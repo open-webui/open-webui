@@ -122,7 +122,11 @@
 			}
 
 			if (modelSuggestions) {
-				_models = [...$models.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))];
+				_models = [
+					...$models
+						.filter((m) => !m?.direct)
+						.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))
+				];
 			}
 		}
 
@@ -196,12 +200,18 @@
 								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						{:else if item.type === 'user'}
 							<img
 								src={`${WEBUI_API_BASE_URL}/users/${item.id}/profile/image`}
 								alt={item?.label ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
+								on:error={(e) => {
+									e.currentTarget.src = '/favicon.png';
+								}}
 							/>
 						{/if}
 

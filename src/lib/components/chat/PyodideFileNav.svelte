@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { pyodideWorker } from '$lib/stores';
 	import PyodideWorkerConstructor from '$lib/workers/pyodide.worker?worker';
 	import type { FileEntry } from '$lib/apis/terminal';
@@ -43,6 +43,52 @@
 	let creatingFile = false;
 	let newFileName = '';
 	let newFileInput: HTMLInputElement;
+
+	// ── Navigation history ──────────────────────────────────────────────────
+	type NavEntry = { path: string; file: string | null };
+	let navHistory: NavEntry[] = [];
+	let navIndex = -1;
+	let navigatingHistory = false;
+
+	$: canGoBack = navIndex > 0;
+	$: canGoForward = navIndex < navHistory.length - 1;
+
+	const pushNavHistory = (path: string, file: string | null = null) => {
+		if (navigatingHistory) return;
+		const current = navHistory[navIndex];
+		if (current && current.path === path && current.file === file) return;
+		if (navIndex < navHistory.length - 1) {
+			navHistory = navHistory.slice(0, navIndex + 1);
+		}
+		navHistory = [...navHistory, { path, file }];
+		navIndex = navHistory.length - 1;
+	};
+
+	const goBack = async () => {
+		if (!canGoBack) return;
+		navigatingHistory = true;
+		navIndex -= 1;
+		const entry = navHistory[navIndex];
+		await loadDir(entry.path);
+		if (entry.file) {
+			const fileName = entry.file.split('/').pop() ?? '';
+			await openEntry({ name: fileName, type: 'file', size: 0 });
+		}
+		navigatingHistory = false;
+	};
+
+	const goForward = async () => {
+		if (!canGoForward) return;
+		navigatingHistory = true;
+		navIndex += 1;
+		const entry = navHistory[navIndex];
+		await loadDir(entry.path);
+		if (entry.file) {
+			const fileName = entry.file.split('/').pop() ?? '';
+			await openEntry({ name: fileName, type: 'file', size: 0 });
+		}
+		navigatingHistory = false;
+	};
 
 	let _reqId = 0;
 
@@ -106,6 +152,7 @@
 		clearPreview();
 		currentPath = path.endsWith('/') ? path : path + '/';
 		savedPyodidePath = currentPath;
+		pushNavHistory(currentPath);
 
 		try {
 			const res = await sendWorkerMessage({
@@ -130,6 +177,7 @@
 		}
 
 		const filePath = `${currentPath}${entry.name}`;
+		pushNavHistory(currentPath, filePath);
 		selectedFile = filePath;
 		fileLoading = true;
 		clearPreview();
@@ -282,9 +330,21 @@
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────
 
+	const onFilesChanged = async () => {
+		try {
+			await sendWorkerMessage({ type: 'fs:sync' });
+		} catch {}
+		loadDir(currentPath);
+	};
+
 	onMount(() => {
 		ensureWorker();
 		loadDir(currentPath);
+		window.addEventListener('pyodide:files', onFilesChanged);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('pyodide:files', onFilesChanged);
 	});
 </script>
 
@@ -334,8 +394,15 @@
 		{breadcrumbs}
 		{selectedFile}
 		{loading}
+		{canGoBack}
+		{canGoForward}
+		onGoBack={goBack}
+		onGoForward={goForward}
 		onNavigate={(path) => loadDir(path)}
-		onRefresh={() => {
+		onRefresh={async () => {
+			try {
+				await sendWorkerMessage({ type: 'fs:sync' });
+			} catch {}
 			if (selectedFile) {
 				const name = selectedFile.split('/').pop() ?? '';
 				openEntry({ name, type: 'file', size: 0 });
@@ -365,28 +432,6 @@
 				/>
 				<path
 					d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-				/>
-			</svg>
-		</button>
-		<button
-			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
-			on:click={() => {
-				if (selectedFile) {
-					confirmDelete(selectedFile, selectedFile.split('/').pop() ?? '');
-				}
-			}}
-			aria-label={$i18n.t('Delete')}
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="size-3.5"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022 1.005 11.36A2.75 2.75 0 0 0 7.764 20h4.472a2.75 2.75 0 0 0 2.745-2.689l1.005-11.36.149.022a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.8l-.3 6a.75.75 0 0 1-1.5-.075l.3-6a.75.75 0 0 1 .8-.725ZM12.2 8.52a.75.75 0 0 0-1.5.075l-.3 6a.75.75 0 0 0 1.5-.075l.3-6Z"
-					clip-rule="evenodd"
 				/>
 			</svg>
 		</button>

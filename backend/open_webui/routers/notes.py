@@ -27,10 +27,15 @@ from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.utils.access_control import (
+    has_permission,
+    has_public_read_access_grant,
+    has_public_write_access_grant,
+    filter_allowed_access_grants,
+)
 from open_webui.models.access_grants import AccessGrants
-from open_webui.internal.db import get_session
-from sqlalchemy.orm import Session
+from open_webui.internal.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -40,8 +45,8 @@ router = APIRouter()
 def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optional[dict]:
     if not data:
         return data
-    md = (data.get("content") or {}).get("md") or ""
-    return {"content": {"md": md[:max_length]}}
+    md = (data.get('content') or {}).get('md') or ''
+    return {'content': {'md': md[:max_length]}}
 
 
 ############################
@@ -53,20 +58,21 @@ class NoteItemResponse(BaseModel):
     id: str
     title: str
     data: Optional[dict]
+    is_pinned: Optional[bool] = False
     updated_at: int
     created_at: int
     user: Optional[UserResponse] = None
 
 
-@router.get("/", response_model=list[NoteItemResponse])
+@router.get('/', response_model=list[NoteItemResponse])
 async def get_notes(
     request: Request,
     page: Optional[int] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -79,19 +85,19 @@ async def get_notes(
         limit = 60
         skip = (page - 1) * limit
 
-    notes = Notes.get_notes_by_user_id(user.id, "read", skip=skip, limit=limit, db=db)
+    notes = await Notes.get_notes_by_user_id(user.id, 'read', skip=skip, limit=limit, db=db)
     if not notes:
         return []
 
     user_ids = list(set(note.user_id for note in notes))
-    users = {user.id: user for user in Users.get_users_by_user_ids(user_ids, db=db)}
+    users = {user.id: user for user in await Users.get_users_by_user_ids(user_ids, db=db)}
 
     return [
         NoteUserResponse(
             **{
                 **note.model_dump(),
-                "data": _truncate_note_data(note.data),
-                "user": UserResponse(**users[note.user_id].model_dump()),
+                'data': _truncate_note_data(note.data),
+                'user': UserResponse(**users[note.user_id].model_dump()),
             }
         )
         for note in notes
@@ -99,7 +105,46 @@ async def get_notes(
     ]
 
 
-@router.get("/search", response_model=NoteListResponse)
+############################
+# GetPinnedNotes
+############################
+
+
+@router.get('/pinned', response_model=list[NoteItemResponse])
+async def get_pinned_notes(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    notes = await Notes.get_pinned_notes_by_user_id(user.id, 'read', db=db)
+    if not notes:
+        return []
+
+    user_ids = list(set(note.user_id for note in notes))
+    users = {user.id: user for user in await Users.get_users_by_user_ids(user_ids, db=db)}
+
+    return [
+        NoteUserResponse(
+            **{
+                **note.model_dump(),
+                'data': _truncate_note_data(note.data),
+                'user': UserResponse(**users[note.user_id].model_dump()),
+            }
+        )
+        for note in notes
+        if note.user_id in users
+    ]
+
+
+@router.get('/search', response_model=NoteListResponse)
 async def search_notes(
     request: Request,
     query: Optional[str] = None,
@@ -109,10 +154,10 @@ async def search_notes(
     direction: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -127,24 +172,24 @@ async def search_notes(
 
     filter = {}
     if query:
-        filter["query"] = query
+        filter['query'] = query
     if view_option:
-        filter["view_option"] = view_option
+        filter['view_option'] = view_option
     if permission:
-        filter["permission"] = permission
+        filter['permission'] = permission
     if order_by:
-        filter["order_by"] = order_by
+        filter['order_by'] = order_by
     if direction:
-        filter["direction"] = direction
+        filter['direction'] = direction
 
-    if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
-        groups = Groups.get_groups_by_member_id(user.id, db=db)
+    if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
+        groups = await Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
-            filter["group_ids"] = [group.id for group in groups]
+            filter['group_ids'] = [group.id for group in groups]
 
-        filter["user_id"] = user.id
+        filter['user_id'] = user.id
 
-    result = Notes.search_notes(user.id, filter, skip=skip, limit=limit, db=db)
+    result = await Notes.search_notes(user.id, filter, skip=skip, limit=limit, db=db)
     for note in result.items:
         note.data = _truncate_note_data(note.data)
     return result
@@ -155,29 +200,36 @@ async def search_notes(
 ############################
 
 
-@router.post("/create", response_model=Optional[NoteModel])
+@router.post('/create', response_model=Optional[NoteModel])
 async def create_new_note(
     request: Request,
     form_data: NoteForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    form_data.access_grants = await filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_notes',
+        db=db,
+    )
+
     try:
-        note = Notes.insert_new_note(user.id, form_data, db=db)
+        note = await Notes.insert_new_note(user.id, form_data, db=db)
         return note
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -189,54 +241,50 @@ class NoteResponse(NoteModel):
     write_access: bool = False
 
 
-@router.get("/{id}", response_model=Optional[NoteResponse])
+@router.get('/{id}', response_model=Optional[NoteResponse])
 async def get_note_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id, db=db)
+    note = await Notes.get_note_by_id(id, db=db)
     if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != "admin" and (
+    if user.role != 'admin' and (
         user.id != note.user_id
         and (
-            not AccessGrants.has_access(
+            not await AccessGrants.has_access(
                 user_id=user.id,
-                resource_type="note",
+                resource_type='note',
                 resource_id=note.id,
-                permission="read",
+                permission='read',
                 db=db,
             )
         )
     ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     write_access = (
-        user.role == "admin"
+        user.role == 'admin'
         or (user.id == note.user_id)
-        or AccessGrants.has_access(
+        or await AccessGrants.has_access(
             user_id=user.id,
-            resource_type="note",
+            resource_type='note',
             resource_id=note.id,
-            permission="write",
+            permission='write',
             db=db,
         )
-        or has_public_read_access_grant(note.access_grants)
+        or has_public_write_access_grant(note.access_grants)
     )
 
     return NoteResponse(**note.model_dump(), write_access=write_access)
@@ -247,65 +295,59 @@ async def get_note_by_id(
 ############################
 
 
-@router.post("/{id}/update", response_model=Optional[NoteModel])
+@router.post('/{id}/update', response_model=Optional[NoteModel])
 async def update_note_by_id(
     request: Request,
     id: str,
     form_data: NoteForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id, db=db)
+    note = await Notes.get_note_by_id(id, db=db)
     if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != "admin" and (
+    if user.role != 'admin' and (
         user.id != note.user_id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
-            resource_type="note",
+            resource_type='note',
             resource_id=note.id,
-            permission="write",
+            permission='write',
             db=db,
         )
     ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
         form_data.access_grants,
-        "sharing.public_notes",
+        'sharing.public_notes',
         db=db,
     )
 
     try:
-        note = Notes.update_note_by_id(id, form_data, db=db)
+        note = await Notes.update_note_by_id(id, form_data, db=db)
         await sio.emit(
-            "note-events",
+            'note-events',
             note.model_dump(),
-            to=f"note:{note.id}",
+            to=f'note:{note.id}',
         )
 
         return note
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
 ############################
@@ -317,53 +359,89 @@ class NoteAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post("/{id}/access/update", response_model=Optional[NoteModel])
+@router.post('/{id}/access/update', response_model=Optional[NoteModel])
 async def update_note_access_by_id(
     request: Request,
     id: str,
     form_data: NoteAccessGrantsForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id, db=db)
+    note = await Notes.get_note_by_id(id, db=db)
     if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != "admin" and (
+    if user.role != 'admin' and (
         user.id != note.user_id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
-            resource_type="note",
+            resource_type='note',
             resource_id=note.id,
-            permission="write",
+            permission='write',
             db=db,
         )
     ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
         form_data.access_grants,
-        "sharing.public_notes",
+        'sharing.public_notes',
     )
 
-    AccessGrants.set_access_grants("note", id, form_data.access_grants, db=db)
+    await AccessGrants.set_access_grants('note', id, form_data.access_grants, db=db)
 
-    return Notes.get_note_by_id(id, db=db)
+    return await Notes.get_note_by_id(id, db=db)
+
+
+############################
+# PinNoteById
+############################
+
+
+@router.post('/{id}/pin', response_model=Optional[NoteModel])
+async def pin_note_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    note = await Notes.toggle_note_pinned_by_id(id, db=db)
+    return note
 
 
 ############################
@@ -371,46 +449,40 @@ async def update_note_access_by_id(
 ############################
 
 
-@router.delete("/{id}/delete", response_model=bool)
+@router.delete('/{id}/delete', response_model=bool)
 async def delete_note_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id, db=db)
+    note = await Notes.get_note_by_id(id, db=db)
     if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != "admin" and (
+    if user.role != 'admin' and (
         user.id != note.user_id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
-            resource_type="note",
+            resource_type='note',
             resource_id=note.id,
-            permission="write",
+            permission='write',
             db=db,
         )
     ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
-        note = Notes.delete_note_by_id(id, db=db)
+        note = await Notes.delete_note_by_id(id, db=db)
         return True
     except Exception as e:
         log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())

@@ -45,10 +45,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         created_at = pw.BigIntegerField(null=False)
 
         class Meta:
-            table_name = "file"
+            table_name = 'file'
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_model("file")
+    migrator.remove_model('file')

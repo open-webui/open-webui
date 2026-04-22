@@ -86,6 +86,9 @@
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 						alt={model?.name ?? model.id}
 						class="rounded-full size-5 items-center mr-2"
+						on:error={(e) => {
+							e.currentTarget.src = '/favicon.png';
+						}}
 					/>
 					<div class="truncate">
 						{model.name}

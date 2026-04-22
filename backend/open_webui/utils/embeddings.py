@@ -43,35 +43,35 @@ async def generate_embeddings(
         bypass_filter = True
 
     # Attach extra metadata from request.state if present
-    if hasattr(request.state, "metadata"):
-        if "metadata" not in form_data:
-            form_data["metadata"] = request.state.metadata
+    if hasattr(request.state, 'metadata'):
+        if 'metadata' not in form_data:
+            form_data['metadata'] = request.state.metadata
         else:
-            form_data["metadata"] = {
-                **form_data["metadata"],
+            form_data['metadata'] = {
+                **form_data['metadata'],
                 **request.state.metadata,
             }
 
     # If "direct" flag present, use only that model
-    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            request.state.model["id"]: request.state.model,
+            request.state.model['id']: request.state.model,
         }
     else:
         models = request.app.state.MODELS
 
-    model_id = form_data.get("model")
+    model_id = form_data.get('model')
     if model_id not in models:
-        raise Exception("Model not found")
+        raise Exception('Model not found')
     model = models[model_id]
 
     # Access filtering
-    if not getattr(request.state, "direct", False):
-        if not bypass_filter and user.role == "user":
-            check_model_access(user, model)
+    if not getattr(request.state, 'direct', False):
+        if not bypass_filter and user.role == 'user':
+            await check_model_access(user, model)
 
     # Ollama backend — use /api/embed which supports batch input natively
-    if model.get("owned_by") == "ollama":
+    if model.get('owned_by') == 'ollama':
         ollama_payload = convert_embed_payload_openai_to_ollama(form_data)
         response = await ollama_embed(
             request=request,

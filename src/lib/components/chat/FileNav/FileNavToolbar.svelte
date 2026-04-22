@@ -18,7 +18,14 @@
 	export let onNewFolder: () => void = () => {};
 	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
+	export let onDownloadDir: () => void = () => {};
 	export let onMove: (source: string, destFolder: string) => void = () => {};
+
+	// Back / forward navigation
+	export let canGoBack = false;
+	export let canGoForward = false;
+	export let onGoBack: () => void = () => {};
+	export let onGoForward: () => void = () => {};
 
 	let dragOverCrumb: number | null = null;
 
@@ -32,6 +39,56 @@
 </script>
 
 <div class="flex items-center px-2 pb-1.5 shrink-0 gap-1">
+	<!-- Back -->
+	<Tooltip content={$i18n.t('Back')}>
+		<button
+			class="shrink-0 p-1 rounded transition {canGoBack
+				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
+			on:click={onGoBack}
+			disabled={!canGoBack}
+			aria-label={$i18n.t('Back')}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="size-3.5"
+			>
+				<path
+					fill-rule="evenodd"
+					d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+					clip-rule="evenodd"
+				/>
+			</svg>
+		</button>
+	</Tooltip>
+
+	<!-- Forward -->
+	<Tooltip content={$i18n.t('Forward')}>
+		<button
+			class="shrink-0 p-1 rounded transition {canGoForward
+				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
+			on:click={onGoForward}
+			disabled={!canGoForward}
+			aria-label={$i18n.t('Forward')}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="size-3.5"
+			>
+				<path
+					fill-rule="evenodd"
+					d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+					clip-rule="evenodd"
+				/>
+			</svg>
+		</button>
+	</Tooltip>
+
 	<div
 		bind:this={breadcrumbEl}
 		class="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none"
@@ -66,7 +123,8 @@
 					dragOverCrumb = null;
 					try {
 						const data = JSON.parse(raw);
-						if (data.path) onMove(data.path, crumb.path);
+						const paths = data.paths || (data.path ? [data.path] : []);
+						for (const p of paths) onMove(p, crumb.path);
 					} catch {}
 				}}
 			>
@@ -119,6 +177,27 @@
 				aria-label={$i18n.t('New File')}
 			>
 				<FilePlusAlt className="size-3.5" />
+			</button>
+		</Tooltip>
+		<Tooltip content={$i18n.t('Download')}>
+			<button
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				on:click={onDownloadDir}
+				aria-label={$i18n.t('Download')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+					/>
+					<path
+						d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+					/>
+				</svg>
 			</button>
 		</Tooltip>
 		<Tooltip content={$i18n.t('Upload')}>

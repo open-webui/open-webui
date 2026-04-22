@@ -16,7 +16,7 @@ def get_filtered_results(results, filter_list):
     filtered_results = []
 
     for result in results:
-        url = result.get("url") or result.get("link", "") or result.get("href", "")
+        url = result.get('url') or result.get('link', '') or result.get('href', '')
         if not validators.url(url):
             continue
 

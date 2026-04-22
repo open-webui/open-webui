@@ -19,6 +19,7 @@
 		listFiles,
 		readFile,
 		downloadFileBlob,
+		archiveFromTerminal,
 		uploadToTerminal,
 		createDirectory,
 		deleteEntry,
@@ -30,7 +31,8 @@
 	import Folder from '../icons/Folder.svelte';
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
-	import Reset from '../icons/Reset.svelte';
+	import ZoomReset from '../icons/ZoomReset.svelte';
+
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -38,13 +40,16 @@
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
+	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import PortList from './FileNav/PortList.svelte';
+	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
 	export let overlay = false;
+	export let chatId: string | null = null;
 
 	// ── Terminal panel state ────────────────────────────────────────────
 	let terminalExpanded = false;
@@ -87,8 +92,57 @@
 	let loading = false;
 	let error: string | null = null;
 
+	// ── Navigation history ──────────────────────────────────────────────
+	type NavEntry = { path: string; file: string | null };
+	let navHistory: NavEntry[] = [];
+	let navIndex = -1;
+	let navigatingHistory = false;
+
+	$: canGoBack = navIndex > 0;
+	$: canGoForward = navIndex < navHistory.length - 1;
+
+	const pushNavHistory = (path: string, file: string | null = null) => {
+		if (navigatingHistory) return;
+		// Skip if this is the same as the current entry
+		const current = navHistory[navIndex];
+		if (current && current.path === path && current.file === file) return;
+		// Truncate forward history when navigating to a new location
+		if (navIndex < navHistory.length - 1) {
+			navHistory = navHistory.slice(0, navIndex + 1);
+		}
+		navHistory = [...navHistory, { path, file }];
+		navIndex = navHistory.length - 1;
+	};
+
+	const goBack = async () => {
+		if (!canGoBack) return;
+		navigatingHistory = true;
+		navIndex -= 1;
+		const entry = navHistory[navIndex];
+		await loadDir(entry.path);
+		if (entry.file) {
+			const fileName = entry.file.split('/').pop() ?? '';
+			await openEntry({ name: fileName, type: 'file', size: 0 });
+		}
+		navigatingHistory = false;
+	};
+
+	const goForward = async () => {
+		if (!canGoForward) return;
+		navigatingHistory = true;
+		navIndex += 1;
+		const entry = navHistory[navIndex];
+		await loadDir(entry.path);
+		if (entry.file) {
+			const fileName = entry.file.split('/').pop() ?? '';
+			await openEntry({ name: fileName, type: 'file', size: 0 });
+		}
+		navigatingHistory = false;
+	};
+
 	// ── File preview state ───────────────────────────────────────────────
 	let selectedFile: string | null = null;
+	let previewPort: number | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
 	let fileVideoUrl: string | null = null;
@@ -162,27 +216,48 @@
 		return url ? { url, key } : null;
 	};
 
-	// Detect terminal changes — the explicit store references ensure
+	// Detect terminal or chat changes — the explicit store references ensure
 	// Svelte re-runs this block when any of them update.
+	// The `mounted` flag prevents the initial run from racing with onMount.
 	let prevTerminalUrl = '';
+	let prevChatId = chatId;
+	let mounted = false;
 	$: {
-		$selectedTerminalId, $terminalServers, $settings;
+		($selectedTerminalId, $terminalServers, $settings);
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 
-		if (terminal && terminal.url !== prevTerminalUrl) {
-			prevTerminalUrl = terminal.url;
-			(async () => {
-				// Discover server features (terminal enabled/disabled)
-				const config = await getTerminalConfig(terminal.url, terminal.key);
-				terminalEnabled = config?.features?.terminal !== false;
+		const chatChanged = chatId !== prevChatId;
+		const oldChatId = prevChatId;
+		if (chatChanged) prevChatId = chatId;
 
-				const rawCwd = await getCwd(terminal.url, terminal.key);
-				const cwd = rawCwd ? normalizePath(rawCwd) : null;
-				const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
-				savedPath = dir;
-				loadDir(dir);
-			})();
+		const terminalChanged = terminal && terminal.url !== prevTerminalUrl;
+		if (terminalChanged) prevTerminalUrl = terminal.url;
+
+		if (mounted && terminal) {
+			if (chatChanged && chatId && !oldChatId) {
+				// Chat just got created (null → real ID): persist the current
+				// browsed path as the new session's cwd — don't re-fetch.
+				setCwd(terminal.url, terminal.key, savedPath, chatId);
+			} else if (terminalChanged || chatChanged) {
+				// Terminal switched, new chat started, or switched between
+				// existing chats — re-fetch the session cwd.
+				loading = true;
+				error = null;
+				entries = [];
+				(async () => {
+					if (terminalChanged) {
+						const config = await getTerminalConfig(terminal.url, terminal.key);
+						terminalEnabled = config?.features?.terminal !== false;
+					}
+
+					const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+					const cwd = rawCwd ? normalizePath(rawCwd) : null;
+					const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
+					savedPath = dir;
+					loadDir(dir);
+				})();
+			}
 		}
 	}
 
@@ -218,7 +293,6 @@
 	// ── File preview management ──────────────────────────────────────────
 	const clearFilePreview = () => {
 		fileContent = null;
-		filePreviewRef?.disposePanzoom();
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
@@ -249,15 +323,18 @@
 		loading = true;
 		error = null;
 		selectedFile = null;
+		previewPort = null;
 		clearFilePreview();
+		clearSelection();
 		currentPath = path;
 		savedPath = path;
+		pushNavHistory(path);
 
-		const result = await listFiles(terminal.url, terminal.key, path);
+		const result = await listFiles(terminal.url, terminal.key, path, chatId ?? undefined);
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		setCwd(terminal.url, terminal.key, path);
+		setCwd(terminal.url, terminal.key, path, chatId ?? undefined);
 
 		if (result === null) {
 			error =
@@ -277,31 +354,63 @@
 			return;
 		}
 
+		const filePath = `${currentPath}${entry.name}`;
+		pushNavHistory(currentPath, filePath);
+
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const filePath = `${currentPath}${entry.name}`;
 		selectedFile = filePath;
 		fileLoading = true;
 		clearFilePreview();
 
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) filePdfData = await result.blob.arrayBuffer();
 		} else if (isSqlite(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) fileSqliteData = await result.blob.arrayBuffer();
 		} else if (isOffice(filePath)) {
-			const result = await downloadFileBlob(terminal.url, terminal.key, filePath);
+			const result = await downloadFileBlob(
+				terminal.url,
+				terminal.key,
+				filePath,
+				chatId ?? undefined
+			);
 			if (result) {
 				const ext = getFileExt(filePath);
 				const arrayBuffer = await result.blob.arrayBuffer();
@@ -334,7 +443,7 @@
 				}
 			}
 		} else {
-			fileContent = await readFile(terminal.url, terminal.key, filePath);
+			fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
 		}
 		fileLoading = false;
 	};
@@ -343,7 +452,11 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await downloadFileBlob(terminal.url, terminal.key, path);
+		// Directories end with '/' — download as ZIP archive
+		const isDir = path.endsWith('/');
+		const result = isDir
+			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
+			: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
 		if (!result) return;
 		const url = URL.createObjectURL(result.blob);
 		const a = document.createElement('a');
@@ -375,7 +488,7 @@
 
 		uploading = true;
 		for (const file of droppedFiles) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
 		await loadDir(currentPath);
@@ -387,7 +500,7 @@
 
 		uploading = true;
 		for (const file of files) {
-			await uploadToTerminal(terminal.url, terminal.key, currentPath, file);
+			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
 		await loadDir(currentPath);
@@ -410,7 +523,12 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await createDirectory(terminal.url, terminal.key, `${currentPath}${name}`);
+		const result = await createDirectory(
+			terminal.url,
+			terminal.key,
+			`${currentPath}${name}`,
+			chatId ?? undefined
+		);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
 		);
@@ -445,7 +563,7 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await deleteEntry(terminal.url, terminal.key, path);
+		const result = await deleteEntry(terminal.url, terminal.key, path, chatId ?? undefined);
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? '{{name}} deleted' : 'Failed to delete {{name}}', { name })
 		);
@@ -471,13 +589,164 @@
 		const sourceDir = source.endsWith('/') ? source : source + '/';
 		if (destFolder.startsWith(sourceDir)) return;
 
-		const result = await moveEntry(terminal.url, terminal.key, source, destination);
+		const result = await moveEntry(
+			terminal.url,
+			terminal.key,
+			source,
+			destination,
+			chatId ?? undefined
+		);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
 			toast.success($i18n.t('Moved {{name}}', { name: fileName }));
 		}
 		await loadDir(currentPath);
+	};
+
+	// ── Rename ──────────────────────────────────────────────────────────
+	const handleRename = async (oldPath: string, newName: string) => {
+		const terminal = selectedTerminal;
+		if (!terminal || !newName) return;
+
+		const dir = oldPath.substring(0, oldPath.lastIndexOf('/') + 1) || currentPath;
+		const destination = `${dir}${newName}`;
+
+		if (oldPath === destination) return;
+
+		const result = await moveEntry(
+			terminal.url,
+			terminal.key,
+			oldPath,
+			destination,
+			chatId ?? undefined
+		);
+		if ('error' in result) {
+			toast.error(result.error);
+		} else {
+			toast.success($i18n.t('Renamed to {{name}}', { name: newName }));
+		}
+		await loadDir(currentPath);
+	};
+
+	// ── Multi-select ────────────────────────────────────────────────────
+	let selectedEntries: Set<string> = new Set();
+	let lastClickedIndex: number | null = null;
+	let selectionMode = false;
+
+	$: selectedCount = selectedEntries.size;
+	$: hasSelectedFiles = [...selectedEntries].some((p) => !p.endsWith('/'));
+
+	const clearSelection = () => {
+		selectedEntries = new Set();
+		lastClickedIndex = null;
+		selectionMode = false;
+	};
+
+	const selectAll = () => {
+		selectedEntries = new Set(
+			entries.map((e) => {
+				const p = `${currentPath}${e.name}`;
+				return e.type === 'directory' ? p + '/' : p;
+			})
+		);
+		selectedEntries = selectedEntries; // trigger reactivity
+	};
+
+	const handleSelect = (entry: FileEntry, event: MouseEvent) => {
+		const path =
+			entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`;
+		const idx = entries.indexOf(entry);
+
+		if (event.shiftKey && lastClickedIndex !== null) {
+			// Range select — replaces current selection with range
+			const start = Math.min(lastClickedIndex, idx);
+			const end = Math.max(lastClickedIndex, idx);
+			const newSet = new Set<string>();
+			for (let i = start; i <= end; i++) {
+				const e = entries[i];
+				const p = e.type === 'directory' ? `${currentPath}${e.name}/` : `${currentPath}${e.name}`;
+				newSet.add(p);
+			}
+			selectedEntries = newSet;
+		} else if (event.metaKey || event.ctrlKey) {
+			// Toggle one
+			if (selectedEntries.has(path)) {
+				selectedEntries.delete(path);
+			} else {
+				selectedEntries.add(path);
+			}
+			selectedEntries = selectedEntries;
+		} else {
+			// In selection mode (touch), toggle
+			if (selectedEntries.has(path)) {
+				selectedEntries.delete(path);
+			} else {
+				selectedEntries.add(path);
+			}
+			selectedEntries = selectedEntries;
+		}
+		lastClickedIndex = idx;
+	};
+
+	const enterSelectionMode = () => {
+		selectionMode = true;
+	};
+
+	const bulkDelete = async () => {
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const paths = [...selectedEntries];
+		let ok = 0;
+		for (const p of paths) {
+			const result = await deleteEntry(terminal.url, terminal.key, p.replace(/\/$/, ''));
+			if (result) ok++;
+		}
+		toast[ok > 0 ? 'success' : 'error'](
+			$i18n.t('Deleted {{ok}} of {{total}} items', { ok, total: paths.length })
+		);
+		clearSelection();
+		await loadDir(currentPath);
+	};
+
+	const bulkDownload = async () => {
+		const terminal = selectedTerminal;
+		if (!terminal) return;
+
+		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
+		if (paths.length === 0) return;
+
+		// Single file (not dir) — use the regular downloadFile path
+		if (paths.length === 1 && ![...selectedEntries][0].endsWith('/')) {
+			await downloadFile([...selectedEntries][0]);
+			return;
+		}
+
+		// Archive everything into a single ZIP
+		const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
+		if (!result) return;
+		const url = URL.createObjectURL(result.blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = result.filename;
+		a.click();
+		URL.revokeObjectURL(url);
+	};
+
+	// Escape to clear selection
+	const handleKeydown = (e: KeyboardEvent) => {
+		if (e.key === 'Escape' && selectedCount > 0) {
+			e.preventDefault();
+			clearSelection();
+		}
+	};
+
+	// Click outside panel to clear selection
+	const handleWindowClick = (e: MouseEvent) => {
+		if (selectedCount > 0 && containerEl && !containerEl.contains(e.target as Node)) {
+			clearSelection();
+		}
 	};
 
 	// ── Lifecycle ────────────────────────────────────────────────────────
@@ -531,13 +800,22 @@
 		});
 
 		if (!handledDisplayFile) {
-			if (savedPath === '/') {
-				const rawCwd = await getCwd(terminal.url, terminal.key);
+			loading = true;
+
+			// Discover server features on initial mount
+			const config = await getTerminalConfig(terminal.url, terminal.key);
+			terminalEnabled = config?.features?.terminal !== false;
+
+			if (chatId || savedPath === '/') {
+				// Fetch session-specific cwd from the server (or global default for new chats)
+				const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
 				const cwd = rawCwd ? normalizePath(rawCwd) : null;
 				if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
 			}
 			loadDir(savedPath);
 		}
+
+		mounted = true;
 
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === 'Shift') shiftKey = true;
@@ -579,11 +857,17 @@
 	bind:show={showDeleteConfirm}
 	on:confirm={() => {
 		if (deleteTarget) {
-			handleDelete(deleteTarget.path, deleteTarget.name);
+			if (deleteTarget.path === '__bulk__') {
+				bulkDelete();
+			} else {
+				handleDelete(deleteTarget.path, deleteTarget.name);
+			}
 			deleteTarget = null;
 		}
 	}}
 />
+
+<svelte:window on:keydown={handleKeydown} on:click={handleWindowClick} />
 
 {#if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -627,216 +911,273 @@
 			</div>
 		{/if}
 
-		<FileNavToolbar
-			breadcrumbs={buildBreadcrumbs(currentPath)}
-			{selectedFile}
-			{loading}
-			onNavigate={loadDir}
-			onRefresh={() => {
-				if (selectedFile) {
-					const fileName = selectedFile.split('/').pop() ?? '';
-					openEntry({ name: fileName, type: 'file', size: 0 });
-				} else {
-					loadDir(currentPath);
-				}
-			}}
-			onNewFolder={startNewFolder}
-			onNewFile={startNewFile}
-			onUploadFiles={handleUploadFiles}
-			onMove={handleMove}
-		>
-			{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
-				<Tooltip content={$i18n.t('Reset view')}>
-					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => filePreviewRef?.resetImageView()}
-						aria-label={$i18n.t('Reset view')}
-					>
-						<Reset className="size-3.5" />
-					</button>
-				</Tooltip>
-			{/if}
-			{#if filePdfData !== null}
-				<Tooltip content={$i18n.t('Reset view')}>
-					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => filePreviewRef?.resetPdfView()}
-						aria-label={$i18n.t('Reset view')}
-					>
-						<Reset className="size-3.5" />
-					</button>
-				</Tooltip>
-			{/if}
-			{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
-				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
-					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => {
-							if (editing) filePreviewRef?.cancelEdit();
-							showRaw = !showRaw;
-						}}
-						aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
-					>
-						{#if showRaw}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.5"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-								/>
-							</svg>
-						{:else}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.5"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
-								/>
-							</svg>
-						{/if}
-					</button>
-				</Tooltip>
-			{/if}
-			{#if isTextFile}
-				{#if isHtml && showRaw}
-					<Tooltip content={$i18n.t('Save')}>
+		{#if previewPort === null}
+			<FileNavToolbar
+				breadcrumbs={buildBreadcrumbs(currentPath)}
+				{selectedFile}
+				{loading}
+				{canGoBack}
+				{canGoForward}
+				onGoBack={goBack}
+				onGoForward={goForward}
+				onNavigate={loadDir}
+				onRefresh={() => {
+					if (selectedFile) {
+						const fileName = selectedFile.split('/').pop() ?? '';
+						openEntry({ name: fileName, type: 'file', size: 0 });
+					} else {
+						loadDir(currentPath);
+					}
+				}}
+				onNewFolder={startNewFolder}
+				onNewFile={startNewFile}
+				onUploadFiles={handleUploadFiles}
+				onDownloadDir={() => downloadFile(currentPath)}
+				onMove={handleMove}
+			>
+				{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
+					<Tooltip content={$i18n.t('Reset view')}>
 						<button
 							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.saveCodeFile()}
-							disabled={saving}
-							aria-label={$i18n.t('Save')}
+							on:click={() => filePreviewRef?.resetImageView()}
+							aria-label={$i18n.t('Reset view')}
 						>
-							{#if saving}
-								<Spinner className="size-3.5" />
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="size-3.5"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							{/if}
-						</button>
-					</Tooltip>
-				{:else if isHtml}
-					<!-- HTML preview mode: no edit/save buttons -->
-				{:else if isCode}
-					<Tooltip content={$i18n.t('Save')}>
-						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.saveCodeFile()}
-							disabled={saving}
-							aria-label={$i18n.t('Save')}
-						>
-							{#if saving}
-								<Spinner className="size-3.5" />
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="size-3.5"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							{/if}
-						</button>
-					</Tooltip>
-				{:else if editing}
-					<Tooltip content={$i18n.t('Cancel')}>
-						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.cancelEdit()}
-							aria-label={$i18n.t('Cancel')}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="size-3.5"
-							>
-								<path
-									d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-								/>
-							</svg>
-						</button>
-					</Tooltip>
-					<Tooltip content={$i18n.t('Save')}>
-						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.saveEdit()}
-							disabled={saving}
-							aria-label={$i18n.t('Save')}
-						>
-							{#if saving}
-								<Spinner className="size-3.5" />
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="size-3.5"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							{/if}
-						</button>
-					</Tooltip>
-				{:else}
-					<Tooltip content={$i18n.t('Edit')}>
-						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.startEdit()}
-							aria-label={$i18n.t('Edit')}
-						>
-							<PenAlt className="size-3.5" />
+							<ZoomReset className="size-3.5" />
 						</button>
 					</Tooltip>
 				{/if}
-			{/if}
+				{#if filePdfData !== null}
+					<Tooltip content={$i18n.t('Reset view')}>
+						<button
+							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+							on:click={() => filePreviewRef?.resetPdfView()}
+							aria-label={$i18n.t('Reset view')}
+						>
+							<ZoomReset className="size-3.5" />
+						</button>
+					</Tooltip>
+				{/if}
+				{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
+						<button
+							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+							on:click={() => {
+								if (editing) filePreviewRef?.cancelEdit();
+								showRaw = !showRaw;
+							}}
+							aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
+						>
+							{#if showRaw}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									class="size-3.5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+									/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+									/>
+								</svg>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									class="size-3.5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</Tooltip>
+				{/if}
+				{#if isTextFile}
+					{#if isHtml && showRaw}
+						<Tooltip content={$i18n.t('Save')}>
+							<button
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								on:click={() => filePreviewRef?.saveCodeFile()}
+								disabled={saving}
+								aria-label={$i18n.t('Save')}
+							>
+								{#if saving}
+									<Spinner className="size-3.5" />
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</Tooltip>
+					{:else if isHtml}
+						<!-- HTML preview mode: no edit/save buttons -->
+					{:else if isMarkdown && showRaw}
+						<Tooltip content={$i18n.t('Save')}>
+							<button
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								on:click={() => filePreviewRef?.saveCodeFile()}
+								disabled={saving}
+								aria-label={$i18n.t('Save')}
+							>
+								{#if saving}
+									<Spinner className="size-3.5" />
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</Tooltip>
+					{:else if isMarkdown}
+						<!-- Markdown preview mode: no edit/save buttons -->
+					{:else if isCode}
+						<Tooltip content={$i18n.t('Save')}>
+							<button
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								on:click={() => filePreviewRef?.saveCodeFile()}
+								disabled={saving}
+								aria-label={$i18n.t('Save')}
+							>
+								{#if saving}
+									<Spinner className="size-3.5" />
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</Tooltip>
+					{:else if editing}
+						<Tooltip content={$i18n.t('Cancel')}>
+							<button
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								on:click={() => filePreviewRef?.cancelEdit()}
+								aria-label={$i18n.t('Cancel')}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="size-3.5"
+								>
+									<path
+										d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
+						<Tooltip content={$i18n.t('Save')}>
+							<button
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								on:click={() => filePreviewRef?.saveEdit()}
+								disabled={saving}
+								aria-label={$i18n.t('Save')}
+							>
+								{#if saving}
+									<Spinner className="size-3.5" />
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="size-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</Tooltip>
+					{:else}
+						<Tooltip content={$i18n.t('Edit')}>
+							<button
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								on:click={() => filePreviewRef?.startEdit()}
+								aria-label={$i18n.t('Edit')}
+							>
+								<PenAlt className="size-3.5" />
+							</button>
+						</Tooltip>
+					{/if}
+				{/if}
 
-			{#if fileContent !== null}
-				<Tooltip content={$i18n.t('Copy')}>
+				{#if fileContent !== null}
+					<Tooltip content={$i18n.t('Copy')}>
+						<button
+							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+							on:click={async () => {
+								await navigator.clipboard.writeText(fileContent ?? '');
+								toast.success($i18n.t('Copied to clipboard'));
+							}}
+							aria-label={$i18n.t('Copy')}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
+				<Tooltip content={$i18n.t('Download')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={async () => {
-							await navigator.clipboard.writeText(fileContent ?? '');
-							toast.success($i18n.t('Copied to clipboard'));
-						}}
-						aria-label={$i18n.t('Copy')}
+						on:click={() => downloadFile(selectedFile)}
+						aria-label={$i18n.t('Download')}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -849,39 +1190,46 @@
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
-								d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"
+								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
 							/>
 						</svg>
 					</button>
 				</Tooltip>
+			</FileNavToolbar>
+
+			<!-- Bulk action bar -->
+			{#if selectedCount > 0}
+				<BulkActionBar
+					count={selectedCount}
+					hasFiles={hasSelectedFiles}
+					onDelete={() => {
+						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
+						showDeleteConfirm = true;
+					}}
+					onDownload={bulkDownload}
+					onSelectAll={selectAll}
+					onClear={clearSelection}
+				/>
 			{/if}
-			<Tooltip content={$i18n.t('Download')}>
-				<button
-					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-					on:click={() => downloadFile(selectedFile)}
-					aria-label={$i18n.t('Download')}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						class="size-3.5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-						/>
-					</svg>
-				</button>
-			</Tooltip>
-		</FileNavToolbar>
+		{/if}
 
 		<!-- Content -->
-		<div class="flex-1 overflow-y-auto min-h-0 min-w-0">
-			{#if selectedFile !== null}
+		<div
+			class="flex-1 overflow-y-auto min-h-0 min-w-0"
+			on:click={(e) => {
+				if (e.target === e.currentTarget && selectedCount > 0) clearSelection();
+			}}
+		>
+			{#if previewPort !== null}
+				<PortPreview
+					baseUrl={selectedTerminal?.url ?? ''}
+					port={previewPort}
+					overlay={overlay || isDraggingHandle}
+					onClose={() => {
+						previewPort = null;
+					}}
+				/>
+			{:else if selectedFile !== null}
 				<FilePreview
 					bind:this={filePreviewRef}
 					bind:editing
@@ -909,7 +1257,7 @@
 					}}
 					baseUrl={selectedTerminal?.url ?? ''}
 					apiKey={selectedTerminal?.key ?? ''}
-					{overlay}
+					overlay={overlay || isDraggingHandle}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
 						if (!terminal || !selectedFile) return;
@@ -993,10 +1341,20 @@
 									{currentPath}
 									terminalUrl={selectedTerminal.url}
 									terminalKey={selectedTerminal.key}
+									selected={selectedEntries.has(
+										entry.type === 'directory'
+											? `${currentPath}${entry.name}/`
+											: `${currentPath}${entry.name}`
+									)}
+									{selectionMode}
+									selectedPaths={selectedEntries}
 									onOpen={openEntry}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
 									onMove={handleMove}
+									onRename={handleRename}
+									onSelect={handleSelect}
+									onLongPress={enterSelectionMode}
 								/>
 							{/each}
 						</ul>
@@ -1006,9 +1364,17 @@
 		</div>
 
 		<!-- Port detection -->
-		{#if selectedTerminal && !selectedFile}
+		{#if selectedTerminal && !selectedFile && previewPort === null}
 			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
-				<PortList baseUrl={selectedTerminal.url} apiKey={selectedTerminal.key} />
+				<PortList
+					baseUrl={selectedTerminal.url}
+					apiKey={selectedTerminal.key}
+					on:previewPort={(e) => {
+						selectedFile = null;
+						clearFilePreview();
+						previewPort = e.detail;
+					}}
+				/>
 			</div>
 		{/if}
 
@@ -1018,17 +1384,17 @@
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div
-						class="h-1 cursor-row-resize hover:bg-blue-400/30 transition group relative"
-						on:mousedown={onHandleMouseDown}
-					>
-						<div class="absolute inset-x-0 -top-1 -bottom-1" />
+					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
+						<div
+							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
+						/>
+						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
 					</div>
 				{/if}
 
 				<!-- Toggle header (full-width button) -->
 				<button
-					class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					class="w-full flex items-center gap-2 px-3 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
 					on:click={toggleTerminal}
 				>
 					<svg
@@ -1072,9 +1438,10 @@
 				{#if terminalExpanded}
 					<div style="height: {terminalHeight}px" class="min-h-0">
 						<XTerminal
-							{overlay}
+							overlay={overlay || isDraggingHandle}
 							bind:connected={terminalConnected}
 							bind:connecting={terminalConnecting}
+							{chatId}
 						/>
 					</div>
 				{/if}

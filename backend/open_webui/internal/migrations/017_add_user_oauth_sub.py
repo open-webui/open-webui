@@ -33,7 +33,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
     migrator.add_fields(
-        "user",
+        'user',
         oauth_sub=pw.TextField(null=True, unique=True),
     )
 
@@ -41,4 +41,4 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_fields("user", "oauth_sub")
+    migrator.remove_fields('user', 'oauth_sub')
