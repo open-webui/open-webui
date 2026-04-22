@@ -111,6 +111,7 @@
 	bind:query
 	bind:orderBy
 	bind:direction
+	showCreatedAtSort={true}
 	title={$i18n.t('Shared Chats')}
 	emptyPlaceholder={$i18n.t('You have no shared conversations.')}
 	shareUrl={false}
