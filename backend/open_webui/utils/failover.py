@@ -113,6 +113,38 @@ def resolve_failover_candidates(
     base_urls = request.app.state.config.OPENAI_API_BASE_URLS
     keys = request.app.state.config.OPENAI_API_KEYS
     configs = request.app.state.config.OPENAI_API_CONFIGS
+    models_state = request.app.state.OPENAI_MODELS or {}
+
+    def _build_candidate(model_id: str, position: int, capabilities: list[str]) -> Optional[ProviderCandidate]:
+        """Resolve a `$models`-style id into a concrete (url, key, ...) candidate.
+
+        Returns None if the model isn't in the OPENAI_MODELS cache (stale or
+        unknown), or if its connection has been skipped.
+        """
+        model_entry = models_state.get(model_id)
+        if not model_entry:
+            return None
+        idx = model_entry.get('urlIdx')
+        if idx is None or idx >= len(base_urls):
+            return None
+        url = base_urls[idx]
+        if url in skip_set:
+            return None
+        key = keys[idx] if idx < len(keys) else ''
+        api_config = configs.get(str(idx), configs.get(url, {}))
+        return ProviderCandidate(
+            url=url,
+            url_idx=idx,
+            key=key,
+            # Pass the prefixed id through; _try_provider_candidate strips
+            # the prefix_id before it goes on the wire, matching legacy
+            # single-provider behavior.
+            model_name=model_id,
+            api_config=api_config,
+            prefix_id=api_config.get('prefix_id'),
+            capabilities=capabilities,
+            position=position,
+        )
 
     failover = None
     if model_info and model_info.meta and getattr(model_info.meta, 'failover_providers', None):
@@ -122,56 +154,24 @@ def resolve_failover_candidates(
 
     if failover:
         for position, entry in enumerate(failover):
-            url = entry.connection_url
-            if url in skip_set:
-                continue
             # Capability filter: if required caps declared, provider must
             # list them. An empty capabilities list = "unknown, try it".
             if required_caps and entry.capabilities:
                 if any(cap not in entry.capabilities for cap in required_caps):
                     continue
-            if url not in base_urls:
-                log.warning('Failover provider %s not found in OPENAI_API_BASE_URLS; skipping.', url)
-                continue
-            idx = base_urls.index(url)
-            key = keys[idx] if idx < len(keys) else ''
-            api_config = configs.get(str(idx), configs.get(url, {}))
-            candidates.append(
-                ProviderCandidate(
-                    url=url,
-                    url_idx=idx,
-                    key=key,
-                    model_name=entry.model_name,
-                    api_config=api_config,
-                    prefix_id=api_config.get('prefix_id'),
-                    capabilities=list(entry.capabilities or []),
-                    position=position,
+            candidate = _build_candidate(entry.model_id, position, list(entry.capabilities or []))
+            if candidate is None:
+                log.warning(
+                    'Failover provider model_id=%s not resolvable against current OPENAI_MODELS / config; skipping.',
+                    entry.model_id,
                 )
-            )
+                continue
+            candidates.append(candidate)
     else:
-        # Legacy path: single provider derived from OPENAI_MODELS cache.
-        models_state = request.app.state.OPENAI_MODELS or {}
-        model_id = payload.get('model')
-        model_entry = models_state.get(model_id)
-        if model_entry:
-            idx = model_entry['urlIdx']
-            if idx < len(base_urls):
-                url = base_urls[idx]
-                if url not in skip_set:
-                    key = keys[idx] if idx < len(keys) else ''
-                    api_config = configs.get(str(idx), configs.get(url, {}))
-                    candidates.append(
-                        ProviderCandidate(
-                            url=url,
-                            url_idx=idx,
-                            key=key,
-                            model_name=model_id,
-                            api_config=api_config,
-                            prefix_id=api_config.get('prefix_id'),
-                            capabilities=[],
-                            position=0,
-                        )
-                    )
+        # Legacy path: single provider derived from the incoming payload model id.
+        candidate = _build_candidate(payload.get('model'), 0, [])
+        if candidate is not None:
+            candidates.append(candidate)
 
     # Sink unhealthy providers to the end, but keep configured order among
     # equals so the primary still beats backup if both are healthy.

@@ -111,11 +111,10 @@
 	// Ordered list of OpenAI-compatible providers to try for this workspace
 	// model. Bound to FailoverProviders.svelte. Replaces the single
 	// base-model dropdown; the legacy `info.base_model_id` is still written
-	// on save (first provider's model name) so code paths that only know
+	// on save (first provider's model id) so code paths that only know
 	// about it keep working.
 	let failoverProviders: Array<{
-		connection_url: string;
-		model_name: string;
+		model_id: string;
 		capabilities: string[];
 	}> = [];
 
@@ -252,12 +251,10 @@
 		// Persist the ordered failover list and mirror the primary into the
 		// legacy base_model_id so code paths that only know the old shape
 		// keep working.
-		const validProviders = failoverProviders.filter(
-			(p) => p.connection_url && p.model_name
-		);
+		const validProviders = failoverProviders.filter((p) => p.model_id);
 		if (validProviders.length > 0) {
 			info.meta.failover_providers = validProviders;
-			info.base_model_id = validProviders[0].model_name;
+			info.base_model_id = validProviders[0].model_id;
 		} else {
 			if (info.meta.failover_providers) {
 				delete info.meta.failover_providers;
@@ -369,19 +366,19 @@
 			ragTopK = model?.meta?.rag_top_k ?? null;
 
 			// Failover config: prefer the new ordered list if present; fall
-			// back to the legacy base_model_id (one-entry list with an
-			// empty URL that the user can then point at a connection).
+			// back to the legacy base_model_id as a one-entry list so old
+			// models auto-migrate on first edit.
 			if (Array.isArray(model?.meta?.failover_providers) && model.meta.failover_providers.length > 0) {
-				failoverProviders = model.meta.failover_providers.map((p) => ({
-					connection_url: p.connection_url ?? '',
-					model_name: p.model_name ?? '',
+				failoverProviders = model.meta.failover_providers.map((p: any) => ({
+					// Tolerate the older {connection_url, model_name} shape
+					// by treating model_name as the id if model_id isn't set.
+					model_id: p.model_id ?? p.model_name ?? '',
 					capabilities: p.capabilities ?? []
 				}));
 			} else if (model?.base_model_id) {
 				failoverProviders = [
 					{
-						connection_url: '',
-						model_name: model.base_model_id,
+						model_id: model.base_model_id,
 						capabilities: []
 					}
 				];
@@ -659,12 +656,15 @@
 							</div>
 
 							{#if preset}
-								<div class="mb-1">
-									<div class=" text-xs font-medium mb-1 text-gray-500">
+								<div class="mb-3">
+									<div class=" text-xs font-medium mb-1.5 text-gray-500">
 										{$i18n.t('Providers (primary + failover)')}
 									</div>
 
-									<FailoverProviders bind:providers={failoverProviders} />
+									<FailoverProviders
+										bind:providers={failoverProviders}
+										currentModelId={edit ? id : null}
+									/>
 								</div>
 							{/if}
 
