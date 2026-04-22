@@ -202,8 +202,6 @@
 		const res = await _copyToClipboard(formatUsage(usage));
 		if (res) {
 			toast.success($i18n.t('Copied to clipboard'));
-		} else {
-			toast.error($i18n.t('Failed to copy'));
 		}
 	};
 
