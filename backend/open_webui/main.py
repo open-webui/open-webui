@@ -21,7 +21,7 @@ from typing import Optional
 from aiocache import cached
 import aiohttp
 import anyio.to_thread
-import requests
+
 from redis import Redis
 
 
@@ -46,7 +46,6 @@ from fastapi.staticfiles import StaticFiles
 from starlette_compress import CompressMiddleware
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.datastructures import Headers
@@ -58,8 +57,15 @@ from starsessions import (
 from starsessions.stores.redis import RedisStore
 
 from open_webui.utils import logger
+from open_webui.utils.asgi_middleware import (
+    AuthTokenMiddleware,
+    CommitSessionMiddleware,
+    RedirectMiddleware,
+    WebsocketUpgradeGuardMiddleware,
+)
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+from open_webui.utils.session_pool import get_session
 from open_webui.socket.main import (
     MODELS,
     app as socket_app,
@@ -67,6 +73,7 @@ from open_webui.socket.main import (
     periodic_session_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
+    get_user_id_from_session_pool,
 )
 from open_webui.routers import (
     analytics,
@@ -97,6 +104,8 @@ from open_webui.routers import (
     utils,
     scim,
     terminals,
+    automations,
+    calendar,
 )
 
 from open_webui.routers.retrieval import (
@@ -107,13 +116,13 @@ from open_webui.routers.retrieval import (
 )
 
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import ScopedSession, engine, get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import ScopedSession, engine, get_async_session
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
-from open_webui.models.chats import Chats
+from open_webui.models.chats import Chats, ChatForm
 
 from open_webui.config import (
     # Ollama
@@ -211,6 +220,8 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    AUDIO_TTS_MISTRAL_API_KEY,
+    AUDIO_TTS_MISTRAL_API_BASE_URL,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -238,6 +249,7 @@ from open_webui.config import (
     RAG_EXTERNAL_RERANKER_URL,
     RAG_EXTERNAL_RERANKER_API_KEY,
     RAG_EXTERNAL_RERANKER_TIMEOUT,
+    RAG_RERANKING_BATCH_SIZE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
@@ -375,12 +387,17 @@ from open_webui.config import (
     JWT_EXPIRES_IN,
     ENABLE_SIGNUP,
     ENABLE_LOGIN_FORM,
+    ENABLE_PASSWORD_CHANGE_FORM,
     ENABLE_API_KEYS,
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     API_KEYS_ALLOWED_ENDPOINTS,
     ENABLE_FOLDERS,
     FOLDER_MAX_FILE_COUNT,
+    ENABLE_AUTOMATIONS,
+    AUTOMATION_MAX_COUNT,
+    AUTOMATION_MIN_INTERVAL,
     ENABLE_CHANNELS,
+    ENABLE_CALENDAR,
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
     ENABLE_COMMUNITY_SHARING,
@@ -464,12 +481,14 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
+    async_reset_config,
 )
 from open_webui.env import (
     ENABLE_CUSTOM_MODEL_FALLBACK,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_INCLUDED_PATHS,
+    ENABLE_AUDIT_GET_REQUESTS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
@@ -510,6 +529,8 @@ from open_webui.env import (
     WEBUI_ADMIN_NAME,
     ENABLE_EASTER_EGGS,
     LOG_FORMAT,
+    # OAuth Back-Channel Logout
+    ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
 )
 
 
@@ -546,6 +567,7 @@ from open_webui.utils.oauth import (
     get_oauth_client_info_with_static_credentials,
     encrypt_data,
     decrypt_data,
+    resolve_oauth_client_info,
     OAuthManager,
     OAuthClientManager,
     OAuthClientInformationFull,
@@ -558,17 +580,18 @@ from open_webui.tasks import (
     list_task_ids_by_item_id,
     create_task,
     stop_task,
+    stop_item_tasks,
     list_tasks,
 )  # Import from tasks.py
 
 from open_webui.utils.redis import get_sentinels_from_env
 
 
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.constants import ERROR_MESSAGES, TASKS
 
 if SAFE_MODE:
     print('SAFE MODE ENABLED')
-    Functions.deactivate_all_functions()
+    # Functions.deactivate_all_functions() is awaited in lifespan below
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -615,21 +638,24 @@ async def lifespan(app: FastAPI):
     start_logger()
 
     if RESET_CONFIG_ON_START:
-        reset_config()
+        await async_reset_config()
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
 
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
-        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+        if await create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
+
+    if SAFE_MODE:
+        await Functions.deactivate_all_functions()
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info('Installing external dependencies of functions and tools...')
-    install_tool_and_function_dependencies()
+    await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -647,6 +673,10 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+
+    from open_webui.utils.automations import scheduler_worker_loop
+
+    asyncio.create_task(scheduler_worker_loop(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -703,6 +733,11 @@ async def lifespan(app: FastAPI):
     app.state.startup_complete = True
 
     yield
+
+    # Shutdown: clean up shared resources
+    from open_webui.utils.session_pool import close_session
+
+    await close_session()
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
@@ -831,6 +866,7 @@ app.state.BASE_MODELS = []
 app.state.config.WEBUI_URL = WEBUI_URL
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+app.state.config.ENABLE_PASSWORD_CHANGE_FORM = ENABLE_PASSWORD_CHANGE_FORM
 
 app.state.config.ENABLE_API_KEYS = ENABLE_API_KEYS
 app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS
@@ -865,7 +901,11 @@ app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
+app.state.config.ENABLE_AUTOMATIONS = ENABLE_AUTOMATIONS
+app.state.config.AUTOMATION_MAX_COUNT = AUTOMATION_MAX_COUNT
+app.state.config.AUTOMATION_MIN_INTERVAL = AUTOMATION_MIN_INTERVAL
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ENABLE_CALENDAR = ENABLE_CALENDAR
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
@@ -1010,6 +1050,7 @@ app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_EXTERNAL_RERANKER_URL = RAG_EXTERNAL_RERANKER_URL
 app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = RAG_EXTERNAL_RERANKER_API_KEY
 app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = RAG_EXTERNAL_RERANKER_TIMEOUT
+app.state.config.RAG_RERANKING_BATCH_SIZE = RAG_RERANKING_BATCH_SIZE
 
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
@@ -1159,6 +1200,7 @@ app.state.RERANKING_FUNCTION = get_reranking_function(
     app.state.config.RAG_RERANKING_ENGINE,
     app.state.config.RAG_RERANKING_MODEL,
     reranking_function=app.state.rf,
+    reranking_batch_size=app.state.config.RAG_RERANKING_BATCH_SIZE,
 )
 
 ########################################
@@ -1277,6 +1319,9 @@ app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_BASE_URL = AUDIO_TTS_AZURE_SPEECH_BASE_URL
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
+app.state.config.TTS_MISTRAL_API_KEY = AUDIO_TTS_MISTRAL_API_KEY
+app.state.config.TTS_MISTRAL_API_BASE_URL = AUDIO_TTS_MISTRAL_API_BASE_URL
+
 
 app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
@@ -1327,149 +1372,19 @@ if ENABLE_COMPRESSION_MIDDLEWARE:
     app.add_middleware(CompressMiddleware)
 
 
-class RedirectMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Check if the request is a GET request
-        if request.method == 'GET':
-            path = request.url.path
-            query_params = dict(parse_qs(urlparse(str(request.url)).query))
-
-            redirect_params = {}
-
-            # Check for the specific watch path and the presence of 'v' parameter
-            if path.endswith('/watch') and 'v' in query_params:
-                # Extract the first 'v' parameter
-                youtube_video_id = query_params['v'][0]
-                redirect_params['youtube'] = youtube_video_id
-
-            if 'shared' in query_params and len(query_params['shared']) > 0:
-                # PWA share_target support
-
-                text = query_params['shared'][0]
-                if text:
-                    urls = re.match(r'https://\S+', text)
-                    if urls:
-                        from open_webui.retrieval.loaders.youtube import _parse_video_id
-
-                        if youtube_video_id := _parse_video_id(urls[0]):
-                            redirect_params['youtube'] = youtube_video_id
-                        else:
-                            redirect_params['load-url'] = urls[0]
-                    else:
-                        redirect_params['q'] = text
-
-            if redirect_params:
-                redirect_url = f'/?{urlencode(redirect_params)}'
-                return RedirectResponse(url=redirect_url)
-
-        # Proceed with the normal flow of other requests
-        response = await call_next(request)
-        return response
-
-
+# All HTTP middlewares below are pure-ASGI implementations. The previous
+# `BaseHTTPMiddleware` / `@app.middleware('http')` versions wrapped the
+# downstream app in an anyio task group whose cancel scope cancelled
+# in-flight DB calls (and any other awaits) on client disconnect /
+# response completion — which surfaced as noisy SQLAlchemy
+# `terminate_force_close` tracebacks under aiosqlite and as random
+# CancelledError storms across the request path. See
+# `open_webui.utils.asgi_middleware` for the rationale.
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-
-
-class APIKeyRestrictionMiddleware:
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope['type'] == 'http':
-            request = Request(scope)
-            auth_header = request.headers.get('Authorization')
-            token = None
-
-            if auth_header:
-                parts = auth_header.split(' ', 1)
-                if len(parts) == 2:
-                    token = parts[1]
-
-            # Only apply restrictions if an sk- API key is used
-            if token and token.startswith('sk-'):
-                # Check if restrictions are enabled
-                if app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
-                    allowed_paths = [
-                        path.strip()
-                        for path in str(app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',')
-                        if path.strip()
-                    ]
-
-                    request_path = request.url.path
-
-                    # Match exact path or prefix path
-                    is_allowed = any(
-                        request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths
-                    )
-
-                    if not is_allowed:
-                        await JSONResponse(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            content={'detail': 'API key not allowed to access this endpoint.'},
-                        )(scope, receive, send)
-                        return
-
-        await self.app(scope, receive, send)
-
-
-app.add_middleware(APIKeyRestrictionMiddleware)
-
-
-@app.middleware('http')
-async def commit_session_after_request(request: Request, call_next):
-    response = await call_next(request)
-    # log.debug("Commit session after request")
-    try:
-        ScopedSession.commit()
-    finally:
-        # CRITICAL: remove() returns the connection to the pool.
-        # Without this, connections remain "checked out" and accumulate
-        # as "idle in transaction" in PostgreSQL.
-        ScopedSession.remove()
-    return response
-
-
-@app.middleware('http')
-async def check_url(request: Request, call_next):
-    start_time = int(time.time())
-    request.state.token = get_http_authorization_cred(request.headers.get('Authorization'))
-    # Fallback to cookie token for browser sessions
-    if request.state.token is None and request.cookies.get('token'):
-        from fastapi.security import HTTPAuthorizationCredentials
-
-        request.state.token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=request.cookies.get('token'))
-
-    # Fallback to x-api-key header for Anthropic Messages API routes
-    if request.state.token is None and request.headers.get('x-api-key'):
-        request_path = request.url.path
-        if request_path in ('/api/message', '/api/v1/messages') or request_path.startswith('/ollama/v1/messages'):
-            from fastapi.security import HTTPAuthorizationCredentials
-
-            request.state.token = HTTPAuthorizationCredentials(
-                scheme='Bearer', credentials=request.headers.get('x-api-key')
-            )
-
-    request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
-    response = await call_next(request)
-    process_time = int(time.time()) - start_time
-    response.headers['X-Process-Time'] = str(process_time)
-    return response
-
-
-@app.middleware('http')
-async def inspect_websocket(request: Request, call_next):
-    if '/ws/socket.io' in request.url.path and request.query_params.get('transport') == 'websocket':
-        upgrade = (request.headers.get('Upgrade') or '').lower()
-        connection = (request.headers.get('Connection') or '').lower().split(',')
-        # Check that there's the correct headers for an upgrade, else reject the connection
-        # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
-        if upgrade != 'websocket' or 'upgrade' not in connection:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={'detail': 'Invalid WebSocket upgrade request'},
-            )
-    return await call_next(request)
+app.add_middleware(CommitSessionMiddleware)
+app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
+app.add_middleware(WebsocketUpgradeGuardMiddleware)
 
 
 app.add_middleware(
@@ -1522,6 +1437,8 @@ if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
+app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
+app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1540,6 +1457,7 @@ if audit_level != AuditLevel.NONE:
         audit_level=audit_level,
         excluded_paths=AUDIT_EXCLUDED_PATHS,
         included_paths=AUDIT_INCLUDED_PATHS,
+        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
 ##################################
@@ -1588,7 +1506,7 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
             )
         )
 
-    models = get_filtered_models(models, user)
+    models = await get_filtered_models(models, user)
 
     log.debug(
         f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
@@ -1654,12 +1572,12 @@ async def chat_completion(
                 raise Exception('Model not found')
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
                 try:
-                    check_model_access(user, model)
+                    await check_model_access(user, model)
                 except Exception as e:
                     raise e
         else:
@@ -1707,13 +1625,30 @@ async def chat_completion(
         if model_info_params.get('reasoning_tags') is not None:
             reasoning_tags = model_info_params.get('reasoning_tags')
 
+        # parent_id signals intent:
+        #   null   → new chat (root message, no parent)
+        #   value  → follow-up (user message's parentId = prev assistant)
+        #   absent → legacy caller, no chat management
+        is_new_chat = 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id')
+        parent_id = form_data.pop('parent_id', None)
+        form_data.pop('new_chat', None)  # Legacy field
+
+        # Multi-model: {model_id: assistant_message_id}
+        # Single-model fallback: built from 'model' + 'id'
+        message_ids = form_data.pop('message_ids', None)
+        if not message_ids:
+            message_ids = {model_id: form_data.pop('id', None)}
+        else:
+            form_data.pop('id', None)
+
+        user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
         metadata = {
             'user_id': user.id,
             'chat_id': form_data.pop('chat_id', None),
-            'message_id': form_data.pop('id', None),
-            'parent_message': form_data.pop('parent_message', None),
-            'parent_message_id': form_data.pop('parent_id', None),
+            'user_message': user_message,
+            'user_message_id': user_message.get('id') if user_message else None,
             'session_id': form_data.pop('session_id', None),
+            'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
             'tool_servers': form_data.pop('tool_servers', None),
@@ -1736,40 +1671,166 @@ async def chat_completion(
             },
         }
 
+        if is_new_chat:
+            metadata['chat_id'] = str(uuid4())
+
         if metadata.get('chat_id') and user:
-            if not metadata['chat_id'].startswith('local:'):  # temporary chats are not stored
-                # Verify chat ownership — lightweight EXISTS check avoids
-                # deserializing the full chat JSON blob just to confirm the row exists
-                if (
-                    not Chats.is_chat_owner(metadata['chat_id'], user.id) and user.role != 'admin'
-                ):  # admins can access any chat
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=ERROR_MESSAGES.DEFAULT(),
+            chat_id = metadata['chat_id']
+            if not chat_id.startswith('local:'):  # temporary chats are not stored
+                if is_new_chat:
+                    # Build the full history upfront with ALL assistant placeholders
+                    user_message = metadata.get('user_message') or {}
+                    user_message_id = user_message.get('id') if user_message else None
+
+                    history_messages = {}
+                    all_assistant_ids = [assistant_id for assistant_id in message_ids.values() if assistant_id]
+
+                    if user_message_id and user_message:
+                        user_message['childrenIds'] = all_assistant_ids
+                        history_messages[user_message_id] = user_message
+
+                    for target_model_id, assistant_message_id in message_ids.items():
+                        if assistant_message_id:
+                            history_messages[assistant_message_id] = {
+                                'id': assistant_message_id,
+                                'parentId': user_message_id,
+                                'childrenIds': [],
+                                'role': 'assistant',
+                                'content': '',
+                                'done': False,
+                                'model': target_model_id,
+                                'timestamp': int(time.time()),
+                            }
+
+                    await Chats.insert_new_chat(
+                        chat_id,
+                        user.id,
+                        ChatForm(
+                            chat={
+                                'id': chat_id,
+                                'title': 'New Chat',
+                                'models': list(message_ids.keys()),
+                                'history': {
+                                    'currentId': all_assistant_ids[0] if all_assistant_ids else user_message_id,
+                                    'messages': history_messages,
+                                },
+                                'messages': [
+                                    {'role': 'user', 'content': user_message.get('content', '')},
+                                ]
+                                if user_message_id
+                                else [],
+                                'tags': [],
+                                'timestamp': int(time.time() * 1000),
+                            },
+                            folder_id=metadata.get('folder_id'),
+                        ),
                     )
 
-                # Insert chat files from parent message if any
-                parent_message = metadata.get('parent_message') or {}
-                parent_message_files = parent_message.get('files', [])
-                if parent_message_files:
-                    try:
-                        Chats.insert_chat_files(
-                            metadata['chat_id'],
-                            parent_message.get('id'),
-                            [
-                                file_item.get('id')
-                                for file_item in parent_message_files
-                                if file_item.get('type') == 'file'
-                            ],
-                            user.id,
+                    # Insert chat files from user message if any
+                    user_message_files = user_message.get('files', [])
+                    if user_message_files:
+                        try:
+                            await Chats.insert_chat_files(
+                                chat_id,
+                                user_message_id,
+                                [
+                                    file_item.get('id')
+                                    for file_item in user_message_files
+                                    if file_item.get('type') == 'file'
+                                ],
+                                user.id,
+                            )
+                        except Exception as e:
+                            log.debug(f'Error inserting chat files: {e}')
+                            pass
+                else:
+                    # Existing chat — verify ownership
+                    if not await Chats.is_chat_owner(chat_id, user.id) and user.role != 'admin':
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=ERROR_MESSAGES.DEFAULT(),
                         )
-                    except Exception as e:
-                        log.debug(f'Error inserting chat files: {e}')
-                        pass
+
+                    # Save user message to DB
+                    user_message = metadata.get('user_message') or {}
+                    if user_message and user_message.get('id'):
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            chat_id,
+                            user_message['id'],
+                            user_message,
+                        )
+
+                        # Link grandparent → user message (childrenIds)
+                        grandparent_id = user_message.get('parentId')
+                        if grandparent_id:
+                            grandparent = await Chats.get_message_by_id_and_message_id(chat_id, grandparent_id)
+                            if grandparent:
+                                child_ids = grandparent.get('childrenIds', [])
+                                if user_message['id'] not in child_ids:
+                                    child_ids.append(user_message['id'])
+                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        chat_id, grandparent_id, {'childrenIds': child_ids}
+                                    )
+
+                    # Insert chat files from user message if any
+                    user_message_files = user_message.get('files', [])
+                    if user_message_files:
+                        try:
+                            await Chats.insert_chat_files(
+                                chat_id,
+                                user_message.get('id'),
+                                [
+                                    file_item.get('id')
+                                    for file_item in user_message_files
+                                    if file_item.get('type') == 'file'
+                                ],
+                                user.id,
+                            )
+                        except Exception as e:
+                            log.debug(f'Error inserting chat files: {e}')
+                            pass
+
+                    # Save ALL assistant placeholders
+                    user_message_id = metadata.get('user_message_id')
+                    all_assistant_ids = [assistant_id for assistant_id in message_ids.values() if assistant_id]
+
+                    # Link user message → all assistant messages (childrenIds)
+                    if user_message_id and all_assistant_ids:
+                        existing_user_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id)
+                        if existing_user_message:
+                            child_ids = existing_user_message.get('childrenIds', [])
+                            for assistant_id in all_assistant_ids:
+                                if assistant_id not in child_ids:
+                                    child_ids.append(assistant_id)
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                chat_id,
+                                user_message_id,
+                                {'childrenIds': child_ids},
+                            )
+
+                    # Save each assistant placeholder
+                    for target_model_id, assistant_message_id in message_ids.items():
+                        if assistant_message_id:
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                chat_id,
+                                assistant_message_id,
+                                {
+                                    'id': assistant_message_id,
+                                    'parentId': user_message_id,
+                                    'childrenIds': [],
+                                    'role': 'assistant',
+                                    'content': '',
+                                    'done': False,
+                                    'model': target_model_id,
+                                    'timestamp': int(time.time()),
+                                },
+                            )
 
         request.state.metadata = metadata
         form_data['metadata'] = metadata
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.debug(f'Error processing chat metadata: {e}')
         raise HTTPException(
@@ -1777,105 +1838,181 @@ async def chat_completion(
             detail=str(e),
         )
 
-    async def process_chat(request, form_data, user, metadata, model):
+    async def process_chat(request, form_data, user, metadata, model, tasks=None):
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
             response = await chat_completion_handler(request, form_data, user)
-            if metadata.get('chat_id') and metadata.get('message_id'):
-                try:
-                    if not metadata['chat_id'].startswith('local:'):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'parentId': metadata.get('parent_message_id', None),
-                                'model': model_id,
-                            },
-                        )
-                except Exception:
-                    pass
 
-            ctx = build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+            # When the upstream provider returns an error (e.g. HTTP 400
+            # content-filter, quota exceeded), generate_chat_completion
+            # returns a JSONResponse instead of raising.  Detect this and
+            # raise so the except-block below emits chat:message:error +
+            # chat:tasks:cancel, unblocking the frontend.
+            if isinstance(response, JSONResponse) and response.status_code >= 400:
+                try:
+                    error_body = json.loads(response.body.decode('utf-8', 'replace'))
+                    detail = error_body.get('error', error_body) if isinstance(error_body, dict) else error_body
+                    if isinstance(detail, dict):
+                        detail = detail.get('message', detail.get('detail', str(detail)))
+                except Exception:
+                    detail = f'Provider returned HTTP {response.status_code}'
+                raise Exception(detail)
+
+            ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
 
             return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
             log.info('Chat processing was cancelled')
             try:
-                event_emitter = get_event_emitter(metadata)
-                await asyncio.shield(
-                    event_emitter(
-                        {'type': 'chat:tasks:cancel'},
+                event_emitter = await get_event_emitter(metadata)
+                if event_emitter:
+                    await asyncio.shield(
+                        event_emitter(
+                            {'type': 'chat:tasks:cancel'},
+                        )
                     )
-                )
             except Exception as e:
                 pass
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
-            log.debug(f'Error processing chat payload: {e}')
+            error_detail = e.detail if isinstance(e, HTTPException) else str(e)
+            log.error('Error processing chat payload: %s', error_detail)
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
                     if not metadata['chat_id'].startswith('local:'):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {
-                                'parentId': metadata.get('parent_message_id', None),
-                                'error': {'content': str(e)},
+                                'parentId': metadata.get('user_message_id', None),
+                                'error': {'content': error_detail},
                             },
                         )
 
-                    event_emitter = get_event_emitter(metadata)
-                    await event_emitter(
-                        {
-                            'type': 'chat:message:error',
-                            'data': {'error': {'content': str(e)}},
-                        }
-                    )
-                    await event_emitter(
-                        {'type': 'chat:tasks:cancel'},
-                    )
+                    event_emitter = await get_event_emitter(metadata)
+                    if event_emitter:
+                        await event_emitter(
+                            {
+                                'type': 'chat:message:error',
+                                'data': {'error': {'content': error_detail}},
+                            }
+                        )
+                        await event_emitter(
+                            {'type': 'chat:tasks:cancel'},
+                        )
 
                 except Exception:
                     pass
         finally:
+            # Clean up MCP clients.  Shield the entire block from
+            # CancelledError so disconnect() can finish even when the
+            # task is being stopped.  Each client is isolated so one
+            # failure doesn't skip the rest.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
-                    for client in reversed(mcp_clients.values()):
-                        await client.disconnect()
+
+                    async def _cleanup_mcp():
+                        for client in reversed(list(mcp_clients.values())):
+                            try:
+                                await client.disconnect()
+                            except Exception as e:
+                                log.debug(f'Error disconnecting MCP client: {e}')
+
+                    await asyncio.wait_for(
+                        asyncio.shield(_cleanup_mcp()),
+                        timeout=10.0,
+                    )
+            except asyncio.TimeoutError:
+                log.warning('MCP client cleanup timed out after 10 s')
             except Exception as e:
-                log.debug(f'Error cleaning up: {e}')
-                pass
+                log.debug(f'Error cleaning up MCP clients: {e}')
             # Emit chat:active=false when task completes
             try:
                 if metadata.get('chat_id'):
-                    event_emitter = get_event_emitter(metadata, update_db=False)
+                    event_emitter = await get_event_emitter(metadata, update_db=False)
                     if event_emitter:
                         await event_emitter({'type': 'chat:active', 'data': {'active': False}})
             except Exception as e:
                 log.debug(f'Error emitting chat:active: {e}')
 
-    if metadata.get('session_id') and metadata.get('chat_id') and metadata.get('message_id'):
-        # Asynchronous Chat Processing
-        task_id, _ = await create_task(
-            request.app.state.redis,
-            process_chat(request, form_data, user, metadata, model),
-            id=metadata['chat_id'],
-        )
-        # Emit chat:active=true when task starts
-        event_emitter = get_event_emitter(metadata, update_db=False)
-        if event_emitter:
-            await event_emitter({'type': 'chat:active', 'data': {'active': True}})
-        return {'status': True, 'task_id': task_id}
+    # Fan out: one task per model
+    if metadata.get('session_id') and metadata.get('chat_id'):
+        task_ids = []
+        chat_id = metadata['chat_id']
+
+        for idx, (target_model_id, assistant_message_id) in enumerate(message_ids.items()):
+            if not assistant_message_id:
+                continue
+
+            # Per-model metadata: own message_id + model
+            per_model_metadata = {
+                **metadata,
+                'message_id': assistant_message_id,
+            }
+
+            # Per-model form_data: own model
+            model_form_data = {
+                **form_data,
+                'model': target_model_id,
+                'metadata': per_model_metadata,
+            }
+
+            # Resolve the model object for this specific model
+            resolved_model = request.app.state.MODELS.get(target_model_id, model)
+
+            # Only the first model runs title/tags generation;
+            # subsequent models only run follow-ups.
+            task_id, _ = await create_task(
+                request.app.state.redis,
+                process_chat(
+                    request,
+                    model_form_data,
+                    user,
+                    per_model_metadata,
+                    resolved_model,
+                    tasks
+                    if idx == 0
+                    else {
+                        k: v
+                        for k, v in (tasks or {}).items()
+                        if k not in (TASKS.TITLE_GENERATION, TASKS.TAGS_GENERATION)
+                    }
+                    or None,
+                ),
+                id=chat_id,
+            )
+            task_ids.append(task_id)
+
+        # Emit chat:active=true
+        if task_ids:
+            event_emitter = await get_event_emitter(
+                {**metadata, 'message_id': list(message_ids.values())[0]},
+                update_db=False,
+            )
+            if event_emitter:
+                await event_emitter({'type': 'chat:active', 'data': {'active': True}})
+
+        return {
+            'status': True,
+            'task_ids': task_ids,
+            'chat_id': chat_id,
+        }
     else:
-        return await process_chat(request, form_data, user, metadata, model)
+        # Legacy/direct: single model, synchronous
+        metadata['message_id'] = list(message_ids.values())[0]
+        return await process_chat(request, form_data, user, metadata, model, tasks)
 
 
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+# Expose as app.state so internal callers (e.g. automations) can
+# use the full pipeline without importing from main.py (avoids circular deps).
+app.state.CHAT_COMPLETION_HANDLER = chat_completion
 
 
 ##################################
@@ -1940,6 +2077,8 @@ async def generate_messages(
 
 @app.post('/api/chat/completed')
 async def chat_completed(request: Request, form_data: dict, user=Depends(get_verified_user)):
+    """Deprecated: outlet filters now run inline during chat completion.
+    Kept for backward compatibility with external integrations."""
     try:
         model_item = form_data.pop('model_item', {})
 
@@ -1973,7 +2112,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user=De
 
 
 @app.post('/api/tasks/stop/{task_id}')
-async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_verified_user)):
+async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_admin_user)):
     try:
         result = await stop_task(request.app.state.redis, task_id)
         return result
@@ -1982,20 +2121,41 @@ async def stop_task_endpoint(request: Request, task_id: str, user=Depends(get_ve
 
 
 @app.get('/api/tasks')
-async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user)):
+async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
     return {'tasks': await list_tasks(request.app.state.redis)}
 
 
-@app.get('/api/tasks/chat/{chat_id}')
+@app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    chat = Chats.get_chat_by_id(chat_id)
-    if chat is None or chat.user_id != user.id:
-        return {'task_ids': []}
+    if chat_id.startswith('local:'):
+        socket_id = chat_id[len('local:') :]
+        owner_id = get_user_id_from_session_pool(socket_id)
+        if owner_id != user.id and user.role != 'admin':
+            return {'task_ids': []}
+    else:
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+            return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
     log.debug(f'Task IDs for chat {chat_id}: {task_ids}')
     return {'task_ids': task_ids}
+
+
+@app.post('/api/tasks/chat/{chat_id:path}/stop')
+async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
+    if chat_id.startswith('local:'):
+        socket_id = chat_id[len('local:') :]
+        owner_id = get_user_id_from_session_pool(socket_id)
+        if owner_id != user.id and user.role != 'admin':
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    else:
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    result = await stop_item_tasks(request.app.state.redis, chat_id)
+    return result
 
 
 ##################################
@@ -2029,9 +2189,9 @@ async def get_app_config(request: Request):
                 detail='Invalid token',
             )
         if data is not None and 'id' in data:
-            user = Users.get_user_by_id(data['id'])
+            user = await Users.get_user_by_id(data['id'])
 
-    user_count = Users.get_num_users()
+    user_count = await Users.get_num_users()
     onboarding = False
 
     if user is None:
@@ -2052,6 +2212,7 @@ async def get_app_config(request: Request):
             'enable_api_keys': app.state.config.ENABLE_API_KEYS,
             'enable_signup': app.state.config.ENABLE_SIGNUP,
             'enable_login_form': app.state.config.ENABLE_LOGIN_FORM,
+            'enable_password_change_form': app.state.config.ENABLE_PASSWORD_CHANGE_FORM,
             'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
             'enable_version_update_check': ENABLE_VERSION_UPDATE_CHECK,
             'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
@@ -2062,6 +2223,8 @@ async def get_app_config(request: Request):
                     'enable_folders': app.state.config.ENABLE_FOLDERS,
                     'folder_max_file_count': app.state.config.FOLDER_MAX_FILE_COUNT,
                     'enable_channels': app.state.config.ENABLE_CHANNELS,
+                    'enable_calendar': app.state.config.ENABLE_CALENDAR,
+                    'enable_automations': app.state.config.ENABLE_AUTOMATIONS,
                     'enable_notes': app.state.config.ENABLE_NOTES,
                     'enable_web_search': app.state.config.ENABLE_WEB_SEARCH,
                     'enable_code_execution': app.state.config.ENABLE_CODE_EXECUTION,
@@ -2240,7 +2403,7 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
         return {
             'model_ids': get_models_in_use(),
-            'user_count': Users.get_active_user_count(),
+            'user_count': await Users.get_active_user_count(),
         }
     except HTTPException:
         raise
@@ -2262,10 +2425,8 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
             auth_type = tool_server_connection.get('auth_type', 'none')
 
             if server_id and auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-                oauth_client_info = tool_server_connection.get('info', {}).get('oauth_client_info', '')
-
                 try:
-                    oauth_client_info = decrypt_data(oauth_client_info)
+                    oauth_client_info = resolve_oauth_client_info(tool_server_connection)
                     app.state.oauth_client_manager.add_client(
                         f'mcp:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
@@ -2326,18 +2487,25 @@ async def register_client(request, client_id: str) -> bool:
 
     try:
         if auth_type == 'oauth_2.1_static':
-            # Static credentials: rebuild from stored credentials + fresh metadata
-            existing_client_info = connection.get('info', {}).get('oauth_client_info', '')
-            if not existing_client_info:
-                log.error(f'No stored OAuth client info for static client {client_id}')
-                return False
-            existing_data = decrypt_data(existing_client_info)
+            # Static credentials: rebuild from admin-provided credentials + fresh metadata
+            info = connection.get('info', {})
+            oauth_client_id = info.get('oauth_client_id') or ''
+            oauth_client_secret = info.get('oauth_client_secret') or ''
+            if not oauth_client_id or not oauth_client_secret:
+                # Fall back to blob for backward compatibility
+                existing_client_info = info.get('oauth_client_info', '')
+                if not existing_client_info:
+                    log.error(f'No stored OAuth client info for static client {client_id}')
+                    return False
+                existing_data = decrypt_data(existing_client_info)
+                oauth_client_id = oauth_client_id or existing_data.get('client_id', '')
+                oauth_client_secret = oauth_client_secret or existing_data.get('client_secret', '')
             oauth_client_info = await get_oauth_client_info_with_static_credentials(
                 request,
                 client_id,
                 server_url,
-                oauth_client_id=existing_data.get('client_id', ''),
-                oauth_client_secret=existing_data.get('client_secret', ''),
+                oauth_client_id=oauth_client_id,
+                oauth_client_secret=oauth_client_secret,
             )
         else:
             oauth_client_info = await get_oauth_client_info_with_dynamic_client_registration(
@@ -2447,15 +2615,36 @@ async def oauth_login_callback(
     provider: str,
     request: Request,
     response: Response,
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     return await oauth_manager.handle_callback(request, provider, response, db=db)
+
+
+############################
+# OIDC Back-Channel Logout
+############################
+
+
+@app.post('/oauth/backchannel-logout')
+async def oauth_backchannel_logout(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not ENABLE_OAUTH_BACKCHANNEL_LOGOUT:
+        raise HTTPException(status_code=404)
+    return await oauth_manager.handle_backchannel_logout(request, db=db)
 
 
 @app.get('/manifest.json')
 async def get_manifest_json():
     if app.state.EXTERNAL_PWA_MANIFEST_URL:
-        return requests.get(app.state.EXTERNAL_PWA_MANIFEST_URL).json()
+        session = await get_session()
+        async with session.get(
+            app.state.EXTERNAL_PWA_MANIFEST_URL,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            r.raise_for_status()
+            return await r.json()
     else:
         return {
             'name': app.state.WEBUI_NAME,

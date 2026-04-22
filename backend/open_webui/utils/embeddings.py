@@ -68,7 +68,7 @@ async def generate_embeddings(
     # Access filtering
     if not getattr(request.state, 'direct', False):
         if not bypass_filter and user.role == 'user':
-            check_model_access(user, model)
+            await check_model_access(user, model)
 
     # Ollama backend — use /api/embed which supports batch input natively
     if model.get('owned_by') == 'ollama':

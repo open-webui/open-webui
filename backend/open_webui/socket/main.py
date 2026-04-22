@@ -312,6 +312,24 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
         log.debug(f'Failed to make users {user_ids} join room {room}: {e}')
 
 
+async def disconnect_user_sessions(user_id: str):
+    """Disconnect all Socket.IO sessions belonging to a user.
+
+    Call this when a user's role is changed or the user is deleted so that
+    stale role/permission data cached in SESSION_POOL is invalidated.
+    The client will automatically reconnect and re-authenticate with
+    fresh data from the database.
+    """
+    try:
+        session_ids = get_session_ids_from_room(f'user:{user_id}')
+        for sid in session_ids:
+            await sio.disconnect(sid)
+        if session_ids:
+            log.info(f'Disconnected {len(session_ids)} session(s) for user {user_id}')
+    except Exception as e:
+        log.warning(f'Failed to disconnect sessions for user {user_id}: {e}')
+
+
 @sio.on('usage')
 async def usage(sid, data):
     if sid in SESSION_POOL:
@@ -333,7 +351,7 @@ async def connect(sid, environ, auth):
         data = decode_token(auth['token'])
 
         if data is not None and 'id' in data:
-            user = Users.get_user_by_id(data['id'])
+            user = await Users.get_user_by_id(data['id'])
 
         if user:
             SESSION_POOL[sid] = {
@@ -361,7 +379,7 @@ async def user_join(sid, data):
     if data is None or 'id' not in data:
         return
 
-    user = Users.get_user_by_id(data['id'])
+    user = await Users.get_user_by_id(data['id'])
     if not user:
         return
 
@@ -381,8 +399,8 @@ async def user_join(sid, data):
     await sio.enter_room(sid, f'user:{user.id}')
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or has_permission(user.id, 'features.channels'):
-        channels = Channels.get_channels_by_user_id(user.id)
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+        channels = await Channels.get_channels_by_user_id(user.id)
         log.debug(f'{channels=}')
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
@@ -395,7 +413,7 @@ async def heartbeat(sid, data):
     user = SESSION_POOL.get(sid)
     if user:
         SESSION_POOL[sid] = {**user, 'last_seen_at': int(time.time())}
-        await asyncio.to_thread(Users.update_last_active_by_id, user['id'])
+        await Users.update_last_active_by_id(user['id'])
 
 
 @sio.on('join-channels')
@@ -408,13 +426,13 @@ async def join_channel(sid, data):
     if data is None or 'id' not in data:
         return
 
-    user = Users.get_user_by_id(data['id'])
+    user = await Users.get_user_by_id(data['id'])
     if not user:
         return
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or has_permission(user.id, 'features.channels'):
-        channels = Channels.get_channels_by_user_id(user.id)
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+        channels = await Channels.get_channels_by_user_id(user.id)
         log.debug(f'{channels=}')
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
@@ -430,11 +448,11 @@ async def join_note(sid, data):
     if token_data is None or 'id' not in token_data:
         return
 
-    user = Users.get_user_by_id(token_data['id'])
+    user = await Users.get_user_by_id(token_data['id'])
     if not user:
         return
 
-    note = Notes.get_note_by_id(data['note_id'])
+    note = await Notes.get_note_by_id(data['note_id'])
     if not note:
         log.error(f'Note {data["note_id"]} not found for user {user.id}')
         return
@@ -442,7 +460,7 @@ async def join_note(sid, data):
     if (
         user.role != 'admin'
         and user.id != note.user_id
-        and not AccessGrants.has_access(
+        and not await AccessGrants.has_access(
             user_id=user.id,
             resource_type='note',
             resource_id=note.id,
@@ -488,7 +506,20 @@ async def channel_events(sid, data):
             room=room,
         )
     elif event_type == 'last_read_at':
-        Channels.update_member_last_read_at(data['channel_id'], user['id'])
+        await Channels.update_member_last_read_at(data['channel_id'], user['id'])
+
+
+@sio.on('events:chat')
+async def chat_events(sid, data):
+    user = SESSION_POOL.get(sid)
+    if not user:
+        return
+
+    event_data = data.get('data', {})
+    event_type = event_data.get('type')
+
+    if event_type == 'last_read_at':
+        await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
 
 
 def normalize_document_id(document_id: str) -> str:
@@ -516,7 +547,7 @@ async def ydoc_document_join(sid, data):
 
         if document_id.startswith('note:'):
             note_id = document_id.split(':')[1]
-            note = Notes.get_note_by_id(note_id)
+            note = await Notes.get_note_by_id(note_id)
             if not note:
                 log.error(f'Note {note_id} not found')
                 return
@@ -524,7 +555,7 @@ async def ydoc_document_join(sid, data):
             if (
                 user.get('role') != 'admin'
                 and user.get('id') != note.user_id
-                and not AccessGrants.has_access(
+                and not await AccessGrants.has_access(
                     user_id=user.get('id'),
                     resource_type='note',
                     resource_id=note.id,
@@ -589,7 +620,7 @@ async def document_save_handler(document_id, data, user):
 
     if document_id.startswith('note:'):
         note_id = document_id.split(':')[1]
-        note = Notes.get_note_by_id(note_id)
+        note = await Notes.get_note_by_id(note_id)
         if not note:
             log.error(f'Note {note_id} not found')
             return
@@ -597,17 +628,17 @@ async def document_save_handler(document_id, data, user):
         if (
             user.get('role') != 'admin'
             and user.get('id') != note.user_id
-            and not AccessGrants.has_access(
+            and not await AccessGrants.has_access(
                 user_id=user.get('id'),
                 resource_type='note',
                 resource_id=note.id,
-                permission='read',
+                permission='write',
             )
         ):
-            log.error(f'User {user.get("id")} does not have access to note {note_id}')
+            log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
 
-        Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+        await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 
 
 @sio.on('ydoc:document:state')
@@ -666,6 +697,31 @@ async def yjs_document_update(sid, data):
             log.warning(f'Session {sid} not in room {room}. Rejecting update.')
             return
 
+        # Verify write permission — room membership only proves read access
+        user = SESSION_POOL.get(sid)
+        if not user:
+            return
+
+        if document_id.startswith('note:'):
+            note_id = document_id.split(':')[1]
+            note = await Notes.get_note_by_id(note_id)
+            if not note:
+                log.error(f'Note {note_id} not found')
+                return
+
+            if (
+                user.get('role') != 'admin'
+                and user.get('id') != note.user_id
+                and not await AccessGrants.has_access(
+                    user_id=user.get('id'),
+                    resource_type='note',
+                    resource_id=note.id,
+                    permission='write',
+                )
+            ):
+                log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
+                return
+
         try:
             await stop_item_tasks(REDIS, document_id)
         except Exception:
@@ -693,10 +749,6 @@ async def yjs_document_update(sid, data):
             skip_sid=sid,
         )
 
-        user = SESSION_POOL.get(sid)
-        if not user:
-            return
-
         async def debounced_save():
             await asyncio.sleep(0.5)
             await document_save_handler(document_id, data.get('data', {}), user)
@@ -712,7 +764,7 @@ async def yjs_document_update(sid, data):
 async def yjs_document_leave(sid, data):
     """Handle user leaving a document"""
     try:
-        document_id = data['document_id']
+        document_id = normalize_document_id(data['document_id'])
         user_id = data.get('user_id', sid)
 
         log.info(f'User {user_id} leaving document {document_id}')
@@ -780,7 +832,7 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
-def get_event_emitter(request_info, update_db=True):
+async def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info['user_id']
         chat_id = request_info['chat_id']
@@ -800,16 +852,14 @@ def get_event_emitter(request_info, update_db=True):
             event_type = event_data.get('type')
 
             if event_type == 'status':
-                await asyncio.to_thread(
-                    Chats.add_message_status_to_chat_by_id_and_message_id,
+                await Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                     event_data.get('data', {}),
                 )
 
             elif event_type == 'message':
-                message = await asyncio.to_thread(
-                    Chats.get_message_by_id_and_message_id,
+                message = await Chats.get_message_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                 )
@@ -818,8 +868,7 @@ def get_event_emitter(request_info, update_db=True):
                     content = message.get('content', '')
                     content += event_data.get('data', {}).get('content', '')
 
-                    await asyncio.to_thread(
-                        Chats.upsert_message_to_chat_by_id_and_message_id,
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         request_info['chat_id'],
                         request_info['message_id'],
                         {
@@ -830,8 +879,7 @@ def get_event_emitter(request_info, update_db=True):
             elif event_type == 'replace':
                 content = event_data.get('data', {}).get('content', '')
 
-                await asyncio.to_thread(
-                    Chats.upsert_message_to_chat_by_id_and_message_id,
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                     {
@@ -840,8 +888,7 @@ def get_event_emitter(request_info, update_db=True):
                 )
 
             elif event_type == 'embeds':
-                message = await asyncio.to_thread(
-                    Chats.get_message_by_id_and_message_id,
+                message = await Chats.get_message_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                 )
@@ -849,8 +896,7 @@ def get_event_emitter(request_info, update_db=True):
                 embeds = event_data.get('data', {}).get('embeds', [])
                 embeds.extend(message.get('embeds', []))
 
-                await asyncio.to_thread(
-                    Chats.upsert_message_to_chat_by_id_and_message_id,
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                     {
@@ -859,8 +905,7 @@ def get_event_emitter(request_info, update_db=True):
                 )
 
             elif event_type == 'files':
-                message = await asyncio.to_thread(
-                    Chats.get_message_by_id_and_message_id,
+                message = await Chats.get_message_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                 )
@@ -868,8 +913,7 @@ def get_event_emitter(request_info, update_db=True):
                 files = event_data.get('data', {}).get('files', [])
                 files.extend(message.get('files', []))
 
-                await asyncio.to_thread(
-                    Chats.upsert_message_to_chat_by_id_and_message_id,
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
                     request_info['message_id'],
                     {
@@ -880,8 +924,7 @@ def get_event_emitter(request_info, update_db=True):
             elif event_type in ('source', 'citation'):
                 data = event_data.get('data', {})
                 if data.get('type') is None:
-                    message = await asyncio.to_thread(
-                        Chats.get_message_by_id_and_message_id,
+                    message = await Chats.get_message_by_id_and_message_id(
                         request_info['chat_id'],
                         request_info['message_id'],
                     )
@@ -889,8 +932,7 @@ def get_event_emitter(request_info, update_db=True):
                     sources = message.get('sources', [])
                     sources.append(data)
 
-                    await asyncio.to_thread(
-                        Chats.upsert_message_to_chat_by_id_and_message_id,
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         request_info['chat_id'],
                         request_info['message_id'],
                         {
@@ -904,7 +946,7 @@ def get_event_emitter(request_info, update_db=True):
         return None
 
 
-def get_event_call(request_info):
+async def get_event_call(request_info):
     async def __event_caller__(event_data):
         response = await sio.call(
             'events',

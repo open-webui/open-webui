@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import equal from 'fast-deep-equal';
 
 	marked.use({
 		breaks: true,
@@ -35,6 +36,18 @@
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
+	// Produce single newlines between paragraphs instead of double.
+	// TipTap wraps every line in <p> tags; the default Turndown rule emits
+	// \n\n around each paragraph which then required a destructive
+	// replaceAll('\n\n','\n') that also wiped blank lines inside code blocks.
+	// This rule eliminates that hack so <pre><code> content is untouched.
+	turndownService.addRule('singleNewlineParagraphs', {
+		filter: 'p',
+		replacement: function (content) {
+			return '\n' + content + '\n';
+		}
+	});
 
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
@@ -435,7 +448,6 @@
 
 	export const setText = (text: string) => {
 		if (!editor || !editor.view) return;
-		text = text.replaceAll('\n\n', '\n');
 
 		if (text === '') {
 			editor.commands.clearContent();
@@ -1246,7 +1258,7 @@
 		}
 
 		if (json) {
-			if (JSON.stringify(value) !== JSON.stringify(jsonValue)) {
+			if (!equal(value, jsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}

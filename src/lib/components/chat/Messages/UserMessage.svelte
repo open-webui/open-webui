@@ -7,6 +7,7 @@
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -58,7 +59,7 @@
 		if (source) {
 			if (message.content !== source.content) {
 				message = structuredClone(source);
-			} else if (JSON.stringify(message) !== JSON.stringify(source)) {
+			} else if (!equal(message, source)) {
 				message = structuredClone(source);
 			}
 		}
@@ -550,8 +551,12 @@
 									class="{($settings?.highContrastMode ?? false)
 										? ''
 										: 'invisible group-hover:visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
-									on:click={() => {
-										showDeleteConfirm = true;
+									on:click={(e) => {
+										if (e.shiftKey) {
+											deleteMessageHandler();
+										} else {
+											showDeleteConfirm = true;
+										}
 									}}
 								>
 									<svg

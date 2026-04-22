@@ -13,6 +13,7 @@
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import equal from 'fast-deep-equal';
 
 	import {
 		chatId,
@@ -46,7 +47,8 @@
 		selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
-		chatRequestQueues
+		chatRequestQueues,
+		desktopEvent
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -80,11 +82,11 @@
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
-		chatCompleted,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
 		stopTask,
+		stopTasksByChatId,
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
@@ -159,6 +161,8 @@
 	let chat = null;
 	let tags = [];
 
+	let chatTasks = [];
+
 	let history = {
 		messages: {},
 		currentId: null
@@ -177,6 +181,12 @@
 	}
 
 	const navigateHandler = async () => {
+		// Mark the outgoing chat as read before loading the new one.
+		// $chatId still holds the previous chat here — loadChat() updates it.
+		if ($chatId && $chatId !== chatIdProp && !$temporaryChatEnabled) {
+			updateLastReadAt($chatId);
+		}
+
 		loading = true;
 
 		prompt = '';
@@ -198,6 +208,11 @@
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
+
+			// Mark chat read when initially loading it
+			if (chatIdProp && !$temporaryChatEnabled) {
+				updateLastReadAt(chatIdProp);
+			}
 
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
@@ -239,7 +254,7 @@
 			messageInput?.setText(data, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
 					await tick();
-					submitPrompt(prompt);
+					submitHandler(prompt);
 				}
 			});
 		}
@@ -263,7 +278,7 @@
 	};
 
 	let oldSelectedModelIds = [''];
-	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
+	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
 		onSelectedModelIdsChange();
 	}
 
@@ -362,6 +377,11 @@
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 				}
 			}
+
+			// Set Default Terminal
+			if (model?.info?.meta?.terminalId) {
+				selectedTerminalId.set(model.info.meta.terminalId);
+			}
 		}
 	};
 
@@ -399,6 +419,13 @@
 		await tick();
 
 		saveChatHandler(_chatId, history);
+	};
+
+	const updateLastReadAt = (id) => {
+		$socket?.emit('events:chat', {
+			chat_id: id,
+			data: { type: 'last_read_at' }
+		});
 	};
 
 	const terminalEventHandler = (type: string, data: any) => {
@@ -449,6 +476,8 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:tasks') {
+					chatTasks = data.tasks;
 				} else if (type === 'chat:message:embeds' || type === 'embeds') {
 					message.embeds = data.embeds;
 
@@ -468,6 +497,23 @@
 					if (autoScroll) {
 						scrollToBottom('smooth');
 					}
+				} else if (type === 'chat:outlet') {
+					// Outlet filter ran on backend — sync in-memory state
+					const outletMessages = data.messages ?? [];
+					for (const msg of outletMessages) {
+						if (msg?.id && history.messages[msg.id]) {
+							const existing = history.messages[msg.id];
+							if (existing.content !== msg.content) {
+								history.messages[msg.id] = {
+									...existing,
+									originalContent: existing.content,
+									...msg
+								};
+							}
+						}
+					}
+					history = history;
+					return; // Patches history.messages directly; skip the trailing write-back.
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
 					message.favorite = data.favorite;
@@ -586,7 +632,7 @@
 
 			if (prompt !== '') {
 				await tick();
-				submitPrompt(prompt);
+				submitHandler(prompt);
 			}
 		}
 
@@ -607,7 +653,7 @@
 			if (event.data.text !== '') {
 				if (isSameOrigin) {
 					await tick();
-					submitPrompt(event.data.text);
+					submitHandler(event.data.text);
 				} else {
 					// Cross-origin: ask user to confirm before submitting
 					eventConfirmationInput = false;
@@ -616,7 +662,7 @@
 					eventCallback = async (confirmed: boolean) => {
 						if (confirmed) {
 							await tick();
-							submitPrompt(event.data.text);
+							submitHandler(event.data.text);
 						}
 					};
 					showEventConfirmation = true;
@@ -629,7 +675,7 @@
 		if (
 			$selectedFolder &&
 			selectedModels.filter((modelId) => modelId !== '').length > 0 &&
-			JSON.stringify($selectedFolder?.data?.model_ids) !== JSON.stringify(selectedModels)
+			!equal($selectedFolder?.data?.model_ids, selectedModels)
 		) {
 			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
 				data: {
@@ -711,10 +757,7 @@
 
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
-			if (
-				folder?.data?.model_ids &&
-				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
-			) {
+			if (folder?.data?.model_ids && !equal(selectedModels, folder.data.model_ids)) {
 				selectedModels = folder.data.model_ids;
 
 				console.log('Set selectedModels from folder data:', selectedModels);
@@ -764,6 +807,9 @@
 
 		return () => {
 			try {
+				if (chatIdProp && !$temporaryChatEnabled) {
+					updateLastReadAt(chatIdProp);
+				}
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
@@ -1156,6 +1202,7 @@
 		chatFiles = [];
 		params = {};
 		taskIds = null;
+		chatTasks = [];
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
@@ -1205,14 +1252,53 @@
 			showControls.set(true);
 		}
 
-		if ($page.url.searchParams.get('q')) {
+		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
+		if ($desktopEvent) {
+			const event = $desktopEvent;
+			desktopEvent.set(null);
+
+			if (event.type === 'call') {
+				// Defer to next macrotask so the call overlay isn't clobbered by
+				// showControlsSubscribe's initial callback (value=false → set(false))
+				// which runs as a pending microtask after this function.
+				setTimeout(() => {
+					showCallOverlay.set(true);
+					showControls.set(true);
+				}, 0);
+			} else if (event.type === 'query') {
+				const query = event.data?.query;
+				const eventFiles = event.data?.files;
+
+				// Attach screenshot images from desktop (e.g. Spotlight region capture)
+				if (eventFiles?.length) {
+					for (const ef of eventFiles) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: ef.dataUrl,
+								name: ef.name
+							}
+						];
+					}
+				}
+
+				if (query || eventFiles?.length) {
+					if (query) {
+						messageInput?.setText(query);
+					}
+					await tick();
+					submitHandler(query || '');
+				}
+			}
+		} else if ($page.url.searchParams.get('q')) {
 			const q = $page.url.searchParams.get('q') ?? '';
 			messageInput?.setText(q);
 
 			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
 					await tick();
-					submitPrompt(q);
+					submitHandler(q);
 				}
 			}
 		}
@@ -1268,12 +1354,20 @@
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
 
+				// Load tasks from chat-level DB field
+				chatTasks = chat?.tasks ?? [];
+
 				autoScroll = true;
 				await tick();
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message && message.role === 'assistant' && message.done !== false) {
+						if (
+							message &&
+							message.role === 'assistant' &&
+							message.id !== history.currentId &&
+							message.done !== false
+						) {
 							message.done = true;
 						}
 					}
@@ -1285,6 +1379,17 @@
 
 				if (taskRes) {
 					taskIds = taskRes.task_ids;
+				}
+
+				// If no active tasks and current message is incomplete, generation was interrupted
+				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
+				if (
+					currentMessage &&
+					currentMessage.role === 'assistant' &&
+					!currentMessage.done &&
+					(!taskIds || taskIds.length === 0)
+				) {
+					currentMessage.done = true;
 				}
 
 				await tick();
@@ -1317,80 +1422,37 @@
 		}
 	};
 
+	let processingQueueChats = new Set<string>();
+
 	const processNextInQueue = async (targetChatId: string) => {
+		if (processingQueueChats.has(targetChatId)) return;
+
 		const queue = $chatRequestQueues[targetChatId];
 		if (!queue || queue.length === 0) return;
 
-		const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
-		const combinedFiles = queue.flatMap((m) => m.files);
+		processingQueueChats.add(targetChatId);
+		try {
+			const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
+			const combinedFiles = queue.flatMap((m) => m.files);
 
-		chatRequestQueues.update((q) => {
-			const { [targetChatId]: _, ...rest } = q;
-			return rest;
-		});
+			chatRequestQueues.update((q) => {
+				const { [targetChatId]: _, ...rest } = q;
+				return rest;
+			});
 
-		files = combinedFiles;
-		await tick();
-		await submitPrompt(combinedPrompt);
+			await submitPrompt(combinedPrompt, combinedFiles);
+		} finally {
+			processingQueueChats.delete(targetChatId);
+		}
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
-		const res = await chatCompleted(localStorage.token, {
-			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.usage ? { usage: m.usage } : {}),
-				...(m.sources ? { sources: m.sources } : {})
-			})),
-			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-			model_item: $models.find((m) => m.id === modelId),
-			chat_id: _chatId,
-			session_id: $socket?.id,
-			id: responseMessageId
-		}).catch((error) => {
-			toast.error(`${error}`);
-			messages.at(-1).error = { content: error };
-
-			return null;
-		});
-
-		if (res !== null && res.messages) {
-			// Update chat history with the new messages
-			for (const message of res.messages) {
-				if (message?.id) {
-					// Add null check for message and message.id
-					history.messages[message.id] = {
-						...history.messages[message.id],
-						...(history.messages[message.id].content !== message.content
-							? { originalContent: history.messages[message.id].content }
-							: {}),
-						...message
-					};
-				}
-			}
+		// Backend handles outlet filters and persistence inline.
+		// Just refresh the sidebar chat list.
+		if ($chatId == _chatId && !$temporaryChatEnabled) {
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
-
-		await tick();
-
-		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			}
-		}
-
 		taskIds = null;
 	};
 
@@ -1759,14 +1821,63 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitPrompt', userPrompt, $chatId);
+	const submitPrompt = async (inputContent, inputFiles) => {
+		const _files = structuredClone(inputFiles);
+
+		chatFiles.push(
+			..._files.filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
+			)
+		);
+		chatFiles = chatFiles.filter(
+			// Remove duplicates
+			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
+		);
+
+		// Create user message
+		let userMessageId = uuidv4();
+		let userMessage = {
+			id: userMessageId,
+			parentId: history.currentId ?? null,
+			childrenIds: [],
+			role: 'user',
+			content: inputContent,
+			files: _files.length > 0 ? _files : undefined,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			models: selectedModels
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[userMessageId] = userMessage;
+
+		// Append messageId to childrenIds of parent message
+		if (history.currentId !== null) {
+			history.messages[history.currentId].childrenIds.push(userMessageId);
+		}
+
+		history.currentId = userMessageId;
+
+		// focus on chat input (skip during voice call to avoid triggering mobile keyboard)
+		if (!$showCallOverlay) {
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		}
+
+		saveSessionSelectedModels();
+
+		await sendMessage(history, userMessageId);
+	};
+
+	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
+		console.log('submitHandler', userPrompt, $chatId);
 
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
+		if (!equal(selectedModels, _selectedModels)) {
 			selectedModels = _selectedModels;
 		}
 
@@ -1840,57 +1951,14 @@
 			}
 		}
 
+		// Clear input and submit
 		messageInput?.setText('');
 		prompt = '';
-
-		const messages = createMessagesList(history, history.currentId);
 		const _files = structuredClone(files);
-
-		chatFiles.push(
-			..._files.filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
-		);
-		chatFiles = chatFiles.filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
-
 		files = [];
 		messageInput?.setText('');
 
-		// Create user message
-		let userMessageId = uuidv4();
-		let userMessage = {
-			id: userMessageId,
-			parentId: messages.length !== 0 ? messages.at(-1).id : null,
-			childrenIds: [],
-			role: 'user',
-			content: userPrompt,
-			files: _files.length > 0 ? _files : undefined,
-			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
-		};
-
-		// Add message to history and Set currentId to messageId
-		history.messages[userMessageId] = userMessage;
-		history.currentId = userMessageId;
-
-		// Append messageId to childrenIds of parent message
-		if (messages.length !== 0) {
-			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
-		}
-
-		// focus on chat input
-		const chatInput = document.getElementById('chat-input');
-		chatInput?.focus();
-
-		saveSessionSelectedModels();
-
-		await sendMessage(history, userMessageId, { newChat: true });
+		await submitPrompt(userPrompt, _files);
 	};
 
 	const sendMessage = async (
@@ -1899,13 +1967,11 @@
 		{
 			messages = null,
 			modelId = null,
-			modelIdx = null,
-			newChat = false
+			modelIdx = null
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
-			newChat?: boolean;
 		} = {}
 	) => {
 		if (autoScroll) {
@@ -1924,6 +1990,8 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
+		// Build message_ids map: {model_id: assistant_message_id}
+		const messageIdsMap: Record<string, string> = {};
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -1935,6 +2003,7 @@
 					childrenIds: [],
 					role: 'assistant',
 					content: '',
+					done: false,
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
@@ -1947,7 +2016,6 @@
 
 				// Append messageId to childrenIds of parent message
 				if (parentId !== null && history.messages[parentId]) {
-					// Add null check before accessing childrenIds
 					history.messages[parentId].childrenIds = [
 						...history.messages[parentId].childrenIds,
 						responseMessageId
@@ -1955,68 +2023,71 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
+				messageIdsMap[modelId] = responseMessageId;
 			}
 		}
 		history = history;
 
-		// Create new chat if newChat is true and first user message
-		if (newChat && _history.messages[_history.currentId].parentId === null) {
-			_chatId = await initChatHandler(_history);
+		// New chat — backend generates the chat_id on first request
+		if (!_chatId) {
+			if ($temporaryChatEnabled) {
+				_chatId = `local:${$socket?.id}`;
+				await chatId.set(_chatId);
+			}
+			await tick();
 		}
 
 		await tick();
 
+		// Re-clone history so sendMessageSocket gets the response messages we just added
 		_history = structuredClone(history);
-		// Save chat after all messages have been created
-		await saveChatHandler(_chatId, _history);
 
-		await Promise.all(
-			selectedModelIds.map(async (modelId, _modelIdx) => {
-				console.log('modelId', modelId);
-				const model = $models.filter((m) => m.id === modelId).at(0);
+		// Vision capability check
+		for (const mid of selectedModelIds) {
+			const model = $models.filter((m) => m.id === mid).at(0);
+			if (model) {
+				const hasImages = createMessagesList(_history, parentId).some((message) =>
+					message.files?.some(
+						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+					)
+				);
 
-				if (model) {
-					// If there are image files, check if model is vision capable
-					// Skip this check if image generation is enabled, as images may be for editing or are generated outputs in the history
-					const hasImages = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some(
-							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-						)
+				if (
+					hasImages &&
+					!(model.info?.meta?.capabilities?.vision ?? true) &&
+					!imageGenerationEnabled
+				) {
+					toast.error(
+						$i18n.t('Model {{modelName}} is not vision capable', {
+							modelName: model.name ?? model.id
+						})
 					);
-
-					if (
-						hasImages &&
-						!(model.info?.meta?.capabilities?.vision ?? true) &&
-						!imageGenerationEnabled
-					) {
-						toast.error(
-							$i18n.t('Model {{modelName}} is not vision capable', {
-								modelName: model.name ?? model.id
-							})
-						);
-					}
-
-					let responseMessageId =
-						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-
-					scrollToBottom();
-					await sendMessageSocket(
-						model,
-						messages && messages.length > 0
-							? messages
-							: createMessagesList(_history, responseMessageId),
-						_history,
-						responseMessageId,
-						_chatId
-					);
-
-					if (chatEventEmitter) clearInterval(chatEventEmitter);
-				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
-			})
-		);
+			}
+		}
+
+		// Single request — backend fans out to all models
+		const primaryModelId = selectedModelIds[0];
+		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
+		const primaryResponseMessageId = messageIdsMap[primaryModelId];
+
+		if (primaryModel && primaryResponseMessageId) {
+			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
+
+			scrollToBottom();
+			await sendMessageSocket(
+				primaryModel,
+				messages && messages.length > 0
+					? messages
+					: createMessagesList(_history, primaryResponseMessageId),
+				_history,
+				primaryResponseMessageId,
+				_chatId,
+				selectedModelIds.length > 1 ? messageIdsMap : undefined
+			);
+
+			if (chatEventEmitter) clearInterval(chatEventEmitter);
+		}
 	};
 
 	const getFeatures = () => {
@@ -2071,7 +2142,14 @@
 			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
 	};
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
+	const sendMessageSocket = async (
+		model,
+		_messages,
+		_history,
+		responseMessageId,
+		_chatId,
+		messageIdsMap?: Record<string, string>
+	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -2094,10 +2172,7 @@
 			)
 		);
 		// Remove duplicates
-		files = files.filter(
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
+		files = files.filter((item, index, array) => array.findIndex((i) => equal(i, item)) === index);
 
 		scrollToBottom();
 		eventTarget.dispatchEvent(
@@ -2122,53 +2197,54 @@
 			$settings?.params?.stream_response ??
 			params?.stream_response ??
 			true;
-
+		// Always include system prompt — backend extracts it and prepends to DB messages.
+		// Only temp chats need conversation messages (persisted chats load from DB).
 		let messages = [
 			params?.system || $settings.system
-				? {
-						role: 'system',
-						content: `${params?.system ?? $settings?.system ?? ''}`
-					}
-				: undefined,
-			..._messages.map((message) => ({
-				...message,
-				content: processDetails(message.content),
-				// Include output for temp chats (backend will use it and strip before LLM)
-				...(message.output ? { output: message.output } : {})
-			}))
-		].filter((message) => message);
+				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
+				: undefined
+		].filter(Boolean);
+		if ($temporaryChatEnabled) {
+			messages = [
+				...messages,
+				..._messages.map((message) => ({
+					...message,
+					content: processDetails(message.content),
+					...(message.output ? { output: message.output } : {})
+				}))
+			].filter((message) => message);
 
-		messages = messages
-			.map((message, idx, arr) => {
-				const imageFiles = (message?.files ?? []).filter(
-					(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-				);
+			messages = messages
+				.map((message, idx, arr) => {
+					const imageFiles = (message?.files ?? []).filter(
+						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+					);
 
-				return {
-					role: message.role,
-					// Preserve output items so backend can reconstruct tool_calls/tool-role messages (temp chats)
-					...(message.output ? { output: message.output } : {}),
-					...(message.role === 'user' && imageFiles.length > 0
-						? {
-								content: [
-									{
-										type: 'text',
-										text: message?.merged?.content ?? message.content
-									},
-									...imageFiles.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									}))
-								]
-							}
-						: {
-								content: message?.merged?.content ?? message.content
-							})
-				};
-			})
-			.filter((message) => message?.role === 'user' || message?.content?.trim());
+					return {
+						role: message.role,
+						...(message.output ? { output: message.output } : {}),
+						...(message.role === 'user' && imageFiles.length > 0
+							? {
+									content: [
+										{
+											type: 'text',
+											text: message?.merged?.content ?? message.content
+										},
+										...imageFiles.map((file) => ({
+											type: 'image_url',
+											image_url: {
+												url: file.url
+											}
+										}))
+									]
+								}
+							: {
+									content: message?.merged?.content ?? message.content
+								})
+					};
+				})
+				.filter((message) => message?.role === 'user' || message?.content?.trim());
+		}
 
 		const toolIds = [];
 		const toolServerIds = [];
@@ -2225,12 +2301,15 @@
 		// Use the user-selected terminal from the dropdown
 		const activeTerminalId = $selectedTerminalId ?? null;
 
+		// Only send terminal_id if the model has terminal capability enabled
+		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				stream: stream,
 				model: model.id,
-				messages: messages,
+				...(messages.length > 0 ? { messages } : {}),
 				params: {
 					...$settings?.params,
 					...params,
@@ -2242,7 +2321,7 @@
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				terminal_id: activeTerminalId ?? undefined,
+				terminal_id: terminalEnabled ? (activeTerminalId ?? undefined) : undefined,
 				tool_servers: [
 					...($toolServers ?? []).filter(
 						(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
@@ -2261,20 +2340,16 @@
 				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,
-				chat_id: $chatId,
+				chat_id: _chatId || undefined,
 				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
-				parent_id: userMessage?.id ?? null,
-				parent_message: userMessage,
+				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
+				parent_id: userMessage?.parentId ?? null,
+				user_message: userMessage,
 
 				background_tasks: {
-					...(!$temporaryChatEnabled &&
-					(messages.length == 1 ||
-						(messages.length == 2 &&
-							messages.at(0)?.role === 'system' &&
-							messages.at(1)?.role === 'user')) &&
-					(selectedModels[0] === model.id || atSelectedModel !== undefined)
+					...(!$temporaryChatEnabled && !_chatId && (userMessage?.parentId ?? null) === null
 						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
@@ -2323,10 +2398,25 @@
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
+				// Backend returns task_ids (multi-model) or task_id (single model)
+				const newTaskIds = res.task_ids ?? (res.task_id ? [res.task_id] : []);
 				if (taskIds) {
-					taskIds.push(res.task_id);
+					taskIds.push(...newTaskIds);
 				} else {
-					taskIds = [res.task_id];
+					taskIds = newTaskIds;
+				}
+
+				// Backend returns chat_id for new chats — set store + URL.
+				// Only update if the user hasn't navigated to a different chat
+				// while the request was in flight (prevents overwriting $chatId
+				// and causing spurious toast notifications / state duplication).
+				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
+					await chatId.set(res.chat_id);
+					if (!$temporaryChatEnabled) {
+						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
+						currentChatPage.set(1);
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					}
 				}
 			}
 		}
@@ -2377,13 +2467,20 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
-	const stopResponse = async () => {
+	const stopResponse = async (processQueue = true) => {
 		if (taskIds) {
-			for (const taskId of taskIds) {
-				const res = await stopTask(localStorage.token, taskId).catch((error) => {
+			if ($chatId) {
+				await stopTasksByChatId(localStorage.token, $chatId).catch((error) => {
 					toast.error(`${error}`);
 					return null;
 				});
+			} else {
+				for (const taskId of taskIds) {
+					const res = await stopTask(localStorage.token, taskId).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+				}
 			}
 
 			taskIds = null;
@@ -2409,7 +2506,9 @@
 			generationController = null;
 		}
 
-		await processNextInQueue($chatId);
+		if (processQueue) {
+			await processNextInQueue($chatId);
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -2619,7 +2718,7 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	const saveDraft = async (draft, chatId = null) => {
+	const saveDraft = async (draft: any, chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2636,7 +2735,7 @@
 		}
 	};
 
-	const clearDraft = async (chatId = null) => {
+	const clearDraft = async (chatId: string | null = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
@@ -2863,6 +2962,7 @@
 									{createMessagePair}
 									{onUpload}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
+									{chatTasks}
 									onQueueSendNow={async (id) => {
 										const queue = $chatRequestQueues[$chatId] ?? [];
 										const item = queue.find((m) => m.id === id);
@@ -2872,13 +2972,9 @@
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
-											// Stop current generation first
-											await stopResponse();
+											await stopResponse(false);
 											await tick();
-											// Set files and submit
-											files = item.files;
-											await tick();
-											await submitPrompt(item.prompt);
+											await submitPrompt(item.prompt, item.files);
 										}
 									}}
 									onQueueEdit={(id) => {
@@ -2908,11 +3004,11 @@
 										}
 									}}
 									on:submit={async (e) => {
-										clearDraft();
+										clearDraft($chatId);
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail);
 										}
 									}}
 								/>
@@ -2955,7 +3051,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
+											submitHandler(e.detail);
 										}
 									}}
 								/>
@@ -2980,7 +3076,7 @@
 						}
 						return a;
 					}, [])}
-					{submitPrompt}
+					submitPrompt={submitHandler}
 					{stopResponse}
 					{showMessage}
 					{eventTarget}
