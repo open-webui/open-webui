@@ -843,9 +843,9 @@ def throttle(interval: float = 10.0):
         last_calls = {}
         lock = threading.Lock()
 
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             if interval is None:
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
 
             key = (args, freeze(kwargs))
             now = time.time()
@@ -855,7 +855,7 @@ def throttle(interval: float = 10.0):
                 if now - last_calls.get(key, 0) < interval:
                     return None
                 last_calls[key] = now
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 
