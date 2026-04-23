@@ -1524,6 +1524,8 @@ USER_PERMISSIONS_FEATURES_AUTOMATIONS = (
     os.environ.get('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
 )
 
+USER_PERMISSIONS_FEATURES_CALENDAR = os.environ.get('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
+
 
 USER_PERMISSIONS_SETTINGS_INTERFACE = os.environ.get('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
 
@@ -1594,6 +1596,7 @@ DEFAULT_USER_PERMISSIONS = {
         'code_interpreter': USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         'memories': USER_PERMISSIONS_FEATURES_MEMORIES,
         'automations': USER_PERMISSIONS_FEATURES_AUTOMATIONS,
+        'calendar': USER_PERMISSIONS_FEATURES_CALENDAR,
     },
     'settings': {
         'interface': USER_PERMISSIONS_SETTINGS_INTERFACE,
@@ -1622,6 +1625,18 @@ ENABLE_CHANNELS = PersistentConfig(
     'ENABLE_CHANNELS',
     'channels.enable',
     os.environ.get('ENABLE_CHANNELS', 'False').lower() == 'true',
+)
+
+ENABLE_CALENDAR = PersistentConfig(
+    'ENABLE_CALENDAR',
+    'calendar.enable',
+    os.environ.get('ENABLE_CALENDAR', 'True').lower() == 'true',
+)
+
+ENABLE_AUTOMATIONS = PersistentConfig(
+    'ENABLE_AUTOMATIONS',
+    'automations.enable',
+    os.environ.get('ENABLE_AUTOMATIONS', 'True').lower() == 'true',
 )
 
 AUTOMATION_MAX_COUNT = PersistentConfig(
@@ -2975,6 +2990,12 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
+)
+
+RAG_RERANKING_BATCH_SIZE = PersistentConfig(
+    'RAG_RERANKING_BATCH_SIZE',
+    'rag.reranking_batch_size',
+    int(os.environ.get('RAG_RERANKING_BATCH_SIZE', '32')),
 )
 
 RAG_EXTERNAL_RERANKER_URL = PersistentConfig(

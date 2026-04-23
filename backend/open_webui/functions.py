@@ -34,8 +34,10 @@ from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
+from open_webui.utils.access_control import check_model_access
 
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -232,11 +234,24 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
     oauth_token = None
     try:
-        if request.cookies.get('oauth_session_id', None):
+        oauth_session_id = request.cookies.get('oauth_session_id', None)
+        if oauth_session_id:
             oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                 user.id,
-                request.cookies.get('oauth_session_id', None),
+                oauth_session_id,
             )
+
+        # Fallback: no cookie (automation, API key, etc.) — use most recent session
+        if oauth_token is None:
+            from open_webui.models.oauth_sessions import OAuthSessions
+
+            sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
+            if sessions:
+                best = max(sessions, key=lambda s: s.updated_at)
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                    user.id,
+                    best.id,
+                )
     except Exception as e:
         log.error(f'Error getting OAuth token: {e}')
 
@@ -259,6 +274,10 @@ async def generate_function_chat_completion(request, form_data, user, models: di
     if model_info:
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
+
+        if not BYPASS_MODEL_ACCESS_CONTROL:
+            bypass = isinstance(user, UserModel) and user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
+            await check_model_access(user if isinstance(user, UserModel) else UserModel(**user), model_info, bypass)
 
         params = model_info.params.model_dump()
 

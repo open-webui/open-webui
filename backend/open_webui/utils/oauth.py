@@ -513,10 +513,12 @@ async def get_oauth_client_info_with_static_credentials(
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
 
-        # Determine scope from server metadata if available
+        # Let the OAuth provider apply its default scopes.
+        # We intentionally do NOT join all scopes_supported here — that list
+        # represents every scope the server *can* grant, not what the client
+        # should request.  Requesting all of them is almost always wrong and
+        # can break providers like Entra ID that require resource-specific scopes.
         scope = None
-        if oauth_server_metadata and oauth_server_metadata.scopes_supported:
-            scope = ' '.join(oauth_server_metadata.scopes_supported)
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'
@@ -1920,10 +1922,10 @@ class OAuthManager:
                 users_to_logout.append(user)
 
         if not users_to_logout and sid:
-            log.info(f'Back-channel logout: no user found by sub, sid-based lookup not yet supported (sid={sid})')
+            log.debug(f'Back-channel logout: no user found by sub, sid-based lookup not yet supported (sid={sid})')
 
         if not users_to_logout:
-            log.info(f'Back-channel logout: no matching user for provider={matched_provider}, sub={sub}, sid={sid}')
+            log.debug(f'Back-channel logout: no matching user for provider={matched_provider}, sub={sub}, sid={sid}')
             return JSONResponse(status_code=200, content={})
 
         # 9. Revoke tokens and delete sessions

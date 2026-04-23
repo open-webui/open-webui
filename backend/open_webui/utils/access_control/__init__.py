@@ -257,6 +257,47 @@ async def filter_allowed_access_grants(
     return access_grants
 
 
+async def has_base_model_access(
+    user_id: str,
+    model_info,
+    *,
+    user_group_ids: set[str] | None = None,
+    db=None,
+) -> bool:
+    """
+    Walk the ``base_model_id`` chain and verify the caller has read access
+    at every hop.
+
+    Returns ``True`` when access is granted (or the chain ends at a raw
+    provider model that has no per-model ACL).  Returns ``False`` the
+    moment a registered base model denies access.
+    """
+    from open_webui.models.models import Models
+    from open_webui.models.access_grants import AccessGrants
+
+    base_model_id = getattr(model_info, 'base_model_id', None)
+    seen = {model_info.id}
+    while base_model_id and base_model_id not in seen:
+        seen.add(base_model_id)
+        base_model_info = await Models.get_model_by_id(base_model_id, db=db)
+        if base_model_info is None:
+            break  # Raw provider model — no per-model ACL
+        if not (
+            user_id == base_model_info.user_id
+            or await AccessGrants.has_access(
+                user_id=user_id,
+                resource_type='model',
+                resource_id=base_model_info.id,
+                permission='read',
+                user_group_ids=user_group_ids,
+                db=db,
+            )
+        ):
+            return False
+        base_model_id = getattr(base_model_info, 'base_model_id', None)
+    return True
+
+
 async def check_model_access(
     user: UserModel,
     model_info,
@@ -295,6 +336,10 @@ async def check_model_access(
                     user_group_ids=user_group_ids,
                 )
             ):
+                raise HTTPException(status_code=403, detail='Model not found')
+
+            # Enforce access on chained base models
+            if not await has_base_model_access(user.id, model_info, user_group_ids=user_group_ids):
                 raise HTTPException(status_code=403, detail='Model not found')
     else:
         if user.role != 'admin':

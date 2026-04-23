@@ -281,24 +281,71 @@ async def import_models(
                 model.id: model for model in (await Models.get_models_by_ids(model_ids, db=db) if model_ids else [])
             }
 
+            # Batch-resolve write permissions in one query instead of
+            # per-model has_access calls (N+1 avoidance).
+            existing_model_ids = list(existing_models.keys())
+            if user.role != 'admin' and existing_model_ids:
+                groups = await Groups.get_groups_by_member_id(user.id, db=db)
+                user_group_ids = {group.id for group in groups}
+                writable_model_ids = await AccessGrants.get_accessible_resource_ids(
+                    user_id=user.id,
+                    resource_type='model',
+                    resource_ids=existing_model_ids,
+                    permission='write',
+                    user_group_ids=user_group_ids,
+                    db=db,
+                )
+            else:
+                writable_model_ids = set(existing_model_ids)
+
             for model_data in data:
-                # Here, you can add logic to validate model_data if needed
                 model_id = model_data.get('id')
 
                 if model_id and is_valid_model_id(model_id):
                     existing_model = existing_models.get(model_id)
                     if existing_model:
+                        # Enforce ownership/write-access before allowing overwrite
+                        if (
+                            user.role != 'admin'
+                            and existing_model.user_id != user.id
+                            and model_id not in writable_model_ids
+                        ):
+                            log.warning(
+                                'import_models: user %s skipped model %s (no write access)',
+                                user.id,
+                                model_id,
+                            )
+                            continue
+
                         # Update existing model
                         model_data['meta'] = model_data.get('meta', {})
                         model_data['params'] = model_data.get('params', {})
 
                         updated_model = ModelForm(**{**existing_model.model_dump(), **model_data})
+                        # Only filter access_grants when explicitly provided
+                        # in the payload to avoid altering existing ACLs on
+                        # metadata-only imports.
+                        if 'access_grants' in model_data:
+                            updated_model.access_grants = await filter_allowed_access_grants(
+                                request.app.state.config.USER_PERMISSIONS,
+                                user.id,
+                                user.role,
+                                updated_model.access_grants,
+                                'sharing.public_models',
+                            )
                         await Models.update_model_by_id(model_id, updated_model, db=db)
                     else:
                         # Insert new model
                         model_data['meta'] = model_data.get('meta', {})
                         model_data['params'] = model_data.get('params', {})
                         new_model = ModelForm(**model_data)
+                        new_model.access_grants = await filter_allowed_access_grants(
+                            request.app.state.config.USER_PERMISSIONS,
+                            user.id,
+                            user.role,
+                            new_model.access_grants,
+                            'sharing.public_models',
+                        )
                         await Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
             return True
         else:
@@ -384,8 +431,12 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 
 
 @router.get('/model/profile/image')
-async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
-    model = await Models.get_model_by_id(id)
+async def get_model_profile_image(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(id, db=db)
 
     if model:
         etag = f'"{model.updated_at}"' if model.updated_at else None

@@ -105,6 +105,7 @@ from open_webui.routers import (
     scim,
     terminals,
     automations,
+    calendar,
 )
 
 from open_webui.routers.retrieval import (
@@ -248,6 +249,7 @@ from open_webui.config import (
     RAG_EXTERNAL_RERANKER_URL,
     RAG_EXTERNAL_RERANKER_API_KEY,
     RAG_EXTERNAL_RERANKER_TIMEOUT,
+    RAG_RERANKING_BATCH_SIZE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
@@ -393,9 +395,11 @@ from open_webui.config import (
     API_KEYS_ALLOWED_ENDPOINTS,
     ENABLE_FOLDERS,
     FOLDER_MAX_FILE_COUNT,
+    ENABLE_AUTOMATIONS,
     AUTOMATION_MAX_COUNT,
     AUTOMATION_MIN_INTERVAL,
     ENABLE_CHANNELS,
+    ENABLE_CALENDAR,
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
     ENABLE_COMMUNITY_SHARING,
@@ -672,9 +676,9 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
 
-    from open_webui.utils.automations import automation_worker_loop
+    from open_webui.utils.automations import scheduler_worker_loop
 
-    asyncio.create_task(automation_worker_loop(app))
+    asyncio.create_task(scheduler_worker_loop(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -899,9 +903,11 @@ app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
+app.state.config.ENABLE_AUTOMATIONS = ENABLE_AUTOMATIONS
 app.state.config.AUTOMATION_MAX_COUNT = AUTOMATION_MAX_COUNT
 app.state.config.AUTOMATION_MIN_INTERVAL = AUTOMATION_MIN_INTERVAL
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ENABLE_CALENDAR = ENABLE_CALENDAR
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
@@ -1048,6 +1054,7 @@ app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_EXTERNAL_RERANKER_URL = RAG_EXTERNAL_RERANKER_URL
 app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = RAG_EXTERNAL_RERANKER_API_KEY
 app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = RAG_EXTERNAL_RERANKER_TIMEOUT
+app.state.config.RAG_RERANKING_BATCH_SIZE = RAG_RERANKING_BATCH_SIZE
 
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
@@ -1197,6 +1204,7 @@ app.state.RERANKING_FUNCTION = get_reranking_function(
     app.state.config.RAG_RERANKING_ENGINE,
     app.state.config.RAG_RERANKING_MODEL,
     reranking_function=app.state.rf,
+    reranking_batch_size=app.state.config.RAG_RERANKING_BATCH_SIZE,
 )
 
 ########################################
@@ -1434,6 +1442,7 @@ if ENABLE_ADMIN_ANALYTICS:
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
 app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
+app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1824,6 +1833,8 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data['metadata'] = metadata
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.debug(f'Error processing chat metadata: {e}')
         raise HTTPException(
@@ -1870,7 +1881,8 @@ async def chat_completion(
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
-            log.error('Error processing chat payload: %s', e)
+            error_detail = e.detail if isinstance(e, HTTPException) else str(e)
+            log.error('Error processing chat payload: %s', error_detail)
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
@@ -1880,7 +1892,7 @@ async def chat_completion(
                             metadata['message_id'],
                             {
                                 'parentId': metadata.get('user_message_id', None),
-                                'error': {'content': str(e)},
+                                'error': {'content': error_detail},
                             },
                         )
 
@@ -1889,7 +1901,7 @@ async def chat_completion(
                         await event_emitter(
                             {
                                 'type': 'chat:message:error',
-                                'data': {'error': {'content': str(e)}},
+                                'data': {'error': {'content': error_detail}},
                             }
                         )
                         await event_emitter(
@@ -2215,6 +2227,8 @@ async def get_app_config(request: Request):
                     'enable_folders': app.state.config.ENABLE_FOLDERS,
                     'folder_max_file_count': app.state.config.FOLDER_MAX_FILE_COUNT,
                     'enable_channels': app.state.config.ENABLE_CHANNELS,
+                    'enable_calendar': app.state.config.ENABLE_CALENDAR,
+                    'enable_automations': app.state.config.ENABLE_AUTOMATIONS,
                     'enable_notes': app.state.config.ENABLE_NOTES,
                     'enable_web_search': app.state.config.ENABLE_WEB_SEARCH,
                     'enable_code_execution': app.state.config.ENABLE_CODE_EXECUTION,

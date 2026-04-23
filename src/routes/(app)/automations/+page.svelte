@@ -165,7 +165,10 @@
 	};
 
 	onMount(async () => {
-		if ($user?.role !== 'admin' && !($user?.permissions?.features?.automations ?? false)) {
+		if (
+			!$config?.features?.enable_automations ||
+			($user?.role !== 'admin' && !($user?.permissions?.features?.automations ?? false))
+		) {
 			goto('/');
 			return;
 		}

@@ -10,7 +10,7 @@ from typing import List, Dict, Any
 from contextlib import asynccontextmanager
 
 from langchain_core.documents import Document
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, AIOHTTP_CLIENT_SESSION_SSL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -292,6 +292,7 @@ class MistralLoader:
                 data=writer,
                 headers=self.headers,
                 timeout=aiohttp.ClientTimeout(total=self.upload_timeout),
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await self._handle_response_async(response)
 
@@ -340,6 +341,7 @@ class MistralLoader:
                 headers=headers,
                 params=params,
                 timeout=aiohttp.ClientTimeout(total=self.url_timeout),
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await self._handle_response_async(response)
 
@@ -411,6 +413,7 @@ class MistralLoader:
                 json=payload,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=self.ocr_timeout),
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 ocr_response = await self._handle_response_async(response)
 
@@ -533,7 +536,8 @@ class MistralLoader:
                 async with session.delete(
                     url=f'{self.base_url}/files/{file_id}',
                     headers=self.headers,
-                    timeout=aiohttp.ClientTimeout(total=self.cleanup_timeout),  # Shorter timeout for cleanup
+                    timeout=aiohttp.ClientTimeout(total=self.cleanup_timeout),
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
                     return await self._handle_response_async(response)
 

@@ -5,7 +5,6 @@ import os
 import uuid
 import html
 import base64
-from functools import lru_cache
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
@@ -421,7 +420,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     elif request.app.state.config.TTS_ENGINE == 'elevenlabs':
         voice_id = payload.get('voice', '')
 
-        if voice_id not in get_available_voices(request):
+        if voice_id not in await get_available_voices(request):
             raise HTTPException(
                 status_code=400,
                 detail='Invalid voice id',
@@ -975,7 +974,10 @@ def transcription_handler(request, file_path, metadata, user=None):
 
                 # Read and encode audio file as base64
                 with open(audio_file_to_use, 'rb') as audio_file:
-                    audio_base64 = base64.b64encode(audio_file.read()).decode('utf-8')
+                    audio_base64 = {
+                        'data': base64.b64encode(audio_file.read()).decode('utf-8'),
+                        'format': mimetypes.guess_extension(mimetypes.guess_type(audio_file_to_use)[0]).lstrip('.'),
+                    }
 
                 # Prepare chat completions request
                 url = f'{api_base_url}/chat/completions'
@@ -1292,40 +1294,56 @@ async def transcription(
         )
 
 
-def get_available_models(request: Request) -> list[dict]:
+async def get_available_models(request: Request) -> list[dict]:
     available_models = []
     if request.app.state.config.TTS_ENGINE == 'openai':
         # Use custom endpoint if not using the official OpenAI API URL
         if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith('https://api.openai.com'):
-            try:
-                response = requests.get(
-                    f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models',
-                    timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-                )
-                response.raise_for_status()
-                data = response.json()
-                available_models = data.get('models', [])
-            except Exception as e:
-                log.error(f'Error fetching models from custom endpoint: {str(e)}')
-                available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                try:
+                    async with session.get(
+                        f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models',
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as response:
+                        response.raise_for_status()
+                        data = await response.json()
+                        available_models = data.get('models', [])
+                except Exception as e:
+                    log.debug(f'/audio/models not available, trying /models fallback: {str(e)}')
+                    # Fallback to standard OpenAI-compatible /models endpoint
+                    # (used by KokoroTTS and similar custom TTS servers)
+                    try:
+                        async with session.get(
+                            f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/models',
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        ) as response:
+                            response.raise_for_status()
+                            data = await response.json()
+                            # OpenAI /models returns {"data": [...]}, /audio/models returns {"models": [...]}
+                            available_models = data.get('data', data.get('models', []))
+                    except Exception as e2:
+                        log.error(f'Error fetching models from custom endpoint: {str(e2)}')
+                        available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
         else:
             available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
     elif request.app.state.config.TTS_ENGINE == 'elevenlabs':
         try:
-            response = requests.get(
-                f'{ELEVENLABS_API_BASE_URL}/v1/models',
-                headers={
-                    'xi-api-key': request.app.state.config.TTS_API_KEY,
-                    'Content-Type': 'application/json',
-                },
-                timeout=5,
-            )
-            response.raise_for_status()
-            models = response.json()
-
-            available_models = [{'name': model['name'], 'id': model['model_id']} for model in models]
-        except requests.RequestException as e:
-            log.error(f'Error fetching voices: {str(e)}')
+            timeout = aiohttp.ClientTimeout(total=5)
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                async with session.get(
+                    f'{ELEVENLABS_API_BASE_URL}/v1/models',
+                    headers={
+                        'xi-api-key': request.app.state.config.TTS_API_KEY,
+                        'Content-Type': 'application/json',
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as response:
+                    response.raise_for_status()
+                    models = await response.json()
+                    available_models = [{'name': model['name'], 'id': model['model_id']} for model in models]
+        except Exception as e:
+            log.error(f'Error fetching models: {str(e)}')
     elif request.app.state.config.TTS_ENGINE == 'mistral':
         available_models = [{'id': 'mistral-tts-latest'}]
     return available_models
@@ -1333,24 +1351,26 @@ def get_available_models(request: Request) -> list[dict]:
 
 @router.get('/models')
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    return {'models': get_available_models(request)}
+    return {'models': await get_available_models(request)}
 
 
-def get_available_voices(request) -> dict:
+async def get_available_voices(request) -> dict:
     """Returns {voice_id: voice_name} dict"""
     available_voices = {}
     if request.app.state.config.TTS_ENGINE == 'openai':
         # Use custom endpoint if not using the official OpenAI API URL
         if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith('https://api.openai.com'):
             try:
-                response = requests.get(
-                    f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices',
-                    timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-                )
-                response.raise_for_status()
-                data = response.json()
-                voices_list = data.get('voices', [])
-                available_voices = {voice['id']: voice['name'] for voice in voices_list}
+                timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+                async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                    async with session.get(
+                        f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices',
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as response:
+                        response.raise_for_status()
+                        data = await response.json()
+                        voices_list = data.get('voices', [])
+                        available_voices = {voice['id']: voice['name'] for voice in voices_list}
             except Exception as e:
                 log.error(f'Error fetching voices from custom endpoint: {str(e)}')
                 available_voices = {
@@ -1372,7 +1392,7 @@ def get_available_voices(request) -> dict:
             }
     elif request.app.state.config.TTS_ENGINE == 'elevenlabs':
         try:
-            available_voices = get_elevenlabs_voices(api_key=request.app.state.config.TTS_API_KEY)
+            available_voices = await get_elevenlabs_voices(api_key=request.app.state.config.TTS_API_KEY)
         except Exception:
             # Avoided @lru_cache with exception
             pass
@@ -1383,13 +1403,15 @@ def get_available_voices(request) -> dict:
             url = (base_url or f'https://{region}.tts.speech.microsoft.com') + '/cognitiveservices/voices/list'
             headers = {'Ocp-Apim-Subscription-Key': request.app.state.config.TTS_API_KEY}
 
-            response = requests.get(url, headers=headers, timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
-            response.raise_for_status()
-            voices = response.json()
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                async with session.get(url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
+                    response.raise_for_status()
+                    voices = await response.json()
 
-            for voice in voices:
-                available_voices[voice['ShortName']] = f'{voice["DisplayName"]} ({voice["ShortName"]})'
-        except requests.RequestException as e:
+                    for voice in voices:
+                        available_voices[voice['ShortName']] = f'{voice["DisplayName"]} ({voice["ShortName"]})'
+        except Exception as e:
             log.error(f'Error fetching voices: {str(e)}')
     elif request.app.state.config.TTS_ENGINE == 'mistral':
         api_key = request.app.state.config.TTS_MISTRAL_API_KEY
@@ -1397,29 +1419,30 @@ def get_available_voices(request) -> dict:
 
         if api_key:
             try:
-                response = requests.get(
-                    f'{api_base_url}/audio/voices',
-                    headers={
-                        'Authorization': f'Bearer {api_key}',
-                    },
-                    timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-                )
-                response.raise_for_status()
-                voices_data = response.json()
+                timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+                async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                    async with session.get(
+                        f'{api_base_url}/audio/voices',
+                        headers={
+                            'Authorization': f'Bearer {api_key}',
+                        },
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as response:
+                        response.raise_for_status()
+                        voices_data = await response.json()
 
-                for voice in voices_data:
-                    voice_id = voice.get('voice_id', voice.get('id', ''))
-                    voice_name = voice.get('name', voice_id)
-                    if voice_id:
-                        available_voices[voice_id] = voice_name
-            except requests.RequestException as e:
+                        for voice in voices_data:
+                            voice_id = voice.get('voice_id', voice.get('id', ''))
+                            voice_name = voice.get('name', voice_id)
+                            if voice_id:
+                                available_voices[voice_id] = voice_name
+            except Exception as e:
                 log.error(f'Error fetching Mistral voices: {str(e)}')
 
     return available_voices
 
 
-@lru_cache
-def get_elevenlabs_voices(api_key: str) -> dict:
+async def get_elevenlabs_voices(api_key: str) -> dict:
     """
     Note, set the following in your .env file to use Elevenlabs:
     AUDIO_TTS_ENGINE=elevenlabs
@@ -1430,22 +1453,23 @@ def get_elevenlabs_voices(api_key: str) -> dict:
 
     try:
         # TODO: Add retries
-        response = requests.get(
-            f'{ELEVENLABS_API_BASE_URL}/v1/voices',
-            headers={
-                'xi-api-key': api_key,
-                'Content-Type': 'application/json',
-            },
-            timeout=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-        )
-        response.raise_for_status()
-        voices_data = response.json()
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.get(
+                f'{ELEVENLABS_API_BASE_URL}/v1/voices',
+                headers={
+                    'xi-api-key': api_key,
+                    'Content-Type': 'application/json',
+                },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as response:
+                response.raise_for_status()
+                voices_data = await response.json()
 
-        voices = {}
-        for voice in voices_data.get('voices', []):
-            voices[voice['voice_id']] = voice['name']
-    except requests.RequestException as e:
-        # Avoid @lru_cache with exception
+                voices = {}
+                for voice in voices_data.get('voices', []):
+                    voices[voice['voice_id']] = voice['name']
+    except Exception as e:
         log.error(f'Error fetching voices: {str(e)}')
         raise RuntimeError(f'Error fetching voices: {str(e)}')
 
@@ -1454,4 +1478,4 @@ def get_elevenlabs_voices(api_key: str) -> dict:
 
 @router.get('/voices')
 async def get_voices(request: Request, user=Depends(get_verified_user)):
-    return {'voices': [{'id': k, 'name': v} for k, v in get_available_voices(request).items()]}
+    return {'voices': [{'id': k, 'name': v} for k, v in (await get_available_voices(request)).items()]}

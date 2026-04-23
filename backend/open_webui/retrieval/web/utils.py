@@ -45,6 +45,7 @@ from open_webui.config import (
     WEB_FETCH_FILTER_LIST,
 )
 from open_webui.utils.misc import is_string_allowed
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 
@@ -511,6 +512,8 @@ class SafeWebBaseLoader(WebBaseLoader):
                     )
                     if not self.session.verify:
                         kwargs['ssl'] = False
+                    else:
+                        kwargs['ssl'] = AIOHTTP_CLIENT_SESSION_SSL
 
                     async with session.get(
                         url,

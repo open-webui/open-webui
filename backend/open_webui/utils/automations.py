@@ -1,11 +1,16 @@
 """
-Automation utilities.
+Automation utilities and unified scheduler.
 
-RRULE helpers, worker loop, and execution logic.
+RRULE helpers, scheduler worker loop, and execution logic.
 Follows the utils/<feature>.py pattern (cf. utils/channels.py, utils/task.py).
 
+The scheduler_worker_loop handles all time-based background work:
+  - Automation execution (claim_due → execute)
+  - Calendar event alerts (upcoming events → socket + webhook notifications)
+
 Environment:
-    AUTOMATION_POLL_INTERVAL  – seconds between polls (default: 10)
+    SCHEDULER_POLL_INTERVAL             – seconds between polls (default: 10)
+    CALENDAR_ALERT_LOOKAHEAD_MINUTES   – default alert window (default: 5)
 """
 
 import asyncio
@@ -31,12 +36,29 @@ from open_webui.internal.db import get_async_db
 
 log = logging.getLogger(__name__)
 
-AUTOMATION_POLL_INTERVAL = int(os.getenv('AUTOMATION_POLL_INTERVAL', '10'))
+SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
+CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
 
 
 ####################
 # RRULE Helpers
 ####################
+
+
+def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
+    """Safely resolve a timezone string to ZoneInfo.
+
+    Returns None (→ server-local fallback) when *tz* is empty, None,
+    or an unrecognised IANA key.  Logs a warning on bad keys so
+    misconfiguration is visible in the server logs.
+    """
+    if not tz:
+        return None
+    try:
+        return ZoneInfo(tz)
+    except (KeyError, Exception):
+        log.warning('Unknown timezone %r — falling back to server time', tz)
+        return None
 
 
 def _parse_rule(s: str):
@@ -55,38 +77,52 @@ def _parse_rule(s: str):
     return rrulestr(s, ignoretz=True)
 
 
-def validate_rrule(s: str) -> None:
-    """Raise ValueError if the RRULE is malformed or exhausted."""
+def validate_rrule(s: str, tz: str = None) -> None:
+    """Raise ValueError if the RRULE is malformed or exhausted.
+
+    When *tz* is provided the "now" reference uses the user's local
+    clock so that near-future schedules are not incorrectly rejected
+    on servers whose system clock is ahead (e.g. UTC vs US timezones).
+    """
     try:
         rule = _parse_rule(s)
     except Exception as e:
         raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
-    if rule.after(datetime.now()) is None:
+    zi = _resolve_tz(tz)
+    now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
+    if rule.after(now) is None:
         raise ValueError(ERROR_MESSAGES.AUTOMATION_NO_FUTURE_RUNS)
 
 
 def next_run_ns(s: str, tz: str = None) -> Optional[int]:
     """Next occurrence as epoch nanoseconds, respecting user timezone."""
-    now = datetime.now(ZoneInfo(tz)) if tz else datetime.now()
+    zi = _resolve_tz(tz)
+    now = datetime.now(zi) if zi else datetime.now()
     dt = _parse_rule(s).after(now.replace(tzinfo=None))
     if dt is None:
         return None
-    if tz:
-        dt = dt.replace(tzinfo=ZoneInfo(tz))
+    if zi:
+        dt = dt.replace(tzinfo=zi)
     return int(dt.timestamp() * 1_000_000_000)
 
 
 def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
-    """Compute next N occurrences for UI preview."""
+    """Compute next N occurrences for UI preview.
+
+    Uses the user's timezone for the starting "now" so that the
+    preview matches the user's local clock (same as next_run_ns).
+    """
+    zi = _resolve_tz(tz)
     rule = _parse_rule(s)
     result = []
-    dt = datetime.now()
+    now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
+    dt = now
     for _ in range(n):
         dt = rule.after(dt)
         if not dt:
             break
-        if tz:
-            dt_tz = dt.replace(tzinfo=ZoneInfo(tz))
+        if zi:
+            dt_tz = dt.replace(tzinfo=zi)
             result.append(int(dt_tz.timestamp() * 1_000_000_000))
         else:
             result.append(int(dt.timestamp() * 1_000_000_000))
@@ -117,26 +153,49 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
 ############################
 
 
+# Keep the old name as an alias so any stale imports still work.
 async def automation_worker_loop(app) -> None:
-    """Poll for due automations, claim, fire-and-forget execute.
+    """Deprecated alias — use scheduler_worker_loop."""
+    await scheduler_worker_loop(app)
+
+
+async def scheduler_worker_loop(app) -> None:
+    """Unified background scheduler for all time-based work.
+
+    Handles:
+      1. Automation execution  (ENABLE_AUTOMATIONS)
+      2. Calendar event alerts (ENABLE_CALENDAR)
 
     Runs on every instance. Poll interval is configurable via
-    AUTOMATION_POLL_INTERVAL env var (default: 10 seconds).
+    SCHEDULER_POLL_INTERVAL env var (default: 10 seconds).
     """
-    log.info(f'Automation worker started (poll interval: {AUTOMATION_POLL_INTERVAL}s)')
+    log.info(f'Scheduler worker started (poll interval: {SCHEDULER_POLL_INTERVAL}s)')
     while True:
         try:
-            async with get_async_db() as db:
-                batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
-            if batch:
-                log.info(f'Claimed {len(batch)} due automation(s)')
-            for automation in batch:
-                asyncio.create_task(execute_automation(app, automation))
+            # ── Automations ──
+            if getattr(app.state.config, 'ENABLE_AUTOMATIONS', False):
+                try:
+                    async with get_async_db() as db:
+                        batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
+                    if batch:
+                        log.info(f'Claimed {len(batch)} due automation(s)')
+                    for automation in batch:
+                        asyncio.create_task(execute_automation(app, automation))
+                except Exception:
+                    log.exception('Scheduler: automation error')
+
+            # ── Calendar Alerts ──
+            if getattr(app.state.config, 'ENABLE_CALENDAR', False):
+                try:
+                    await _check_calendar_alerts(app)
+                except Exception:
+                    log.exception('Scheduler: calendar alert error')
+
         except Exception:
-            log.exception('Automation worker error')
+            log.exception('Scheduler worker error')
 
         # Jitter to spread load across instances
-        await asyncio.sleep(AUTOMATION_POLL_INTERVAL + random.uniform(0, 2))
+        await asyncio.sleep(SCHEDULER_POLL_INTERVAL + random.uniform(0, 2))
 
 
 ##########################
@@ -243,6 +302,7 @@ async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -
     handled correctly — same path the frontend uses.
     """
     import aiohttp
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 
     connections = getattr(getattr(app, 'state', None), 'config', None)
     if connections is None:
@@ -278,6 +338,7 @@ async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -
                 target_url,
                 json={'path': cwd},
                 headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as resp:
                 if resp.status != 200:
                     body = await resp.text()
@@ -427,6 +488,98 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 ####################
 # Internals
 ####################
+
+
+async def _check_calendar_alerts(app) -> None:
+    """Check for upcoming calendar events and send alert notifications.
+
+    De-duplication is DB-backed via meta.alerted_at — survives restarts
+    and works across multiple instances.
+    """
+    from open_webui.models.calendar import CalendarEvents, CalendarEventUpdateForm
+    from open_webui.socket.main import sio
+
+    now_ns = int(time.time_ns())
+    default_lookahead_ns = CALENDAR_ALERT_LOOKAHEAD_MINUTES * 60 * 1_000_000_000
+
+    async with get_async_db() as db:
+        upcoming = await CalendarEvents.get_upcoming_events(now_ns, default_lookahead_ns, db=db)
+
+    if not upcoming:
+        return
+
+    for event, user_tz in upcoming:
+        # Skip if already alerted for this start time
+        if event.meta and event.meta.get('alerted_at'):
+            continue
+
+        # Compute minutes until event starts
+        minutes_until = max(0, int((event.start_at - now_ns) / (60 * 1_000_000_000)))
+
+        alert_data = {
+            'event_id': event.id,
+            'title': event.title,
+            'description': event.description or '',
+            'start_at': event.start_at,
+            'minutes_until': minutes_until,
+            'calendar_id': event.calendar_id,
+            'location': event.location or '',
+        }
+
+        await sio.emit(
+            'events',
+            {
+                'data': {
+                    'type': 'calendar:alert',
+                    'data': alert_data,
+                },
+            },
+            room=f'user:{event.user_id}',
+        )
+
+        # Mark as alerted in DB so it survives restarts / multi-instance
+        try:
+            await CalendarEvents.update_event_by_id(
+                event.id,
+                CalendarEventUpdateForm(meta={'alerted_at': now_ns}),
+            )
+        except Exception:
+            log.debug(f'Failed to mark event {event.id} as alerted', exc_info=True)
+
+        # Send webhook notification if user has one configured
+        try:
+            webui_name = getattr(app.state, 'WEBUI_NAME', 'Open WebUI')
+            enable_user_webhooks = getattr(app.state.config, 'ENABLE_USER_WEBHOOKS', False)
+
+            if enable_user_webhooks:
+                user = await Users.get_user_by_id(event.user_id)
+                if user and user.settings:
+                    webhook_url = (
+                        user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
+                        if isinstance(user.settings, dict)
+                        else getattr(getattr(user.settings, 'ui', None), 'get', lambda *a: None)(
+                            'notifications', {}
+                        ).get('webhook_url', None)
+                        if hasattr(user.settings, 'ui')
+                        else None
+                    )
+                    if webhook_url:
+                        from open_webui.utils.webhook import post_webhook
+
+                        time_str = f'in {minutes_until} min' if minutes_until > 0 else 'now'
+                        await post_webhook(
+                            webui_name,
+                            webhook_url,
+                            f'{event.title} — starting {time_str}',
+                            {
+                                'action': 'calendar_alert',
+                                'title': event.title,
+                                'minutes_until': minutes_until,
+                                'event_id': event.id,
+                            },
+                        )
+        except Exception:
+            log.debug(f'Failed to send webhook for calendar alert {event.id}', exc_info=True)
 
 
 async def _record_run(

@@ -810,7 +810,7 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
             oauth_id_token = session.token.get('id_token')
             try:
                 async with ClientSession(trust_env=True) as session:
-                    async with session.get(oauth_server_metadata_url) as r:
+                    async with session.get(oauth_server_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
                         if r.status == 200:
                             openid_data = await r.json()
                             logout_url = openid_data.get('end_session_endpoint')
@@ -971,7 +971,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         'FOLDER_MAX_FILE_COUNT': request.app.state.config.FOLDER_MAX_FILE_COUNT,
         'AUTOMATION_MAX_COUNT': request.app.state.config.AUTOMATION_MAX_COUNT,
         'AUTOMATION_MIN_INTERVAL': request.app.state.config.AUTOMATION_MIN_INTERVAL,
+        'ENABLE_AUTOMATIONS': request.app.state.config.ENABLE_AUTOMATIONS,
         'ENABLE_CHANNELS': request.app.state.config.ENABLE_CHANNELS,
+        'ENABLE_CALENDAR': request.app.state.config.ENABLE_CALENDAR,
         'ENABLE_MEMORIES': request.app.state.config.ENABLE_MEMORIES,
         'ENABLE_NOTES': request.app.state.config.ENABLE_NOTES,
         'ENABLE_USER_WEBHOOKS': request.app.state.config.ENABLE_USER_WEBHOOKS,
@@ -999,7 +1001,9 @@ class AdminConfig(BaseModel):
     FOLDER_MAX_FILE_COUNT: Optional[int | str] = None
     AUTOMATION_MAX_COUNT: Optional[int | str] = None
     AUTOMATION_MIN_INTERVAL: Optional[int | str] = None
+    ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
+    ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
@@ -1030,7 +1034,9 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
     request.app.state.config.AUTOMATION_MIN_INTERVAL = (
         int(form_data.AUTOMATION_MIN_INTERVAL) if form_data.AUTOMATION_MIN_INTERVAL else ''
     )
+    request.app.state.config.ENABLE_AUTOMATIONS = form_data.ENABLE_AUTOMATIONS
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
+    request.app.state.config.ENABLE_CALENDAR = form_data.ENABLE_CALENDAR
     request.app.state.config.ENABLE_MEMORIES = form_data.ENABLE_MEMORIES
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
@@ -1073,7 +1079,9 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         'FOLDER_MAX_FILE_COUNT': request.app.state.config.FOLDER_MAX_FILE_COUNT,
         'AUTOMATION_MAX_COUNT': request.app.state.config.AUTOMATION_MAX_COUNT,
         'AUTOMATION_MIN_INTERVAL': request.app.state.config.AUTOMATION_MIN_INTERVAL,
+        'ENABLE_AUTOMATIONS': request.app.state.config.ENABLE_AUTOMATIONS,
         'ENABLE_CHANNELS': request.app.state.config.ENABLE_CHANNELS,
+        'ENABLE_CALENDAR': request.app.state.config.ENABLE_CALENDAR,
         'ENABLE_MEMORIES': request.app.state.config.ENABLE_MEMORIES,
         'ENABLE_NOTES': request.app.state.config.ENABLE_NOTES,
         'ENABLE_USER_WEBHOOKS': request.app.state.config.ENABLE_USER_WEBHOOKS,

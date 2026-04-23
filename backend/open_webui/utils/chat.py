@@ -10,7 +10,7 @@ import json
 import uuid
 import asyncio
 
-from fastapi import Request, status
+from fastapi import HTTPException, Request, status
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
@@ -328,6 +328,8 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
 
     try:
         data = await process_pipeline_outlet_filter(request, data, user, models)
+    except HTTPException:
+        raise
     except Exception as e:
         raise Exception(f'Error: {e}')
 

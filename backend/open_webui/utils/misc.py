@@ -245,6 +245,12 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
+                    # NOTE: Some providers (e.g. Moonshot/Kimi K2.5) require
+                    # reasoning_content as a top-level field on assistant
+                    # messages.  This should be handled externally via a
+                    # pipeline filter or connection-level middleware, not
+                    # here — adding it universally breaks strict providers
+                    # (OpenAI, Vertex AI, Azure) that reject unknown fields.
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == 'open_webui:code_interpreter':

@@ -305,7 +305,7 @@ async def create_new_channel(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
@@ -643,7 +643,7 @@ async def update_channel_by_id(
     if channel.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    form_data.access_grants = filter_allowed_access_grants(
+    form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
         user.role,
@@ -923,15 +923,13 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                 thread_history = []
                 images = []
-                message_users = {}
+
+                # Batch fetch all users in a single query (fixes N+1 problem)
+                user_ids = list({message.user_id for message in thread_messages})
+                message_users = {user.id: user for user in await Users.get_users_by_user_ids(user_ids, db=db)}
 
                 for thread_message in thread_messages:
-                    message_user = None
-                    if thread_message.user_id not in message_users:
-                        message_user = await Users.get_user_by_id(thread_message.user_id, db=db)
-                        message_users[thread_message.user_id] = message_user
-                    else:
-                        message_user = message_users[thread_message.user_id]
+                    message_user = message_users.get(thread_message.user_id)
 
                     if thread_message.meta and thread_message.meta.get('model_id', None):
                         # If the message was sent by a model, use the model name

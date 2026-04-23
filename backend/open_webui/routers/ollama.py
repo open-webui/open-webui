@@ -1383,29 +1383,9 @@ async def generate_responses(
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
 
-        # Check if user has access to the model
-        if user.role == 'user':
-            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or await AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-                )
+        await check_model_access(user, model_info)
     else:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-            )
+        await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(

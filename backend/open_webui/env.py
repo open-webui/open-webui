@@ -375,7 +375,35 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
-DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'False').lower() == 'true'
+DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'True').lower() == 'true'
+
+# SQLite PRAGMA tuning — these defaults are optimised for WAL-mode web-server
+# workloads.  Each can be overridden via its environment variable.
+# Set any value to an empty string to skip that PRAGMA entirely.
+
+# PRAGMA synchronous: NORMAL (1) is safe with WAL and avoids an fsync per
+# transaction.  Valid values: OFF (0), NORMAL (1), FULL (2), EXTRA (3).
+DATABASE_SQLITE_PRAGMA_SYNCHRONOUS = os.environ.get('DATABASE_SQLITE_PRAGMA_SYNCHRONOUS', 'NORMAL')
+
+# PRAGMA busy_timeout (ms): how long a connection waits for a write lock
+# before raising SQLITE_BUSY.
+DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT = os.environ.get('DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT', '5000')
+
+# PRAGMA cache_size: negative value = KiB.  -65536 ≈ 64 MB page cache.
+DATABASE_SQLITE_PRAGMA_CACHE_SIZE = os.environ.get('DATABASE_SQLITE_PRAGMA_CACHE_SIZE', '-65536')
+
+# PRAGMA temp_store: MEMORY (2) keeps temp tables and indices in RAM.
+# Valid values: DEFAULT (0), FILE (1), MEMORY (2).
+DATABASE_SQLITE_PRAGMA_TEMP_STORE = os.environ.get('DATABASE_SQLITE_PRAGMA_TEMP_STORE', 'MEMORY')
+
+# PRAGMA mmap_size (bytes): memory-mapped I/O size.  268435456 ≈ 256 MB.
+# Set to 0 to disable mmap.
+DATABASE_SQLITE_PRAGMA_MMAP_SIZE = os.environ.get('DATABASE_SQLITE_PRAGMA_MMAP_SIZE', '268435456')
+
+# PRAGMA journal_size_limit (bytes): caps the WAL file size after checkpoint.
+# Without this the WAL grows unbounded during write bursts and is never
+# truncated.  67108864 ≈ 64 MB.  Set to -1 for no limit (SQLite default).
+DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT = os.environ.get('DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT', '67108864')
 
 DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get('DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL', None)
 if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
@@ -644,6 +672,15 @@ else:
 
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.environ.get('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
+)
+
+# When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
+# fallback when both mimetypes.guess_type() and file.meta.content_type fail to
+# determine the content type. This can help on minimal container images (e.g.
+# wolfi-base) that lack /etc/mime.types AND have legacy files without stored
+# content_type metadata.
+ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK = (
+    os.environ.get('ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK', 'False').lower() == 'true'
 )
 
 CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get('CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE', '1')

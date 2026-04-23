@@ -29,6 +29,7 @@ export const MODEL_DOWNLOAD_POOL = writable({});
 export const mobile = writable(false);
 
 export const socket: Writable<null | Socket> = writable(null);
+export const socketConnected: Writable<boolean> = writable(true);
 export const activeUserIds: Writable<null | string[]> = writable(null);
 export const activeChatIds: Writable<Set<string>> = writable(new Set());
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
@@ -230,6 +231,7 @@ type Settings = {
 	ctrlEnterToSend?: boolean;
 	renderMarkdownInPreviews?: boolean;
 	recentEmojis?: string[];
+	pinnedMenuItems?: string[];
 
 	system?: string;
 	seed?: number;
