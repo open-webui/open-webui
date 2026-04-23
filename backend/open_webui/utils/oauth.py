@@ -289,17 +289,39 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
     return parsed, base_url
 
 
+def get_protected_resource_well_known_metadata_urls(server_url: str) -> list[str]:
+    """
+    Generate well-known metadata URLs for protected resource discovery based on the server URL
+    https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#authorization-server-location
+    """
+    urls = []
+    parsed, base_url = get_parsed_and_base_url(server_url)
+    if parsed.path and parsed.path != '/':
+        path = parsed.path.rstrip('/')
+        urls.append(
+            urllib.parse.urljoin(base_url, f'/.well-known/oauth-protected-resource{path}'),
+        )
+    urls.append(
+        urllib.parse.urljoin(base_url, '/.well-known/oauth-protected-resource'),
+    )
+    return urls
+
+
 async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
     """
-    https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization
-    """
+    https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#authorization-server-location
 
+    """
     authorization_servers = []
-    try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+    metadata_urls = []
+
+    async with aiohttp.ClientSession(trust_env=True) as session:
+        # Try service discovery using WWW-Authenticate header
+        try:
+            # Step 1: Try to get resource metadata URL from WWW-Authenticate header
             async with session.post(
                 server_url,
-                json={'jsonrpc': '2.0', 'method': 'initialize', 'params': {}, 'id': 1},
+                json={'jsonrpc': '2.0', 'method': 'initialize', 'params': {'protocolVersion': '2025-11-25'}, 'id': 1},
                 headers={'Content-Type': 'application/json'},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
@@ -311,21 +333,31 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
                     if match:
                         resource_metadata_url = match.group(1) or match.group(2)
                         log.debug(f'Found resource_metadata URL: {resource_metadata_url}')
+                        metadata_urls.append(resource_metadata_url)
+        except Exception as e:
+            log.debug(f'MCP Protected Resource discovery failed: {e}')
 
-                        # Step 2: Fetch Protected Resource metadata
-                        async with session.get(
-                            resource_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                        ) as resource_response:
-                            if resource_response.status == 200:
-                                resource_metadata = await resource_response.json()
-
-                                # Step 3: Extract authorization_servers
-                                servers = resource_metadata.get('authorization_servers', [])
-                                if servers:
-                                    authorization_servers = servers
-                                    log.debug(f'Discovered authorization servers: {servers}')
-    except Exception as e:
-        log.debug(f'MCP Protected Resource discovery failed: {e}')
+        # Step 2: Fetch Protected Resource metadata
+        metadata_urls.extend(get_protected_resource_well_known_metadata_urls(server_url))
+        for metadata_url in metadata_urls:
+            try:
+                async with session.get(metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resource_response:
+                    if resource_response.status == 200:
+                        resource_metadata = await resource_response.json()
+                        resource = resource_metadata.get('resource', '')
+                        if resource and resource != server_url:
+                            log.debug(
+                                f'Skipping resource metadata from {metadata_url} '
+                                f'due to resource mismatch: {resource} != {server_url}'
+                            )
+                            continue
+                        servers = resource_metadata.get('authorization_servers', [])
+                        if servers:
+                            log.debug(f'Discovered authorization servers from {metadata_url}: {servers}')
+                            authorization_servers = servers
+                            break
+            except Exception as e:
+                log.debug(f'Failed to fetch protected resource metadata from {metadata_url}: {e}')
 
     discovery_urls = []
     for auth_server in authorization_servers:
