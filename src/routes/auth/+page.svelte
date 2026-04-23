@@ -1,6 +1,5 @@
 <script lang="ts">
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 
 	import { toast } from 'svelte-sonner';
 
@@ -577,7 +576,7 @@
 						{#if $config?.metadata?.login_footer}
 							<div class="max-w-3xl mx-auto">
 								<div class="mt-2 text-[0.7rem] text-gray-500 dark:text-gray-400 marked">
-									{@html DOMPurify.sanitize(marked($config?.metadata?.login_footer))}
+									{@html renderMarkdownToHTMLSanitized($config?.metadata?.login_footer ?? '')}
 								</div>
 							</div>
 						{/if}

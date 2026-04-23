@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 	import { settings } from '$lib/stores';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
@@ -112,7 +112,7 @@
 			: null;
 	$: renderedHtml =
 		isMarkdown && fileContent
-			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
+			? renderMarkdownToHTMLSanitized(fileContent)
 			: '';
 
 	let markdownEl: HTMLDivElement;

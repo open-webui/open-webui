@@ -2,8 +2,7 @@
 	import type { Banner } from '$lib/types';
 	import { onMount, createEventDispatcher, getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
+	import { renderMarkdownToHTMLSanitized } from '$lib/utils/marked';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const dispatch = createEventDispatcher();
@@ -100,7 +99,7 @@
 					{/if}
 				</div>
 				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
-					{@html DOMPurify.sanitize(marked.parse((banner?.content ?? '').replace(/\n/g, '<br>')))}
+					{@html renderMarkdownToHTMLSanitized((banner?.content ?? '').replace(/\n/g, '<br>'))}
 				</div>
 			</div>
 

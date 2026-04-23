@@ -1,33 +1,7 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { renderMarkdownToHTML } from '$lib/utils/marked';
 	import DOMPurify from 'dompurify';
 	import equal from 'fast-deep-equal';
-
-	marked.use({
-		breaks: true,
-		gfm: true,
-		renderer: {
-			list(body, ordered, start) {
-				const isTaskList = body.includes('data-checked=');
-
-				if (isTaskList) {
-					return `<ul data-type="taskList">${body}</ul>`;
-				}
-
-				const type = ordered ? 'ol' : 'ul';
-				const startatt = ordered && start !== 1 ? ` start="${start}"` : '';
-				return `<${type}${startatt}>${body}</${type}>`;
-			},
-
-			listitem(text, task, checked) {
-				if (task) {
-					const checkedAttr = checked ? 'true' : 'false';
-					return `<li data-type="taskItem" data-checked="${checkedAttr}">${text}</li>`;
-				}
-				return `<li>${text}</li>`;
-			}
-		}
-	});
 
 	import TurndownService from 'turndown';
 	import { gfm } from '@joplin/turndown-plugin-gfm';
@@ -370,12 +344,7 @@
 
 		if (insertPromptAsRichText) {
 			const htmlContent = DOMPurify.sanitize(
-				marked
-					.parse(text, {
-						breaks: true,
-						gfm: true
-					})
-					.trim()
+				renderMarkdownToHTML(text, { breaks: true, gfm: true }).trim()
 			);
 
 			// Create a temporary div to parse HTML
@@ -492,7 +461,7 @@
 		const { schema, tr } = state;
 
 		// If content is a string, convert it to a ProseMirror node
-		const htmlContent = marked.parse(content);
+		const htmlContent = renderMarkdownToHTML(content);
 
 		// insert the HTML content at the current selection
 		editor.commands.insertContent(htmlContent);
@@ -708,7 +677,7 @@
 				async function tryParse(value, attempts = 3, interval = 100) {
 					try {
 						// Try parsing the value
-						return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+						return renderMarkdownToHTML(value.replaceAll(`\n<br/>`, `<br/>`), {
 							breaks: false
 						});
 					} catch (error) {
@@ -1273,7 +1242,7 @@
 					editor.commands.setContent(
 						preserveBreaks
 							? value
-							: marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+							: renderMarkdownToHTML(value.replaceAll(`\n<br/>`, `<br/>`), {
 									breaks: false
 								})
 					);

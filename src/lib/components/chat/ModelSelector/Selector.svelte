@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
 
 	import dayjs from '$lib/dayjs';
