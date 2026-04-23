@@ -48,6 +48,7 @@
 		const updatedSettings = { ...$settings, models: selectedModels };
 		settings.set(updatedSettings);
 		localStorage.setItem('settings', JSON.stringify(updatedSettings));
+		sessionStorage.removeItem('selectedModels');
 		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 	};
 
