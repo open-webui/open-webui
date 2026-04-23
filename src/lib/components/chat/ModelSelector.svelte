@@ -39,6 +39,17 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
+	const autoSaveDefaultModel = async () => {
+		const hasEmptyModel = selectedModels.filter((it) => it === '');
+		if (hasEmptyModel.length) return;
+		settings.set({ ...$settings, models: selectedModels });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+
+	$: if (selectedModels && selectedModels[0] !== '') {
+		autoSaveDefaultModel();
+	}
+
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		const _selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
@@ -127,11 +138,3 @@
 		</div>
 	{/each}
 </div>
-
-{#if showSetDefault}
-	<div
-		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
-	>
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-	</div>
-{/if}

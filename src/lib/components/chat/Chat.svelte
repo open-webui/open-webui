@@ -1912,7 +1912,9 @@
 		await tick();
 
 		// Animate on rendered bubble if private mode
-		if ($privacyProxy) {
+		const _selectedModel = $models.find((m) => m.id === selectedModels[0]);
+		const _isOllama = _selectedModel?.owned_by === 'ollama';
+		if ($privacyProxy && !_isOllama) {
 			const entities = await analyzeMessageEntities(localStorage.token, userPrompt);
 			const garnetToggles = JSON.parse(localStorage.getItem('garnet_entity_toggles') || '{}');
 			const filteredEntities = entities
