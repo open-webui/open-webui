@@ -608,8 +608,39 @@ def sanitize_text_for_db(text: str) -> str:
     return text
 
 
+_SANITIZE_BAD_CHARS_RE = re.compile(r'[\x00\ud800-\udfff]')
+
+
+def _sanitize_needs_copy(obj) -> bool:
+    """Return True if any string in the structure needs sanitization.
+
+    A string "needs sanitization" if it contains a NUL byte or a lone UTF-16
+    surrogate code point (U+D800..U+DFFF) — exactly the characters that
+    ``sanitize_text_for_db`` rewrites. Valid JSON-decoded payloads almost
+    never contain these, so real-world chats take the zero-copy fast path in
+    ``sanitize_data_for_db`` below. The walk mirrors that function and visits
+    only dict values (keys were not rewritten by the original implementation
+    either).
+    """
+    if isinstance(obj, str):
+        return _SANITIZE_BAD_CHARS_RE.search(obj) is not None
+    if isinstance(obj, dict):
+        return any(_sanitize_needs_copy(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_sanitize_needs_copy(v) for v in obj)
+    return False
+
+
 def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage."""
+    # Fast path: if nothing looks dirty, return the object as-is (zero-copy).
+    # The original implementation always rebuilt the entire structure, which
+    # is wasteful once a chat's ``chat`` JSON grows past a few megabytes — the
+    # deep copy dominates CPU time and allocates a duplicate of the full tree
+    # for no reason. Data read back from the database is always clean because
+    # PostgreSQL text/jsonb cannot store NUL bytes or lone surrogates.
+    if not _sanitize_needs_copy(obj):
+        return obj
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     elif isinstance(obj, dict):
