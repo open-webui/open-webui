@@ -639,37 +639,30 @@
 					</span>
 				</Tooltip>
 
-				{#if message.provider}
-					<Tooltip
-						content={`${message.provider.url ?? ''}\n${$i18n.t('Model: {{m}}', { m: message.provider.model_name ?? '' })}${
-							(message.provider.position ?? 0) > 0
-								? '\n' + $i18n.t('Answered by backup #{{n}}', { n: message.provider.position })
-								: ''
-						}`}
-						placement="top-start"
-					>
-						<span
-							class="self-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ml-1.5 translate-y-[1px] {(message.provider.position ?? 0) > 0
-								? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-								: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}"
-						>
-							{#if (message.provider.position ?? 0) > 0}
-								{$i18n.t('backup #{{n}}', { n: message.provider.position })}
-							{:else}
-								{$i18n.t('primary')}
-							{/if}
-						</span>
-					</Tooltip>
-				{/if}
-
 				{#if message.timestamp}
+					{@const providerUsed = message.provider
+						? $models.find((m) => m.id === message.provider.model_name)?.name ??
+							message.provider.model_name
+						: null}
+					{@const providerPosition = message.provider?.position ?? 0}
 					<div
 						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
 						false)
 							? 'dark:text-gray-100 text-gray-900'
 							: 'invisible group-hover:visible transition text-gray-400'}"
 					>
-						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+						<Tooltip
+							content={`${dayjs(message.timestamp * 1000).format('LLLL')}${
+								$user?.role === 'admin' && providerUsed
+									? '\n\n' +
+										$i18n.t('Base model: {{m}}', { m: providerUsed }) +
+										(providerPosition > 0
+											? ' ' + $i18n.t('(backup #{{n}})', { n: providerPosition })
+											: '') +
+										(message.provider?.url ? '\n' + message.provider.url : '')
+									: ''
+							}`}
+						>
 							<span class="line-clamp-1"
 								>{$i18n.t(formatDate(message.timestamp * 1000), {
 									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
@@ -1393,7 +1386,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if message?.provider?.url && isLastMessage}
+										{#if message?.provider?.url && isLastMessage && $user?.role === 'admin'}
 											<Tooltip content={$i18n.t('Retry with a different provider')} placement="bottom">
 												<button
 													type="button"
