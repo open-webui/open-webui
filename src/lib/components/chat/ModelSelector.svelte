@@ -48,6 +48,7 @@
 		const updatedSettings = { ...$settings, models: selectedModels };
 		settings.set(updatedSettings);
 		localStorage.setItem('settings', JSON.stringify(updatedSettings));
+		document.cookie = `garnet_default_model=${selectedModels[0]};path=/;max-age=31536000`;
 		sessionStorage.removeItem('selectedModels');
 		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 	};
