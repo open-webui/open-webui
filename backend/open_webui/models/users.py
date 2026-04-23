@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlalchemy import select, delete, update, func, or_, case, exists
 from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context, get_db
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 
@@ -524,6 +524,11 @@ class UsersTable:
             result = await db.execute(select(func.count()).select_from(User))
             return result.scalar()
 
+    def get_num_users_sync(self) -> Optional[int]:
+        """Synchronous variant for use from non-async contexts (e.g. OTEL metric callbacks)."""
+        with get_db() as db:
+            return db.execute(select(func.count()).select_from(User)).scalar()
+
     async def has_users(self, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(exists(select(User))))
@@ -559,6 +564,15 @@ class UsersTable:
                 select(func.count()).select_from(User).filter(User.last_active_at > today_midnight_timestamp)
             )
             return result.scalar()
+
+    def get_num_users_active_today_sync(self) -> Optional[int]:
+        """Synchronous variant for use from non-async contexts (e.g. OTEL metric callbacks)."""
+        with get_db() as db:
+            current_timestamp = int(datetime.datetime.now().timestamp())
+            today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
+            return db.execute(
+                select(func.count()).select_from(User).filter(User.last_active_at > today_midnight_timestamp)
+            ).scalar()
 
     async def update_user_role_by_id(
         self, id: str, role: str, db: Optional[AsyncSession] = None
@@ -811,6 +825,14 @@ class UsersTable:
                 select(func.count()).select_from(User).filter(User.last_active_at >= three_minutes_ago)
             )
             return result.scalar()
+
+    def get_active_user_count_sync(self) -> int:
+        """Synchronous variant for use from non-async contexts (e.g. OTEL metric callbacks)."""
+        with get_db() as db:
+            three_minutes_ago = int(time.time()) - 180
+            return db.execute(
+                select(func.count()).select_from(User).filter(User.last_active_at >= three_minutes_ago)
+            ).scalar()
 
     @staticmethod
     def is_active(user: UserModel) -> bool:
