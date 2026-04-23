@@ -1106,7 +1106,7 @@
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
 				const _cookieModel = document.cookie.split(';').find(c => c.trim().startsWith('garnet_default_model='))?.split('=')?.[1];
-				if (_cookieModel && $models.find(m => m.id === _cookieModel)) {
+				if (_cookieModel) {
 					selectedModels = [_cookieModel];
 				} else if ($settings?.models) {
 					// Set from user settings
