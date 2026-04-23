@@ -307,7 +307,7 @@ def get_protected_resource_well_known_metadata_urls(server_url: str) -> list[str
     return urls
 
 
-async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
+async def get_authorization_servers(server_url: str) -> list[str]:
     """
     https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#authorization-server-location
 
@@ -359,45 +359,43 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
             except Exception as e:
                 log.debug(f'Failed to fetch protected resource metadata from {metadata_url}: {e}')
 
-    discovery_urls = []
-    for auth_server in authorization_servers:
-        auth_server = auth_server.rstrip('/')
-        discovery_urls.extend(
-            [
-                f'{auth_server}/.well-known/oauth-authorization-server',
-                f'{auth_server}/.well-known/openid-configuration',
-            ]
-        )
+    return authorization_servers
 
-    return discovery_urls
+
+def get_well_known_authorization_endpoints(authorization_servers: list[str]) -> list[str]:
+    """
+    Generate Authorization Metadata URLs
+    https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization#authorization-server-metadata-discovery
+    """
+    urls = []
+    for server_url in authorization_servers:
+        parsed, base_url = get_parsed_and_base_url(server_url)
+        if parsed.path and parsed.path != '/':
+            tenant = parsed.path.rstrip('/')
+            urls.extend(
+                [
+                    urllib.parse.urljoin(
+                        base_url,
+                        f'/.well-known/oauth-authorization-server{tenant}',
+                    ),
+                    urllib.parse.urljoin(base_url, f'/.well-known/openid-configuration{tenant}'),
+                    urllib.parse.urljoin(base_url, f'{tenant}/.well-known/openid-configuration'),
+                ]
+            )
+        else:
+            urls.extend(
+                [
+                    urllib.parse.urljoin(base_url, '/.well-known/oauth-authorization-server'),
+                    urllib.parse.urljoin(base_url, '/.well-known/openid-configuration'),
+                ]
+            )
+    return urls
 
 
 async def get_discovery_urls(server_url) -> list[str]:
-    urls = await get_authorization_server_discovery_urls(server_url)
-    parsed, base_url = get_parsed_and_base_url(server_url)
-
-    if parsed.path and parsed.path != '/':
-        # Generate discovery URLs based on https://modelcontextprotocol.io/specification/draft/basic/authorization#authorization-server-metadata-discovery
-        tenant = parsed.path.rstrip('/')
-        urls.extend(
-            [
-                urllib.parse.urljoin(
-                    base_url,
-                    f'/.well-known/oauth-authorization-server{tenant}',
-                ),
-                urllib.parse.urljoin(base_url, f'/.well-known/openid-configuration{tenant}'),
-                urllib.parse.urljoin(base_url, f'{tenant}/.well-known/openid-configuration'),
-            ]
-        )
-
-    urls.extend(
-        [
-            urllib.parse.urljoin(base_url, '/.well-known/oauth-authorization-server'),
-            urllib.parse.urljoin(base_url, '/.well-known/openid-configuration'),
-        ]
-    )
-
-    return urls
+    authorization_servers = await get_authorization_servers(server_url)
+    authorization_metadata_urls = get_well_known_authorization_endpoints(authorization_servers)
+    return authorization_metadata_urls
 
 
 # TODO: Some OAuth providers require Initial Access Tokens (IATs) for dynamic client registration.
