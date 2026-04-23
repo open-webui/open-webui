@@ -78,7 +78,6 @@ from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     get_task_model_id,
-    rag_template,
     tools_function_calling_generation_template,
 )
 from open_webui.utils.misc import (
