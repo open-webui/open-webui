@@ -1125,7 +1125,9 @@
 			}
 
 			// Unavailable & hidden models filtering
-			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+			if (availableModels.length > 0) {
+				selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+			}
 		}
 
 		// Ensure at least one model is selected
