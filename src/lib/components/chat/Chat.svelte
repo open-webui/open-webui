@@ -2387,11 +2387,21 @@
 
 				id: responseMessageId,
 				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
-				parent_id: userMessage?.parentId ?? null,
+				parent_id: (() => {
+					const rawParent = userMessage?.parentId ?? null;
+					// If the immediate parent is a greeting message, treat this as a
+					// root message so the backend creates a new chat correctly.
+					if (rawParent && _history.messages[rawParent]?.greeting) return null;
+					return rawParent;
+				})(),
 				user_message: userMessage,
 
 				background_tasks: {
-					...(!$temporaryChatEnabled && !_chatId && (userMessage?.parentId ?? null) === null
+					...(!$temporaryChatEnabled && !_chatId && (() => {
+						const rawParent = userMessage?.parentId ?? null;
+						if (rawParent && _history.messages[rawParent]?.greeting) return true;
+						return rawParent === null;
+					})()
 						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
