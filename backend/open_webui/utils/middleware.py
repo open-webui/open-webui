@@ -1165,7 +1165,9 @@ async def process_tool_result(
                             }
                         )
                     elif item.get('type') == 'resource':
-                        resource = item.get('resource', {})
+                        resource = item.get('resource')
+                        if not isinstance(resource, dict):
+                            resource = {}
                         text = resource.get('text', '')
                         if isinstance(text, str):
                             try:
