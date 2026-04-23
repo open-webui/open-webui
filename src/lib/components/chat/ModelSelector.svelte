@@ -8,6 +8,9 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	const i18n = getContext('i18n');
 
+	let mounted = false;
+	onMount(() => { setTimeout(() => { mounted = true; }, 500); });
+
 	export let selectedModels = [''];
 	export let disabled = false;
 
@@ -47,7 +50,7 @@
 		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 	};
 
-	$: if (selectedModels && selectedModels[0] !== '') {
+	$: if (mounted && selectedModels && selectedModels[0] !== '') {
 		autoSaveDefaultModel();
 	}
 
