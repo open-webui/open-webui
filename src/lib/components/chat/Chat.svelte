@@ -252,7 +252,7 @@
 	};
 
 	$: if (selectedModels && chatIdProp !== '') {
-		saveSessionSelectedModels();
+		// saveSessionSelectedModels(); — disabled, default model persisted via localStorage/DB
 	}
 
 	const saveSessionSelectedModels = () => {
