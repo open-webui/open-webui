@@ -264,8 +264,11 @@
 		) {
 			return;
 		}
+		const savedDefault = JSON.parse(localStorage.getItem('settings') ?? '{}')?.models;
+		if (savedDefault && JSON.stringify(savedDefault) === selectedModelsString) {
+			return;
+		}
 		sessionStorage.selectedModels = selectedModelsString;
-		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
 	let oldSelectedModelIds = [''];
