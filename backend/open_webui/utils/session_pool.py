@@ -161,24 +161,52 @@ async def prefetched_stream_wrapper(
     response,
     prefetched_chunks: list[bytes],
     session=None,
-    content_handler=None,
+    content_handler=None,  # kept for signature compatibility; unused
     leading_events: Optional[list[bytes]] = None,
 ):
-    """Like ``stream_wrapper`` but prepends optional leading events and already-read chunks.
+    """SSE stream wrapper: prepend leading events + already-read bytes, then continue.
 
-    Used in tandem with ``prefetch_stream_bytes``. ``content_handler`` is only
-    applied to the *continuation* of the stream (the bytes still in
-    ``response.content``); the prefetched bytes are emitted as-is because
-    they were already removed from the underlying StreamReader.
+    ``content_handler`` is accepted for signature compatibility with older call
+    sites but is *not* applied — this wrapper replicates the line-splitting
+    behaviour of ``stream_chunks_handler`` inline so the partial line at the
+    end of ``prefetched_chunks`` is correctly stitched into the first line of
+    the continued stream.
+
+    Output contract: one *complete* SSE line per ``yield`` (each line includes
+    its trailing ``\\n``). This matches what middleware.streaming_chat_response
+    expects when it does ``async for line in response.body_iterator``. Without
+    it, the whole prefetched blob is delivered as a single "line", the SSE
+    parser can't split the concatenated events, and the first chunk of the
+    reply is dropped on the floor.
     """
     try:
         if leading_events:
             for event in leading_events:
                 yield event
-        for chunk in prefetched_chunks:
-            yield chunk
-        stream = content_handler(response.content) if content_handler else response.content
-        async for chunk in stream:
-            yield chunk
+
+        # Replay the prefetched bytes as line-framed chunks, keeping any
+        # partial trailing line in `buffer` so it can be joined to the next
+        # chunk from the live stream.
+        buffer = b''.join(prefetched_chunks)
+        if buffer:
+            lines = buffer.split(b'\n')
+            for line in lines[:-1]:
+                yield line + b'\n'
+            buffer = lines[-1]
+
+        # ``iter_any`` reads whatever bytes are available (vs. ``iter_chunks``
+        # which keys off HTTP chunk boundaries — those are unreliable after
+        # ``prefetch_stream_bytes`` consumed partway through a chunk).
+        async for data in response.content.iter_any():
+            if not data:
+                continue
+            lines = (buffer + data).split(b'\n')
+            for line in lines[:-1]:
+                yield line + b'\n'
+            buffer = lines[-1]
+
+        # Final tail (stream ended mid-line — rare for well-behaved SSE).
+        if buffer:
+            yield buffer
     finally:
         await cleanup_response(response, session)

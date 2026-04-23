@@ -36,18 +36,19 @@ class ModelParams(BaseModel):
 class FailoverProvider(BaseModel):
     """One entry in a workspace model's ordered failover list.
 
-    `connection_url` is the stable key into OPENAI_API_BASE_URLS (we match
-    by URL, not list index, so a connection deletion doesn't silently
-    re-wire another model's failover chain).
-    `model_name` is the model id as the remote provider knows it — same model
-    is often named differently across providers (gpt-4o vs gpt-4-turbo).
+    `model_id` is the id of a model as it appears in the `$models` store —
+    the same identifier the user would have picked from the legacy
+    base-model dropdown. Each $models entry already encodes its connection
+    via `urlIdx` (and the connection's `prefix_id`), so two different
+    connections serving the "same" underlying model show up as two
+    distinct entries here and can coexist in one failover chain.
+
     `capabilities` is what the user asserts this provider supports; when the
-    incoming request needs a capability (tools, vision), providers missing it
-    are filtered out. An empty list means "unknown — try it anyway".
+    incoming request needs a capability (tools, vision), providers missing
+    it are filtered out. An empty list means "unknown — try it anyway".
     """
 
-    connection_url: str
-    model_name: str
+    model_id: str
     capabilities: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(extra='allow')

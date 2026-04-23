@@ -1,64 +1,39 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
-	import { OPENAI_API_BASE_URL } from '$lib/constants';
+	import { getContext } from 'svelte';
+	import { models } from '$lib/stores';
 
 	const i18n: any = getContext('i18n');
 
 	// Ordered list. First entry is the primary provider; subsequent ones are
-	// tried in order if earlier ones fail with a retryable error.
+	// tried in order when earlier ones fail with a retryable error.
 	export let providers: Array<{
-		connection_url: string;
-		model_name: string;
+		model_id: string;
 		capabilities: string[];
 	}> = [];
 
-	type HealthEntry = {
-		effective_status?: 'healthy' | 'unhealthy' | 'unknown' | 'disabled';
-		last_error?: string;
-		last_error_status?: number;
-		last_success_at?: number;
-		seconds_until_retry?: number | null;
-		latency_ms?: number;
-	};
+	// Exclude the model currently being edited so it can't self-reference,
+	// and drop presets / arena / direct entries so the list matches the
+	// legacy base-model dropdown.
+	export let currentModelId: string | null = null;
 
-	let healthByUrl: Record<string, HealthEntry> = {};
-	let availableUrls: string[] = [];
-	let loading = true;
+	$: availableModels = ($models ?? []).filter(
+		(m: any) =>
+			(!currentModelId || m.id !== currentModelId) &&
+			!m?.preset &&
+			m?.owned_by !== 'arena' &&
+			!(m?.direct ?? false)
+	);
 
-	async function loadHealth() {
-		try {
-			const res = await fetch(`${OPENAI_API_BASE_URL}/health`, {
-				method: 'GET',
-				headers: {
-					Accept: 'application/json',
-					authorization: `Bearer ${localStorage.token}`
-				}
-			});
-			if (!res.ok) throw new Error(await res.text());
-			healthByUrl = await res.json();
-			availableUrls = Object.keys(healthByUrl);
-		} catch (err) {
-			console.warn('Failed to load provider health', err);
-			healthByUrl = {};
-			availableUrls = [];
-		} finally {
-			loading = false;
-		}
+	function modelDisplayName(id: string): string {
+		const m = ($models ?? []).find((m: any) => m.id === id);
+		return m?.name ?? id;
 	}
-
-	onMount(() => {
-		loadHealth();
-		// Re-poll every 30s so the dots reflect the current state of the world.
-		const interval = setInterval(loadHealth, 30_000);
-		return () => clearInterval(interval);
-	});
 
 	function addProvider() {
 		providers = [
 			...providers,
 			{
-				connection_url: availableUrls[0] ?? '',
-				model_name: '',
+				model_id: '',
 				capabilities: []
 			}
 		];
@@ -85,125 +60,126 @@
 		}
 		providers = providers;
 	}
-
-	function statusDotClass(url: string): string {
-		const status = healthByUrl[url]?.effective_status ?? 'unknown';
-		return (
-			{
-				healthy: 'bg-green-500',
-				unhealthy: 'bg-red-500',
-				disabled: 'bg-gray-400',
-				unknown: 'bg-yellow-400'
-			}[status] ?? 'bg-gray-400'
-		);
-	}
-
-	function statusTitle(url: string): string {
-		const entry = healthByUrl[url];
-		if (!entry) return $i18n.t('Unknown status');
-		const parts: string[] = [
-			$i18n.t('Status: {{status}}', { status: entry.effective_status ?? 'unknown' })
-		];
-		if (entry.last_error) {
-			parts.push($i18n.t('Last error: {{err}}', { err: entry.last_error }));
-		}
-		if (entry.seconds_until_retry != null && entry.seconds_until_retry > 0) {
-			parts.push(
-				$i18n.t('Cool-off: {{s}}s remaining', { s: entry.seconds_until_retry })
-			);
-		}
-		if (entry.latency_ms != null) {
-			parts.push($i18n.t('Latency: {{ms}}ms', { ms: entry.latency_ms }));
-		}
-		return parts.join('\n');
-	}
 </script>
 
-<div class="space-y-2">
-	{#if loading}
-		<div class="text-xs text-gray-500">{$i18n.t('Loading providers…')}</div>
-	{:else if availableUrls.length === 0}
-		<div class="text-xs text-gray-500">
-			{$i18n.t('No OpenAI-compatible connections configured. Add one in Admin → Settings → Connections first.')}
-		</div>
-	{/if}
-
-	{#each providers as provider, idx}
-		<div class="border border-gray-200 dark:border-gray-700 rounded-md p-2 space-y-1">
+<div class="space-y-1.5">
+	{#each providers as provider, idx (idx)}
+		<div
+			class="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-850/50 px-3 py-2"
+		>
 			<div class="flex items-center gap-2">
-				<span class="text-xs font-medium w-20 shrink-0 text-gray-500">
-					{idx === 0
-						? $i18n.t('Primary')
-						: $i18n.t('Backup #{{n}}', { n: idx })}
-				</span>
-
-				<span
-					class="w-2 h-2 rounded-full shrink-0 {statusDotClass(provider.connection_url)}"
-					title={statusTitle(provider.connection_url)}
-				></span>
-
-				<select
-					bind:value={provider.connection_url}
-					class="flex-1 min-w-0 text-sm bg-transparent outline-none"
-					aria-label={$i18n.t('Connection URL')}
+				<!-- Position label -->
+				<div
+					class="shrink-0 flex items-center gap-1.5 w-24 text-xs font-medium uppercase tracking-wide {idx ===
+					0
+						? 'text-gray-700 dark:text-gray-300'
+						: 'text-gray-500 dark:text-gray-400'}"
 				>
-					{#if !availableUrls.includes(provider.connection_url) && provider.connection_url}
-						<!-- Preserve a URL that is no longer configured so the user
-						     can see what's there before they change it. -->
-						<option value={provider.connection_url}>{provider.connection_url} ({$i18n.t('missing')})</option>
+					{#if idx === 0}
+						<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+						{$i18n.t('Primary')}
+					{:else}
+						<span class="w-1.5 h-1.5 rounded-full bg-amber-400/70"></span>
+						{$i18n.t('Backup {{n}}', { n: idx })}
 					{/if}
-					{#each availableUrls as url}
-						<option value={url}>{url}</option>
+				</div>
+
+				<!-- Model selector -->
+				<select
+					class="flex-1 min-w-0 text-sm bg-transparent outline-none truncate"
+					bind:value={provider.model_id}
+					aria-label={$i18n.t('Model')}
+				>
+					<option value="" class="text-gray-900">{$i18n.t('Select a model')}</option>
+					{#if provider.model_id && !availableModels.find((m: any) => m.id === provider.model_id)}
+						<!-- Preserve an id that no longer appears in the store
+						     (e.g. connection removed) so the user can see it
+						     before re-picking. -->
+						<option value={provider.model_id} class="text-gray-900">
+							{provider.model_id} ({$i18n.t('missing')})
+						</option>
+					{/if}
+					{#each availableModels as m (m.id)}
+						<option value={m.id} class="text-gray-900">{m.name}</option>
 					{/each}
 				</select>
 
-				<input
-					type="text"
-					bind:value={provider.model_name}
-					placeholder={$i18n.t('Model name (e.g. gpt-4o)')}
-					class="flex-1 min-w-0 text-sm bg-transparent outline-none border-b border-gray-300 dark:border-gray-700"
-					aria-label={$i18n.t('Model name')}
-				/>
-
-				<button
-					type="button"
-					class="px-1 text-gray-500 hover:text-black dark:hover:text-white disabled:opacity-30"
-					on:click={() => move(idx, -1)}
-					disabled={idx === 0}
-					aria-label={$i18n.t('Move up')}>↑</button
-				>
-				<button
-					type="button"
-					class="px-1 text-gray-500 hover:text-black dark:hover:text-white disabled:opacity-30"
-					on:click={() => move(idx, 1)}
-					disabled={idx === providers.length - 1}
-					aria-label={$i18n.t('Move down')}>↓</button
-				>
-				<button
-					type="button"
-					class="px-1 text-gray-500 hover:text-red-500"
-					on:click={() => removeProvider(idx)}
-					aria-label={$i18n.t('Remove')}>×</button
-				>
+				<!-- Reorder / remove -->
+				<div class="flex items-center shrink-0 text-gray-400">
+					<button
+						type="button"
+						class="p-1 hover:text-black dark:hover:text-white disabled:opacity-20 disabled:pointer-events-none"
+						on:click={() => move(idx, -1)}
+						disabled={idx === 0}
+						aria-label={$i18n.t('Move up')}
+						title={$i18n.t('Move up')}
+					>
+						<svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+							<path
+								fill-rule="evenodd"
+								d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04L10.75 5.612V16.25A.75.75 0 0110 17z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="p-1 hover:text-black dark:hover:text-white disabled:opacity-20 disabled:pointer-events-none"
+						on:click={() => move(idx, 1)}
+						disabled={idx === providers.length - 1}
+						aria-label={$i18n.t('Move down')}
+						title={$i18n.t('Move down')}
+					>
+						<svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+							<path
+								fill-rule="evenodd"
+								d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="p-1 hover:text-red-500"
+						on:click={() => removeProvider(idx)}
+						aria-label={$i18n.t('Remove provider')}
+						title={$i18n.t('Remove provider')}
+					>
+						<svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+							<path
+								d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+							/>
+						</svg>
+					</button>
+				</div>
 			</div>
 
-			<div class="flex gap-3 text-xs ml-22 text-gray-500">
-				<label class="flex items-center gap-1">
+			<!-- Capabilities row -->
+			<div class="flex items-center gap-4 mt-1.5 ml-24 text-xs text-gray-500 dark:text-gray-400">
+				<span class="text-[10px] uppercase tracking-wide">{$i18n.t('Supports')}</span>
+				<label class="flex items-center gap-1 cursor-pointer select-none">
 					<input
 						type="checkbox"
+						class="accent-gray-500"
 						checked={provider.capabilities.includes('tools')}
 						on:change={() => toggleCapability(idx, 'tools')}
 					/>
 					{$i18n.t('Tools')}
 				</label>
-				<label class="flex items-center gap-1">
+				<label class="flex items-center gap-1 cursor-pointer select-none">
 					<input
 						type="checkbox"
+						class="accent-gray-500"
 						checked={provider.capabilities.includes('vision')}
 						on:change={() => toggleCapability(idx, 'vision')}
 					/>
 					{$i18n.t('Vision')}
 				</label>
+				{#if idx > 0}
+					<span class="text-[10px] text-gray-400 dark:text-gray-500">
+						{$i18n.t('Leave unticked if unsure — untagged backups are always eligible.')}
+					</span>
+				{/if}
 			</div>
 		</div>
 	{/each}
@@ -211,15 +187,14 @@
 	<button
 		type="button"
 		on:click={addProvider}
-		disabled={availableUrls.length === 0}
-		class="w-full text-sm border border-dashed border-gray-300 dark:border-gray-700 rounded-md p-2 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-850 disabled:opacity-50"
+		class="w-full text-sm border border-dashed border-gray-300 dark:border-gray-700 rounded-lg py-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-400 dark:hover:border-gray-600 transition"
 	>
-		+ {$i18n.t('Add provider')}
+		+ {$i18n.t(providers.length === 0 ? 'Add primary provider' : 'Add backup provider')}
 	</button>
 
-	<p class="text-xs text-gray-500">
+	<p class="text-[11px] leading-relaxed text-gray-400 dark:text-gray-500 pt-1">
 		{$i18n.t(
-			'The first provider is primary. Backups are tried in order on 429/5xx/network errors. Tick a capability to assert the provider supports it — a request that needs tools or vision will skip providers missing them.'
+			'The first provider is the primary. Backups are tried in order when the previous one fails with a network, 429, or 5xx error. Capability ticks filter backups out when the request needs tools or vision.'
 		)}
 	</p>
 </div>
