@@ -47,6 +47,7 @@
 		if (hasEmptyModel.length) return;
 		const updatedSettings = { ...$settings, models: selectedModels };
 		settings.set(updatedSettings);
+		localStorage.setItem('settings', JSON.stringify(updatedSettings));
 		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 	};
 
