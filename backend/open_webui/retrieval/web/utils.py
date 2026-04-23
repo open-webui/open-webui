@@ -1,4 +1,3 @@
-import requests
 import asyncio
 import ipaddress
 import logging
@@ -47,6 +46,7 @@ from open_webui.config import (
 )
 from open_webui.utils.misc import is_string_allowed
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+import requests
 
 log = logging.getLogger(__name__)
 
