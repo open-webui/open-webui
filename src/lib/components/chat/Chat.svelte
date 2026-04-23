@@ -1102,14 +1102,15 @@
 				// Set from folder model IDs
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
-				if (sessionStorage.selectedModels) {
+				if ($settings?.models) {
+					// Set from user settings
+					selectedModels = $settings?.models;
+				} else if (sessionStorage.selectedModels) {
 					// Set from session storage (temporary selection)
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else {
-					if ($settings?.models) {
-						// Set from user settings
-						selectedModels = $settings?.models;
+					if (false) {
 					} else if (defaultModels && defaultModels.length > 0) {
 						// Set from default models
 						selectedModels = defaultModels;
