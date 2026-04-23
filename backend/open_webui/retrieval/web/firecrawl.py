@@ -32,6 +32,10 @@ def search_firecrawl(
         response.raise_for_status()
         data = response.json().get('data', [])
 
+        # Support old response shape.
+        if type(data) is dict:
+            data = data.get('web', [])
+
         results = [
             SearchResult(
                 link=r.get('url', ''),
