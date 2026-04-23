@@ -62,7 +62,8 @@ html {
 code {
 	/* white-space-collapse: preserve !important; */
 	overflow-x: auto;
-	width: auto;
+	min-width: 0;
+	max-width: 100%;
 }
 
 .editor-selection {
@@ -83,7 +84,7 @@ math {
 }
 
 .hljs {
-	@apply rounded-lg;
+	@apply rounded-lg min-w-0 max-w-full;
 }
 
 input::placeholder {
