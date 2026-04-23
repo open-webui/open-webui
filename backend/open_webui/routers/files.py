@@ -323,6 +323,346 @@ async def upload_file_handler(
 
 
 ############################
+# Chunked Upload
+#
+# Works around per-request body limits (iOS Safari rejects very large
+# multipart POSTs). The client calls /chunked/start, streams chunks to
+# /chunked/{upload_id}, then POSTs /chunked/{upload_id}/complete which
+# wraps the assembled temp file as an UploadFile and runs it through
+# the normal upload_file_handler so storage/DB/processing stays unified.
+############################
+
+CHUNKED_UPLOAD_DIR = Path(UPLOAD_DIR) / '.chunks'
+
+# Per-upload max size for the chunked endpoint, in MB. Optional override
+# — when 0/unset we fall through to the admin-configured FILE_MAX_SIZE
+# (sourced from RAG_FILE_MAX_SIZE) and finally to a safety fallback.
+CHUNKED_UPLOAD_MAX_SIZE_MB = int(os.environ.get('CHUNKED_UPLOAD_MAX_SIZE_MB', '0') or '0')
+
+# Safety fallback when neither CHUNKED_UPLOAD_MAX_SIZE_MB nor FILE_MAX_SIZE
+# is set. Prevents pathological declared-size requests from pre-allocating
+# session state. In MB; default 5 GiB.
+CHUNKED_UPLOAD_MAX_SIZE_FALLBACK_MB = int(
+    os.environ.get('CHUNKED_UPLOAD_MAX_SIZE_FALLBACK_MB', str(5 * 1024)) or str(5 * 1024)
+)
+
+# How long an abandoned chunk session can sit on disk before it's eligible
+# for best-effort cleanup. Seconds; default 24h.
+CHUNKED_UPLOAD_SESSION_TTL_SECONDS = int(
+    os.environ.get('CHUNKED_UPLOAD_SESSION_TTL_SECONDS', str(24 * 60 * 60))
+    or str(24 * 60 * 60)
+)
+
+
+def _chunked_max_size_bytes(request: Request) -> int:
+    """Resolve the effective max declared size for a chunked upload.
+
+    Precedence:
+      1. CHUNKED_UPLOAD_MAX_SIZE_MB env var (if > 0)
+      2. admin-configured FILE_MAX_SIZE (MB, surfaced as
+         app.state.config.FILE_MAX_SIZE, driven by RAG_FILE_MAX_SIZE)
+      3. CHUNKED_UPLOAD_MAX_SIZE_FALLBACK_MB safety net
+    """
+    if CHUNKED_UPLOAD_MAX_SIZE_MB > 0:
+        return CHUNKED_UPLOAD_MAX_SIZE_MB * 1024 * 1024
+    configured = getattr(request.app.state.config, 'FILE_MAX_SIZE', None)
+    if configured and int(configured) > 0:
+        return int(configured) * 1024 * 1024
+    return CHUNKED_UPLOAD_MAX_SIZE_FALLBACK_MB * 1024 * 1024
+
+
+class _UploadFileFromPath:
+    """Minimal UploadFile-compatible wrapper around an on-disk file.
+
+    upload_file_handler only touches .filename, .content_type and .file (a
+    file-like with .read/.seek), so we don't need a full Starlette UploadFile.
+    """
+
+    def __init__(self, path: Path, filename: str, content_type: Optional[str]):
+        self.filename = filename
+        self.content_type = content_type
+        self.file = open(path, 'rb')
+
+    def close(self):
+        try:
+            self.file.close()
+        except Exception:
+            pass
+
+
+def _chunked_session_dir(upload_id: str) -> Path:
+    # upload_id is a UUID we generate; reject anything with path separators as defense in depth.
+    if '/' in upload_id or '\\' in upload_id or '..' in upload_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Invalid upload id'),
+        )
+    return CHUNKED_UPLOAD_DIR / upload_id
+
+
+def _chunked_reap_stale() -> None:
+    """Best-effort cleanup of abandoned chunk sessions."""
+    try:
+        if not CHUNKED_UPLOAD_DIR.exists():
+            return
+        import time as _time
+        now = _time.time()
+        for child in CHUNKED_UPLOAD_DIR.iterdir():
+            try:
+                if now - child.stat().st_mtime > CHUNKED_UPLOAD_SESSION_TTL_SECONDS:
+                    import shutil as _shutil
+                    _shutil.rmtree(child, ignore_errors=True)
+            except Exception:
+                continue
+    except Exception as e:
+        log.debug(f'Chunked reap skipped: {e}')
+
+
+class ChunkedUploadStartForm(BaseModel):
+    filename: str
+    size: int
+    content_type: Optional[str] = None
+
+
+class ChunkedUploadStartResponse(BaseModel):
+    upload_id: str
+
+
+@router.post('/chunked/start', response_model=ChunkedUploadStartResponse)
+async def chunked_upload_start(
+    request: Request,
+    form: ChunkedUploadStartForm,
+    user=Depends(get_verified_user),
+):
+    if not form.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('filename is required'),
+        )
+    max_bytes = _chunked_max_size_bytes(request)
+    if form.size is None or form.size <= 0 or form.size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(
+                f'Invalid file size (max {max_bytes // (1024 * 1024)} MB)'
+            ),
+        )
+
+    _chunked_reap_stale()
+
+    upload_id = str(uuid.uuid4())
+    session_dir = _chunked_session_dir(upload_id)
+    try:
+        session_dir.mkdir(parents=True, exist_ok=True)
+        # Initialize empty data file so appends are deterministic.
+        (session_dir / 'data').touch()
+        meta = {
+            'filename': os.path.basename(form.filename),
+            'size': int(form.size),
+            'content_type': form.content_type,
+            'user_id': user.id,
+            'received': 0,
+        }
+        with open(session_dir / 'meta.json', 'w') as f:
+            json.dump(meta, f)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT('Could not initialize chunked upload'),
+        )
+
+    return ChunkedUploadStartResponse(upload_id=upload_id)
+
+
+def _read_meta(session_dir: Path) -> dict:
+    with open(session_dir / 'meta.json', 'r') as f:
+        return json.load(f)
+
+
+def _write_meta(session_dir: Path, meta: dict) -> None:
+    with open(session_dir / 'meta.json', 'w') as f:
+        json.dump(meta, f)
+
+
+@router.post('/chunked/{upload_id}')
+async def chunked_upload_append(
+    upload_id: str,
+    request: Request,
+    user=Depends(get_verified_user),
+):
+    """Append a chunk. Body is raw bytes; offset is passed via query param.
+
+    Using raw body (not multipart) keeps per-request payloads small and
+    predictable — important for iOS Safari which chokes on large multipart
+    posts.
+    """
+    session_dir = _chunked_session_dir(upload_id)
+    if not session_dir.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT('Upload session not found'),
+        )
+
+    try:
+        meta = _read_meta(session_dir)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT('Upload session not found'),
+        )
+
+    if meta.get('user_id') != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    try:
+        offset = int(request.query_params.get('offset', meta.get('received', 0)))
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Invalid offset'),
+        )
+
+    data_path = session_dir / 'data'
+    current_size = data_path.stat().st_size
+    if offset != current_size:
+        # Client and server disagree on progress — surface so client can resync.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={'message': 'offset mismatch', 'received': current_size},
+        )
+
+    total = int(meta.get('size', 0))
+    written = 0
+    try:
+        with open(data_path, 'ab') as f:
+            async for piece in request.stream():
+                if not piece:
+                    continue
+                if current_size + written + len(piece) > total:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.DEFAULT('Chunk exceeds declared size'),
+                    )
+                f.write(piece)
+                written += len(piece)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT('Error writing chunk'),
+        )
+
+    meta['received'] = current_size + written
+    _write_meta(session_dir, meta)
+
+    return {'received': meta['received'], 'size': total}
+
+
+@router.post('/chunked/{upload_id}/complete', response_model=FileModelResponse)
+async def chunked_upload_complete(
+    upload_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    metadata: Optional[dict | str] = Form(None),
+    process: bool = Query(True),
+    process_in_background: bool = Query(True),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    session_dir = _chunked_session_dir(upload_id)
+    if not session_dir.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT('Upload session not found'),
+        )
+
+    try:
+        meta = _read_meta(session_dir)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT('Upload session not found'),
+        )
+
+    if meta.get('user_id') != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    data_path = session_dir / 'data'
+    actual = data_path.stat().st_size
+    expected = int(meta.get('size', 0))
+    if actual != expected:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(
+                f'Upload incomplete: have {actual} bytes, expected {expected}'
+            ),
+        )
+
+    wrapper = _UploadFileFromPath(
+        path=data_path,
+        filename=meta.get('filename') or upload_id,
+        content_type=meta.get('content_type'),
+    )
+
+    try:
+        result = await upload_file_handler(
+            request,
+            file=wrapper,  # type: ignore[arg-type]
+            metadata=metadata,
+            process=process,
+            process_in_background=process_in_background,
+            user=user,
+            background_tasks=background_tasks,
+            db=db,
+        )
+        return result
+    finally:
+        wrapper.close()
+        # Storage.upload_file copies bytes out of wrapper.file, so the temp
+        # session directory is safe to remove even when background processing
+        # is still running (it uses the stored path, not the temp file).
+        try:
+            import shutil as _shutil
+            _shutil.rmtree(session_dir, ignore_errors=True)
+        except Exception as e:
+            log.debug(f'Failed to remove chunk session {upload_id}: {e}')
+
+
+@router.delete('/chunked/{upload_id}')
+async def chunked_upload_abort(
+    upload_id: str,
+    user=Depends(get_verified_user),
+):
+    session_dir = _chunked_session_dir(upload_id)
+    if not session_dir.exists():
+        return {'status': True}
+    try:
+        meta = _read_meta(session_dir)
+        if meta.get('user_id') != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        # Corrupt meta — just delete.
+        pass
+    import shutil as _shutil
+    _shutil.rmtree(session_dir, ignore_errors=True)
+    return {'status': True}
+
+
+############################
 # List Files
 ############################
 

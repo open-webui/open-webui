@@ -50,7 +50,8 @@
 		getFormattedTime,
 		getUserPosition,
 		getUserTimezone,
-		getWeekday
+		getWeekday,
+		isIOSLike
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -736,6 +737,26 @@
 			if (file['type'].startsWith('image/')) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+					return;
+				}
+
+				// iOS/iPadOS WebKit has hard memory limits on FileReader and
+				// <canvas> for large images. When no transform is actually
+				// required, skip the FileReader+canvas pipeline on those
+				// platforms and hand the raw file straight to uploadFile(),
+				// which will chunk it as needed.
+				const needsCompression =
+					($settings?.imageCompression ?? false) ||
+					($config?.file?.image_compression?.width ?? null) !== null ||
+					($config?.file?.image_compression?.height ?? null) !== null;
+				const needsHeicConvert = file['type'] === 'image/heic';
+				if (
+					isIOSLike() &&
+					!$temporaryChatEnabled &&
+					!needsCompression &&
+					!needsHeicConvert
+				) {
+					uploadFileHandler(file, false);
 					return;
 				}
 

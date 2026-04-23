@@ -32,6 +32,18 @@ import { decode } from 'html-entities';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Detect iOS / iPadOS (including iPadOS in desktop-UA mode).
+// WebKit on these platforms has hard memory limits on large multipart
+// POSTs and on FileReader/canvas — some upload flows must be adapted.
+export const isIOSLike = (): boolean => {
+	if (typeof navigator === 'undefined') return false;
+	const ua = navigator.userAgent || '';
+	if (/iPad|iPhone|iPod/.test(ua)) return true;
+	// iPadOS 13+ reports as MacIntel; distinguish via touch support.
+	if (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints ?? 0) > 1) return true;
+	return false;
+};
+
 export const formatNumber = (num: number): string => {
 	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
 		num
