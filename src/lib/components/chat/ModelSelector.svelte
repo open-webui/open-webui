@@ -42,8 +42,9 @@
 	const autoSaveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
 		if (hasEmptyModel.length) return;
-		settings.set({ ...$settings, models: selectedModels });
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		const updatedSettings = { ...$settings, models: selectedModels };
+		settings.set(updatedSettings);
+		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 	};
 
 	$: if (selectedModels && selectedModels[0] !== '') {
