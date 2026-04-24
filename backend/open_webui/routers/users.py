@@ -550,6 +550,8 @@ async def update_user_by_id(
                         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
                     )
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f'Error checking primary admin status: {e}')
         raise HTTPException(
@@ -631,6 +633,8 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user), db: Asyn
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ERROR_MESSAGES.ACTION_PROHIBITED,
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f'Error checking primary admin status: {e}')
         raise HTTPException(

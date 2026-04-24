@@ -550,3 +550,4 @@ export const getUserGroupsById = async (token: string, userId: string) => {
 
 	return res;
 };
+

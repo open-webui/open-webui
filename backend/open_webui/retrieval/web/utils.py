@@ -5,6 +5,8 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
+
+import requests
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
