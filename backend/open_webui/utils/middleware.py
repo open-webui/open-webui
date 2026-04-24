@@ -4660,9 +4660,6 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_type = None
                         direct_tool = False
 
-                        log.info(
-                            f'[MCP] tool_call: name="{tool_function_name}" found={tool_function_name in tools}'
-                        )
                         if tool_function_name in tools:
                             tool = tools[tool_function_name]
                             spec = tool.get('spec', {})
