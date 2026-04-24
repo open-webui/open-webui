@@ -53,10 +53,6 @@
 		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 	};
 
-	$: if (mounted && selectedModels && selectedModels[0] !== '') {
-		autoSaveDefaultModel();
-	}
-
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		const _selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
@@ -83,6 +79,7 @@
 						}))}
 						{pinModelHandler}
 						bind:value={selectedModel}
+					on:change={autoSaveDefaultModel}
 					/>
 				</div>
 			</div>
