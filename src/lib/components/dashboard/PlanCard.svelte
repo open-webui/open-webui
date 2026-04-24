@@ -14,6 +14,11 @@
 	$: current = plans.find((p) => p.id === planName?.toLowerCase()) ?? plans[0];
 	$: nextPlan = plans[plans.indexOf(current) + 1];
 
+	const tokenPacks = [
+		{ id: 'pack_500k', label: '+500K Tokens', price: '€19', period: 'einmalig' },
+		{ id: 'pack_2m',   label: '+2M Tokens',   price: '€59', period: 'einmalig' }
+	];
+
 	async function handleUpgrade() {
 		if (!nextPlan || nextPlan.id === 'free') return;
 		try {
@@ -36,6 +41,29 @@
 			// network error — fall through to mailto
 		}
 		window.location.href = `mailto:hola@clapnclaw.com?subject=Upgrade%20a%20${nextPlan.label}`;
+	}
+
+	async function handleTokenPack(pack: typeof tokenPacks[0]) {
+		try {
+			const res = await fetch(`${WEBUI_BASE_URL}/api/v1/clapnclaw/billing/checkout`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${localStorage.token}`
+				},
+				body: JSON.stringify({ plan: pack.id })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				if (data.checkout_url) {
+					window.location.href = data.checkout_url;
+					return;
+				}
+			}
+		} catch {
+			// fall through to mailto
+		}
+		window.location.href = `mailto:hola@clapnclaw.com?subject=Token%20Pack%20${encodeURIComponent(pack.label)}`;
 	}
 </script>
 
@@ -100,4 +128,22 @@
 			Plan máximo activo
 		</div>
 	{/if}
+
+	<!-- Token packs -->
+	<div class="mt-3 pt-3 border-t border-black/[.05] dark:border-white/[.05]">
+		<p class="text-[9px] font-semibold uppercase tracking-[.1em] text-gray-400 dark:text-white/30 mb-2">Recargas</p>
+		<div class="flex flex-wrap gap-1.5">
+			{#each tokenPacks as pack}
+				<button
+					class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-mono transition-all hover:border-gray-400 dark:hover:border-gray-500 hover:-translate-y-0.5 cursor-pointer"
+					style="border-color:rgba(0,0,0,.12);color:rgba(0,0,0,.65)"
+					on:click={() => handleTokenPack(pack)}
+				>
+					<span class="font-semibold dark:text-gray-200">{pack.label}</span>
+					<span class="text-gray-500 dark:text-gray-400">{pack.price}</span>
+					<span class="text-[9px] text-gray-400 dark:text-gray-500">{pack.period}</span>
+				</button>
+			{/each}
+		</div>
+	</div>
 </div>
