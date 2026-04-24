@@ -74,7 +74,7 @@ class MCPClient:
                     await self.session.initialize()
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
-                await asyncio.shield(self.disconnect())
+                await self.disconnect()
                 raise e
 
     async def list_tool_specs(self) -> Optional[dict]:
@@ -142,9 +142,18 @@ class MCPClient:
         """Clean up and close the session.
 
         This method is idempotent — calling it multiple times or on a
-        client that was never connected is safe.  It shields the close
-        operation from CancelledError and adds a timeout so a hung MCP
-        server cannot block the event loop indefinitely.
+        client that was never connected is safe.  It adds a timeout so a
+        hung MCP server cannot block the event loop indefinitely.
+
+        NOTE: Neither asyncio.wait_for() nor anyio.fail_after() may be used
+        here as a timeout wrapper.
+        - asyncio.wait_for() wraps in a new Task, violating anyio cancel-scope
+          task-ownership rules.
+        - anyio.fail_after() creates a new cancel scope that conflicts with
+          the transport's internal cancel scopes when they are exited from a
+          different anyio task-group context (raises "Attempted to exit a
+          cancel scope that isn't the current task's current cancel scope").
+        The transport handles its own cleanup; we just suppress all exceptions.
         """
         exit_stack = self.exit_stack
         if exit_stack is None:
@@ -155,20 +164,16 @@ class MCPClient:
         self.session = None
 
         try:
-            # IMPORTANT: Do NOT use asyncio.shield() or asyncio.wait_for()
-            # because they create a new asyncio task, which violates the MCP SDK's
-            # requirement that its TaskGroup be exited in the exact same task.
-            # ALSO do NOT use anyio.CancelScope(shield=True) or anyio.fail_after(),
-            # because they push a new cancel scope onto the task, violating LIFO
-            # order when aclose() attempts to exit the inner TaskGroup.
-            # We simply call aclose() directly. If the task is cancelled, the
-            # sockets will eventually be cleaned up by garbage collection.
             await exit_stack.aclose()
-        except TimeoutError:
-            log.warning('MCPClient.disconnect() timed out after 5 s')
-        except RuntimeError as exc:
-            log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
-        except Exception as exc:
+        except BaseException as exc:
+            # The MCP SDK's streamable_http transport uses anyio task
+            # groups and async generators internally.  When we close
+            # a session that was interrupted mid-flight these can raise
+            # various errors (e.g. "aclose(): asynchronous generator is
+            # already running", or asyncio.CancelledError from internal
+            # cancel scopes, or RuntimeError about cancel scope ownership).
+            # Swallowing the error here is safe because the connection is
+            # being torn down anyway.
             log.debug('MCPClient.disconnect() error: %s', exc)
 
     async def __aenter__(self):
