@@ -3006,6 +3006,17 @@ async def background_tasks_handler(ctx):
     tasks = ctx['tasks']
     event_emitter = ctx['event_emitter']
 
+    # Background task generation (titles, tags, follow-ups) should always use
+    # the server-side task model, not the user's direct connection. Clear the
+    # direct flag so generate_chat_completion routes through the standard
+    # server-side path instead of generate_direct_chat_completion, which
+    # requires an active WebSocket session that doesn't exist in this context.
+    original_direct = getattr(request.state, 'direct', False)
+    original_model = getattr(request.state, 'model', None)
+    request.state.direct = False
+    if hasattr(request.state, 'model'):
+        del request.state.model
+
     message = None
     messages = []
 
@@ -3199,6 +3210,11 @@ async def background_tasks_handler(ctx):
                             )
                         except Exception as e:
                             pass
+
+    # Restore original direct connection state
+    request.state.direct = original_direct
+    if original_model is not None:
+        request.state.model = original_model
 
 
 async def outlet_filter_handler(ctx):

@@ -157,28 +157,26 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
             content={'detail': 'Title generation is disabled'},
         )
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating chat title using model {task_model_id} for user {user.email} ')
 
@@ -234,28 +232,26 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
             content={'detail': 'Follow-up generation is disabled'},
         )
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating chat title using model {task_model_id} for user {user.email} ')
 
@@ -302,28 +298,26 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
             content={'detail': 'Tags generation is disabled'},
         )
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating chat tags using model {task_model_id} for user {user.email} ')
 
@@ -364,28 +358,26 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
 
 @router.post('/image_prompt/completions')
 async def generate_image_prompt(request: Request, form_data: dict, user=Depends(get_verified_user)):
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating image prompt using model {task_model_id} for user {user.email} ')
 
@@ -444,28 +436,26 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
         log.info(f'Reusing cached queries: {request.state.cached_queries}')
         return request.state.cached_queries
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating {type} queries using model {task_model_id} for user {user.email}')
 
@@ -522,28 +512,26 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
                 detail=ERROR_MESSAGES.INPUT_TOO_LONG(request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH),
             )
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating autocompletion using model {task_model_id} for user {user.email}')
 
@@ -584,28 +572,26 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
 
 @router.post('/emoji/completions')
 async def generate_emoji(request: Request, form_data: dict, user=Depends(get_verified_user)):
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-        )
 
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
+    # Resolve the task model before validating — the configured task model
+    # may differ from the chat model (e.g., when users chat via direct
+    # connections, the chat model may not be in the server's MODELS registry,
+    # but the configured task model is).
     task_model_id = get_task_model_id(
         model_id,
         request.app.state.config.TASK_MODEL,
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
+
+    if task_model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
 
     log.debug(f'generating emoji using model {task_model_id} for user {user.email} ')
 
@@ -649,12 +635,7 @@ async def generate_emoji(request: Request, form_data: dict, user=Depends(get_ver
 
 @router.post('/moa/completions')
 async def generate_moa_response(request: Request, form_data: dict, user=Depends(get_verified_user)):
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = request.app.state.MODELS
 
     model_id = form_data['model']
 
