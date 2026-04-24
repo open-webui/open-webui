@@ -60,7 +60,7 @@
 
 		if (JSON.stringify(_selectedModels) !== JSON.stringify(selectedModels)) {
 			const cookieModel = document.cookie.split(';').find(c => c.trim().startsWith('garnet_default_model='))?.split('=')?.[1];
-			if (!cookieModel || _selectedModels[0] !== '') {
+			if (!cookieModel) {
 				selectedModels = _selectedModels;
 			}
 		}
