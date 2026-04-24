@@ -1,0 +1,76 @@
+name: PR Approve Bot
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  approve-pr:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/approve')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PR_BOT_APP_ID }}
+          private_key: ${{ secrets.PR_BOT_PRIVATE_KEY }}
+
+      - name: Check commenter has write access
+        id: check-permission
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.actor,
+            });
+            const allowed = ['write', 'admin', 'maintain'].includes(data.permission);
+            if (!allowed) {
+              core.warning(`@${context.actor} does not have write access (got: ${data.permission})`);
+            }
+            return allowed;
+
+      - name: Approve PR
+        if: steps.check-permission.outputs.result == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.bot-token.outputs.token }}
+          script: |
+            const prNumber = context.issue.number;
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              event: 'APPROVE',
+              body: `Approved via \`/approve\` comment by @${context.actor}.`,
+            });
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1',
+            });
+
+      - name: Reject — insufficient permissions
+        if: steps.check-permission.outputs.result != 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1',
+            });
+            core.setFailed(`@${context.actor} does not have permission to approve PRs.`);
