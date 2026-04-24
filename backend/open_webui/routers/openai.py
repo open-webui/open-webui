@@ -1239,7 +1239,7 @@ async def generate_chat_completion(
                     except Exception:
                         pass
                     yield chunk
-                if pseudo_prompt:
+                if pseudo_prompt or file_entity_count:
                     synthetic = f'data: {json.dumps({"pseudonymized_prompt": pseudo_prompt, "file_entity_count": file_entity_count})}\n\n'
                     yield synthetic.encode('utf-8')
 
