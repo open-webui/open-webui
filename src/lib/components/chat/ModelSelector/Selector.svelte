@@ -649,8 +649,8 @@
 													onClick={() => {
 														value = item.value;
 														selectedModelIdx = index;
-
 														show = false;
+														dispatch('change', { value: item.value });
 													}}
 												/>
 											{/each}
