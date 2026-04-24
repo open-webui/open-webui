@@ -847,7 +847,7 @@ def _normalize_stored_item(item: dict) -> dict:
     return {k: v for k, v in item.items() if k in allowed}
 
 
-def convert_to_responses_payload(payload: dict) -> dict:
+def convert_to_responses_payload(payload: dict, metadata: dict | None = None) -> dict:
     """
     Convert Chat Completions payload to Responses API format.
 
@@ -855,6 +855,9 @@ def convert_to_responses_payload(payload: dict) -> dict:
     Responses API: { input: [{type: "message", role, content: [...]}], instructions: "system" }
     """
     messages = payload.pop('messages', [])
+    # Use provided metadata or fallback to payload metadata
+    if metadata is None:
+        metadata = payload.get('metadata', {})
 
     system_content = ''
     input_items = []
@@ -986,6 +989,28 @@ def convert_to_responses_payload(payload: dict) -> dict:
                 converted_tools.append(tool)
         responses_payload['tools'] = converted_tools
 
+    # Determine if native OpenAI web_search should be used
+    if not metadata:
+        metadata = payload.get('metadata', {})
+    web_search_enabled = metadata.get('features', {}).get('web_search', False)
+    using_openai_web_search = metadata.get('params', {}).get('openai_responses_web_search') or payload.get(
+        'openai_responses_web_search'
+    )
+
+    if web_search_enabled and using_openai_web_search:
+        # Strip built-in search_web/fetch_url tools — we only want the native web_search tool
+        tools = responses_payload.get('tools', [])
+        tools = [
+            t for t in tools
+            if not (isinstance(t, dict) and t.get('name') in ('search_web', 'fetch_url'))
+        ]
+        # Inject native web_search tool if not already present
+        has_native_web_search = any(isinstance(t, dict) and t.get('type') == 'web_search' for t in tools)
+        if not has_native_web_search:
+            tools = tools + [{'type': 'web_search'}]
+            log.debug('Injected native web_search tool for Responses API')
+        responses_payload['tools'] = tools
+
     return responses_payload
 
 
@@ -1063,6 +1088,14 @@ async def generate_chat_completion(
 
         if params:
             system = params.pop('system', None)
+
+            # Merge model params into metadata for Responses API processing
+            # Request/runtime params (from metadata) take precedence over model defaults
+            if metadata is not None and isinstance(metadata, dict):
+                metadata['params'] = {
+                    **params,
+                    **metadata.get('params', {})
+                }
 
             payload = apply_model_params_to_body_openai(params, payload)
             if not bypass_system_prompt:
@@ -1146,7 +1179,7 @@ async def generate_chat_completion(
 
         if is_azure_v1:
             if is_responses:
-                payload = convert_to_responses_payload(payload)
+                payload = convert_to_responses_payload(payload, metadata)
                 request_url = f'{url.rstrip("/")}/responses'
             else:
                 request_url = f'{url.rstrip("/")}/chat/completions'
@@ -1156,13 +1189,13 @@ async def generate_chat_completion(
             headers['api-version'] = api_version
 
             if is_responses:
-                payload = convert_to_responses_payload(payload)
+                payload = convert_to_responses_payload(payload, metadata)
                 request_url = f'{request_url}/responses?api-version={api_version}'
             else:
                 request_url = f'{request_url}/chat/completions?api-version={api_version}'
     else:
         if is_responses:
-            payload = convert_to_responses_payload(payload)
+            payload = convert_to_responses_payload(payload, metadata)
             request_url = f'{url}/responses'
         else:
             request_url = f'{url}/chat/completions'

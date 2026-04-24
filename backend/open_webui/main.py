@@ -1668,6 +1668,10 @@ async def chat_completion(
                     )
                     else 'default'
                 ),
+                'openai_responses_web_search': (
+                    form_data.get('params', {}).get('openai_responses_web_search') is True
+                    or model_info_params.get('openai_responses_web_search') is True
+                ),
             },
         }
 

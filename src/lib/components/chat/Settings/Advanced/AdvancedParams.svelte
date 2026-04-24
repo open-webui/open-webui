@@ -17,6 +17,7 @@
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
+		openai_responses_web_search: null,
 		reasoning_tags: null,
 		seed: null,
 		stop: null,
@@ -170,6 +171,35 @@
 						<span class="ml-2 self-center">{$i18n.t('Native')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+	</div>
+
+	<div>
+		<Tooltip
+			content={$i18n.t(
+				'Use the OpenAI Responses API native web_search tool instead of built-in search_web and fetch_url tools. Requires Native Function Calling to be enabled.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs">
+					{$i18n.t('OpenAI Web Search (Responses API)')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						params.openai_responses_web_search = (params?.openai_responses_web_search ?? null) === null ? true : null;
+					}}
+					type="button"
+				>
+					{#if params.openai_responses_web_search === true}
+						<span class="ml-2 self-center">{$i18n.t('Enabled')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Disabled')}</span>
 					{/if}
 				</button>
 			</div>

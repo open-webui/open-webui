@@ -38,7 +38,8 @@
 		'firecrawl',
 		'external',
 		'yandex',
-		'youcom'
+		'youcom',
+		'model_native'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -174,7 +175,18 @@
 					</div>
 
 					{#if webConfig.WEB_SEARCH_ENGINE !== ''}
-						{#if webConfig.WEB_SEARCH_ENGINE === 'ollama_cloud'}
+						{#if webConfig.WEB_SEARCH_ENGINE === 'model_native'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3">
+									<div class="text-xs font-medium mb-1">{$i18n.t('Model Native Web Search')}</div>
+									<div class="text-xs text-gray-500">
+										{$i18n.t(
+											'This option uses the model\'s native web search capability (e.g., OpenAI Responses API web_search tool). No additional configuration is required, but the model must support native web search and "OpenAI Web Search (Responses API)" must be enabled in the model\'s Advanced Params.'
+										)}
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'ollama_cloud'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
