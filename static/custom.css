@@ -1,11 +1,17 @@
 /* ClapNClaw — Open WebUI Custom Branding */
 
-/* ── Primary color override (green accent) ── */
+/* ── Prevent /auth page flash on logout ──
+   loader.js redirects /auth → hub. Hide #app until loader.js confirms
+   we're on the right page and calls document.getElementById('app').style.visibility='visible'
+   Transition delay keeps normal pages from flickering. */
+#app { visibility: hidden; transition: visibility 0s 0.05s; }
+
+/* ── Primary color override ── */
 :root {
   --accent-color: #0D5C3F;
 }
 
-/* Override Tailwind's blue accent with ClapNClaw green */
+/* Override blue accent with ClapNClaw green */
 .bg-blue-500, .bg-blue-600 { background-color: #0D5C3F !important; }
 .hover\:bg-blue-600:hover { background-color: #094a32 !important; }
 .text-blue-500, .text-blue-600 { color: #0D5C3F !important; }
@@ -13,63 +19,292 @@
 .ring-blue-500 { --tw-ring-color: #0D5C3F !important; }
 .focus\:ring-blue-500:focus { --tw-ring-color: #0D5C3F !important; }
 
-/* Button primary */
-button[type="submit"],
-.bg-black.text-white,
-.dark .bg-white.text-gray-900 {
-  background-color: #0D5C3F !important;
-  color: #fff !important;
-}
-button[type="submit"]:hover {
-  background-color: #094a32 !important;
-}
-
 /* Send button */
-button[aria-label="Send"] {
-  background-color: #0D5C3F !important;
-}
+button[aria-label="Send"] { background-color: #0D5C3F !important; }
 
-/* ── Hide version update notification ── */
-[class*="version"], [class*="update-available"] {
-  display: none !important;
-}
+/* ── Hide version / update banners ── */
+[class*="update-available"], [data-testid="update-banner"] { display: none !important; }
 
-/* ── Hide "Workspace" section for non-admins ── */
-/* This is handled via permissions, but as a safety net */
-
-/* ── Sidebar branding ── */
-.text-lg.font-medium {
-  font-family: 'Outfit', sans-serif !important;
-}
-
-/* ── Clean splash screen ── */
+/* ── Splash screen ── */
 #splash-screen {
   background: #f5f2ec !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
-html.dark #splash-screen {
-  background: #0b0b0b !important;
-}
-
-/* ── Model selector — hide model ID, show friendly name ── */
-.text-xs.text-gray-500.truncate {
-  display: none;
-}
-
-/* ── Hide Open WebUI default logo on login page ── */
-.svelte-1kxnbnl, .svelte-lwo099 {
-  /* Svelte class selectors are fragile — use content-based hiding */
+html.dark #splash-screen { background: #1a1a1a !important; }
+#splash-screen img {
+  width: auto !important;
+  height: 52px !important;
+  max-width: 180px !important;
+  object-fit: contain !important;
 }
 
-/* Hide the "OI" logo mark top-left */
-img[src*="favicon"], img[src="/static/favicon.png"] {
-  content: url('/static/favicon.svg') !important;
-  width: 28px !important;
-  height: 28px !important;
+/* ── Model selector — hide raw model ID ── */
+.text-xs.text-gray-500.truncate { display: none; }
+
+/* ══════════════════════════════════════
+   LOGIN PAGE REDESIGN
+   (class .cnc-login added by custom JS)
+   ══════════════════════════════════════ */
+
+body.cnc-login {
+  background: linear-gradient(135deg, #f0f4f0 0%, #e8f0e8 50%, #f5f2ec 100%) !important;
+  min-height: 100vh;
 }
 
-/* ── Login page — hide the "(slug)" suffix shown after WEBUI_NAME ── */
+/* Center wrapper */
+body.cnc-login > div > div {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh !important;
+  padding: 24px !important;
+}
 
-/* ── Hide version update banner ── */
-div[class*="update"], .update-available, [data-testid="update-banner"] {
+/* Form card */
+body.cnc-login .cnc-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 48px 44px 40px;
+  box-shadow: 0 8px 48px rgba(13, 92, 63, 0.10), 0 2px 12px rgba(0,0,0,0.06);
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Logo on login page */
+body.cnc-login .cnc-logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  margin: 0 auto 28px;
+  object-fit: contain;
+}
+
+/* Login title */
+body.cnc-login .cnc-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+  margin-bottom: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body.cnc-login .cnc-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* Input labels */
+body.cnc-login label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  margin-bottom: 6px !important;
+}
+
+/* Input fields */
+body.cnc-login input[type="email"],
+body.cnc-login input[type="password"],
+body.cnc-login input[type="text"] {
+  border: 1.5px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  font-size: 15px !important;
+  transition: border-color 0.15s !important;
+  background: #fafafa !important;
+}
+
+body.cnc-login input:focus {
+  border-color: #0D5C3F !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(13, 92, 63, 0.08) !important;
+  background: #fff !important;
+}
+
+/* Submit button */
+body.cnc-login button[type="submit"] {
+  background: #0D5C3F !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  padding: 12px !important;
+  transition: background 0.15s, transform 0.1s !important;
+  border: none !important;
+  width: 100% !important;
+  margin-top: 8px !important;
+}
+
+body.cnc-login button[type="submit"]:hover {
+  background: #094a32 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Forgot password link */
+.cnc-forgot-pw {
+  display: block;
+  text-align: right;
+  margin-top: 10px;
+  color: #0D5C3F;
+  font-size: 13px;
+  text-decoration: none;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.cnc-forgot-pw:hover { opacity: 1; text-decoration: underline; }
+
+/* Security badge */
+.cnc-security-badge {
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* ══════════════════════════════════════════════════════
+   V1 BRANDING CLEANUP — hide OWI-specific elements
+   ══════════════════════════════════════════════════════ */
+
+/* ── Update notifications (all variants) ── */
+[class*="update-available"],
+[data-testid="update-banner"],
+[class*="UpdateBanner"],
+[class*="changelog"],
+.toast-update,
+button[onclick*="changelog"],
+a[href*="github.com/open-webui"] { display: none !important; }
+
+/* ── About dialog — hide social links, OWI copyright, version update button ── */
+a[href*="discord.gg"],
+a[href*="twitter.com/OpenWebUI"],
+a[href*="x.com/OpenWebUI"],
+a[href*="github.com/open-webui/open-webui"],
+button[onclick*="Nach Updates suchen"],
+button[onclick*="Check for Updates"] { display: none !important; }
+
+/* Hide "Star us on Github" + Discord + OpenWebUI branded buttons in about modal */
+.modal a[href*="discord"],
+.modal a[href*="github.com/open-webui"],
+.modal button:has(svg[data-icon="github"]) { display: none !important; }
+
+/* Hide "Erstellt von" / "Created by" attribution line */
+p:has(a[href*="tjbck"]),
+p:has(a[href*="timothy"]),
+div:has(> p:contains("Timothy")) { display: none !important; }
+
+/* ── OI logo in model selector — replace with neutral circle ── */
+/* The OpenAI circular logo appears as img with OI alt or openai src */
+img[alt="OpenAI"],
+img[src*="openai"],
+img[src*="/static/favicon.png"].rounded-full { opacity: 0 !important; }
+
+/* ── Settings sidebar nav — hide Audio, Tool Connections, Memory tabs ── */
+/* OWI uses button/nav items with text labels in settings */
+nav button[aria-label*="Audio"],
+nav button[aria-label*="Sprache"],
+nav button[aria-label*="STT"],
+nav button[aria-label*="Verbindungen"],
+nav button[aria-label*="Connections"],
+nav button[aria-label*="Erinnerungen"],
+nav button[aria-label*="Memory"],
+nav button[data-key="audio"],
+nav button[data-key="connections"],
+nav button[data-key="memory"] { display: none !important; }
+
+/* ── Profile — hide webhook field ── */
+/* The webhook URL input in account settings */
+label:has(+ input[placeholder*="Webhook"]),
+label:has(+ input[name*="webhook"]),
+input[placeholder*="Webhook-URL"],
+input[placeholder*="webhook"],
+div:has(> label:contains("Webhook")) { display: none !important; }
+
+/* ── Dashboard/sidebar overlap fix ── */
+/* Sidebar drawer should not overlay main content area */
+#sidebar {
+  z-index: 40 !important;
+}
+#sidebar ~ main,
+#sidebar + div {
+  z-index: 50 !important;
+  position: relative !important;
+}
+
+/* ── Benutzeroberfläche (UI) settings — hide advanced toggles users shouldn't touch ── */
+/* Hide "Nachrichten Queue aktivieren", "Breitbildmodus", "Temporärer Chat als Standard" */
+label:has(input[name*="queue"]),
+label:has(input[name*="widescreen"]),
+label:has(input[name*="temporary"]) { display: none !important; }
+
+/* ── Hide Controls, Playground, Notes, Admin nav items ──
+   OWI uses Svelte-hashed classes — target by aria/href/title attributes.
+   JS (loader.js) also hides these; CSS is the fast first-pass. */
+[aria-label="Controls"],
+[aria-label="Steuerung"],
+[aria-label="Model Options"],
+[aria-label="Modelloptionen"],
+[href="/playground"],
+[href*="playground"],
+[aria-label="Playground"],
+[aria-label="Notes"],
+[aria-label="Notizen"],
+[title="Controls"],
+[title="Playground"],
+[title="Notes"],
+[title="Steuerung"],
+[title="Notizen"],
+[href="/admin"],
+[href*="/admin/"],
+[aria-label="Admin"],
+[aria-label="Admin Panel"],
+[aria-label="Documentation"],
+[aria-label="Dokumentation"],
+[aria-label="Release Notes"],
+[aria-label="Releases"],
+[aria-label="Keyboard Shortcuts"],
+[aria-label="Tastenkombinationen"],
+[href*="docs.openwebui"],
+[href*="discord.gg"] {
   display: none !important;
+}
+
+/* Hide parent li if the hidden element is inside one */
+li:has(> [aria-label="Controls"]),
+li:has(> [aria-label="Steuerung"]),
+li:has(> [href="/playground"]),
+li:has(> [aria-label="Playground"]),
+li:has(> [aria-label="Notes"]),
+li:has(> [aria-label="Notizen"]),
+li:has(> [href="/admin"]),
+li:has(> [aria-label="Documentation"]),
+li:has(> [aria-label="Dokumentation"]),
+li:has(> [aria-label="Release Notes"]),
+li:has(> [aria-label="Releases"]),
+li:has(> [aria-label="Keyboard Shortcuts"]),
+li:has(> [aria-label="Tastenkombinationen"]) {
+  display: none !important;
+}
+
+/* ── Dashboard link styling (added by loader.js) ── */
+#cnc-dash-link {
+  margin: 4px 8px 8px;
+}
+
+/* ── Model logos inline alignment ── */
+[data-cnc-mlogo] {
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* ── Token count on sidebar button — truncate gracefully ── */
+#cnc-panel-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
 }

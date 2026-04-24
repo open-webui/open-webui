@@ -59,14 +59,6 @@
 					<div
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 					>
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin">{$i18n.t('Users')}</a
-						>
-
 						{#if $config?.features.enable_admin_analytics ?? true}
 							<a
 								draggable="false"
@@ -76,14 +68,6 @@
 								href="/admin/analytics">{$i18n.t('Analytics')}</a
 							>
 						{/if}
-
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin/evaluations">{$i18n.t('Evaluations')}</a
-						>
 
 						<a
 							draggable="false"

@@ -146,7 +146,7 @@
 	let selectedFilterIds = [];
 
 	let imageGenerationEnabled = false;
-	let webSearchEnabled = false;
+	let webSearchEnabled = true;
 	let codeInterpreterEnabled = false;
 
 	let showCommands = false;

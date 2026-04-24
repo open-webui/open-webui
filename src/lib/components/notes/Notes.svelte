@@ -351,18 +351,20 @@
 						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 						on:click={async () => {
 							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
-
 							if (res) {
 								goto(`/notes/${res.id}`);
 							}
 						}}
 					>
 						<Plus className="size-3" strokeWidth="2.5" />
-
 						<div class=" ml-1 text-xs">{$i18n.t('New Note')}</div>
 					</button>
 				</div>
 			</div>
+
+			<p class="text-sm text-gray-400 dark:text-gray-500 px-0.5 mt-0.5">
+				Guarda instrucciones reutilizables, borradores y contexto para tus conversaciones con IA. Privado por usuario, accesible en cualquier sesión.
+			</p>
 		</div>
 
 		<div

@@ -69,9 +69,8 @@
 		<div class="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700">
 			<div class="flex items-center gap-3 mb-4">
 				<img
-					crossorigin="anonymous"
-					src="{WEBUI_BASE_URL}/static/favicon.png"
-					class="size-8 rounded-full"
+					src="/icon-rounded.svg"
+					class="size-8 logo-spin"
 					alt="ClapNClaw"
 				/>
 				<h2 class="text-xl font-bold text-gray-900 dark:text-white">
@@ -120,8 +119,11 @@
 				/>
 			{:else if $onboardingStep === 'analyzing'}
 				<div class="flex flex-col items-center py-8">
-					<div
-						class="size-12 border-4 border-claw-500 border-t-transparent rounded-full animate-spin mb-4"
+					<img
+						src="/icon-rounded.svg"
+						alt=""
+						class="logo-spin mb-4"
+						style="width:64px;height:64px;"
 					/>
 					<p class="text-gray-600 dark:text-gray-400">
 						Analizando tus integraciones y recomendando skills...
@@ -146,3 +148,13 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes logo-rotate {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+	.logo-spin {
+		animation: logo-rotate 3s linear infinite;
+	}
+</style>
