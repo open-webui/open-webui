@@ -563,6 +563,12 @@
 					</button>
 				</Tooltip>
 
+				{#if message.file_entity_count > 0}
+					<span class="text-xs text-gray-400 mt-1">
+						📎 {message.file_entity_count} sensitive items detected in file
+					</span>
+				{/if}
+
 				{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
 					{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">

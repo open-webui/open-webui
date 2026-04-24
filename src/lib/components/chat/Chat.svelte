@@ -1613,7 +1613,7 @@
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		console.warn('[GARNET ENTRY]', data);
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage, pseudonymized_prompt } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage, pseudonymized_prompt, file_entity_count } = data;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -1718,8 +1718,12 @@
 		if (pseudonymized_prompt) {
 			const userMsgId = message.parentId;
 			if (userMsgId && history.messages[userMsgId]) {
-				history.messages[userMsgId] = { ...history.messages[userMsgId], pseudonymized_prompt };
-				console.warn('[GARNET MESSAGE SET]', userMsgId, pseudonymized_prompt);
+				history.messages[userMsgId] = {
+					...history.messages[userMsgId],
+					pseudonymized_prompt,
+					file_entity_count: file_entity_count ?? 0
+				};
+				console.warn('[GARNET MESSAGE SET]', userMsgId, pseudonymized_prompt, 'file_entity_count:', file_entity_count);
 			}
 		}
 
