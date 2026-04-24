@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-04-24
+
+### Added
+
+- 🧠 **PaddleOCR-vl document extraction.** Administrators can now use PaddleOCR-vl as a content extraction engine for document processing, with configurable API URL and token settings in document retrieval configuration. [Commit](https://github.com/open-webui/open-webui/commit/04c7e9535d330906891eefa5eda516f661c1cf79..331b7520db719d2f1c76c4b06603a9a59a9b7c25)
+- 🧵 **Streaming markdown performance stability.** Streaming responses now stay more memory-efficient by preventing repeated cleanup callback registration during markdown updates. [#24048](https://github.com/open-webui/open-webui/pull/24048)
+- 📚 **Source overflow indicator.** The Sources button now shows a +N badge when more than three sources are available, so hidden sources are clearly indicated in chat responses. [#23918](https://github.com/open-webui/open-webui/pull/23918)
+- ⚡ **Model avatar cache reuse.** Default model profile images now reuse a shared static path to reduce repeated downloads and improve loading efficiency when multiple models use the fallback icon. [#24015](https://github.com/open-webui/open-webui/pull/24015)
+- 🚀 **Faster splash image loading.** Splash screen images are now prioritized earlier during page load, improving first-load LCP behavior and reducing delayed image discovery. [#24011](https://github.com/open-webui/open-webui/pull/24011)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Finnish, Korean, Portuguese (Brazil), and Dutch were enhanced and expanded.
+
+### Fixed
+
+- 🛠️ **Throttle request handling.** Request handling no longer fails when user activity status updates are throttled with a non-zero interval. [#23979](https://github.com/open-webui/open-webui/pull/23979)
+- ✍️ **Rich text extension conflicts.** Rich text editing no longer triggers duplicate extension conflicts for lists and code blocks, improving editor stability. [#24009](https://github.com/open-webui/open-webui/pull/24009)
+
+### Changed
+
+- 
+
 ## [0.9.1] - 2026-04-21
 
 ### Fixed
