@@ -9,7 +9,7 @@
 	const i18n = getContext('i18n');
 
 	let mounted = false;
-	onMount(() => { setTimeout(() => { mounted = true; }, 500); });
+	onMount(() => { setTimeout(() => { mounted = true; }, 3000); });
 
 	export let selectedModels = [''];
 	export let disabled = false;
