@@ -3342,6 +3342,144 @@ async def outlet_filter_handler(ctx):
         log.debug(f'Error running outlet filters: {e}')
 
 
+async def _execute_tool_calls_non_streaming(request, form_data, ctx, response_data):
+    """Execute tool calls from a non-streaming LLM response and return the final response.
+
+    When a model returns finish_reason=tool_calls in a non-streaming response,
+    OWU needs to:
+      1. Execute each requested tool (MCP or builtin)
+      2. Append the assistant message and tool results to the message history
+      3. Issue a second LLM call and return its response
+    """
+    user = ctx['user']
+    metadata = ctx['metadata']
+
+    tools = metadata.get('tools', {})
+    if not tools:
+        return None
+
+    choices = response_data.get('choices', [])
+    if not choices:
+        return None
+
+    message = choices[0].get('message', {})
+    tool_calls_raw = message.get('tool_calls', [])
+    if not tool_calls_raw:
+        return None
+
+    results = []
+    for tool_call in tool_calls_raw:
+        tool_call_id = tool_call.get('id', '')
+        tool_function_name = tool_call.get('function', {}).get('name', '')
+        tool_args = tool_call.get('function', {}).get('arguments', '{}')
+
+        # Normalize tool name: Ollama may prepend the MCP server id as a
+        # namespace (e.g. "oracle:oracle_vault_ask") but tools_dict keys use
+        # the underscore-prefixed form ("oracle_vault_ask").
+        if tool_function_name not in tools and ':' in tool_function_name:
+            normalized_name = tool_function_name.split(':', 1)[1]
+            if normalized_name in tools:
+                log.info(f'[MCP] Normalizing tool name "{tool_function_name}" -> "{normalized_name}"')
+                tool_function_name = normalized_name
+                tool_call.setdefault('function', {})['name'] = tool_function_name
+
+        # Parse arguments
+        tool_function_params = {}
+        if tool_args and tool_args.strip():
+            try:
+                tool_function_params = ast.literal_eval(tool_args)
+            except Exception:
+                try:
+                    tool_function_params = json.loads(tool_args)
+                except Exception:
+                    log.error(f'[MCP] Could not parse tool args for {tool_function_name}: {tool_args}')
+                    results.append({'tool_call_id': tool_call_id, 'content': 'Error: could not parse arguments'})
+                    continue
+
+        # Sanitize args to only allowed params
+        tool_result = None
+        if tool_function_name in tools:
+            tool = tools[tool_function_name]
+            spec = tool.get('spec', {})
+            allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
+            tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
+
+            try:
+                log.info(f'[MCP] Executing tool "{tool_function_name}" params={tool_function_params}')
+                if tool.get('direct', False):
+                    event_caller = ctx.get('event_caller')
+                    if event_caller:
+                        tool_result = await event_caller(
+                            {
+                                'type': 'execute:tool',
+                                'data': {
+                                    'id': str(uuid4()),
+                                    'name': tool_function_name,
+                                    'params': tool_function_params,
+                                    'server': tool.get('server', {}),
+                                    'session_id': metadata.get('session_id', None),
+                                },
+                            }
+                        )
+                else:
+                    tool_function = await get_updated_tool_function(
+                        function=tool['callable'],
+                        extra_params={
+                            '__messages__': form_data.get('messages', []),
+                            '__files__': metadata.get('files', []),
+                        },
+                    )
+                    tool_result = await tool_function(**tool_function_params)
+                log.info(f'[MCP] Tool "{tool_function_name}" result: {str(tool_result)[:200]}')
+            except Exception as e:
+                log.error(f'[MCP] Tool execution error for {tool_function_name}: {e}')
+                tool_result = str(e)
+        else:
+            log.warning(f'[MCP] Tool "{tool_function_name}" not found in tools_dict (keys: {list(tools.keys())[:5]}...)')
+            tool_result = f'Error: tool "{tool_function_name}" not found'
+
+        results.append({'tool_call_id': tool_call_id, 'content': str(tool_result) if tool_result else ''})
+
+    if not results:
+        return None
+
+    # Build updated messages: original + assistant msg with tool_calls + tool results
+    updated_messages = list(form_data.get('messages', []))
+    updated_messages.append({
+        'role': 'assistant',
+        'content': message.get('content') or '',
+        'tool_calls': tool_calls_raw,
+    })
+    for result in results:
+        updated_messages.append({
+            'role': 'tool',
+            'tool_call_id': result['tool_call_id'],
+            'content': result['content'],
+        })
+
+    # Second LLM call with tool results in context
+    new_form_data = {
+        **form_data,
+        'messages': updated_messages,
+        'stream': False,
+    }
+    # Remove tools list so the LLM just answers (avoids infinite loop)
+    new_form_data.pop('tools', None)
+
+    log.info(f'[MCP] Making second LLM call after tool execution')
+    try:
+        second_response = await generate_chat_completion(
+            request,
+            new_form_data,
+            user,
+            bypass_system_prompt=True,
+        )
+        return second_response
+    except Exception as e:
+        log.error(f'[MCP] Error in second LLM call: {e}')
+        return None
+
+
 async def non_streaming_chat_response_handler(response, ctx):
     request = ctx['request']
 
@@ -3351,9 +3489,27 @@ async def non_streaming_chat_response_handler(response, ctx):
 
     event_emitter = ctx['event_emitter']
 
+    form_data = ctx.get('form_data', {})
+
     response, response_data = get_response_data(response)
     if response_data is None:
         return response
+
+    # Handle tool_calls from native function calling in non-streaming responses.
+    # The streaming_chat_response_handler's tool-execution loop only runs when
+    # the response IS a StreamingResponse.  For non-streaming JSON responses
+    # (finish_reason="tool_calls"), we must execute tools here and make a second
+    # LLM call with the results before returning to the caller.
+    if metadata.get('params', {}).get('function_calling') == 'native':
+        choices = response_data.get('choices', [])
+        if choices and choices[0].get('message', {}).get('tool_calls'):
+            log.info('[MCP] non-streaming tool_calls detected — executing and re-calling LLM')
+            second_response = await _execute_tool_calls_non_streaming(
+                request, form_data, ctx, response_data
+            )
+            if second_response is not None:
+                # Recurse once so the second response goes through normal content handling
+                return await non_streaming_chat_response_handler(second_response, ctx)
 
     if event_emitter:
         try:
@@ -4461,6 +4617,20 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_function_name = tool_call.get('function', {}).get('name', '')
                         tool_args = tool_call.get('function', {}).get('arguments', '{}')
 
+                        # Normalize tool name: some backends (e.g. Ollama) prepend the MCP
+                        # server id as a namespace (e.g. "oracle:oracle_vault_ask") but our
+                        # tools_dict keys use only the underscore-prefixed form
+                        # ("oracle_vault_ask").  Strip the "server_id:" prefix so the lookup
+                        # below succeeds.
+                        if tool_function_name not in tools and ':' in tool_function_name:
+                            normalized_name = tool_function_name.split(':', 1)[1]
+                            if normalized_name in tools:
+                                log.info(
+                                    f'Normalizing tool name from "{tool_function_name}" to "{normalized_name}"'
+                                )
+                                tool_function_name = normalized_name
+                                tool_call.setdefault('function', {})['name'] = tool_function_name
+
                         tool_function_params = {}
                         if tool_args and tool_args.strip():
                             try:
@@ -4490,6 +4660,9 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_type = None
                         direct_tool = False
 
+                        log.info(
+                            f'[MCP] tool_call: name="{tool_function_name}" found={tool_function_name in tools}'
+                        )
                         if tool_function_name in tools:
                             tool = tools[tool_function_name]
                             spec = tool.get('spec', {})
