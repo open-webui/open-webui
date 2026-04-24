@@ -59,8 +59,9 @@
 		);
 
 		if (JSON.stringify(_selectedModels) !== JSON.stringify(selectedModels)) {
-			if (_selectedModels.every((m) => m === '')) return;
-			selectedModels = _selectedModels;
+			if (!_selectedModels.every((m) => m === '')) {
+				selectedModels = _selectedModels;
+			}
 		}
 	}
 </script>
