@@ -1272,10 +1272,11 @@
 			if (chatContent) {
 				console.log(chatContent);
 
-				selectedModels =
-					(chatContent?.models ?? undefined) !== undefined
-						? chatContent.models
-						: [chatContent.models ?? ''];
+				const _chatModels = (chatContent?.models ?? undefined) !== undefined
+					? chatContent.models
+					: [chatContent.models ?? ''];
+				const _cookieDefault = document.cookie.split(';').find(c => c.trim().startsWith('garnet_default_model='))?.split('=')?.[1];
+				selectedModels = _cookieDefault ? [_cookieDefault] : _chatModels;
 
 				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
