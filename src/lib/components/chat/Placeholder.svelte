@@ -124,10 +124,11 @@
 										}}
 									>
 										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+											src={model?.info?.meta?.profile_image_url || '/icon-rounded.svg'}
+											style="width:36px;height:36px;min-width:36px;object-fit:contain;border-radius:8px;"
 											aria-hidden="true"
 											draggable="false"
+											on:error={(e) => { e.currentTarget.src = '/icon-rounded.svg'; }}
 										/>
 									</button>
 								</Tooltip>

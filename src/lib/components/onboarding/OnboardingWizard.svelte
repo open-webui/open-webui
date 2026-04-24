@@ -14,7 +14,6 @@
 	export let onComplete: () => void = () => {};
 
 	const steps: { key: OnboardingStep; label: string }[] = [
-		{ key: 'google', label: 'Google' },
 		{ key: 'slack', label: 'Slack' },
 		{ key: 'notion', label: 'Notion' },
 		{ key: 'analyzing', label: 'Analizando' },
@@ -38,7 +37,6 @@
 
 	async function runAnalysis() {
 		const providers: string[] = [];
-		if ($connectorStatus.google) providers.push('google');
 		if ($connectorStatus.slack) providers.push('slack');
 		if ($connectorStatus.notion) providers.push('notion');
 
@@ -96,18 +94,7 @@
 
 		<!-- Content -->
 		<div class="p-6 space-y-4">
-			{#if $onboardingStep === 'google'}
-				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-					Conecta tu cuenta de Google para acceder a Gmail, Drive y Calendar.
-				</p>
-				<ConnectorButton
-					provider="google"
-					label="Google (Gmail + Drive + Calendar)"
-					icon="G"
-					bind:connected={$connectorStatus.google}
-					onConnect={nextStep}
-				/>
-			{:else if $onboardingStep === 'slack'}
+			{#if $onboardingStep === 'slack'}
 				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
 					Conecta Slack para buscar y enviar mensajes.
 				</p>

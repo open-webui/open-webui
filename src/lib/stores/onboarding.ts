@@ -1,10 +1,9 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-export type OnboardingStep = 'google' | 'slack' | 'notion' | 'analyzing' | 'done';
+export type OnboardingStep = 'slack' | 'notion' | 'analyzing' | 'done';
 
 export interface ConnectorStatus {
-	google: boolean;
 	slack: boolean;
 	notion: boolean;
 }
@@ -17,12 +16,11 @@ export interface SkillRecommendation {
 }
 
 const defaultConnectors: ConnectorStatus = {
-	google: false,
 	slack: false,
 	notion: false
 };
 
-export const onboardingStep = writable<OnboardingStep>('google');
+export const onboardingStep = writable<OnboardingStep>('slack');
 export const connectorStatus = writable<ConnectorStatus>({ ...defaultConnectors });
 export const recommendedSkills = writable<SkillRecommendation[]>([]);
 
