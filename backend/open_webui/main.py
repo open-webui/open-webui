@@ -1919,25 +1919,28 @@ async def chat_completion(
                     detail=error_detail,
                 )
         finally:
-            # MCP cleanup — MUST run in the SAME asyncio task as
-            # connect() because the MCP SDK's streamablehttp_client
-            # uses anyio task groups whose cancel scopes enforce
-            # same-task exit.  Do NOT wrap in asyncio.shield() or
-            # asyncio.wait_for() — both create a new task.
+            # Clean up MCP clients.  Each client is isolated so one
+            # failure doesn't skip the rest.
+            #
+            # NOTE: asyncio.wait_for() / asyncio.shield() must NOT be used
+            # here — they create new asyncio Tasks, which violate anyio
+            # cancel-scope task-ownership rules when the MCPClient's
+            # exit_stack contains anyio transport resources (streamable_http).
+            # Exiting those cancel scopes from the wrong task raises
+            # "Attempted to exit a cancel scope that isn't the current
+            # task's current cancel scope", which propagates as a
+            # BaseException through the finally block, discards the response
+            # return value, and surfaces as a 500 "No response returned."
+            # MCPClient.disconnect() already catches BaseException internally.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
                     for client in reversed(list(mcp_clients.values())):
                         try:
                             await client.disconnect()
-                        except Exception as e:
+                        except BaseException as e:
                             log.debug(f'Error disconnecting MCP client: {e}')
-                        except asyncio.CancelledError:
-                            # Let the client close asynchronously by GC
-                            pass
-            except Exception as e:
+            except BaseException as e:
                 log.debug(f'Error cleaning up MCP clients: {e}')
-            except asyncio.CancelledError:
-                pass
 
             try:
                 if metadata.get('chat_id'):
