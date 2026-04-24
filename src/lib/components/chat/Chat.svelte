@@ -1715,12 +1715,12 @@
 			message.usage = usage;
 		}
 
-		if (pseudonymized_prompt) {
+		if (pseudonymized_prompt || file_entity_count > 0) {
 			const userMsgId = message.parentId;
 			if (userMsgId && history.messages[userMsgId]) {
 				history.messages[userMsgId] = {
 					...history.messages[userMsgId],
-					pseudonymized_prompt,
+					...(pseudonymized_prompt ? { pseudonymized_prompt } : {}),
 					file_entity_count: file_entity_count ?? 0
 				};
 				console.warn('[GARNET MESSAGE SET]', userMsgId, pseudonymized_prompt, 'file_entity_count:', file_entity_count);

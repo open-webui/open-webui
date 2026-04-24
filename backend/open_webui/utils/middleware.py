@@ -3478,6 +3478,7 @@ async def streaming_chat_response_handler(response, ctx):
             prior_output = []
             last_response_id = None
             pseudonymized_prompt = None
+            file_entity_count = 0
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -3518,6 +3519,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal prior_output
                     nonlocal last_response_id
                     nonlocal pseudonymized_prompt
+                    nonlocal file_entity_count
 
                     response_tool_calls = []
 
@@ -3562,6 +3564,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                             if 'pseudonymized_prompt' in data:
                                 pseudonymized_prompt = data['pseudonymized_prompt']
+                            if 'file_entity_count' in data:
+                                file_entity_count = data['file_entity_count']
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -4620,6 +4624,11 @@ async def streaming_chat_response_handler(response, ctx):
                     **(
                         {'pseudonymized_prompt': pseudonymized_prompt}
                         if pseudonymized_prompt
+                        else {}
+                    ),
+                    **(
+                        {'file_entity_count': file_entity_count}
+                        if file_entity_count
                         else {}
                     ),
                 }
