@@ -47,6 +47,8 @@
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { Shortcut, shortcuts } from '$lib/shortcuts';
+	import OnboardingWizard from '$lib/components/onboarding/OnboardingWizard.svelte';
+	import { isOnboardingCompleted } from '$lib/stores/onboarding';
 
 	const i18n = getContext('i18n');
 
@@ -389,6 +391,9 @@
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />
 			{:else}
+				{#if !$isOnboardingCompleted}
+					<OnboardingWizard onComplete={() => isOnboardingCompleted.set(true)} />
+				{/if}
 				{#if localDBChats.length > 0}
 					<div class="fixed w-full h-full flex z-50">
 						<div
