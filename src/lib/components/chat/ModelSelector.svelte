@@ -60,8 +60,12 @@
 
 		if (JSON.stringify(_selectedModels) !== JSON.stringify(selectedModels)) {
 			const cookieModel = document.cookie.split(';').find(c => c.trim().startsWith('garnet_default_model='))?.split('=')?.[1];
+			console.error('[GARNET TRACE] remap block fires, cookie:', cookieModel, 'current:', selectedModels, 'new:', _selectedModels);
 			if (!cookieModel) {
+				console.error('[GARNET TRACE] remap block applying change (no cookie)');
 				selectedModels = _selectedModels;
+			} else {
+				console.error('[GARNET TRACE] remap block skipped (cookie present)');
 			}
 		}
 	}

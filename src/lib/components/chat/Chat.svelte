@@ -1089,37 +1089,47 @@
 					}
 				} else {
 					// Model found; set it as selected
-					selectedModels = urlModels;
+					console.error('[GARNET TRACE] setting from url (single found):', urlModels);
+				selectedModels = urlModels;
 				}
 			} else {
 				// Multiple models; set as selected
+				console.error('[GARNET TRACE] setting from url (multiple):', urlModels);
 				selectedModels = urlModels;
 			}
 
 			// Unavailable models filtering
+			console.error('[GARNET TRACE] filtering url models against $models:', selectedModels);
 			selectedModels = selectedModels.filter((modelId) =>
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
 			if ($selectedFolder?.data?.model_ids) {
+				console.error('[GARNET TRACE] setting from folder:', $selectedFolder?.data?.model_ids);
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
 				const _cookieModel = document.cookie.split(';').find(c => c.trim().startsWith('garnet_default_model='))?.split('=')?.[1];
 				if (_cookieModel) {
+					console.error('[GARNET TRACE] setting from cookie:', [_cookieModel]);
 					selectedModels = [_cookieModel];
 					// skip availableModels filter — models may not be loaded yet
 					return;
 				} else if ($settings?.models) {
+					console.error('[GARNET TRACE] setting from $settings.models:', $settings?.models);
 					selectedModels = $settings?.models;
 				} else if (sessionStorage.selectedModels) {
+					console.error('[GARNET TRACE] setting from sessionStorage:', sessionStorage.selectedModels);
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else if (defaultModels && defaultModels.length > 0) {
+					console.error('[GARNET TRACE] setting from defaultModels:', defaultModels);
 					selectedModels = defaultModels;
 				}
 			}
 			if (availableModels.length > 0) {
+				console.error('[GARNET TRACE] filtering against availableModels, before:', selectedModels);
 				selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+				console.error('[GARNET TRACE] after availableModels filter:', selectedModels);
 			}
 		}
 
@@ -1127,6 +1137,7 @@
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
 				if (defaultModels && defaultModels.length > 0) {
+					console.error('[GARNET TRACE] fallback to defaultModels (filtered):', defaultModels);
 					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
 				}
 
@@ -1135,9 +1146,11 @@
 					(selectedModels.length === 1 && selectedModels[0] === '')
 				) {
 					// Only fall back to first available model if default models didn't resolve
+					console.error('[GARNET TRACE] fallback to first available model:', availableModels?.at(0));
 					selectedModels = [availableModels?.at(0) ?? ''];
 				}
 			} else {
+				console.error('[GARNET TRACE] no available models, setting empty');
 				selectedModels = [''];
 			}
 		}
@@ -1227,9 +1240,11 @@
 			}
 		}
 
+		console.error('[GARNET TRACE] end-of-initNewChat remap, before:', selectedModels);
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+		console.error('[GARNET TRACE] end-of-initNewChat remap, after:', selectedModels);
 
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
