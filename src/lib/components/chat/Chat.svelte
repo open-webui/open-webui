@@ -1113,7 +1113,6 @@
 					console.error('[GARNET TRACE] setting from cookie:', [_cookieModel]);
 					selectedModels = [_cookieModel];
 					// skip availableModels filter — models may not be loaded yet
-					return;
 				} else if ($settings?.models) {
 					console.error('[GARNET TRACE] setting from $settings.models:', $settings?.models);
 					selectedModels = $settings?.models;
