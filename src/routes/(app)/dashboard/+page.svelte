@@ -3,30 +3,16 @@
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, showSidebar, user, mobile } from '$lib/stores';
 	import { getLanguages, changeLanguage } from '$lib/i18n';
-
-	import TokenUsageCard from '$lib/components/dashboard/TokenUsageCard.svelte';
-	import PlanCard from '$lib/components/dashboard/PlanCard.svelte';
-	import ModelUsageCard from '$lib/components/dashboard/ModelUsageCard.svelte';
 	import IntegrationsCard from '$lib/components/dashboard/IntegrationsCard.svelte';
+	import ModelUsageCard from '$lib/components/dashboard/ModelUsageCard.svelte';
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 
 	const i18n = getContext('i18n');
 
-	// Billing plan response shape (from backend /billing/plan)
-	let billing = {
-		plan: '',
-		tokens_used: 0,
-		tokens_limit: 0,
-		tokens_effective: 0,
-		tokens_pct: 0,
-		alert: false,
-		blocked: false
-	};
+	let billing: any = null;
 	let modelStats: { model: string; tokens: number; requests: number }[] = [];
 	let loading = true;
-
-	// Preferences
 	let languages: { code: string; title: string }[] = [];
 	let currentLang = '';
 	let currentTheme = '';
@@ -36,21 +22,31 @@
 		.sort((a, b) => PRIORITY_LANGS.indexOf(a.code) - PRIORITY_LANGS.indexOf(b.code));
 	$: otherLangs = languages.filter((l) => !PRIORITY_LANGS.includes(l.code));
 
-	// Reset date = first day of next month
-	function nextResetDate() {
+	const plans = [
+		{ id: 'free',     label: 'Free',     tokens: '50K',  price: '€0',   desc: '1 agente' },
+		{ id: 'starter',  label: 'Starter',  tokens: '200K', price: '€49',  desc: '3 agentes' },
+		{ id: 'pro',      label: 'Pro',      tokens: '500K', price: '€99',  desc: '5 agentes' },
+		{ id: 'business', label: 'Business', tokens: '2M',   price: '€249', desc: '15 agentes' },
+	];
+
+	$: currentPlan = billing?.plan?.toLowerCase() ?? 'free';
+	$: currentIdx = plans.findIndex((p) => p.id === currentPlan);
+	$: effectiveIdx = currentIdx < 0 ? 0 : currentIdx;
+	$: tokensUsed = billing?.tokens_used ?? 0;
+	$: tokensTotal = billing?.tokens_effective ?? billing?.tokens_limit ?? 0;
+	$: tokensPct = tokensTotal > 0 ? Math.min(100, Math.round((tokensUsed / tokensTotal) * 100)) : 0;
+	$: connected = billing !== null && tokensTotal > 0;
+
+	function daysLeft() {
 		const d = new Date();
-		return new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
+		const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+		return Math.max(0, Math.ceil((next.getTime() - Date.now()) / 86400000));
 	}
 
-	function greeting() {
-		const h = new Date().getHours();
-		if (h < 12) return 'Buenos días';
-		if (h < 19) return 'Buenas tardes';
-		return 'Buenas noches';
-	}
-
-	function firstName(name: string) {
-		return name?.split(' ')[0] ?? '';
+	function fmt(n: number) {
+		if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+		if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
+		return n.toString();
 	}
 
 	async function fetchData() {
@@ -64,10 +60,23 @@
 				billing = data;
 				modelStats = data.by_model || [];
 			}
-		} catch {
-			// API not available — show empty state
-		}
+		} catch { /* show empty state */ }
 		loading = false;
+	}
+
+	async function goToCheckout(planId: string) {
+		try {
+			const res = await fetch(`${WEBUI_BASE_URL}/api/v1/clapnclaw/billing/checkout`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.token}` },
+				body: JSON.stringify({ plan: planId })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				if (data.checkout_url) { window.location.href = data.checkout_url; return; }
+			}
+		} catch { /* fall through */ }
+		window.location.href = `mailto:hola@clapnclaw.com?subject=Upgrade%20a%20${planId}`;
 	}
 
 	async function loadPreferences() {
@@ -99,11 +108,7 @@
 		await Promise.all([fetchData(), loadPreferences()]);
 	});
 
-	$: today = new Date().toLocaleDateString('es-ES', {
-		weekday: 'long',
-		day: 'numeric',
-		month: 'long'
-	});
+	$: today = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 </script>
 
 <svelte:head>
@@ -114,7 +119,6 @@
 	class="flex-1 w-full flex flex-col min-h-screen max-w-4xl
 	{$showSidebar ? 'md:max-w-[calc(100%-var(--sidebar-width))] ml-auto mr-0' : 'mx-auto'}"
 >
-	<!-- Mobile top bar — matches chat navbar style -->
 	{#if $mobile}
 		<nav class="sticky top-0 z-30 w-full backdrop-blur-xl drag-region">
 			<div
@@ -131,15 +135,10 @@
 					</button>
 					<span class="text-sm font-semibold" style="color:#0D5C3F">Mi cuenta</span>
 				</div>
-
 				{#if $user}
 					<UserMenu role={$user?.role} className="max-w-[220px]">
 						<button class="rounded-full cursor-pointer hover:opacity-80 transition">
-							<img
-								src="{WEBUI_API_BASE_URL}/users/{$user?.id}/profile/image"
-								class="size-7 rounded-full object-cover"
-								alt="Perfil"
-							/>
+							<img src="{WEBUI_API_BASE_URL}/users/{$user?.id}/profile/image" class="size-7 rounded-full object-cover" alt="Perfil" />
 						</button>
 					</UserMenu>
 				{/if}
@@ -147,48 +146,108 @@
 		</nav>
 	{/if}
 
-	<!-- Content -->
 	<div class="flex-1 px-4 md:px-6 py-6 md:py-10">
 		<!-- Header -->
-		<div class="mb-6 md:mb-8">
+		<div class="mb-7">
 			<h1 class="text-sm font-medium text-gray-900 dark:text-white">Mi cuenta</h1>
 			<p class="text-xs text-gray-400 dark:text-gray-500 capitalize mt-0.5">{today}</p>
 		</div>
 
 		{#if loading}
 			<div class="flex justify-center py-20">
-				<div
-					class="size-7 border-[3px] rounded-full animate-spin"
-					style="border-color:#0D5C3F transparent transparent transparent"
-				/>
+				<div class="size-6 border-[2.5px] rounded-full animate-spin" style="border-color:#0D5C3F transparent transparent transparent" />
 			</div>
 		{:else}
 			<div class="flex flex-col gap-4">
-				<!-- Row 1: token usage (2/3) + plan (1/3) -->
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<div class="md:col-span-2">
-						<TokenUsageCard
-							used={billing.tokens_used}
-							total={billing.tokens_effective || billing.tokens_limit}
-							resetDate={nextResetDate()}
-							alert={billing.alert}
-							blocked={billing.blocked}
-						/>
+
+				<!-- ── PLAN + TOKENS ROW ── -->
+				<div class="rounded-2xl border bg-white dark:bg-gray-800 border-black/[.07] dark:border-white/[.07] overflow-hidden">
+
+					<!-- Plan rail -->
+					<div class="px-5 pt-5 pb-4 border-b border-black/[.05] dark:border-white/[.05]">
+						<div class="flex items-center justify-between mb-3">
+							<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40">Plan</p>
+							<span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full" style="background:#0D5C3F;color:#F5F0E8">
+								{plans[effectiveIdx]?.label ?? 'Free'}
+							</span>
+						</div>
+						<div class="grid grid-cols-4 gap-2">
+							{#each plans as plan, i}
+								{@const isCurrent = i === effectiveIdx}
+								{@const isUpgrade = i > effectiveIdx}
+								<button
+									class="flex flex-col items-start px-3 py-2.5 rounded-xl border transition-all text-left
+										{isCurrent ? 'cursor-default' : isUpgrade ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-sm' : 'cursor-default opacity-40'}"
+									style={isCurrent
+										? 'border-color:#0D5C3F;background:rgba(13,92,63,.06)'
+										: 'border-color:rgba(0,0,0,.07)'}
+									disabled={!isUpgrade}
+									on:click={() => isUpgrade && goToCheckout(plan.id)}
+								>
+									<div class="flex items-center justify-between w-full mb-1">
+										<span class="text-[10px] font-semibold uppercase tracking-wide" style={isCurrent ? 'color:#0D5C3F' : 'color:rgba(0,0,0,.4)'}>
+											{plan.label}
+										</span>
+										{#if isCurrent}
+											<span class="text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style="background:rgba(13,92,63,.12);color:#0D5C3F">Actual</span>
+										{:else if isUpgrade}
+											<span class="text-[9px] text-gray-300 dark:text-gray-600">→</span>
+										{/if}
+									</div>
+									<span class="text-sm font-bold text-gray-800 dark:text-white">{plan.price}</span>
+									<span class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{plan.tokens} tokens · {plan.desc}</span>
+								</button>
+							{/each}
+						</div>
 					</div>
-					<PlanCard planName={billing.plan} />
+
+					<!-- Token strip -->
+					<div class="px-5 py-4">
+						{#if connected}
+							<div class="flex items-center gap-6">
+								<!-- Usage bar -->
+								<div class="flex-1">
+									<div class="flex items-center justify-between mb-1.5">
+										<p class="text-[10px] font-semibold uppercase tracking-[.1em] text-gray-400 dark:text-white/40">Tokens este mes</p>
+										<span class="text-[10px] font-mono font-semibold" style="color:#0D5C3F">{tokensPct}%</span>
+									</div>
+									<div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(13,92,63,.1)">
+										<div
+											class="h-full rounded-full transition-all duration-1000"
+											style="width:{tokensPct}%;background:{billing?.blocked ? '#de3514' : billing?.alert ? '#E07020' : '#0D5C3F'}"
+										/>
+									</div>
+									<div class="flex items-center justify-between mt-1.5">
+										<span class="text-[10px] font-mono text-gray-400">{fmt(tokensUsed)} usados</span>
+										<span class="text-[10px] font-mono text-gray-400">{fmt(tokensTotal)} total</span>
+									</div>
+								</div>
+								<!-- Days left chip -->
+								<div class="shrink-0 text-center px-4 py-2.5 rounded-xl" style="background:rgba(13,92,63,.06)">
+									<p class="text-lg font-mono font-bold leading-none" style="color:#0D5C3F">{daysLeft()}</p>
+									<p class="text-[9px] text-gray-400 mt-0.5 uppercase tracking-wide">días</p>
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-center gap-3">
+								<div class="size-1.5 rounded-full" style="background:rgba(13,92,63,.2)" />
+								<p class="text-xs text-gray-400 dark:text-gray-500">
+									Configura <code class="font-mono text-[10px] px-1 py-0.5 rounded" style="background:rgba(0,0,0,.05)">CLAPNCLAW_WORKSPACE_SECRET</code> en <code class="font-mono text-[10px] px-1 py-0.5 rounded" style="background:rgba(0,0,0,.05)">.env.dev</code> para ver el uso en tiempo real
+								</p>
+							</div>
+						{/if}
+					</div>
 				</div>
 
-				<!-- Model usage -->
-				<ModelUsageCard {modelStats} totalUsed={billing.tokens_used} />
+				<!-- ── MODEL USAGE ── -->
+				<ModelUsageCard {modelStats} totalUsed={tokensUsed} />
 
-				<!-- Integrations -->
+				<!-- ── INTEGRATIONS ── -->
 				<IntegrationsCard />
 
-				<!-- Preferences row -->
+				<!-- ── PREFERENCES ── -->
 				<div class="rounded-2xl px-5 py-4 border bg-white dark:bg-gray-800 border-black/[.07] dark:border-white/[.07]">
-					<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40 mb-3">
-						Preferencias
-					</p>
+					<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40 mb-3">Preferencias</p>
 					<div class="flex flex-wrap gap-4 items-center">
 						<div class="flex items-center gap-2">
 							<label for="lang-select" class="text-xs text-gray-500 dark:text-gray-400 shrink-0">Idioma</label>
@@ -207,7 +266,6 @@
 								{/each}
 							</select>
 						</div>
-
 						<div class="flex items-center gap-2">
 							<span class="text-xs text-gray-500 dark:text-gray-400 shrink-0">Tema</span>
 							<div class="flex gap-1">
@@ -227,6 +285,7 @@
 						</div>
 					</div>
 				</div>
+
 			</div>
 		{/if}
 	</div>
