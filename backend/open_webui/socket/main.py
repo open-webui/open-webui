@@ -40,7 +40,7 @@ from open_webui.env import (
     WEBSOCKET_EVENT_CALLER_TIMEOUT,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
+from open_webui.socket.utils import RedisDict, RedisLock, YdocManager, ChatYdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.redis import get_redis_connection
 from open_webui.utils.access_control import has_permission
@@ -168,7 +168,10 @@ YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:documents',
 )
-
+CHAT_YDOC_MANAGER = ChatYdocManager(
+    redis=REDIS,
+    redis_key_prefix=f'{REDIS_KEY_PREFIX}:ydoc:chat_yjs',
+)
 
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
@@ -809,7 +812,35 @@ async def yjs_awareness_update(sid, data):
     except Exception as e:
         log.error(f'Error in yjs_awareness_update: {e}')
 
+@sio.on('chat:message:full_state')
+async def handle_chat_full_state_request(sid, data):
+    """Send full Yjs document state for chat messages"""
+    try:
+        message_id = data.get('message_id')
 
+        if not message_id:
+            log.warning('No message_id provided in full_state request')
+            return
+
+        # Get full document state
+        full_state = await CHAT_YDOC_MANAGER.get_full_state(message_id)
+
+        if full_state:
+            await sio.emit(
+                'chat:completion',
+                {
+                    'message_id': message_id,
+                    'yjs_update': full_state.hex(),
+                    'is_full_state': True
+                },
+                room=sid
+            )
+        else:
+            log.warning(f'No document state found for message {message_id}')
+
+    except Exception as e:
+        log.error(f'Error handling full state request: {e}')
+        
 @sio.event
 async def disconnect(sid):
     if sid in SESSION_POOL:

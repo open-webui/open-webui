@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { ChatMessageYjsHandler } from '$lib/utils/ChatMessageYjs'
+	import { socket } from '$lib/stores';
+
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
@@ -119,6 +122,8 @@
 	export let history;
 	export let messageId;
 	export let selectedModels = [];
+
+	let yjsHandler: ChatMessageYjsHandler | null = null;
 
 	let message: MessageType = structuredClone(history.messages[messageId]);
 	$: if (history.messages) {
@@ -585,8 +590,23 @@
 		}
 	};
 
+	let content = message.content || ''
+
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
+		if ($socket && message?.id) {
+			yjsHandler = new ChatMessageYjsHandler(
+				message.id,
+				$socket,
+				(content) => {
+					message.content = content
+				}
+			)
+			// Request full state if content is empty (new tab)
+			if (!content) {
+				yjsHandler.requestFullState()
+			}
+		}
 
 		await tick();
 		if (buttonsContainerElement) {

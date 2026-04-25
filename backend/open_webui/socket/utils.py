@@ -1,10 +1,18 @@
+from __future__ import annotations
+ 
 import json
 import uuid
 from open_webui.utils.redis import get_redis_connection
 from open_webui.env import REDIS_KEY_PREFIX
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 import pycrdt as Y
 
+import sys
+import logging
+from open_webui.env import GLOBAL_LOG_LEVEL
+
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
+log = logging.getLogger(__name__)
 
 class RedisLock:
     def __init__(
@@ -133,7 +141,6 @@ class YdocManager:
         self._users = {}
         self._redis = redis
         self._redis_key_prefix = redis_key_prefix
-
     async def append_to_updates(self, document_id: str, update: bytes):
         document_id = document_id.replace(':', '_')
         if self._redis:
@@ -261,3 +268,105 @@ class YdocManager:
                 del self._updates[document_id]
             if document_id in self._users:
                 del self._users[document_id]
+
+class ChatYdocManager:
+    """Manages Yjs documents for chat message streaming"""
+
+    def __init__(self, redis=None, redis_key_prefix: str = f'{REDIS_KEY_PREFIX}:ydoc:chat_yjs'):
+        self._redis = redis
+        self._redis_key_prefix = redis_key_prefix
+        self._active_docs: Dict[str, Y.Doc] = {}
+        log.debug(f'XXX-DEBUG-Redis:{redis}')
+        log.debug(f'XXX-DEBUG-Redis:{redis_key_prefix}')
+
+    async def create_document(self, message_id: str, initial_output: List = None) -> Y.Doc:
+        """Create a new Yjs document for a chat message"""
+        ydoc = Y.Doc()
+        output_array = ydoc.get('output', type=Y.Array)
+        log.debug(f'XXX-DEBUG-CreateYDoc_outputArray:{output_array}')
+        if initial_output:
+            ydoc['output'] = Y.Array(initial_output)
+        else:
+            ydoc['output'] = Y.Array([])
+
+        # Store in memory for active streaming
+        self._active_docs[message_id] = ydoc
+
+        # Store updates in Redis for persistence
+        if self._redis:
+            log.debug(f'XXX-DEBUG-UpdateRedis:{ydoc}')
+            await self._store_initial_state(message_id, ydoc)
+
+        return ydoc
+
+    async def get_document(self, message_id: str) -> Optional[Y.Doc]:
+        """Get active document or recreate from stored updates"""
+        if message_id in self._active_docs:
+            return self._active_docs[message_id]
+
+        # Recreate from Redis if not in memory
+        if self._redis:
+            ydoc = Y.Doc()
+            updates = await self._get_stored_updates(message_id)
+            for update in updates:
+                ydoc.apply_update(update)
+            self._active_docs[message_id] = ydoc
+            return ydoc
+        return None
+
+    async def update_document(self, message_id: str):
+        """Apply update function to document and store delta"""
+        ydoc = await self.get_document(message_id)
+        if not ydoc:
+            return None
+        current_output = list(ydoc['output'])
+        # Apply update 
+        ydoc['output'] = Y.Array(current_output)
+        # Get and emit full state (no diff in pycrdt)
+        state_update = ydoc.get_update()
+        log.debug(f'XXX-DEBUG-UpdateDoc:{state_update}')
+        if self._redis:
+            log.debug(f'XXX-DEBUG-UpdateRedis.')
+            await self._store_update(message_id, state_update)
+        return state_update
+
+    async def get_full_state(self, message_id: str) -> Optional[bytes]:
+        """Get complete document state for new clients"""
+        ydoc = await self.get_document(message_id)
+        if ydoc:
+            return ydoc.get_update()
+        return None
+
+    async def cleanup_document(self, message_id: str):
+        """Clean up document after streaming completes"""
+        if message_id in self._active_docs:
+            del self._active_docs[message_id]
+
+        if self._redis:
+            await self._cleanup_stored_updates(message_id)
+
+    async def _store_initial_state(self, message_id: str, ydoc: Y.Doc):
+        """Store initial document state"""
+        redis_key = f"{self._redis_key_prefix}:{message_id}:state"
+        state = ydoc.get_update()
+        log.debug(f'XXX-DEBUG-StoreIniStateRedis:{state}')
+        await self._redis.set(redis_key, state, ex=3600)  # 1 hour TTL
+
+    async def _store_update(self, message_id: str, delta: bytes):
+        """Store incremental update"""
+        redis_key = f"{self._redis_key_prefix}:{message_id}:updates"
+        log.debug(f'XXX-DEBUG-StoreIniStateRedis:{json.dumps(list(delta))}')
+        await self._redis.lpush(redis_key, json.dumps(list(delta)))  # Convert to list for JSON
+        await self._redis.expire(redis_key, 3600)
+
+    async def _get_stored_updates(self, message_id: str) -> List[bytes]:
+        """Retrieve all stored updates"""
+        redis_key = f"{self._redis_key_prefix}:{message_id}:updates"
+        updates = await self._redis.lrange(redis_key, 0, -1)
+        log.debug(f'XXX-DEBUG-GetStoreRedis:{updates}')
+        return [bytes(update) for update in updates]
+
+    async def _cleanup_stored_updates(self, message_id: str):
+        """Clean up stored updates"""
+        await self._redis.delete(f"{self._redis_key_prefix}:{message_id}:state")
+        await self._redis.delete(f"{self._redis_key_prefix}:{message_id}:updates")

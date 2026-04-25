@@ -142,6 +142,9 @@ from open_webui.env import (
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.constants import TASKS
 
+import pycrdt as Y
+from backend.open_webui.socket.main import CHAT_YDOC_MANAGER
+
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
@@ -3778,6 +3781,10 @@ async def streaming_chat_response_handler(response, ctx):
                 else:
                     output = []
 
+            # Initialize Yjs document
+            message_id = metadata['message_id']
+            yjs_doc = await CHAT_YDOC_MANAGER.create_document(message_id, output)
+
             usage = None
             prior_output = []
             last_response_id = None
@@ -3820,6 +3827,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
+                    nonlocal yjs_doc
 
                     response_tool_calls = []
 
@@ -3829,6 +3837,20 @@ async def streaming_chat_response_handler(response, ctx):
                         int(metadata.get('params', {}).get('stream_delta_chunk_size') or 1),
                     )
                     last_delta_data = None
+
+                    # Helper function to update both output array and Yjs document
+                    async def update_and_emit():
+                        """Update Yjs document and emit state"""
+                        state_update = await CHAT_YDOC_MANAGER.update_document(message_id) #, output)
+
+                        if state_update:
+                            await event_emitter({
+                                'type': 'chat:completion',
+                                'data': {
+                                    'yjs_update': state_update.hex(),
+                                    'message_id': message_id
+                                }
+                            })
 
                     async def flush_pending_delta_data(threshold: int = 0):
                         nonlocal delta_count
@@ -3866,7 +3888,10 @@ async def streaming_chat_response_handler(response, ctx):
                                 request=request,
                                 filter_functions=filter_functions,
                                 filter_type='stream',
-                                form_data=data,
+                                form_data={
+                                    **data,
+                                    'full_output': output  # Use output array directly
+                                },
                                 extra_params={'__body__': form_data, **extra_params},
                             )
 
@@ -4148,7 +4173,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 }
                                             ]
 
-                                        data = {'content': serialize_output(full_output())}
+                                        await update_and_emit()
 
                                     if value:
                                         if (
@@ -4308,6 +4333,8 @@ async def streaming_chat_response_handler(response, ctx):
                                                 'content': serialize_output(full_output()),
                                             }
 
+                                        await update_and_emit()
+
                                 if delta:
                                     delta_count += 1
                                     last_delta_data = data
@@ -4398,6 +4425,7 @@ async def streaming_chat_response_handler(response, ctx):
                 finally:
                     if response.background:
                         await response.background()
+                    await CHAT_YDOC_MANAGER.cleanup_document(message_id)
 
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
@@ -4819,9 +4847,9 @@ async def streaming_chat_response_handler(response, ctx):
                                     blocking_code = textwrap.dedent(
                                         f"""
                                         import builtins
-    
+
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
-    
+
                                         _real_import = builtins.__import__
                                         async def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                                             if name.split('.')[0] in BLOCKED_MODULES:
@@ -4831,7 +4859,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                         f"Direct import of module {{name}} is restricted."
                                                     )
                                             return _real_import(name, globals, locals, fromlist, level)
-    
+
                                         builtins.__import__ = restricted_import
                                     """
                                     )
