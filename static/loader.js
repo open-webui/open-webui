@@ -54,6 +54,9 @@
   (function checkLogout() {
     if (!(location.pathname === '/auth' || location.pathname.startsWith('/auth/'))) return;
     localStorage.removeItem('token');
+    localStorage.removeItem('clapnclaw_token');
+    localStorage.removeItem('clapnclaw_onboarded');
+    localStorage.removeItem('clapnclaw_slug');
     sessionStorage.removeItem('cnc-session');
     window.location.replace(_hubUrl);
   })();
@@ -77,6 +80,9 @@
     var app = document.getElementById('app');
     if (app) app.style.visibility = 'hidden';
     localStorage.removeItem('token');
+    localStorage.removeItem('clapnclaw_token');
+    localStorage.removeItem('clapnclaw_onboarded');
+    localStorage.removeItem('clapnclaw_slug');
     sessionStorage.removeItem('cnc-session');
     window.location.replace(_hubUrl);
   }
