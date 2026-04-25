@@ -108,7 +108,24 @@
       'position:fixed;inset:0;z-index:99999;background:#ffffff;' +
       'display:flex;align-items:center;justify-content:center;' +
       'transition:opacity 0.5s ease;';
-    splash.appendChild(_makeLogoEl(72));
+    var spinnerWrap = document.createElement('div');
+    spinnerWrap.style.cssText = 'position:relative;width:88px;height:88px;';
+    var spinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    spinSvg.setAttribute('width', '88'); spinSvg.setAttribute('height', '88');
+    spinSvg.setAttribute('viewBox', '0 0 88 88');
+    spinSvg.style.cssText = 'position:absolute;top:0;left:0;animation:cncSpin 1s linear infinite;';
+    var arc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    arc.setAttribute('cx', '44'); arc.setAttribute('cy', '44'); arc.setAttribute('r', '38');
+    arc.setAttribute('fill', 'none'); arc.setAttribute('stroke', '#0D5C3F');
+    arc.setAttribute('stroke-width', '4'); arc.setAttribute('stroke-dasharray', '60 180');
+    arc.setAttribute('stroke-linecap', 'round');
+    spinSvg.appendChild(arc);
+    spinnerWrap.appendChild(spinSvg);
+    var logoCenter = document.createElement('div');
+    logoCenter.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);';
+    logoCenter.appendChild(_makeLogoEl(36));
+    spinnerWrap.appendChild(logoCenter);
+    splash.appendChild(spinnerWrap);
     document.documentElement.appendChild(splash);
     var checks = 0;
     var iv = setInterval(function () {
@@ -130,6 +147,7 @@
     var s = document.createElement('style');
     s.textContent =
       '@keyframes cncFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}' +
+      '@keyframes cncSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}' +
       '@keyframes cncL{0%,100%{transform:translateX(0) rotate(0deg)}20%{transform:translateX(5px) rotate(10deg)}40%{transform:translateX(-3px) rotate(-5deg)}60%{transform:translateX(2px) rotate(3deg)}}' +
       '@keyframes cncC{0%,100%{transform:translateY(0) scale(1)}20%{transform:translateY(-6px) scale(1.12)}40%{transform:translateY(1px) scale(.96)}60%{transform:translateY(-3px) scale(1.05)}}' +
       '@keyframes cncR{0%,100%{transform:translateX(0) rotate(0deg)}20%{transform:translateX(-5px) rotate(-10deg)}40%{transform:translateX(3px) rotate(5deg)}60%{transform:translateX(-2px) rotate(-3deg)}}';
