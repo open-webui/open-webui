@@ -189,13 +189,15 @@ COPY --chown=$UID:$GID ./static/favicon.ico /app/backend/open_webui/static/favic
 COPY --chown=$UID:$GID ./static/splash.png /app/backend/open_webui/static/splash.png
 COPY --chown=$UID:$GID ./static/splash-dark.png /app/backend/open_webui/static/splash-dark.png
 COPY --chown=$UID:$GID ./static/custom.css /app/backend/open_webui/static/custom.css
-# Build static (served to frontend)
+COPY --chown=$UID:$GID ./static/loader.js /app/backend/open_webui/static/loader.js
+# Build static (served to frontend) — must come after npm run build to override empty stubs
 COPY --chown=$UID:$GID ./static/favicon.png /app/build/static/favicon.png
 COPY --chown=$UID:$GID ./static/favicon-dark.png /app/build/static/favicon-dark.png
 COPY --chown=$UID:$GID ./static/favicon.png /app/build/favicon.png
 COPY --chown=$UID:$GID ./static/splash.png /app/build/static/splash.png
 COPY --chown=$UID:$GID ./static/splash-dark.png /app/build/static/splash-dark.png
 COPY --chown=$UID:$GID ./static/custom.css /app/build/static/custom.css
+COPY --chown=$UID:$GID ./static/loader.js /app/build/static/loader.js
 
 EXPOSE 8080
 
