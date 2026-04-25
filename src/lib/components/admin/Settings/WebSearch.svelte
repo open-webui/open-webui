@@ -34,6 +34,7 @@
 		'jina',
 		'bing',
 		'exa',
+		'parallel',
 		'perplexity',
 		'sougou',
 		'firecrawl',
@@ -42,7 +43,7 @@
 		'youcom',
 		'linkup'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'parallel', 'external'];
 
 	let webConfig = null;
 
@@ -630,6 +631,19 @@
 									/>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'parallel'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Parallel API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Parallel API Key')}
+										bind:value={webConfig.PARALLEL_API_KEY}
+									/>
+								</div>
+							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
@@ -1176,6 +1190,19 @@
 									/>
 								</div>
 							{/if}
+						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'parallel' && webConfig.WEB_SEARCH_ENGINE !== 'parallel'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Parallel API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Parallel API Key')}
+									bind:value={webConfig.PARALLEL_API_KEY}
+								/>
+							</div>
 						</div>
 					{:else if webConfig.WEB_LOADER_ENGINE === 'external'}
 						<div class="mb-2.5 flex w-full flex-col">

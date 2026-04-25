@@ -1786,6 +1786,12 @@ EXA_API_KEY = ConfigVar(
     os.getenv('EXA_API_KEY', ''),
 )
 
+PARALLEL_API_KEY = ConfigVar(
+    'PARALLEL_API_KEY',
+    'rag.web.search.parallel_api_key',
+    os.getenv('PARALLEL_API_KEY', ''),
+)
+
 PERPLEXITY_API_KEY = ConfigVar(
     'PERPLEXITY_API_KEY',
     'rag.web.search.perplexity_api_key',

@@ -83,6 +83,7 @@ from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.exa import search_exa
+from open_webui.retrieval.web.parallel import search_parallel
 from open_webui.retrieval.web.external import search_external
 from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.google_pse import search_google_pse
@@ -528,6 +529,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'BING_SEARCH_V7_ENDPOINT': request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             'BING_SEARCH_V7_SUBSCRIPTION_KEY': request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             'EXA_API_KEY': request.app.state.config.EXA_API_KEY,
+            'PARALLEL_API_KEY': request.app.state.config.PARALLEL_API_KEY,
             'PERPLEXITY_API_KEY': request.app.state.config.PERPLEXITY_API_KEY,
             'PERPLEXITY_MODEL': request.app.state.config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -599,6 +601,7 @@ class WebConfig(BaseModel):
     BING_SEARCH_V7_ENDPOINT: str | None = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: str | None = None
     EXA_API_KEY: str | None = None
+    PARALLEL_API_KEY: str | None = None
     PERPLEXITY_API_KEY: str | None = None
     PERPLEXITY_MODEL: str | None = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
@@ -1085,6 +1088,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = form_data.web.BING_SEARCH_V7_ENDPOINT
         request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = form_data.web.BING_SEARCH_V7_SUBSCRIPTION_KEY
         request.app.state.config.EXA_API_KEY = form_data.web.EXA_API_KEY
+        request.app.state.config.PARALLEL_API_KEY = form_data.web.PARALLEL_API_KEY
         request.app.state.config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
         request.app.state.config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
         request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
@@ -1222,6 +1226,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'BING_SEARCH_V7_ENDPOINT': request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             'BING_SEARCH_V7_SUBSCRIPTION_KEY': request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             'EXA_API_KEY': request.app.state.config.EXA_API_KEY,
+            'PARALLEL_API_KEY': request.app.state.config.PARALLEL_API_KEY,
             'PERPLEXITY_API_KEY': request.app.state.config.PERPLEXITY_API_KEY,
             'PERPLEXITY_MODEL': request.app.state.config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -2052,6 +2057,17 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No EXA_API_KEY found in environment variables')
+    elif engine == 'parallel':
+        if request.app.state.config.PARALLEL_API_KEY:
+            return await asyncio.to_thread(
+                search_parallel,
+                request.app.state.config.PARALLEL_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No PARALLEL_API_KEY found in environment variables')
     elif engine == 'searchapi':
         if request.app.state.config.SEARCHAPI_API_KEY:
             return await asyncio.to_thread(

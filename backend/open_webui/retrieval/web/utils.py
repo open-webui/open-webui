@@ -1,6 +1,7 @@
 import asyncio
 import ipaddress
 import logging
+import os
 import socket
 import ssl
 import urllib.parse
@@ -37,6 +38,7 @@ from open_webui.config import (
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     FIRECRAWL_TIMEOUT,
+    PARALLEL_API_KEY,
     PLAYWRIGHT_TIMEOUT,
     PLAYWRIGHT_WS_URL,
     TAVILY_API_KEY,
@@ -48,6 +50,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, USER_AGENT
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.loaders.parallel import ParallelLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_string_allowed
@@ -331,6 +334,96 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
+
+
+class SafeParallelLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    """Web loader that extracts page content via Parallel's /v1/extract endpoint.
+
+    Parallel accepts up to 20 URLs per request and returns full-page markdown.
+    """
+
+    def __init__(
+        self,
+        web_paths,
+        api_key: str,
+        max_chars_per_result: Optional[int] = None,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        requests_per_second: Optional[float] = None,
+        continue_on_failure: bool = True,
+        proxy: Optional[Dict[str, str]] = None,
+    ):
+        self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_key = api_key
+        self.max_chars_per_result = max_chars_per_result
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+        self.continue_on_failure = continue_on_failure
+
+    def lazy_load(self) -> Iterator[Document]:
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
+                if not self.continue_on_failure:
+                    raise e
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning('No valid URLs to process after SSL verification')
+                return
+            raise ValueError('No valid URLs to process after SSL verification')
+
+        try:
+            loader = ParallelLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                max_chars_per_result=self.max_chars_per_result,
+                continue_on_failure=self.continue_on_failure,
+            )
+            yield from loader.lazy_load()
+        except Exception as e:
+            if self.continue_on_failure:
+                log.warning(f'Error extracting content from URLs with Parallel: {e}')
+            else:
+                raise
+
+    async def alazy_load(self):
+        """Async version with rate limiting and SSL verification."""
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                await self._safe_process_url(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
+                if not self.continue_on_failure:
+                    raise e
+
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning('No valid URLs to process after SSL verification')
+                return
+            raise ValueError('No valid URLs to process after SSL verification')
+
+        try:
+            loader = ParallelLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                max_chars_per_result=self.max_chars_per_result,
+                continue_on_failure=self.continue_on_failure,
+            )
+            async for document in loader.alazy_load():
+                yield document
+        except Exception as e:
+            if self.continue_on_failure:
+                log.warning(f'Error extracting content from URLs with Parallel: {e}')
+            else:
+                raise
 
 
 class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
@@ -794,6 +887,16 @@ def get_web_loader(
         web_loader_args['api_key'] = TAVILY_API_KEY.value
         web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH.value
 
+    if WEB_LOADER_ENGINE.value == 'parallel':
+        WebLoaderClass = SafeParallelLoader
+        web_loader_args['api_key'] = PARALLEL_API_KEY.value
+        max_chars = os.getenv('PARALLEL_EXTRACT_MAX_CHARS')
+        if max_chars:
+            try:
+                web_loader_args['max_chars_per_result'] = int(max_chars)
+            except ValueError:
+                pass
+
     if WEB_LOADER_ENGINE.value == 'external':
         WebLoaderClass = ExternalWebLoader
         web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL.value
@@ -812,5 +915,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', or 'parallel'."
         )
