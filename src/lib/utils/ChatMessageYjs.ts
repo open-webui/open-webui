@@ -129,9 +129,9 @@ export function serializeOutput(output: any[]): string {
      <summary>Analyzing…</summary>
      ${display}
      </details>\n`;
-            }
-        }
-    }
+			}
+		}
+	}
 
 	return content.trim();
 }

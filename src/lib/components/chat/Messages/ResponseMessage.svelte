@@ -595,9 +595,9 @@
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 		if ($socket && message?.id) {
-			yjsHandler = new ChatMessageYjsHandler(message.id,	$socket, (content) => {
-					message.content = content
-				});
+			yjsHandler = new ChatMessageYjsHandler(message.id, $socket, (content) => {
+				message.content = content
+			});
 			// Request full state if content is empty (new tab)
 			if (!content) {
 				yjsHandler.requestFullState();
