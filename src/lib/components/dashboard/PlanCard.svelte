@@ -5,9 +5,9 @@
 
 	const plans = [
 		{ id: 'free',     label: 'Free',     tokens: '50K',  price: '€0',       desc: 'Para empezar' },
-		{ id: 'starter',  label: 'Starter',  tokens: '500K', price: '€82/mes',  desc: 'Uso diario' },
-		{ id: 'pro',      label: 'Pro',      tokens: '2M',   price: '€164/mes', desc: 'Usuarios intensivos' },
-		{ id: 'business', label: 'Business', tokens: '5M',   price: '€328/mes', desc: 'Equipos y firmas' }
+		{ id: 'starter',  label: 'Starter',  tokens: '200K', price: '€49/mes',  desc: '3 agentes' },
+		{ id: 'pro',      label: 'Pro',      tokens: '500K', price: '€99/mes',  desc: '5 agentes' },
+		{ id: 'business', label: 'Business', tokens: '2M',   price: '€249/mes', desc: '15 agentes' }
 	];
 
 	$: currentIdx = plans.findIndex((p) => p.id === planName?.toLowerCase()) ?? 0;

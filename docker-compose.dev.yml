@@ -8,12 +8,19 @@ services:
       - clapnclaw-webui-dev:/app/backend/data
     ports:
       - "3000:8080"
+      # Note: container runs on 8080 internally — host port 3000 maps to it
     environment:
       - WEBUI_AUTH=False
       - ENABLE_SIGNUP=True
       - WEBUI_SECRET_KEY=dev-secret-local
       - CLAPNCLAW_API_URL=${CLAPNCLAW_API_URL:-https://api-staging.clapnclaw.io}
       - CLAPNCLAW_WORKSPACE_SECRET=${CLAPNCLAW_WORKSPACE_SECRET:-}
+      # LLM via staging gateway — OPENAI_API_KEY = gateway_token (sk-...) from workspaces table
+      - OPENAI_API_BASE_URL=${CLAPNCLAW_API_URL:-https://api-staging.clapnclaw.io}/openai/v1
+      - OPENAI_API_KEY=${GATEWAY_TOKEN:-placeholder}
+      # Web search enabled by default
+      - ENABLE_WEB_SEARCH=True
+      - WEB_SEARCH_ENGINE=duckduckgo
       - CORS_ALLOW_ORIGIN=http://localhost:3000
       - SCARF_NO_ANALYTICS=true
       - DO_NOT_TRACK=true

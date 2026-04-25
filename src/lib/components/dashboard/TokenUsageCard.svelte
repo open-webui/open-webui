@@ -23,7 +23,31 @@
 	}
 </script>
 
-<!-- Light mode -->
+{#if total === 0}
+<!-- Empty state — backend not connected -->
+<div
+	class="rounded-2xl px-5 py-4 border dark:hidden"
+	style="background:#F5F0E8;border-color:rgba(13,92,63,.12)"
+>
+	<div class="flex items-center justify-between mb-2">
+		<p class="text-[10px] font-semibold uppercase tracking-[.12em]" style="color:rgba(13,92,63,.5)">Tokens este mes</p>
+	</div>
+	<div class="flex items-center gap-3">
+		<div class="size-2 rounded-full shrink-0" style="background:rgba(13,92,63,.2)" />
+		<p class="text-xs" style="color:rgba(30,30,30,.4)">Sin datos — configura <code class="font-mono text-[10px]">CLAPNCLAW_WORKSPACE_SECRET</code> en <code class="font-mono text-[10px]">.env.dev</code></p>
+	</div>
+</div>
+<div class="rounded-2xl px-5 py-4 border hidden dark:block dark:bg-gray-800 dark:border-white/[.07]">
+	<div class="flex items-center justify-between mb-2">
+		<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Tokens este mes</p>
+	</div>
+	<div class="flex items-center gap-3">
+		<div class="size-2 rounded-full shrink-0 bg-white/20" />
+		<p class="text-xs text-white/30">Sin datos — configura <code class="font-mono text-[10px]">CLAPNCLAW_WORKSPACE_SECRET</code> en <code class="font-mono text-[10px]">.env.dev</code></p>
+	</div>
+</div>
+{:else}
+<!-- Light mode — with data -->
 <div
 	class="rounded-2xl px-5 py-4 border h-full dark:hidden"
 	style="background:#F5F0E8;border-color:rgba(13,92,63,.12)"
@@ -40,9 +64,7 @@
 			<span class="text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold" style="background:#0D5C3F;color:#F5F0E8">Renueva en {daysLeft}d</span>
 		{/if}
 	</div>
-
 	<div class="flex items-center gap-5">
-		<!-- Compact donut -->
 		<div class="shrink-0">
 			<svg width="80" height="80" viewBox="0 0 80 80">
 				<circle cx="40" cy="40" r={R} fill="none" stroke="rgba(13,92,63,.1)" stroke-width="7" />
@@ -61,7 +83,6 @@
 				>usado</text>
 			</svg>
 		</div>
-
 		<div class="flex-1 min-w-0">
 			<div class="flex items-baseline gap-1.5 mb-0.5">
 				<p class="text-2xl font-mono font-bold tabular-nums leading-none" style="color:#1E1E1E;letter-spacing:-.03em">{fmt(used)}</p>
@@ -72,14 +93,11 @@
 				<p class="text-base font-mono font-semibold tabular-nums" style="color:#0D5C3F">{fmt(remaining)}</p>
 				<p class="text-[10px]" style="color:rgba(30,30,30,.4)">disponibles</p>
 			</div>
-			{#if total === 0}
-				<p class="text-[10px] mt-2" style="color:rgba(30,30,30,.3)">Conecta el backend para ver tu uso</p>
-			{/if}
 		</div>
 	</div>
 </div>
 
-<!-- Dark mode -->
+<!-- Dark mode — with data -->
 <div class="rounded-2xl px-5 py-4 border h-full hidden dark:block dark:bg-gray-800 dark:border-white/[.07]">
 	<div class="flex items-center justify-between mb-3">
 		<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Tokens este mes</p>
@@ -91,7 +109,6 @@
 			<span class="text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold" style="background:#0D5C3F;color:#F5F0E8">Renueva en {daysLeft}d</span>
 		{/if}
 	</div>
-
 	<div class="flex items-center gap-5">
 		<div class="shrink-0">
 			<svg width="80" height="80" viewBox="0 0 80 80">
@@ -110,7 +127,6 @@
 				>usado</text>
 			</svg>
 		</div>
-
 		<div class="flex-1 min-w-0">
 			<div class="flex items-baseline gap-1.5 mb-0.5">
 				<p class="text-2xl font-mono font-bold tabular-nums leading-none text-white" style="letter-spacing:-.03em">{fmt(used)}</p>
@@ -121,9 +137,7 @@
 				<p class="text-base font-mono font-semibold tabular-nums" style="color:#7ecfaf">{fmt(remaining)}</p>
 				<p class="text-[10px] text-white/40">disponibles</p>
 			</div>
-			{#if total === 0}
-				<p class="text-[10px] mt-2 text-white/20">Conecta el backend para ver tu uso</p>
-			{/if}
 		</div>
 	</div>
 </div>
+{/if}
