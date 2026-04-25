@@ -54,6 +54,7 @@
 	let oauthClientInfo = null;
 
 	let enable = true;
+	let parallelizable = false;
 	let loading = false;
 
 	const registerOAuthClientHandler = async () => {
@@ -179,6 +180,10 @@
 				if (data.auth_type) auth_type = data.auth_type;
 				if (data.key) key = data.key;
 
+				if (typeof data.parallelizable === 'boolean') {
+					parallelizable = data.parallelizable;
+				}
+
 				if (data.info) {
 					id = data.info.id ?? '';
 					name = data.info.name ?? '';
@@ -211,6 +216,8 @@
 
 				auth_type,
 				key,
+
+				parallelizable,
 
 				info: {
 					id: id,
@@ -266,6 +273,9 @@
 
 			auth_type,
 			key,
+
+			parallelizable,
+
 			config: {
 				enable: enable,
 				access_control: accessControl
@@ -300,6 +310,7 @@
 		oauthClientInfo = null;
 
 		enable = true;
+		parallelizable = false;
 		accessControl = null;
 	};
 
@@ -314,6 +325,8 @@
 
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
+
+			parallelizable = connection?.parallelizable ?? false;
 
 			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
@@ -652,6 +665,27 @@
 											</div>
 										{/if}
 									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex gap-2 mt-3">
+							<div class="flex flex-col w-full">
+								<div class="flex w-full justify-between items-center">
+									<Tooltip
+										content={$i18n.t(
+											'When enabled, calls to tools from this server can run in parallel with other parallelizable tool calls in the same response. Leave off for tools that mutate state or depend on call ordering.'
+										)}
+										placement="top-start"
+									>
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Allow parallel execution')}
+										</div>
+									</Tooltip>
+
+									<Switch bind:state={parallelizable} />
 								</div>
 							</div>
 						</div>

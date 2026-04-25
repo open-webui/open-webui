@@ -12,17 +12,38 @@
 
 	export let chatId = '';
 
-	// Track the last trigger value to detect changes
 	let lastTrigger = 0;
 	let trackedChatId = '';
+	let lastTrackedChatId = '';
+
+	// Retry-on-failure state. A transient failure (network blip, backend indexing
+	// lag for a freshly persisted chat, momentary auth window during boot) used to
+	// silently nuke the counter and never recover until the user changed chats or
+	// reloaded. Now we back off and retry; if every retry still fails we keep the
+	// last good values rendered instead of disappearing.
+	const RETRY_DELAYS_MS = [1000, 3000, 8000];
+	let retryCount = 0;
+	let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function clearRetry() {
+		if (retryTimer !== null) {
+			clearTimeout(retryTimer);
+			retryTimer = null;
+		}
+	}
 
 	$: trackedChatId = chatId || $currentChatIdStore || '';
 
-	// Reactive fetch when chatId changes
-	$: if (trackedChatId && !trackedChatId.startsWith('local:')) {
-		fetchTokenStats(trackedChatId);
-	} else {
-		chatTokenStats.set(null);
+	// Reset retry state and (re)start a fetch each time we move to a different chat.
+	$: if (trackedChatId !== lastTrackedChatId) {
+		lastTrackedChatId = trackedChatId;
+		clearRetry();
+		retryCount = 0;
+		if (trackedChatId && !trackedChatId.startsWith('local:')) {
+			fetchTokenStats(trackedChatId);
+		} else {
+			chatTokenStats.set(null);
+		}
 	}
 
 	// Reactive fetch when refresh trigger changes (debounced)
@@ -32,10 +53,40 @@
 		!trackedChatId.startsWith('local:')
 	) {
 		lastTrigger = $chatTokenStatsRefreshTrigger;
+		clearRetry();
+		retryCount = 0;
 		// Debounce the refresh slightly to allow backend to process
 		setTimeout(() => {
-			fetchTokenStats(trackedChatId);
+			if (trackedChatId && !trackedChatId.startsWith('local:')) {
+				fetchTokenStats(trackedChatId);
+			}
 		}, 500);
+	}
+
+	function scheduleRetry(id: string) {
+		clearRetry();
+
+		// Drop the loading flag while we wait so the UI doesn't pulse forever.
+		// Preserves the last good values so the box stays visible.
+		chatTokenStats.update((current) =>
+			current ? { ...current, loading: false } : current
+		);
+
+		if (retryCount >= RETRY_DELAYS_MS.length) {
+			// Retries exhausted. The next chatId change or refresh trigger will
+			// reset retry state and try again from scratch.
+			return;
+		}
+
+		const delay = RETRY_DELAYS_MS[retryCount];
+		retryCount += 1;
+
+		retryTimer = setTimeout(() => {
+			retryTimer = null;
+			if (id === trackedChatId) {
+				fetchTokenStats(id);
+			}
+		}, delay);
 	}
 
 	async function fetchTokenStats(id: string) {
@@ -44,7 +95,8 @@
 			return;
 		}
 
-		// Set loading state
+		// Set loading state. Preserve last good values so the box doesn't flicker
+		// empty during refetch.
 		chatTokenStats.update((current) => ({
 			chat_id: id,
 			total_input_tokens: current?.total_input_tokens ?? 0,
@@ -56,21 +108,26 @@
 			loading: true
 		}));
 
-		try {
-			const requestedChatId = id;
-			const token = localStorage.getItem('token');
-			if (!token) {
-				chatTokenStats.set(null);
-				return;
-			}
+		const requestedChatId = id;
+		const token = localStorage.getItem('token');
+		if (!token) {
+			// Token not in storage yet (rare race during boot, or just-logged-out).
+			// Retry — by the time backoff fires, auth has either landed a token or
+			// the user has been redirected away from this view.
+			scheduleRetry(id);
+			return;
+		}
 
+		try {
 			const stats = await getChatTokenStats(token, requestedChatId);
 
 			if (requestedChatId !== trackedChatId) {
-				return;
+				return; // Stale: user moved to a different chat mid-fetch
 			}
 
 			if (stats) {
+				clearRetry();
+				retryCount = 0;
 				chatTokenStats.set({
 					chat_id: stats.chat_id,
 					total_input_tokens: stats.total_input_tokens,
@@ -82,22 +139,28 @@
 					loading: false
 				});
 			} else {
-				chatTokenStats.set(null);
+				// Null can mean: stats don't exist yet (brand-new chat with no
+				// usage-bearing messages), backend indexing lag, or a transient
+				// upstream error swallowed by the API helper. Retry with backoff.
+				scheduleRetry(id);
 			}
 		} catch (error) {
 			console.error('[ChatTokenStats] Error fetching token stats:', error);
-			chatTokenStats.set(null);
+			scheduleRetry(id);
 		}
 	}
 
 	// Function to refresh stats (can be called from parent)
 	export function refresh() {
 		if (trackedChatId && !trackedChatId.startsWith('local:')) {
+			clearRetry();
+			retryCount = 0;
 			fetchTokenStats(trackedChatId);
 		}
 	}
 
 	onDestroy(() => {
+		clearRetry();
 		chatTokenStats.set(null);
 	});
 </script>

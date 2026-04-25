@@ -19,7 +19,10 @@ export const appData = writable(null);
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
 
-export const mobile = writable(false);
+// Initialize from window size at module load so mobile-only UI renders correctly
+// on the first paint. The +layout.svelte resize listener keeps this in sync afterward.
+// Falls back to false during SSR / non-browser contexts.
+export const mobile = writable(typeof window !== 'undefined' && window.innerWidth < 768);
 
 export const socket: Writable<null | Socket> = writable(null);
 export const activeUserIds: Writable<null | string[]> = writable(null);

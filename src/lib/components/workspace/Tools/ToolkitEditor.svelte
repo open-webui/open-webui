@@ -27,10 +27,15 @@
 	export let id = '';
 	export let name = '';
 	export let meta = {
-		description: ''
+		description: '',
+		parallelizable: false
 	};
 	export let content = '';
 	export let accessControl = {};
+
+	$: if (meta && meta.parallelizable === undefined) {
+		meta.parallelizable = false;
+	}
 
 	let _content = '';
 
@@ -281,6 +286,24 @@ class Tools:
 								bind:value={meta.description}
 								required
 							/>
+						</Tooltip>
+					</div>
+
+					<div class="flex items-center gap-2 px-1 mt-1">
+						<Tooltip
+							content={$i18n.t(
+								'When enabled, calls to this tool can run in parallel with other parallelizable tool calls in the same response. Leave off for tools that mutate state or depend on call ordering.'
+							)}
+							placement="top-start"
+						>
+							<label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+								<input
+									type="checkbox"
+									class="size-3.5 accent-black dark:accent-white"
+									bind:checked={meta.parallelizable}
+								/>
+								{$i18n.t('Allow parallel execution')}
+							</label>
 						</Tooltip>
 					</div>
 				</div>

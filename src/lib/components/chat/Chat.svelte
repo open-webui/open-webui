@@ -1976,6 +1976,10 @@
 
 		if (error) {
 			await handleOpenAIError(error, message);
+			// Error takes priority — do NOT fall through to the `done`
+			// handler which would finalize the message as completed and
+			// prevent the automatic retry mechanism from triggering.
+			return;
 		}
 
 		// Emit usage event for token tracking if usage data is available
@@ -2955,28 +2959,14 @@
 
 					return {
 						role: 'assistant',
-						content: message?.merged?.content ?? message.content ?? '',
-						tool_calls: message.tool_calls,
-						...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
+						content: (message?.merged?.content ?? message.content) || null,
+						tool_calls: message.tool_calls
 					};
 				}
 
 				const hasImages = message.files?.some((file) => file.type === 'image');
 				const isUser = message.role === 'user';
 				const modelSupportsVision = model?.info?.meta?.capabilities?.vision ?? true;
-
-				if (message.tool_calls && Array.isArray(message.reasoning_details)) {
-					const signatureDetail = message.reasoning_details.find(
-						(d) => d.type === 'reasoning.encrypted' && d.data
-					);
-
-					if (signatureDetail) {
-						message.tool_calls = message.tool_calls.map((tc) => ({
-							...tc,
-							extra_content: { google: { thought_signature: signatureDetail.data } }
-						}));
-					}
-				}
 
 				// Check if message has PDF files
 				const hasPdfFiles = message.files?.some(

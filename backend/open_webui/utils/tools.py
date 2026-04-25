@@ -200,6 +200,13 @@ async def get_tools(
                             "spec": spec,
                             # Misc info
                             "type": "external",
+                            "metadata": {
+                                "parallelizable": bool(
+                                    tool_server_connection.get(
+                                        "parallelizable", False
+                                    )
+                                ),
+                            },
                         }
 
                         # Handle function name collisions
@@ -271,6 +278,9 @@ async def get_tools(
                         "file_handler": hasattr(module, "file_handler")
                         and module.file_handler,
                         "citation": hasattr(module, "citation") and module.citation,
+                        "parallelizable": bool(
+                            getattr(tool.meta, "parallelizable", False)
+                        ),
                     },
                 }
 
@@ -860,8 +870,9 @@ def get_web_search_tool_specs(extra_params: dict) -> dict:
             "name": "web_search",
             "spec": spec_map["web_search"],
             "callable": callable_search,
+            "metadata": {"parallelizable": True},
         }
-    
+
     # Register web_fetch tool
     if "web_fetch" in spec_map:
         callable_fetch = get_async_tool_function_and_apply_extra_params(
@@ -872,6 +883,7 @@ def get_web_search_tool_specs(extra_params: dict) -> dict:
             "name": "web_fetch",
             "spec": spec_map["web_fetch"],
             "callable": callable_fetch,
+            "metadata": {"parallelizable": True},
         }
-    
+
     return tools

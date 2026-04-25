@@ -366,14 +366,16 @@ async def chat_completion_tools_handler(
 
             result = json.loads(content)
 
-            async def tool_call_handler(tool_call):
-                nonlocal skip_files
-
+            # Computes the tool result without mutating shared state (sources,
+            # body["messages"], skip_files, event emissions). This lets us run
+            # parallelizable calls concurrently via asyncio.gather and then
+            # apply side effects in input order via _apply_tool_call_result.
+            async def _compute_tool_call(tool_call):
                 log.debug(f"{tool_call=}")
 
                 tool_function_name = tool_call.get("name", None)
                 if tool_function_name not in tools:
-                    return body, {}
+                    return None
 
                 tool_function_params = tool_call.get("parameters", {})
 
@@ -427,6 +429,27 @@ async def chat_completion_tools_handler(
                         user,
                     )
                 )
+
+                return {
+                    "tool_function_name": tool_function_name,
+                    "tool_function_params": tool_function_params,
+                    "tool_result": tool_result,
+                    "tool_result_files": tool_result_files,
+                    "tool_result_embeds": tool_result_embeds,
+                }
+
+            async def _apply_tool_call_result(handler_result):
+                """Apply side effects from a tool result. MUST be called in input order."""
+                nonlocal skip_files
+
+                if handler_result is None:
+                    return
+
+                tool_function_name = handler_result["tool_function_name"]
+                tool_function_params = handler_result["tool_function_params"]
+                tool_result = handler_result["tool_result"]
+                tool_result_files = handler_result["tool_result_files"]
+                tool_result_embeds = handler_result["tool_result_embeds"]
 
                 if event_emitter:
                     if tool_result_files:
@@ -495,12 +518,50 @@ async def chat_completion_tools_handler(
                     ):
                         skip_files = True
 
+            def _is_parallelizable(tool_call):
+                name = tool_call.get("name", None)
+                tool = tools.get(name)
+                return bool(
+                    tool
+                    and tool.get("metadata", {}).get("parallelizable", False)
+                )
+
             # check if "tool_calls" in result
             if result.get("tool_calls"):
-                for tool_call in result.get("tool_calls"):
-                    await tool_call_handler(tool_call)
+                tool_calls_list = result.get("tool_calls")
+                # Group consecutive parallelizable calls; non-parallelizable calls
+                # are barriers. Side effects are applied strictly in input order
+                # below, so message/source ordering matches the native path.
+                handler_results = [None] * len(tool_calls_list)
+                i = 0
+                while i < len(tool_calls_list):
+                    if _is_parallelizable(tool_calls_list[i]):
+                        j = i
+                        while (
+                            j < len(tool_calls_list)
+                            and _is_parallelizable(tool_calls_list[j])
+                        ):
+                            j += 1
+                        batch = await asyncio.gather(
+                            *[
+                                _compute_tool_call(tool_calls_list[k])
+                                for k in range(i, j)
+                            ]
+                        )
+                        for offset, hr in enumerate(batch):
+                            handler_results[i + offset] = hr
+                        i = j
+                    else:
+                        handler_results[i] = await _compute_tool_call(
+                            tool_calls_list[i]
+                        )
+                        i += 1
+
+                for hr in handler_results:
+                    await _apply_tool_call_result(hr)
             else:
-                await tool_call_handler(result)
+                hr = await _compute_tool_call(result)
+                await _apply_tool_call_result(hr)
 
         except Exception as e:
             log.debug(f"Error: {e}")
@@ -1191,6 +1252,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             "type": "mcp",
                             "client": mcp_clients[server_id],
                             "direct": False,
+                            "metadata": {
+                                "parallelizable": bool(
+                                    mcp_server_connection.get(
+                                        "parallelizable", False
+                                    )
+                                ),
+                            },
                         }
                 except Exception as e:
                     log.debug(e)
@@ -1219,6 +1287,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     "spec": tool,
                     "direct": True,
                     "server": tool_server,
+                    "metadata": {
+                        "parallelizable": bool(
+                            tool_server.get("parallelizable", False)
+                        ),
+                    },
                 }
 
     if mcp_clients:
@@ -1953,9 +2026,10 @@ async def process_chat_response(
                 temp_blocks = []
                 for idx, block in enumerate(content_blocks):
                     if block["type"] == "tool_calls":
+                        serialized = serialize_content_blocks(temp_blocks, raw)
                         message = {
                             "role": "assistant",
-                            "content": serialize_content_blocks(temp_blocks, raw),
+                            "content": serialized if serialized else None,
                             "tool_calls": block.get("content"),
                         }
 
@@ -2358,17 +2432,32 @@ async def process_chat_response(
                                             }
                                         )
 
+                                    # Detect mid-stream errors: OpenRouter
+                                    # sends errors with an `error` field at
+                                    # the top level AND choices[0].finish_reason
+                                    # set to "error". Check BEFORE inspecting
+                                    # choices so the error isn't silently ignored.
+                                    chunk_error = data.get("error")
+                                    chunk_finish = (
+                                        choices[0].get("finish_reason")
+                                        if choices
+                                        else None
+                                    )
+                                    if chunk_error or chunk_finish == "error":
+                                        error_payload = chunk_error or {
+                                            "message": "Provider returned an error during streaming."
+                                        }
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "error": error_payload,
+                                                },
+                                            }
+                                        )
+                                        break
+
                                     if not choices:
-                                        error = data.get("error", {})
-                                        if error:
-                                            await event_emitter(
-                                                {
-                                                    "type": "chat:completion",
-                                                    "data": {
-                                                        "error": error,
-                                                    },
-                                                }
-                                            )
                                         continue
 
                                     delta = choices[0].get("delta", {})
@@ -2591,15 +2680,19 @@ async def process_chat_response(
                                                 ),
                                             }
 
-                                            # Check for reasoning_details in content_blocks
+                                            # Collect reasoning_details from ALL tool_calls blocks
+                                            all_reasoning_details = []
                                             for block in content_blocks:
                                                 if block["type"] == "tool_calls" and block.get(
                                                     "reasoning_details"
                                                 ):
-                                                    update_data["reasoning_details"] = block[
-                                                        "reasoning_details"
-                                                    ]
-                                                    break
+                                                    all_reasoning_details.extend(
+                                                        block["reasoning_details"]
+                                                    )
+                                            if all_reasoning_details:
+                                                update_data["reasoning_details"] = (
+                                                    all_reasoning_details
+                                                )
 
                                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata["chat_id"],
@@ -2630,7 +2723,9 @@ async def process_chat_response(
                             if done:
                                 pass
                             else:
-                                log.debug(f"Error: {e}")
+                                log.warning(
+                                    f"Error parsing SSE chunk: {e}"
+                                )
                                 continue
                     await flush_pending_delta_data()
 
@@ -2713,9 +2808,7 @@ async def process_chat_response(
 
                     tools = metadata.get("tools", {})
 
-                    results = []
-
-                    for tool_call in response_tool_calls:
+                    async def _execute_tool_call(tool_call):
                         tool_call_id = tool_call.get("id", "")
                         tool_function_name = tool_call.get("function", {}).get(
                             "name", ""
@@ -2810,22 +2903,59 @@ async def process_chat_response(
                             )
                         )
 
-                        results.append(
-                            {
-                                "tool_call_id": tool_call_id,
-                                "content": tool_result or "",
-                                **(
-                                    {"files": tool_result_files}
-                                    if tool_result_files
-                                    else {}
-                                ),
-                                **(
-                                    {"embeds": tool_result_embeds}
-                                    if tool_result_embeds
-                                    else {}
-                                ),
-                            }
+                        return {
+                            "tool_call_id": tool_call_id,
+                            "content": tool_result or "",
+                            **(
+                                {"files": tool_result_files}
+                                if tool_result_files
+                                else {}
+                            ),
+                            **(
+                                {"embeds": tool_result_embeds}
+                                if tool_result_embeds
+                                else {}
+                            ),
+                        }
+
+                    def _is_parallelizable(tool_call):
+                        name = tool_call.get("function", {}).get("name", "")
+                        tool = tools.get(name)
+                        return bool(
+                            tool
+                            and tool.get("metadata", {}).get("parallelizable", False)
                         )
+
+                    # Group consecutive parallelizable tool calls so they run concurrently
+                    # via asyncio.gather. A non-parallelizable call acts as a barrier:
+                    # everything before it must finish before it runs, and everything after
+                    # it waits until it completes. This keeps state-mutating tools strictly
+                    # ordered while letting read-only tools (web_search, web_fetch, ...) run
+                    # in parallel. Result order matches the tool_calls input order.
+                    results = [None] * len(response_tool_calls)
+                    i = 0
+                    while i < len(response_tool_calls):
+                        if _is_parallelizable(response_tool_calls[i]):
+                            j = i
+                            while (
+                                j < len(response_tool_calls)
+                                and _is_parallelizable(response_tool_calls[j])
+                            ):
+                                j += 1
+                            batch_results = await asyncio.gather(
+                                *[
+                                    _execute_tool_call(response_tool_calls[k])
+                                    for k in range(i, j)
+                                ]
+                            )
+                            for offset, result in enumerate(batch_results):
+                                results[i + offset] = result
+                            i = j
+                        else:
+                            results[i] = await _execute_tool_call(
+                                response_tool_calls[i]
+                            )
+                            i += 1
 
                     content_blocks[-1]["results"] = results
                     content_blocks.append(
@@ -3273,11 +3403,13 @@ async def process_chat_response(
                         "content": serialize_content_blocks(content_blocks),
                     }
 
-                    # Check for reasoning_details in content_blocks
+                    # Collect reasoning_details from ALL tool_calls blocks
+                    all_reasoning_details = []
                     for block in content_blocks:
                         if block["type"] == "tool_calls" and block.get("reasoning_details"):
-                            update_data["reasoning_details"] = block["reasoning_details"]
-                            break
+                            all_reasoning_details.extend(block["reasoning_details"])
+                    if all_reasoning_details:
+                        update_data["reasoning_details"] = all_reasoning_details
 
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
@@ -3326,11 +3458,13 @@ async def process_chat_response(
                         "content": serialize_content_blocks(content_blocks),
                     }
 
-                    # Check for reasoning_details in content_blocks
+                    # Collect reasoning_details from ALL tool_calls blocks
+                    all_reasoning_details = []
                     for block in content_blocks:
                         if block["type"] == "tool_calls" and block.get("reasoning_details"):
-                            update_data["reasoning_details"] = block["reasoning_details"]
-                            break
+                            all_reasoning_details.extend(block["reasoning_details"])
+                    if all_reasoning_details:
+                        update_data["reasoning_details"] = all_reasoning_details
 
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],

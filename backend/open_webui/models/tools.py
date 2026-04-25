@@ -56,6 +56,10 @@ class Tool(Base):
 class ToolMeta(BaseModel):
     description: Optional[str] = None
     manifest: Optional[dict] = {}
+    # When True, the dispatch loop may run calls to this tool concurrently with
+    # other parallelizable calls in the same model response. Defaults to False
+    # because user-authored tools may mutate state and rely on call ordering.
+    parallelizable: Optional[bool] = False
 
 
 class ToolModel(BaseModel):

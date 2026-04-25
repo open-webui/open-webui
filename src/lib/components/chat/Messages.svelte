@@ -27,7 +27,10 @@
 	export let className = 'h-full flex pt-8';
 
 	export let chatId = '';
-	export let user = $_user;
+	// Track $_user reactively rather than capturing it once at component init.
+	// During the brief window before the user store hydrates, the captured value
+	// would be undefined and never update, breaking child role checks.
+	$: user = $_user;
 
 	export let prompt;
 	export let history = {};

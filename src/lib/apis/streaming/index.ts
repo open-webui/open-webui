@@ -61,8 +61,15 @@ async function* openAIStreamToIterator(
 		try {
 			const parsedData = JSON.parse(data);
 
-			if (parsedData.error) {
-				yield { done: true, value: '', error: parsedData.error };
+			// Detect errors: top-level `error` field, or `finish_reason: "error"`
+			// in the choices array. OpenRouter sends mid-stream errors with both.
+			const finishReason = parsedData.choices?.[0]?.finish_reason;
+			if (parsedData.error || finishReason === 'error') {
+				yield {
+					done: true,
+					value: '',
+					error: parsedData.error ?? { message: 'Provider returned an error during streaming.' }
+				};
 				break;
 			}
 

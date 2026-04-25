@@ -664,25 +664,25 @@
 	$: showWebSearchButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			webSearchCapableModels.length &&
-		$config?.features?.enable_web_search &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+		!!$config?.features?.enable_web_search &&
+		($_user?.role === 'admin' || !!$_user?.permissions?.features?.web_search);
 
 	let showStudyModeButton = false;
-	$: showStudyModeButton = $config?.features?.enable_study_mode;
+	$: showStudyModeButton = !!$config?.features?.enable_study_mode;
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			imageGenerationCapableModels.length &&
-		$config?.features?.enable_image_generation &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
+		!!$config?.features?.enable_image_generation &&
+		($_user?.role === 'admin' || !!$_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			codeInterpreterCapableModels.length &&
-		$config?.features?.enable_code_interpreter &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+		!!$config?.features?.enable_code_interpreter &&
+		($_user?.role === 'admin' || !!$_user?.permissions?.features?.code_interpreter);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -2328,7 +2328,7 @@
 																return;
 															}
 
-															if ($config.audio.stt.engine === 'web') {
+															if ($config?.audio?.stt?.engine === 'web') {
 																toast.error(
 																	$i18n.t('Call feature is not supported when using Web STT engine')
 																);
