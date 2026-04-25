@@ -23,10 +23,9 @@
 	$: otherLangs = languages.filter((l) => !PRIORITY_LANGS.includes(l.code));
 
 	const plans = [
-		{ id: 'free',     label: 'Free',     tokens: '50K',  price: '€0',   desc: '1 agente' },
-		{ id: 'starter',  label: 'Starter',  tokens: '200K', price: '€49',  desc: '3 agentes' },
-		{ id: 'pro',      label: 'Pro',      tokens: '500K', price: '€99',  desc: '5 agentes' },
-		{ id: 'business', label: 'Business', tokens: '2M',   price: '€249', desc: '15 agentes' },
+		{ id: 'free',    label: 'Free',    tokens: '50K', price: '€0'  },
+		{ id: 'starter', label: 'Starter', tokens: '1M',  price: '€49' },
+		{ id: 'pro',     label: 'Pro',     tokens: '3M',  price: '€99' },
 	];
 
 	$: currentPlan = billing?.plan?.toLowerCase() ?? 'free';
@@ -195,7 +194,7 @@
 										{/if}
 									</div>
 									<span class="text-sm font-bold text-gray-800 dark:text-white">{plan.price}</span>
-									<span class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{plan.tokens} tokens · {plan.desc}</span>
+									<span class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{plan.tokens} tokens/mes</span>
 								</button>
 							{/each}
 						</div>

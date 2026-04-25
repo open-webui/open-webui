@@ -17,9 +17,8 @@
 			price: '€0',
 			period: '',
 			tokens: '50K',
-			users: '1 usuario',
-			desc: 'Tu agente personal. Gratis para siempre.',
-			features: ['50.000 tokens/mes', '1 agente', 'Claude Haiku', 'Skills ilimitados', 'RGPD · datos en UE'],
+			desc: 'Para empezar. Gratis para siempre.',
+			features: ['50.000 tokens/mes', 'Claude Haiku', 'RGPD · datos en UE'],
 			cta: 'Plan actual',
 			highlight: false
 		},
@@ -28,10 +27,9 @@
 			label: 'Starter',
 			price: '€49',
 			period: '/mes',
-			tokens: '200K',
-			users: 'Hasta 5 usuarios',
-			desc: '3 agentes para equipos pequeños.',
-			features: ['200.000 tokens/mes (pool)', '3 agentes', 'Hasta 5 usuarios', 'Claude Haiku + Sonnet', 'Integraciones Google/Microsoft', '14 días de prueba gratis'],
+			tokens: '1M',
+			desc: 'Para equipos pequeños.',
+			features: ['1.000.000 tokens/mes', 'Claude Haiku + Sonnet', 'Integraciones Google/Microsoft', 'RGPD · datos en UE'],
 			cta: 'Upgrade a Starter',
 			highlight: false
 		},
@@ -40,24 +38,11 @@
 			label: 'Pro',
 			price: '€99',
 			period: '/mes',
-			tokens: '500K',
-			users: 'Hasta 10 usuarios',
-			desc: '5 agentes para equipos en crecimiento.',
-			features: ['500.000 tokens/mes (pool)', '5 agentes', 'Hasta 10 usuarios', 'Todos los modelos', 'Soporte prioritario', 'Analytics de uso', '14 días de prueba gratis'],
+			tokens: '3M',
+			desc: 'Para equipos en crecimiento.',
+			features: ['3.000.000 tokens/mes', 'Todos los modelos', 'Soporte prioritario', 'Analytics de uso', 'RGPD · datos en UE'],
 			cta: 'Upgrade a Pro',
 			highlight: true
-		},
-		{
-			id: 'business',
-			label: 'Business',
-			price: '€249',
-			period: '/mes',
-			tokens: '2M',
-			users: 'Usuarios ilimitados',
-			desc: '15 agentes. Enterprise-ready.',
-			features: ['2.000.000 tokens/mes (pool)', '15 agentes', 'Usuarios ilimitados', 'Todos los modelos', 'Account manager dedicado', 'SLA garantizado', 'Factura alemana (UStG)', '14 días de prueba gratis'],
-			cta: 'Upgrade a Business',
-			highlight: false
 		}
 	];
 
@@ -97,7 +82,7 @@
 				}
 			}
 		} catch { /* fall through */ }
-		window.location.href = `mailto:hola@clapnclaw.com?subject=Upgrade%20a%20${planId}`;
+		window.location.href = `mailto:crojasu@clapnclaw.io?subject=Upgrade%20a%20${planId}`;
 	}
 
 	function ctaAction(plan: typeof plans[0], i: number) {
@@ -153,11 +138,9 @@
 	<!-- Content -->
 	<div class="flex-1 px-4 md:px-6 py-8 md:py-12">
 		<!-- Header -->
-		<div class="mb-8 md:mb-10">
-			<h1 class="text-lg font-semibold text-gray-900 dark:text-white">Planes y precios</h1>
-			<p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
-				IA privada para empresas europeas — datos siempre en la UE
-			</p>
+		<div class="mb-7">
+			<h1 class="text-sm font-medium text-gray-900 dark:text-white">Planes y precios</h1>
+			<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">IA privada para empresas europeas · datos siempre en la UE</p>
 		</div>
 
 		{#if loading}
@@ -220,20 +203,13 @@
 							<!-- Desc -->
 							<p class="text-xs text-gray-500 dark:text-gray-400 mb-4">{plan.desc}</p>
 
-							<!-- Key stats -->
+							<!-- Token count -->
 							<div
-								class="flex gap-3 mb-4 px-3 py-2.5 rounded-xl"
-								style="background:rgba(13,92,63,.04)"
+								class="inline-flex items-center gap-1.5 mb-4 px-3 py-2 rounded-xl"
+								style="background:rgba(13,92,63,.06)"
 							>
-								<div class="text-center flex-1">
-									<div class="text-sm font-bold" style="color:#0D5C3F">{plan.tokens}</div>
-									<div class="text-[9px] text-gray-400 uppercase tracking-wide">tokens/mes</div>
-								</div>
-								<div class="w-px bg-black/[.06]" />
-								<div class="text-center flex-1">
-									<div class="text-sm font-bold text-gray-700 dark:text-gray-300">{plan.users}</div>
-									<div class="text-[9px] text-gray-400 uppercase tracking-wide">usuarios</div>
-								</div>
+								<div class="text-sm font-bold" style="color:#0D5C3F">{plan.tokens}</div>
+								<div class="text-[9px] text-gray-400 uppercase tracking-wide">tokens/mes</div>
 							</div>
 
 							<!-- Features -->
@@ -285,7 +261,7 @@
 				<p class="text-xs text-gray-400 dark:text-gray-500">
 					¿Necesitas un plan Enterprise personalizado?
 					<a
-						href="mailto:hola@clapnclaw.com?subject=Plan%20Enterprise"
+						href="mailto:crojasu@clapnclaw.io?subject=Plan%20Enterprise"
 						class="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 					>
 						Contáctanos
