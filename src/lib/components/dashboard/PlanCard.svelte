@@ -3,7 +3,6 @@
 
 	export let planName = '';
 
-	// Plans aligned with backend Plan enum: free | starter | pro | enterprise
 	const plans = [
 		{ id: 'free',       label: 'Free',       tokens: '50K',  price: '€0',      desc: 'Para empezar' },
 		{ id: 'starter',    label: 'Starter',    tokens: '1M',   price: '€20/mes', desc: 'Uso diario' },
@@ -11,16 +10,16 @@
 		{ id: 'enterprise', label: 'Enterprise', tokens: '5M',   price: '€99/mes', desc: 'Equipos y firmas' }
 	];
 
-	$: current = plans.find((p) => p.id === planName?.toLowerCase()) ?? plans[0];
-	$: nextPlan = plans[plans.indexOf(current) + 1];
+	$: currentIdx = plans.findIndex((p) => p.id === planName?.toLowerCase()) ?? 0;
+	$: current = plans[currentIdx < 0 ? 0 : currentIdx];
 
 	const tokenPacks = [
 		{ id: 'pack_500k', label: '+500K Tokens', price: '€19', period: 'einmalig' },
 		{ id: 'pack_2m',   label: '+2M Tokens',   price: '€59', period: 'einmalig' }
 	];
 
-	async function handleUpgrade() {
-		if (!nextPlan || nextPlan.id === 'free') return;
+	async function goToCheckout(planId: string) {
+		if (planId === 'free' || planId === current.id) return;
 		try {
 			const res = await fetch(`${WEBUI_BASE_URL}/api/v1/clapnclaw/billing/checkout`, {
 				method: 'POST',
@@ -28,19 +27,14 @@
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${localStorage.token}`
 				},
-				body: JSON.stringify({ plan: nextPlan.id })
+				body: JSON.stringify({ plan: planId })
 			});
 			if (res.ok) {
 				const data = await res.json();
-				if (data.checkout_url) {
-					window.location.href = data.checkout_url;
-					return;
-				}
+				if (data.checkout_url) { window.location.href = data.checkout_url; return; }
 			}
-		} catch {
-			// network error — fall through to mailto
-		}
-		window.location.href = `mailto:hola@clapnclaw.com?subject=Upgrade%20a%20${nextPlan.label}`;
+		} catch { /* fall through */ }
+		window.location.href = `mailto:hola@clapnclaw.com?subject=Upgrade%20a%20${planId}`;
 	}
 
 	async function handleTokenPack(pack: typeof tokenPacks[0]) {
@@ -55,14 +49,9 @@
 			});
 			if (res.ok) {
 				const data = await res.json();
-				if (data.checkout_url) {
-					window.location.href = data.checkout_url;
-					return;
-				}
+				if (data.checkout_url) { window.location.href = data.checkout_url; return; }
 			}
-		} catch {
-			// fall through to mailto
-		}
+		} catch { /* fall through */ }
 		window.location.href = `mailto:hola@clapnclaw.com?subject=Token%20Pack%20${encodeURIComponent(pack.label)}`;
 	}
 </script>
@@ -79,58 +68,54 @@
 		</span>
 	</div>
 
-	<!-- Plan list -->
-	<div class="flex-1 space-y-0.5 mb-4">
-		{#each plans as p}
-			<div
-				class="flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors
-				{p.id !== current.id ? 'hover:bg-gray-50 dark:hover:bg-gray-700/40' : ''}"
-				style={p.id === current.id ? 'background:rgba(13,92,63,.07)' : ''}
+	<!-- Plan list — each row is a button if upgradeable -->
+	<div class="flex-1 space-y-1 mb-4">
+		{#each plans as p, i}
+			{@const isActive = p.id === current.id}
+			{@const isUpgrade = i > currentIdx && current.id !== 'enterprise'}
+			{@const isFree = p.id === 'free'}
+			<button
+				class="w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors text-left
+					{isUpgrade ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 group' : 'cursor-default'}
+					{isActive ? '' : ''}"
+				style={isActive ? 'background:rgba(13,92,63,.07)' : ''}
+				disabled={isActive || isFree || i < currentIdx}
+				on:click={() => isUpgrade && goToCheckout(p.id)}
 			>
 				<div class="flex items-center gap-2 min-w-0">
 					<div
 						class="size-1.5 rounded-full shrink-0"
-						style={p.id === current.id ? 'background:#0D5C3F' : 'background:rgba(0,0,0,.15)'}
+						style={isActive ? 'background:#0D5C3F' : 'background:rgba(0,0,0,.15)'}
 					/>
 					<span
 						class="text-xs truncate"
-						class:font-semibold={p.id === current.id}
-						class:text-gray-900={p.id === current.id}
-						class:dark:text-white={p.id === current.id}
-						class:text-gray-400={p.id !== current.id}
+						class:font-semibold={isActive}
+						class:text-gray-900={isActive}
+						class:dark:text-white={isActive}
+						class:text-gray-400={!isActive}
 					>
 						{p.label}
 					</span>
 					<span class="text-[10px] text-gray-300 dark:text-gray-600 font-mono shrink-0">{p.tokens}</span>
 				</div>
-				<span
-					class="text-[10px] font-mono shrink-0 ml-1"
-					class:font-semibold={p.id === current.id}
-					style={p.id === current.id ? 'color:#0D5C3F' : 'color:rgba(0,0,0,.25)'}
-				>
-					{p.price}
-				</span>
-			</div>
+				<div class="flex items-center gap-1.5">
+					<span
+						class="text-[10px] font-mono shrink-0"
+						class:font-semibold={isActive}
+						style={isActive ? 'color:#0D5C3F' : 'color:rgba(0,0,0,.25)'}
+					>
+						{p.price}
+					</span>
+					{#if isUpgrade}
+						<span class="text-[9px] font-mono text-gray-300 group-hover:text-green-700 transition-colors">→</span>
+					{/if}
+				</div>
+			</button>
 		{/each}
 	</div>
 
-	<!-- CTA -->
-	{#if nextPlan}
-		<button
-			class="w-full py-2 rounded-xl text-xs font-semibold font-mono transition-all hover:opacity-90 hover:-translate-y-0.5 cursor-pointer"
-			style="background:#0D5C3F;color:#F5F0E8"
-			on:click={handleUpgrade}
-		>
-			Mejorar → {nextPlan.label} ({nextPlan.price})
-		</button>
-	{:else}
-		<div class="w-full py-2 rounded-xl text-xs font-mono text-center" style="background:rgba(13,92,63,.07);color:#0D5C3F">
-			Plan máximo activo
-		</div>
-	{/if}
-
 	<!-- Token packs -->
-	<div class="mt-3 pt-3 border-t border-black/[.05] dark:border-white/[.05]">
+	<div class="pt-3 border-t border-black/[.05] dark:border-white/[.05]">
 		<p class="text-[9px] font-semibold uppercase tracking-[.1em] text-gray-400 dark:text-white/30 mb-2">Recargas</p>
 		<div class="flex flex-wrap gap-1.5">
 			{#each tokenPacks as pack}

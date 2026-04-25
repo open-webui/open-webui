@@ -12,9 +12,10 @@
   // ── 2. Favicon replacement ───────────────────────────────────
   (function replaceFavicon() {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
-      '<polygon points="14,82 28,18 42,82" fill="#0D5C3F"/>' +
-      '<polygon points="26,18 40,82 54,18" fill="#E07020" opacity="0.7"/>' +
-      '<polygon points="38,82 52,18 66,82" fill="#0D5C3F" opacity="0.45"/>' +
+      '<rect width="100" height="100" rx="22" fill="#0D5C3F"/>' +
+      '<polygon points="20,78 33,22 46,78" fill="#F5F0E8"/>' +
+      '<polygon points="31,22 44,78 57,22" fill="#F5F0E8" opacity="0.75"/>' +
+      '<polygon points="42,78 55,22 68,78" fill="#F5F0E8" opacity="0.5"/>' +
       '</svg>';
     var url = 'data:image/svg+xml,' + encodeURIComponent(svg);
     var existing = document.querySelectorAll('link[rel*="icon"]');
@@ -58,7 +59,7 @@
     localStorage.removeItem('clapnclaw_onboarded');
     localStorage.removeItem('clapnclaw_slug');
     sessionStorage.removeItem('cnc-session');
-    window.location.replace(_hubUrl);
+    window.location.replace(_hubUrl + '/onboarding.html?new=true');
   })();
 
   // Reveal #app — custom.css hides it to prevent /auth flash while defer script loads.
@@ -84,7 +85,7 @@
     localStorage.removeItem('clapnclaw_onboarded');
     localStorage.removeItem('clapnclaw_slug');
     sessionStorage.removeItem('cnc-session');
-    window.location.replace(_hubUrl);
+    window.location.replace(_hubUrl + '/onboarding.html?new=true');
   }
 
   // Watch for SPA navigation to /auth AND token removal (OWI v0.8+ logout)
