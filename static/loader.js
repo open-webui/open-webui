@@ -12,10 +12,10 @@
   // ── 2. Favicon replacement ───────────────────────────────────
   (function replaceFavicon() {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
-      '<rect width="100" height="100" rx="22" fill="#0D5C3F"/>' +
-      '<polygon points="20,78 33,22 46,78" fill="#F5F0E8"/>' +
-      '<polygon points="31,22 44,78 57,22" fill="#F5F0E8" opacity="0.75"/>' +
-      '<polygon points="42,78 55,22 68,78" fill="#F5F0E8" opacity="0.5"/>' +
+      '<circle cx="50" cy="50" r="50" fill="#0D5C3F"/>' +
+      '<polygon points="22,78 35,22 48,78" fill="#F5F0E8"/>' +
+      '<polygon points="33,22 46,78 59,22" fill="#F5F0E8" opacity="0.75"/>' +
+      '<polygon points="44,78 57,22 70,78" fill="#F5F0E8" opacity="0.5"/>' +
       '</svg>';
     var url = 'data:image/svg+xml,' + encodeURIComponent(svg);
     var existing = document.querySelectorAll('link[rel*="icon"]');
@@ -110,6 +110,7 @@
 
   // ── 3. Splash screen (animated logo while OWI SPA loads) ────────────
   function showSplash() {
+    if (_isLocal) return; // no splash in local dev — avoids stale-token hangs
     if (!localStorage.getItem('token')) return; // login page handles itself
     if (document.getElementById('cnc-splash')) return;
     _injectLogoStyles();

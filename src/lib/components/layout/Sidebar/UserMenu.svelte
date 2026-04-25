@@ -175,7 +175,7 @@
 
 			<DropdownMenu.Item
 				as="a"
-				href="/dashboard#plan"
+				href="/plans"
 				draggable="false"
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 				on:click={async () => {

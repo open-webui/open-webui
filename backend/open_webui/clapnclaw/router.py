@@ -60,7 +60,7 @@ class CheckoutRequest(BaseModel):
 @router.post("/billing/checkout")
 async def billing_checkout(body: CheckoutRequest):
     try:
-        return await clapnclaw_client.post("/api/billing/checkout", body.model_dump())
+        return await clapnclaw_client.post("/api/billing/workspace-checkout", body.model_dump())
     except Exception as e:
         log.error(f"billing_checkout: {e}")
         raise HTTPException(502, "ClapNClaw API unreachable")

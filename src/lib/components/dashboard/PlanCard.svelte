@@ -4,10 +4,10 @@
 	export let planName = '';
 
 	const plans = [
-		{ id: 'free',       label: 'Free',       tokens: '50K',  price: '€0',      desc: 'Para empezar' },
-		{ id: 'starter',    label: 'Starter',    tokens: '1M',   price: '€20/mes', desc: 'Uso diario' },
-		{ id: 'pro',        label: 'Pro',        tokens: '3M',   price: '€79/mes', desc: 'Usuarios intensivos' },
-		{ id: 'enterprise', label: 'Enterprise', tokens: '5M',   price: '€99/mes', desc: 'Equipos y firmas' }
+		{ id: 'free',     label: 'Free',     tokens: '50K',  price: '€0',       desc: 'Para empezar' },
+		{ id: 'starter',  label: 'Starter',  tokens: '500K', price: '€82/mes',  desc: 'Uso diario' },
+		{ id: 'pro',      label: 'Pro',      tokens: '2M',   price: '€164/mes', desc: 'Usuarios intensivos' },
+		{ id: 'business', label: 'Business', tokens: '5M',   price: '€328/mes', desc: 'Equipos y firmas' }
 	];
 
 	$: currentIdx = plans.findIndex((p) => p.id === planName?.toLowerCase()) ?? 0;
