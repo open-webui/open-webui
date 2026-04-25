@@ -266,12 +266,13 @@
 							href="#"
 							class="hover:underline line-clamp-1"
 							on:click|preventDefault={() => {
-								if (!isPDF && item.url) {
+								if (item.type === 'file' || item.url) {
+									let fileId = item?.id ?? item?.tempId;
 									window.open(
 										item.type === 'file'
 											? item?.url?.startsWith('http')
 												? item.url
-												: `${WEBUI_API_BASE_URL}/files/${item.url}/content`
+												: `${WEBUI_API_BASE_URL}/files/${fileId}/content`
 											: item.url,
 										'_blank'
 									);
