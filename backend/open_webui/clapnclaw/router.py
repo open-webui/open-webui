@@ -47,7 +47,7 @@ async def tokens_usage():
 @router.get("/billing/plan")
 async def billing_plan():
     try:
-        return await clapnclaw_client.get("/api/billing/plan")
+        return await clapnclaw_client.get("/api/billing/workspace-plan")
     except Exception as e:
         log.error(f"billing_plan: {e}")
         raise HTTPException(502, "ClapNClaw API unreachable")

@@ -107,7 +107,7 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard | {$WEBUI_NAME}</title>
+	<title>Mi cuenta | {$WEBUI_NAME}</title>
 </svelte:head>
 
 <div
@@ -129,7 +129,7 @@
 					>
 						<Sidebar />
 					</button>
-					<span class="text-sm font-semibold" style="color:#0D5C3F">Dashboard</span>
+					<span class="text-sm font-semibold" style="color:#0D5C3F">Mi cuenta</span>
 				</div>
 
 				{#if $user}
@@ -151,7 +151,7 @@
 	<div class="flex-1 px-4 md:px-6 py-6 md:py-10">
 		<!-- Header -->
 		<div class="mb-6 md:mb-8">
-			<h1 class="text-sm font-medium text-gray-900 dark:text-white">Dashboard</h1>
+			<h1 class="text-sm font-medium text-gray-900 dark:text-white">Mi cuenta</h1>
 			<p class="text-xs text-gray-400 dark:text-gray-500 capitalize mt-0.5">{today}</p>
 		</div>
 

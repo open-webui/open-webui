@@ -31,6 +31,7 @@
   // Detect hub + API URLs from tenant hostname.
   // staging-*.clapnclaw.io → staging hub / api-staging
   var _hostname = window.location.hostname;
+  var _isLocal = (_hostname === 'localhost' || _hostname === '127.0.0.1' || _hostname.startsWith('192.168.'));
   var _hubUrl = 'https://clapnclaw.io';
   var _apiUrl = 'https://api.clapnclaw.io';
   if (_hostname.indexOf('staging') >= 0) {
@@ -52,7 +53,9 @@
 
   // ClapNClaw users NEVER log in via Open WebUI directly — always via hub autologin.
   // Any landing on /auth means logout or expired session → redirect to home.
+  // Exception: localhost dev environment — allow normal login form.
   (function checkLogout() {
+    if (_isLocal) return;
     if (!(location.pathname === '/auth' || location.pathname.startsWith('/auth/'))) return;
     localStorage.removeItem('token');
     localStorage.removeItem('clapnclaw_token');
@@ -78,13 +81,14 @@
   }
 
   function _doLogout() {
-    var app = document.getElementById('app');
-    if (app) app.style.visibility = 'hidden';
     localStorage.removeItem('token');
     localStorage.removeItem('clapnclaw_token');
     localStorage.removeItem('clapnclaw_onboarded');
     localStorage.removeItem('clapnclaw_slug');
     sessionStorage.removeItem('cnc-session');
+    if (_isLocal) { window.location.replace('/auth'); return; }
+    var app = document.getElementById('app');
+    if (app) app.style.visibility = 'hidden';
     window.location.replace(_hubUrl + '/onboarding.html?new=true');
   }
 
