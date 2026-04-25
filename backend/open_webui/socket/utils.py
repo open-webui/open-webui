@@ -7,12 +7,6 @@ from open_webui.env import REDIS_KEY_PREFIX
 from typing import Optional, List, Tuple, Dict
 import pycrdt as Y
 
-import sys
-import logging
-from open_webui.env import GLOBAL_LOG_LEVEL
-
-logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
-log = logging.getLogger(__name__)
 
 class RedisLock:
     def __init__(
@@ -276,14 +270,12 @@ class ChatYdocManager:
         self._redis = redis
         self._redis_key_prefix = redis_key_prefix
         self._active_docs: Dict[str, Y.Doc] = {}
-        log.debug(f'XXX-DEBUG-Redis:{redis}')
-        log.debug(f'XXX-DEBUG-Redis:{redis_key_prefix}')
 
     async def create_document(self, message_id: str, initial_output: List = None) -> Y.Doc:
         """Create a new Yjs document for a chat message"""
         ydoc = Y.Doc()
         output_array = ydoc.get('output', type=Y.Array)
-        log.debug(f'XXX-DEBUG-CreateYDoc_outputArray:{output_array}')
+
         if initial_output:
             ydoc['output'] = Y.Array(initial_output)
         else:
@@ -294,7 +286,6 @@ class ChatYdocManager:
 
         # Store updates in Redis for persistence
         if self._redis:
-            log.debug(f'XXX-DEBUG-UpdateRedis:{ydoc}')
             await self._store_initial_state(message_id, ydoc)
 
         return ydoc
@@ -324,9 +315,7 @@ class ChatYdocManager:
         ydoc['output'] = Y.Array(current_output)
         # Get and emit full state (no diff in pycrdt)
         state_update = ydoc.get_update()
-        log.debug(f'XXX-DEBUG-UpdateDoc:{state_update}')
         if self._redis:
-            log.debug(f'XXX-DEBUG-UpdateRedis.')
             await self._store_update(message_id, state_update)
         return state_update
 
@@ -349,13 +338,11 @@ class ChatYdocManager:
         """Store initial document state"""
         redis_key = f"{self._redis_key_prefix}:{message_id}:state"
         state = ydoc.get_update()
-        log.debug(f'XXX-DEBUG-StoreIniStateRedis:{state}')
         await self._redis.set(redis_key, state, ex=3600)  # 1 hour TTL
 
     async def _store_update(self, message_id: str, delta: bytes):
         """Store incremental update"""
         redis_key = f"{self._redis_key_prefix}:{message_id}:updates"
-        log.debug(f'XXX-DEBUG-StoreIniStateRedis:{json.dumps(list(delta))}')
         await self._redis.lpush(redis_key, json.dumps(list(delta)))  # Convert to list for JSON
         await self._redis.expire(redis_key, 3600)
 
@@ -363,7 +350,6 @@ class ChatYdocManager:
         """Retrieve all stored updates"""
         redis_key = f"{self._redis_key_prefix}:{message_id}:updates"
         updates = await self._redis.lrange(redis_key, 0, -1)
-        log.debug(f'XXX-DEBUG-GetStoreRedis:{updates}')
         return [bytes(update) for update in updates]
 
     async def _cleanup_stored_updates(self, message_id: str):
