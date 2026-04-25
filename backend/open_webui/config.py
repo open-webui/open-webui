@@ -3038,6 +3038,21 @@ TIKTOKEN_ENCODING_NAME = PersistentConfig(
 )
 
 
+RAG_TOKENIZER_MODEL = PersistentConfig(
+    'RAG_TOKENIZER_MODEL',
+    'rag.tokenizer_model',
+    os.environ.get('RAG_TOKENIZER_MODEL', ''),
+)
+
+RAG_TOKENIZER_MODEL_AUTO_UPDATE = (
+    not OFFLINE_MODE and os.environ.get('RAG_TOKENIZER_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
+)
+
+RAG_TOKENIZER_MODEL_TRUST_REMOTE_CODE = (
+    os.environ.get('RAG_TOKENIZER_MODEL_TRUST_REMOTE_CODE', 'False').lower() == 'true'
+)
+
+
 CHUNK_SIZE = PersistentConfig('CHUNK_SIZE', 'rag.chunk_size', int(os.environ.get('CHUNK_SIZE', '1000')))
 
 CHUNK_MIN_SIZE_TARGET = PersistentConfig(

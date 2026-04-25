@@ -14,7 +14,8 @@
 		getRerankingConfig,
 		updateRerankingConfig,
 		getRAGConfig,
-		updateRAGConfig
+		updateRAGConfig,
+		updateTokenizerModel
 	} from '$lib/apis/retrieval';
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
@@ -33,6 +34,7 @@
 
 	let updateEmbeddingModelLoading = false;
 	let updateRerankingModelLoading = false;
+	let updateTokenizerModelLoading = false;
 
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
@@ -141,6 +143,22 @@
 		}
 	};
 
+	const tokenizerModelUpdateHandler = async () => {
+		updateTokenizerModelLoading = true;
+		const res = await updateTokenizerModel(localStorage.token, {
+			RAG_TOKENIZER_MODEL: RAGConfig.RAG_TOKENIZER_MODEL
+		}).catch(async (error) => {
+			toast.error(`${error}`);
+			await setRAGConfig();
+			return null;
+		});
+		updateTokenizerModelLoading = false;
+
+		if (res) {
+			toast.success($i18n.t('Success'));
+		}
+	};
+
 	const submitHandler = async () => {
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
@@ -201,6 +219,15 @@
 			return;
 		}
 
+		if (
+			RAGConfig.TEXT_SPLITTER === 'token_transformers' &&
+			RAG_EMBEDDING_ENGINE !== '' &&
+			!RAGConfig.RAG_TOKENIZER_MODEL?.trim()
+		) {
+			toast.error($i18n.t('Tokenizer Model required when using an external embedding engine.'));
+			return;
+		}
+
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
 		}
@@ -249,6 +276,23 @@
 		dispatch('save');
 	};
 
+	const setRAGConfig = async () => {
+		const config = await getRAGConfig(localStorage.token);
+		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
+
+		config.DOCLING_PARAMS =
+			typeof config.DOCLING_PARAMS === 'object'
+				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
+				: config.DOCLING_PARAMS;
+
+		config.MINERU_PARAMS =
+			typeof config.MINERU_PARAMS === 'object'
+				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
+				: config.MINERU_PARAMS;
+
+		RAGConfig = config;
+	};
+
 	const setEmbeddingConfig = async () => {
 		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
 
@@ -272,21 +316,7 @@
 	};
 	onMount(async () => {
 		await setEmbeddingConfig();
-
-		const config = await getRAGConfig(localStorage.token);
-		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
-
-		config.DOCLING_PARAMS =
-			typeof config.DOCLING_PARAMS === 'object'
-				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
-				: config.DOCLING_PARAMS;
-
-		config.MINERU_PARAMS =
-			typeof config.MINERU_PARAMS === 'object'
-				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
-				: config.MINERU_PARAMS;
-
-		RAGConfig = config;
+		await setRAGConfig();
 	});
 </script>
 
@@ -797,9 +827,68 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+									<option value="token_transformers">{$i18n.t('Token')} ({$i18n.t('Transformers')})</option>
 								</select>
 							</div>
 						</div>
+
+						{#if RAGConfig.TEXT_SPLITTER === 'token_transformers'}
+							<div class="mb-2.5 flex w-full justify-between">
+								<div class="flex gap-1.5 w-full">
+									<div class="w-full">
+										<div class="self-center text-xs font-medium min-w-fit mb-1">
+											<Tooltip
+												placement="top-start"
+												content={$i18n.t(
+													'HuggingFace repository name of a model to load its tokenizer locally for exact token length calculation (e.g. sentence-transformers/all-MiniLM-L6-v2). Takes priority over the local embedding model\'s tokenizer when set. Required when using an external embedding API.'
+												)}
+											>
+												{$i18n.t('Tokenizer Model (HuggingFace Repo)')}
+												{#if RAG_EMBEDDING_ENGINE !== ''}
+													<span class="text-red-500 ml-0.5">*</span>
+												{/if}
+											</Tooltip>
+										</div>
+										<div class="self-center flex gap-2">
+											<input
+												class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('e.g. sentence-transformers/all-MiniLM-L6-v2')}
+												bind:value={RAGConfig.RAG_TOKENIZER_MODEL}
+												autocomplete="off"
+											/>
+
+											<button
+												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
+												on:click={tokenizerModelUpdateHandler}
+												disabled={updateTokenizerModelLoading || !RAGConfig.RAG_TOKENIZER_MODEL}
+												title={$i18n.t('Download tokenizer')}
+											>
+												{#if updateTokenizerModelLoading}
+													<div class="self-center">
+														<Spinner />
+													</div>
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
+														/>
+														<path
+															d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+														/>
+													</svg>
+												{/if}
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						{/if}
 
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">

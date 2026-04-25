@@ -113,6 +113,7 @@ from open_webui.routers.retrieval import (
     get_reranking_function,
     get_ef,
     get_rf,
+    get_rag_tokenizer,
 )
 
 
@@ -306,6 +307,7 @@ from open_webui.config import (
     PADDLEOCR_VL_BASE_URL,
     PADDLEOCR_VL_TOKEN,
     RAG_TEXT_SPLITTER,
+    RAG_TOKENIZER_MODEL,
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
@@ -1034,6 +1036,7 @@ app.state.config.MINERU_API_TIMEOUT = MINERU_API_TIMEOUT
 app.state.config.MINERU_PARAMS = MINERU_PARAMS
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
+app.state.config.RAG_TOKENIZER_MODEL = RAG_TOKENIZER_MODEL
 app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
 
 app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
@@ -1147,6 +1150,7 @@ app.state.EMBEDDING_FUNCTION = None
 app.state.RERANKING_FUNCTION = None
 app.state.ef = None
 app.state.rf = None
+app.state.rag_tokenizer = None
 
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
@@ -1163,6 +1167,17 @@ try:
         )
     else:
         app.state.rf = None
+    if app.state.config.RAG_TOKENIZER_MODEL:
+        tokenizer_model_name = str(app.state.config.RAG_TOKENIZER_MODEL)
+        log.info(f'Loading RAG tokenizer model: {tokenizer_model_name}')
+        app.state.rag_tokenizer = get_rag_tokenizer(tokenizer_model_name)
+        if app.state.rag_tokenizer is None:
+            log.error(
+                f'RAG tokenizer model \'{tokenizer_model_name}\' could not be loaded at startup. '
+                f'Uploads using token_transformers splitter will fail until the model is available.'
+            )
+        else:
+            log.info(f'RAG tokenizer model \'{tokenizer_model_name}\' loaded successfully')
 except Exception as e:
     log.error(f'Error updating models: {e}')
     pass

@@ -111,6 +111,8 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_QUERY_PREFIX,
+    RAG_TOKENIZER_MODEL_AUTO_UPDATE,
+    RAG_TOKENIZER_MODEL_TRUST_REMOTE_CODE,
 )
 from open_webui.env import (
     DEVICE_TYPE,
@@ -121,6 +123,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
+    OFFLINE_MODE,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -134,6 +137,46 @@ log = logging.getLogger(__name__)
 # not into hallucination, but deliver us from noise.
 #
 ##########################################
+
+
+def get_rag_tokenizer(
+    tokenizer_model: str,
+    auto_update: bool = RAG_TOKENIZER_MODEL_AUTO_UPDATE,
+    force_update: bool = False,
+):
+    if not tokenizer_model:
+        return None
+    try:
+        from transformers import AutoTokenizer
+
+        local_files_only = not (force_update or auto_update)
+        if OFFLINE_MODE:
+            local_files_only = True
+
+        cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME') or os.getenv('HF_HUB_CACHE')
+
+        # Default to repo_id; AutoTokenizer will only pull tokenizer files when downloading
+        model_path = tokenizer_model
+        if not force_update:
+            # If the full snapshot is already cached (e.g. same model used for local embeddings),
+            # resolve it via get_model_path so we can use the local directory directly.
+            try:
+                candidate = get_model_path(tokenizer_model, update_model=False)
+                if os.path.exists(candidate):
+                    model_path = candidate
+            except Exception:
+                if OFFLINE_MODE:
+                    raise
+
+        return AutoTokenizer.from_pretrained(
+            model_path,
+            cache_dir=cache_dir,
+            trust_remote_code=RAG_TOKENIZER_MODEL_TRUST_REMOTE_CODE,
+            local_files_only=local_files_only,
+        )
+    except Exception as e:
+        log.error(f'Error loading tokenizer {tokenizer_model}: {e}')
+        return None
 
 
 def get_ef(
@@ -439,6 +482,35 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         )
 
 
+class TokenizerModelUpdateForm(BaseModel):
+    RAG_TOKENIZER_MODEL: str
+
+
+@router.post('/tokenizer/update')
+async def update_tokenizer_model(request: Request, form_data: TokenizerModelUpdateForm, user=Depends(get_admin_user)):
+    tokenizer_model = form_data.RAG_TOKENIZER_MODEL.strip()
+    if not tokenizer_model:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='RAG_TOKENIZER_MODEL is not set',
+        )
+
+    log.info(f'Downloading/updating tokenizer: {tokenizer_model}')
+    try:
+        tokenizer = get_rag_tokenizer(tokenizer_model, force_update=True)
+        if tokenizer is None:
+            raise ValueError(f'Failed to load tokenizer: {tokenizer_model}')
+        request.app.state.rag_tokenizer = tokenizer
+        request.app.state.config.RAG_TOKENIZER_MODEL = tokenizer_model
+        return {'status': True, 'RAG_TOKENIZER_MODEL': tokenizer_model}
+    except Exception as e:
+        log.exception(f'Problem updating tokenizer model: {e}')
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
 @router.get('/config')
 async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
@@ -497,6 +569,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'RAG_EXTERNAL_RERANKER_TIMEOUT': request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         'TEXT_SPLITTER': request.app.state.config.TEXT_SPLITTER,
+        'RAG_TOKENIZER_MODEL': request.app.state.config.RAG_TOKENIZER_MODEL,
         'ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER': request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         'CHUNK_SIZE': request.app.state.config.CHUNK_SIZE,
         'CHUNK_MIN_SIZE_TARGET': request.app.state.config.CHUNK_MIN_SIZE_TARGET,
@@ -708,6 +781,7 @@ class ConfigForm(BaseModel):
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
+    RAG_TOKENIZER_MODEL: Optional[str] = None
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
     CHUNK_MIN_SIZE_TARGET: Optional[int] = None
@@ -1023,6 +1097,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     request.app.state.config.CHUNK_OVERLAP = (
         form_data.CHUNK_OVERLAP if form_data.CHUNK_OVERLAP is not None else request.app.state.config.CHUNK_OVERLAP
     )
+    if form_data.RAG_TOKENIZER_MODEL is not None and form_data.RAG_TOKENIZER_MODEL != str(request.app.state.config.RAG_TOKENIZER_MODEL):
+        request.app.state.config.RAG_TOKENIZER_MODEL = form_data.RAG_TOKENIZER_MODEL
+        request.app.state.rag_tokenizer = None  # invalidate cache so it reloads on next ingestion
 
     # File upload settings
     # Empty string means "clear to None" (unlimited/no compression),
@@ -1283,6 +1360,28 @@ def can_merge_chunks(a: Document, b: Document) -> bool:
     return True
 
 
+def get_transformers_tokenizer_for_text_splitter(request: Request):
+    tokenizer_model = str(request.app.state.config.RAG_TOKENIZER_MODEL).strip()
+    if tokenizer_model:
+        if request.app.state.rag_tokenizer is not None:
+            return request.app.state.rag_tokenizer
+
+        tokenizer = get_rag_tokenizer(tokenizer_model)
+        if tokenizer is None:
+            raise ValueError(
+                f"RAG_TOKENIZER_MODEL is set to '{tokenizer_model}' but failed to load — "
+                f"check the application logs for details. "
+                f"Ensure the model name is correct and the model can be downloaded or is already cached locally."
+            )
+        request.app.state.rag_tokenizer = tokenizer
+        return tokenizer
+
+    if request.app.state.ef is not None and hasattr(request.app.state.ef, "tokenizer"):
+        return request.app.state.ef.tokenizer
+
+    return None
+
+
 def merge_docs_to_target_size(
     request: Request,
     chunks: list[Document],
@@ -1304,6 +1403,12 @@ def merge_docs_to_target_size(
     if request.app.state.config.TEXT_SPLITTER == 'token':
         encoding = tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
         measure_chunk_size = lambda text: len(encoding.encode(text))
+    elif request.app.state.config.TEXT_SPLITTER == 'token_transformers':
+        tokenizer = get_transformers_tokenizer_for_text_splitter(request)
+        if tokenizer is not None:
+            measure_chunk_size = lambda text: len(tokenizer.encode(text, add_special_tokens=False))
+        else:
+            log.warning('token_transformers tokenizer unavailable in merge_docs_to_target_size, falling back to character counting')
 
     processed_chunks: list[Document] = []
 
@@ -1443,6 +1548,38 @@ def save_docs_to_vector_db(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
+        elif request.app.state.config.TEXT_SPLITTER == 'token_transformers':
+            tokenizer = get_transformers_tokenizer_for_text_splitter(request)
+            if tokenizer is None:
+                raise ValueError(
+                    'token_transformers splitter requires a local embedding model or RAG_TOKENIZER_MODEL to be set'
+                )
+
+            model_max_length = getattr(tokenizer, 'model_max_length', None)
+            chunk_size = request.app.state.config.CHUNK_SIZE
+            if model_max_length and model_max_length <= 100_000:
+                num_special = tokenizer.num_special_tokens_to_add(pair=False)
+                effective_max = model_max_length - num_special
+                if chunk_size > effective_max:
+                    log.warning(
+                        f'token_transformers splitter: CHUNK_SIZE={chunk_size} exceeds '
+                        f'effective limit of {effective_max} '
+                        f'(model_max_length={model_max_length} minus {num_special} special tokens) — '
+                        f'chunks will be silently truncated during embedding (local embedding model) '
+                        f'or embedding will fail (remote API embedding model). '
+                        f'Consider reducing CHUNK_SIZE to at most {effective_max}.'
+                    )
+
+            def token_length(text):
+                return len(tokenizer.encode(text, add_special_tokens=False))
+
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                length_function=token_length,
                 add_start_index=True,
             )
             docs = text_splitter.split_documents(docs)
