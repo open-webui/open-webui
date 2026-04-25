@@ -682,6 +682,7 @@ def generate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
+    model = model.strip()
     log.debug(f'generate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
     json_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
@@ -715,6 +716,7 @@ async def agenerate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
+    model = model.strip()
     log.debug(f'agenerate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
     form_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
@@ -834,6 +836,7 @@ def generate_ollama_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
+    model = model.strip()
     log.debug(f'generate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
     json_data = {'input': texts, 'model': model, 'truncate': True}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
@@ -870,6 +873,7 @@ async def agenerate_ollama_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
+    model = model.strip()
     log.debug(f'agenerate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
     form_data = {'input': texts, 'model': model, 'truncate': True}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
@@ -993,6 +997,7 @@ async def generate_embeddings(
     prefix: Union[str, None] = None,
     **kwargs,
 ):
+    model = model.strip()
     url = kwargs.get('url', '')
     key = kwargs.get('key', '')
     user = kwargs.get('user')
