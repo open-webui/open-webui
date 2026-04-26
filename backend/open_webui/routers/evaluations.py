@@ -326,7 +326,7 @@ async def export_all_feedbacks(
 
 
 @router.get('/feedbacks/user', response_model=list[FeedbackUserResponse])
-async def get_feedbacks(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_feedbacks_user(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     feedbacks = await Feedbacks.get_feedbacks_by_user_id(user.id, db=db)
     return feedbacks
 
@@ -341,7 +341,7 @@ PAGE_ITEM_COUNT = 30
 
 
 @router.get('/feedbacks/list', response_model=FeedbackListResponse)
-async def get_feedbacks(
+async def get_feedbacks_list(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,

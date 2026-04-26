@@ -57,7 +57,7 @@ async def get_function_list(user=Depends(get_admin_user), db: AsyncSession = Dep
 
 
 @router.get('/export', response_model=list[FunctionModel | FunctionWithValvesModel])
-async def get_functions(
+async def export_functions(
     include_valves: bool = False,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
