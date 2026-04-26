@@ -27,8 +27,11 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import ChatConnectorBar from '$lib/components/chat/ChatConnectorBar.svelte';
+	import ModelGuideModal from '$lib/components/chat/ModelGuideModal.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
 	import FolderTitle from './Placeholder/FolderTitle.svelte';
+
+	let showModelGuide = false;
 
 	const i18n = getContext('i18n');
 
@@ -265,6 +268,22 @@
 					{onSelect}
 				/>
 			</div>
+			<div class="flex justify-center mt-2">
+				<button
+					class="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition cursor-pointer px-3 py-1.5 rounded-full hover:bg-black/[.04] dark:hover:bg-white/[.04]"
+					on:click={() => (showModelGuide = true)}
+				>
+					<span class="flex gap-1 items-center">
+						<span class="size-1.5 rounded-full bg-[#EA580C]" />
+						<span class="size-1.5 rounded-full bg-[#F59E0B]" />
+						<span class="size-1.5 rounded-full bg-[#16A34A]" />
+						<span class="size-1.5 rounded-full bg-[#7C3AED]" />
+					</span>
+					{$i18n.t('Know the models')}
+				</button>
+			</div>
 		</div>
 	{/if}
 </div>
+
+<ModelGuideModal bind:open={showModelGuide} />

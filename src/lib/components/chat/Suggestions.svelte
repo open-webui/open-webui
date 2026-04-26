@@ -68,16 +68,6 @@
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
-	{:else}
-		<!-- Keine Vorschläge -->
-
-		<div
-			class="flex w-full {$settings?.landingPageMode === 'chat'
-				? ' -mt-1'
-				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
-		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
-		</div>
 	{/if}
 </div>
 
@@ -117,6 +107,26 @@
 					</div>
 				</button>
 			{/each}
+		</div>
+	{:else}
+		<!-- No suggestions: show onboarding CTA -->
+		<div class="flex flex-col items-center justify-center gap-3 pt-4">
+			<button
+				class="waterfall flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-black/[.08] dark:border-white/[.08] bg-transparent hover:bg-black/[.04] dark:hover:bg-white/[.04] transition group cursor-pointer"
+				on:click={() => onSelect({ type: 'prompt', data: $i18n.t('_onboarding_prompt') === '_onboarding_prompt'
+					? 'Hola! Cuéntame sobre ti: ¿en qué sector trabajas, qué tareas haces más seguido y cómo puedo ayudarte mejor cada día?'
+					: $i18n.t('_onboarding_prompt') })}
+			>
+				<span class="text-lg">👋</span>
+				<div class="text-left">
+					<p class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">
+						{$i18n.t('Tell me about yourself')}
+					</p>
+					<p class="text-[11px] text-gray-400 dark:text-gray-500">
+						{$i18n.t('Get personalized suggestions')}
+					</p>
+				</div>
+			</button>
 		</div>
 	{/if}
 </div>
