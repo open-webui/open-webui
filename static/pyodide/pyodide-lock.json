@@ -5008,6 +5008,18 @@
         "mypy_extensions"
       ],
       "depends": []
+    },
+    "pytokens": {
+      "name": "pytokens",
+      "version": "0.4.1",
+      "file_name": "pytokens-0.4.1-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "26cef14744a8385f35d0e095dc8b3a7583f6c953c2e3d269c7f82484bf5ad2de",
+      "package_type": "package",
+      "imports": [
+        "pytokens"
+      ],
+      "depends": []
     }
   }
 }

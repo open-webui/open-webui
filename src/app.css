@@ -103,15 +103,15 @@ textarea::placeholder {
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-sm {
-	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal prose-headings:font-semibold prose-hr:my-2 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal prose-headings:font-semibold prose-hr:my-0.5 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -149,7 +149,8 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
+	background-color: rgba(67, 67, 67, 0.6);
+	/* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
@@ -189,20 +190,19 @@ select {
 	0% {
 		background-position: 100% 0;
 	}
+
 	100% {
 		background-position: -100% 0;
 	}
 }
 
 .shimmer {
-	background: linear-gradient(
-		110deg,
-		#b4b4b4 0%,
-		#b4b4b4 43%,
-		#e8e8e8 50%,
-		#b4b4b4 57%,
-		#b4b4b4 100%
-	);
+	background: linear-gradient(110deg,
+			#b4b4b4 0%,
+			#b4b4b4 43%,
+			#e8e8e8 50%,
+			#b4b4b4 57%,
+			#b4b4b4 100%);
 	background-size: 200% 100%;
 	background-clip: text;
 	-webkit-background-clip: text;
@@ -212,14 +212,12 @@ select {
 }
 
 :global(.dark) .shimmer {
-	background: linear-gradient(
-		110deg,
-		#9a9a9a 0%,
-		#9a9a9a 43%,
-		#5e5e5e 50%,
-		#9a9a9a 57%,
-		#9a9a9a 100%
-	);
+	background: linear-gradient(110deg,
+			#9a9a9a 0%,
+			#9a9a9a 43%,
+			#5e5e5e 50%,
+			#9a9a9a 57%,
+			#9a9a9a 100%);
 	background-size: 200% 100%;
 	background-clip: text;
 	-webkit-background-clip: text;
@@ -233,6 +231,7 @@ select {
 		opacity: 0;
 		transform: translateY(-10px);
 	}
+
 	100% {
 		opacity: 1;
 		transform: translateY(0);
@@ -247,6 +246,7 @@ select {
 	from {
 		opacity: 0;
 	}
+
 	to {
 		opacity: 1;
 	}
@@ -263,8 +263,8 @@ select {
 /* Hide leaked Mermaid temp containers if render cleanup misses.
    Use visibility:hidden (not display:none) so mermaid can still
    measure the SVG layout before extracting its HTML. */
-body > div[id^='dmermaid-'],
-body > iframe[id^='imermaid-'] {
+body>div[id^='dmermaid-'],
+body>iframe[id^='imermaid-'] {
 	position: fixed !important;
 	visibility: hidden !important;
 	height: 0 !important;
@@ -276,6 +276,7 @@ body > iframe[id^='imermaid-'] {
 .scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
+
 .scrollbar-hidden::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
@@ -285,7 +286,8 @@ body > iframe[id^='imermaid-'] {
 }
 
 .scrollbar-none::-webkit-scrollbar {
-	display: none; /* for Chrome, Safari and Opera */
+	display: none;
+	/* for Chrome, Safari and Opera */
 }
 
 .scrollbar-none::-webkit-scrollbar-corner {
@@ -293,19 +295,23 @@ body > iframe[id^='imermaid-'] {
 }
 
 .scrollbar-none {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	/* IE and Edge */
+	scrollbar-width: none;
+	/* Firefox */
 }
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
 	/* display: none; <- Crashes Chrome on hover */
 	-webkit-appearance: none;
-	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+	margin: 0;
+	/* <-- Apparently some margin are still there even though it's hidden */
 }
 
 input[type='number'] {
-	-moz-appearance: textfield; /* Firefox */
+	-moz-appearance: textfield;
+	/* Firefox */
 }
 
 .katex-display {
@@ -322,6 +328,7 @@ input[type='number'] {
 .katex-display:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
+
 .katex-display::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
@@ -362,7 +369,7 @@ input[type='number'] {
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded-lg bg-black text-xs border border-gray-900 shadow-xl;
 }
 
 .password {
@@ -379,11 +386,11 @@ input[type='number'] {
 	background-color: transparent !important;
 }
 
-.svelte-flow__edge > path {
+.svelte-flow__edge>path {
 	stroke-width: 0.5;
 }
 
-.svelte-flow__edge.animated > path {
+.svelte-flow__edge.animated>path {
 	stroke-width: 2;
 	@apply stroke-gray-600 dark:stroke-gray-500;
 }
@@ -420,7 +427,7 @@ input[type='number'] {
 		align-items: start;
 		display: flex;
 
-		> label {
+		>label {
 			flex: 0 0 auto;
 			margin-right: 0.5rem;
 			margin-top: 0.2rem;
@@ -428,7 +435,7 @@ input[type='number'] {
 			display: flex;
 		}
 
-		> div {
+		>div {
 			flex: 1 1 auto;
 
 			align-items: center;
@@ -438,7 +445,7 @@ input[type='number'] {
 	/* checked data-checked="true" */
 
 	li[data-checked='true'] {
-		> div {
+		>div {
 			opacity: 0.5;
 			text-decoration: line-through;
 		}
@@ -513,7 +520,7 @@ input[type='number'] {
 		align-items: start;
 		display: flex;
 
-		> label {
+		>label {
 			flex: 0 0 auto;
 			margin-right: 0.5rem;
 			margin-top: 0.4rem;
@@ -521,7 +528,7 @@ input[type='number'] {
 			display: flex;
 		}
 
-		> div {
+		>div {
 			flex: 1 1 auto;
 
 			align-items: center;
@@ -531,7 +538,7 @@ input[type='number'] {
 	/* checked data-checked="true" */
 
 	li[data-checked='true'] {
-		> div {
+		>div {
 			opacity: 0.5;
 			text-decoration: line-through;
 		}
@@ -583,7 +590,7 @@ input[type='number'] {
 	pointer-events: none;
 }
 
-.tiptap pre > code {
+.tiptap pre>code {
 	border-radius: 0.4rem;
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
@@ -689,9 +696,10 @@ input[type='number'] {
 }
 
 /* this is a rough fix for the first cursor position when the first paragraph is empty */
-.ProseMirror > .ProseMirror-yjs-cursor:first-child {
+.ProseMirror>.ProseMirror-yjs-cursor:first-child {
 	margin-top: 16px;
 }
+
 /* This gives the remote user caret. The colors are automatically overwritten*/
 .ProseMirror-yjs-cursor {
 	position: relative;
@@ -703,8 +711,9 @@ input[type='number'] {
 	word-break: normal;
 	pointer-events: none;
 }
+
 /* This renders the username above the caret */
-.ProseMirror-yjs-cursor > div {
+.ProseMirror-yjs-cursor>div {
 	position: absolute;
 	top: -1.05em;
 	left: -1px;
@@ -730,7 +739,8 @@ body {
 /* Position the handle relative to each LI */
 .pm-li--with-handle {
 	position: relative;
-	margin-left: 12px; /* make space for the handle */
+	margin-left: 12px;
+	/* make space for the handle */
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
@@ -740,7 +750,8 @@ body {
 /* The drag handle itself */
 .pm-list-drag-handle {
 	position: absolute;
-	left: -36px; /* pull into the left gutter */
+	left: -36px;
+	/* pull into the left gutter */
 	top: 1px;
 	width: 18px;
 	height: 18px;
@@ -759,15 +770,18 @@ body {
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
-	left: -16px; /* pull into the left gutter more to avoid the checkbox */
+	left: -16px;
+	/* pull into the left gutter more to avoid the checkbox */
 }
 
 .pm-list-drag-handle:active {
 	cursor: grabbing;
 }
-.pm-li--with-handle:hover > .pm-list-drag-handle {
+
+.pm-li--with-handle:hover>.pm-list-drag-handle {
 	opacity: 1;
 }
+
 .pm-list-drag-handle:hover {
 	background: rgba(0, 0, 0, 0.06);
 }
@@ -796,9 +810,11 @@ body {
 	background: var(--pm-accent);
 	pointer-events: none;
 }
+
 .pm-li-drop-before::before {
 	top: -2px;
 }
+
 .pm-li-drop-after::after {
 	bottom: -2px;
 }
@@ -837,5 +853,6 @@ body {
 }
 
 #note-content-container .ProseMirror {
-	padding-bottom: 2rem; /* space for the bottom toolbar */
+	padding-bottom: 2rem;
+	/* space for the bottom toolbar */
 }
