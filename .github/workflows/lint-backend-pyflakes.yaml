@@ -1,0 +1,32 @@
+name: Lint Backend (Pyflakes)
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ruff-pyflakes:
+    name: Ruff (pyflakes only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ruff>=0.15.5"
+
+      - name: Detect logic errors
+        run: |
+          ruff check \
+            --select=F \
+            --ignore=F401,F403,F405,F541,F841 \
+            --output-format=github \
+            .
