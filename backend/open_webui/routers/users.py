@@ -414,7 +414,6 @@ class UserActiveResponse(UserStatus):
 
 @router.get('/{user_id}', response_model=UserActiveResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
-
     user = await Users.get_user_by_id(user_id, db=db)
     if user:
         groups = await Groups.get_groups_by_member_id(user_id, db=db)
