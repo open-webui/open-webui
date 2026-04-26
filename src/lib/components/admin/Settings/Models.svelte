@@ -415,7 +415,7 @@
 						/>
 
 						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition"
 							disabled={modelsImportInProgress}
 							on:click={() => {
 								modelsImportInputElement.click();
@@ -430,7 +430,7 @@
 						</button>
 
 						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition"
 							on:click={async () => {
 								downloadModels(models);
 							}}
@@ -442,7 +442,7 @@
 					{/if}
 
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						type="button"
 						on:click={() => {
 							showManageModal = true;
@@ -517,7 +517,7 @@
 
 					<div slot="content">
 						<div
-							class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+							class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-sm"
 						>
 							<button
 								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"

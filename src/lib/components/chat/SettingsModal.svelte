@@ -611,7 +611,7 @@
 				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[min(42rem,calc(100dvh-10rem))] md:max-h-[min(42rem,calc(100dvh-10rem))] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
 			>
 				<div
-					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 mb-1.5"
+					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-black/80 backdrop-blur-2xl my-1 mb-1.5"
 					id="settings-search"
 				>
 					<div class="self-center rounded-l-xl bg-transparent">

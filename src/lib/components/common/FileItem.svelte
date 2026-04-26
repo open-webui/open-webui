@@ -16,7 +16,7 @@
 
 	export let className = 'w-60';
 	export let colorClassName =
-		'bg-white dark:bg-gray-850 border border-gray-50/30 dark:border-gray-800/30';
+		'bg-white dark:bg-black border border-gray-50/30 dark:border-gray-800/30';
 	export let url: string | null = null;
 
 	export let dismissible = false;

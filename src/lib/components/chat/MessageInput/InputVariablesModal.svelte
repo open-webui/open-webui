@@ -107,7 +107,7 @@
 											<div class=" flex-1">
 												{#if variables[variable]?.type === 'select'}
 													<select
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														bind:value={variableValues[variable]}
 														id="input-variable-{idx}"
 													>
@@ -175,7 +175,7 @@
 												{:else if variables[variable]?.type === 'date'}
 													<input
 														type="date"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -186,7 +186,7 @@
 												{:else if variables[variable]?.type === 'datetime-local'}
 													<input
 														type="datetime-local"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -197,7 +197,7 @@
 												{:else if variables[variable]?.type === 'email'}
 													<input
 														type="email"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -208,7 +208,7 @@
 												{:else if variables[variable]?.type === 'month'}
 													<input
 														type="month"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -219,7 +219,7 @@
 												{:else if variables[variable]?.type === 'number'}
 													<input
 														type="number"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -233,7 +233,7 @@
 															<input
 																type="range"
 																bind:value={variableValues[variable]}
-																class="w-full rounded-lg py-1 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+																class="w-full rounded-lg py-1 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 																id="input-variable-{idx}"
 																{...variableAttributes}
 															/>
@@ -251,7 +251,7 @@
 
 													<!-- <input
 														type="range"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -261,7 +261,7 @@
 												{:else if variables[variable]?.type === 'tel'}
 													<input
 														type="tel"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -272,7 +272,7 @@
 												{:else if variables[variable]?.type === 'text'}
 													<input
 														type="text"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -283,7 +283,7 @@
 												{:else if variables[variable]?.type === 'time'}
 													<input
 														type="time"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -294,7 +294,7 @@
 												{:else if variables[variable]?.type === 'url'}
 													<input
 														type="url"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"
@@ -326,7 +326,7 @@
 													</div>
 												{:else}
 													<textarea
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-black outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 														placeholder={variables[variable]?.placeholder ?? ''}
 														bind:value={variableValues[variable]}
 														autocomplete="off"

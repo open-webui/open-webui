@@ -123,7 +123,7 @@
 
 	<div slot="content">
 		<div
-			class="{className} rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
+			class="{className} rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-lg text-sm"
 		>
 			{#if profile}
 				<div class=" flex gap-3.5 w-full p-2.5 items-center">

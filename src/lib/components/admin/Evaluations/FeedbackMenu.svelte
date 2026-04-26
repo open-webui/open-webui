@@ -18,7 +18,7 @@
 
 	<div slot="content">
 		<div
-			class="min-w-[150px] rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="min-w-[150px] rounded-xl p-1 z-50 bg-white dark:bg-black dark:text-white shadow-lg"
 		>
 			<button
 				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md w-full"

@@ -49,7 +49,7 @@
 
 		<div
 			slot="content"
-			class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 min-w-56 max-w-56 p-1"
+			class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black min-w-56 max-w-56 p-1"
 		>
 			<div class="px-2 text-xs text-gray-500 py-1">
 				{$i18n.t('Terminal')}

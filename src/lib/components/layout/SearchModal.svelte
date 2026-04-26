@@ -307,7 +307,7 @@
 					<button
 						class=" w-full flex items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
 						idx
-							? 'bg-gray-50 dark:bg-gray-850'
+							? 'bg-gray-50 dark:bg-black'
 							: ''}"
 						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
 						dragabble="false"
@@ -370,7 +370,7 @@
 						<a
 							class=" w-full flex justify-between items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
 							idx + actions.length
-								? 'bg-gray-50 dark:bg-gray-850'
+								? 'bg-gray-50 dark:bg-black'
 								: ''}"
 							href="/c/{chat.id}"
 							draggable="false"

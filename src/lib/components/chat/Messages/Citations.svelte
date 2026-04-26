@@ -221,7 +221,7 @@
 						selectedCitation = citation;
 					}}
 				>
-					<div class=" font-medium bg-gray-50 dark:bg-gray-850 rounded-md px-1">
+					<div class=" font-medium bg-gray-50 dark:bg-black rounded-md px-1">
 						{idx + 1}
 					</div>
 					<div

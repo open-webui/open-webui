@@ -28,7 +28,7 @@
 
 	<div slot="content">
 		<div
-			class="max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			class="max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-lg transition"
 		>
 			<div class="py-1.5 px-2.5 flex dark:text-gray-100">
 				<input

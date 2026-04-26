@@ -61,7 +61,7 @@
 				<div class=" flex gap-1 flex-wrap mt-2">
 					{#each status.queries as query, idx (query)}
 						<div
-							class="bg-gray-50 dark:bg-gray-850 flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
+							class="bg-gray-50 dark:bg-black flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
 						>
 							<div>
 								<Search className="size-3" />
@@ -87,7 +87,7 @@
 				<div class=" flex gap-1 flex-wrap mt-2">
 					{#each status.queries as query, idx (query)}
 						<div
-							class="bg-gray-50 dark:bg-gray-850 flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
+							class="bg-gray-50 dark:bg-black flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
 						>
 							<div>
 								<Search className="size-3" />

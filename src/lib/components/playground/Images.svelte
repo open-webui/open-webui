@@ -244,7 +244,7 @@
 							/>
 							<button
 								type="button"
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
 								on:click={() => fileInputElement?.click()}
 								on:dragover|preventDefault
 								on:drop={handleDrop}

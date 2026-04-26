@@ -118,7 +118,7 @@
 
 	<div slot="content">
 		<div
-			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-70 p-1.5"
+			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black w-70 p-1.5"
 		>
 			<div class=" flex w-full space-x-2 px-2 pb-0.5">
 				<div class="flex flex-1">

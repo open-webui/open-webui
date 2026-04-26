@@ -115,7 +115,7 @@
 						{#if selectedGroup[id]}
 							<button
 								type="button"
-								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
+								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-black rounded-lg text-xs"
 								on:click={() => {
 									groupIds = groupIds.filter((gid) => gid !== id);
 									delete selectedGroup[id];
@@ -147,7 +147,7 @@
 						{#if selectedUsers[id]}
 							<button
 								type="button"
-								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
+								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-black rounded-lg text-xs"
 								on:click={() => {
 									userIds = userIds.filter((uid) => uid !== id);
 									delete selectedUsers[id];

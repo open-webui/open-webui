@@ -231,7 +231,7 @@
 				{#if total > 0}
 					<Dropdown align="end">
 						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						>
 							<div class="self-center font-medium line-clamp-1">
 								{$i18n.t('Export')}
@@ -241,7 +241,7 @@
 
 						<div slot="content">
 							<div
-								class="w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+								class="w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-lg"
 							>
 								<button
 									class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
@@ -289,7 +289,7 @@
 							...modelIds.map((mid) => ({ value: mid, label: mid }))
 						]}
 						placeholder={$i18n.t('All')}
-						triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
+						triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-black rounded-xl"
 						onChange={() => {
 							page = 1;
 							getFeedbacks();

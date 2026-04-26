@@ -68,7 +68,7 @@
 
 	<div
 		slot="content"
-		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-1"
+		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black w-72 p-1"
 	>
 		<div class="flex items-center gap-2 px-2.5 py-1.5">
 			<Search className="size-3.5" strokeWidth="2.5" />

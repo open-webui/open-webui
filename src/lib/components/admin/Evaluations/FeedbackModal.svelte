@@ -121,7 +121,7 @@
 							<div class="mb-2 -mx-1">
 								<div class="flex flex-wrap gap-1 mt-1">
 									{#each selectedFeedback?.data?.tags as tag}
-										<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-[9px]"
+										<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-black text-[9px]"
 											>{tag}</span
 										>
 									{/each}

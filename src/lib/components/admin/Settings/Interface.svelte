@@ -124,7 +124,7 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('Local Task Model')}</div>
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 							bind:value={taskConfig.TASK_MODEL}
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
@@ -167,7 +167,7 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('External Task Model')}</div>
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {

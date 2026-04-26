@@ -4,7 +4,7 @@
 
 	/** CSS classes for the sub-content container */
 	export let contentClass =
-		'select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800';
+		'select-none rounded-2xl p-1 z-50 bg-white dark:bg-black dark:text-white shadow-lg border border-gray-100 dark:border-gray-800';
 
 	/** Max width in px, enforced at the component level */
 	export let maxWidth = 200;

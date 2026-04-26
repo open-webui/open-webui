@@ -108,7 +108,7 @@
 
 					<button
 						type="button"
-						class="px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:bg-gray-850/50 text-black dark:text-white transition font-medium text-xs flex items-center justify-center"
+						class="px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:bg-black/50 text-black dark:text-white transition font-medium text-xs flex items-center justify-center"
 						on:click={createHandler}
 						disabled={isSaving}
 					>

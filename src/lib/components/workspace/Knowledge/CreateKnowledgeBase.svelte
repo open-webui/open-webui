@@ -84,7 +84,7 @@
 
 					<div class="w-full mt-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 							type="text"
 							bind:value={name}
 							placeholder={$i18n.t('Name your knowledge base')}
@@ -98,7 +98,7 @@
 
 					<div class=" w-full mt-1">
 						<textarea
-							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 							rows="4"
 							bind:value={description}
 							placeholder={$i18n.t('Describe your knowledge base and objectives')}
@@ -125,7 +125,7 @@
 				<button
 					class=" text-sm px-4 py-2 transition rounded-lg {loading
 						? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-						: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'} flex"
+						: ' bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800'} flex"
 					type="submit"
 					disabled={loading}
 				>

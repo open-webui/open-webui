@@ -287,7 +287,7 @@
 
 			<div slot="content">
 				<div
-					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-black dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
 				>
 					<button
 						type="button"

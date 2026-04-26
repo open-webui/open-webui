@@ -583,7 +583,7 @@
 
 								<div class="shrink-0">
 									<button
-										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-black dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 										type="button"
 										on:click={() => {
 											showAccessControlModal = true;

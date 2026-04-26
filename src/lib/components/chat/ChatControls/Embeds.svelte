@@ -56,7 +56,7 @@
 			</div>
 
 			<button
-				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
+				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-black"
 				aria-label="Close embed"
 				on:click={() => {
 					showControls.set(false);

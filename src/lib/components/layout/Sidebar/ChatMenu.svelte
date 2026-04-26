@@ -293,7 +293,7 @@
 
 	<div slot="content">
 		<div
-			class="select-none min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			class="select-none min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-lg transition"
 		>
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<button
@@ -309,7 +309,7 @@
 			{/if}
 
 			<DropdownSub
-				contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+				contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-black dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
 			>
 				<button
 					slot="trigger"
@@ -396,7 +396,7 @@
 
 			{#if chatId && $folders.length > 0}
 				<DropdownSub
-					contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+					contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-black dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
 				>
 					<button
 						slot="trigger"

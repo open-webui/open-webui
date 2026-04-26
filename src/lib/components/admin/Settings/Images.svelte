@@ -487,7 +487,7 @@
 							<div class="mt-1.5 flex w-full">
 								<div class="flex-1 mr-2">
 									<Textarea
-										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 										bind:value={config.IMAGES_OPENAI_API_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
@@ -601,7 +601,7 @@
 							<div class="mt-1.5 flex w-full">
 								<div class="flex-1 mr-2">
 									<Textarea
-										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 										bind:value={config.AUTOMATIC1111_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
@@ -751,7 +751,7 @@
 								/>
 								<!-- {#if config.COMFYUI_WORKFLOW}
 									<Textarea
-										class="w-full rounded-lg my-1 py-2 px-3 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none"
+										class="w-full rounded-lg my-1 py-2 px-3 text-xs bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden disabled:text-gray-600 resize-none"
 										rows="10"
 										bind:value={config.COMFYUI_WORKFLOW}
 										required

@@ -42,7 +42,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <button
-	class="relative group py-2 px-3 w-60 flex flex-col bg-white dark:bg-gray-850 border border-gray-50/30 dark:border-gray-800/30 rounded-xl text-left cursor-pointer"
+	class="relative group py-2 px-3 w-60 flex flex-col bg-white dark:bg-black border border-gray-50/30 dark:border-gray-800/30 rounded-xl text-left cursor-pointer"
 	type="button"
 	on:click|preventDefault|stopPropagation={() => {
 		try {

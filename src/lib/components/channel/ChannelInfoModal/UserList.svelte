@@ -111,7 +111,7 @@
 				<div class="">
 					<button
 						type="button"
-						class=" px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:text-white dark:bg-gray-850/50 text-black transition font-medium text-xs flex items-center justify-center"
+						class=" px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:text-white dark:bg-black/50 text-black transition font-medium text-xs flex items-center justify-center"
 						on:click={onAdd}
 					>
 						<Plus className="size-3.5 " />

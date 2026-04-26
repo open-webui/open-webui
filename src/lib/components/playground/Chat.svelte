@@ -362,7 +362,7 @@
 
 					<div slot="content">
 						<div
-							class="min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+							class="min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-lg"
 						>
 							<DropdownSub>
 								<button
@@ -441,7 +441,7 @@
 						<div class="shrink-0">
 							<button
 								type="button"
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??
+								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??
 								false)
 									? ''
 									: 'outline-hidden'}"
@@ -479,7 +479,7 @@
 								{#if !loading}
 									<button
 										disabled={message === ''}
-										class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+										class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
 										on:click={() => {
 											addHandler();
 											role = role === 'user' ? 'assistant' : 'user';

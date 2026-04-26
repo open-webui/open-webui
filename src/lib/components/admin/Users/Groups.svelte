@@ -179,7 +179,7 @@
 				bind:value={sortBy}
 				items={sortItems}
 				placeholder={$i18n.t('Sort by')}
-				triggerClass="relative flex items-center gap-0.5 px-2.5 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl shrink-0"
+				triggerClass="relative flex items-center gap-0.5 px-2.5 py-1.5 text-sm bg-gray-50 dark:bg-black rounded-xl shrink-0"
 				align="end"
 			>
 				<svelte:fragment slot="trigger" let:selectedLabel>

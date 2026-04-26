@@ -44,7 +44,7 @@
 
 	<div slot="content">
 		<div
-			class="w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-999 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			class="w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-999 bg-white dark:bg-black dark:text-white shadow-lg transition"
 		>
 			<button
 				class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"

@@ -234,7 +234,7 @@
 					<div class="flex gap-2">
 						<div class="flex-1">
 							<select
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 								bind:value={selectedPipelinesUrlIdx}
 								placeholder={$i18n.t('Select a pipeline url')}
 								on:change={async () => {
@@ -285,7 +285,7 @@
 							</button>
 						</div>
 						<button
-							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 							on:click={() => {
 								uploadPipelineHandler();
 							}}
@@ -348,13 +348,13 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 								placeholder={$i18n.t('Enter Github Raw URL')}
 								bind:value={pipelineDownloadUrl}
 							/>
 						</div>
 						<button
-							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 							on:click={() => {
 								addPipelineHandler();
 							}}
@@ -432,7 +432,7 @@
 								<div class="flex gap-2">
 									<div class="flex-1">
 										<select
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 											bind:value={selectedPipelineIdx}
 											placeholder={$i18n.t('Select a pipeline')}
 											on:change={async () => {
@@ -449,7 +449,7 @@
 									</div>
 
 									<button
-										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 										on:click={() => {
 											deletePipelineHandler();
 										}}
@@ -502,7 +502,7 @@
 														<div class=" flex-1">
 															{#if valves_spec.properties[property]?.enum ?? null}
 																<select
-																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 																	bind:value={valves[property]}
 																>
 																	{#each valves_spec.properties[property].enum as option}
@@ -523,7 +523,7 @@
 																</div>
 															{:else}
 																<input
-																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-black outline-hidden"
 																	type="text"
 																	placeholder={valves_spec.properties[property].title}
 																	bind:value={valves[property]}

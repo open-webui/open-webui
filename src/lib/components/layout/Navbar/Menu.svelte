@@ -279,7 +279,7 @@
 
 	<div slot="content">
 		<div
-			class="select-none min-w-[200px] max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			class="select-none min-w-[200px] max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-black dark:text-white shadow-lg transition"
 		>
 			<!-- <DropdownMenu.Item draggable="false"
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-xl"

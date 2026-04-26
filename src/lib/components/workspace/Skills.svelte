@@ -263,7 +263,7 @@
 
 				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={() => {
 							importInputElement.click();
 						}}
@@ -276,7 +276,7 @@
 
 				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills)}
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={async () => {
 							const _skills = await exportSkills(localStorage.token).catch((error) => {
 								toast.error(`${error}`);

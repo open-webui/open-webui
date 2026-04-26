@@ -90,7 +90,7 @@
 >
 	{#if !floatingInput}
 		<div
-			class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
+			class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-black dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
 		>
 			{#each actions as action}
 				<button
@@ -125,7 +125,7 @@
 		</div>
 	{:else}
 		<div
-			class="py-1 flex dark:text-gray-100 bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 w-72 rounded-full shadow-xl"
+			class="py-1 flex dark:text-gray-100 bg-white dark:bg-black border border-gray-100 dark:border-gray-800 w-72 rounded-full shadow-xl"
 		>
 			<input
 				type="text"

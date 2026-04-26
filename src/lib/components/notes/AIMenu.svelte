@@ -28,7 +28,7 @@
 
 	<div slot="content">
 		<div
-			class="min-w-[170px] text-sm rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="min-w-[170px] text-sm rounded-xl p-1 z-50 bg-white dark:bg-black dark:text-white shadow-lg font-primary"
 		>
 			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"

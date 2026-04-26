@@ -108,7 +108,7 @@
 				{#if topTags.length}
 					<div class="flex flex-wrap gap-1 -mx-1">
 						{#each topTags as tagInfo}
-							<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
+							<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-black text-xs">
 								{tagInfo.tag} <span class="text-gray-500 font-medium">{tagInfo.count}</span>
 							</span>
 						{/each}

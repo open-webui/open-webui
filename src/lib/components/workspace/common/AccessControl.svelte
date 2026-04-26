@@ -556,7 +556,7 @@
 					<div class="flex items-center gap-2 w-full flex-1">
 						<!-- Placeholder for group icon vs user icon -->
 						<div
-							class="size-5 rounded-full bg-gray-100 dark:bg-gray-850 flex items-center justify-center text-xs"
+							class="size-5 rounded-full bg-gray-100 dark:bg-black flex items-center justify-center text-xs"
 						>
 							{group.name.charAt(0).toUpperCase()}
 						</div>

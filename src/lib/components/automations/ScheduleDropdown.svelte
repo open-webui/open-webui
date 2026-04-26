@@ -192,7 +192,7 @@
 
 	<div
 		slot="content"
-		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-1"
+		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black w-48 p-1"
 	>
 		<div class="px-2 text-xs text-gray-500 pt-1">
 			{$i18n.t('Schedule')}

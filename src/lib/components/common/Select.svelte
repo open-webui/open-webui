@@ -22,7 +22,7 @@
 
 	/** CSS classes for the dropdown content container */
 	export let contentClass =
-		'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg';
+		'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-black dark:text-white shadow-lg';
 
 	/** CSS classes for each item button */
 	export let itemClass =

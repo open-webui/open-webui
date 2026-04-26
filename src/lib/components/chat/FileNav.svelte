@@ -891,7 +891,7 @@
 	>
 		{#if isDragOver}
 			<div
-				class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm pointer-events-none gap-1.5"
+				class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-sm pointer-events-none gap-1.5"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -1380,7 +1380,7 @@
 
 		<!-- Terminal bottom panel -->
 		{#if terminalEnabled}
-			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
+			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-black">
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->

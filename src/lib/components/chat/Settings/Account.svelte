@@ -407,7 +407,7 @@
 									</Tooltip>
 								{:else}
 									<button
-										class="flex gap-1.5 items-center font-medium px-3.5 py-1.5 rounded-lg bg-gray-100/70 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-850 transition"
+										class="flex gap-1.5 items-center font-medium px-3.5 py-1.5 rounded-lg bg-gray-100/70 hover:bg-gray-100 dark:bg-black dark:hover:bg-gray-850 transition"
 										on:click={() => {
 											createAPIKeyHandler();
 										}}

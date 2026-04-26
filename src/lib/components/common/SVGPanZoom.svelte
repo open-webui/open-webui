@@ -83,7 +83,7 @@
 			<div class="flex gap-1">
 				<Tooltip content={$i18n.t('Download as SVG')}>
 					<button
-						class="p-1.5 rounded-lg border border-gray-100 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						class="p-1.5 rounded-lg border border-gray-100 dark:border-none dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 						on:click={() => {
 							downloadAsSVG();
 						}}
@@ -94,7 +94,7 @@
 
 				<Tooltip content={$i18n.t('Reset view')}>
 					<button
-						class="p-1.5 rounded-lg border border-gray-100 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						class="p-1.5 rounded-lg border border-gray-100 dark:border-none dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 						on:click={() => {
 							resetPanZoomViewport();
 						}}
@@ -105,7 +105,7 @@
 
 				<Tooltip content={$i18n.t('Copy to clipboard')}>
 					<button
-						class="p-1.5 rounded-lg border border-gray-100 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+						class="p-1.5 rounded-lg border border-gray-100 dark:border-none dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 						on:click={() => {
 							copyToClipboard(content);
 							toast.success($i18n.t('Copied to clipboard'));

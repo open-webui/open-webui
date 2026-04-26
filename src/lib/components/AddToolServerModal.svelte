@@ -760,7 +760,7 @@
 
 							{#if !direct}
 								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-black dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
 									type="button"
 									on:click={() => {
 										showAccessControlModal = true;

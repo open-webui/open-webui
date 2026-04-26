@@ -162,7 +162,7 @@
 
 				<div class="mt-6 flex justify-between gap-1.5">
 					<button
-						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
+						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-black dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
 						on:click={() => {
 							show = false;
 							dispatch('cancel');

@@ -86,7 +86,7 @@
 
 				{#if $config?.features?.enable_version_update_check}
 					<button
-						class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+						class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-black dark:hover:bg-gray-800 transition rounded-lg font-medium"
 						on:click={() => {
 							checkForVersionUpdates();
 						}}
