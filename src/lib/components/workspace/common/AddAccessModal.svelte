@@ -8,11 +8,22 @@
 
 	export let show = false;
 	export let shareUsers = true;
+	export let existingUserIds: string[] = [];
+	export let existingGroupIds: string[] = [];
 	export let onAdd = (payload: { userIds: string[]; groupIds: string[] }) => {};
 
 	let userIds: string[] = [];
 	let groupIds: string[] = [];
 	let loading = false;
+
+	let prevShow = false;
+	$: {
+		if (show && !prevShow) {
+			userIds = [...existingUserIds];
+			groupIds = [...existingGroupIds];
+		}
+		prevShow = show;
+	}
 
 	const submitHandler = () => {
 		loading = true;

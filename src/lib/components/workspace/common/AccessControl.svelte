@@ -323,7 +323,20 @@
 	};
 
 	const handleAddAccess = ({ userIds, groupIds }: { userIds: string[]; groupIds: string[] }) => {
-		let next = [...currentGrants()];
+		const userIdSet = new Set(userIds);
+		const groupIdSet = new Set(groupIds);
+
+		// Drop principals the user unchecked in the modal (preserve user:* public grants).
+		let next = currentGrants().filter((grant) => {
+			if (grant.principal_type === 'user') {
+				if (grant.principal_id === '*') return true;
+				return userIdSet.has(grant.principal_id);
+			}
+			if (grant.principal_type === 'group') {
+				return groupIdSet.has(grant.principal_id);
+			}
+			return true;
+		});
 
 		for (const groupId of groupIds) {
 			next = upsertPrincipalGrant('group', groupId, 'read', next);
@@ -442,7 +455,13 @@
 	});
 </script>
 
-<AddAccessModal bind:show={showAddAccessModal} {shareUsers} onAdd={handleAddAccess} />
+<AddAccessModal
+	bind:show={showAddAccessModal}
+	{shareUsers}
+	existingUserIds={selectedUserIds}
+	existingGroupIds={Array.from(new Set([...readGroupIds, ...writeGroupIds]))}
+	onAdd={handleAddAccess}
+/>
 
 <div class=" rounded-lg flex flex-col gap-1">
 	<div class="py-2">
@@ -601,12 +620,10 @@
 			<!-- Users -->
 			{#if shareUsers}
 				{#each selectedUsers as user}
-					<div
-						class="flex items-center gap-3 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-2 last:border-0"
-					>
+					<div class="flex items-center gap-3 justify-between text-sm w-full transition pb-1">
 						<div class="flex items-center gap-2 w-full flex-1">
 							<img
-								class="rounded-full size-5 object-cover"
+								class="rounded-full size-5 object-cover shrink-0"
 								src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 								alt={user.name ?? user.id}
 							/>

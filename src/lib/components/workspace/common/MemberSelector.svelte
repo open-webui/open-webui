@@ -84,6 +84,16 @@
 			return [];
 		});
 
+		if (groupIds.length > 0 && groups) {
+			for (const id of groupIds) {
+				const match = groups.find((g) => g.id === id);
+				if (match) {
+					selectedGroup[id] = match;
+				}
+			}
+			selectedGroup = selectedGroup;
+		}
+
 		if (userIds.length > 0) {
 			userIds.forEach(async (id) => {
 				const res = await getUserInfoById(localStorage.token, id).catch((error) => {
