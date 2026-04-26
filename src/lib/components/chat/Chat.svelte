@@ -1298,7 +1298,8 @@
 			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
 					await tick();
-					submitHandler(q);
+					await submitHandler(q);
+					messageInput?.setText('');
 				}
 			}
 		}
