@@ -124,14 +124,23 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install common system dependencies
-RUN apt-get update && \
+RUN   if [ "$USE_SLIM" != "true" ]; then \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
     libmariadb-dev \
     python3-dev \
     ffmpeg libsm6 libxext6 zstd \
-    && rm -rf /var/lib/apt/lists/*
-
+    && rm -rf /var/lib/apt/lists/*;  \
+    else \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    git pandoc  netcat-openbsd curl jq \
+    libmariadb-dev \
+    python3-dev \
+     libsm6 libxext6 zstd \
+    && rm -rf /var/lib/apt/lists/* ; \
+    fi; 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
