@@ -102,6 +102,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
+	import ChatConnectorBar from '$lib/components/chat/ChatConnectorBar.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
@@ -193,7 +194,7 @@
 		messageQueue = [];
 		selectedToolIds = [];
 		selectedFilterIds = [];
-		webSearchEnabled = false;
+		webSearchEnabled = true;
 		imageGenerationEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
@@ -300,7 +301,7 @@
 	const resetInput = () => {
 		selectedToolIds = [];
 		selectedFilterIds = [];
-		webSearchEnabled = false;
+		webSearchEnabled = true;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -712,7 +713,7 @@
 				files = [];
 				selectedToolIds = [];
 				selectedFilterIds = [];
-				webSearchEnabled = false;
+				webSearchEnabled = true;
 				imageGenerationEnabled = false;
 				codeInterpreterEnabled = false;
 
@@ -2868,6 +2869,8 @@
 										}
 									}}
 								/>
+
+								<ChatConnectorBar />
 
 								<div
 									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"

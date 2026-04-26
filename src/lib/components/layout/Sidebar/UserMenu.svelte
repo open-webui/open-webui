@@ -170,7 +170,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
 					</svg>
 				</div>
-				<div class=" self-center truncate">Mi cuenta</div>
+				<div class=" self-center truncate">{$i18n.t('My Account')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
@@ -191,7 +191,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z" />
 					</svg>
 				</div>
-				<div class=" self-center truncate font-medium" style="color:#0D5C3F">Upgrade</div>
+				<div class=" self-center truncate font-medium" style="color:#0D5C3F">{$i18n.t('Upgrade')}</div>
 			</DropdownMenu.Item>
 
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />

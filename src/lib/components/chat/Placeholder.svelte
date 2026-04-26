@@ -26,10 +26,25 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
+	import ChatConnectorBar from '$lib/components/chat/ChatConnectorBar.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
 	import FolderTitle from './Placeholder/FolderTitle.svelte';
 
 	const i18n = getContext('i18n');
+
+	function fmtModelName(name: string): string {
+		if (!name) return name;
+		if (!name.includes('-')) return name;
+		const parts = name.split('-');
+		const words: string[] = [];
+		let nums: string[] = [];
+		for (const p of parts) {
+			if (/^\d+$/.test(p)) { nums.push(p); }
+			else { if (nums.length) { words.push(nums.join('.')); nums = []; } words.push(p.charAt(0).toUpperCase() + p.slice(1)); }
+		}
+		if (nums.length) words.push(nums.join('.'));
+		return words.join(' ');
+	}
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
@@ -142,12 +157,12 @@
 					>
 						{#if models[selectedModelIdx]?.name}
 							<Tooltip
-								content={models[selectedModelIdx]?.name}
+								content={fmtModelName(models[selectedModelIdx]?.name)}
 								placement="top"
 								className=" flex items-center "
 							>
 								<span class="line-clamp-1">
-									{models[selectedModelIdx]?.name}
+									{fmtModelName(models[selectedModelIdx]?.name)}
 								</span>
 							</Tooltip>
 						{:else}
@@ -226,6 +241,7 @@
 						dispatch('submit', e.detail);
 					}}
 				/>
+				<ChatConnectorBar />
 			</div>
 		</div>
 	</div>

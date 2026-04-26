@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
+
 	export let modelStats: { model: string; tokens: number; requests: number }[] = [];
 	export let totalUsed = 0;
 
@@ -10,7 +14,6 @@
 		'mistral-medium': 'Mistral Medium 3'
 	};
 
-	// Logo colors: green, orange, muted variants
 	const barColors = ['#0D5C3F', '#E07020', '#2a8f62', '#c45e15', '#6b9e85'];
 
 	function label(model: string) {
@@ -32,11 +35,11 @@
 <div class="rounded-2xl p-6 border bg-white dark:bg-gray-800 border-black/[.07] dark:border-white/[.07]">
 	<div class="flex items-center justify-between mb-5">
 		<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40">
-			Uso por modelo
+			{$i18n.t('Usage by model')}
 		</p>
 		{#if modelStats.length > 0}
 			<span class="text-[10px] font-mono text-gray-300 dark:text-gray-600">
-				{modelStats.reduce((s, m) => s + m.requests, 0)} peticiones totales
+				{modelStats.reduce((s, m) => s + m.requests, 0)} {$i18n.t('total requests')}
 			</span>
 		{/if}
 	</div>
@@ -54,7 +57,7 @@
 				{/each}
 			</div>
 			<p class="text-xs text-gray-300 dark:text-gray-600 max-w-[180px] text-right shrink-0">
-				Las estadísticas aparecen después de tus primeras conversaciones
+				{$i18n.t('Stats appear after your first conversations')}
 			</p>
 		</div>
 	{:else}

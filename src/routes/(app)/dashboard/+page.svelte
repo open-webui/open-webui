@@ -2,7 +2,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, showSidebar, user, mobile } from '$lib/stores';
-	import { getLanguages, changeLanguage } from '$lib/i18n';
+	import { changeLanguage } from '$lib/i18n';
 	import IntegrationsCard from '$lib/components/dashboard/IntegrationsCard.svelte';
 	import ModelUsageCard from '$lib/components/dashboard/ModelUsageCard.svelte';
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
@@ -13,19 +13,14 @@
 	let billing: any = null;
 	let modelStats: { model: string; tokens: number; requests: number }[] = [];
 	let loading = true;
-	let languages: { code: string; title: string }[] = [];
 	let currentLang = '';
 	let currentTheme = '';
 
-	const PRIORITY_LANGS = ['de', 'en', 'es'];
-	$: priorityLangs = languages.filter((l) => PRIORITY_LANGS.includes(l.code))
-		.sort((a, b) => PRIORITY_LANGS.indexOf(a.code) - PRIORITY_LANGS.indexOf(b.code));
-	$: otherLangs = languages.filter((l) => !PRIORITY_LANGS.includes(l.code));
-
 	const plans = [
-		{ id: 'free',    label: 'Free',    tokens: '50K', price: '€0'  },
-		{ id: 'starter', label: 'Starter', tokens: '1M',  price: '€49' },
-		{ id: 'pro',     label: 'Pro',     tokens: '3M',  price: '€99' },
+		{ id: 'free',       label: 'Free',       tokens: '50K', price: '€0'  },
+		{ id: 'starter',    label: 'Starter',    tokens: '1M',  price: '€20' },
+		{ id: 'pro',        label: 'Pro',        tokens: '3M',  price: '€79' },
+		{ id: 'enterprise', label: 'Enterprise', tokens: '5M',  price: '€99' },
 	];
 
 	$: currentPlan = billing?.plan?.toLowerCase() ?? 'free';
@@ -78,8 +73,27 @@
 		window.location.href = `mailto:hola@clapnclaw.com?subject=Upgrade%20a%20${planId}`;
 	}
 
-	async function loadPreferences() {
-		languages = await getLanguages();
+	async function buyAddon(packId: string) {
+		try {
+			const res = await fetch(`${WEBUI_BASE_URL}/api/v1/clapnclaw/billing/token-addon`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.token}` },
+				body: JSON.stringify({ pack: packId })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				if (data.checkout_url) { window.location.href = data.checkout_url; return; }
+			}
+		} catch {}
+		window.location.href = `mailto:hola@clapnclaw.com?subject=Token%20addon%20${packId}`;
+	}
+
+	$: addonPacks = [
+		{ id: 'small', label: '+500K Tokens', price: '€19', desc: $i18n.t('One-time payment') },
+		{ id: 'large', label: '+2M Tokens', price: '€59', desc: $i18n.t('One-time payment') }
+	];
+
+	function loadPreferences() {
 		currentLang = $i18n.language;
 		currentTheme = localStorage.theme ?? 'system';
 	}
@@ -97,21 +111,21 @@
 		}
 	}
 
-	async function handleLangChange(e: Event) {
-		const code = (e.target as HTMLSelectElement).value;
+	async function handleLangChange(code: string) {
 		await changeLanguage(code);
 		currentLang = code;
 	}
 
 	onMount(async () => {
-		await Promise.all([fetchData(), loadPreferences()]);
+		loadPreferences();
+		await fetchData();
 	});
 
-	$: today = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+	$: today = new Date().toLocaleDateString($i18n.language || 'en', { weekday: 'long', day: 'numeric', month: 'long' });
 </script>
 
 <svelte:head>
-	<title>Mi cuenta | {$WEBUI_NAME}</title>
+	<title>{$i18n.t('My Account')} | {$WEBUI_NAME}</title>
 </svelte:head>
 
 <div
@@ -132,7 +146,7 @@
 					>
 						<Sidebar />
 					</button>
-					<span class="text-sm font-semibold" style="color:#0D5C3F">Mi cuenta</span>
+					<span class="text-sm font-semibold" style="color:#0D5C3F">{$i18n.t('My Account')}</span>
 				</div>
 				{#if $user}
 					<UserMenu role={$user?.role} className="max-w-[220px]">
@@ -148,7 +162,7 @@
 	<div class="flex-1 px-4 md:px-6 py-6 md:py-10">
 		<!-- Header -->
 		<div class="mb-7">
-			<h1 class="text-sm font-medium text-gray-900 dark:text-white">Mi cuenta</h1>
+			<h1 class="text-sm font-medium text-gray-900 dark:text-white">{$i18n.t('My Account')}</h1>
 			<p class="text-xs text-gray-400 dark:text-gray-500 capitalize mt-0.5">{today}</p>
 		</div>
 
@@ -181,20 +195,20 @@
 										? 'border-color:#0D5C3F;background:rgba(13,92,63,.06)'
 										: 'border-color:rgba(0,0,0,.07)'}
 									disabled={!isUpgrade}
-									on:click={() => isUpgrade && goToCheckout(plan.id)}
+									on:click={() => isUpgrade && (plan.id === 'enterprise' ? window.location.href = 'mailto:hola@clapnclaw.com?subject=Enterprise' : goToCheckout(plan.id))}
 								>
 									<div class="flex items-center justify-between w-full mb-1">
 										<span class="text-[10px] font-semibold uppercase tracking-wide" style={isCurrent ? 'color:#0D5C3F' : 'color:rgba(0,0,0,.4)'}>
 											{plan.label}
 										</span>
 										{#if isCurrent}
-											<span class="text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style="background:rgba(13,92,63,.12);color:#0D5C3F">Actual</span>
+											<span class="text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style="background:rgba(13,92,63,.12);color:#0D5C3F">{$i18n.t('Current')}</span>
 										{:else if isUpgrade}
 											<span class="text-[9px] text-gray-300 dark:text-gray-600">→</span>
 										{/if}
 									</div>
 									<span class="text-sm font-bold text-gray-800 dark:text-white">{plan.price}</span>
-									<span class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{plan.tokens} tokens/mes</span>
+									<span class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{plan.tokens} {$i18n.t('tokens/month')}</span>
 								</button>
 							{/each}
 						</div>
@@ -207,7 +221,7 @@
 								<!-- Usage bar -->
 								<div class="flex-1">
 									<div class="flex items-center justify-between mb-1.5">
-										<p class="text-[10px] font-semibold uppercase tracking-[.1em] text-gray-400 dark:text-white/40">Tokens este mes</p>
+										<p class="text-[10px] font-semibold uppercase tracking-[.1em] text-gray-400 dark:text-white/40">{$i18n.t('Tokens this month')}</p>
 										<span class="text-[10px] font-mono font-semibold" style="color:#0D5C3F">{tokensPct}%</span>
 									</div>
 									<div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(13,92,63,.1)">
@@ -217,14 +231,14 @@
 										/>
 									</div>
 									<div class="flex items-center justify-between mt-1.5">
-										<span class="text-[10px] font-mono text-gray-400">{fmt(tokensUsed)} usados</span>
-										<span class="text-[10px] font-mono text-gray-400">{fmt(tokensTotal)} total</span>
+										<span class="text-[10px] font-mono text-gray-400">{fmt(tokensUsed)} {$i18n.t('used')}</span>
+										<span class="text-[10px] font-mono text-gray-400">{fmt(tokensTotal)} {$i18n.t('total')}</span>
 									</div>
 								</div>
 								<!-- Days left chip -->
 								<div class="shrink-0 text-center px-4 py-2.5 rounded-xl" style="background:rgba(13,92,63,.06)">
 									<p class="text-lg font-mono font-bold leading-none" style="color:#0D5C3F">{daysLeft()}</p>
-									<p class="text-[9px] text-gray-400 mt-0.5 uppercase tracking-wide">días</p>
+									<p class="text-[9px] text-gray-400 mt-0.5 uppercase tracking-wide">{$i18n.t('days')}</p>
 								</div>
 							</div>
 						{:else}
@@ -244,31 +258,55 @@
 				<!-- ── INTEGRATIONS ── -->
 				<IntegrationsCard />
 
+				<!-- ── ADDON PACKS ── -->
+				<div class="rounded-2xl px-5 py-4 border bg-white dark:bg-gray-800 border-black/[.07] dark:border-white/[.07]">
+					<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40 mb-3">{$i18n.t('Extra Token Packs')}</p>
+					<div class="flex flex-wrap gap-3">
+						{#each addonPacks as pack}
+							<div class="flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-black/[.07] dark:border-white/[.07] flex-1 min-w-[180px]">
+								<div>
+									<p class="text-sm font-bold text-gray-800 dark:text-white">{pack.label}</p>
+									<p class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{pack.desc}</p>
+								</div>
+								<div class="flex items-center gap-2 shrink-0">
+									<span class="text-base font-bold" style="color:#0D5C3F">{pack.price}</span>
+									<button
+										class="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-black/[.12] dark:border-white/[.12] text-gray-600 dark:text-gray-300 hover:bg-black/[.05] dark:hover:bg-white/[.05] transition cursor-pointer"
+										on:click={() => buyAddon(pack.id)}
+									>
+										{$i18n.t('Buy')}
+									</button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+
 				<!-- ── PREFERENCES ── -->
 				<div class="rounded-2xl px-5 py-4 border bg-white dark:bg-gray-800 border-black/[.07] dark:border-white/[.07]">
-					<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40 mb-3">Preferencias</p>
+					<p class="text-[10px] font-semibold uppercase tracking-[.12em] text-gray-400 dark:text-white/40 mb-3">{$i18n.t('Preferences')}</p>
 					<div class="flex flex-wrap gap-4 items-center">
 						<div class="flex items-center gap-2">
-							<label for="lang-select" class="text-xs text-gray-500 dark:text-gray-400 shrink-0">Idioma</label>
-							<select
-								id="lang-select"
-								class="text-xs rounded-lg border border-black/[.07] dark:border-white/[.1] bg-transparent text-gray-700 dark:text-gray-300 px-2 py-1.5 cursor-pointer focus:outline-none"
-								bind:value={currentLang}
-								on:change={handleLangChange}
-							>
-								{#each priorityLangs as lang}
-									<option value={lang.code}>{lang.title}</option>
+							<span class="text-xs text-gray-500 dark:text-gray-400 shrink-0">{$i18n.t('Language')}</span>
+							<div class="flex gap-1">
+								{#each [['en-US','🇺🇸 EN'],['de-DE','🇩🇪 DE'],['es-ES','🇪🇸 ES']] as [code, label]}
+									<button
+										class="text-xs px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer"
+										class:font-semibold={currentLang === code || currentLang.startsWith(code.split('-')[0])}
+										style={currentLang === code || currentLang.startsWith(code.split('-')[0])
+											? 'background:#0D5C3F;color:#F5F0E8;border-color:#0D5C3F'
+											: 'border-color:rgba(0,0,0,.08);color:rgba(0,0,0,.5)'}
+										on:click={() => handleLangChange(code)}
+									>
+										{label}
+									</button>
 								{/each}
-								<option disabled>──────────</option>
-								{#each otherLangs as lang}
-									<option value={lang.code}>{lang.title}</option>
-								{/each}
-							</select>
+							</div>
 						</div>
 						<div class="flex items-center gap-2">
-							<span class="text-xs text-gray-500 dark:text-gray-400 shrink-0">Tema</span>
+							<span class="text-xs text-gray-500 dark:text-gray-400 shrink-0">{$i18n.t('Theme')}</span>
 							<div class="flex gap-1">
-								{#each [['light','☀️ Claro'],['dark','🌑 Oscuro'],['system','⚙️ Sistema']] as [val, label]}
+								{#each [['light','☀️ ' + $i18n.t('Light')],['dark','🌑 ' + $i18n.t('Dark')],['system','⚙️ ' + $i18n.t('System')]] as [val, label]}
 									<button
 										class="text-xs px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer"
 										class:font-semibold={currentTheme === val}

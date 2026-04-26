@@ -19,6 +19,22 @@
 
 	const i18n = getContext('i18n');
 
+	function companyLogo(id: string): 'anthropic' | 'mistral' | null {
+		const s = (id ?? '').toLowerCase();
+		if (s.includes('claude') || s.includes('haiku') || s.includes('sonnet') || s.includes('opus') || s.includes('medio') || s.includes('complex')) return 'anthropic';
+		if (s.includes('mistral')) return 'mistral';
+		return null;
+	}
+
+	function modelTier(id: string): { color: string; label: string } {
+		const s = (id ?? '').toLowerCase();
+		if (s.includes('opus'))                              return { color: '#16A34A', label: 'Opus' };
+		if (s.includes('sonnet') || s.includes('medio') || s.includes('complex')) return { color: '#F59E0B', label: 'Sonnet' };
+		if (s.includes('haiku') || s === 'haiku' || s.includes('default'))        return { color: '#EA580C', label: 'Haiku' };
+		if (s.includes('mistral'))                           return { color: '#7C3AED', label: 'Mistral' };
+		return { color: '#6B7280', label: '' };
+	}
+
 	export let selectedModelIdx: number = -1;
 	export let item: any = {};
 	export let index: number = -1;
@@ -76,14 +92,52 @@
 
 		<div class="flex items-center gap-2">
 			<div class="flex items-center min-w-fit">
-				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
-					<img
-						src={item.model?.info?.meta?.profile_image_url || '/favicon.png'}
-						alt={$i18n.t('{{modelName}} profile image', { modelName: item.label })}
-						class="rounded-full size-5 flex items-center"
-						loading="lazy"
-						on:error={(e) => { e.currentTarget.src = '/favicon.png'; }}
-					/>
+				<Tooltip
+					content={$user?.role === 'admin'
+						? (item?.value ?? '')
+						: modelTier(item.value).label
+							? `${modelTier(item.value).label} · ${modelTier(item.value).label === 'Haiku' ? 'Rápido y eficiente' : modelTier(item.value).label === 'Sonnet' ? 'Equilibrado' : modelTier(item.value).label === 'Opus' ? 'Máxima capacidad' : 'Alternativa EU'}`
+							: ''}
+					placement="top-start"
+				>
+					<div class="relative">
+						{#if item.model?.info?.meta?.profile_image_url}
+							<img
+								src={item.model.info.meta.profile_image_url}
+								alt={item.label}
+								class="rounded-full size-5 object-cover"
+								loading="lazy"
+								on:error={(e) => { e.currentTarget.style.display='none'; }}
+							/>
+						{:else if companyLogo(item.value) === 'anthropic'}
+							<!-- Anthropic logo -->
+							<div class="size-5 rounded-full flex items-center justify-center" style="background:#CC785C">
+								<svg viewBox="0 0 24 24" width="13" height="13" fill="white" xmlns="http://www.w3.org/2000/svg">
+									<path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-3.654 0H6.57L0 20h3.603l1.357-3.415h6.857L13.173 20h3.603l-6.603-16.48zM6.984 13.8l2.41-6.063 2.41 6.063H6.984z"/>
+								</svg>
+							</div>
+						{:else if companyLogo(item.value) === 'mistral'}
+							<!-- Mistral logo -->
+							<div class="size-5 rounded-full flex items-center justify-center" style="background:#FF7000">
+								<svg viewBox="0 0 24 24" width="13" height="13" fill="white" xmlns="http://www.w3.org/2000/svg">
+									<path d="M3 3h4v4H3zm14 0h4v4h-4zM3 10h4v4H3zm7-7h4v4h-4zm0 14h4v4h-4zm7 0h4v4h-4zM3 17h4v4H3zm7-7h4v4h-4z"/>
+								</svg>
+							</div>
+						{:else}
+							<img
+								src="/favicon.png"
+								alt={item.label}
+								class="rounded-full size-5 object-cover"
+								loading="lazy"
+							/>
+						{/if}
+						{#if modelTier(item.value).color}
+							<span
+								class="absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-1 ring-white dark:ring-gray-850"
+								style="background:{modelTier(item.value).color}"
+							/>
+						{/if}
+					</div>
 				</Tooltip>
 			</div>
 

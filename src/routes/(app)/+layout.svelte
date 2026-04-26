@@ -110,12 +110,17 @@
 	};
 
 	const setModels = async () => {
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
+		const allModels = await getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 		);
+		// Custom workspace models (modelfiles) have an `info` field — show them first
+		allModels.sort((a, b) => {
+			const aCustom = a.info ? 0 : 1;
+			const bCustom = b.info ? 0 : 1;
+			return aCustom - bCustom;
+		});
+		models.set(allModels);
 	};
 
 	const setToolServers = async () => {
