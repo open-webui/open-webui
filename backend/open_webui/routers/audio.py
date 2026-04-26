@@ -13,6 +13,7 @@ from typing import Optional
 from fnmatch import fnmatch
 import aiohttp
 import aiofiles
+import asyncio
 import requests
 import mimetypes
 
@@ -125,6 +126,42 @@ def convert_audio_to_mp3(file_path):
     except Exception as e:
         log.error(f'Error converting audio file: {e}')
         return None
+
+
+def convert_pcm_to_mp3(file_path: str, content_type: str) -> str:
+    """Convert a 16-bit PCM file to MP3 using parameters from Content-Type.
+
+    Deletes the original PCM file and returns the path of the created MP3 file.
+    Example Content-Type: "audio/pcm;rate=24000;channels=1"
+    """
+    mime_components = content_type.lower().split(";")
+    if mime_components[0].strip() != 'audio/pcm':
+        raise ValueError(f'Error converting non-PCM audio: {content_type}')
+
+    params: dict[str, int] = {}
+    for mime_component in mime_components[1:]:
+        k, sep, v = mime_component.strip().partition('=')
+        if sep and v.isdigit():
+            params[k] = int(v)
+
+    output_path = os.path.splitext(file_path)[0] + '.mp3'
+    try:
+        audio = AudioSegment.from_raw(
+            file_path,
+            sample_width=2,
+            frame_rate=params.get('rate', 24000),
+            channels=params.get('channels', 1),
+        )
+        audio.export(output_path, format='mp3')
+        log.info(f'Converted {file_path} to {output_path}')
+    except Exception:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise
+    finally:
+        if file_path != output_path and os.path.exists(file_path):
+            os.remove(file_path)
+    return output_path
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
@@ -387,8 +424,20 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
                 r.raise_for_status()
 
-                async with aiofiles.open(file_path, 'wb') as f:
-                    await f.write(await r.read())
+                # Gemini-TTS does not support MP3 output (neither via LiteLLM
+                # nor OpenRouter) and OpenRouter TTS returns PCM by default.
+                content_type = r.headers.get('Content-Type', '')
+                mime_type = content_type.lower().split(';')[0].strip()
+                if mime_type == 'audio/pcm':
+                    pcm_path = os.path.splitext(file_path)[0] + '.pcm'
+                    async with aiofiles.open(pcm_path, 'wb') as f:
+                        await f.write(await r.read())
+                    file_path = await asyncio.to_thread(
+                        convert_pcm_to_mp3, pcm_path, content_type,
+                    )
+                else:
+                    async with aiofiles.open(file_path, 'wb') as f:
+                        await f.write(await r.read())
 
                 async with aiofiles.open(file_body_path, 'w') as f:
                     await f.write(json.dumps(payload))
