@@ -32,6 +32,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ModelSettingsModal from './Models/ModelSettingsModal.svelte';
+	import BaseModelFailoverModal from './Models/BaseModelFailoverModal.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
@@ -64,6 +65,10 @@
 
 	let showConfigModal = false;
 	let showManageModal = false;
+
+	// Per-base-model failover editor modal
+	let showFailoverModal = false;
+	let failoverModalModel: { id: string; name?: string } | null = null;
 
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
 
@@ -362,6 +367,7 @@
 
 <ModelSettingsModal bind:show={showConfigModal} initHandler={init} />
 <ManageModelsModal bind:show={showManageModal} />
+<BaseModelFailoverModal bind:show={showFailoverModal} model={failoverModalModel} />
 
 {#if models !== null}
 	{#if selectedModelId === null}
@@ -711,6 +717,10 @@
 										}}
 										cloneHandler={() => {
 											cloneHandler(model);
+										}}
+										failoverHandler={() => {
+											failoverModalModel = { id: model.id, name: model.name };
+											showFailoverModal = true;
 										}}
 										onClose={() => {}}
 									>

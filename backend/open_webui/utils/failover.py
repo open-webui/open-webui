@@ -99,13 +99,26 @@ def resolve_failover_candidates(
 ) -> list[ProviderCandidate]:
     """Build the ordered candidate list for a chat completion.
 
-    If `model_info.meta.failover_providers` is set, use that ordered list
-    (filtered by skip_urls and required capabilities). Otherwise, fall back
-    to legacy single-provider resolution via OPENAI_MODELS.
+    Resolution precedence (most specific wins):
 
-    Unhealthy-per-cache providers stay in the list but sink below healthy
-    ones; if every candidate is unhealthy they are still tried in their
-    configured order.
+    1. **Workspace-model-level chain**: ``model_info.meta.failover_providers``
+       — when a workspace model has its own ordered list configured, that
+       overrides everything else.
+    2. **Base-model-level chain**: ``app.state.config.MODEL_FAILOVER_MAP``
+       — a global admin map keyed by model id. The requested model is the
+       implicit primary; entries from the map become backups #1..N. This
+       lets one config protect every workspace model (and direct chats)
+       that share a base model.
+    3. **Legacy**: single provider derived from the OPENAI_MODELS cache.
+
+    Filters applied to the resolved chain:
+    - ``skip_urls`` (set by the retry-with-different-provider button).
+    - Required capabilities — if the payload needs ``tools`` or ``vision``,
+      providers that explicitly assert their capabilities and don't include
+      one are filtered out. The implicit primary is always kept regardless.
+    - Health cache — unhealthy providers sink to the end of the list but
+      remain present, so an all-unhealthy chain still degrades rather
+      than hard-failing.
     """
     skip_set = set(skip_urls or [])
     required_caps = required_capabilities_from_payload(payload)
@@ -153,6 +166,7 @@ def resolve_failover_candidates(
     candidates: list[ProviderCandidate] = []
 
     if failover:
+        # Workspace-level chain wins entirely.
         for position, entry in enumerate(failover):
             # Capability filter: if required caps declared, provider must
             # list them. An empty capabilities list = "unknown, try it".
@@ -162,15 +176,41 @@ def resolve_failover_candidates(
             candidate = _build_candidate(entry.model_id, position, list(entry.capabilities or []))
             if candidate is None:
                 log.warning(
-                    'Failover provider model_id=%s not resolvable against current OPENAI_MODELS / config; skipping.',
+                    'Workspace failover provider model_id=%s not resolvable against current OPENAI_MODELS / config; skipping.',
                     entry.model_id,
                 )
                 continue
             candidates.append(candidate)
     else:
-        # Legacy path: single provider derived from the incoming payload model id.
-        candidate = _build_candidate(payload.get('model'), 0, [])
-        if candidate is not None:
+        # No workspace chain. Always start with the requested model as the
+        # implicit primary, then expand from the global base-model map if
+        # an entry exists for that id.
+        requested_id = payload.get('model')
+        primary = _build_candidate(requested_id, 0, [])
+        if primary is not None:
+            candidates.append(primary)
+
+        global_map = getattr(request.app.state.config, 'MODEL_FAILOVER_MAP', None) or {}
+        # PersistentConfig deserialises to plain dicts/lists, not Pydantic
+        # FailoverProvider instances — handle dicts defensively.
+        chain = global_map.get(requested_id) or []
+        for offset, raw_entry in enumerate(chain):
+            entry = raw_entry if isinstance(raw_entry, dict) else getattr(raw_entry, '__dict__', {})
+            target_id = entry.get('model_id')
+            if not target_id:
+                continue
+            cap_list = list(entry.get('capabilities') or [])
+            if required_caps and cap_list:
+                if any(cap not in cap_list for cap in required_caps):
+                    continue
+            candidate = _build_candidate(target_id, offset + 1, cap_list)
+            if candidate is None:
+                log.warning(
+                    'Base-model failover entry model_id=%s (parent=%s) not resolvable; skipping.',
+                    target_id,
+                    requested_id,
+                )
+                continue
             candidates.append(candidate)
 
     # Sink unhealthy providers to the end, but keep configured order among

@@ -561,6 +561,77 @@ export const setModelsConfig = async (token: string, config: object) => {
 	return res;
 };
 
+export type ModelFailoverEntry = {
+	model_id: string;
+	capabilities: string[];
+};
+
+export type ModelFailoverMap = Record<string, ModelFailoverEntry[]>;
+
+/**
+ * Fetch the global per-base-model failover map.
+ *
+ * Admin-only on the backend; returns an empty object when no failover has
+ * been configured for any model.
+ */
+export const getModelFailoverMap = async (token: string): Promise<ModelFailoverMap> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models/failover`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail ?? err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.MODEL_FAILOVER_MAP ?? {};
+};
+
+export const setModelFailoverMap = async (
+	token: string,
+	map: ModelFailoverMap
+): Promise<ModelFailoverMap> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models/failover`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ MODEL_FAILOVER_MAP: map })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail ?? err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.MODEL_FAILOVER_MAP ?? {};
+};
+
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 
