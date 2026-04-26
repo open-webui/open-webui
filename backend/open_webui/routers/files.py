@@ -602,6 +602,62 @@ async def update_file_data_content_by_id(
 ############################
 
 
+async def _serve_file_content(id: str, user, db: AsyncSession, *, force_attachment: bool, attachment: bool):
+    """Shared logic for the /content and /content/{file_name} endpoints."""
+    file = await Files.get_file_by_id(id, db=db)
+    if not file:
+        # File does not exist
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    elif not (file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db)):
+        # User does not have permission to access it
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    file_path = file.path
+    filename = file.meta.get('name', file.filename)
+    encoded_filename = quote(filename)  # RFC5987 encoding
+    content_type = file.meta.get('content_type')
+    headers = {}
+
+    if force_attachment:
+        headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+    elif attachment:
+        headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+    else:
+        if content_type == 'application/pdf' or filename.lower().endswith('.pdf'):
+            headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
+            content_type = 'application/pdf'
+        elif content_type != 'text/plain':
+            headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+
+    if file_path:
+        try:
+            file_path = await asyncio.to_thread(Storage.get_file, file_path)
+            file_path = Path(file_path)
+            if not file_path.is_file():
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+            if force_attachment:
+                return FileResponse(file_path, headers=headers)
+            return FileResponse(file_path, headers=headers, media_type=content_type)
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT('Error getting file content'),
+            )
+
+    if not force_attachment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    file_content = file.data.get('content', '')
+
+    def generator():
+        yield file_content.encode('utf-8')
+
+    return StreamingResponse(generator(), media_type='text/plain', headers=headers)
+
+
 @router.get('/{id}/content')
 async def get_file_content_by_id(
     id: str,
@@ -609,60 +665,7 @@ async def get_file_content_by_id(
     attachment: bool = Query(False),
     db: AsyncSession = Depends(get_async_session),
 ):
-    file = await Files.get_file_by_id(id, db=db)
-
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
-        try:
-            file_path = await asyncio.to_thread(Storage.get_file, file.path)
-            file_path = Path(file_path)
-
-            # Check if the file already exists in the cache
-            if file_path.is_file():
-                # Handle Unicode filenames
-                filename = file.meta.get('name', file.filename)
-                encoded_filename = quote(filename)  # RFC5987 encoding
-
-                content_type = file.meta.get('content_type')
-                filename = file.meta.get('name', file.filename)
-                encoded_filename = quote(filename)
-                headers = {}
-
-                if attachment:
-                    headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
-                else:
-                    if content_type == 'application/pdf' or filename.lower().endswith('.pdf'):
-                        headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
-                        content_type = 'application/pdf'
-                    elif content_type != 'text/plain':
-                        headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
-
-                return FileResponse(file_path, headers=headers, media_type=content_type)
-
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
-        except HTTPException as e:
-            raise e
-        except Exception as e:
-            log.exception(e)
-            log.error('Error getting file content')
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT('Error getting file content'),
-            )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    return await _serve_file_content(id, user, db, force_attachment=False, attachment=attachment)
 
 
 @router.get('/{id}/content/html')
@@ -715,56 +718,10 @@ async def get_html_file_content_by_id(
 
 
 @router.get('/{id}/content/{file_name}')
-async def get_file_content_by_id(
+async def download_file_content_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    file = await Files.get_file_by_id(id, db=db)
-
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
-        file_path = file.path
-
-        # Handle Unicode filenames
-        filename = file.meta.get('name', file.filename)
-        encoded_filename = quote(filename)  # RFC5987 encoding
-        headers = {'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}"}
-
-        if file_path:
-            file_path = await asyncio.to_thread(Storage.get_file, file_path)
-            file_path = Path(file_path)
-
-            # Check if the file already exists in the cache
-            if file_path.is_file():
-                return FileResponse(file_path, headers=headers)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
-        else:
-            # File path doesn’t exist, return the content as .txt if possible
-            file_content = file.data.get('content', '')
-            file_name = file.filename
-
-            # Create a generator that encodes the file content
-            def generator():
-                yield file_content.encode('utf-8')
-
-            return StreamingResponse(
-                generator(),
-                media_type='text/plain',
-                headers=headers,
-            )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    return await _serve_file_content(id, user, db, force_attachment=True, attachment=False)
 
 
 ############################
