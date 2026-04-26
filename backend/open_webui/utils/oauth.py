@@ -62,6 +62,7 @@ from open_webui.config import (
     OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
     OAUTH_AUTHORIZE_PARAMS,
+    OAUTH_TIMEOUT,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
@@ -597,6 +598,7 @@ class OAuthClientManager:
             'client_secret': oauth_client_info.client_secret,
             'client_kwargs': {
                 'follow_redirects': True,
+                **({'timeout': int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}),
                 **({'scope': oauth_client_info.scope} if oauth_client_info.scope else {}),
                 **(
                     {'token_endpoint_auth_method': oauth_client_info.token_endpoint_auth_method}
