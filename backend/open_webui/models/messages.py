@@ -13,7 +13,7 @@ from open_webui.models.channels import Channels, ChannelMember
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
-from sqlalchemy import or_, func, and_, text
+from sqlalchemy import or_, and_, text
 from sqlalchemy.sql import exists
 
 ####################

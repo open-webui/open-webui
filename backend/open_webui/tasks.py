@@ -6,7 +6,7 @@ import json
 import logging
 from redis.asyncio import Redis
 from fastapi import Request
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from open_webui.env import REDIS_KEY_PREFIX
 
