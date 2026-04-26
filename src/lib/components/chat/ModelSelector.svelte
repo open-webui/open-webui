@@ -58,11 +58,18 @@
 					<Selector
 						id={`${selectedModelIdx}`}
 						placeholder={$i18n.t('Select a model')}
-						items={$models.map((model) => ({
-							value: model.id,
-							label: model.name,
-							model: model
-						}))}
+						items={$models.map((model) => {
+							let displayLabel = model.name;
+							if (model.connection_type === 'external' && model.id.includes('.')) {
+								const prefix = model.id.split('.')[0];
+								displayLabel = `${prefix} | ${model.name}`;
+							}
+							return {
+								value: model.id,
+								label: displayLabel,
+								model: model
+							};
+						})}
 						{pinModelHandler}
 						bind:value={selectedModel}
 					/>
