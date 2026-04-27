@@ -1648,7 +1648,25 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage, yjs_update } = data;
+
+		// Handle Yjs updates for streaming  
+		if (yjs_update && message.id) {  
+			// Get or create Yjs handler for this message  
+			if (!message.yjsHandler) {  
+				message.yjsHandler = new ChatMessageYjsHandler(  
+					message.id,  
+					$socket,  
+					(content) => {  
+						message.content = content;  
+					}  
+				);  
+			}  
+			
+			// Apply Yjs update (handled internally by ChatMessageYjsHandler)  
+			// The handler will update message.content via the callback  
+			return; // Skip traditional processing for Yjs updates  
+		}  
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
