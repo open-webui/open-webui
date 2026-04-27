@@ -23,7 +23,8 @@ from fastapi import (
     status,
     Response,
 )
-from fastapi.responses import FileResponse, StreamingResponse
+import os
+from fastapi.responses import FileResponse, StreamingResponse, Response
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -307,9 +308,15 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
                 except Exception as e:
                     pass
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+        favicon_path = f"{STATIC_DIR}/favicon.png"
+        if os.path.exists(favicon_path):
+            return FileResponse(favicon_path)
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
     else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+        favicon_path = f"{STATIC_DIR}/favicon.png"
+        if os.path.exists(favicon_path):
+            return FileResponse(favicon_path)
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
 ############################

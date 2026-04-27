@@ -107,15 +107,7 @@ class LangfuseTracer:
                 }
             }
 
-            # Add explicit timing if provided
-            if start_time is not None:
-                from datetime import datetime, timezone
-                obs_params["start_time"] = datetime.fromtimestamp(start_time, tz=timezone.utc)
-            if end_time is not None:
-                from datetime import datetime, timezone
-                obs_params["end_time"] = datetime.fromtimestamp(end_time, tz=timezone.utc)
-
-            # Log timing info for debugging
+            # Log timing info for debugging (start_time/end_time not passed to start_observation — not supported in langfuse v4)
             if start_time and end_time:
                 duration_ms = (end_time - start_time) * 1000
                 log.info(f"[LANGFUSE TRACE] Explicit timing: start={start_time}, end={end_time}, duration={duration_ms:.0f}ms")

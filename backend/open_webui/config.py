@@ -3927,3 +3927,10 @@ DEFAULT_RAG_STORE_NAME = PersistentConfig(
     "rag.default_store_name",
     os.environ.get("DEFAULT_RAG_STORE_NAME", None),
 )
+
+####################################
+# Analytics (PostHog)
+####################################
+
+POSTHOG_API_KEY = os.environ.get("POSTHOG_API_KEY", "")
+POSTHOG_HOST = os.environ.get("POSTHOG_HOST", "https://app.posthog.com")
