@@ -36,6 +36,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.utils.provider_logos import provider_logo_url
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -497,6 +498,18 @@ async def get_model_profile_image(
                         url=safe_static,
                         status_code=status.HTTP_302_FOUND,
                     )
+
+    # No admin-supplied image — fall back to a brand logo inferred from the
+    # model id (e.g. ``gpt-5`` -> openai, ``claude-opus`` -> anthropic). Lets
+    # connection-supplied models render with the right logo without manual
+    # overlay rows. Returns None for unrecognised ids, in which case we drop
+    # through to the favicon below.
+    auto_url = provider_logo_url(id)
+    if auto_url:
+        return RedirectResponse(
+            url=auto_url,
+            status_code=status.HTTP_302_FOUND,
+        )
 
     return RedirectResponse(
         url='/static/favicon.png',
