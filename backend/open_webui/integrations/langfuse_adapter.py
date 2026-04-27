@@ -545,6 +545,9 @@ class LangfusePromptAdapter:
                 # Use first GENERATION observation for main metrics
                 main_obs = observations[0]
 
+                # Detect error: any observation flagged as ERROR level
+                is_error = any((o.get('level') == 'ERROR') for o in observations)
+
                 # Get metadata and user info
                 metadata = main_obs.get('metadata', {})
                 user_id = trace.get('userId') or metadata.get('user_id')  # Fallback to metadata
@@ -640,6 +643,7 @@ class LangfusePromptAdapter:
                     "input_preview": input_preview,
                     "output_preview": output_preview,
                     "langfuse_url": langfuse_url,
+                    "is_error": is_error,
                 }
 
                 trace_list.append(trace_item)
@@ -776,6 +780,10 @@ class LangfusePromptAdapter:
         today_cost = 0.0
         error_count = 0
 
+        # Per-trace records for top-N aggregation
+        trace_records: list[dict] = []
+        user_tokens: dict[str, dict] = {}  # uid -> { tokens, calls, cost }
+
         import time as _time
         for i, t in enumerate(sampled):
             tid = t.get("id")
@@ -800,8 +808,9 @@ class LangfusePromptAdapter:
                 if obs.get("level") == "ERROR":
                     error_count += 1
                 lat = obs.get("latency")
-                if lat:
-                    latencies.append(lat * 1000)
+                lat_ms = lat * 1000 if lat else None
+                if lat_ms is not None:
+                    latencies.append(lat_ms)
                 cost = obs.get("totalCost") or 0
                 if cost:
                     day = (obs.get("startTime") or "")[:10]
@@ -814,8 +823,37 @@ class LangfusePromptAdapter:
                 uid = t.get("userId") or (obs.get("metadata", {}) or {}).get("user_id")
                 if uid:
                     active_users.add(uid)
+                usage = obs.get("usage") or {}
+                tokens = (usage.get("total") or 0) or (
+                    (usage.get("input") or 0) + (usage.get("output") or 0)
+                )
+                trace_records.append({
+                    "trace_id": tid,
+                    "timestamp": t.get("timestamp") or obs.get("startTime"),
+                    "model": model,
+                    "user_id": uid,
+                    "user_name": (t.get("metadata") or {}).get("user_name") if isinstance(t.get("metadata"), dict) else None,
+                    "tokens": int(tokens or 0),
+                    "cost": float(cost or 0),
+                    "latency_ms": float(lat_ms) if lat_ms is not None else None,
+                })
+                if uid:
+                    rec = user_tokens.setdefault(uid, {"tokens": 0, "calls": 0, "cost": 0.0, "name": None})
+                    rec["tokens"] += int(tokens or 0)
+                    rec["calls"] += 1
+                    rec["cost"] += float(cost or 0)
             except Exception:
                 continue
+
+        # Resolve user names from local DB (best-effort)
+        try:
+            from open_webui.models.users import Users
+            for uid in list(user_tokens.keys()):
+                u = Users.get_user_by_id(uid)
+                if u is not None:
+                    user_tokens[uid]["name"] = getattr(u, "name", None) or getattr(u, "email", None)
+        except Exception:
+            pass
 
         # p95 latency
         p95 = 0
@@ -830,6 +868,50 @@ class LangfusePromptAdapter:
             for d, c in sorted(costs_by_day.items())
         ]
 
+        # Top-N aggregations
+        top_token_users = sorted(
+            (
+                {
+                    "user_id": uid,
+                    "name": rec.get("name"),
+                    "tokens": rec["tokens"],
+                    "calls": rec["calls"],
+                    "cost": round(rec["cost"], 6),
+                }
+                for uid, rec in user_tokens.items()
+                if rec["tokens"] > 0
+            ),
+            key=lambda r: -r["tokens"],
+        )[:5]
+
+        top_expensive = sorted(
+            (
+                {
+                    "trace_id": r["trace_id"],
+                    "timestamp": r["timestamp"],
+                    "model": r["model"],
+                    "cost_usd": round(r["cost"], 6),
+                }
+                for r in trace_records
+                if r["cost"] > 0
+            ),
+            key=lambda r: -r["cost_usd"],
+        )[:5]
+
+        top_slow = sorted(
+            (
+                {
+                    "trace_id": r["trace_id"],
+                    "timestamp": r["timestamp"],
+                    "model": r["model"],
+                    "latency_ms": round(r["latency_ms"], 1),
+                }
+                for r in trace_records
+                if r["latency_ms"] is not None
+            ),
+            key=lambda r: -r["latency_ms"],
+        )[:5]
+
         return {
             "days": days,
             "total_messages": total_count,
@@ -840,6 +922,135 @@ class LangfusePromptAdapter:
             "error_rate": round(error_count / len(sampled), 4) if sampled else 0,
             "top_models": [{"model": m, "count": c} for m, c in top_models],
             "daily": daily,
+            "top_token_users": top_token_users,
+            "top_expensive": top_expensive,
+            "top_slow": top_slow,
+        }
+
+
+    def get_trace_detail(self, trace_id: str) -> Optional[dict]:
+        """
+        Fetch a single trace with input/output preview, observations breakdown,
+        cost/token totals, and a Langfuse deep link.
+
+        Returns None if not found.
+        """
+        import requests, base64
+        auth = base64.b64encode(f"{self.public_key}:{self.secret_key}".encode()).decode()
+        headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
+
+        try:
+            tr_resp = requests.get(
+                f"{self.host}/api/public/traces/{trace_id}",
+                headers=headers,
+                timeout=15,
+            )
+            if tr_resp.status_code == 404:
+                return None
+            tr_resp.raise_for_status()
+            trace = tr_resp.json()
+        except Exception as e:
+            log.warning(f"[LANGFUSE] trace fetch failed: {e}")
+            return None
+
+        try:
+            obs_resp = requests.get(
+                f"{self.host}/api/public/observations",
+                headers=headers,
+                params={
+                    "traceId": trace_id,
+                    "fields": "core,basic,usage,metrics,io,metadata",
+                    "limit": 50,
+                },
+                timeout=15,
+            )
+            obs_resp.raise_for_status()
+            obs_list = obs_resp.json().get("data", [])
+        except Exception as e:
+            log.warning(f"[LANGFUSE] observations fetch failed: {e}")
+            obs_list = []
+
+        # Aggregate
+        total_cost = 0.0
+        total_tokens = 0
+        input_tokens = 0
+        output_tokens = 0
+        total_latency_ms = 0.0
+        model = None
+        input_preview = ""
+        output_preview = ""
+        observations: list[dict] = []
+        for obs in obs_list:
+            cost = obs.get("totalCost") or 0
+            total_cost += float(cost or 0)
+            usage = obs.get("usageDetails") or obs.get("usage") or {}
+            t_in = int(usage.get("input") or 0)
+            t_out = int(usage.get("output") or 0)
+            t_total = int(usage.get("total") or 0) or (t_in + t_out)
+            input_tokens += t_in
+            output_tokens += t_out
+            total_tokens += t_total
+            lat = obs.get("latency")
+            lat_ms = (lat * 1000) if lat else 0
+            total_latency_ms += lat_ms
+            if model is None:
+                model = obs.get("model") or (obs.get("metadata") or {}).get("model")
+
+            observations.append({
+                "name": obs.get("name") or obs.get("type") or "obs",
+                "latency_ms": round(lat_ms, 1),
+            })
+
+            if obs.get("type") == "GENERATION" or not input_preview:
+                obs_in = obs.get("input")
+                obs_out = obs.get("output")
+                if isinstance(obs_in, list):
+                    for msg in reversed(obs_in):
+                        if isinstance(msg, dict) and msg.get("role") == "user":
+                            content = msg.get("content")
+                            if isinstance(content, str):
+                                input_preview = content[:800]
+                                break
+                elif isinstance(obs_in, str) and not input_preview:
+                    input_preview = obs_in[:800]
+                if isinstance(obs_out, str) and not output_preview:
+                    output_preview = obs_out[:800]
+                elif isinstance(obs_out, dict) and not output_preview:
+                    content = obs_out.get("content") if isinstance(obs_out.get("content"), str) else None
+                    output_preview = (content or str(obs_out))[:800]
+
+        # Resolve user info
+        uid = trace.get("userId") or (trace.get("metadata") or {}).get("user_id")
+        user_block = None
+        if uid:
+            try:
+                from open_webui.models.users import Users
+                u = Users.get_user_by_id(uid)
+                if u is not None:
+                    user_block = {
+                        "id": u.id,
+                        "name": getattr(u, "name", None),
+                        "email": getattr(u, "email", None),
+                    }
+                else:
+                    user_block = {"id": uid, "name": None, "email": None}
+            except Exception:
+                user_block = {"id": uid, "name": None, "email": None}
+
+        return {
+            "trace_id": trace_id,
+            "timestamp": trace.get("timestamp"),
+            "user": user_block,
+            "model": model,
+            "input_preview": input_preview,
+            "output_preview": output_preview,
+            "total_tokens": total_tokens,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_cost_usd": round(total_cost, 6),
+            "latency_ms": round(total_latency_ms, 1),
+            "observations": observations,
+            "langfuse_url": f"{self.host}/trace/{trace_id}",
         }
 
 

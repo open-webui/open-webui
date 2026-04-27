@@ -743,6 +743,7 @@ export interface PromptTrace {
 	response_style?: string;
 	chapter_id?: string | null;
 	langfuse_url?: string;
+	is_error?: boolean;
 	user?: {
 		id: string;
 		name: string;

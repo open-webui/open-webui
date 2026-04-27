@@ -6,6 +6,9 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import StatCard from './StatCard.svelte';
+	import TopListsSection from './TopListsSection.svelte';
+	import AnomalyAlert from './AnomalyAlert.svelte';
+	import TraceDetailDrawer from './TraceDetailDrawer.svelte';
 	import type { PromptGroupStats, PromptTrace } from '$lib/apis/prompt-groups';
 	import { getPromptGroupUsage } from '$lib/apis/prompt-groups';
 	import { getAnalyticsSummary, type AnalyticsSummary } from '$lib/apis/analytics';
@@ -38,6 +41,91 @@
 
 	let globalSummary: AnalyticsSummary | null = null;
 	let globalLoading = false;
+
+	// Threshold rules (client-side)
+	const latencyStatus = (ms: number | undefined): 'ok' | 'warn' | 'critical' | undefined => {
+		if (ms === undefined || ms === null) return undefined;
+		if (ms > 3000) return 'critical';
+		if (ms > 1500) return 'warn';
+		return 'ok';
+	};
+	const errorRateStatus = (rate: number | undefined): 'ok' | 'warn' | 'critical' | undefined => {
+		if (rate === undefined || rate === null) return undefined;
+		if (rate > 0.05) return 'critical';
+		if (rate > 0.01) return 'warn';
+		return 'ok';
+	};
+
+	// Delta computation: split daily[] into halves, compare averages
+	const computeDelta = (
+		points: { date: string; cost: number }[] | undefined,
+		isGoodWhenDown = true
+	): { value: number; direction: 'up' | 'down'; isGood: boolean } | undefined => {
+		if (!points || points.length < 4) return undefined;
+		const mid = Math.floor(points.length / 2);
+		const first = points.slice(0, mid);
+		const second = points.slice(mid);
+		const avg = (arr: typeof points) => arr.reduce((s, p) => s + p.cost, 0) / arr.length;
+		const a = avg(first);
+		const b = avg(second);
+		if (a === 0) return undefined;
+		const pct = ((b - a) / a) * 100;
+		const direction: 'up' | 'down' = pct >= 0 ? 'up' : 'down';
+		const isGood = isGoodWhenDown ? direction === 'down' : direction === 'up';
+		if (Math.abs(pct) < 1) return undefined;
+		return { value: pct, direction, isGood };
+	};
+
+	$: costDelta = computeDelta(globalSummary?.daily, true);
+	$: p95Status = latencyStatus(globalSummary?.p95_latency_ms);
+	$: errorStatus = errorRateStatus(globalSummary?.error_rate);
+
+	// Selected trace for detail drawer (Stage 5)
+	let selectedTraceId: string | null = null;
+	let loadingDetails = false;
+	const openTraceDetail = (traceId: string) => {
+		selectedTraceId = traceId;
+	};
+	const closeTraceDetail = () => {
+		selectedTraceId = null;
+	};
+
+	// Sort buttons (client-side, current page only)
+	type SortMode = 'recent' | 'tokens' | 'slow' | 'cost' | 'error';
+	let sortMode: SortMode = 'recent';
+	const SORT_LABELS: Record<SortMode, string> = {
+		recent: '최신순',
+		tokens: '토큰 많은순',
+		slow: '느린순',
+		cost: '비용 큰순',
+		error: '에러순'
+	};
+	const SORT_MODES: SortMode[] = ['recent', 'tokens', 'slow', 'cost', 'error'];
+
+	$: sortedTraces = (() => {
+		const arr = [...(traces || [])];
+		switch (sortMode) {
+			case 'tokens':
+				return arr.sort((a, b) => (b.tokens || 0) - (a.tokens || 0));
+			case 'slow':
+				return arr.sort((a, b) => (b.latency || 0) - (a.latency || 0));
+			case 'cost':
+				return arr.sort((a, b) => (b.cost || 0) - (a.cost || 0));
+			case 'error':
+				return arr.sort((a, b) => {
+					const ae = a.is_error ? 1 : 0;
+					const be = b.is_error ? 1 : 0;
+					if (ae !== be) return be - ae;
+					return (b.latency || 0) - (a.latency || 0);
+				});
+			case 'recent':
+			default:
+				return arr.sort(
+					(a, b) =>
+						new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+				);
+		}
+	})();
 
 	const loadGlobalSummary = async () => {
 		const days = (selectedDays === 90 ? 30 : selectedDays) as 1 | 7 | 30;
@@ -297,6 +385,9 @@
 		</div>
 	</div>
 
+	<!-- Anomaly alert (rule-based, hidden when no anomalies) -->
+	<AnomalyAlert summary={globalSummary} />
+
 	<!-- Global summary (across all groups) -->
 	<div class="global-summary border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-900/40">
 		<div class="flex items-center justify-between mb-3">
@@ -313,11 +404,23 @@
 			</div>
 		{:else if globalSummary}
 			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-				<StatCard title="오늘 비용" value={`$${globalSummary.today_cost_usd.toFixed(4)}`} />
+				<StatCard
+					title="오늘 비용"
+					value={`$${globalSummary.today_cost_usd.toFixed(4)}`}
+					delta={costDelta}
+				/>
 				<StatCard title="총 메시지" value={globalSummary.total_messages.toLocaleString()} />
-				<StatCard title="p95 응답시간" value={formatLatency(globalSummary.p95_latency_ms)} />
+				<StatCard
+					title="p95 응답시간"
+					value={formatLatency(globalSummary.p95_latency_ms)}
+					status={p95Status}
+				/>
 				<StatCard title="활성 사용자" value={globalSummary.active_users} />
-				<StatCard title="에러율" value={`${(globalSummary.error_rate * 100).toFixed(2)}%`} />
+				<StatCard
+					title="에러율"
+					value={`${(globalSummary.error_rate * 100).toFixed(2)}%`}
+					status={errorStatus}
+				/>
 			</div>
 			{#if globalSummary.daily.length >= 2}
 				<div class="mt-3 flex items-center gap-3">
@@ -343,6 +446,15 @@
 			<div class="text-xs text-gray-500 dark:text-gray-400 py-2">전체 요약 데이터를 불러올 수 없습니다.</div>
 		{/if}
 	</div>
+
+	{#if globalSummary}
+		<TopListsSection
+			topTokenUsers={globalSummary.top_token_users || []}
+			topExpensive={globalSummary.top_expensive || []}
+			topSlow={globalSummary.top_slow || []}
+			on:select={(e) => openTraceDetail(e.detail.traceId)}
+		/>
+	{/if}
 
 	{#if loading}
 		<div class="flex items-center justify-center py-12">
@@ -370,6 +482,23 @@
 					</span>
 				{/if}
 			</div>
+
+			{#if traces.length > 0}
+				<div class="flex flex-wrap items-center gap-1.5 mb-3">
+					<span class="text-xs text-gray-500 dark:text-gray-400 mr-1">정렬:</span>
+					{#each SORT_MODES as mode}
+						<button
+							type="button"
+							on:click={() => (sortMode = mode)}
+							class="px-2.5 py-1 text-xs rounded-full transition border {sortMode === mode
+								? 'bg-blue-600 text-white border-blue-600'
+								: 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}"
+						>
+							{SORT_LABELS[mode]}
+						</button>
+					{/each}
+				</div>
+			{/if}
 
 			{#if traces.length === 0}
 				<div class="p-8 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
@@ -423,10 +552,23 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-							{#each traces as trace}
-								<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+							{#each sortedTraces as trace}
+								<tr
+									class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer {trace.is_error
+										? 'bg-red-50/50 dark:bg-red-900/10'
+										: ''}"
+									on:click={() => openTraceDetail(trace.trace_id)}
+								>
 									<td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-										{formatDate(trace.timestamp)}
+										<div class="flex items-center gap-2">
+											{#if trace.is_error}
+												<span
+													class="inline-block w-1.5 h-1.5 rounded-full bg-red-500"
+													aria-label="error"
+												></span>
+											{/if}
+											{formatDate(trace.timestamp)}
+										</div>
 									</td>
 									<td class="px-4 py-3 text-gray-700 dark:text-gray-300">
 										{#if trace.user}
@@ -476,6 +618,7 @@
 												target="_blank"
 												rel="noopener noreferrer"
 												class="text-blue-600 dark:text-blue-400 hover:underline text-xs"
+												on:click|stopPropagation
 											>
 												Langfuse →
 											</a>
@@ -565,3 +708,5 @@
 		</div>
 	{/if}
 </div>
+
+<TraceDetailDrawer traceId={selectedTraceId} onClose={closeTraceDetail} />
