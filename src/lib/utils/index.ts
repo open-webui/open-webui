@@ -1296,6 +1296,52 @@ export const createMessagesList = (history, messageId) => {
 	return list.reverse();
 };
 
+/**
+ * A message is considered "renderable" only if it has the minimum schema fields
+ * downstream components depend on (`role` and `childrenIds`). Upstream OpenAI-
+ * compatible providers occasionally return safety-rejection / content-filter
+ * shapes that get persisted into `chat.history.messages` without these fields.
+ * If `history.currentId` ever points at such a node, the chat renderer locks up
+ * on an infinite Loading spinner. This predicate lets us detect the bad node so
+ * we can fall back to the last valid ancestor instead of rendering it.
+ * See https://github.com/open-webui/open-webui/issues/24157
+ */
+export const isRenderableMessage = (message: unknown): boolean => {
+	if (!message || typeof message !== 'object') {
+		return false;
+	}
+	const m = message as Record<string, unknown>;
+	return typeof m.role === 'string' && Array.isArray(m.childrenIds);
+};
+
+/**
+ * Walk backwards through the parent chain starting at `startId` and return the
+ * first ancestor (inclusive) that satisfies `isRenderableMessage`. Returns
+ * `null` if no renderable ancestor exists.
+ */
+export const findLastRenderableAncestor = (
+	history: { messages: Record<string, any> },
+	startId: string | null | undefined
+): string | null => {
+	if (!startId || !history?.messages) {
+		return null;
+	}
+	const seen = new Set<string>();
+	let currentId: string | null | undefined = startId;
+	while (currentId && !seen.has(currentId)) {
+		seen.add(currentId);
+		const message = history.messages[currentId];
+		if (message === undefined) {
+			return null;
+		}
+		if (isRenderableMessage(message)) {
+			return currentId;
+		}
+		currentId = message?.parentId ?? null;
+	}
+	return null;
+};
+
 export const formatFileSize = (size) => {
 	if (size == null) return 'Unknown size';
 	if (typeof size !== 'number' || size < 0) return 'Invalid size';

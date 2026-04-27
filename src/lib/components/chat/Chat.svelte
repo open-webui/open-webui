@@ -58,6 +58,8 @@
 		copyToClipboard,
 		getMessageContentParts,
 		createMessagesList,
+		findLastRenderableAncestor,
+		isRenderableMessage,
 		getPromptVariables,
 		processDetails,
 		removeAllDetails,
@@ -1348,6 +1350,25 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
+
+				// Defensive recovery: if `history.currentId` points at a malformed
+				// message (e.g. a safety-rejection / content-filter shape from an
+				// upstream OpenAI-compatible provider that lacks `role` /
+				// `childrenIds`), the renderer would otherwise lock up on an
+				// infinite Loading spinner. Walk back to the last valid ancestor
+				// and surface a non-fatal warning instead. See #24157.
+				if (
+					history?.currentId &&
+					history?.messages &&
+					!isRenderableMessage(history.messages[history.currentId])
+				) {
+					const recoveredId = findLastRenderableAncestor(history, history.currentId);
+					console.warn(
+						`[chat] history.currentId ${history.currentId} points at a malformed message; ` +
+							`recovering to last valid ancestor: ${recoveredId ?? '<none>'}`
+					);
+					history.currentId = recoveredId as any;
+				}
 
 				chatTitle.set(chatContent.title);
 
