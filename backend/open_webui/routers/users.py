@@ -193,6 +193,7 @@ class SharingPermissions(BaseModel):
     public_skills: bool = False
     notes: bool = False
     public_notes: bool = True
+    public_chats: bool = False
 
 
 class AccessGrantsPermissions(BaseModel):
