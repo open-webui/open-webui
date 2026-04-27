@@ -14,7 +14,7 @@ async def get_function_module(request, function_id, load_from_db=True):
     """
     Get the function module by its ID.
     """
-    function_module, _, _ = await get_function_module_from_cache(request, function_id, load_from_db)
+    function_module, _, _ = await get_function_module_from_cache(request, function_id, load_from_db=load_from_db)
     return function_module
 
 

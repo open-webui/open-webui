@@ -393,7 +393,6 @@ class ChatTable:
                 chat_item.updated_at = int(time.time())
 
                 await db.commit()
-                await db.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
