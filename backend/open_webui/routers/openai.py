@@ -86,6 +86,17 @@ log = logging.getLogger(__name__)
 #
 ##########################################
 
+# Headers that become stale after aiohttp auto-decompresses the upstream
+# response body.  Forwarding them verbatim causes desktop / programmatic
+# clients to attempt decompression of an already-decoded payload, resulting
+# in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
+_STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
+
+
+def _clean_proxy_headers(raw_headers) -> dict:
+    """Return a copy of *raw_headers* with stale encoding headers removed."""
+    return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
+
 
 async def send_get_request(
     request: Request = None,
@@ -1335,12 +1346,12 @@ async def _try_provider_candidate(
                 + '\n\n'
             ).encode()
 
-            response_headers = dict(r.headers)
+            # Adopt upstream's helper which also strips Content-Encoding /
+            # Transfer-Encoding so desktop clients don't try to re-decode the
+            # already-decoded body. (Issue: aio-libs/aiohttp#4462.)
+            response_headers = _clean_proxy_headers(r.headers)
             response_headers['X-Selected-Provider-URL'] = url
             response_headers['X-Selected-Provider-Position'] = str(candidate.position)
-            # The original Content-Length (if any) now lies; strip it.
-            response_headers.pop('Content-Length', None)
-            response_headers.pop('content-length', None)
 
             return StreamingResponse(
                 prefetched_stream_wrapper(
@@ -1484,7 +1495,7 @@ async def embeddings(request: Request, form_data: dict, user):
             return StreamingResponse(
                 stream_wrapper(r),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:
@@ -1605,7 +1616,7 @@ async def responses(
             return StreamingResponse(
                 stream_wrapper(r),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:
@@ -1722,7 +1733,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             return StreamingResponse(
                 stream_wrapper(r),
                 status_code=r.status,
-                headers=dict(r.headers),
+                headers=_clean_proxy_headers(r.headers),
             )
         else:
             try:

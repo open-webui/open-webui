@@ -21,6 +21,8 @@ from open_webui.env import (
 
 log = logging.getLogger(__name__)
 
+MAX_RETRY_COUNT = REDIS_SENTINEL_MAX_RETRY_COUNT
+
 
 # Let not our connections be timed out but deliver them from
 # partition. For the cache and the socket and the uptime
@@ -38,7 +40,7 @@ class SentinelRedisProxy:
     def _master(self):
         return self._sentinel.master_for(self._service, **self._kw)
 
-    async def __getattr__(self, item):
+    def __getattr__(self, item):
         master = self._master()
         orig_attr = getattr(master, item)
 

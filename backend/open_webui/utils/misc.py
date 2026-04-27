@@ -597,6 +597,9 @@ def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
+    # Fast path: skip work when there are no null bytes (the common case)
+    if '\x00' not in text:
+        return text
     # Remove null bytes
     text = text.replace('\x00', '').replace('\u0000', '')
     # Remove invalid UTF-8 surrogate characters that can cause encoding errors
@@ -608,15 +611,36 @@ def sanitize_text_for_db(text: str) -> str:
     return text
 
 
-def sanitize_data_for_db(obj):
-    """Recursively sanitize all strings in a data structure for database storage."""
+def _strip_null_bytes_deep(obj):
+    """Inner recursive walk — only called when null bytes are known to be present."""
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     elif isinstance(obj, dict):
-        return {k: sanitize_data_for_db(v) for k, v in obj.items()}
+        return {k: _strip_null_bytes_deep(v) for k, v in obj.items()}
     elif isinstance(obj, list):
-        return [sanitize_data_for_db(v) for v in obj]
+        return [_strip_null_bytes_deep(v) for v in obj]
     return obj
+
+
+def sanitize_data_for_db(obj):
+    """Recursively sanitize all strings in a data structure for database storage.
+
+    Performs a fast pre-check: serializes the structure once and scans for
+    null bytes.  If none are found (the overwhelmingly common case), the
+    original object is returned immediately, skipping the expensive
+    recursive walk.
+    """
+    if isinstance(obj, str):
+        return sanitize_text_for_db(obj)
+    # Fast path: check for null bytes in the serialized form.
+    # json.dumps is implemented in C and much faster than a Python-level
+    # recursive walk over every leaf string.
+    try:
+        if '\x00' not in json.dumps(obj, ensure_ascii=False):
+            return obj
+    except (TypeError, ValueError):
+        pass
+    return _strip_null_bytes_deep(obj)
 
 
 def sanitize_metadata(metadata: dict) -> dict:
@@ -843,9 +867,9 @@ def throttle(interval: float = 10.0):
         last_calls = {}
         lock = threading.Lock()
 
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             if interval is None:
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
 
             key = (args, freeze(kwargs))
             now = time.time()
@@ -855,7 +879,7 @@ def throttle(interval: float = 10.0):
                 if now - last_calls.get(key, 0) < interval:
                     return None
                 last_calls[key] = now
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 

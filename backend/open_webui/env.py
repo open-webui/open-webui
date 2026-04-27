@@ -525,6 +525,12 @@ WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get('WEBUI_AUTH_TRUSTED_NAME_HEADER'
 WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.environ.get('WEBUI_AUTH_TRUSTED_GROUPS_HEADER', None)
 WEBUI_AUTH_TRUSTED_ROLE_HEADER = os.environ.get('WEBUI_AUTH_TRUSTED_ROLE_HEADER', None)
 
+# Custom header name for API key authentication.  Defaults to 'x-api-key'.
+# Useful when Open WebUI sits behind a reverse proxy / API gateway that
+# already uses the Authorization header for its own authentication — set
+# this to a unique header (e.g. 'X-OpenWebUI-Key') so the middleware
+# checks the custom header instead and avoids the 401 short-circuit.
+CUSTOM_API_KEY_HEADER = os.environ.get('CUSTOM_API_KEY_HEADER', 'x-api-key')
 
 ENABLE_PASSWORD_VALIDATION = os.environ.get('ENABLE_PASSWORD_VALIDATION', 'False').lower() == 'true'
 PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
