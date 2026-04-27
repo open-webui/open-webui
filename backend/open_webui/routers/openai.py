@@ -223,9 +223,10 @@ async def get_headers_and_cookies(
         }
         custom_headers = {}
         for k, v in config.get('headers').items():
-            if isinstance(v, str):
-                for token, value in template_vars.items():
-                    v = v.replace(token, value)
+            if not isinstance(v, str):
+                v = str(v)
+            for token, value in template_vars.items():
+                v = v.replace(token, value)
             custom_headers[k] = v
         headers = {**headers, **custom_headers}
 
