@@ -197,7 +197,7 @@ CRITICAL RULES:
         json_schema = _clean_schema_for_gemini(json_schema)
 
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash-exp",
+            model_name="gemini-2.5-flash",
             generation_config={
                 "response_mime_type": "application/json",
                 "response_schema": json_schema
@@ -1145,6 +1145,7 @@ async def handle_gemini_native_request(
                             # Prepare tracing metadata
                             trace_metadata = {
                                 "user_id": metadata.get("user_id"),
+                                "message_id": metadata.get("message_id") or request_info.get("message_id"),
                                 "prompt_group_id": metadata.get("prompt_group_id"),
                                 "proficiency_level": metadata.get("proficiency_level"),
                                 "response_style": metadata.get("response_style"),
@@ -1321,11 +1322,12 @@ async def handle_gemini_native_request(
                     # Prepare tracing metadata
                     trace_metadata = {
                         "user_id": metadata.get("user_id"),
+                        "message_id": metadata.get("message_id") or request_info.get("message_id"),
                         "prompt_group_id": metadata.get("prompt_group_id"),
                         "proficiency_level": metadata.get("proficiency_level"),
                         "response_style": metadata.get("response_style"),
                         "composed_prompt_length": len(final_system) if final_system else 0,
-                        "tool_count": 0,  # TODO: Add tool count if tools are used
+                        "tool_count": 0,
                         "provider": "gemini",
                         "chapter_id": chapter_id,
                         "store_names": store_names,

@@ -153,3 +153,7 @@ opentelemetry-instrumentation-aiohttp-client==0.58b0
 
 ## Rate limiting
 slowapi==0.1.9
+
+## Analytics
+posthog>=3.8.0
+langfuse>=3.0.0,<4.0.0
