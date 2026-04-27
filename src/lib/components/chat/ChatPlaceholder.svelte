@@ -86,13 +86,13 @@
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
-					{#if models[selectedModelIdx]?.name}
+				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }} dir="rtl">
+					/*{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
-					{:else}
+					{:else}*/
 						/* {$i18n.t('Hello, {{name}}', { name: $user?.name })} */
-						{`3aslema ${$user?.name}, tfadhel`}
-					{/if}
+						{`عسلامة ${$user?.name} تفضل`}
+					/*{/if}*/
 				</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
