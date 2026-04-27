@@ -9,6 +9,36 @@ import logging
 
 log = logging.getLogger(__name__)
 
+_MODEL_PRICING = {
+    # (input USD/token, output USD/token)
+    "gemini-2.0-flash":         (0.075 / 1_000_000,  0.30 / 1_000_000),
+    "gemini-2.0-flash-exp":     (0.075 / 1_000_000,  0.30 / 1_000_000),
+    "gemini-2.0-flash-lite":    (0.0375 / 1_000_000, 0.15 / 1_000_000),
+    "gemini-2.5-pro":           (1.25 / 1_000_000,  10.00 / 1_000_000),
+    "gemini-2.5-pro-preview":   (1.25 / 1_000_000,  10.00 / 1_000_000),
+    "gemini-2.5-flash":         (0.15 / 1_000_000,   0.60 / 1_000_000),
+    "gemini-2.5-flash-preview": (0.15 / 1_000_000,   0.60 / 1_000_000),
+    "gemini-3-flash-preview":   (0.15 / 1_000_000,   0.60 / 1_000_000),
+    "gemini-1.5-flash":         (0.075 / 1_000_000,  0.30 / 1_000_000),
+    "gemini-1.5-pro":           (1.25 / 1_000_000,   5.00 / 1_000_000),
+}
+
+
+def _get_cost_details(model: str, usage_details: Optional[Dict]) -> Optional[Dict[str, float]]:
+    if not usage_details or not model:
+        return None
+    key = model.lower().split("/")[-1]
+    pricing = None
+    for prefix, price in _MODEL_PRICING.items():
+        if key.startswith(prefix):
+            pricing = price
+            break
+    if not pricing:
+        return None
+    in_cost = usage_details.get("input", 0) * pricing[0]
+    out_cost = usage_details.get("output", 0) * pricing[1]
+    return {"input": in_cost, "output": out_cost, "total": in_cost + out_cost}
+
 
 class LangfuseTracer:
     """Wrapper for Langfuse tracing"""
@@ -107,12 +137,21 @@ class LangfuseTracer:
                 }
             }
 
-            # Log timing info for debugging (start_time/end_time not passed to start_observation — not supported in langfuse v4)
+            # cost_details (v4 supports cost_details directly)
+            cost_details = _get_cost_details(model, usage_details)
+            if cost_details:
+                obs_params["cost_details"] = cost_details
+
+            # completion_start_time: when model started generating (supported in v4)
+            if start_time is not None:
+                from datetime import datetime, timezone
+                obs_params["completion_start_time"] = datetime.fromtimestamp(start_time, tz=timezone.utc)
+
             if start_time and end_time:
                 duration_ms = (end_time - start_time) * 1000
-                log.info(f"[LANGFUSE TRACE] Explicit timing: start={start_time}, end={end_time}, duration={duration_ms:.0f}ms")
+                log.info(f"[LANGFUSE TRACE] Timing: duration={duration_ms:.0f}ms, cost={cost_details}")
 
-            # Create generation observation using v3 API
+            # Create generation observation
             generation = self.langfuse.start_observation(**obs_params)
 
             log.debug(f"[LANGFUSE] Usage details: {usage_details}, user_id: {metadata.get('user_id')}")
