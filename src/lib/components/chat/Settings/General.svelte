@@ -162,6 +162,8 @@
 				color: ${colors[700]} !important;
 			}
 
+			.bg-whiter { background-color: #fff8ed !important; }
+			
 			.bg-gray-50,
 			.bg-white {
 				background-color: ${colors[50]} !important;
