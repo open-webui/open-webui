@@ -151,6 +151,9 @@
 
 			const css = document.createElement('style');
 			css.textContent = `
+			@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600&display=swap');
+			*, body { font-family: 'Lexend Deca', sans-serif !important; }
+
 			* { border-color: ${colors[200]} !important; }
 
 			.text-gray-700,
@@ -172,7 +175,7 @@
 				background-color: #E8E4D9 !important;
 			}
 			`;
-			
+
 			document.head.appendChild(css);
 		}
 
