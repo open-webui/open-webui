@@ -570,3 +570,17 @@ async def set_default_rag_store_config(
     return {
         "DEFAULT_RAG_STORE_NAME": request.app.state.config.DEFAULT_RAG_STORE_NAME
     }
+
+
+############################
+# Langfuse Host (admin only)
+############################
+
+
+@router.get("/langfuse_host")
+async def get_langfuse_host(user=Depends(get_admin_user)):
+    from open_webui.env import LANGFUSE_HOST, LANGFUSE_ENABLED
+    return {
+        "host": LANGFUSE_HOST.rstrip("/") if LANGFUSE_HOST else None,
+        "enabled": LANGFUSE_ENABLED,
+    }

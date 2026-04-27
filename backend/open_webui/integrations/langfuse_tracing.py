@@ -134,6 +134,7 @@ class LangfuseTracer:
                     "chapter_id": metadata.get("chapter_id"),
                     "stream": metadata.get("stream", False),
                     "chat_id": chat_id,  # Store original chat_id for reference
+                    "chat_type": metadata.get("chat_type"),
                 }
             }
 
@@ -233,6 +234,83 @@ class LangfuseTracer:
         except Exception as e:
             log.error(f"[LANGFUSE] Failed to trace tool call: {e}", exc_info=True)
             return None
+
+    def start_span(
+        self,
+        parent,
+        name: str,
+        input: Any = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        Start a child span under an existing trace/observation.
+
+        Args:
+            parent: Parent observation (returned by trace_chat_completion) or None
+            name: Span name (e.g., "hint_step", "attempt_log")
+            input: Span input (any JSON-serializable structure)
+            metadata: Additional metadata
+
+        Returns:
+            Span object (call `.end()` or pass to `end_span()`), or None on failure.
+        """
+        try:
+            if parent is not None and hasattr(parent, "span"):
+                span = parent.span(name=name, input=input, metadata=metadata or {})
+                return span
+            # Fallback: create a standalone span on the langfuse client
+            return self.langfuse.start_observation(
+                name=name,
+                as_type="span",
+                input=input,
+                metadata=metadata or {},
+            )
+        except Exception as e:
+            log.warning(f"[LANGFUSE] start_span({name}) failed: {e}")
+            return None
+
+    def end_span(self, span, output: Any = None, metadata: Optional[Dict[str, Any]] = None):
+        """End a span and flush."""
+        if span is None:
+            return
+        try:
+            if output is not None and hasattr(span, "update"):
+                span.update(output=output, metadata=metadata or {})
+            span.end()
+            self.langfuse.flush()
+        except Exception as e:
+            log.warning(f"[LANGFUSE] end_span failed: {e}")
+
+    def score_trace(
+        self,
+        trace_id: str,
+        name: str,
+        value,
+        comment: Optional[str] = None,
+    ):
+        """
+        Attach a score to a trace (e.g., correctness=0/1).
+
+        Args:
+            trace_id: Original trace_id (UUID; will be normalized)
+            name: Score name (e.g., "correctness")
+            value: Numeric or string value
+            comment: Optional comment
+        """
+        try:
+            normalized = trace_id.replace("-", "").lower()[:32]
+            self.langfuse.create_score(
+                trace_id=normalized,
+                name=name,
+                value=value,
+                comment=comment,
+            )
+            self.langfuse.flush()
+            log.debug(f"[LANGFUSE] Score attached: trace={normalized[:8]}... {name}={value}")
+            return True
+        except Exception as e:
+            log.warning(f"[LANGFUSE] score_trace failed: {e}")
+            return False
 
     def _extract_response_text(self, response: Any) -> str:
         """

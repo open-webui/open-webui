@@ -272,7 +272,10 @@ class LangfusePromptAdapter:
         limit: int = 50,
         days: int = 7,
         offset: int = 0,
-        summary_only: bool = False
+        summary_only: bool = False,
+        model: Optional[str] = None,
+        user_id: Optional[str] = None,
+        chapter_id: Optional[str] = None,
     ) -> dict:
         """
         Get traces that used a specific prompt group.
@@ -283,6 +286,9 @@ class LangfusePromptAdapter:
             days: Number of days to look back
             offset: Number of traces to skip (for pagination)
             summary_only: If True, return only trace metadata without observations (fast)
+            model: Optional model name filter (metadata.model)
+            user_id: Optional user_id filter (metadata.user_id)
+            chapter_id: Optional chapter_id filter (metadata.chapter_id)
 
         Returns:
             Dictionary with stats and trace list
@@ -310,7 +316,7 @@ class LangfusePromptAdapter:
                 }
 
                 # Build filter for metadata.prompt_group_id
-                filter_json = json.dumps([
+                filter_list = [
                     {
                         "type": "stringObject",
                         "column": "metadata",
@@ -324,7 +330,23 @@ class LangfusePromptAdapter:
                         "operator": ">=",
                         "value": cutoff_time.isoformat() + "Z"
                     }
-                ])
+                ]
+                if model:
+                    filter_list.append({
+                        "type": "stringObject", "column": "metadata",
+                        "key": "model", "operator": "=", "value": model
+                    })
+                if user_id:
+                    filter_list.append({
+                        "type": "stringObject", "column": "metadata",
+                        "key": "user_id", "operator": "=", "value": user_id
+                    })
+                if chapter_id:
+                    filter_list.append({
+                        "type": "stringObject", "column": "metadata",
+                        "key": "chapter_id", "operator": "=", "value": chapter_id
+                    })
+                filter_json = json.dumps(filter_list)
 
                 # Fetch traces from REST API - get trace IDs and basic metadata
                 url = f"{self.host}/api/public/traces"
@@ -691,6 +713,134 @@ class LangfusePromptAdapter:
                     "has_more": False
                 }
             }
+
+
+    def get_global_summary(self, days: int = 7) -> dict:
+        """
+        Aggregate stats over all traces in the time window.
+
+        Returns: dict with today_cost_usd, total_messages, p95_latency_ms,
+                 active_users, top_models[], error_rate, daily[] sparkline.
+        """
+        from datetime import datetime, timedelta
+        import requests, base64, json, math
+
+        cutoff = datetime.now() - timedelta(days=days)
+        auth = base64.b64encode(f"{self.public_key}:{self.secret_key}".encode()).decode()
+        headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
+
+        filter_json = json.dumps([{
+            "type": "datetime",
+            "column": "timestamp",
+            "operator": ">=",
+            "value": cutoff.isoformat() + "Z"
+        }])
+
+        traces = []
+        page = 1
+        page_limit = 100
+        max_pages = 10  # cap at 1000 traces per summary
+        total_count = 0
+        try:
+            while page <= max_pages:
+                resp = requests.get(
+                    f"{self.host}/api/public/traces",
+                    headers=headers,
+                    params={
+                        "page": page,
+                        "limit": page_limit,
+                        "filter": filter_json,
+                        "fields": "core,metadata",
+                        "orderBy": "timestamp.desc",
+                    },
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                batch = data.get("data", [])
+                total_count = data.get("totalCount", total_count)
+                traces.extend(batch)
+                if len(batch) < page_limit:
+                    break
+                page += 1
+        except Exception as e:
+            log.warning(f"[LANGFUSE] global summary trace fetch failed: {e}")
+
+        # Fetch observations for cost/latency (best-effort, sample first 200 to limit calls)
+        sampled = traces[:200]
+        latencies = []
+        costs_by_day = {}
+        models_count = {}
+        active_users = set()
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_cost = 0.0
+        error_count = 0
+
+        import time as _time
+        for i, t in enumerate(sampled):
+            tid = t.get("id")
+            try:
+                if i > 0 and i % 10 == 0:
+                    _time.sleep(0.1)
+                obs_resp = requests.get(
+                    f"{self.host}/api/public/observations",
+                    headers=headers,
+                    params={
+                        "traceId": tid,
+                        "type": "GENERATION",
+                        "fields": "core,basic,usage,metrics,metadata",
+                    },
+                    timeout=10,
+                )
+                obs_resp.raise_for_status()
+                obs_list = obs_resp.json().get("data", [])
+                if not obs_list:
+                    continue
+                obs = obs_list[0]
+                if obs.get("level") == "ERROR":
+                    error_count += 1
+                lat = obs.get("latency")
+                if lat:
+                    latencies.append(lat * 1000)
+                cost = obs.get("totalCost") or 0
+                if cost:
+                    day = (obs.get("startTime") or "")[:10]
+                    costs_by_day[day] = costs_by_day.get(day, 0) + cost
+                    if day == today_str:
+                        today_cost += cost
+                model = obs.get("model") or (obs.get("metadata", {}) or {}).get("model")
+                if model:
+                    models_count[model] = models_count.get(model, 0) + 1
+                uid = t.get("userId") or (obs.get("metadata", {}) or {}).get("user_id")
+                if uid:
+                    active_users.add(uid)
+            except Exception:
+                continue
+
+        # p95 latency
+        p95 = 0
+        if latencies:
+            latencies.sort()
+            idx = max(0, math.ceil(0.95 * len(latencies)) - 1)
+            p95 = round(latencies[idx], 2)
+
+        top_models = sorted(models_count.items(), key=lambda x: -x[1])[:5]
+        daily = [
+            {"date": d, "cost": round(c, 6)}
+            for d, c in sorted(costs_by_day.items())
+        ]
+
+        return {
+            "days": days,
+            "total_messages": total_count,
+            "sampled_messages": len(sampled),
+            "today_cost_usd": round(today_cost, 6),
+            "p95_latency_ms": p95,
+            "active_users": len(active_users),
+            "error_rate": round(error_count / len(sampled), 4) if sampled else 0,
+            "top_models": [{"model": m, "count": c} for m, c in top_models],
+            "daily": daily,
+        }
 
 
 # Singleton instance

@@ -866,7 +866,8 @@ export const getPromptGroupUsage = async (
 	days: number = 7,
 	limit: number = 50,
 	summary: boolean = false,
-	offset: number = 0
+	offset: number = 0,
+	filters: { model?: string | null; user_id?: string | null; chapter_id?: string | null } = {}
 ): Promise<PromptGroupUsage> => {
 	try {
 		const params = new URLSearchParams({
@@ -875,6 +876,9 @@ export const getPromptGroupUsage = async (
 			summary: summary.toString(),
 			offset: offset.toString()
 		});
+		if (filters.model) params.set('model', filters.model);
+		if (filters.user_id) params.set('user_id', filters.user_id);
+		if (filters.chapter_id) params.set('chapter_id', filters.chapter_id);
 
 		const res = await fetch(
 			`${WEBUI_API_BASE_URL}/prompts/group/${encodeURIComponent(groupId)}/usage?${params}`,
