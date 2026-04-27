@@ -136,12 +136,44 @@
 			document.documentElement.style.setProperty('--color-gray-900', '#171717');
 			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
 		} else if (_theme === 'coffee') {
-			document.documentElement.style.setProperty('--color-gray-50', '#F5EFE6');
-			document.documentElement.style.setProperty('--color-gray-100', '#EBE4DA');
-			document.documentElement.style.setProperty('--color-gray-200', '#D4C4B4');
-			document.documentElement.style.setProperty('--color-gray-700', '#3D2B20');
-			document.documentElement.style.setProperty('--color-gray-800', '#4A3A30');
-			document.documentElement.style.setProperty('--color-gray-900', '#3D2B20');
+			const colors = {
+			50: '#F5EFE6',
+			100: '#EBE4DA',
+			200: '#D4C4B4',
+			700: '#3D2B20',
+			800: '#4A3A30',
+			900: '#3D2B20'
+			};
+
+			Object.entries(colors).forEach(([shade, value]) => {
+			document.documentElement.style.setProperty(`--color-gray-${shade}`, value);
+			});
+
+			const css = document.createElement('style');
+			css.textContent = `
+			* { border-color: ${colors[200]} !important; }
+
+			.text-gray-700,
+			.text-gray-800,
+			.text-gray-900 {
+				color: ${colors[700]} !important;
+			}
+
+			.bg-gray-50,
+			.bg-white {
+				background-color: ${colors[50]} !important;
+			}
+
+			.bg-gray-100 {
+				background-color: ${colors[100]} !important;
+			}
+
+			#sidebar {
+				background-color: #E8E4D9 !important;
+			}
+			`;
+			
+			document.head.appendChild(css);
 		}
 
 		themes
@@ -176,7 +208,9 @@
 								? '#983724'
 								: _theme === 'latte'
 									? '#FDF8F3'
-									: '#ffffff'
+									: _theme === 'coffee'
+										? '#F5EFE6'
+										: '#ffffff'
 				);
 			}
 		}
