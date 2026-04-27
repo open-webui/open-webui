@@ -1140,6 +1140,7 @@ async def handle_gemini_native_request(
                     # ============================================================
                     try:
                         from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                        from open_webui.utils.chat_type import infer_chat_type
                         tracer = get_langfuse_tracer()
                         if tracer and metadata and collected_text:
                             # Prepare tracing metadata
@@ -1155,6 +1156,7 @@ async def handle_gemini_native_request(
                                 "chapter_id": chapter_id,
                                 "store_names": store_names,
                                 "stream": True,
+                                "chat_type": infer_chat_type(payload, metadata),
                             }
 
                             # Create response_data in OpenAI format
@@ -1317,6 +1319,7 @@ async def handle_gemini_native_request(
             # Trace to Langfuse for observability
             try:
                 from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                from open_webui.utils.chat_type import infer_chat_type
                 tracer = get_langfuse_tracer()
                 if tracer and metadata:
                     # Prepare tracing metadata
@@ -1331,6 +1334,7 @@ async def handle_gemini_native_request(
                         "provider": "gemini",
                         "chapter_id": chapter_id,
                         "store_names": store_names,
+                        "chat_type": infer_chat_type(payload, metadata),
                     }
 
                     # Trace the completion with explicit timing

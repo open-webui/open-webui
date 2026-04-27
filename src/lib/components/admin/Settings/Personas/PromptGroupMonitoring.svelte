@@ -8,6 +8,7 @@
 	import StatCard from './StatCard.svelte';
 	import type { PromptGroupStats, PromptTrace } from '$lib/apis/prompt-groups';
 	import { getPromptGroupUsage } from '$lib/apis/prompt-groups';
+	import { getAnalyticsSummary, type AnalyticsSummary } from '$lib/apis/analytics';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -25,6 +26,49 @@
 	let traces: PromptTrace[] = [];
 	let loading = false;
 	let selectedDays = 7;
+
+	// Filters
+	let filterModel: string | null = null;
+	let filterUserId: string | null = null;
+	let filterChapter: string | null = null;
+	// Cached options (collected from previously-loaded traces)
+	let modelOptions: string[] = [];
+	let userOptions: { id: string; name: string | null }[] = [];
+	let chapterOptions: string[] = [];
+
+	let globalSummary: AnalyticsSummary | null = null;
+	let globalLoading = false;
+
+	const loadGlobalSummary = async () => {
+		const days = (selectedDays === 90 ? 30 : selectedDays) as 1 | 7 | 30;
+		globalLoading = true;
+		try {
+			const token = localStorage.getItem('token') || '';
+			globalSummary = await getAnalyticsSummary(token, days);
+		} catch (err) {
+			console.warn('analytics summary failed', err);
+			globalSummary = null;
+		} finally {
+			globalLoading = false;
+		}
+	};
+
+	const sparklinePath = (
+		points: { date: string; cost: number }[],
+		w = 120,
+		h = 28
+	): string => {
+		if (!points || points.length < 2) return '';
+		const max = Math.max(...points.map((p) => p.cost), 1e-9);
+		const step = w / (points.length - 1);
+		return points
+			.map((p, i) => {
+				const x = i * step;
+				const y = h - (p.cost / max) * h;
+				return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+			})
+			.join(' ');
+	};
 	let currentPage = 1;
 	let pageSize = 10;
 	let totalPages = 1;
@@ -35,11 +79,36 @@
 		try {
 			const token = localStorage.getItem('token') || '';
 			const offset = (page - 1) * pageSize;
-			const usage = await getPromptGroupUsage(token, groupId, selectedDays, pageSize, false, offset);
+			const usage = await getPromptGroupUsage(
+				token,
+				groupId,
+				selectedDays,
+				pageSize,
+				false,
+				offset,
+				{ model: filterModel, user_id: filterUserId, chapter_id: filterChapter }
+			);
 
 			traces = usage.traces;
 			stats = usage.stats;
 			currentPage = page;
+
+			// Collect filter options from traces (union with previous to avoid losing entries on filtered fetches)
+			const seenModels = new Set(modelOptions);
+			const seenUsers = new Map(userOptions.map((u) => [u.id, u]));
+			const seenChapters = new Set(chapterOptions);
+			for (const t of traces as any[]) {
+				if (t.model) seenModels.add(t.model);
+				if (t.user_id && !seenUsers.has(t.user_id)) {
+					seenUsers.set(t.user_id, { id: t.user_id, name: t.user?.name ?? null });
+				}
+				if (t.chapter_id) seenChapters.add(t.chapter_id);
+			}
+			modelOptions = Array.from(seenModels).sort();
+			userOptions = Array.from(seenUsers.values()).sort((a, b) =>
+				(a.name || a.id).localeCompare(b.name || b.id)
+			);
+			chapterOptions = Array.from(seenChapters).sort();
 
 			// Calculate total pages
 			if (stats.total_count) {
@@ -133,6 +202,7 @@
 
 	onMount(() => {
 		loadData(1);
+		loadGlobalSummary();
 	});
 
 	// Reload when groupId changes
@@ -143,6 +213,7 @@
 	// Reload when period changes
 	$: if (selectedDays) {
 		loadData(1);
+		loadGlobalSummary();
 	}
 </script>
 
@@ -162,7 +233,37 @@
 				{/if}
 			</p>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
+			<select
+				bind:value={filterModel}
+				on:change={() => loadData(1)}
+				class="px-2 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+			>
+				<option value={null}>모델 (전체)</option>
+				{#each modelOptions as m}
+					<option value={m}>{m}</option>
+				{/each}
+			</select>
+			<select
+				bind:value={filterUserId}
+				on:change={() => loadData(1)}
+				class="px-2 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+			>
+				<option value={null}>사용자 (전체)</option>
+				{#each userOptions as u}
+					<option value={u.id}>{u.name || u.id.slice(0, 8)}</option>
+				{/each}
+			</select>
+			<select
+				bind:value={filterChapter}
+				on:change={() => loadData(1)}
+				class="px-2 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+			>
+				<option value={null}>챕터 (전체)</option>
+				{#each chapterOptions as c}
+					<option value={c}>{c}</option>
+				{/each}
+			</select>
 			<select
 				bind:value={selectedDays}
 				class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
@@ -194,6 +295,53 @@
 				</svg>
 			</button>
 		</div>
+	</div>
+
+	<!-- Global summary (across all groups) -->
+	<div class="global-summary border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-900/40">
+		<div class="flex items-center justify-between mb-3">
+			<h4 class="text-sm font-semibold text-gray-900 dark:text-white">전체 요약</h4>
+			{#if globalSummary}
+				<span class="text-xs text-gray-500 dark:text-gray-400">
+					최근 {globalSummary.days}일 · 샘플 {globalSummary.sampled_messages.toLocaleString()}/{globalSummary.total_messages.toLocaleString()}건
+				</span>
+			{/if}
+		</div>
+		{#if globalLoading && !globalSummary}
+			<div class="flex items-center justify-center py-6">
+				<Spinner className="size-5" />
+			</div>
+		{:else if globalSummary}
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+				<StatCard title="오늘 비용" value={`$${globalSummary.today_cost_usd.toFixed(4)}`} />
+				<StatCard title="총 메시지" value={globalSummary.total_messages.toLocaleString()} />
+				<StatCard title="p95 응답시간" value={formatLatency(globalSummary.p95_latency_ms)} />
+				<StatCard title="활성 사용자" value={globalSummary.active_users} />
+				<StatCard title="에러율" value={`${(globalSummary.error_rate * 100).toFixed(2)}%`} />
+			</div>
+			{#if globalSummary.daily.length >= 2}
+				<div class="mt-3 flex items-center gap-3">
+					<span class="text-xs text-gray-500 dark:text-gray-400">일자별 비용</span>
+					<svg viewBox="0 0 120 28" class="w-32 h-7 text-blue-500">
+						<path d={sparklinePath(globalSummary.daily)} fill="none" stroke="currentColor" stroke-width="1.5" />
+					</svg>
+					<span class="text-xs text-gray-500 dark:text-gray-400">
+						{globalSummary.daily[0].date} → {globalSummary.daily[globalSummary.daily.length - 1].date}
+					</span>
+				</div>
+			{/if}
+			{#if globalSummary.top_models.length}
+				<div class="mt-2 flex flex-wrap gap-1.5">
+					{#each globalSummary.top_models as m}
+						<span class="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-mono">
+							{m.model} · {m.count}
+						</span>
+					{/each}
+				</div>
+			{/if}
+		{:else}
+			<div class="text-xs text-gray-500 dark:text-gray-400 py-2">전체 요약 데이터를 불러올 수 없습니다.</div>
+		{/if}
 	</div>
 
 	{#if loading}

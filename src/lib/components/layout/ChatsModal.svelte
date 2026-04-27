@@ -46,6 +46,13 @@
 
 	export let loadHandler: null | Function = null;
 	export let unarchiveHandler: null | Function = null;
+	export let langfuseHost: string | null = null;
+
+	const toLangfuseSessionUrl = (chatId: string) => {
+		if (!langfuseHost || !chatId) return null;
+		const sid = chatId.replaceAll('-', '').toLowerCase().slice(0, 32);
+		return `${langfuseHost.replace(/\/$/, '')}/sessions/${sid}`;
+	};
 
 	const setSortKey = (key) => {
 		if (orderBy === key) {
@@ -257,6 +264,36 @@
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
+											{#if langfuseHost && toLangfuseSessionUrl(chat.id)}
+												<Tooltip content={$i18n.t('Open in Langfuse')}>
+													<a
+														class="self-center w-fit px-1 text-sm rounded-xl"
+														href={toLangfuseSessionUrl(chat.id)}
+														target="_blank"
+														rel="noopener noreferrer"
+														on:click={(e) => {
+															e.stopImmediatePropagation();
+															e.stopPropagation();
+														}}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke-width="1.5"
+															stroke="currentColor"
+															class="size-4"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+															/>
+														</svg>
+													</a>
+												</Tooltip>
+											{/if}
+
 											{#if unarchiveHandler}
 												<Tooltip content={$i18n.t('Unarchive Chat')}>
 													<button

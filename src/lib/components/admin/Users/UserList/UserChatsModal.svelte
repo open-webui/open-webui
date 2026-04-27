@@ -8,6 +8,7 @@
 	dayjs.extend(localizedFormat);
 
 	import { getChatListByUserId, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
+	import { getLangfuseHost } from '$lib/apis/configs';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -21,6 +22,7 @@
 
 	let chatList = null;
 	let page = 1;
+	let langfuseHost: string | null = null;
 
 	let query = '';
 	let orderBy = 'updated_at';
@@ -89,6 +91,14 @@
 
 	const init = async () => {
 		chatList = await getChatListByUserId(localStorage.token, user.id, page, filter);
+		if (langfuseHost === null) {
+			try {
+				const cfg = await getLangfuseHost(localStorage.token);
+				if (cfg?.enabled && cfg?.host) langfuseHost = cfg.host;
+			} catch (_) {
+				/* ignore */
+			}
+		}
 	};
 
 	$: if (show) {
@@ -115,6 +125,7 @@
 	{chatList}
 	{allChatsLoaded}
 	{chatListLoading}
+	{langfuseHost}
 	onUpdate={() => {
 		init();
 	}}

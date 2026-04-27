@@ -451,7 +451,10 @@ async def get_prompt_group_usage(
     days: int = 7,
     limit: int = 20,
     offset: int = 0,
-    summary: bool = False
+    summary: bool = False,
+    model: Optional[str] = None,
+    user_id: Optional[str] = None,
+    chapter_id: Optional[str] = None,
 ):
     """
     Get usage statistics for a prompt group from Langfuse traces.
@@ -489,7 +492,10 @@ async def get_prompt_group_usage(
             limit=limit,
             days=days,
             offset=offset,
-            summary_only=summary
+            summary_only=summary,
+            model=model,
+            user_id=user_id,
+            chapter_id=chapter_id,
         )
 
         mode = "summary" if summary else "detailed"
