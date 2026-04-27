@@ -444,7 +444,7 @@
 									<div class="flex-1">
 										<Tooltip
 											content={$i18n.t(
-												'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
+												'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}). Dynamic values supported: {{chat_id}}, {{message_id}}, {{user_id}}, {{user_name}}'
 											)}
 										>
 											<Textarea

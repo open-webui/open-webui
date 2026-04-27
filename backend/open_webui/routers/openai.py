@@ -215,7 +215,19 @@ async def get_headers_and_cookies(
         headers['Authorization'] = f'Bearer {token}'
 
     if config.get('headers') and isinstance(config.get('headers'), dict):
-        headers = {**headers, **config.get('headers')}
+        template_vars = {
+            '{{chat_id}}': (metadata or {}).get('chat_id', '') or '',
+            '{{message_id}}': (metadata or {}).get('message_id', '') or '',
+            '{{user_id}}': (user.id if user else '') or '',
+            '{{user_name}}': (user.name if user else '') or '',
+        }
+        custom_headers = {}
+        for k, v in config.get('headers').items():
+            if isinstance(v, str):
+                for token, value in template_vars.items():
+                    v = v.replace(token, value)
+            custom_headers[k] = v
+        headers = {**headers, **custom_headers}
 
     return headers, cookies
 
