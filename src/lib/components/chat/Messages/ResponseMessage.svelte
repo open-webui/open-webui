@@ -1161,14 +1161,14 @@
 						</div>
 
 						<!-- 학습 액션 바 -->
-						<ActionBar
+						<!-- <ActionBar
 							onAction={(type) => {
 								if (type === 'hint') learningSession.update((s) => ({ ...s, mode: 'hint', currentHintStep: 0, totalHintSteps: 3 }));
 								else if (type === 'solve_myself') learningSession.update((s) => ({ ...s, mode: 'solve' }));
 								else if (type === 'quiz') learningSession.update((s) => ({ ...s, mode: 'quiz', quizActive: true }));
 								else if (type === 'graph') learningSession.update((s) => ({ ...s, mode: 'graph' }));
 							}}
-						/>
+						/> -->
 
 						<!-- Regenerate Button (Mobile only) -->
 							{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}

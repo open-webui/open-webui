@@ -60,6 +60,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils import posthog as ph
 
 from typing import Optional, List
 
@@ -558,6 +559,11 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         )
 
     if user:
+        ph.identify(user.id, {
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+        })
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
@@ -654,6 +660,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         )
 
         if user:
+            ph.identify(user.id, {
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+            })
+
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
             expires_at = None
             if expires_delta:

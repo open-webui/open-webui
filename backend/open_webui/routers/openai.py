@@ -65,6 +65,7 @@ from open_webui.utils.tool_gating import (
 )
 from open_webui.utils.tool_inline_executor import build_tool_hints
 from open_webui.utils.gemini_cache_manager import GeminiCacheManager
+from open_webui.utils import posthog as ph
 
 
 log = logging.getLogger(__name__)
@@ -2393,6 +2394,24 @@ async def generate_chat_completion(
     metadata["proficiency_level"] = proficiency_level
     metadata["response_style"] = response_style
     # chapter_id is already in metadata if it was set earlier
+
+    # PostHog: log chat completion attempt
+    _user_prompt = ""
+    for _msg in reversed(payload.get("messages", [])):
+        if _msg.get("role") == "user":
+            _content = _msg.get("content", "")
+            _user_prompt = _content if isinstance(_content, str) else str(_content)
+            break
+    ph.capture(user.id, "chat_completion", {
+        "model_id": payload.get("model"),
+        "prompt": _user_prompt[:500],
+        "tool_names": list(metadata.get("tool_commands", set())),
+        "tool_mode": effective_tool_mode,
+        "proficiency_level": proficiency_level,
+        "response_style": response_style,
+        "chapter_id": metadata.get("chapter_id"),
+        "backend_type": "gemini" if is_gemini_backend else "openai",
+    })
 
     # CRITICAL: If Gemini backend, use native SDK for ALL requests
     # This enables context caching and improves performance

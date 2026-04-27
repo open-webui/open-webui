@@ -43,6 +43,7 @@ from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.redis import get_redis_connection
 from open_webui.utils.access_control import has_access, get_users_with_access
+from open_webui.utils import posthog as ph
 
 
 from open_webui.env import (
@@ -293,12 +294,14 @@ async def connect(sid, environ, auth):
             SESSION_POOL[sid] = user.model_dump(
                 exclude=["date_of_birth", "bio", "gender"]
             )
+            SESSION_POOL[sid]["_start_time"] = time.time()
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
                 USER_POOL[user.id] = [sid]
 
             await sio.enter_room(sid, f"user:{user.id}")
+            ph.capture(user.id, "user_session_start", {"session_id": sid})
 
 
 @sio.on("user-join")
@@ -654,6 +657,12 @@ async def disconnect(sid):
         del SESSION_POOL[sid]
 
         user_id = user["id"]
+        duration = int(time.time() - user.get("_start_time", time.time()))
+        ph.capture(user_id, "user_session_end", {
+            "session_id": sid,
+            "duration_seconds": duration,
+        })
+
         USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
 
         if len(USER_POOL[user_id]) == 0:
