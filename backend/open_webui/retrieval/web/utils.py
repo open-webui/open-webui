@@ -220,6 +220,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def lazy_load(self) -> Iterator[Document]:
         for url in self.web_paths:
             try:
+                self._sync_wait_for_rate_limit()
                 doc = scrape_firecrawl_url(
                     self.api_url,
                     self.api_key,
@@ -239,6 +240,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     async def alazy_load(self):
         for url in self.web_paths:
             try:
+                await self._wait_for_rate_limit()
                 doc = await run_in_threadpool(
                     scrape_firecrawl_url,
                     self.api_url,

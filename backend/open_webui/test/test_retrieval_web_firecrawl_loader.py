@@ -126,6 +126,24 @@ class TestLazyLoad:
         with pytest.raises(requests.HTTPError):
             list(loader.lazy_load())
 
+    @patch('open_webui.retrieval.web.utils.scrape_firecrawl_url')
+    def test_waits_for_rate_limit_before_each_scrape(self, mock_scrape):
+        """Each URL must trigger the rate limiter before the scrape, mirroring SafePlaywrightURLLoader"""
+        events = []
+
+        def wait_side_effect():
+            events.append('wait')
+
+        def scrape_side_effect(api_url, api_key, url, **kwargs):
+            events.append('scrape')
+            return _make_doc(url)
+
+        mock_scrape.side_effect = scrape_side_effect
+        loader = _build_loader(web_paths=URLS[:3])
+        with patch.object(loader, '_sync_wait_for_rate_limit', side_effect=wait_side_effect):
+            list(loader.lazy_load())
+        assert events == ['wait', 'scrape'] * 3, f'Expected wait-then-scrape per URL; got {events!r}'
+
 
 class TestAlazyLoad:
     """Async `SafeFireCrawlLoader.alazy_load` -- same contract as the sync version."""
@@ -179,3 +197,22 @@ class TestAlazyLoad:
         loader = _build_loader(web_paths=URLS[:3], continue_on_failure=False)
         with pytest.raises(requests.HTTPError):
             await _collect(loader.alazy_load())
+
+    @pytest.mark.asyncio
+    @patch('open_webui.retrieval.web.utils.scrape_firecrawl_url')
+    async def test_waits_for_rate_limit_before_each_scrape(self, mock_scrape):
+        """Async equivalent: each URL must await the rate limiter before scraping."""
+        events = []
+
+        async def wait_side_effect():
+            events.append('wait')
+
+        def scrape_side_effect(api_url, api_key, url, **kwargs):
+            events.append('scrape')
+            return _make_doc(url)
+
+        mock_scrape.side_effect = scrape_side_effect
+        loader = _build_loader(web_paths=URLS[:3])
+        with patch.object(loader, '_wait_for_rate_limit', side_effect=wait_side_effect):
+            await _collect(loader.alazy_load())
+        assert events == ['wait', 'scrape'] * 3, f'Expected wait-then-scrape per URL; got {events!r}'
