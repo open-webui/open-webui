@@ -66,6 +66,9 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
+	import ActionBar from './ResponseMessage/ActionBar.svelte';
+	import TutorMessageCard from './TutorMessageCard.svelte';
+	import { learningSession } from '$lib/stores/learning';
 	import { fade, fly } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
@@ -941,6 +944,15 @@
 									</div>
 								{/if}
 
+								<!-- 튜터형 메시지 카드 (meta.learning_type === 'tutor' 일 때) -->
+								{#if message.meta?.learning_type === 'tutor' && message.meta?.tutor}
+									<TutorMessageCard
+										summary={message.meta.tutor.summary}
+										checkQuestion={message.meta.tutor.checkQuestion}
+										choices={message.meta.tutor.choices ?? []}
+									/>
+								{/if}
+
 								{#if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
@@ -1147,7 +1159,17 @@
 								<Spinner className="size-4" />
 							{/if}
 						</div>
-						
+
+						<!-- 학습 액션 바 -->
+						<ActionBar
+							onAction={(type) => {
+								if (type === 'hint') learningSession.update((s) => ({ ...s, mode: 'hint', currentHintStep: 0, totalHintSteps: 3 }));
+								else if (type === 'solve_myself') learningSession.update((s) => ({ ...s, mode: 'solve' }));
+								else if (type === 'quiz') learningSession.update((s) => ({ ...s, mode: 'quiz', quizActive: true }));
+								else if (type === 'graph') learningSession.update((s) => ({ ...s, mode: 'graph' }));
+							}}
+						/>
+
 						<!-- Regenerate Button (Mobile only) -->
 							{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 								<Tooltip content={$i18n.t('Regenerate')} placement="bottom">

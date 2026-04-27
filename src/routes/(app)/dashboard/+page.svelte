@@ -15,7 +15,12 @@
 		chapter_name?: string | null;
 	}
 	import MessagePreviewModal from '$lib/components/dashboard/MessagePreviewModal.svelte';
+	import ChapterProgressBar from '$lib/components/dashboard/ChapterProgressBar.svelte';
+	import WeaknessTagCloud from '$lib/components/dashboard/WeaknessTagCloud.svelte';
 	const i18n = getContext('i18n');
+
+	// 학생 대시보드 탭
+	let activeTab: 'admin' | 'student' = 'admin';
 
 	// Mobile sidebar state
 	let showMobileSidebar = false;
@@ -285,7 +290,62 @@
 {/if}
 
 <div class="w-full h-full flex flex-col items-center {$mobile ? 'px-5 pt-[76px] pb-10 gap-10' : 'py-10 px-5 gap-16'}" style="max-width: 960px; margin: 0 auto;">
+
+	<!-- 탭 전환 -->
+	<div class="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-full max-w-[920px]">
+		<button
+			class="flex-1 py-2 rounded-lg text-sm font-medium transition
+				{activeTab === 'admin' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}"
+			on:click={() => (activeTab = 'admin')}
+		>
+			📊 관리자 현황
+		</button>
+		<button
+			class="flex-1 py-2 rounded-lg text-sm font-medium transition
+				{activeTab === 'student' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}"
+			on:click={() => (activeTab = 'student')}
+		>
+			🎓 내 학습 현황
+		</button>
+	</div>
+
+	<!-- 학생 대시보드 (목업) -->
+	{#if activeTab === 'student'}
+		<div class="flex flex-col gap-6 w-full max-w-[920px]">
+			<!-- 챕터 진도 -->
+			<div class="bg-white dark:bg-gray-900/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
+				<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-4">챕터별 진도</h3>
+				<ChapterProgressBar />
+			</div>
+
+			<!-- 약점 개념 + 통계 -->
+			<div class="flex {$mobile ? 'flex-col' : 'flex-row'} gap-4">
+				<div class="flex-1 bg-white dark:bg-gray-900/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
+					<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-4">약점 개념</h3>
+					<WeaknessTagCloud />
+				</div>
+				<div class="flex-1 bg-white dark:bg-gray-900/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
+					<h3 class="text-base font-semibold text-gray-900 dark:text-white mb-4">학습 통계</h3>
+					<div class="flex flex-col gap-3">
+						{#each [
+							{ label: '최근 퀴즈 정답률', value: '72%', color: 'text-blue-600' },
+							{ label: '힌트 사용 횟수', value: '14회', color: 'text-amber-600' },
+							{ label: '완료한 챕터', value: '1 / 3', color: 'text-green-600' },
+							{ label: '총 학습 시간', value: '4시간 32분', color: 'text-purple-600' }
+						] as stat}
+							<div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+								<span class="text-sm text-gray-600 dark:text-gray-400">{stat.label}</span>
+								<span class="text-sm font-semibold {stat.color}">{stat.value}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	<!-- 현황 분석 Section (Figma: gap 20px between title and cards) -->
+	{#if activeTab === 'admin'}
 	<div class="flex flex-col justify-center items-start gap-5 w-full max-w-[920px]">
 		<!-- Section Title (Figma: 24px, 600 weight, line-height 36px) -->
 		<h2 class="text-title-2 text-gray-950 dark:text-gray-50 tracking-[-0.02em]">현황 분석</h2>
@@ -500,6 +560,7 @@
 			{/each}
 		{/if}
 	</div>
+	{/if}
 </div>
 
 <!-- Message Preview Modal -->
