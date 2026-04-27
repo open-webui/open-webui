@@ -1305,6 +1305,18 @@ DEFAULT_MODEL_METADATA = PersistentConfig(
     {},
 )
 
+# Per-base-model failover map.
+# Shape: { "<model_id>": [ { "model_id": "<fallback_model_id>", "capabilities": [...] }, ... ] }
+# When a chat completion is sent to a model whose id is a key here, the
+# resolver expands the candidate list to [requested_model, ...map[requested_model]].
+# Workspace-model-level `failover_providers` overrides this entirely (most
+# specific wins) so a workspace model can opt out by configuring its own chain.
+MODEL_FAILOVER_MAP = PersistentConfig(
+    'MODEL_FAILOVER_MAP',
+    'models.failover_map',
+    {},
+)
+
 try:
     default_model_params = json.loads(os.environ.get('DEFAULT_MODEL_PARAMS', '{}'))
 except Exception as e:

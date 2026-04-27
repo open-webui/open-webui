@@ -616,6 +616,50 @@ async def set_models_config(request: Request, form_data: ModelsConfigForm, user=
     }
 
 
+############################
+# Per-base-model failover map
+############################
+
+
+class ModelFailoverEntry(BaseModel):
+    model_id: str
+    capabilities: list[str] = []
+
+
+class ModelFailoverMapForm(BaseModel):
+    # Shape mirrors what's stored in PersistentConfig:
+    # { "<base_model_id>": [ {model_id, capabilities}, ... ] }
+    MODEL_FAILOVER_MAP: dict[str, list[ModelFailoverEntry]]
+
+
+@router.get('/models/failover', response_model=ModelFailoverMapForm)
+async def get_model_failover_map(request: Request, user=Depends(get_admin_user)):
+    """Return the global per-base-model failover map.
+
+    Admin-only — the map describes infrastructure routing and shouldn't leak
+    to regular users (matches how we hide `provider_selected` metadata from
+    them on chat messages).
+    """
+    return {'MODEL_FAILOVER_MAP': request.app.state.config.MODEL_FAILOVER_MAP or {}}
+
+
+@router.post('/models/failover', response_model=ModelFailoverMapForm)
+async def set_model_failover_map(
+    request: Request,
+    form_data: ModelFailoverMapForm,
+    user=Depends(get_admin_user),
+):
+    """Replace the failover map. Empty lists are dropped so the persisted
+    value stays small and absence-of-key is the canonical 'no failover'."""
+    cleaned = {
+        base_id: [entry.model_dump() for entry in entries]
+        for base_id, entries in form_data.MODEL_FAILOVER_MAP.items()
+        if entries
+    }
+    request.app.state.config.MODEL_FAILOVER_MAP = cleaned
+    return {'MODEL_FAILOVER_MAP': request.app.state.config.MODEL_FAILOVER_MAP}
+
+
 class PromptSuggestion(BaseModel):
     title: list[str]
     content: str
