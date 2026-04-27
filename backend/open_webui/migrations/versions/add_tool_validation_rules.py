@@ -32,21 +32,14 @@ depends_on = None
 
 def upgrade():
     # Add validation_rules column (JSON format)
-    op.add_column(
-        "prompt",
-        sa.Column("validation_rules", sa.JSON(), nullable=True)
-    )
+    op.add_column("prompt", sa.Column("validation_rules", sa.JSON(), nullable=True))
 
     # Migrate existing 'tool' prompts to 'json_tool'
-    op.execute(
-        "UPDATE prompt SET prompt_type = 'json_tool' WHERE prompt_type = 'tool'"
-    )
+    op.execute("UPDATE prompt SET prompt_type = 'json_tool' WHERE prompt_type = 'tool'")
 
 
 def downgrade():
     # Revert 'json_tool' back to 'tool'
-    op.execute(
-        "UPDATE prompt SET prompt_type = 'tool' WHERE prompt_type = 'json_tool'"
-    )
+    op.execute("UPDATE prompt SET prompt_type = 'tool' WHERE prompt_type = 'json_tool'")
 
     op.drop_column("prompt", "validation_rules")

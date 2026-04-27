@@ -24,7 +24,9 @@ def upgrade():
         "tag_feedback",
         sa.Column("user_id", sa.String(), primary_key=True),
         sa.Column("tag_id", sa.String(), primary_key=True),
-        sa.Column("status", sa.String(), nullable=True),  # not_interested, understood, confused
+        sa.Column(
+            "status", sa.String(), nullable=True
+        ),  # not_interested, understood, confused
         sa.Column("created_at", sa.BigInteger(), nullable=False),
         sa.Column("updated_at", sa.BigInteger(), nullable=False),
     )

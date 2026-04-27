@@ -41,8 +41,12 @@ class Chat(Base):
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
     chapter_id = Column(Text, nullable=True)
-    proficiency_level = Column(Text, nullable=True)  # e.g., "beginner", "intermediate", "advanced"
-    response_style = Column(Text, nullable=True)  # e.g., "simple", "detailed", "question_guidance"
+    proficiency_level = Column(
+        Text, nullable=True
+    )  # e.g., "beginner", "intermediate", "advanced"
+    response_style = Column(
+        Text, nullable=True
+    )  # e.g., "simple", "detailed", "question_guidance"
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -77,10 +81,14 @@ class ChatModel(BaseModel):
     meta: dict = {}
     folder_id: Optional[str] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[str] = None  # e.g., "beginner", "intermediate", "advanced"
-    response_style: Optional[str] = None  # e.g., "simple", "detailed", "question_guidance"
+    proficiency_level: Optional[str] = (
+        None  # e.g., "beginner", "intermediate", "advanced"
+    )
+    response_style: Optional[str] = (
+        None  # e.g., "simple", "detailed", "question_guidance"
+    )
 
-    @field_validator('proficiency_level', 'response_style', mode='before')
+    @field_validator("proficiency_level", "response_style", mode="before")
     @classmethod
     def convert_to_string(cls, v):
         """Convert integer values to string for backward compatibility"""
@@ -98,8 +106,12 @@ class ChatForm(BaseModel):
     chat: dict
     folder_id: Optional[str] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[str] = None  # e.g., "beginner", "intermediate", "advanced"
-    response_style: Optional[str] = None  # e.g., "simple", "detailed", "question_guidance"
+    proficiency_level: Optional[str] = (
+        None  # e.g., "beginner", "intermediate", "advanced"
+    )
+    response_style: Optional[str] = (
+        None  # e.g., "simple", "detailed", "question_guidance"
+    )
 
 
 class ChatImportForm(ChatForm):
@@ -138,8 +150,12 @@ class ChatResponse(BaseModel):
     meta: dict = {}
     folder_id: Optional[str] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[str] = None  # e.g., "beginner", "intermediate", "advanced"
-    response_style: Optional[str] = None  # e.g., "simple", "detailed", "question_guidance"
+    proficiency_level: Optional[str] = (
+        None  # e.g., "beginner", "intermediate", "advanced"
+    )
+    response_style: Optional[str] = (
+        None  # e.g., "simple", "detailed", "question_guidance"
+    )
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -272,7 +288,11 @@ class ChatTable:
                 if "chapter_id" in chat:
                     chat_item.chapter_id = chat["chapter_id"]
                 if "proficiency_level" in chat:
-                    chat_item.proficiency_level = str(chat["proficiency_level"]) if chat["proficiency_level"] is not None else None
+                    chat_item.proficiency_level = (
+                        str(chat["proficiency_level"])
+                        if chat["proficiency_level"] is not None
+                        else None
+                    )
                 if "response_style" in chat:
                     chat_item.response_style = chat["response_style"]
 
@@ -1031,7 +1051,7 @@ class ChatTable:
         id: str,
         chapter_id: Optional[str] = None,
         proficiency_level: Optional[str] = None,
-        response_style: Optional[str] = None
+        response_style: Optional[str] = None,
     ) -> Optional[ChatModel]:
         """
         Update chat settings (chapter_id, proficiency_level, response_style).

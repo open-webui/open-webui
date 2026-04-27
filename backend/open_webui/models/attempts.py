@@ -85,9 +85,7 @@ class AttemptsTable:
         with get_db() as db:
             attempt_id = str(uuid.uuid4())
             metadata_json = (
-                json.dumps(form.metadata, ensure_ascii=False)
-                if form.metadata
-                else None
+                json.dumps(form.metadata, ensure_ascii=False) if form.metadata else None
             )
             row = Attempt(
                 id=attempt_id,

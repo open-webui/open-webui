@@ -19,9 +19,7 @@ class LangfusePromptAdapter:
         self.secret_key = secret_key
         self.host = host
         self.langfuse = Langfuse(
-            public_key=public_key,
-            secret_key=secret_key,
-            host=host
+            public_key=public_key, secret_key=secret_key, host=host
         )
         self.enabled = True
         log.info(f"[LANGFUSE] Adapter initialized with host: {host}")
@@ -46,12 +44,14 @@ class LangfusePromptAdapter:
             langfuse_name = self._get_langfuse_name(prompt)
 
             # Create commit message with timestamp metadata
-            commit_message = json.dumps({
-                "timestamp": prompt.timestamp,
-                "datetime": datetime.fromtimestamp(prompt.timestamp).isoformat(),
-                "user_id": prompt.user_id,
-                "title": prompt.title
-            })
+            commit_message = json.dumps(
+                {
+                    "timestamp": prompt.timestamp,
+                    "datetime": datetime.fromtimestamp(prompt.timestamp).isoformat(),
+                    "user_id": prompt.user_id,
+                    "title": prompt.title,
+                }
+            )
 
             # Use REST API directly since SDK doesn't support commitMessage
             auth_string = f"{self.public_key}:{self.secret_key}"
@@ -59,18 +59,13 @@ class LangfusePromptAdapter:
 
             headers = {
                 "Authorization": f"Basic {auth_bytes}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             # Prepare request body (Langfuse v2 API format)
             payload = {
                 "name": langfuse_name,
-                "prompt": [
-                    {
-                        "role": "system",
-                        "content": prompt.content
-                    }
-                ],
+                "prompt": [{"role": "system", "content": prompt.content}],
                 "type": "chat",
                 "labels": [prompt.prompt_type] if prompt.prompt_type else [],
                 "config": {
@@ -81,7 +76,7 @@ class LangfusePromptAdapter:
                     "tool_description": prompt.tool_description,
                     "tool_priority": prompt.tool_priority,
                 },
-                "commitMessage": commit_message
+                "commitMessage": commit_message,
             }
 
             # POST to Langfuse v2 API
@@ -92,13 +87,13 @@ class LangfusePromptAdapter:
             log.info(f"[LANGFUSE] Synced prompt to Langfuse: {prompt.command}")
             return True
         except Exception as e:
-            log.error(f"[LANGFUSE] Failed to sync prompt to Langfuse: {e}", exc_info=True)
+            log.error(
+                f"[LANGFUSE] Failed to sync prompt to Langfuse: {e}", exc_info=True
+            )
             return False
 
     def fetch_prompt_from_langfuse(
-        self,
-        command: str,
-        version: Optional[int] = None
+        self, command: str, version: Optional[int] = None
     ) -> Optional[str]:
         """
         Fetch a prompt from Langfuse (specific version or latest) using v2 REST API.
@@ -122,7 +117,7 @@ class LangfusePromptAdapter:
 
             headers = {
                 "Authorization": f"Basic {auth_bytes}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             # Fetch from v2 API
@@ -139,16 +134,22 @@ class LangfusePromptAdapter:
             content = ""
             if version_data.get("type") == "chat" and "prompt" in version_data:
                 messages = version_data["prompt"]
-                content = "\n\n".join([
-                    msg.get("content", "")
-                    for msg in messages
-                    if isinstance(msg, dict) and msg.get("content")
-                ])
+                content = "\n\n".join(
+                    [
+                        msg.get("content", "")
+                        for msg in messages
+                        if isinstance(msg, dict) and msg.get("content")
+                    ]
+                )
 
-            log.debug(f"[LANGFUSE] Fetched prompt from Langfuse: {command} v{version or 'latest'}")
+            log.debug(
+                f"[LANGFUSE] Fetched prompt from Langfuse: {command} v{version or 'latest'}"
+            )
             return content if content else None
         except Exception as e:
-            log.error(f"[LANGFUSE] Failed to fetch prompt from Langfuse: {e}", exc_info=True)
+            log.error(
+                f"[LANGFUSE] Failed to fetch prompt from Langfuse: {e}", exc_info=True
+            )
             return None
 
     def get_prompt_versions(self, command: str, max_versions: int = 100) -> list[dict]:
@@ -176,20 +177,24 @@ class LangfusePromptAdapter:
 
             headers = {
                 "Authorization": f"Basic {auth_bytes}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             # Step 1: Get list of versions using v2 API
-            log.debug(f"[LANGFUSE] Fetching version list for prompt: {prompt_name} via v2 REST API")
+            log.debug(
+                f"[LANGFUSE] Fetching version list for prompt: {prompt_name} via v2 REST API"
+            )
             list_url = f"{self.host}/api/public/v2/prompts"
             params = {
                 "name": prompt_name,
                 "page": 1,
-                "limit": 1  # We only need the version list from the first item
+                "limit": 1,  # We only need the version list from the first item
             }
 
             try:
-                list_response = requests.get(list_url, headers=headers, params=params, timeout=10)
+                list_response = requests.get(
+                    list_url, headers=headers, params=params, timeout=10
+                )
                 list_response.raise_for_status()
                 list_data = list_response.json()
 
@@ -201,7 +206,9 @@ class LangfusePromptAdapter:
                 prompt_info = list_data["data"][0]
                 version_numbers = prompt_info.get("versions", [])
 
-                log.info(f"[LANGFUSE] Found {len(version_numbers)} versions for: {command}")
+                log.info(
+                    f"[LANGFUSE] Found {len(version_numbers)} versions for: {command}"
+                )
 
                 # Step 2: Fetch each version's details to get commitMessage
                 for version_num in version_numbers[:max_versions]:
@@ -209,20 +216,30 @@ class LangfusePromptAdapter:
                         detail_url = f"{self.host}/api/public/v2/prompts/{prompt_name}"
                         detail_params = {"version": version_num}
 
-                        detail_response = requests.get(detail_url, headers=headers, params=detail_params, timeout=10)
+                        detail_response = requests.get(
+                            detail_url,
+                            headers=headers,
+                            params=detail_params,
+                            timeout=10,
+                        )
                         detail_response.raise_for_status()
                         version_data = detail_response.json()
 
                         # Extract content from chat messages
                         content = ""
-                        if version_data.get("type") == "chat" and "prompt" in version_data:
+                        if (
+                            version_data.get("type") == "chat"
+                            and "prompt" in version_data
+                        ):
                             # Concatenate all message contents
                             messages = version_data["prompt"]
-                            content = "\n\n".join([
-                                msg.get("content", "")
-                                for msg in messages
-                                if isinstance(msg, dict)
-                            ])
+                            content = "\n\n".join(
+                                [
+                                    msg.get("content", "")
+                                    for msg in messages
+                                    if isinstance(msg, dict)
+                                ]
+                            )
 
                         # Parse commitMessage for timestamp
                         created_at = None
@@ -234,19 +251,27 @@ class LangfusePromptAdapter:
                             except:
                                 pass
 
-                        versions.append({
-                            "version": version_num,
-                            "content": content,
-                            "created_at": created_at,
-                            "updated_at": None,
-                        })
+                        versions.append(
+                            {
+                                "version": version_num,
+                                "content": content,
+                                "created_at": created_at,
+                                "updated_at": None,
+                            }
+                        )
 
-                        log.debug(f"[LANGFUSE] Fetched version {version_num} with timestamp: {created_at}")
+                        log.debug(
+                            f"[LANGFUSE] Fetched version {version_num} with timestamp: {created_at}"
+                        )
                     except Exception as version_error:
-                        log.warning(f"[LANGFUSE] Failed to fetch version {version_num}: {version_error}")
+                        log.warning(
+                            f"[LANGFUSE] Failed to fetch version {version_num}: {version_error}"
+                        )
                         continue
 
-                log.info(f"[LANGFUSE] Successfully fetched {len(versions)} versions via v2 REST API for: {command}")
+                log.info(
+                    f"[LANGFUSE] Successfully fetched {len(versions)} versions via v2 REST API for: {command}"
+                )
                 return versions
 
             except Exception as api_error:
@@ -312,7 +337,7 @@ class LangfusePromptAdapter:
 
                 headers = {
                     "Authorization": f"Basic {auth_bytes}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 }
 
                 # Build filter for metadata.prompt_group_id
@@ -322,30 +347,45 @@ class LangfusePromptAdapter:
                         "column": "metadata",
                         "key": "prompt_group_id",
                         "operator": "=",
-                        "value": prompt_group_id
+                        "value": prompt_group_id,
                     },
                     {
                         "type": "datetime",
                         "column": "timestamp",
                         "operator": ">=",
-                        "value": cutoff_time.isoformat() + "Z"
-                    }
+                        "value": cutoff_time.isoformat() + "Z",
+                    },
                 ]
                 if model:
-                    filter_list.append({
-                        "type": "stringObject", "column": "metadata",
-                        "key": "model", "operator": "=", "value": model
-                    })
+                    filter_list.append(
+                        {
+                            "type": "stringObject",
+                            "column": "metadata",
+                            "key": "model",
+                            "operator": "=",
+                            "value": model,
+                        }
+                    )
                 if user_id:
-                    filter_list.append({
-                        "type": "stringObject", "column": "metadata",
-                        "key": "user_id", "operator": "=", "value": user_id
-                    })
+                    filter_list.append(
+                        {
+                            "type": "stringObject",
+                            "column": "metadata",
+                            "key": "user_id",
+                            "operator": "=",
+                            "value": user_id,
+                        }
+                    )
                 if chapter_id:
-                    filter_list.append({
-                        "type": "stringObject", "column": "metadata",
-                        "key": "chapter_id", "operator": "=", "value": chapter_id
-                    })
+                    filter_list.append(
+                        {
+                            "type": "stringObject",
+                            "column": "metadata",
+                            "key": "chapter_id",
+                            "operator": "=",
+                            "value": chapter_id,
+                        }
+                    )
                 filter_json = json.dumps(filter_list)
 
                 # Fetch traces from REST API - get trace IDs and basic metadata
@@ -360,7 +400,7 @@ class LangfusePromptAdapter:
                     "limit": limit,
                     "filter": filter_json,
                     "fields": "core,metadata",  # Get core + metadata for summary
-                    "orderBy": "timestamp.desc"
+                    "orderBy": "timestamp.desc",
                 }
 
                 response = requests.get(url, headers=headers, params=params, timeout=30)
@@ -369,72 +409,93 @@ class LangfusePromptAdapter:
                 traces_data = api_data.get("data", [])
                 total_count = api_data.get("totalCount", len(traces_data))
 
-                log.info(f"[LANGFUSE] Fetched {len(traces_data)} traces (page {page}) for group {prompt_group_id}, total: {total_count}")
+                log.info(
+                    f"[LANGFUSE] Fetched {len(traces_data)} traces (page {page}) for group {prompt_group_id}, total: {total_count}"
+                )
 
                 # If summary_only, return lightweight data without observations
                 if summary_only:
                     traces = []
                     unique_users = set()
                     for trace_data in traces_data:
-                        user_id = trace_data.get('userId') or trace_data.get('metadata', {}).get('user_id')
+                        user_id = trace_data.get("userId") or trace_data.get(
+                            "metadata", {}
+                        ).get("user_id")
                         if user_id:
                             unique_users.add(user_id)
 
-                        traces.append({
-                            'id': trace_data.get('id'),
-                            'userId': user_id,
-                            'timestamp': trace_data.get('timestamp'),
-                            'metadata': trace_data.get('metadata', {}),
-                            'observations': []  # Empty for summary
-                        })
+                        traces.append(
+                            {
+                                "id": trace_data.get("id"),
+                                "userId": user_id,
+                                "timestamp": trace_data.get("timestamp"),
+                                "metadata": trace_data.get("metadata", {}),
+                                "observations": [],  # Empty for summary
+                            }
+                        )
 
-                    log.info(f"[LANGFUSE] Returning summary-only data (no observations), fetched {len(traces)} items")
+                    log.info(
+                        f"[LANGFUSE] Returning summary-only data (no observations), fetched {len(traces)} items"
+                    )
 
                     # For summary, return basic structure with trace list
                     trace_list = []
                     for trace in traces:
-                        metadata = trace.get('metadata', {})
-                        trace_list.append({
-                            "trace_id": trace.get('id'),
-                            "user_id": trace.get('userId'),
-                            "timestamp": trace.get('timestamp'),
-                            "provider": metadata.get('provider'),
-                            "proficiency_level": metadata.get('proficiency_level'),
-                            "response_style": metadata.get('response_style'),
-                            "chapter_id": metadata.get('chapter_id'),
-                            "langfuse_url": f"{self.host}/trace/{trace.get('id')}",
-                        })
+                        metadata = trace.get("metadata", {})
+                        trace_list.append(
+                            {
+                                "trace_id": trace.get("id"),
+                                "user_id": trace.get("userId"),
+                                "timestamp": trace.get("timestamp"),
+                                "provider": metadata.get("provider"),
+                                "proficiency_level": metadata.get("proficiency_level"),
+                                "response_style": metadata.get("response_style"),
+                                "chapter_id": metadata.get("chapter_id"),
+                                "langfuse_url": f"{self.host}/trace/{trace.get('id')}",
+                            }
+                        )
 
                     # Enrich with user details
                     user_details = {}
                     if unique_users:
                         try:
                             from open_webui.models.users import Users
+
                             users = Users.get_users_by_user_ids(list(unique_users))
                             user_details = {
                                 user.id: {
                                     "id": user.id,
                                     "name": user.name,
                                     "email": user.email,
-                                    "role": user.role
-                                } for user in users
+                                    "role": user.role,
+                                }
+                                for user in users
                             }
                         except Exception as user_error:
-                            log.warning(f"[LANGFUSE] Failed to fetch user details: {user_error}")
+                            log.warning(
+                                f"[LANGFUSE] Failed to fetch user details: {user_error}"
+                            )
 
                     for trace_item in trace_list:
                         user_id = trace_item.get("user_id")
                         if user_id and user_id in user_details:
                             trace_item["user"] = user_details[user_id]
                         elif user_id:
-                            trace_item["user"] = {"id": user_id, "name": None, "email": None, "role": None}
+                            trace_item["user"] = {
+                                "id": user_id,
+                                "name": None,
+                                "email": None,
+                                "role": None,
+                            }
                         else:
                             trace_item["user"] = None
 
                     # Calculate has_more based on limit, not actual fetched count
                     # This handles cases where Langfuse returns more/fewer items than requested
                     has_more = (offset + limit) < total_count
-                    log.info(f"[LANGFUSE PAGINATION] offset={offset}, limit={limit}, fetched={len(trace_list)}, total={total_count}, has_more={has_more}")
+                    log.info(
+                        f"[LANGFUSE PAGINATION] offset={offset}, limit={limit}, fetched={len(trace_list)}, total={total_count}, has_more={has_more}"
+                    )
 
                     return {
                         "stats": {
@@ -446,17 +507,20 @@ class LangfusePromptAdapter:
                         "pagination": {
                             "offset": offset,
                             "limit": limit,
-                            "has_more": has_more
-                        }
+                            "has_more": has_more,
+                        },
                     }
 
                 # For detailed view, fetch observations
-                trace_ids = [t.get('id') for t in traces_data]
-                log.info(f"[LANGFUSE] Fetching observations for {len(trace_ids)} traces")
+                trace_ids = [t.get("id") for t in traces_data]
+                log.info(
+                    f"[LANGFUSE] Fetching observations for {len(trace_ids)} traces"
+                )
 
                 # Fetch observations to get actual usage data
                 # Add rate limiting: small delay between requests to avoid 429
                 import time
+
                 traces = []
                 failed_count = 0
 
@@ -471,9 +535,11 @@ class LangfusePromptAdapter:
                         obs_params = {
                             "traceId": trace_id,
                             "type": "GENERATION",
-                            "fields": "core,basic,usage,metrics,io,metadata"  # Include usage for tokens/cost, metrics for latency
+                            "fields": "core,basic,usage,metrics,io,metadata",  # Include usage for tokens/cost, metrics for latency
                         }
-                        obs_response = requests.get(obs_url, headers=headers, params=obs_params, timeout=10)
+                        obs_response = requests.get(
+                            obs_url, headers=headers, params=obs_params, timeout=10
+                        )
                         obs_response.raise_for_status()
                         obs_data = obs_response.json()
 
@@ -483,11 +549,11 @@ class LangfusePromptAdapter:
                         if observations:
                             first_obs = observations[0]
                             trace_info = {
-                                'id': trace_id,
-                                'userId': first_obs.get('trace', {}).get('userId'),
-                                'timestamp': first_obs.get('startTime'),
-                                'metadata': first_obs.get('metadata', {}),
-                                'observations': observations
+                                "id": trace_id,
+                                "userId": first_obs.get("trace", {}).get("userId"),
+                                "timestamp": first_obs.get("startTime"),
+                                "metadata": first_obs.get("metadata", {}),
+                                "observations": observations,
                             }
                             traces.append(trace_info)
                     except requests.exceptions.HTTPError as http_error:
@@ -495,17 +561,27 @@ class LangfusePromptAdapter:
                         if "429" in str(http_error):
                             failed_count += 1
                             if failed_count <= 3:  # Only log first 3 failures
-                                log.warning(f"[LANGFUSE] Rate limited (429) for trace {trace_id}, skipping...")
+                                log.warning(
+                                    f"[LANGFUSE] Rate limited (429) for trace {trace_id}, skipping..."
+                                )
                         else:
-                            log.warning(f"[LANGFUSE] HTTP error fetching observations for trace {trace_id}: {http_error}")
+                            log.warning(
+                                f"[LANGFUSE] HTTP error fetching observations for trace {trace_id}: {http_error}"
+                            )
                         continue
                     except Exception as obs_error:
-                        log.warning(f"[LANGFUSE] Failed to fetch observations for trace {trace_id}: {obs_error}")
+                        log.warning(
+                            f"[LANGFUSE] Failed to fetch observations for trace {trace_id}: {obs_error}"
+                        )
                         continue
 
                 if failed_count > 3:
-                    log.warning(f"[LANGFUSE] Rate limited on {failed_count} traces (only first 3 logged)")
-                log.info(f"[LANGFUSE] Fetched observations for {len(traces)} traces (skipped {failed_count} due to rate limiting)")
+                    log.warning(
+                        f"[LANGFUSE] Rate limited on {failed_count} traces (only first 3 logged)"
+                    )
+                log.info(
+                    f"[LANGFUSE] Fetched observations for {len(traces)} traces (skipped {failed_count} due to rate limiting)"
+                )
             except Exception as api_error:
                 log.warning(f"[LANGFUSE] Failed to fetch traces: {api_error}")
                 traces = []
@@ -520,8 +596,8 @@ class LangfusePromptAdapter:
             # Debug: Log first trace structure to see what data we're getting
             if traces and len(traces) > 0:
                 first_trace = traces[0]
-                first_obs = first_trace.get('observations', [{}])[0]
-                usage = first_obs.get('usageDetails', {})
+                first_obs = first_trace.get("observations", [{}])[0]
+                usage = first_obs.get("usageDetails", {})
 
                 # Debug: Log ALL time-related fields
                 log.info(f"[LANGFUSE API] First observation DEBUG:")
@@ -529,7 +605,9 @@ class LangfusePromptAdapter:
                 log.info(f"  - type: {first_obs.get('type')}")
                 log.info(f"  - startTime: {first_obs.get('startTime')}")
                 log.info(f"  - endTime: {first_obs.get('endTime')}")
-                log.info(f"  - completionStartTime: {first_obs.get('completionStartTime')}")
+                log.info(
+                    f"  - completionStartTime: {first_obs.get('completionStartTime')}"
+                )
                 log.info(f"  - latency: {first_obs.get('latency')}")
                 log.info(f"  - timeToFirstToken: {first_obs.get('timeToFirstToken')}")
                 log.info(f"  - usageDetails: {usage}")
@@ -538,7 +616,7 @@ class LangfusePromptAdapter:
 
             for trace in traces:
                 # Extract data from observations
-                observations = trace.get('observations', [])
+                observations = trace.get("observations", [])
                 if not observations:
                     continue
 
@@ -546,84 +624,109 @@ class LangfusePromptAdapter:
                 main_obs = observations[0]
 
                 # Detect error: any observation flagged as ERROR level
-                is_error = any((o.get('level') == 'ERROR') for o in observations)
+                is_error = any((o.get("level") == "ERROR") for o in observations)
 
                 # Get metadata and user info
-                metadata = main_obs.get('metadata', {})
-                user_id = trace.get('userId') or metadata.get('user_id')  # Fallback to metadata
-                trace_id = trace.get('id')
-                timestamp = main_obs.get('startTime')
+                metadata = main_obs.get("metadata", {})
+                user_id = trace.get("userId") or metadata.get(
+                    "user_id"
+                )  # Fallback to metadata
+                trace_id = trace.get("id")
+                timestamp = main_obs.get("startTime")
 
                 # Extract user
                 if user_id:
                     unique_users.add(user_id)
 
                 # Extract token usage from usageDetails
-                usage_details = main_obs.get('usageDetails', {}) or {}
-                input_tokens = usage_details.get('input', 0) or 0
-                output_tokens = usage_details.get('output', 0) or 0
-                tokens = usage_details.get('total', 0) or (input_tokens + output_tokens)
+                usage_details = main_obs.get("usageDetails", {}) or {}
+                input_tokens = usage_details.get("input", 0) or 0
+                output_tokens = usage_details.get("output", 0) or 0
+                tokens = usage_details.get("total", 0) or (input_tokens + output_tokens)
                 total_tokens += tokens
 
                 # Get latency directly from observation's latency field (in seconds)
                 latency_ms = 0
-                latency_seconds = main_obs.get('latency')  # Langfuse provides latency in seconds
+                latency_seconds = main_obs.get(
+                    "latency"
+                )  # Langfuse provides latency in seconds
                 if latency_seconds is not None and latency_seconds > 0:
                     latency_ms = latency_seconds * 1000
                     total_latency += latency_ms
                 else:
                     # Fallback: calculate from startTime and endTime if latency field not available
-                    if main_obs.get('startTime') and main_obs.get('endTime'):
+                    if main_obs.get("startTime") and main_obs.get("endTime"):
                         try:
                             from datetime import datetime
-                            start_time = datetime.fromisoformat(main_obs['startTime'].replace('Z', '+00:00'))
-                            end_time = datetime.fromisoformat(main_obs['endTime'].replace('Z', '+00:00'))
+
+                            start_time = datetime.fromisoformat(
+                                main_obs["startTime"].replace("Z", "+00:00")
+                            )
+                            end_time = datetime.fromisoformat(
+                                main_obs["endTime"].replace("Z", "+00:00")
+                            )
                             latency_seconds = (end_time - start_time).total_seconds()
                             latency_ms = latency_seconds * 1000
                             total_latency += latency_ms
                         except Exception as e:
-                            log.warning(f"[LANGFUSE] Failed to calculate latency from timestamps: {e}")
+                            log.warning(
+                                f"[LANGFUSE] Failed to calculate latency from timestamps: {e}"
+                            )
 
                 # Get cost from observation
-                obs_total_cost = main_obs.get('totalCost', 0) or 0
+                obs_total_cost = main_obs.get("totalCost", 0) or 0
 
                 # Extract model from metadata or observation
-                model = metadata.get('model') or main_obs.get('model')
+                model = metadata.get("model") or main_obs.get("model")
 
                 # Get other useful metadata
-                provider = metadata.get('provider')
-                proficiency_level = metadata.get('proficiency_level')
-                response_style = metadata.get('response_style')
-                chapter_id = metadata.get('chapter_id')
+                provider = metadata.get("provider")
+                proficiency_level = metadata.get("proficiency_level")
+                response_style = metadata.get("response_style")
+                chapter_id = metadata.get("chapter_id")
 
                 # Build Langfuse UI URL using trace ID
                 langfuse_url = f"{self.host}/trace/{trace_id}"
 
                 # Get input/output from observation
-                trace_input = main_obs.get('input')
-                trace_output = main_obs.get('output')
+                trace_input = main_obs.get("input")
+                trace_output = main_obs.get("output")
 
                 # Truncate input/output for preview
                 input_preview = None
                 if trace_input:
                     if isinstance(trace_input, str):
-                        input_preview = trace_input[:200] + "..." if len(trace_input) > 200 else trace_input
+                        input_preview = (
+                            trace_input[:200] + "..."
+                            if len(trace_input) > 200
+                            else trace_input
+                        )
                     elif isinstance(trace_input, list):
                         # If it's a list of messages, get the last user message
                         for msg in reversed(trace_input):
-                            if isinstance(msg, dict) and msg.get('role') == 'user':
-                                content = msg.get('content', '')
-                                input_preview = content[:200] + "..." if len(content) > 200 else content
+                            if isinstance(msg, dict) and msg.get("role") == "user":
+                                content = msg.get("content", "")
+                                input_preview = (
+                                    content[:200] + "..."
+                                    if len(content) > 200
+                                    else content
+                                )
                                 break
 
                 output_preview = None
                 if trace_output:
                     if isinstance(trace_output, str):
-                        output_preview = trace_output[:200] + "..." if len(trace_output) > 200 else trace_output
+                        output_preview = (
+                            trace_output[:200] + "..."
+                            if len(trace_output) > 200
+                            else trace_output
+                        )
                     elif isinstance(trace_output, dict):
                         # Extract from response structure
-                        content = trace_output.get('content', str(trace_output)[:200])
-                        output_preview = content[:200] + "..." if len(content) > 200 else content
+                        content = trace_output.get("content", str(trace_output)[:200])
+                        output_preview = (
+                            content[:200] + "..." if len(content) > 200 else content
+                        )
 
                 # Add to trace list
                 trace_item = {
@@ -656,18 +759,24 @@ class LangfusePromptAdapter:
             if unique_users:
                 try:
                     from open_webui.models.users import Users
+
                     users = Users.get_users_by_user_ids(list(unique_users))
                     user_details = {
                         user.id: {
                             "id": user.id,
                             "name": user.name,
                             "email": user.email,
-                            "role": user.role
-                        } for user in users
+                            "role": user.role,
+                        }
+                        for user in users
                     }
-                    log.debug(f"[LANGFUSE] Fetched details for {len(user_details)} users")
+                    log.debug(
+                        f"[LANGFUSE] Fetched details for {len(user_details)} users"
+                    )
                 except Exception as user_error:
-                    log.warning(f"[LANGFUSE] Failed to fetch user details: {user_error}")
+                    log.warning(
+                        f"[LANGFUSE] Failed to fetch user details: {user_error}"
+                    )
 
             # Enrich trace_list with user details
             for trace_item in trace_list:
@@ -676,13 +785,20 @@ class LangfusePromptAdapter:
                     trace_item["user"] = user_details[user_id]
                 elif user_id:
                     # User not found in DB, keep just the ID
-                    trace_item["user"] = {"id": user_id, "name": None, "email": None, "role": None}
+                    trace_item["user"] = {
+                        "id": user_id,
+                        "name": None,
+                        "email": None,
+                        "role": None,
+                    }
                 else:
                     trace_item["user"] = None
 
             # Calculate has_more based on limit, not actual fetched count
             has_more = (offset + limit) < total_count
-            log.info(f"[LANGFUSE PAGINATION] Detailed mode: offset={offset}, limit={limit}, fetched={len(trace_list)}, total={total_count}, has_more={has_more}")
+            log.info(
+                f"[LANGFUSE PAGINATION] Detailed mode: offset={offset}, limit={limit}, fetched={len(trace_list)}, total={total_count}, has_more={has_more}"
+            )
 
             return {
                 "stats": {
@@ -693,11 +809,7 @@ class LangfusePromptAdapter:
                     "users": list(unique_users),
                 },
                 "traces": trace_list,
-                "pagination": {
-                    "offset": offset,
-                    "limit": limit,
-                    "has_more": has_more
-                }
+                "pagination": {"offset": offset, "limit": limit, "has_more": has_more},
             }
 
         except Exception as e:
@@ -711,13 +823,8 @@ class LangfusePromptAdapter:
                     "users": [],
                 },
                 "traces": [],
-                "pagination": {
-                    "offset": offset,
-                    "limit": limit,
-                    "has_more": False
-                }
+                "pagination": {"offset": offset, "limit": limit, "has_more": False},
             }
-
 
     def get_global_summary(self, days: int = 7) -> dict:
         """
@@ -730,15 +837,21 @@ class LangfusePromptAdapter:
         import requests, base64, json, math
 
         cutoff = datetime.now() - timedelta(days=days)
-        auth = base64.b64encode(f"{self.public_key}:{self.secret_key}".encode()).decode()
+        auth = base64.b64encode(
+            f"{self.public_key}:{self.secret_key}".encode()
+        ).decode()
         headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
 
-        filter_json = json.dumps([{
-            "type": "datetime",
-            "column": "timestamp",
-            "operator": ">=",
-            "value": cutoff.isoformat() + "Z"
-        }])
+        filter_json = json.dumps(
+            [
+                {
+                    "type": "datetime",
+                    "column": "timestamp",
+                    "operator": ">=",
+                    "value": cutoff.isoformat() + "Z",
+                }
+            ]
+        )
 
         traces = []
         page = 1
@@ -785,6 +898,7 @@ class LangfusePromptAdapter:
         user_tokens: dict[str, dict] = {}  # uid -> { tokens, calls, cost }
 
         import time as _time
+
         for i, t in enumerate(sampled):
             tid = t.get("id")
             try:
@@ -827,18 +941,26 @@ class LangfusePromptAdapter:
                 tokens = (usage.get("total") or 0) or (
                     (usage.get("input") or 0) + (usage.get("output") or 0)
                 )
-                trace_records.append({
-                    "trace_id": tid,
-                    "timestamp": t.get("timestamp") or obs.get("startTime"),
-                    "model": model,
-                    "user_id": uid,
-                    "user_name": (t.get("metadata") or {}).get("user_name") if isinstance(t.get("metadata"), dict) else None,
-                    "tokens": int(tokens or 0),
-                    "cost": float(cost or 0),
-                    "latency_ms": float(lat_ms) if lat_ms is not None else None,
-                })
+                trace_records.append(
+                    {
+                        "trace_id": tid,
+                        "timestamp": t.get("timestamp") or obs.get("startTime"),
+                        "model": model,
+                        "user_id": uid,
+                        "user_name": (
+                            (t.get("metadata") or {}).get("user_name")
+                            if isinstance(t.get("metadata"), dict)
+                            else None
+                        ),
+                        "tokens": int(tokens or 0),
+                        "cost": float(cost or 0),
+                        "latency_ms": float(lat_ms) if lat_ms is not None else None,
+                    }
+                )
                 if uid:
-                    rec = user_tokens.setdefault(uid, {"tokens": 0, "calls": 0, "cost": 0.0, "name": None})
+                    rec = user_tokens.setdefault(
+                        uid, {"tokens": 0, "calls": 0, "cost": 0.0, "name": None}
+                    )
                     rec["tokens"] += int(tokens or 0)
                     rec["calls"] += 1
                     rec["cost"] += float(cost or 0)
@@ -848,10 +970,13 @@ class LangfusePromptAdapter:
         # Resolve user names from local DB (best-effort)
         try:
             from open_webui.models.users import Users
+
             for uid in list(user_tokens.keys()):
                 u = Users.get_user_by_id(uid)
                 if u is not None:
-                    user_tokens[uid]["name"] = getattr(u, "name", None) or getattr(u, "email", None)
+                    user_tokens[uid]["name"] = getattr(u, "name", None) or getattr(
+                        u, "email", None
+                    )
         except Exception:
             pass
 
@@ -864,8 +989,7 @@ class LangfusePromptAdapter:
 
         top_models = sorted(models_count.items(), key=lambda x: -x[1])[:5]
         daily = [
-            {"date": d, "cost": round(c, 6)}
-            for d, c in sorted(costs_by_day.items())
+            {"date": d, "cost": round(c, 6)} for d, c in sorted(costs_by_day.items())
         ]
 
         # Top-N aggregations
@@ -927,7 +1051,6 @@ class LangfusePromptAdapter:
             "top_slow": top_slow,
         }
 
-
     def get_trace_detail(self, trace_id: str) -> Optional[dict]:
         """
         Fetch a single trace with input/output preview, observations breakdown,
@@ -936,7 +1059,10 @@ class LangfusePromptAdapter:
         Returns None if not found.
         """
         import requests, base64
-        auth = base64.b64encode(f"{self.public_key}:{self.secret_key}".encode()).decode()
+
+        auth = base64.b64encode(
+            f"{self.public_key}:{self.secret_key}".encode()
+        ).decode()
         headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
 
         try:
@@ -996,10 +1122,12 @@ class LangfusePromptAdapter:
             if model is None:
                 model = obs.get("model") or (obs.get("metadata") or {}).get("model")
 
-            observations.append({
-                "name": obs.get("name") or obs.get("type") or "obs",
-                "latency_ms": round(lat_ms, 1),
-            })
+            observations.append(
+                {
+                    "name": obs.get("name") or obs.get("type") or "obs",
+                    "latency_ms": round(lat_ms, 1),
+                }
+            )
 
             if obs.get("type") == "GENERATION" or not input_preview:
                 obs_in = obs.get("input")
@@ -1016,7 +1144,11 @@ class LangfusePromptAdapter:
                 if isinstance(obs_out, str) and not output_preview:
                     output_preview = obs_out[:800]
                 elif isinstance(obs_out, dict) and not output_preview:
-                    content = obs_out.get("content") if isinstance(obs_out.get("content"), str) else None
+                    content = (
+                        obs_out.get("content")
+                        if isinstance(obs_out.get("content"), str)
+                        else None
+                    )
                     output_preview = (content or str(obs_out))[:800]
 
         # Resolve user info
@@ -1025,6 +1157,7 @@ class LangfusePromptAdapter:
         if uid:
             try:
                 from open_webui.models.users import Users
+
                 u = Users.get_user_by_id(uid)
                 if u is not None:
                     user_block = {
@@ -1069,13 +1202,23 @@ def get_langfuse_adapter() -> Optional[LangfusePromptAdapter]:
     if _langfuse_adapter is None:
         try:
             # Check if Langfuse is configured
-            from open_webui.env import LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST, LANGFUSE_ENABLED
+            from open_webui.env import (
+                LANGFUSE_PUBLIC_KEY,
+                LANGFUSE_SECRET_KEY,
+                LANGFUSE_HOST,
+                LANGFUSE_ENABLED,
+            )
 
-            if LANGFUSE_ENABLED and LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY and LANGFUSE_HOST:
+            if (
+                LANGFUSE_ENABLED
+                and LANGFUSE_PUBLIC_KEY
+                and LANGFUSE_SECRET_KEY
+                and LANGFUSE_HOST
+            ):
                 _langfuse_adapter = LangfusePromptAdapter(
                     public_key=LANGFUSE_PUBLIC_KEY,
                     secret_key=LANGFUSE_SECRET_KEY,
-                    host=LANGFUSE_HOST
+                    host=LANGFUSE_HOST,
                 )
                 log.info("[LANGFUSE] Adapter singleton created")
             else:

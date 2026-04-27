@@ -7,7 +7,16 @@ Gemini File Search RAG API 라우터
 import logging
 import os
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    Request,
+    BackgroundTasks,
+)
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -32,6 +41,7 @@ router = APIRouter()
 # ============================================================
 # Pydantic 모델
 # ============================================================
+
 
 class StoreCreateRequest(BaseModel):
     display_name: str
@@ -114,16 +124,13 @@ def get_rag_service(request: Request) -> GeminiRAGService:
     if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings.",
         )
     return get_gemini_rag_service(api_key)
 
 
 def generate_chat_title_background(
-    api_key: str,
-    chat_id: str,
-    messages: List[dict],
-    user_id: str
+    api_key: str, chat_id: str, messages: List[dict], user_id: str
 ):
     """
     백그라운드에서 채팅 제목 자동 생성
@@ -151,10 +158,12 @@ def generate_chat_title_background(
         service = get_gemini_rag_service(api_key)
 
         # 메시지 포맷팅
-        conversation = "\n".join([
-            f"{msg.get('role', 'user')}: {msg.get('content', '')}"
-            for msg in messages[:3]  # 처음 3개 메시지만 사용
-        ])
+        conversation = "\n".join(
+            [
+                f"{msg.get('role', 'user')}: {msg.get('content', '')}"
+                for msg in messages[:3]  # 처음 3개 메시지만 사용
+            ]
+        )
 
         # 제목 생성 프롬프트
         title_prompt = f"""다음 대화의 제목을 한국어로 짧게 생성해주세요.
@@ -172,13 +181,13 @@ def generate_chat_title_background(
             store_names=[],  # 제목 생성에는 RAG 불필요
             model="gemini-2.5-flash",
             temperature=0.7,
-            system_instruction="You are a helpful assistant that generates concise chat titles."
+            system_instruction="You are a helpful assistant that generates concise chat titles.",
         )
 
         if result.get("success") and result.get("text"):
             title = result["text"].strip()
             # 제목 정리 (따옴표, 특수문자 제거)
-            title = title.replace('"', '').replace("'", '').strip()
+            title = title.replace('"', "").replace("'", "").strip()
             # 너무 길면 자르기
             if len(title) > 50:
                 title = title[:47] + "..."
@@ -187,7 +196,9 @@ def generate_chat_title_background(
             Chats.update_chat_title_by_id(chat_id, title)
             log.info(f"✅ Generated title for chat {chat_id}: {title}")
         else:
-            log.warning(f"Failed to generate title for chat {chat_id}: {result.get('error')}")
+            log.warning(
+                f"Failed to generate title for chat {chat_id}: {result.get('error')}"
+            )
 
     except Exception as e:
         log.error(f"Error generating title for chat {chat_id}: {e}")
@@ -197,11 +208,10 @@ def generate_chat_title_background(
 # Store 관리 엔드포인트
 # ============================================================
 
+
 @router.post("/stores", response_model=StoreResponse)
 async def create_store(
-    request: Request,
-    body: StoreCreateRequest,
-    user=Depends(get_admin_user)
+    request: Request, body: StoreCreateRequest, user=Depends(get_admin_user)
 ):
     """
     새로운 File Search Store(코퍼스) 생성 (관리자 전용)
@@ -212,20 +222,17 @@ async def create_store(
     result = service.create_store(body.display_name)
 
     if not result.get("success"):
-        raise HTTPException(status_code=500, detail=result.get("error", "Failed to create store"))
+        raise HTTPException(
+            status_code=500, detail=result.get("error", "Failed to create store")
+        )
 
     return StoreResponse(
-        name=result["name"],
-        display_name=body.display_name,
-        success=True
+        name=result["name"], display_name=body.display_name, success=True
     )
 
 
 @router.get("/stores", response_model=StoreListResponse)
-async def list_stores(
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def list_stores(request: Request, user=Depends(get_admin_user)):
     """
     모든 Store 목록 조회 (관리자 전용)
     """
@@ -235,16 +242,12 @@ async def list_stores(
 
 
 @router.get("/stores/{store_name}")
-async def get_store(
-    store_name: str,
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def get_store(store_name: str, request: Request, user=Depends(get_admin_user)):
     """
     특정 Store 정보 조회 (관리자 전용)
     """
     service = get_rag_service(request)
-    store = service.get_store("fileSearchStores/"+store_name)
+    store = service.get_store("fileSearchStores/" + store_name)
 
     if not store:
         raise HTTPException(status_code=404, detail="Store not found")
@@ -253,11 +256,7 @@ async def get_store(
 
 
 @router.delete("/stores/{store_name}")
-async def delete_store(
-    store_name: str,
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def delete_store(store_name: str, request: Request, user=Depends(get_admin_user)):
     """
     Store 삭제 (관리자 전용)
 
@@ -276,13 +275,14 @@ async def delete_store(
     return {
         "success": True,
         "message": f"Deleted store: {full_store_name}",
-        "cleared_chapter_mappings": cleared_chapters
+        "cleared_chapter_mappings": cleared_chapters,
     }
 
 
 # ============================================================
 # 파일 업로드 엔드포인트
 # ============================================================
+
 
 @router.post("/stores/{store_name}/upload", response_model=FileUploadResponse)
 async def upload_file_to_store(
@@ -291,7 +291,7 @@ async def upload_file_to_store(
     file: UploadFile = File(...),
     max_tokens_per_chunk: int = Form(default=400),
     max_overlap_tokens: int = Form(default=40),
-    user=Depends(get_admin_user)
+    user=Depends(get_admin_user),
 ):
     """
     파일을 Store에 업로드 (관리자 전용)
@@ -316,11 +316,13 @@ async def upload_file_to_store(
         store_name=full_store_name,
         max_tokens_per_chunk=max_tokens_per_chunk,
         max_overlap_tokens=max_overlap_tokens,
-        wait_for_completion=True
+        wait_for_completion=True,
     )
 
     if not result.get("success"):
-        raise HTTPException(status_code=500, detail=result.get("error", "Failed to upload file"))
+        raise HTTPException(
+            status_code=500, detail=result.get("error", "Failed to upload file")
+        )
 
     return FileUploadResponse(**result)
 
@@ -332,9 +334,7 @@ class FileListResponse(BaseModel):
 
 @router.get("/stores/{store_name}/files", response_model=FileListResponse)
 async def list_files_in_store(
-    store_name: str,
-    request: Request,
-    user=Depends(get_admin_user)
+    store_name: str, request: Request, user=Depends(get_admin_user)
 ):
     """
     Store 내 파일 목록 조회 (관리자 전용)
@@ -352,10 +352,10 @@ async def list_files_in_store(
 # 챕터-Store 매핑 엔드포인트 (DB 연동)
 # ============================================================
 
+
 @router.post("/chapter-mapping")
 async def set_chapter_store_mapping(
-    mapping: ChapterStoreMapping,
-    user=Depends(get_admin_user)
+    mapping: ChapterStoreMapping, user=Depends(get_admin_user)
 ):
     """
     챕터 ID와 Store 매핑 설정 (관리자 전용)
@@ -366,22 +366,22 @@ async def set_chapter_store_mapping(
     """
     chapter = TextbookChapters.set_rag_store(mapping.chapter_id, mapping.store_name)
     if not chapter:
-        raise HTTPException(status_code=404, detail=f"Chapter not found: {mapping.chapter_id}")
+        raise HTTPException(
+            status_code=404, detail=f"Chapter not found: {mapping.chapter_id}"
+        )
 
     return {
         "success": True,
         "mapping": {
             "chapter_id": chapter.id,
             "store_name": chapter.rag_store_name,
-            "display_name": chapter.title
-        }
+            "display_name": chapter.title,
+        },
     }
 
 
 @router.get("/chapter-mapping")
-async def get_chapter_store_mappings(
-    user=Depends(get_verified_user)
-):
+async def get_chapter_store_mappings(user=Depends(get_verified_user)):
     """
     모든 챕터-Store 매핑 조회 (store가 설정된 챕터만)
     """
@@ -390,10 +390,7 @@ async def get_chapter_store_mappings(
 
 
 @router.get("/chapter-mapping/{chapter_id}")
-async def get_chapter_store_mapping(
-    chapter_id: str,
-    user=Depends(get_verified_user)
-):
+async def get_chapter_store_mapping(chapter_id: str, user=Depends(get_verified_user)):
     """
     특정 챕터의 Store 매핑 조회
     """
@@ -402,19 +399,15 @@ async def get_chapter_store_mapping(
         raise HTTPException(status_code=404, detail="Chapter not found")
 
     if not chapter.rag_store_name:
-        raise HTTPException(status_code=404, detail="No RAG store configured for this chapter")
+        raise HTTPException(
+            status_code=404, detail="No RAG store configured for this chapter"
+        )
 
-    return {
-        "store_name": chapter.rag_store_name,
-        "display_name": chapter.title
-    }
+    return {"store_name": chapter.rag_store_name, "display_name": chapter.title}
 
 
 @router.delete("/chapter-mapping/{chapter_id}")
-async def delete_chapter_store_mapping(
-    chapter_id: str,
-    user=Depends(get_admin_user)
-):
+async def delete_chapter_store_mapping(chapter_id: str, user=Depends(get_admin_user)):
     """
     챕터-Store 매핑 삭제 (관리자 전용)
     """
@@ -429,12 +422,13 @@ async def delete_chapter_store_mapping(
 # RAG 쿼리 엔드포인트
 # ============================================================
 
+
 @router.post("/query", response_model=RAGQueryResponse)
 async def query_rag(
     request: Request,
     body: RAGQueryRequest,
     background_tasks: BackgroundTasks,
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     """
     RAG 쿼리 실행 (문서 검색 + 응답 생성)
@@ -452,15 +446,19 @@ async def query_rag(
     service = get_rag_service(request)
 
     # Compose prompts with fallback logic (now returns tuple with tool_prompts)
-    log.info("="*80)
+    log.info("=" * 80)
     log.info("[GEMINI RAG] 쿼리 요청 받음")
     log.info(f"  prompt_group_id: {body.prompt_group_id}")
-    log.info(f"  system_instruction: {body.system_instruction[:50] if body.system_instruction else None}...")
+    log.info(
+        f"  system_instruction: {body.system_instruction[:50] if body.system_instruction else None}..."
+    )
     log.info(f"  proficiency_level: {body.proficiency_level}")
     log.info(f"  response_style: {body.response_style}")
     log.info(f"  enable_tool_gating: {body.enable_tool_gating}")
-    log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
-    log.info("="*80)
+    log.info(
+        f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}"
+    )
+    log.info("=" * 80)
 
     # Stage 1 프롬프트 (경량, base만 사용) - Tool gating용
     composed_gating, tool_prompts = compose_with_fallback(
@@ -472,7 +470,7 @@ async def query_rag(
         proficiency_level=body.proficiency_level,
         response_style=body.response_style,
         include_tools=False,
-        use_only_base=True  # Stage 1: Base only (~55% token reduction)
+        use_only_base=True,  # Stage 1: Base only (~55% token reduction)
     )
 
     # Stage 2 프롬프트 (전체, base + proficiency + style) - Actual execution용
@@ -485,21 +483,25 @@ async def query_rag(
         proficiency_level=body.proficiency_level,
         response_style=body.response_style,
         include_tools=False,
-        use_only_base=False  # Stage 2: Full prompt
+        use_only_base=False,  # Stage 2: Full prompt
     )
 
     gating_system = composed_gating if composed_gating else body.system_instruction
     final_system = composed_full if composed_full else body.system_instruction
 
-    log.info("="*80)
+    log.info("=" * 80)
     log.info("[GEMINI RAG] 최종 시스템 프롬프트:")
-    log.info(f"  Stage 1 (gating) 프롬프트 길이: {len(gating_system) if gating_system else 0} 문자")
-    log.info(f"  Stage 2 (execution) 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(
+        f"  Stage 1 (gating) 프롬프트 길이: {len(gating_system) if gating_system else 0} 문자"
+    )
+    log.info(
+        f"  Stage 2 (execution) 프롬프트 길이: {len(final_system) if final_system else 0} 문자"
+    )
     log.info(f"  Tool prompts 개수: {len(tool_prompts)}")
     log.info(f"  Tool prompts: {[t.command for t in tool_prompts]}")
     log.info(f"  Stage 1 내용: {gating_system[:300] if gating_system else '(없음)'}...")
     log.info(f"  Stage 2 내용: {final_system[:300] if final_system else '(없음)'}...")
-    log.info("="*80)
+    log.info("=" * 80)
 
     # Determine if we should use tool gating
     used_tools = []
@@ -516,15 +518,20 @@ async def query_rag(
             tool_gating_model = model_config.meta.tool_gating_model
             cache_strategy = model_config.meta.cache_strategy or "auto"
             if tool_gating_model:
-                log.info(f"[GEMINI RAG] Found tool_gating_model in config: {tool_gating_model}")
+                log.info(
+                    f"[GEMINI RAG] Found tool_gating_model in config: {tool_gating_model}"
+                )
             else:
-                log.info(f"[GEMINI RAG] No tool_gating_model configured, using main model for both stages")
+                log.info(
+                    f"[GEMINI RAG] No tool_gating_model configured, using main model for both stages"
+                )
             log.info(f"[GEMINI RAG] Cache strategy: {cache_strategy}")
 
         tool_gating_result = execute_with_tool_gating(
             query=body.question,
             base_system=gating_system or "",  # Stage 1: Lightweight prompt (base only)
-            full_system=final_system or "",  # Stage 2: Full prompt (base + proficiency + style)
+            full_system=final_system
+            or "",  # Stage 2: Full prompt (base + proficiency + style)
             tool_prompts=tool_prompts,
             llm_call_fn=service.query,
             gating_model=tool_gating_model,
@@ -543,15 +550,20 @@ async def query_rag(
         }
         used_tools = tool_gating_result.used_tools
         tool_gating_stage = tool_gating_result.stage
-        log.info(f"[GEMINI RAG] Tool gating completed - stage: {tool_gating_stage}, tools: {used_tools}")
+        log.info(
+            f"[GEMINI RAG] Tool gating completed - stage: {tool_gating_stage}, tools: {used_tools}"
+        )
     else:
         # Legacy mode: include all tool prompts in system instruction
         if tool_prompts:
             log.info("[GEMINI RAG] Tool gating disabled, including all tools")
-            final_system = compose_stage2_system_prompt(final_system or "", tool_prompts)
+            final_system = compose_stage2_system_prompt(
+                final_system or "", tool_prompts
+            )
 
         # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
         import asyncio
+
         result = await asyncio.to_thread(
             service.query,
             question=body.question,
@@ -559,7 +571,7 @@ async def query_rag(
             model=body.model,
             temperature=body.temperature,
             system_instruction=final_system,
-            cache_stage="execution"  # Enable global caching for legacy mode
+            cache_stage="execution",  # Enable global caching for legacy mode
         )
 
     # 채팅 생성 및 제목 생성 로직
@@ -573,15 +585,9 @@ async def query_rag(
         chat_messages = {
             "title": "새 채팅",
             "messages": [
-                {
-                    "role": "user",
-                    "content": body.question
-                },
-                {
-                    "role": "assistant",
-                    "content": result["text"]
-                }
-            ]
+                {"role": "user", "content": body.question},
+                {"role": "assistant", "content": result["text"]},
+            ],
         }
 
         # 새 채팅 생성
@@ -589,7 +595,7 @@ async def query_rag(
             chat=chat_messages,
             chapter_id=None,  # RAG query doesn't specify chapter
             proficiency_level=body.proficiency_level,
-            response_style=body.response_style
+            response_style=body.response_style,
         )
 
         new_chat = Chats.insert_new_chat(user.id, chat_form)
@@ -600,23 +606,21 @@ async def query_rag(
             log.error("[GEMINI RAG] Failed to create new chat")
 
     # 채팅 ID가 있으면 백그라운드에서 제목 생성
-    enable_title_gen = getattr(request.app.state.config, 'ENABLE_TITLE_GENERATION', True)
+    enable_title_gen = getattr(
+        request.app.state.config, "ENABLE_TITLE_GENERATION", True
+    )
     api_key = get_gemini_api_key(request)
 
     if chat_id and enable_title_gen and api_key:
         # 제목 생성용 메시지 준비
         messages = [
             {"role": "user", "content": body.question},
-            {"role": "assistant", "content": result.get("text", "")}
+            {"role": "assistant", "content": result.get("text", "")},
         ]
 
         log.info(f"[GEMINI RAG] Scheduling title generation for chat {chat_id}")
         background_tasks.add_task(
-            generate_chat_title_background,
-            api_key,
-            chat_id,
-            messages,
-            user.id
+            generate_chat_title_background, api_key, chat_id, messages, user.id
         )
 
     # 응답에 chat_id와 tool gating 정보 포함
@@ -642,7 +646,7 @@ async def query_rag_by_chapter(
     proficiency_level: Optional[str] = None,
     response_style: Optional[str] = None,
     enable_tool_gating: bool = True,
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     """
     챕터 ID로 RAG 쿼리 실행
@@ -660,28 +664,33 @@ async def query_rag_by_chapter(
     # Fallback to "general" if chapter_id is null or empty
     if not chapter_id or chapter_id.strip() == "" or chapter_id.lower() == "null":
         chapter_id = "general"
-        log.info(f"[GEMINI RAG BY CHAPTER] chapter_id was null, using fallback: {chapter_id}")
+        log.info(
+            f"[GEMINI RAG BY CHAPTER] chapter_id was null, using fallback: {chapter_id}"
+        )
 
     store_name = TextbookChapters.get_rag_store(chapter_id)
     if not store_name:
         raise HTTPException(
-            status_code=404,
-            detail=f"No RAG store configured for chapter: {chapter_id}"
+            status_code=404, detail=f"No RAG store configured for chapter: {chapter_id}"
         )
 
     service = get_rag_service(request)
 
     # Compose prompts with fallback logic (now returns tuple with tool_prompts)
-    log.info("="*80)
+    log.info("=" * 80)
     log.info("[GEMINI RAG BY CHAPTER] 쿼리 요청 받음")
     log.info(f"  chapter_id: {chapter_id}")
     log.info(f"  prompt_group_id: {prompt_group_id}")
-    log.info(f"  system_instruction: {system_instruction[:50] if system_instruction else None}...")
+    log.info(
+        f"  system_instruction: {system_instruction[:50] if system_instruction else None}..."
+    )
     log.info(f"  proficiency_level: {proficiency_level}")
     log.info(f"  response_style: {response_style}")
     log.info(f"  enable_tool_gating: {enable_tool_gating}")
-    log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
-    log.info("="*80)
+    log.info(
+        f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}"
+    )
+    log.info("=" * 80)
 
     # Stage 1 프롬프트 (경량, base만 사용) - Tool gating용
     composed_gating, tool_prompts = compose_with_fallback(
@@ -693,7 +702,7 @@ async def query_rag_by_chapter(
         proficiency_level=proficiency_level,
         response_style=response_style,
         include_tools=False,
-        use_only_base=True  # Stage 1: Base only (~55% token reduction)
+        use_only_base=True,  # Stage 1: Base only (~55% token reduction)
     )
 
     # Stage 2 프롬프트 (전체, base + proficiency + style) - Actual execution용
@@ -706,21 +715,25 @@ async def query_rag_by_chapter(
         proficiency_level=proficiency_level,
         response_style=response_style,
         include_tools=False,
-        use_only_base=False  # Stage 2: Full prompt
+        use_only_base=False,  # Stage 2: Full prompt
     )
 
     gating_system = composed_gating if composed_gating else system_instruction
     final_system = composed_full if composed_full else system_instruction
 
-    log.info("="*80)
+    log.info("=" * 80)
     log.info("[GEMINI RAG BY CHAPTER] 최종 시스템 프롬프트:")
-    log.info(f"  Stage 1 (gating) 프롬프트 길이: {len(gating_system) if gating_system else 0} 문자")
-    log.info(f"  Stage 2 (execution) 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(
+        f"  Stage 1 (gating) 프롬프트 길이: {len(gating_system) if gating_system else 0} 문자"
+    )
+    log.info(
+        f"  Stage 2 (execution) 프롬프트 길이: {len(final_system) if final_system else 0} 문자"
+    )
     log.info(f"  Tool prompts 개수: {len(tool_prompts)}")
     log.info(f"  Tool prompts: {[t.command for t in tool_prompts]}")
     log.info(f"  Stage 1 내용: {gating_system[:300] if gating_system else '(없음)'}...")
     log.info(f"  Stage 2 내용: {final_system[:300] if final_system else '(없음)'}...")
-    log.info("="*80)
+    log.info("=" * 80)
 
     # Determine if we should use tool gating
     used_tools = []
@@ -735,14 +748,19 @@ async def query_rag_by_chapter(
         if model_config and model_config.meta:
             tool_gating_model = model_config.meta.tool_gating_model
             if tool_gating_model:
-                log.info(f"[GEMINI RAG BY CHAPTER] Found tool_gating_model in config: {tool_gating_model}")
+                log.info(
+                    f"[GEMINI RAG BY CHAPTER] Found tool_gating_model in config: {tool_gating_model}"
+                )
             else:
-                log.info(f"[GEMINI RAG BY CHAPTER] No tool_gating_model configured, using main model for both stages")
+                log.info(
+                    f"[GEMINI RAG BY CHAPTER] No tool_gating_model configured, using main model for both stages"
+                )
 
         tool_gating_result = execute_with_tool_gating(
             query=question,
             base_system=gating_system or "",  # Stage 1: Lightweight prompt (base only)
-            full_system=final_system or "",  # Stage 2: Full prompt (base + proficiency + style)
+            full_system=final_system
+            or "",  # Stage 2: Full prompt (base + proficiency + style)
             tool_prompts=tool_prompts,
             llm_call_fn=service.query,
             gating_model=tool_gating_model,
@@ -760,15 +778,22 @@ async def query_rag_by_chapter(
         }
         used_tools = tool_gating_result.used_tools
         tool_gating_stage = tool_gating_result.stage
-        log.info(f"[GEMINI RAG BY CHAPTER] Tool gating completed - stage: {tool_gating_stage}, tools: {used_tools}")
+        log.info(
+            f"[GEMINI RAG BY CHAPTER] Tool gating completed - stage: {tool_gating_stage}, tools: {used_tools}"
+        )
     else:
         # Legacy mode: include all tool prompts in system instruction
         if tool_prompts:
-            log.info("[GEMINI RAG BY CHAPTER] Tool gating disabled, including all tools")
-            final_system = compose_stage2_system_prompt(final_system or "", tool_prompts)
+            log.info(
+                "[GEMINI RAG BY CHAPTER] Tool gating disabled, including all tools"
+            )
+            final_system = compose_stage2_system_prompt(
+                final_system or "", tool_prompts
+            )
 
         # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
         import asyncio
+
         result = await asyncio.to_thread(
             service.query,
             question=question,
@@ -776,7 +801,7 @@ async def query_rag_by_chapter(
             model=model,
             temperature=temperature,
             system_instruction=final_system,
-            cache_stage="execution"  # Enable global caching for legacy mode
+            cache_stage="execution",  # Enable global caching for legacy mode
         )
 
     # 채팅 생성 및 제목 생성 로직
@@ -790,15 +815,9 @@ async def query_rag_by_chapter(
         chat_messages = {
             "title": "새 채팅",
             "messages": [
-                {
-                    "role": "user",
-                    "content": question
-                },
-                {
-                    "role": "assistant",
-                    "content": result["text"]
-                }
-            ]
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": result["text"]},
+            ],
         }
 
         # 새 채팅 생성
@@ -806,7 +825,7 @@ async def query_rag_by_chapter(
             chat=chat_messages,
             chapter_id=chapter_id,
             proficiency_level=proficiency_level,
-            response_style=response_style
+            response_style=response_style,
         )
 
         new_chat = Chats.insert_new_chat(user.id, chat_form)
@@ -817,23 +836,27 @@ async def query_rag_by_chapter(
             log.error("[GEMINI RAG BY CHAPTER] Failed to create new chat")
 
     # 채팅 ID가 있으면 백그라운드에서 제목 생성
-    enable_title_gen = getattr(request.app.state.config, 'ENABLE_TITLE_GENERATION', True)
+    enable_title_gen = getattr(
+        request.app.state.config, "ENABLE_TITLE_GENERATION", True
+    )
     api_key = get_gemini_api_key(request)
 
     if final_chat_id and enable_title_gen and api_key:
         # 제목 생성용 메시지 준비
         title_messages = [
             {"role": "user", "content": question},
-            {"role": "assistant", "content": result.get("text", "")}
+            {"role": "assistant", "content": result.get("text", "")},
         ]
 
-        log.info(f"[GEMINI RAG BY CHAPTER] Scheduling title generation for chat {final_chat_id}")
+        log.info(
+            f"[GEMINI RAG BY CHAPTER] Scheduling title generation for chat {final_chat_id}"
+        )
         background_tasks.add_task(
             generate_chat_title_background,
             api_key,
             final_chat_id,
             title_messages,
-            user.id
+            user.id,
         )
 
     # 응답에 chat_id와 tool gating 정보 포함
@@ -850,6 +873,7 @@ async def query_rag_by_chapter(
 # 헬스 체크
 # ============================================================
 
+
 @router.get("/health")
 async def health_check(request: Request):
     """
@@ -859,7 +883,7 @@ async def health_check(request: Request):
     if not api_key:
         return {
             "status": "error",
-            "message": "Gemini API key not found. Please configure Gemini in OpenAI settings."
+            "message": "Gemini API key not found. Please configure Gemini in OpenAI settings.",
         }
 
     try:
@@ -869,24 +893,19 @@ async def health_check(request: Request):
         return {
             "status": "ok",
             "store_count": len(stores),
-            "chapter_mappings": len(mappings)
+            "chapter_mappings": len(mappings),
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        return {"status": "error", "message": str(e)}
 
 
 # ============================================================
 # 캐시 관리 API
 # ============================================================
 
+
 @router.get("/cache/stats")
-async def get_cache_stats(
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def get_cache_stats(request: Request, user=Depends(get_admin_user)):
     """
     Get global cache statistics.
 
@@ -903,30 +922,23 @@ async def get_cache_stats(
     if not api_key:
         raise HTTPException(
             status_code=400,
-            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings.",
         )
 
     try:
         service = get_rag_service(request)
         stats = service.cache_manager.get_stats()
 
-        return {
-            "status": "ok",
-            **stats
-        }
+        return {"status": "ok", **stats}
     except Exception as e:
         log.error(f"[CACHE] Failed to get stats: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get cache statistics: {str(e)}"
+            status_code=500, detail=f"Failed to get cache statistics: {str(e)}"
         )
 
 
 @router.delete("/cache")
-async def clear_all_caches(
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def clear_all_caches(request: Request, user=Depends(get_admin_user)):
     """
     Clear all cached system prompts.
 
@@ -942,30 +954,22 @@ async def clear_all_caches(
     if not api_key:
         raise HTTPException(
             status_code=400,
-            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings.",
         )
 
     try:
         service = get_rag_service(request)
         result = service.cache_manager.clear_all_caches()
 
-        return {
-            "status": "ok",
-            **result
-        }
+        return {"status": "ok", **result}
     except Exception as e:
         log.error(f"[CACHE] Failed to clear all caches: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to clear caches: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to clear caches: {str(e)}")
 
 
 @router.delete("/cache/{stage}")
 async def clear_caches_by_stage(
-    request: Request,
-    stage: str,
-    user=Depends(get_admin_user)
+    request: Request, stage: str, user=Depends(get_admin_user)
 ):
     """
     Clear caches for a specific stage.
@@ -985,27 +989,24 @@ async def clear_caches_by_stage(
     if stage not in ("gating", "execution"):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid stage: {stage}. Must be 'gating' or 'execution'"
+            detail=f"Invalid stage: {stage}. Must be 'gating' or 'execution'",
         )
 
     api_key = get_gemini_api_key(request)
     if not api_key:
         raise HTTPException(
             status_code=400,
-            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings.",
         )
 
     try:
         service = get_rag_service(request)
         result = service.cache_manager.clear_caches_by_stage(stage)
 
-        return {
-            "status": "ok",
-            **result
-        }
+        return {"status": "ok", **result}
     except Exception as e:
         log.error(f"[CACHE] Failed to clear caches for stage {stage}: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to clear caches for stage {stage}: {str(e)}"
+            detail=f"Failed to clear caches for stage {stage}: {str(e)}",
         )

@@ -24,7 +24,11 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.rate_limiter import limiter, get_role_based_limit, get_write_operation_limit
+from open_webui.utils.rate_limiter import (
+    limiter,
+    get_role_based_limit,
+    get_write_operation_limit,
+)
 from open_webui.utils import posthog as ph
 
 log = logging.getLogger(__name__)
@@ -139,7 +143,9 @@ async def get_user_chat_list_by_user_id(
 
 @router.post("/new", response_model=Optional[ChatResponse])
 @get_write_operation_limit
-async def create_new_chat(request: Request, form_data: ChatForm, user=Depends(get_verified_user)):
+async def create_new_chat(
+    request: Request, form_data: ChatForm, user=Depends(get_verified_user)
+):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
         ph.capture(user.id, "chat_created", {"chat_id": chat.id})
@@ -158,7 +164,9 @@ async def create_new_chat(request: Request, form_data: ChatForm, user=Depends(ge
 
 @router.post("/import", response_model=list[ChatResponse])
 @get_write_operation_limit
-async def import_chats(request: Request, form_data: ChatsImportForm, user=Depends(get_verified_user)):
+async def import_chats(
+    request: Request, form_data: ChatsImportForm, user=Depends(get_verified_user)
+):
     try:
         chats = Chats.import_chats(user.id, form_data.chats)
         return chats
@@ -177,7 +185,10 @@ async def import_chats(request: Request, form_data: ChatsImportForm, user=Depend
 @router.get("/search", response_model=list[ChatTitleIdResponse])
 @get_role_based_limit
 def search_user_chats(
-    request: Request, text: str, page: Optional[int] = None, user=Depends(get_verified_user)
+    request: Request,
+    text: str,
+    page: Optional[int] = None,
+    user=Depends(get_verified_user),
 ):
     if page is None:
         page = 1
@@ -211,7 +222,9 @@ def search_user_chats(
 
 @router.get("/folder/{folder_id}", response_model=list[ChatResponse])
 @get_role_based_limit
-async def get_chats_by_folder_id(request: Request, folder_id: str, user=Depends(get_verified_user)):
+async def get_chats_by_folder_id(
+    request: Request, folder_id: str, user=Depends(get_verified_user)
+):
     folder_ids = [folder_id]
     children_folders = Folders.get_children_folders_by_id_and_user_id(
         folder_id, user.id
@@ -228,7 +241,10 @@ async def get_chats_by_folder_id(request: Request, folder_id: str, user=Depends(
 @router.get("/folder/{folder_id}/list")
 @get_role_based_limit
 async def get_chat_list_by_folder_id(
-    request: Request, folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
+    request: Request,
+    folder_id: str,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
 ):
     try:
         limit = 10
@@ -395,7 +411,9 @@ async def unarchive_all_chats(request: Request, user=Depends(get_verified_user))
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
 @get_role_based_limit
-async def get_shared_chat_by_id(request: Request, share_id: str, user=Depends(get_verified_user)):
+async def get_shared_chat_by_id(
+    request: Request, share_id: str, user=Depends(get_verified_user)
+):
     from open_webui.models.feedbacks import Feedbacks
 
     if user.role == "pending":
@@ -403,7 +421,9 @@ async def get_shared_chat_by_id(request: Request, share_id: str, user=Depends(ge
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user" or (user.role in {"admin", "professor"} and not ENABLE_ADMIN_CHAT_ACCESS):
+    if user.role == "user" or (
+        user.role in {"admin", "professor"} and not ENABLE_ADMIN_CHAT_ACCESS
+    ):
         chat = Chats.get_chat_by_share_id(share_id)
     elif user.role in {"admin", "professor"} and ENABLE_ADMIN_CHAT_ACCESS:
         # Admin and Professor can access any chat directly
@@ -511,12 +531,16 @@ async def update_chat_by_id(
         incoming_style = form_data.chat.get("response_style")
 
         # If frontend sends new values, update outer columns to match
-        if incoming_chapter_id is not None or incoming_proficiency is not None or incoming_style is not None:
+        if (
+            incoming_chapter_id is not None
+            or incoming_proficiency is not None
+            or incoming_style is not None
+        ):
             Chats.update_chat_settings_by_id(
                 id,
                 chapter_id=incoming_chapter_id,
                 proficiency_level=incoming_proficiency,
-                response_style=incoming_style
+                response_style=incoming_style,
             )
             # Refresh chat to get updated values
             chat = Chats.get_chat_by_id_and_user_id(id, user.id)
@@ -546,7 +570,10 @@ async def update_chat_by_id(
                     db_msg = db_messages[msg_id]
                     if db_msg.get("chapter_id") and "chapter_id" not in msg:
                         msg["chapter_id"] = db_msg["chapter_id"]
-                    if db_msg.get("proficiency_level") and "proficiency_level" not in msg:
+                    if (
+                        db_msg.get("proficiency_level")
+                        and "proficiency_level" not in msg
+                    ):
                         msg["proficiency_level"] = db_msg["proficiency_level"]
                     if db_msg.get("response_style") and "response_style" not in msg:
                         msg["response_style"] = db_msg["response_style"]
@@ -554,7 +581,10 @@ async def update_chat_by_id(
                 # Then, for messages without persona info, use current chat settings
                 if chat_persona.get("chapter_id") and "chapter_id" not in msg:
                     msg["chapter_id"] = chat_persona["chapter_id"]
-                if chat_persona.get("proficiency_level") and "proficiency_level" not in msg:
+                if (
+                    chat_persona.get("proficiency_level")
+                    and "proficiency_level" not in msg
+                ):
                     msg["proficiency_level"] = chat_persona["proficiency_level"]
                 if chat_persona.get("response_style") and "response_style" not in msg:
                     msg["response_style"] = chat_persona["response_style"]
@@ -601,7 +631,11 @@ class MessageForm(BaseModel):
 @router.post("/{id}/messages/{message_id}", response_model=Optional[ChatResponse])
 @get_write_operation_limit
 async def update_chat_message_by_id(
-    request: Request, id: str, message_id: str, form_data: MessageForm, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    message_id: str,
+    form_data: MessageForm,
+    user=Depends(get_verified_user),
 ):
     chat = Chats.get_chat_by_id(id)
 
@@ -660,7 +694,11 @@ class EventForm(BaseModel):
 @router.post("/{id}/messages/{message_id}/event", response_model=Optional[bool])
 @get_write_operation_limit
 async def send_chat_message_event_by_id(
-    request: Request, id: str, message_id: str, form_data: EventForm, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    message_id: str,
+    form_data: EventForm,
+    user=Depends(get_verified_user),
 ):
     chat = Chats.get_chat_by_id(id)
 
@@ -736,7 +774,9 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
 @router.get("/{id}/pinned", response_model=Optional[bool])
 @get_role_based_limit
-async def get_pinned_status_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def get_pinned_status_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         return chat.pinned
@@ -822,7 +862,9 @@ async def clone_chat_by_id(
 
 @router.post("/{id}/clone/shared", response_model=Optional[ChatResponse])
 @get_write_operation_limit
-async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def clone_shared_chat_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
 
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
@@ -872,7 +914,9 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
 
 @router.post("/{id}/archive", response_model=Optional[ChatResponse])
 @get_write_operation_limit
-async def archive_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def archive_chat_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id)
@@ -944,7 +988,9 @@ async def share_chat_by_id(request: Request, id: str, user=Depends(get_verified_
 
 @router.delete("/{id}/share", response_model=Optional[bool])
 @get_write_operation_limit
-async def delete_shared_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def delete_shared_chat_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         if not chat.share_id:
@@ -973,7 +1019,10 @@ class ChatFolderIdForm(BaseModel):
 @router.post("/{id}/folder", response_model=Optional[ChatResponse])
 @get_write_operation_limit
 async def update_chat_folder_id_by_id(
-    request: Request, id: str, form_data: ChatFolderIdForm, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    form_data: ChatFolderIdForm,
+    user=Depends(get_verified_user),
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
@@ -994,7 +1043,9 @@ async def update_chat_folder_id_by_id(
 
 @router.get("/{id}/tags", response_model=list[TagModel])
 @get_role_based_limit
-async def get_chat_tags_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def get_chat_tags_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         tags = chat.meta.get("tags", [])
@@ -1073,7 +1124,9 @@ async def delete_tag_by_id_and_tag_name(
 
 @router.delete("/{id}/tags/all", response_model=Optional[bool])
 @get_write_operation_limit
-async def delete_all_tags_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def delete_all_tags_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         Chats.delete_all_tags_by_id_and_user_id(id, user.id)

@@ -19,7 +19,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.tool_validator import validate_tool_output
 from open_webui.utils.hardcoded_tools import (
     is_hardcoded_tool,
-    get_hardcoded_tool_by_command
+    get_hardcoded_tool_by_command,
 )
 
 log = logging.getLogger(__name__)
@@ -48,8 +48,7 @@ class ToolInlineExecutor:
 
     # Pattern for tool-unsupported marker
     UNSUPPORTED_PATTERN = re.compile(
-        r'<tool-unsupported\s+tool="([^"]+)"\s+reason="([^"]+)"\s*/?>',
-        re.IGNORECASE
+        r'<tool-unsupported\s+tool="([^"]+)"\s+reason="([^"]+)"\s*/?>', re.IGNORECASE
     )
 
     def __init__(
@@ -96,7 +95,9 @@ class ToolInlineExecutor:
         log.info(f"  tool_prompts: {list(self.tool_prompts.keys())}")
         log.info(f"  tool_validation_rules: {list(self.tool_validation_rules.keys())}")
         log.info(f"  llm_call_fn: {'SET' if llm_call_fn else 'NONE'}")
-        log.info(f"  marker_pattern: {self._marker_pattern.pattern if self._marker_pattern else 'NONE'}")
+        log.info(
+            f"  marker_pattern: {self._marker_pattern.pattern if self._marker_pattern else 'NONE'}"
+        )
         log.info("=" * 60)
 
     def _build_marker_pattern(self) -> Optional[re.Pattern]:
@@ -113,6 +114,7 @@ class ToolInlineExecutor:
 
         # Get all hardcoded tool commands
         from open_webui.utils.hardcoded_tools import get_hardcoded_tools
+
         hardcoded_tools = get_hardcoded_tools()
         hardcoded_commands = [tool.command for tool in hardcoded_tools]
 
@@ -126,8 +128,8 @@ class ToolInlineExecutor:
         # Build pattern: <command>content</command>
         # Capture group 1: command name
         # Capture group 2: content
-        escaped_commands = '|'.join(re.escape(cmd) for cmd in commands)
-        pattern = rf'<({escaped_commands})>(.*?)</\1>'
+        escaped_commands = "|".join(re.escape(cmd) for cmd in commands)
+        pattern = rf"<({escaped_commands})>(.*?)</\1>"
 
         log.info(f"[TOOL INLINE] Built marker pattern for {len(commands)} commands:")
         log.info(f"  DB tools: {db_commands}")
@@ -170,7 +172,7 @@ class ToolInlineExecutor:
             # Handle unsupported marker first if it appears before tool marker
             if unsupported_match:
                 unsupported_pos = unsupported_match.start()
-                tool_pos = match.start() if match else float('inf')
+                tool_pos = match.start() if match else float("inf")
 
                 if unsupported_pos < tool_pos:
                     # Unsupported marker comes first - handle it
@@ -182,16 +184,20 @@ class ToolInlineExecutor:
                     tool_name = unsupported_match.group(1)
                     reason = unsupported_match.group(2)
 
-                    log.info(f"[TOOL INLINE] Unsupported marker detected: tool={tool_name}, reason={reason}")
+                    log.info(
+                        f"[TOOL INLINE] Unsupported marker detected: tool={tool_name}, reason={reason}"
+                    )
 
                     # Handle recovery - make LLM call to continue naturally
-                    recovery_text = await self._handle_unsupported_tool(tool_name, reason)
+                    recovery_text = await self._handle_unsupported_tool(
+                        tool_name, reason
+                    )
                     output += recovery_text
                     self.generated_content += recovery_text
 
                     # Remove processed unsupported marker and everything after from buffer
                     # (LLM response after unsupported marker is likely incomplete/invalid)
-                    self.buffer = self.buffer[unsupported_match.end():]
+                    self.buffer = self.buffer[unsupported_match.end() :]
                     continue
 
             if match:
@@ -208,7 +214,9 @@ class ToolInlineExecutor:
                 tool_command = match.group(1)
                 tool_context = match.group(2).strip()
 
-                log.info(f"[TOOL INLINE] Complete marker detected: command={tool_command}")
+                log.info(
+                    f"[TOOL INLINE] Complete marker detected: command={tool_command}"
+                )
                 log.info(f"[TOOL INLINE] Context preview: {tool_context[:100]}...")
 
                 # NOTE: tool_executing event was already emitted when opening tag was detected
@@ -225,11 +233,15 @@ class ToolInlineExecutor:
                 # Append tool result to output immediately (inline in stream)
                 output += tool_result
                 self.generated_content += tool_result
-                log.info(f"[TOOL INLINE] Tool result appended inline: {len(tool_result)} chars")
+                log.info(
+                    f"[TOOL INLINE] Tool result appended inline: {len(tool_result)} chars"
+                )
 
                 # Clear tool_executing tracking
                 self._emitted_tool_executing.discard(tool_command)
-                log.debug(f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}")
+                log.debug(
+                    f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}"
+                )
 
                 # Remove processed marker from buffer (don't show marker to user)
                 self.buffer = self.buffer[marker_end:]
@@ -241,8 +253,11 @@ class ToolInlineExecutor:
 
                 # Check both DB tools and hardcoded tools
                 from open_webui.utils.hardcoded_tools import get_hardcoded_tools
+
                 hardcoded_tools = get_hardcoded_tools()
-                all_commands = list(self.tool_prompts.keys()) + [tool.command for tool in hardcoded_tools]
+                all_commands = list(self.tool_prompts.keys()) + [
+                    tool.command for tool in hardcoded_tools
+                ]
 
                 for cmd in all_commands:
                     open_tag = f"<{cmd}>"
@@ -252,18 +267,26 @@ class ToolInlineExecutor:
                     open_pos = self.buffer.find(open_tag)
                     if open_pos != -1:
                         # Opening tag found - check if closing tag exists
-                        close_pos = self.buffer.find(close_tag, open_pos + len(open_tag))
+                        close_pos = self.buffer.find(
+                            close_tag, open_pos + len(open_tag)
+                        )
                         if close_pos == -1:
                             # Opening tag without closing tag - we're in the middle of a marker
                             in_marker = True
                             marker_start_pos = open_pos
-                            log.info(f"[TOOL INLINE] Opening tag detected: {cmd} at pos {open_pos}")
+                            log.info(
+                                f"[TOOL INLINE] Opening tag detected: {cmd} at pos {open_pos}"
+                            )
 
                             # Emit tool_executing event IMMEDIATELY when opening tag is detected
                             # (only once per tool to avoid duplicates)
                             if cmd not in self._emitted_tool_executing:
-                                log.info(f"[TOOL INLINE] Emitting tool_executing event for {cmd} (opening tag detected)")
-                                await self._emit_event("tool_executing", cmd, f"도구 실행 중: {cmd}")
+                                log.info(
+                                    f"[TOOL INLINE] Emitting tool_executing event for {cmd} (opening tag detected)"
+                                )
+                                await self._emit_event(
+                                    "tool_executing", cmd, f"도구 실행 중: {cmd}"
+                                )
                                 self._emitted_tool_executing.add(cmd)
 
                             break
@@ -279,7 +302,9 @@ class ToolInlineExecutor:
                         if not in_marker or unsupported_pos < marker_start_pos:
                             in_marker = True
                             marker_start_pos = unsupported_pos
-                            log.debug(f"[TOOL INLINE] Buffering partial unsupported marker at pos {unsupported_pos}")
+                            log.debug(
+                                f"[TOOL INLINE] Buffering partial unsupported marker at pos {unsupported_pos}"
+                            )
 
                 if in_marker and marker_start_pos >= 0:
                     # Output text before the opening tag, keep rest in buffer
@@ -287,7 +312,9 @@ class ToolInlineExecutor:
                     output += text_before
                     self.generated_content += text_before
                     self.buffer = self.buffer[marker_start_pos:]
-                    log.debug(f"[TOOL INLINE] Buffer retained ({len(self.buffer)} chars): {self.buffer[:50]}...")
+                    log.debug(
+                        f"[TOOL INLINE] Buffer retained ({len(self.buffer)} chars): {self.buffer[:50]}..."
+                    )
                     break
 
                 # Check for partial opening tag at the end of buffer
@@ -302,7 +329,9 @@ class ToolInlineExecutor:
                             self.generated_content += text_before
                             self.buffer = self.buffer[-i:]
                             found_partial = True
-                            log.debug(f"[TOOL INLINE] Partial opening tag retained: {self.buffer}")
+                            log.debug(
+                                f"[TOOL INLINE] Partial opening tag retained: {self.buffer}"
+                            )
                             break
                     if found_partial:
                         break
@@ -316,7 +345,9 @@ class ToolInlineExecutor:
                             self.generated_content += text_before
                             self.buffer = self.buffer[-i:]
                             found_partial = True
-                            log.debug(f"[TOOL INLINE] Partial unsupported tag retained: {self.buffer}")
+                            log.debug(
+                                f"[TOOL INLINE] Partial unsupported tag retained: {self.buffer}"
+                            )
                             break
 
                 if not found_partial:
@@ -344,6 +375,7 @@ class ToolInlineExecutor:
             # Trace tool execution to Langfuse
             try:
                 from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+
                 tracer = get_langfuse_tracer()
                 if tracer:
                     # Use trace object if available, otherwise fall back to chat_id
@@ -352,9 +384,11 @@ class ToolInlineExecutor:
                         tracer.trace_tool_call(
                             trace_obj=trace_obj,
                             tool_name=command,
-                            tool_input={"context": context[:500]},  # Limit context length
+                            tool_input={
+                                "context": context[:500]
+                            },  # Limit context length
                             tool_output={"result": result[:500]},  # Limit result length
-                            metadata={"tool_type": "hardcoded"}
+                            metadata={"tool_type": "hardcoded"},
                         )
                         log.info(f"[LANGFUSE] Traced hardcoded tool: {command}")
             except Exception as trace_error:
@@ -385,7 +419,9 @@ Generate the visualization for the following request:
 Output ONLY the tool-specific JSON block wrapped in appropriate markers.
 Do NOT include any explanatory text before or after the output block."""
 
-            log.info(f"[TOOL INLINE] Calling LLM with tool prompt ({len(tool_system)} chars)")
+            log.info(
+                f"[TOOL INLINE] Calling LLM with tool prompt ({len(tool_system)} chars)"
+            )
             log.info(f"[TOOL INLINE] Using Pro model for accurate tool execution")
 
             # Call LLM for tool execution (use_fast_model=False by default for accuracy)
@@ -397,11 +433,16 @@ Do NOT include any explanatory text before or after the output block."""
 
             if result.get("success"):
                 tool_output = result.get("text", "")
-                log.info(f"[TOOL INLINE] Tool output received: {len(tool_output)} chars")
+                log.info(
+                    f"[TOOL INLINE] Tool output received: {len(tool_output)} chars"
+                )
 
                 # Trace DB tool execution to Langfuse
                 try:
-                    from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                    from open_webui.integrations.langfuse_tracing import (
+                        get_langfuse_tracer,
+                    )
+
                     tracer = get_langfuse_tracer()
                     if tracer:
                         # Use trace object if available, otherwise fall back to chat_id
@@ -410,38 +451,58 @@ Do NOT include any explanatory text before or after the output block."""
                             tracer.trace_tool_call(
                                 trace_obj=trace_obj,
                                 tool_name=command,
-                                tool_input={"context": context[:500]},  # Limit context length
-                                tool_output={"result": tool_output[:500]},  # Limit output length
-                                metadata={"tool_type": "db_tool"}
+                                tool_input={
+                                    "context": context[:500]
+                                },  # Limit context length
+                                tool_output={
+                                    "result": tool_output[:500]
+                                },  # Limit output length
+                                metadata={"tool_type": "db_tool"},
                             )
                             log.info(f"[LANGFUSE] Traced DB tool: {command}")
                 except Exception as trace_error:
                     log.error(f"[LANGFUSE] Failed to trace DB tool call: {trace_error}")
 
                 # Validate output for json_tool types
-                normalized_cmd = command.lower().replace('_', '-').lstrip('/')
+                normalized_cmd = command.lower().replace("_", "-").lstrip("/")
                 validation_rules = self.tool_validation_rules.get(normalized_cmd)
                 if validation_rules:
-                    is_valid, error_msg = validate_tool_output(tool_output, validation_rules)
+                    is_valid, error_msg = validate_tool_output(
+                        tool_output, validation_rules
+                    )
                     if not is_valid:
-                        log.warning(f"[TOOL INLINE] Validation failed for {command}: {error_msg}")
-                        log.warning(f"[TOOL INLINE] Tool output FULL OUTPUT (for debugging):")
+                        log.warning(
+                            f"[TOOL INLINE] Validation failed for {command}: {error_msg}"
+                        )
+                        log.warning(
+                            f"[TOOL INLINE] Tool output FULL OUTPUT (for debugging):"
+                        )
                         log.warning(tool_output)  # Full output for debugging
-                        log.warning(f"[TOOL INLINE] Validation rules: {validation_rules}")
-                        await self._emit_event("tool_validation_failed", command, f"검증 실패: {command}")
+                        log.warning(
+                            f"[TOOL INLINE] Validation rules: {validation_rules}"
+                        )
+                        await self._emit_event(
+                            "tool_validation_failed", command, f"검증 실패: {command}"
+                        )
                         # Use recovery approach (same as tool-unsupported)
                         recovery_text = await self._handle_validation_failure(
                             command, error_msg, context
                         )
-                        await self._emit_event("tool_completed", command, f"도구 완료 (복구): {command}")
+                        await self._emit_event(
+                            "tool_completed", command, f"도구 완료 (복구): {command}"
+                        )
                         return f"\n{recovery_text}\n"
 
-                await self._emit_event("tool_completed", command, f"도구 완료: {command}")
+                await self._emit_event(
+                    "tool_completed", command, f"도구 완료: {command}"
+                )
                 return f"\n{tool_output}\n"
             else:
                 error = result.get("error", "Unknown error")
                 log.error(f"[TOOL INLINE] Tool execution failed: {error}")
-                await self._emit_event("tool_completed", command, f"도구 실패: {command}")
+                await self._emit_event(
+                    "tool_completed", command, f"도구 실패: {command}"
+                )
                 return f"\n<!-- Tool error: {error} -->\n"
 
         except Exception as e:
@@ -480,8 +541,12 @@ Do NOT include any explanatory text before or after the output block."""
 
         try:
             log.info(f"[HARDCODED TOOL] Executing {command} with response_schema")
-            log.info(f"[HARDCODED TOOL] System prompt length: {len(hardcoded_tool.system_prompt)} chars")
-            log.info(f"[HARDCODED TOOL] Response schema: {hardcoded_tool.response_schema.__name__}")
+            log.info(
+                f"[HARDCODED TOOL] System prompt length: {len(hardcoded_tool.system_prompt)} chars"
+            )
+            log.info(
+                f"[HARDCODED TOOL] Response schema: {hardcoded_tool.response_schema.__name__}"
+            )
 
             # Call LLM with response_schema
             # Note: use_fast_model=False to use Pro model for accuracy (not Flash)
@@ -491,12 +556,14 @@ Do NOT include any explanatory text before or after the output block."""
                 use_fast_model=False,  # Use Pro model for hardcoded tools (accurate)
                 response_schema=hardcoded_tool.response_schema,
                 disable_afc=hardcoded_tool.disable_afc,  # Tool-specific AFC control
-                force_model=hardcoded_tool.force_model  # Tool-specific model selection
+                force_model=hardcoded_tool.force_model,  # Tool-specific model selection
             )
 
             if result.get("success"):
                 tool_output = result.get("text", "")
-                log.info(f"[HARDCODED TOOL] Tool output received: {len(tool_output)} chars (JSON)")
+                log.info(
+                    f"[HARDCODED TOOL] Tool output received: {len(tool_output)} chars (JSON)"
+                )
 
                 # Strip markdown code blocks if present (Gemini sometimes wraps JSON in ```json...```)
                 import re
@@ -506,16 +573,20 @@ Do NOT include any explanatory text before or after the output block."""
                 tool_output = tool_output.strip()
                 if tool_output.startswith("```"):
                     # Remove opening ```json or ```
-                    tool_output = re.sub(r'^```(?:json)?\s*\n?', '', tool_output)
+                    tool_output = re.sub(r"^```(?:json)?\s*\n?", "", tool_output)
                     # Remove closing ```
-                    tool_output = re.sub(r'\n?```\s*$', '', tool_output)
+                    tool_output = re.sub(r"\n?```\s*$", "", tool_output)
                     tool_output = tool_output.strip()
-                    log.info(f"[HARDCODED TOOL] Stripped markdown code blocks, new length: {len(tool_output)} chars")
+                    log.info(
+                        f"[HARDCODED TOOL] Stripped markdown code blocks, new length: {len(tool_output)} chars"
+                    )
 
                 # Parse JSON and check status
                 try:
                     parsed = json.loads(tool_output)
-                    log.info(f"[HARDCODED TOOL] Parsed JSON structure: {list(parsed.keys())}")
+                    log.info(
+                        f"[HARDCODED TOOL] Parsed JSON structure: {list(parsed.keys())}"
+                    )
 
                     # Handle two possible JSON structures:
                     # 1. Correct: {"result": {"status": "...", ...}}
@@ -525,11 +596,15 @@ Do NOT include any explanatory text before or after the output block."""
                     elif "status" in parsed:
                         # Gemini returned flat structure without "result" wrapper
                         result_data = parsed
-                        log.warning(f"[HARDCODED TOOL] JSON missing 'result' wrapper, using top-level fields")
+                        log.warning(
+                            f"[HARDCODED TOOL] JSON missing 'result' wrapper, using top-level fields"
+                        )
                     else:
                         # Completely unexpected structure
                         final_output = tool_output
-                        log.warning(f"[HARDCODED TOOL] Unexpected JSON structure (no result/status), using original output")
+                        log.warning(
+                            f"[HARDCODED TOOL] Unexpected JSON structure (no result/status), using original output"
+                        )
                         result_data = None
 
                     if result_data:
@@ -537,42 +612,64 @@ Do NOT include any explanatory text before or after the output block."""
 
                         if status == "unsupported":
                             # Graph generation failed - use recovery with Flash model
-                            reason = result_data.get("reason", "지원하지 않는 그래프 유형입니다")
-                            log.warning(f"[HARDCODED TOOL] Graph generation failed (unsupported): {reason}")
-                            await self._emit_event("tool_unsupported", command, f"도구 미지원: {command}")
+                            reason = result_data.get(
+                                "reason", "지원하지 않는 그래프 유형입니다"
+                            )
+                            log.warning(
+                                f"[HARDCODED TOOL] Graph generation failed (unsupported): {reason}"
+                            )
+                            await self._emit_event(
+                                "tool_unsupported", command, f"도구 미지원: {command}"
+                            )
 
                             # Handle recovery - Flash model will generate natural text explanation
-                            recovery_text = await self._handle_unsupported_tool(command, reason)
-                            await self._emit_event("tool_completed", command, f"도구 완료 (복구): {command}")
+                            recovery_text = await self._handle_unsupported_tool(
+                                command, reason
+                            )
+                            await self._emit_event(
+                                "tool_completed",
+                                command,
+                                f"도구 완료 (복구): {command}",
+                            )
                             return f"\n{recovery_text}\n"
 
                         elif status == "success" and "graph" in result_data:
                             # Success - extract graph data
                             graph_data = result_data["graph"]
                             final_output = json.dumps(graph_data, ensure_ascii=False)
-                            log.info(f"[HARDCODED TOOL] Extracted graph data: {len(final_output)} chars")
+                            log.info(
+                                f"[HARDCODED TOOL] Extracted graph data: {len(final_output)} chars"
+                            )
                         else:
                             # Unexpected status or missing graph field
                             final_output = tool_output
-                            log.warning(f"[HARDCODED TOOL] Unexpected result structure (status={status}), using original output")
+                            log.warning(
+                                f"[HARDCODED TOOL] Unexpected result structure (status={status}), using original output"
+                            )
                 except json.JSONDecodeError as e:
                     log.error(f"[HARDCODED TOOL] JSON parsing failed: {e}")
                     final_output = tool_output
 
                 # Emit tool_completed event
-                await self._emit_event("tool_completed", command, f"도구 완료: {command}")
+                await self._emit_event(
+                    "tool_completed", command, f"도구 완료: {command}"
+                )
 
                 # Return JSON output wrapped in output_tag (e.g., <graph-spec>...</graph-spec>)
                 output_tag = hardcoded_tool.output_tag
                 result_str = f"\n<{output_tag}>{final_output}</{output_tag}>\n"
-                log.info(f"[HARDCODED TOOL] Wrapping output in <{output_tag}>...</{output_tag}>")
+                log.info(
+                    f"[HARDCODED TOOL] Wrapping output in <{output_tag}>...</{output_tag}>"
+                )
                 log.info(f"[HARDCODED TOOL] Returning result: {len(result_str)} chars")
                 log.info(f"[HARDCODED TOOL] Result preview: {result_str[:200]}...")
                 return result_str
             else:
                 error = result.get("error", "Unknown error")
                 log.error(f"[HARDCODED TOOL] Tool execution failed: {error}")
-                await self._emit_event("tool_completed", command, f"도구 실패: {command}")
+                await self._emit_event(
+                    "tool_completed", command, f"도구 실패: {command}"
+                )
                 return f"\n<!-- Hardcoded tool error: {error} -->\n"
 
         except Exception as e:
@@ -594,7 +691,9 @@ Do NOT include any explanatory text before or after the output block."""
         import asyncio
         import time
 
-        log.info(f"[GRAPH TIMEOUT] Starting graph generation with {GRAPH_TIMEOUT_SECONDS}s timeout")
+        log.info(
+            f"[GRAPH TIMEOUT] Starting graph generation with {GRAPH_TIMEOUT_SECONDS}s timeout"
+        )
 
         # Create background task for graph generation
         async def _call_llm_for_graph():
@@ -605,7 +704,7 @@ Do NOT include any explanatory text before or after the output block."""
                 use_fast_model=False,  # Use Pro model for accuracy
                 response_schema=hardcoded_tool.response_schema,
                 disable_afc=hardcoded_tool.disable_afc,
-                force_model=hardcoded_tool.force_model  # Force specific model
+                force_model=hardcoded_tool.force_model,  # Force specific model
             )
             return result
 
@@ -619,19 +718,36 @@ Do NOT include any explanatory text before or after the output block."""
 
             # Timeout check
             if elapsed >= GRAPH_TIMEOUT_SECONDS:
-                log.warning(f"[GRAPH TIMEOUT] Graph generation timeout ({GRAPH_TIMEOUT_SECONDS}s)")
+                log.warning(
+                    f"[GRAPH TIMEOUT] Graph generation timeout ({GRAPH_TIMEOUT_SECONDS}s)"
+                )
                 task.cancel()
 
                 # Recovery: 텍스트 설명으로 대체
-                await self._emit_event("tool_timeout", hardcoded_tool.command, f"타임아웃: {hardcoded_tool.command}")
-                recovery_text = await self._handle_graph_timeout(hardcoded_tool.command, context)
-                await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 완료 (타임아웃 복구): {hardcoded_tool.command}")
+                await self._emit_event(
+                    "tool_timeout",
+                    hardcoded_tool.command,
+                    f"타임아웃: {hardcoded_tool.command}",
+                )
+                recovery_text = await self._handle_graph_timeout(
+                    hardcoded_tool.command, context
+                )
+                await self._emit_event(
+                    "tool_completed",
+                    hardcoded_tool.command,
+                    f"도구 완료 (타임아웃 복구): {hardcoded_tool.command}",
+                )
                 return f"\n{recovery_text}\n"
 
             # Progress update (every 5 seconds)
-            if elapsed > last_progress and elapsed % GRAPH_PROGRESS_INTERVAL_SECONDS == 0:
+            if (
+                elapsed > last_progress
+                and elapsed % GRAPH_PROGRESS_INTERVAL_SECONDS == 0
+            ):
                 progress_msg = f"⏳ 그래프 생성 중... ({elapsed}초 경과)"
-                await self._emit_event("tool_progress", hardcoded_tool.command, progress_msg)
+                await self._emit_event(
+                    "tool_progress", hardcoded_tool.command, progress_msg
+                )
                 log.info(f"[GRAPH TIMEOUT] Progress: {elapsed}s")
                 last_progress = elapsed
 
@@ -642,7 +758,9 @@ Do NOT include any explanatory text before or after the output block."""
             result = await task
             if result.get("success"):
                 tool_output = result.get("text", "")
-                log.info(f"[GRAPH TIMEOUT] Graph generated successfully: {len(tool_output)} chars")
+                log.info(
+                    f"[GRAPH TIMEOUT] Graph generated successfully: {len(tool_output)} chars"
+                )
 
                 # Strip markdown code blocks if present
                 import re
@@ -650,14 +768,16 @@ Do NOT include any explanatory text before or after the output block."""
 
                 tool_output = tool_output.strip()
                 if tool_output.startswith("```"):
-                    tool_output = re.sub(r'^```(?:json)?\s*\n?', '', tool_output)
-                    tool_output = re.sub(r'\n?```\s*$', '', tool_output)
+                    tool_output = re.sub(r"^```(?:json)?\s*\n?", "", tool_output)
+                    tool_output = re.sub(r"\n?```\s*$", "", tool_output)
                     tool_output = tool_output.strip()
 
                 # Parse JSON and check status
                 try:
                     parsed = json.loads(tool_output)
-                    log.info(f"[GRAPH TIMEOUT] Parsed JSON structure: {list(parsed.keys())}")
+                    log.info(
+                        f"[GRAPH TIMEOUT] Parsed JSON structure: {list(parsed.keys())}"
+                    )
 
                     # Handle JSON structure
                     if "result" in parsed:
@@ -672,18 +792,34 @@ Do NOT include any explanatory text before or after the output block."""
                         status = result_data.get("status", "success")
 
                         if status == "unsupported":
-                            reason = result_data.get("reason", "지원하지 않는 그래프 유형입니다")
-                            log.warning(f"[GRAPH TIMEOUT] Graph generation failed (unsupported): {reason}")
-                            await self._emit_event("tool_unsupported", hardcoded_tool.command, f"도구 미지원: {hardcoded_tool.command}")
+                            reason = result_data.get(
+                                "reason", "지원하지 않는 그래프 유형입니다"
+                            )
+                            log.warning(
+                                f"[GRAPH TIMEOUT] Graph generation failed (unsupported): {reason}"
+                            )
+                            await self._emit_event(
+                                "tool_unsupported",
+                                hardcoded_tool.command,
+                                f"도구 미지원: {hardcoded_tool.command}",
+                            )
 
-                            recovery_text = await self._handle_unsupported_tool(hardcoded_tool.command, reason)
-                            await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 완료 (복구): {hardcoded_tool.command}")
+                            recovery_text = await self._handle_unsupported_tool(
+                                hardcoded_tool.command, reason
+                            )
+                            await self._emit_event(
+                                "tool_completed",
+                                hardcoded_tool.command,
+                                f"도구 완료 (복구): {hardcoded_tool.command}",
+                            )
                             return f"\n{recovery_text}\n"
 
                         elif status == "success" and "graph" in result_data:
                             graph_data = result_data["graph"]
                             final_output = json.dumps(graph_data, ensure_ascii=False)
-                            log.info(f"[GRAPH TIMEOUT] Extracted graph data: {len(final_output)} chars")
+                            log.info(
+                                f"[GRAPH TIMEOUT] Extracted graph data: {len(final_output)} chars"
+                            )
                         else:
                             final_output = tool_output
 
@@ -691,7 +827,11 @@ Do NOT include any explanatory text before or after the output block."""
                     log.error(f"[GRAPH TIMEOUT] JSON parsing failed: {e}")
                     final_output = tool_output
 
-                await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 완료: {hardcoded_tool.command}")
+                await self._emit_event(
+                    "tool_completed",
+                    hardcoded_tool.command,
+                    f"도구 완료: {hardcoded_tool.command}",
+                )
 
                 output_tag = hardcoded_tool.output_tag
                 result_str = f"\n<{output_tag}>{final_output}</{output_tag}>\n"
@@ -699,7 +839,11 @@ Do NOT include any explanatory text before or after the output block."""
             else:
                 error = result.get("error", "Unknown error")
                 log.error(f"[GRAPH TIMEOUT] Tool execution failed: {error}")
-                await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 실패: {hardcoded_tool.command}")
+                await self._emit_event(
+                    "tool_completed",
+                    hardcoded_tool.command,
+                    f"도구 실패: {hardcoded_tool.command}",
+                )
                 return f"\n<!-- Graph generation error: {error} -->\n"
 
         except asyncio.CancelledError:
@@ -707,7 +851,11 @@ Do NOT include any explanatory text before or after the output block."""
             return f"\n<!-- Graph generation was cancelled -->\n"
         except Exception as e:
             log.error(f"[GRAPH TIMEOUT] Exception: {e}")
-            await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 오류: {hardcoded_tool.command}")
+            await self._emit_event(
+                "tool_completed",
+                hardcoded_tool.command,
+                f"도구 오류: {hardcoded_tool.command}",
+            )
             return f"\n<!-- Graph generation exception: {str(e)} -->\n"
 
     async def _handle_graph_timeout(self, tool_name: str, context: str) -> str:
@@ -723,7 +871,9 @@ Do NOT include any explanatory text before or after the output block."""
         """
         log.info(f"[GRAPH TIMEOUT] Handling timeout for: {tool_name}")
 
-        await self._emit_event("tool_recovery", tool_name, f"그래프 생성 복구 중: {tool_name}")
+        await self._emit_event(
+            "tool_recovery", tool_name, f"그래프 생성 복구 중: {tool_name}"
+        )
 
         if not self.llm_call_fn:
             log.warning("[GRAPH TIMEOUT] No LLM call function for recovery")
@@ -750,13 +900,17 @@ Do NOT include any explanatory text before or after the output block."""
             result = await self.llm_call_fn(
                 system_prompt=recovery_system,
                 user_message=user_message,
-                use_fast_model=True  # Use Flash model for fast recovery
+                use_fast_model=True,  # Use Flash model for fast recovery
             )
 
             if result.get("success"):
                 recovery_text = result.get("text", "")
-                log.info(f"[GRAPH TIMEOUT] Recovery text received: {len(recovery_text)} chars")
-                await self._emit_event("tool_recovery_completed", tool_name, f"복구 완료: {tool_name}")
+                log.info(
+                    f"[GRAPH TIMEOUT] Recovery text received: {len(recovery_text)} chars"
+                )
+                await self._emit_event(
+                    "tool_recovery_completed", tool_name, f"복구 완료: {tool_name}"
+                )
                 return f" {recovery_text}"
             else:
                 error = result.get("error", "Unknown error")
@@ -770,7 +924,7 @@ Do NOT include any explanatory text before or after the output block."""
     def _find_tool_prompt(self, command: str) -> Optional[str]:
         """Find tool prompt by command name."""
         # Normalize command
-        normalized = command.lower().replace('_', '-').lstrip('/')
+        normalized = command.lower().replace("_", "-").lstrip("/")
 
         # Direct match first
         if normalized in self.tool_prompts:
@@ -778,7 +932,7 @@ Do NOT include any explanatory text before or after the output block."""
 
         # Fuzzy match
         for key, prompt in self.tool_prompts.items():
-            key_normalized = key.lower().replace('_', '-').lstrip('/')
+            key_normalized = key.lower().replace("_", "-").lstrip("/")
             if normalized in key_normalized or key_normalized in normalized:
                 return prompt
 
@@ -795,11 +949,13 @@ Do NOT include any explanatory text before or after the output block."""
             return None
 
         # Output text before the unsupported marker
-        text_before = text[:match.start()]
+        text_before = text[: match.start()]
         tool_name = match.group(1)
         reason = match.group(2)
 
-        log.info(f"[TOOL INLINE] Unsupported marker found (no-tool mode): tool={tool_name}, reason={reason}")
+        log.info(
+            f"[TOOL INLINE] Unsupported marker found (no-tool mode): tool={tool_name}, reason={reason}"
+        )
 
         # Handle recovery
         recovery_text = await self._handle_unsupported_tool(tool_name, reason)
@@ -822,10 +978,14 @@ Do NOT include any explanatory text before or after the output block."""
         Returns:
             Recovery text to insert into the stream
         """
-        log.info(f"[TOOL INLINE] Handling unsupported tool: {tool_name}, reason: {reason}")
+        log.info(
+            f"[TOOL INLINE] Handling unsupported tool: {tool_name}, reason: {reason}"
+        )
 
         # Emit event for recovery
-        await self._emit_event("tool_recovery", tool_name, f"시각화 도구 복구 중: {tool_name}")
+        await self._emit_event(
+            "tool_recovery", tool_name, f"시각화 도구 복구 중: {tool_name}"
+        )
 
         if not self.llm_call_fn:
             log.warning("[TOOL INLINE] No LLM call function for recovery")
@@ -845,7 +1005,11 @@ Do NOT include any explanatory text before or after the output block."""
 - 간결하고 명확하게 설명하세요"""
 
             # Build context from generated content so far
-            context_preview = self.generated_content[-1000:] if len(self.generated_content) > 1000 else self.generated_content
+            context_preview = (
+                self.generated_content[-1000:]
+                if len(self.generated_content) > 1000
+                else self.generated_content
+            )
 
             user_message = f"""지금까지 생성된 응답:
 {context_preview}
@@ -859,13 +1023,17 @@ Do NOT include any explanatory text before or after the output block."""
             result = await self.llm_call_fn(
                 system_prompt=recovery_system,
                 user_message=user_message,
-                use_fast_model=True  # Use Flash model for fast recovery
+                use_fast_model=True,  # Use Flash model for fast recovery
             )
 
             if result.get("success"):
                 recovery_text = result.get("text", "")
-                log.info(f"[TOOL INLINE] Recovery text received: {len(recovery_text)} chars")
-                await self._emit_event("tool_recovery_completed", tool_name, f"복구 완료: {tool_name}")
+                log.info(
+                    f"[TOOL INLINE] Recovery text received: {len(recovery_text)} chars"
+                )
+                await self._emit_event(
+                    "tool_recovery_completed", tool_name, f"복구 완료: {tool_name}"
+                )
                 # Add space before recovery text for natural flow
                 return f" {recovery_text}"
             else:
@@ -927,18 +1095,24 @@ Do NOT include any explanatory text before or after the output block."""
 
 위 내용에서 자연스럽게 이어서 설명을 계속해주세요. 1-2문장 정도로 간결하게."""
 
-            log.info("[TOOL INLINE] Making validation recovery LLM call with Flash model")
+            log.info(
+                "[TOOL INLINE] Making validation recovery LLM call with Flash model"
+            )
 
             result = await self.llm_call_fn(
                 system_prompt=recovery_system,
                 user_message=user_message,
-                use_fast_model=True  # Use Flash model for fast recovery
+                use_fast_model=True,  # Use Flash model for fast recovery
             )
 
             if result.get("success"):
                 recovery_text = result.get("text", "")
-                log.info(f"[TOOL INLINE] Validation recovery text received: {len(recovery_text)} chars")
-                await self._emit_event("tool_recovery_completed", tool_name, f"복구 완료: {tool_name}")
+                log.info(
+                    f"[TOOL INLINE] Validation recovery text received: {len(recovery_text)} chars"
+                )
+                await self._emit_event(
+                    "tool_recovery_completed", tool_name, f"복구 완료: {tool_name}"
+                )
                 return f" {recovery_text}"
             else:
                 error = result.get("error", "Unknown error")
@@ -953,13 +1127,9 @@ Do NOT include any explanatory text before or after the output block."""
         """Emit socket event."""
         if self.event_emitter:
             try:
-                await self.event_emitter({
-                    "type": event_type,
-                    "data": {
-                        "tool": tool,
-                        "message": message
-                    }
-                })
+                await self.event_emitter(
+                    {"type": event_type, "data": {"tool": tool, "message": message}}
+                )
                 log.info(f"[TOOL INLINE] Event emitted: {event_type} - {tool}")
             except Exception as e:
                 log.error(f"[TOOL INLINE] Event emission failed: {e}")
@@ -997,7 +1167,7 @@ def build_tool_hints(tool_prompts: List[Any]) -> str:
     ]
 
     for tool in tool_prompts:
-        command = tool.command.lstrip('/')
+        command = tool.command.lstrip("/")
         title = tool.title or command
         description = tool.tool_description or ""
         # Truncate long descriptions
@@ -1006,28 +1176,38 @@ def build_tool_hints(tool_prompts: List[Any]) -> str:
         lines.append(f"- {title}: {description}")
         lines.append(f"  형식: <{command}>시각화할 내용 설명</{command}>")
 
-    lines.extend([
-        "",
-        "사용 예시:",
-    ])
+    lines.extend(
+        [
+            "",
+            "사용 예시:",
+        ]
+    )
 
     # Add examples based on available tools
     for tool in tool_prompts[:2]:  # Show 2 examples max
-        command = tool.command.lstrip('/')
+        command = tool.command.lstrip("/")
         title = tool.title or command
-        if 'graph' in command.lower():
-            lines.append(f"<{command}>y = sin(x) 함수의 그래프를 0부터 2π까지 그려주세요</{command}>")
-        elif 'flow' in command.lower():
-            lines.append(f"<{command}>이차방정식 풀이 과정을 순서도로 나타내세요</{command}>")
-        elif 'diagram' in command.lower():
-            lines.append(f"<{command}>삼각형의 내심과 외심 관계를 다이어그램으로 표현</{command}>")
-        elif 'scene' in command.lower():
+        if "graph" in command.lower():
+            lines.append(
+                f"<{command}>y = sin(x) 함수의 그래프를 0부터 2π까지 그려주세요</{command}>"
+            )
+        elif "flow" in command.lower():
+            lines.append(
+                f"<{command}>이차방정식 풀이 과정을 순서도로 나타내세요</{command}>"
+            )
+        elif "diagram" in command.lower():
+            lines.append(
+                f"<{command}>삼각형의 내심과 외심 관계를 다이어그램으로 표현</{command}>"
+            )
+        elif "scene" in command.lower():
             lines.append(f"<{command}>원기둥의 부피 공식을 3D로 시각화</{command}>")
 
-    lines.extend([
-        "",
-        "중요: 시각화가 이해에 도움이 될 때만 도구를 사용하세요.",
-        "도구 출력은 별도로 생성되어 응답에 삽입됩니다.",
-    ])
+    lines.extend(
+        [
+            "",
+            "중요: 시각화가 이해에 도움이 될 때만 도구를 사용하세요.",
+            "도구 출력은 별도로 생성되어 응답에 삽입됩니다.",
+        ]
+    )
 
     return "\n".join(lines)

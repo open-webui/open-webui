@@ -31,17 +31,28 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 # Pydantic Models for Structured Tagging Responses
 # ============================================================
 
+
 class MessageTagResponse(BaseModel):
     """Pydantic model for structured tagging response from Gemini."""
+
     message_id: str = Field(..., description="Message ID from input")
-    tag: Optional[str] = Field(None, description="Tag ID (lowercase with underscores) or null if not math-related")
-    tag_display: Optional[str] = Field(None, description="Korean display name with English in parentheses or null")
+    tag: Optional[str] = Field(
+        None,
+        description="Tag ID (lowercase with underscores) or null if not math-related",
+    )
+    tag_display: Optional[str] = Field(
+        None, description="Korean display name with English in parentheses or null"
+    )
     summary: str = Field(..., description="50-character Korean summary")
-    chapter_id: Optional[str] = Field(None, description="Best matching chapter ID (e.g., 'ch-5') based on content analysis, or null if uncertain")
+    chapter_id: Optional[str] = Field(
+        None,
+        description="Best matching chapter ID (e.g., 'ch-5') based on content analysis, or null if uncertain",
+    )
 
 
 class BatchTaggingResponse(BaseModel):
     """Container for batch tagging results."""
+
     results: List[MessageTagResponse]
 
 
@@ -70,9 +81,15 @@ class MessageTaggingDaemon:
         return {
             **self._progress,
             "progress_percent": (
-                round(self._progress["processed_messages"] / self._progress["total_messages"] * 100, 1)
-                if self._progress["total_messages"] > 0 else 0
-            )
+                round(
+                    self._progress["processed_messages"]
+                    / self._progress["total_messages"]
+                    * 100,
+                    1,
+                )
+                if self._progress["total_messages"] > 0
+                else 0
+            ),
         }
 
     def _reset_progress(self):
@@ -105,7 +122,9 @@ class MessageTaggingDaemon:
                 lock_age = now - config.lock_acquired_at
                 # Clear lock if it's older than 2 hours (stale from crash/restart)
                 if lock_age > 7200:
-                    log.warning(f"[MESSAGE TAGGING DAEMON] Clearing stale lock (age: {lock_age}s)")
+                    log.warning(
+                        f"[MESSAGE TAGGING DAEMON] Clearing stale lock (age: {lock_age}s)"
+                    )
                     TaggingDaemonConfigs.update_lock(None, None)
         except Exception as e:
             log.error(f"[MESSAGE TAGGING DAEMON] Error cleaning up stale lock: {e}")
@@ -212,7 +231,9 @@ class MessageTaggingDaemon:
             cutoff_time = int(time.time()) - (config.lookback_days * 86400)
             untagged_messages = await self._get_untagged_messages(cutoff_time)
 
-            log.info(f"[MESSAGE TAGGING DAEMON] Found {len(untagged_messages)} untagged messages")
+            log.info(
+                f"[MESSAGE TAGGING DAEMON] Found {len(untagged_messages)} untagged messages"
+            )
 
             # Filter to only user messages
             user_messages = [m for m in untagged_messages if m.get("role") == "user"]
@@ -220,19 +241,23 @@ class MessageTaggingDaemon:
             if not user_messages:
                 self._progress["status"] = "completed"
                 self._progress["is_running"] = False
-                TaggingDaemonConfigs.update_last_run(start_time, "success: no messages to tag")
+                TaggingDaemonConfigs.update_last_run(
+                    start_time, "success: no messages to tag"
+                )
                 return
 
             # Update progress with totals
             self._progress["total_messages"] = len(user_messages)
-            self._progress["total_batches"] = (len(user_messages) + config.batch_size - 1) // config.batch_size
+            self._progress["total_batches"] = (
+                len(user_messages) + config.batch_size - 1
+            ) // config.batch_size
             self._progress["status"] = "processing"
 
             # Process in batches
             processed = 0
             batch_num = 0
             for i in range(0, len(user_messages), config.batch_size):
-                batch = user_messages[i:i + config.batch_size]
+                batch = user_messages[i : i + config.batch_size]
                 batch_num += 1
 
                 # Update progress
@@ -259,8 +284,12 @@ class MessageTaggingDaemon:
             self._progress["is_running"] = False
 
             # Update last run status
-            TaggingDaemonConfigs.update_last_run(start_time, f"success: tagged {processed} messages")
-            log.info(f"[MESSAGE TAGGING DAEMON] Tagging run completed: {processed} messages tagged")
+            TaggingDaemonConfigs.update_last_run(
+                start_time, f"success: tagged {processed} messages"
+            )
+            log.info(
+                f"[MESSAGE TAGGING DAEMON] Tagging run completed: {processed} messages tagged"
+            )
 
         except Exception as e:
             log.error(f"[MESSAGE TAGGING DAEMON] Tagging run failed: {e}")
@@ -275,9 +304,7 @@ class MessageTaggingDaemon:
 
         with get_db() as db:
             # Get chats updated after cutoff time
-            chats = db.query(Chat).filter(
-                Chat.updated_at >= cutoff_time
-            ).all()
+            chats = db.query(Chat).filter(Chat.updated_at >= cutoff_time).all()
 
             for chat in chats:
                 if not chat.chat:
@@ -297,14 +324,16 @@ class MessageTaggingDaemon:
 
                     # Check if already tagged
                     if not MessageTags.has_tags(chat.id, msg_id):
-                        untagged.append({
-                            "chat_id": chat.id,
-                            "message_id": msg_id,
-                            "content": content,
-                            "user_id": chat.user_id,
-                            "chapter_id": chat.chapter_id,  # Include chapter_id from chat
-                            "role": msg.get("role", "user")
-                        })
+                        untagged.append(
+                            {
+                                "chat_id": chat.id,
+                                "message_id": msg_id,
+                                "content": content,
+                                "user_id": chat.user_id,
+                                "chapter_id": chat.chapter_id,  # Include chapter_id from chat
+                                "role": msg.get("role", "user"),
+                            }
+                        )
 
         return untagged
 
@@ -332,33 +361,50 @@ class MessageTaggingDaemon:
             if config.enable_rag_chapter_detection:
                 # Get all chapter-store mappings
                 from open_webui.models.textbooks import TextbookChapters
+
                 chapter_mappings = TextbookChapters.get_all_rag_store_mappings()
 
                 if chapter_mappings:
                     # Smart selection: Use keyword-based matching to select top 5 relevant stores
                     # This respects Gemini's 5-store limit while maximizing accuracy
-                    store_names = self._select_relevant_stores(batch, chapter_mappings, max_stores=5)
+                    store_names = self._select_relevant_stores(
+                        batch, chapter_mappings, max_stores=5
+                    )
                     if store_names:
-                        log.info(f"[TAGGING] Using {len(store_names)} smart-selected chapter stores for RAG-based chapter detection")
+                        log.info(
+                            f"[TAGGING] Using {len(store_names)} smart-selected chapter stores for RAG-based chapter detection"
+                        )
                     else:
-                        log.warning("[TAGGING] No relevant stores selected, falling back to configured stores")
+                        log.warning(
+                            "[TAGGING] No relevant stores selected, falling back to configured stores"
+                        )
                         store_names = config.rag_store_names or []
                 else:
-                    log.warning("[TAGGING] RAG chapter detection enabled but no chapter stores found")
+                    log.warning(
+                        "[TAGGING] RAG chapter detection enabled but no chapter stores found"
+                    )
             else:
                 # Fallback: Use configured stores only (current behavior)
                 store_names = config.rag_store_names or []
 
             # Build prompt with chapter context (includes valid chapter list)
-            prompt = self._build_tagging_prompt(batch, existing_tags, config, chapter_mappings)
+            prompt = self._build_tagging_prompt(
+                batch, existing_tags, config, chapter_mappings
+            )
 
             # Use gemini-2.5-flash when using RAG stores or Pydantic schema (FileSearch + Pydantic require 2.5+)
             # Otherwise use gemini-2.0-flash for faster processing
-            model = "gemini-2.5-flash" if (store_names or config.enable_rag_chapter_detection) else "gemini-2.0-flash"
+            model = (
+                "gemini-2.5-flash"
+                if (store_names or config.enable_rag_chapter_detection)
+                else "gemini-2.0-flash"
+            )
 
             # Determine if we should use Pydantic response schema
             # Use it when RAG chapter detection is enabled for structured output
-            response_schema = BatchTaggingResponse if config.enable_rag_chapter_detection else None
+            response_schema = (
+                BatchTaggingResponse if config.enable_rag_chapter_detection else None
+            )
 
             # Force FileSearch tool usage when RAG chapter detection is enabled
             # This ensures AFC calls FileSearch even if it thinks it doesn't need to
@@ -372,29 +418,43 @@ class MessageTaggingDaemon:
                 temperature=0.3,
                 system_instruction=self._get_system_instruction(config),
                 response_schema=response_schema,  # Pydantic model for structured output
-                force_tool_use=force_tool_use  # Force FileSearch when doing chapter detection
+                force_tool_use=force_tool_use,  # Force FileSearch when doing chapter detection
             )
 
             if result.get("success") and result.get("text"):
-                await self._parse_and_save_tags(batch, result["text"], use_pydantic=bool(response_schema))
+                await self._parse_and_save_tags(
+                    batch, result["text"], use_pydantic=bool(response_schema)
+                )
                 return True
             else:
-                log.error(f"[MESSAGE TAGGING DAEMON] Gemini query failed: {result.get('error')}")
+                log.error(
+                    f"[MESSAGE TAGGING DAEMON] Gemini query failed: {result.get('error')}"
+                )
                 return False
 
         except Exception as e:
             log.error(f"[MESSAGE TAGGING DAEMON] Error processing batch: {e}")
             return False
 
-    def _build_tagging_prompt(self, batch: List[Dict], existing_tags: List[str], config=None, chapter_mappings: Optional[Dict] = None) -> str:
+    def _build_tagging_prompt(
+        self,
+        batch: List[Dict],
+        existing_tags: List[str],
+        config=None,
+        chapter_mappings: Optional[Dict] = None,
+    ) -> str:
         """Build the prompt for Gemini tagging."""
         # Use custom prompt if configured
         if config and config.custom_tagging_prompt:
-            messages_text = "\n\n".join([
-                f"Message {i+1} (ID: {m['message_id']}):\n{m['content'][:500]}"
-                for i, m in enumerate(batch)
-            ])
-            existing_tags_text = ", ".join(existing_tags[:50]) if existing_tags else "None yet"
+            messages_text = "\n\n".join(
+                [
+                    f"Message {i+1} (ID: {m['message_id']}):\n{m['content'][:500]}"
+                    for i, m in enumerate(batch)
+                ]
+            )
+            existing_tags_text = (
+                ", ".join(existing_tags[:50]) if existing_tags else "None yet"
+            )
 
             # Replace placeholders in custom prompt
             custom_prompt = config.custom_tagging_prompt
@@ -407,11 +467,14 @@ class MessageTaggingDaemon:
         if chapter_mappings and config and config.enable_rag_chapter_detection:
             # Get list of valid chapters with their display names
             from open_webui.models.textbooks import TextbookChapters
+
             all_chapters = TextbookChapters.get_all()
-            chapter_list = "\n".join([
-                f"  - {ch.id}: {ch.title}"
-                for ch in sorted(all_chapters, key=lambda x: x.order)
-            ])
+            chapter_list = "\n".join(
+                [
+                    f"  - {ch.id}: {ch.title}"
+                    for ch in sorted(all_chapters, key=lambda x: x.order)
+                ]
+            )
             chapter_context = f"""
 AVAILABLE CHAPTERS (analyze message content and assign the best matching chapter):
 {chapter_list}
@@ -419,12 +482,16 @@ AVAILABLE CHAPTERS (analyze message content and assign the best matching chapter
 """
 
         # Default prompt
-        messages_text = "\n\n".join([
-            f"Message {i+1} (ID: {m['message_id']}):\n{m['content'][:500]}"
-            for i, m in enumerate(batch)
-        ])
+        messages_text = "\n\n".join(
+            [
+                f"Message {i+1} (ID: {m['message_id']}):\n{m['content'][:500]}"
+                for i, m in enumerate(batch)
+            ]
+        )
 
-        existing_tags_text = ", ".join(existing_tags[:50]) if existing_tags else "None yet"
+        existing_tags_text = (
+            ", ".join(existing_tags[:50]) if existing_tags else "None yet"
+        )
 
         return f"""Analyze the following user messages and generate tags and summaries.
 
@@ -491,7 +558,9 @@ CRITICAL: When determining chapter_id:
 4. Only create new tags for genuinely novel topics
 5. Return valid JSON array only, no markdown formatting, no code blocks"""
 
-    async def _parse_and_save_tags(self, batch: List[Dict], response_text: str, use_pydantic: bool = False):
+    async def _parse_and_save_tags(
+        self, batch: List[Dict], response_text: str, use_pydantic: bool = False
+    ):
         """Parse Gemini response and save tags to database."""
         # Create lookup for batch items
         batch_lookup = {m["message_id"]: m for m in batch}
@@ -506,8 +575,12 @@ CRITICAL: When determining chapter_id:
                 # Parse Pydantic-structured response
                 try:
                     response_text = response_text.strip()
-                    batch_response = BatchTaggingResponse.model_validate_json(response_text)
-                    results = [tag_resp.model_dump() for tag_resp in batch_response.results]
+                    batch_response = BatchTaggingResponse.model_validate_json(
+                        response_text
+                    )
+                    results = [
+                        tag_resp.model_dump() for tag_resp in batch_response.results
+                    ]
                     log.info("[TAGGING] Successfully parsed Pydantic response")
                 except ValidationError as e:
                     log.error(f"[TAGGING] Pydantic validation failed: {e}")
@@ -521,7 +594,9 @@ CRITICAL: When determining chapter_id:
                 if response_text.startswith("```"):
                     lines = response_text.split("\n")
                     start_idx = 1 if lines[0].startswith("```") else 0
-                    end_idx = len(lines) - 1 if lines[-1].strip() == "```" else len(lines)
+                    end_idx = (
+                        len(lines) - 1 if lines[-1].strip() == "```" else len(lines)
+                    )
                     response_text = "\n".join(lines[start_idx:end_idx])
                     if response_text.startswith("json"):
                         response_text = response_text[4:]
@@ -535,11 +610,15 @@ CRITICAL: When determining chapter_id:
 
                 # Skip if tag is null (message not related to math/engineering)
                 if raw_tag is None:
-                    log.debug(f"[TAGGING] Skipping message {msg_id} - no relevant topic")
+                    log.debug(
+                        f"[TAGGING] Skipping message {msg_id} - no relevant topic"
+                    )
                     continue
 
                 tag_id = str(raw_tag).strip().lower().replace(" ", "_")
-                tag_display = result.get("tag_display", tag_id)  # Fallback to tag_id if not provided
+                tag_display = result.get(
+                    "tag_display", tag_id
+                )  # Fallback to tag_id if not provided
                 summary = result.get("summary", "")[:100]
 
                 if not msg_id or not tag_id or msg_id not in batch_lookup:
@@ -547,7 +626,9 @@ CRITICAL: When determining chapter_id:
 
                 # Skip blacklisted tags
                 if tag_id in blacklist:
-                    log.debug(f"[TAGGING] Skipping blacklisted tag '{tag_id}' for message {msg_id}")
+                    log.debug(
+                        f"[TAGGING] Skipping blacklisted tag '{tag_id}' for message {msg_id}"
+                    )
                     continue
 
                 msg = batch_lookup[msg_id]
@@ -559,11 +640,15 @@ CRITICAL: When determining chapter_id:
                     validated_chapter_id = self._validate_chapter_id(rag_chapter_id)
                     if validated_chapter_id:
                         chapter_id = validated_chapter_id
-                        log.info(f"[TAGGING] Using RAG-determined chapter_id '{chapter_id}' for message {msg_id}")
+                        log.info(
+                            f"[TAGGING] Using RAG-determined chapter_id '{chapter_id}' for message {msg_id}"
+                        )
                     else:
                         # Validation failed, fall back to chat's chapter_id
                         chapter_id = msg.get("chapter_id")
-                        log.info(f"[TAGGING] Rejected invalid chapter_id '{rag_chapter_id}', using fallback '{chapter_id}' for message {msg_id}")
+                        log.info(
+                            f"[TAGGING] Rejected invalid chapter_id '{rag_chapter_id}', using fallback '{chapter_id}' for message {msg_id}"
+                        )
                 else:
                     # No RAG chapter_id, use chat's chapter_id (backward compatible)
                     chapter_id = msg.get("chapter_id")
@@ -573,9 +658,7 @@ CRITICAL: When determining chapter_id:
                 if not tag_def:
                     # Create with explicit tag_id, display name, and chapter_id
                     tag_def = MessageTagDefinitions.create(
-                        name=tag_display,
-                        tag_id=tag_id,
-                        chapter_id=chapter_id
+                        name=tag_display, tag_id=tag_id, chapter_id=chapter_id
                     )
                 elif chapter_id and tag_def.chapter_id is None:
                     # Update existing tag's chapter_id if it was null
@@ -588,13 +671,15 @@ CRITICAL: When determining chapter_id:
                         message_id=msg_id,
                         tag_id=tag_id,
                         summary=summary,
-                        user_id=msg["user_id"]
+                        user_id=msg["user_id"],
                     )
 
                     # Increment usage count
                     MessageTagDefinitions.increment_usage(tag_id)
 
-                    log.debug(f"[TAGGING] Tagged message {msg_id} with '{tag_id}' ({tag_display}) in chapter '{chapter_id}'")
+                    log.debug(
+                        f"[TAGGING] Tagged message {msg_id} with '{tag_id}' ({tag_display}) in chapter '{chapter_id}'"
+                    )
 
         except json.JSONDecodeError as e:
             log.error(f"[TAGGING] Failed to parse Gemini response: {e}")
@@ -625,7 +710,9 @@ CRITICAL: When determining chapter_id:
             protected_tags = [t for t in all_tags if t.is_protected]
 
             # Sort by usage (consolidate less-used tags first)
-            tag_names = [t.name for t in sorted(unprotected_tags, key=lambda x: x.usage_count)]
+            tag_names = [
+                t.name for t in sorted(unprotected_tags, key=lambda x: x.usage_count)
+            ]
             protected_tag_names = [t.name for t in protected_tags]
 
             prompt = f"""Analyze these tags and suggest merges for similar ones.
@@ -652,7 +739,7 @@ IMPORTANT:
                 store_names=[],
                 model="gemini-2.0-flash",
                 temperature=0.2,
-                system_instruction="You are a tag consolidation assistant. Analyze tags and suggest merges for similar ones. Return valid JSON only."
+                system_instruction="You are a tag consolidation assistant. Analyze tags and suggest merges for similar ones. Return valid JSON only.",
             )
 
             if result.get("success") and result.get("text"):
@@ -687,13 +774,17 @@ IMPORTANT:
                     # Double-check: skip protected tags even if AI suggested them
                     tag_def = MessageTagDefinitions.get_by_id(old_tag)
                     if tag_def and tag_def.is_protected:
-                        log.warning(f"[MESSAGE TAGGING DAEMON] Skipping protected tag: {old_tag}")
+                        log.warning(
+                            f"[MESSAGE TAGGING DAEMON] Skipping protected tag: {old_tag}"
+                        )
                         continue
 
                     MessageTags.update_tag_id(old_tag, keep_tag)
                     MessageTagDefinitions.delete(old_tag)
 
-                log.info(f"[MESSAGE TAGGING DAEMON] Merged {merge_tags} into {keep_tag}")
+                log.info(
+                    f"[MESSAGE TAGGING DAEMON] Merged {merge_tags} into {keep_tag}"
+                )
 
         except Exception as e:
             log.error(f"[MESSAGE TAGGING DAEMON] Error applying tag merges: {e}")
@@ -727,18 +818,23 @@ IMPORTANT:
 
         try:
             from open_webui.models.textbooks import TextbookChapters
+
             valid_chapters = TextbookChapters.get_valid_chapter_ids()
 
             if chapter_id in valid_chapters:
                 return chapter_id
             else:
-                log.warning(f"[TAGGING] Invalid chapter_id '{chapter_id}' returned by Gemini, rejecting")
+                log.warning(
+                    f"[TAGGING] Invalid chapter_id '{chapter_id}' returned by Gemini, rejecting"
+                )
                 return None
         except Exception as e:
             log.error(f"[TAGGING] Error validating chapter_id: {e}")
             return None
 
-    def _select_relevant_stores(self, batch: List[Dict], chapter_mappings: dict, max_stores: int = 5) -> List[str]:
+    def _select_relevant_stores(
+        self, batch: List[Dict], chapter_mappings: dict, max_stores: int = 5
+    ) -> List[str]:
         """
         Select relevant RAG stores based on message content keywords.
 
@@ -765,7 +861,6 @@ IMPORTANT:
             "르장드르": ["ch-5"],
             "series": ["ch-5"],
             "급수": ["ch-5"],
-
             # Part B: Linear Algebra
             "matrix": ["ch-7", "ch-8"],
             "행렬": ["ch-7", "ch-8"],
@@ -787,7 +882,6 @@ IMPORTANT:
             "그린": ["ch-10"],
             "stokes": ["ch-10"],
             "스토크스": ["ch-10"],
-
             # Part C: Fourier, PDEs
             "fourier": ["ch-11"],
             "푸리에": ["ch-11"],
@@ -797,7 +891,6 @@ IMPORTANT:
             "열방정식": ["ch-12"],
             "wave": ["ch-12"],
             "파동": ["ch-12"],
-
             # Part D: Complex Analysis
             "complex": ["ch-13", "ch-14", "ch-15", "ch-16"],
             "복소": ["ch-13", "ch-14", "ch-15", "ch-16"],
@@ -813,7 +906,6 @@ IMPORTANT:
             "테일러": ["ch-15"],
             "conformal": ["ch-17"],
             "등각": ["ch-17"],
-
             # Part E: Numerical Analysis
             "numerical": ["ch-19", "ch-20", "ch-21"],
             "수치": ["ch-19", "ch-20", "ch-21"],
@@ -827,7 +919,6 @@ IMPORTANT:
             "오일러": ["ch-21"],
             "runge": ["ch-21"],
             "룽게": ["ch-21"],
-
             # Part F: Optimization
             "optimization": ["ch-22", "ch-23"],
             "최적화": ["ch-22", "ch-23"],
@@ -837,7 +928,6 @@ IMPORTANT:
             "심플렉스": ["ch-22"],
             "graph": ["ch-23"],
             "그래프": ["ch-23"],
-
             # Part G: Probability, Statistics
             "probability": ["ch-24", "ch-25"],
             "확률": ["ch-24", "ch-25"],
@@ -861,13 +951,21 @@ IMPORTANT:
 
         # If no keywords matched, return empty list (will use default behavior)
         if not chapter_scores:
-            log.info("[TAGGING] No keyword matches found, using fallback chapter selection")
+            log.info(
+                "[TAGGING] No keyword matches found, using fallback chapter selection"
+            )
             # Use configured stores or first 5 chapters as fallback
             all_chapter_ids = sorted(chapter_mappings.keys())[:max_stores]
-            return [chapter_mappings[ch_id]["store_name"] for ch_id in all_chapter_ids if ch_id in chapter_mappings]
+            return [
+                chapter_mappings[ch_id]["store_name"]
+                for ch_id in all_chapter_ids
+                if ch_id in chapter_mappings
+            ]
 
         # Sort chapters by score (most relevant first) and take top max_stores
-        top_chapters = sorted(chapter_scores.items(), key=lambda x: x[1], reverse=True)[:max_stores]
+        top_chapters = sorted(chapter_scores.items(), key=lambda x: x[1], reverse=True)[
+            :max_stores
+        ]
         top_chapter_ids = [ch_id for ch_id, _ in top_chapters]
 
         # Get store names for top chapters
@@ -876,13 +974,15 @@ IMPORTANT:
             if ch_id in chapter_mappings:
                 store_names.append(chapter_mappings[ch_id]["store_name"])
 
-        log.info(f"[TAGGING] Selected {len(store_names)} relevant stores based on keywords: {top_chapter_ids}")
+        log.info(
+            f"[TAGGING] Selected {len(store_names)} relevant stores based on keywords: {top_chapter_ids}"
+        )
         return store_names
 
     async def run_manual(self):
         """Trigger a manual tagging run."""
         config = TaggingDaemonConfigs.get_config()
-        
+
         if config and self._acquire_lock(config):
             try:
                 await self._execute_tagging_run(config)

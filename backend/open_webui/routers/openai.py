@@ -51,7 +51,11 @@ from open_webui.utils.misc import (
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.rate_limiter import limiter, get_role_based_limit, get_write_operation_limit
+from open_webui.utils.rate_limiter import (
+    limiter,
+    get_role_based_limit,
+    get_write_operation_limit,
+)
 from open_webui.utils.access_control import has_access
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.prompt_composer import compose_with_fallback
@@ -81,8 +85,13 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 class ChapterRecommendationResponse(BaseModel):
     """LLM response for chapter recommendation."""
-    chapter_id: Optional[str] = Field(None, description="Recommended chapter ID (e.g., 'ch-5') or null")
-    reasoning: Optional[str] = Field(None, description="Korean explanation (1-2 sentences)")
+
+    chapter_id: Optional[str] = Field(
+        None, description="Recommended chapter ID (e.g., 'ch-5') or null"
+    )
+    reasoning: Optional[str] = Field(
+        None, description="Korean explanation (1-2 sentences)"
+    )
 
 
 def _clean_schema_for_gemini(schema: dict) -> dict:
@@ -99,26 +108,37 @@ def _clean_schema_for_gemini(schema: dict) -> dict:
     """
     if isinstance(schema, dict):
         # Handle anyOf pattern from Optional[T] → extract the non-null type
-        if 'anyOf' in schema:
-            any_of_list = schema['anyOf']
+        if "anyOf" in schema:
+            any_of_list = schema["anyOf"]
             if isinstance(any_of_list, list):
                 # Find the non-null type schema
-                non_null_schemas = [s for s in any_of_list if isinstance(s, dict) and s.get('type') != 'null']
+                non_null_schemas = [
+                    s
+                    for s in any_of_list
+                    if isinstance(s, dict) and s.get("type") != "null"
+                ]
                 if non_null_schemas:
                     # Replace anyOf with the first non-null type
                     non_null_schema = non_null_schemas[0]
                     schema = {**schema, **non_null_schema}
-                    del schema['anyOf']
+                    del schema["anyOf"]
 
         # Remove unsupported fields
-        schema = {k: v for k, v in schema.items() if k not in ('default', 'additionalProperties', 'title')}
+        schema = {
+            k: v
+            for k, v in schema.items()
+            if k not in ("default", "additionalProperties", "title")
+        }
 
         # Recursively clean nested schemas
         for key, value in schema.items():
             if isinstance(value, dict):
                 schema[key] = _clean_schema_for_gemini(value)
             elif isinstance(value, list):
-                schema[key] = [_clean_schema_for_gemini(item) if isinstance(item, dict) else item for item in value]
+                schema[key] = [
+                    _clean_schema_for_gemini(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
 
     return schema
 
@@ -163,10 +183,12 @@ async def detect_chapter_from_conversation(chat_id: str, api_key: str) -> Option
 
         # Get all chapters (ID + Korean title)
         chapter_mappings = TextbookChapters.get_all_rag_store_mappings()
-        chapter_list = "\n".join([
-            f"- {ch_id}: {info['display_name']}"
-            for ch_id, info in sorted(chapter_mappings.items())
-        ])
+        chapter_list = "\n".join(
+            [
+                f"- {ch_id}: {info['display_name']}"
+                for ch_id, info in sorted(chapter_mappings.items())
+            ]
+        )
 
         # Build prompt
         prompt = f"""다음 대화를 분석하고, 가장 관련이 깊은 공업수학 챕터를 추천하세요.
@@ -200,8 +222,8 @@ CRITICAL RULES:
             model_name="gemini-2.5-flash",
             generation_config={
                 "response_mime_type": "application/json",
-                "response_schema": json_schema
-            }
+                "response_schema": json_schema,
+            },
         )
 
         response = model.generate_content(prompt)
@@ -218,14 +240,18 @@ CRITICAL RULES:
         if result.chapter_id:
             # Reject invalid strings like "uncategorized", "unknown", etc.
             if result.chapter_id.lower() in ["uncategorized", "unknown", "none", "n/a"]:
-                log.warning(f"[CHAPTER-AUTO] Rejected invalid chapter_id: {result.chapter_id}")
+                log.warning(
+                    f"[CHAPTER-AUTO] Rejected invalid chapter_id: {result.chapter_id}"
+                )
                 return None
 
             # Check if valid chapter exists
             if result.chapter_id in chapter_mappings:
                 return result.chapter_id
             else:
-                log.warning(f"[CHAPTER-AUTO] Chapter {result.chapter_id} not found in mappings")
+                log.warning(
+                    f"[CHAPTER-AUTO] Chapter {result.chapter_id} not found in mappings"
+                )
                 return None
 
         return None
@@ -411,19 +437,19 @@ async def make_gemini_llm_call(
                 payload["messages"][0]["content"] = system_prompt
             else:
                 # Insert system message at the beginning
-                payload["messages"].insert(0, {
-                    "role": "system",
-                    "content": system_prompt
-                })
+                payload["messages"].insert(
+                    0, {"role": "system", "content": system_prompt}
+                )
 
         payload_json = json.dumps(payload)
 
         log.info(f"[OPENAI-TOOL-GATING] Making LLM call to: {request_url}")
-        log.info(f"[OPENAI-TOOL-GATING] System prompt length: {len(system_prompt)} chars")
+        log.info(
+            f"[OPENAI-TOOL-GATING] System prompt length: {len(system_prompt)} chars"
+        )
 
         async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
             async with session.post(
                 request_url,
@@ -434,7 +460,9 @@ async def make_gemini_llm_call(
             ) as r:
                 if r.status >= 400:
                     error_text = await r.text()
-                    log.error(f"[OPENAI-TOOL-GATING] LLM call failed: {r.status} - {error_text}")
+                    log.error(
+                        f"[OPENAI-TOOL-GATING] LLM call failed: {r.status} - {error_text}"
+                    )
                     return {"success": False, "error": f"HTTP {r.status}: {error_text}"}
 
                 response = await r.json()
@@ -448,7 +476,9 @@ async def make_gemini_llm_call(
                     elif choice.get("text"):
                         text = choice["text"]
 
-                log.info(f"[OPENAI-TOOL-GATING] LLM response received: {len(text)} chars")
+                log.info(
+                    f"[OPENAI-TOOL-GATING] LLM response received: {len(text)} chars"
+                )
                 return {"success": True, "text": text}
 
     except Exception as e:
@@ -509,18 +539,20 @@ async def make_gemini_native_call_with_cache(
                 model_id=model,
                 system_prompt=system_prompt,
                 stage=cache_stage,
-                cache_strategy=cache_strategy
+                cache_strategy=cache_strategy,
             )
             if cached_content_name:
-                log.info(f"[GEMINI-NATIVE-CACHE] Using global cache: {cached_content_name}")
+                log.info(
+                    f"[GEMINI-NATIVE-CACHE] Using global cache: {cached_content_name}"
+                )
 
         # Build config
         config = types.GenerateContentConfig(
             temperature=temperature,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                disable=False,          # Enable automatic function calling
-                maximum_remote_calls=5  # Limit to 5 calls (default is 10)
-            )
+                disable=False,  # Enable automatic function calling
+                maximum_remote_calls=5,  # Limit to 5 calls (default is 10)
+            ),
         )
 
         # Add response_schema if provided (for structured JSON output)
@@ -531,11 +563,15 @@ async def make_gemini_native_call_with_cache(
             config.response_mime_type = "application/json"
             # Convert Pydantic model to JSON schema and remove additionalProperties
             # (Gemini API doesn't support additionalProperties field)
-            if isinstance(response_schema, type) and issubclass(response_schema, BaseModel):
+            if isinstance(response_schema, type) and issubclass(
+                response_schema, BaseModel
+            ):
                 json_schema = response_schema.model_json_schema()
                 json_schema = remove_additional_properties(json_schema)
                 config.response_schema = json_schema
-                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (cleaned)")
+                log.info(
+                    f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (cleaned)"
+                )
             else:
                 config.response_schema = response_schema
                 log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema}")
@@ -549,7 +585,9 @@ async def make_gemini_native_call_with_cache(
         # Determine contents to use: contents parameter OR convert query to single-turn
         if contents:
             api_contents = contents
-            log.info(f"[GEMINI-NATIVE-CACHE] Using provided contents (multi-turn): {len(contents)} messages")
+            log.info(
+                f"[GEMINI-NATIVE-CACHE] Using provided contents (multi-turn): {len(contents)} messages"
+            )
         elif query:
             api_contents = query
             log.info(f"[GEMINI-NATIVE-CACHE] Using query (single-turn)")
@@ -558,13 +596,11 @@ async def make_gemini_native_call_with_cache(
 
         # Call Gemini native API
         response = client.models.generate_content(
-            model=model,
-            contents=api_contents,
-            config=config
+            model=model, contents=api_contents, config=config
         )
 
         # Extract text from native API response
-        text = response.text if hasattr(response, 'text') else ""
+        text = response.text if hasattr(response, "text") else ""
 
         log.info(f"[GEMINI-NATIVE-CACHE] Response received: {len(text)} chars")
         return {"success": True, "text": text}
@@ -575,7 +611,9 @@ async def make_gemini_native_call_with_cache(
         return {"success": False, "error": str(e)}
 
 
-def get_or_create_gemini_cache_manager(request: Request, api_key: str) -> GeminiCacheManager:
+def get_or_create_gemini_cache_manager(
+    request: Request, api_key: str
+) -> GeminiCacheManager:
     """
     Get or create a GeminiCacheManager for the given API key.
     Cache managers are stored in app.state per API key.
@@ -666,18 +704,20 @@ def filter_code_blocks(text: str) -> str:
         content = match.group(2)
         return summarize_tool_output(tag_name, content)
 
-    text = re.sub(r'<([a-z-]+)>([\s\S]*?)</\1>', replace_tool_marker, text)
+    text = re.sub(r"<([a-z-]+)>([\s\S]*?)</\1>", replace_tool_marker, text)
 
     # Remove fenced code blocks (```...```)
-    text = re.sub(r'```[\s\S]*?```', '', text)
+    text = re.sub(r"```[\s\S]*?```", "", text)
 
     # Clean up multiple consecutive newlines
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text
 
 
-def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool = True) -> list:
+def convert_openai_messages_to_gemini_contents(
+    messages: list, filter_code: bool = True
+) -> list:
     """
     Convert OpenAI-format messages to Gemini contents format with multimodal support.
 
@@ -758,30 +798,42 @@ def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool
                         # Data URL format: data:image/png;base64,iVBORw0KGgo...
                         try:
                             # Extract mime type and base64 data
-                            match = re.match(r'data:([^;]+);base64,(.+)', url)
+                            match = re.match(r"data:([^;]+);base64,(.+)", url)
                             if match:
                                 mime_type = match.group(1)
                                 base64_data = match.group(2)
 
                                 # Add inline_data part for Gemini
-                                parts.append({
-                                    "inline_data": {
-                                        "mime_type": mime_type,
-                                        "data": base64_data
+                                parts.append(
+                                    {
+                                        "inline_data": {
+                                            "mime_type": mime_type,
+                                            "data": base64_data,
+                                        }
                                     }
-                                })
-                                log.info(f"[GEMINI-MULTIMODAL] Converted image_url to inline_data: {mime_type}")
+                                )
+                                log.info(
+                                    f"[GEMINI-MULTIMODAL] Converted image_url to inline_data: {mime_type}"
+                                )
                             else:
-                                log.warning(f"[GEMINI-MULTIMODAL] Malformed data URL, skipping image")
+                                log.warning(
+                                    f"[GEMINI-MULTIMODAL] Malformed data URL, skipping image"
+                                )
                         except Exception as e:
-                            log.error(f"[GEMINI-MULTIMODAL] Failed to parse data URL: {e}")
+                            log.error(
+                                f"[GEMINI-MULTIMODAL] Failed to parse data URL: {e}"
+                            )
 
                     elif url.startswith("http"):
                         # HTTP URL - not yet supported
-                        log.warning(f"[GEMINI-MULTIMODAL] HTTP image URLs not yet supported: {url[:100]}...")
+                        log.warning(
+                            f"[GEMINI-MULTIMODAL] HTTP image URLs not yet supported: {url[:100]}..."
+                        )
 
                     else:
-                        log.warning(f"[GEMINI-MULTIMODAL] Unknown image URL format: {url[:50]}...")
+                        log.warning(
+                            f"[GEMINI-MULTIMODAL] Unknown image URL format: {url[:50]}..."
+                        )
 
         else:
             # Fallback to string conversion
@@ -791,15 +843,14 @@ def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool
 
         # Add to contents if we have parts
         if parts:
-            contents.append({
-                "role": gemini_role,
-                "parts": parts
-            })
+            contents.append({"role": gemini_role, "parts": parts})
 
     return contents
 
 
-def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict) -> Optional[Tuple[str, float]]:
+def extract_chapter_from_citations(
+    citations: List[Dict], chapter_mappings: Dict
+) -> Optional[Tuple[str, float]]:
     """
     Extract most likely chapter_id from citations.
 
@@ -818,8 +869,7 @@ def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict
 
     # Reverse mapping: store_name → chapter_id
     store_to_chapter = {
-        info["store_name"]: ch_id
-        for ch_id, info in chapter_mappings.items()
+        info["store_name"]: ch_id for ch_id, info in chapter_mappings.items()
     }
 
     # Count citations by chapter
@@ -839,7 +889,7 @@ def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict
         # Look for patterns like "ch-5", "ch-10", "chapter-5", "chapter-10" in the source
         if not matched:
             # Try pattern: ch-N or ch-NN
-            match = re.search(r'ch-(\d+)', source, re.IGNORECASE)
+            match = re.search(r"ch-(\d+)", source, re.IGNORECASE)
             if match:
                 chapter_num = match.group(1)
                 chapter_id = f"ch-{chapter_num}"
@@ -848,18 +898,24 @@ def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict
                 if chapter_id in chapter_mappings:
                     chapter_counts[chapter_id] = chapter_counts.get(chapter_id, 0) + 1
                     matched = True
-                    log.debug(f"[CHAPTER-AUTO] Extracted chapter {chapter_id} from source: {source}")
+                    log.debug(
+                        f"[CHAPTER-AUTO] Extracted chapter {chapter_id} from source: {source}"
+                    )
 
             # Try alternative pattern: chapter-N or chapter-NN
             if not matched:
-                match = re.search(r'chapter[-_]?(\d+)', source, re.IGNORECASE)
+                match = re.search(r"chapter[-_]?(\d+)", source, re.IGNORECASE)
                 if match:
                     chapter_num = match.group(1)
                     chapter_id = f"ch-{chapter_num}"
 
                     if chapter_id in chapter_mappings:
-                        chapter_counts[chapter_id] = chapter_counts.get(chapter_id, 0) + 1
-                        log.debug(f"[CHAPTER-AUTO] Extracted chapter {chapter_id} from source: {source}")
+                        chapter_counts[chapter_id] = (
+                            chapter_counts.get(chapter_id, 0) + 1
+                        )
+                        log.debug(
+                            f"[CHAPTER-AUTO] Extracted chapter {chapter_id} from source: {source}"
+                        )
 
     if not chapter_counts:
         log.warning("[CHAPTER-AUTO] No chapter IDs could be extracted from citations")
@@ -871,7 +927,9 @@ def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict
     chapter_id, count = top_chapter
     confidence = count / total_citations
 
-    log.info(f"[CHAPTER-AUTO] Detected chapter: {chapter_id} ({count}/{total_citations} = {confidence:.2%})")
+    log.info(
+        f"[CHAPTER-AUTO] Detected chapter: {chapter_id} ({count}/{total_citations} = {confidence:.2%})"
+    )
 
     return (chapter_id, confidence)
 
@@ -911,7 +969,9 @@ async def handle_gemini_native_request(
         log.info("[GEMINI-NATIVE] Routing to unified GeminiRAGService")
         log.info(f"  Model: {model_id}")
         log.info(f"  Cache stage: {cache_stage}")
-        log.info(f"  System prompt length: {len(final_system) if final_system else 0} chars")
+        log.info(
+            f"  System prompt length: {len(final_system) if final_system else 0} chars"
+        )
         log.info("=" * 80)
 
         # Convert OpenAI messages to Gemini contents (preserves conversation history)
@@ -923,11 +983,13 @@ async def handle_gemini_native_request(
                 "error": {
                     "message": "No valid messages found in request",
                     "type": "invalid_request_error",
-                    "code": "no_messages"
+                    "code": "no_messages",
                 }
             }
 
-        log.info(f"[GEMINI-NATIVE] Converted {len(messages)} OpenAI messages to {len(gemini_contents)} Gemini contents")
+        log.info(
+            f"[GEMINI-NATIVE] Converted {len(messages)} OpenAI messages to {len(gemini_contents)} Gemini contents"
+        )
         if gemini_contents:
             last_msg = gemini_contents[-1]
             if last_msg.get("parts"):
@@ -939,7 +1001,9 @@ async def handle_gemini_native_request(
             if not hasattr(request.state, "_metadata"):
                 request.state._metadata = {}
             request.state._metadata.update(metadata)
-            log.info(f"[GEMINI-NATIVE] Metadata stored in request.state: {list(metadata.keys())}")
+            log.info(
+                f"[GEMINI-NATIVE] Metadata stored in request.state: {list(metadata.keys())}"
+            )
 
         # Get unified Gemini service
         service = get_gemini_rag_service(api_key)
@@ -979,9 +1043,13 @@ async def handle_gemini_native_request(
                     # Use default RAG store (not tied to chapters)
                     store_names = [default_store_name]
                     used_default_chapter = True
-                    log.info(f"[CHAPTER-AUTO] Using default RAG store {default_store_name} for chat {chat_id}")
+                    log.info(
+                        f"[CHAPTER-AUTO] Using default RAG store {default_store_name} for chat {chat_id}"
+                    )
                 else:
-                    log.info(f"[CHAPTER-AUTO] Chat {chat_id} has no chapter_id and no default RAG store configured")
+                    log.info(
+                        f"[CHAPTER-AUTO] Chat {chat_id} has no chapter_id and no default RAG store configured"
+                    )
             except Exception as e:
                 log.error(f"[CHAPTER-AUTO] Error determining default RAG store: {e}")
                 log.exception(e)
@@ -990,14 +1058,19 @@ async def handle_gemini_native_request(
             # Chapter explicitly set → use its store
             try:
                 from open_webui.models.textbooks import TextbookChapters
+
                 store_name = TextbookChapters.get_rag_store(chapter_id)
                 if store_name:
                     store_names = [store_name]
-                    log.info(f"[CHAPTER-AUTO] Using explicit chapter {chapter_id} (store: {store_name})")
+                    log.info(
+                        f"[CHAPTER-AUTO] Using explicit chapter {chapter_id} (store: {store_name})"
+                    )
                 else:
                     log.warning(f"[CHAPTER-AUTO] Chapter {chapter_id} has no RAG store")
             except Exception as e:
-                log.error(f"[CHAPTER-AUTO] Error getting RAG store for chapter {chapter_id}: {e}")
+                log.error(
+                    f"[CHAPTER-AUTO] Error getting RAG store for chapter {chapter_id}: {e}"
+                )
                 log.exception(e)
 
         # If no stores determined, use empty list (current behavior - no RAG)
@@ -1014,7 +1087,9 @@ async def handle_gemini_native_request(
             # This helps AFC (Automatic Function Calling) understand it should search documents
             # even when conversation history might seem sufficient
             final_system += "\n\n⚠️ CRITICAL INSTRUCTION: You MUST search the provided document store to ground your responses in textbook content. Even when answering follow-up questions or meta-questions about previous responses, ALWAYS use the document store to verify and supplement your answers with accurate, authoritative textbook information. Do not rely solely on conversation history."
-            log.info("[CHAPTER-AUTO] Added explicit FileSearch instruction to system prompt")
+            log.info(
+                "[CHAPTER-AUTO] Added explicit FileSearch instruction to system prompt"
+            )
 
         # Handle streaming requests
         if stream:
@@ -1024,11 +1099,16 @@ async def handle_gemini_native_request(
                 """Generate OpenAI-compatible SSE chunks from Gemini stream"""
                 try:
                     citations = []
-                    usage_dict = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+                    usage_dict = {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                    }
                     collected_text = ""  # Collect full response for tracing
 
                     # Track timing for Langfuse tracing
                     import time
+
                     llm_start_time = time.time()
 
                     # Call streaming service with conversation history
@@ -1040,19 +1120,25 @@ async def handle_gemini_native_request(
                         model=model_id,
                         temperature=temperature,
                         system_instruction=final_system,
-                        cache_stage=cache_stage
+                        cache_stage=cache_stage,
                     ):
                         # Check for citation marker
                         if chunk_text.startswith("\n__CITATIONS__:"):
                             # Extract citations from marker
                             try:
-                                citation_json = chunk_text.replace("\n__CITATIONS__:", "")
+                                citation_json = chunk_text.replace(
+                                    "\n__CITATIONS__:", ""
+                                )
                                 citations = json.loads(citation_json)
-                                log.info(f"[CHAPTER-AUTO] Received {len(citations)} citations from RAG stream")
+                                log.info(
+                                    f"[CHAPTER-AUTO] Received {len(citations)} citations from RAG stream"
+                                )
                                 # Don't send this marker to the client
                                 continue
                             except Exception as e:
-                                log.error(f"[CHAPTER-AUTO] Failed to parse citations: {e}")
+                                log.error(
+                                    f"[CHAPTER-AUTO] Failed to parse citations: {e}"
+                                )
 
                         # Check for usage marker
                         if chunk_text.startswith("\n__USAGE__:"):
@@ -1060,7 +1146,9 @@ async def handle_gemini_native_request(
                             try:
                                 usage_json = chunk_text.replace("\n__USAGE__:", "")
                                 usage_dict = json.loads(usage_json)
-                                log.info(f"[LANGFUSE] Received usage from stream: {usage_dict}")
+                                log.info(
+                                    f"[LANGFUSE] Received usage from stream: {usage_dict}"
+                                )
                                 # Don't send this marker to the client
                                 continue
                             except Exception as e:
@@ -1071,8 +1159,7 @@ async def handle_gemini_native_request(
 
                         # Format as OpenAI chunk
                         chunk_data = openai_chat_chunk_message_template(
-                            model=model_id,
-                            content=chunk_text
+                            model=model_id, content=chunk_text
                         )
                         yield f"data: {json.dumps(chunk_data)}\n\n"
 
@@ -1081,7 +1168,9 @@ async def handle_gemini_native_request(
                     # ============================================================
                     # Trigger detection if chapter_id is null or "uncategorized"
                     current_chapter_id = metadata.get("chapter_id")
-                    should_detect = chat_id and (not current_chapter_id or current_chapter_id == "uncategorized")
+                    should_detect = chat_id and (
+                        not current_chapter_id or current_chapter_id == "uncategorized"
+                    )
 
                     if should_detect:
                         try:
@@ -1089,43 +1178,60 @@ async def handle_gemini_native_request(
 
                             # Check if chat still has no chapter or uncategorized
                             chat = Chats.get_chat_by_id(chat_id)
-                            if chat and (not chat.chapter_id or chat.chapter_id == "uncategorized"):
+                            if chat and (
+                                not chat.chapter_id
+                                or chat.chapter_id == "uncategorized"
+                            ):
                                 # Log if replacing uncategorized
                                 if chat.chapter_id == "uncategorized":
-                                    log.info(f"[CHAPTER-AUTO] Retrying detection for uncategorized chat {chat_id}")
+                                    log.info(
+                                        f"[CHAPTER-AUTO] Retrying detection for uncategorized chat {chat_id}"
+                                    )
 
                                 # Detect using LLM
-                                detected = await detect_chapter_from_conversation(chat_id, api_key)
+                                detected = await detect_chapter_from_conversation(
+                                    chat_id, api_key
+                                )
 
                                 if detected:
-                                    updated = Chats.update_chat_chapter_id_by_id(chat_id, detected)
+                                    updated = Chats.update_chat_chapter_id_by_id(
+                                        chat_id, detected
+                                    )
                                     if updated:
                                         if chat.chapter_id == "uncategorized":
-                                            log.info(f"[CHAPTER-AUTO] ✅ Updated uncategorized → {detected} for chat {chat_id}")
+                                            log.info(
+                                                f"[CHAPTER-AUTO] ✅ Updated uncategorized → {detected} for chat {chat_id}"
+                                            )
                                         else:
-                                            log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
+                                            log.info(
+                                                f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}"
+                                            )
 
                                         # Emit socket event to notify frontend
                                         try:
                                             from open_webui.socket.main import sio
+
                                             await sio.emit(
                                                 "chat:chapter:updated",
                                                 {
                                                     "chat_id": chat_id,
-                                                    "chapter_id": detected
+                                                    "chapter_id": detected,
                                                 },
-                                                room=f"user:{chat.user_id}"
+                                                room=f"user:{chat.user_id}",
                                             )
-                                            log.info(f"[CHAPTER-AUTO] 🔔 Notified user {chat.user_id} via socket")
+                                            log.info(
+                                                f"[CHAPTER-AUTO] 🔔 Notified user {chat.user_id} via socket"
+                                            )
                                         except Exception as socket_error:
-                                            log.error(f"[CHAPTER-AUTO] Socket emit failed: {socket_error}")
+                                            log.error(
+                                                f"[CHAPTER-AUTO] Socket emit failed: {socket_error}"
+                                            )
                         except Exception as e:
                             log.error(f"[CHAPTER-AUTO] Error: {e}")
 
                     # Send final chunk with finish_reason
                     final_chunk = openai_chat_chunk_message_template(
-                        model=model_id,
-                        content=None  # No content = finish
+                        model=model_id, content=None  # No content = finish
                     )
                     yield f"data: {json.dumps(final_chunk)}\n\n"
 
@@ -1139,18 +1245,24 @@ async def handle_gemini_native_request(
                     # Trace to Langfuse after streaming completes
                     # ============================================================
                     try:
-                        from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                        from open_webui.integrations.langfuse_tracing import (
+                            get_langfuse_tracer,
+                        )
                         from open_webui.utils.chat_type import infer_chat_type
+
                         tracer = get_langfuse_tracer()
                         if tracer and metadata and collected_text:
                             # Prepare tracing metadata
                             trace_metadata = {
                                 "user_id": metadata.get("user_id"),
-                                "message_id": metadata.get("message_id") or request_info.get("message_id"),
+                                "message_id": metadata.get("message_id")
+                                or request_info.get("message_id"),
                                 "prompt_group_id": metadata.get("prompt_group_id"),
                                 "proficiency_level": metadata.get("proficiency_level"),
                                 "response_style": metadata.get("response_style"),
-                                "composed_prompt_length": len(final_system) if final_system else 0,
+                                "composed_prompt_length": (
+                                    len(final_system) if final_system else 0
+                                ),
                                 "tool_count": 0,
                                 "provider": "gemini",
                                 "chapter_id": chapter_id,
@@ -1165,15 +1277,17 @@ async def handle_gemini_native_request(
                                 "object": "chat.completion",
                                 "created": int(time.time()),
                                 "model": model_id,
-                                "choices": [{
-                                    "index": 0,
-                                    "message": {
-                                        "role": "assistant",
-                                        "content": collected_text
-                                    },
-                                    "finish_reason": "stop"
-                                }],
-                                "usage": usage_dict  # Use actual usage from stream
+                                "choices": [
+                                    {
+                                        "index": 0,
+                                        "message": {
+                                            "role": "assistant",
+                                            "content": collected_text,
+                                        },
+                                        "finish_reason": "stop",
+                                    }
+                                ],
+                                "usage": usage_dict,  # Use actual usage from stream
                             }
 
                             # Trace the completion with explicit timing
@@ -1184,17 +1298,24 @@ async def handle_gemini_native_request(
                                 response=response_data,
                                 metadata=trace_metadata,
                                 start_time=llm_start_time,
-                                end_time=llm_end_time
+                                end_time=llm_end_time,
                             )
                             # Store trace for tool tracing
                             if trace and metadata is not None:
                                 metadata["langfuse_trace"] = trace
-                            log.info(f"[LANGFUSE] Traced Gemini streaming completion: {chat_id}")
+                            log.info(
+                                f"[LANGFUSE] Traced Gemini streaming completion: {chat_id}"
+                            )
 
                             # Type 1~4 learning spans (Phase B2)
                             try:
-                                from open_webui.integrations.learning_spans import build_emitter
-                                from open_webui.utils.learning_response_parser import emit_post_response_spans
+                                from open_webui.integrations.learning_spans import (
+                                    build_emitter,
+                                )
+                                from open_webui.utils.learning_response_parser import (
+                                    emit_post_response_spans,
+                                )
+
                                 ct = trace_metadata.get("chat_type")
                                 emitter = build_emitter(
                                     parent=trace,
@@ -1203,15 +1324,28 @@ async def handle_gemini_native_request(
                                         "trace_id": metadata.get("message_id"),
                                         "user_id": trace_metadata.get("user_id"),
                                         "topic_id": chapter_id,
-                                        "proficiency": trace_metadata.get("proficiency_level"),
-                                        "model_tier": "pro" if "pro" in (model_id or "").lower() else "flash",
-                                        "prompt_version": trace_metadata.get("prompt_group_id") or "n/a",
+                                        "proficiency": trace_metadata.get(
+                                            "proficiency_level"
+                                        ),
+                                        "model_tier": (
+                                            "pro"
+                                            if "pro" in (model_id or "").lower()
+                                            else "flash"
+                                        ),
+                                        "prompt_version": trace_metadata.get(
+                                            "prompt_group_id"
+                                        )
+                                        or "n/a",
                                     },
                                 )
                                 if ct:
-                                    emitter.routing(routed_type=f"type_{ct}", confidence="heuristic")
+                                    emitter.routing(
+                                        routed_type=f"type_{ct}", confidence="heuristic"
+                                    )
                                 emitter.input_classification(
-                                    intent_class="high" if len(collected_text) > 80 else "low",
+                                    intent_class=(
+                                        "high" if len(collected_text) > 80 else "low"
+                                    ),
                                     latency_ms=(llm_end_time - llm_start_time) * 1000,
                                 )
                                 if store_names:
@@ -1222,13 +1356,18 @@ async def handle_gemini_native_request(
                                     )
                                 emit_post_response_spans(emitter, collected_text, ct)
                                 emitter.trace_complete(
-                                    total_latency_ms=(llm_end_time - llm_start_time) * 1000,
+                                    total_latency_ms=(llm_end_time - llm_start_time)
+                                    * 1000,
                                 )
                             except Exception as ls_err:
-                                log.warning(f"[LEARNING_SPAN] streaming emit failed: {ls_err}")
+                                log.warning(
+                                    f"[LEARNING_SPAN] streaming emit failed: {ls_err}"
+                                )
                     except Exception as trace_error:
                         # Don't fail the request if tracing fails
-                        log.error(f"[LANGFUSE] Failed to trace streaming completion: {trace_error}")
+                        log.error(
+                            f"[LANGFUSE] Failed to trace streaming completion: {trace_error}"
+                        )
 
                 except Exception as e:
                     log.error(f"[GEMINI-NATIVE] Streaming error: {e}")
@@ -1237,7 +1376,7 @@ async def handle_gemini_native_request(
                         "error": {
                             "message": str(e),
                             "type": "api_error",
-                            "code": "streaming_error"
+                            "code": "streaming_error",
                         }
                     }
                     yield f"data: {json.dumps(error_chunk)}\n\n"
@@ -1249,13 +1388,14 @@ async def handle_gemini_native_request(
                 headers={
                     "Cache-Control": "no-cache",
                     "Connection": "keep-alive",
-                }
+                },
             )
 
         # Non-streaming mode
         else:
             # Track timing for Langfuse tracing
             import time
+
             llm_start_time = time.time()
 
             # Call unified service with conversation history
@@ -1263,6 +1403,7 @@ async def handle_gemini_native_request(
             # NOTE: force_tool_use only works with function_declarations, not with FileSearch
             # We rely on system_instruction to encourage FileSearch usage instead
             import asyncio
+
             result = await asyncio.to_thread(
                 service.query,
                 contents=gemini_contents,  # Full conversation history
@@ -1270,7 +1411,7 @@ async def handle_gemini_native_request(
                 model=model_id,
                 temperature=temperature,
                 system_instruction=final_system,
-                cache_stage=cache_stage
+                cache_stage=cache_stage,
             )
 
             # Track end time
@@ -1281,20 +1422,26 @@ async def handle_gemini_native_request(
                     "error": {
                         "message": result.get("error", "Unknown error"),
                         "type": "api_error",
-                        "code": "gemini_service_error"
+                        "code": "gemini_service_error",
                     }
                 }
 
             text = result.get("text", "")
-            usage_dict = result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
-            log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars, usage: {usage_dict}")
+            usage_dict = result.get(
+                "usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+            )
+            log.info(
+                f"[GEMINI-NATIVE] Response received: {len(text)} chars, usage: {usage_dict}"
+            )
 
             # ============================================================
             # Auto-chapter assignment (non-streaming mode) - LLM-based
             # ============================================================
             # Trigger detection if chapter_id is null or "uncategorized"
             current_chapter_id = metadata.get("chapter_id")
-            should_detect = chat_id and (not current_chapter_id or current_chapter_id == "uncategorized")
+            should_detect = chat_id and (
+                not current_chapter_id or current_chapter_id == "uncategorized"
+            )
 
             if should_detect:
                 try:
@@ -1302,36 +1449,50 @@ async def handle_gemini_native_request(
 
                     # Check if chat still has no chapter or uncategorized
                     chat = Chats.get_chat_by_id(chat_id)
-                    if chat and (not chat.chapter_id or chat.chapter_id == "uncategorized"):
+                    if chat and (
+                        not chat.chapter_id or chat.chapter_id == "uncategorized"
+                    ):
                         # Log if replacing uncategorized
                         if chat.chapter_id == "uncategorized":
-                            log.info(f"[CHAPTER-AUTO] Retrying detection for uncategorized chat {chat_id}")
+                            log.info(
+                                f"[CHAPTER-AUTO] Retrying detection for uncategorized chat {chat_id}"
+                            )
 
                         # Detect using LLM
-                        detected = await detect_chapter_from_conversation(chat_id, api_key)
+                        detected = await detect_chapter_from_conversation(
+                            chat_id, api_key
+                        )
 
                         if detected:
-                            updated = Chats.update_chat_chapter_id_by_id(chat_id, detected)
+                            updated = Chats.update_chat_chapter_id_by_id(
+                                chat_id, detected
+                            )
                             if updated:
                                 if chat.chapter_id == "uncategorized":
-                                    log.info(f"[CHAPTER-AUTO] ✅ Updated uncategorized → {detected} for chat {chat_id}")
+                                    log.info(
+                                        f"[CHAPTER-AUTO] ✅ Updated uncategorized → {detected} for chat {chat_id}"
+                                    )
                                 else:
-                                    log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
+                                    log.info(
+                                        f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}"
+                                    )
 
                                 # Emit socket event to notify frontend
                                 try:
                                     from open_webui.socket.main import sio
+
                                     await sio.emit(
                                         "chat:chapter:updated",
-                                        {
-                                            "chat_id": chat_id,
-                                            "chapter_id": detected
-                                        },
-                                        room=f"user:{chat.user_id}"
+                                        {"chat_id": chat_id, "chapter_id": detected},
+                                        room=f"user:{chat.user_id}",
                                     )
-                                    log.info(f"[CHAPTER-AUTO] 🔔 Notified user {chat.user_id} via socket")
+                                    log.info(
+                                        f"[CHAPTER-AUTO] 🔔 Notified user {chat.user_id} via socket"
+                                    )
                                 except Exception as socket_error:
-                                    log.error(f"[CHAPTER-AUTO] Socket emit failed: {socket_error}")
+                                    log.error(
+                                        f"[CHAPTER-AUTO] Socket emit failed: {socket_error}"
+                                    )
                 except Exception as e:
                     log.error(f"[CHAPTER-AUTO] Error: {e}")
 
@@ -1341,31 +1502,34 @@ async def handle_gemini_native_request(
                 "object": "chat.completion",
                 "created": int(time.time()),
                 "model": model_id,
-                "choices": [{
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": text
-                    },
-                    "finish_reason": "stop"
-                }],
-                "usage": usage_dict  # Use actual usage from Gemini
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": text},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": usage_dict,  # Use actual usage from Gemini
             }
 
             # Trace to Langfuse for observability
             try:
                 from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
                 from open_webui.utils.chat_type import infer_chat_type
+
                 tracer = get_langfuse_tracer()
                 if tracer and metadata:
                     # Prepare tracing metadata
                     trace_metadata = {
                         "user_id": metadata.get("user_id"),
-                        "message_id": metadata.get("message_id") or request_info.get("message_id"),
+                        "message_id": metadata.get("message_id")
+                        or request_info.get("message_id"),
                         "prompt_group_id": metadata.get("prompt_group_id"),
                         "proficiency_level": metadata.get("proficiency_level"),
                         "response_style": metadata.get("response_style"),
-                        "composed_prompt_length": len(final_system) if final_system else 0,
+                        "composed_prompt_length": (
+                            len(final_system) if final_system else 0
+                        ),
                         "tool_count": 0,
                         "provider": "gemini",
                         "chapter_id": chapter_id,
@@ -1381,7 +1545,7 @@ async def handle_gemini_native_request(
                         response=response_data,
                         metadata=trace_metadata,
                         start_time=llm_start_time,
-                        end_time=llm_end_time
+                        end_time=llm_end_time,
                     )
                     # Store trace for tool tracing
                     if trace and metadata is not None:
@@ -1391,7 +1555,10 @@ async def handle_gemini_native_request(
                     # Type 1~4 learning spans (Phase B2)
                     try:
                         from open_webui.integrations.learning_spans import build_emitter
-                        from open_webui.utils.learning_response_parser import emit_post_response_spans
+                        from open_webui.utils.learning_response_parser import (
+                            emit_post_response_spans,
+                        )
+
                         ct = trace_metadata.get("chat_type")
                         emitter = build_emitter(
                             parent=trace,
@@ -1401,12 +1568,19 @@ async def handle_gemini_native_request(
                                 "user_id": trace_metadata.get("user_id"),
                                 "topic_id": chapter_id,
                                 "proficiency": trace_metadata.get("proficiency_level"),
-                                "model_tier": "pro" if "pro" in (model_id or "").lower() else "flash",
-                                "prompt_version": trace_metadata.get("prompt_group_id") or "n/a",
+                                "model_tier": (
+                                    "pro"
+                                    if "pro" in (model_id or "").lower()
+                                    else "flash"
+                                ),
+                                "prompt_version": trace_metadata.get("prompt_group_id")
+                                or "n/a",
                             },
                         )
                         if ct:
-                            emitter.routing(routed_type=f"type_{ct}", confidence="heuristic")
+                            emitter.routing(
+                                routed_type=f"type_{ct}", confidence="heuristic"
+                            )
                         emitter.input_classification(
                             intent_class="high" if len(text or "") > 80 else "low",
                             latency_ms=(llm_end_time - llm_start_time) * 1000,
@@ -1422,7 +1596,9 @@ async def handle_gemini_native_request(
                             total_latency_ms=(llm_end_time - llm_start_time) * 1000,
                         )
                     except Exception as ls_err:
-                        log.warning(f"[LEARNING_SPAN] non-streaming emit failed: {ls_err}")
+                        log.warning(
+                            f"[LEARNING_SPAN] non-streaming emit failed: {ls_err}"
+                        )
             except Exception as trace_error:
                 # Don't fail the request if tracing fails
                 log.error(f"[LANGFUSE] Failed to trace completion: {trace_error}")
@@ -1436,7 +1612,7 @@ async def handle_gemini_native_request(
             "error": {
                 "message": str(e),
                 "type": "api_error",
-                "code": "gemini_native_error"
+                "code": "gemini_native_error",
             }
         }
 
@@ -2081,8 +2257,12 @@ async def generate_chat_completion(
 
         # Extract tool_mode and prompt_group_id from meta (model settings)
         model_tool_mode = meta.get("tool_mode")  # "gating" | "concat" | "none" | None
-        tool_gating_model = meta.get("tool_gating_model")  # Optional: Flash model for Stage 1 tool gating
-        cache_strategy = meta.get("cache_strategy") or "auto"  # Cache strategy for Gemini caching
+        tool_gating_model = meta.get(
+            "tool_gating_model"
+        )  # Optional: Flash model for Stage 1 tool gating
+        cache_strategy = (
+            meta.get("cache_strategy") or "auto"
+        )  # Cache strategy for Gemini caching
         prompt_group_id_from_meta = meta.get("prompt_group_id")
 
         # Extract system and prompt_group_id from params (legacy support)
@@ -2095,7 +2275,9 @@ async def generate_chat_completion(
         # Priority: meta.prompt_group_id > params.prompt_group_id
         prompt_group_id = prompt_group_id_from_meta or prompt_group_id_from_params
 
-        log.info(f"[OPENAI] Model settings - tool_mode: {model_tool_mode}, tool_gating_model: {tool_gating_model}, prompt_group_id: {prompt_group_id}")
+        log.info(
+            f"[OPENAI] Model settings - tool_mode: {model_tool_mode}, tool_gating_model: {tool_gating_model}, prompt_group_id: {prompt_group_id}"
+        )
 
         # Always try to compose prompts (even if params is None)
         # Get persona values from metadata (stored in chat)
@@ -2218,7 +2400,9 @@ async def generate_chat_completion(
         task_type = metadata.get("task", "")
         if task_type in ("title_generation", "summary", "title"):
             is_utility_request = True
-            log.info(f"[OPENAI] Utility request detected (task={task_type}), skipping tool gating")
+            log.info(
+                f"[OPENAI] Utility request detected (task={task_type}), skipping tool gating"
+            )
 
     # Also check system prompt for title generation patterns
     # Use specific phrases to avoid false positives (e.g., "include a title" in graph prompts)
@@ -2244,10 +2428,14 @@ async def generate_chat_completion(
 
         if matched_pattern:
             is_utility_request = True
-            log.info(f"[OPENAI] Title generation detected in system prompt (matched: '{matched_pattern}'), skipping tool gating")
+            log.info(
+                f"[OPENAI] Title generation detected in system prompt (matched: '{matched_pattern}'), skipping tool gating"
+            )
         else:
             # Debug: Log that we checked but didn't find title patterns
-            log.debug(f"[OPENAI] No title generation patterns found in base_system (length: {len(base_system)} chars)")
+            log.debug(
+                f"[OPENAI] No title generation patterns found in base_system (length: {len(base_system)} chars)"
+            )
 
     # Determine tool handling mode based on model settings
     # Priority: model_tool_mode > default behavior
@@ -2258,7 +2446,9 @@ async def generate_chat_completion(
     effective_tool_mode = model_tool_mode if model_tool_mode else "inline"
 
     log.info("=" * 80)
-    log.info(f"[OPENAI] Tool handling mode: {effective_tool_mode} (model_tool_mode={model_tool_mode})")
+    log.info(
+        f"[OPENAI] Tool handling mode: {effective_tool_mode} (model_tool_mode={model_tool_mode})"
+    )
     log.info(f"[OPENAI] Available tools: {[t.command for t in tool_prompts]}")
     log.info("=" * 80)
 
@@ -2290,25 +2480,37 @@ async def generate_chat_completion(
 
         # Stage 1: Tool selection with catalog + JSON instructions
         tool_catalog = build_tool_catalog(tool_prompts)
-        stage1_system = build_tool_selection_system_prompt(base_system or "", tool_catalog)
+        stage1_system = build_tool_selection_system_prompt(
+            base_system or "", tool_catalog
+        )
 
-        log.info(f"[OPENAI-TOOL-GATING] Stage 1 System Prompt Length: {len(stage1_system)} chars")
+        log.info(
+            f"[OPENAI-TOOL-GATING] Stage 1 System Prompt Length: {len(stage1_system)} chars"
+        )
 
         # Make Stage 1 call
         # Use Gemini native API with cache if Gemini backend, otherwise OpenAI-compatible API
         # Use tool_gating_model if configured, otherwise use main model
         stage1_model = tool_gating_model if tool_gating_model else payload["model"]
-        log.info(f"[OPENAI-TOOL-GATING] Stage 1 model: {stage1_model} (tool_gating_model={tool_gating_model})")
+        log.info(
+            f"[OPENAI-TOOL-GATING] Stage 1 model: {stage1_model} (tool_gating_model={tool_gating_model})"
+        )
 
         if is_gemini_backend:
-            log.info("[OPENAI-TOOL-GATING] Using Gemini native API for Stage 1 with Pydantic response schema")
+            log.info(
+                "[OPENAI-TOOL-GATING] Using Gemini native API for Stage 1 with Pydantic response schema"
+            )
             cache_manager = get_or_create_gemini_cache_manager(request, key)
 
             # Convert recent chat history to Gemini format for better context
             # Include last 6 messages (3 turns) to provide context
             recent_messages = payload.get("messages", [])[-6:]
-            gemini_contents = convert_openai_messages_to_gemini_contents(recent_messages, filter_code=False)
-            log.info(f"[OPENAI-TOOL-GATING] Stage 1 - Using {len(recent_messages)} recent messages for context")
+            gemini_contents = convert_openai_messages_to_gemini_contents(
+                recent_messages, filter_code=False
+            )
+            log.info(
+                f"[OPENAI-TOOL-GATING] Stage 1 - Using {len(recent_messages)} recent messages for context"
+            )
 
             stage1_result = await make_gemini_native_call_with_cache(
                 api_key=key,
@@ -2335,7 +2537,9 @@ async def generate_chat_completion(
             )
 
         if not stage1_result.get("success"):
-            log.error(f"[OPENAI-TOOL-GATING] Stage 1 failed: {stage1_result.get('error')}")
+            log.error(
+                f"[OPENAI-TOOL-GATING] Stage 1 failed: {stage1_result.get('error')}"
+            )
             # Fallback: use base system without tools
             final_system = base_system
         else:
@@ -2347,17 +2551,29 @@ async def generate_chat_completion(
 
             if not selected_tools:
                 # No tools needed - proceed to Stage 2 with base system only
-                log.info("[OPENAI-TOOL-GATING] No tools needed, proceeding with base system only")
+                log.info(
+                    "[OPENAI-TOOL-GATING] No tools needed, proceeding with base system only"
+                )
                 final_system = base_system
             else:
                 # Stage 2: Use selected tools' full content
-                log.info(f"[OPENAI-TOOL-GATING] Stage 2 - Tools selected: {selected_tools}")
+                log.info(
+                    f"[OPENAI-TOOL-GATING] Stage 2 - Tools selected: {selected_tools}"
+                )
 
-                selected_tool_prompts = get_tool_prompts_by_commands(tool_prompts, selected_tools)
-                final_system = compose_stage2_system_prompt(base_system or "", selected_tool_prompts)
+                selected_tool_prompts = get_tool_prompts_by_commands(
+                    tool_prompts, selected_tools
+                )
+                final_system = compose_stage2_system_prompt(
+                    base_system or "", selected_tool_prompts
+                )
 
-                log.info(f"[OPENAI-TOOL-GATING] Stage 2 System Prompt Length: {len(final_system)} chars")
-                log.info(f"[OPENAI-TOOL-GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
+                log.info(
+                    f"[OPENAI-TOOL-GATING] Stage 2 System Prompt Length: {len(final_system)} chars"
+                )
+                log.info(
+                    f"[OPENAI-TOOL-GATING] Selected tools: {[t.command for t in selected_tool_prompts]}"
+                )
 
                 # Enable inline tool execution for Stage 2 (for streaming with tool markers)
                 if metadata is None:
@@ -2365,10 +2581,10 @@ async def generate_chat_completion(
                 metadata["enable_tool_notifications"] = True
                 metadata["tool_commands"] = {t.command for t in selected_tool_prompts}
                 metadata["tool_prompts_dict"] = {
-                    t.command.lstrip('/'): t.content for t in selected_tool_prompts
+                    t.command.lstrip("/"): t.content for t in selected_tool_prompts
                 }
                 metadata["tool_validation_rules"] = {
-                    t.command.lstrip('/'): t.validation_rules
+                    t.command.lstrip("/"): t.validation_rules
                     for t in selected_tool_prompts
                     if t.prompt_type == "json_tool" and t.validation_rules
                 }
@@ -2382,12 +2598,22 @@ async def generate_chat_completion(
                     metadata["gemini_api_key"] = key
                     metadata["gemini_model_id"] = payload["model"]
                     # Use tool_gating_model (Flash) for tool execution if configured
-                    metadata["gemini_tool_model"] = tool_gating_model if tool_gating_model else payload["model"]
-                    log.info(f"[OPENAI-TOOL-GATING] Stage 2 inline tool execution will use Gemini native SDK")
-                    log.info(f"[OPENAI-TOOL-GATING] Tool execution model: {metadata['gemini_tool_model']}")
+                    metadata["gemini_tool_model"] = (
+                        tool_gating_model if tool_gating_model else payload["model"]
+                    )
+                    log.info(
+                        f"[OPENAI-TOOL-GATING] Stage 2 inline tool execution will use Gemini native SDK"
+                    )
+                    log.info(
+                        f"[OPENAI-TOOL-GATING] Tool execution model: {metadata['gemini_tool_model']}"
+                    )
 
-                log.info(f"[OPENAI-TOOL-GATING] Stage 2 inline tool execution enabled for: {metadata['tool_commands']}")
-                log.info(f"[OPENAI-TOOL-GATING] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}")
+                log.info(
+                    f"[OPENAI-TOOL-GATING] Stage 2 inline tool execution enabled for: {metadata['tool_commands']}"
+                )
+                log.info(
+                    f"[OPENAI-TOOL-GATING] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}"
+                )
 
                 # Store metadata in form_data for middleware access
                 form_data["metadata"] = metadata
@@ -2409,7 +2635,9 @@ async def generate_chat_completion(
         # When tool markers are detected in stream, ToolInlineExecutor will call LLM with full prompt
         tool_hints = build_tool_hints(tool_prompts)
         final_system = f"{base_system}\n\n{tool_hints}" if base_system else tool_hints
-        log.info(f"[OPENAI] Inline tool execution mode with {len(tool_prompts)} tools (short hints)")
+        log.info(
+            f"[OPENAI] Inline tool execution mode with {len(tool_prompts)} tools (short hints)"
+        )
         log.info(f"[OPENAI] Tool hints length: {len(tool_hints)} chars")
 
     # Enable inline tool execution for streaming if using inline mode
@@ -2420,11 +2648,11 @@ async def generate_chat_completion(
         metadata["tool_commands"] = {t.command for t in tool_prompts}
         # Pass full tool prompts dict for inline execution
         metadata["tool_prompts_dict"] = {
-            t.command.lstrip('/'): t.content for t in tool_prompts
+            t.command.lstrip("/"): t.content for t in tool_prompts
         }
         # Pass validation rules for json_tool types
         metadata["tool_validation_rules"] = {
-            t.command.lstrip('/'): t.validation_rules
+            t.command.lstrip("/"): t.validation_rules
             for t in tool_prompts
             if t.prompt_type == "json_tool" and t.validation_rules
         }
@@ -2439,13 +2667,21 @@ async def generate_chat_completion(
             metadata["gemini_api_key"] = key
             metadata["gemini_model_id"] = payload["model"]
             # Use tool_gating_model (Flash) for tool execution if configured
-            metadata["gemini_tool_model"] = tool_gating_model if tool_gating_model else payload["model"]
+            metadata["gemini_tool_model"] = (
+                tool_gating_model if tool_gating_model else payload["model"]
+            )
             log.info(f"[OPENAI] Inline tool execution will use Gemini native SDK")
             log.info(f"[OPENAI] Tool execution model: {metadata['gemini_tool_model']}")
 
-        log.info(f"[OPENAI] Inline tool execution enabled for: {metadata['tool_commands']}")
-        log.info(f"[OPENAI] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}")
-        log.info(f"[OPENAI] Tool validation rules keys: {list(metadata['tool_validation_rules'].keys())}")
+        log.info(
+            f"[OPENAI] Inline tool execution enabled for: {metadata['tool_commands']}"
+        )
+        log.info(
+            f"[OPENAI] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}"
+        )
+        log.info(
+            f"[OPENAI] Tool validation rules keys: {list(metadata['tool_validation_rules'].keys())}"
+        )
 
         # Store updated metadata back in form_data for middleware access
         form_data["metadata"] = metadata
@@ -2456,11 +2692,15 @@ async def generate_chat_completion(
 
     # Debug: Log the final system prompt being sent
     log.info("=" * 80)
-    log.info(f"[OPENAI] Final system prompt length: {len(final_system) if final_system else 0} chars")
+    log.info(
+        f"[OPENAI] Final system prompt length: {len(final_system) if final_system else 0} chars"
+    )
     log.info(f"[OPENAI] Backend URL: {url}")
     log.info(f"[OPENAI] Is Gemini backend: {is_gemini_backend}")
     log.info(f"[OPENAI] Tool prompts count: {len(tool_prompts)}")
-    log.info(f"[OPENAI] Inline tool execution: {tool_prompts and not is_utility_request}")
+    log.info(
+        f"[OPENAI] Inline tool execution: {tool_prompts and not is_utility_request}"
+    )
     log.info("=" * 80)
 
     # Add prompt_group_id and user_id to metadata for Langfuse tracing
@@ -2480,16 +2720,20 @@ async def generate_chat_completion(
             _content = _msg.get("content", "")
             _user_prompt = _content if isinstance(_content, str) else str(_content)
             break
-    ph.capture(user.id, "chat_completion", {
-        "model_id": payload.get("model"),
-        "prompt": _user_prompt[:500],
-        "tool_names": list(metadata.get("tool_commands", set())),
-        "tool_mode": effective_tool_mode,
-        "proficiency_level": proficiency_level,
-        "response_style": response_style,
-        "chapter_id": metadata.get("chapter_id"),
-        "backend_type": "gemini" if is_gemini_backend else "openai",
-    })
+    ph.capture(
+        user.id,
+        "chat_completion",
+        {
+            "model_id": payload.get("model"),
+            "prompt": _user_prompt[:500],
+            "tool_names": list(metadata.get("tool_commands", set())),
+            "tool_mode": effective_tool_mode,
+            "proficiency_level": proficiency_level,
+            "response_style": response_style,
+            "chapter_id": metadata.get("chapter_id"),
+            "backend_type": "gemini" if is_gemini_backend else "openai",
+        },
+    )
 
     # CRITICAL: If Gemini backend, use native SDK for ALL requests
     # This enables context caching and improves performance
@@ -2506,7 +2750,9 @@ async def generate_chat_completion(
         selected_model = payload["model"]
         if effective_tool_mode == "inline" and tool_gating_model:
             selected_model = tool_gating_model
-            log.info(f"[OPENAI] Inline mode: using Flash model for first call: {selected_model}")
+            log.info(
+                f"[OPENAI] Inline mode: using Flash model for first call: {selected_model}"
+            )
 
         return await handle_gemini_native_request(
             request=request,
@@ -2572,8 +2818,10 @@ async def generate_chat_completion(
             # Filter out encoding headers to prevent ERR_CONTENT_DECODING_FAILED
             # aiohttp already handles decompression, so we shouldn't pass these headers
             filtered_headers = {
-                k: v for k, v in r.headers.items()
-                if k.lower() not in ('content-encoding', 'transfer-encoding', 'content-length')
+                k: v
+                for k, v in r.headers.items()
+                if k.lower()
+                not in ("content-encoding", "transfer-encoding", "content-length")
             }
             return StreamingResponse(
                 stream_chunks_handler(r.content),
@@ -2788,12 +3036,10 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 # Gemini Cache Management API
 # ============================================================
 
+
 @router.get("/gemini/cache/stats")
 @get_role_based_limit
-async def get_gemini_cache_stats(
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def get_gemini_cache_stats(request: Request, user=Depends(get_admin_user)):
     """
     Get Gemini global cache statistics.
 
@@ -2814,7 +3060,7 @@ async def get_gemini_cache_stats(
             "by_stage": {"gating": 0, "execution": 0},
             "by_model": {},
             "tool_spec_version": "v1.0.0",
-            "message": "No cache managers initialized yet"
+            "message": "No cache managers initialized yet",
         }
 
     # Aggregate stats from all cache managers
@@ -2837,16 +3083,13 @@ async def get_gemini_cache_stats(
         "by_stage": by_stage,
         "by_model": by_model,
         "tool_spec_version": "v1.0.0",
-        "cache_managers_count": len(request.app.state.gemini_cache_managers)
+        "cache_managers_count": len(request.app.state.gemini_cache_managers),
     }
 
 
 @router.delete("/gemini/cache")
 @get_write_operation_limit
-async def clear_all_gemini_caches(
-    request: Request,
-    user=Depends(get_admin_user)
-):
+async def clear_all_gemini_caches(request: Request, user=Depends(get_admin_user)):
     """
     Clear all Gemini cached system prompts.
 
@@ -2864,7 +3107,7 @@ async def clear_all_gemini_caches(
             "deleted_count": 0,
             "failed_count": 0,
             "errors": [],
-            "message": "No cache managers initialized yet"
+            "message": "No cache managers initialized yet",
         }
 
     total_deleted = 0
@@ -2883,16 +3126,14 @@ async def clear_all_gemini_caches(
         "deleted_count": total_deleted,
         "failed_count": total_failed,
         "errors": all_errors,
-        "cache_managers_count": len(request.app.state.gemini_cache_managers)
+        "cache_managers_count": len(request.app.state.gemini_cache_managers),
     }
 
 
 @router.delete("/gemini/cache/{stage}")
 @get_write_operation_limit
 async def clear_gemini_caches_by_stage(
-    request: Request,
-    stage: str,
-    user=Depends(get_admin_user)
+    request: Request, stage: str, user=Depends(get_admin_user)
 ):
     """
     Clear Gemini caches for a specific stage.
@@ -2912,7 +3153,7 @@ async def clear_gemini_caches_by_stage(
     if stage not in ("gating", "execution"):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid stage: {stage}. Must be 'gating' or 'execution'"
+            detail=f"Invalid stage: {stage}. Must be 'gating' or 'execution'",
         )
 
     if not hasattr(request.app.state, "gemini_cache_managers"):
@@ -2922,7 +3163,7 @@ async def clear_gemini_caches_by_stage(
             "deleted_count": 0,
             "failed_count": 0,
             "errors": [],
-            "message": "No cache managers initialized yet"
+            "message": "No cache managers initialized yet",
         }
 
     total_deleted = 0
@@ -2942,5 +3183,5 @@ async def clear_gemini_caches_by_stage(
         "deleted_count": total_deleted,
         "failed_count": total_failed,
         "errors": all_errors,
-        "cache_managers_count": len(request.app.state.gemini_cache_managers)
+        "cache_managers_count": len(request.app.state.gemini_cache_managers),
     }

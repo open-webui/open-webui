@@ -21,21 +21,17 @@ depends_on = None
 def upgrade():
     # Add chapter_id to message_tag_definition
     op.add_column(
-        "message_tag_definition",
-        sa.Column("chapter_id", sa.String(), nullable=True)
+        "message_tag_definition", sa.Column("chapter_id", sa.String(), nullable=True)
     )
 
     # Create index for chapter_id
     op.create_index(
-        "idx_message_tag_def_chapter",
-        "message_tag_definition",
-        ["chapter_id"]
+        "idx_message_tag_def_chapter", "message_tag_definition", ["chapter_id"]
     )
 
     # Add blacklisted_tags to tagging_daemon_config
     op.add_column(
-        "tagging_daemon_config",
-        sa.Column("blacklisted_tags", sa.JSON(), nullable=True)
+        "tagging_daemon_config", sa.Column("blacklisted_tags", sa.JSON(), nullable=True)
     )
 
 

@@ -658,10 +658,14 @@ async def disconnect(sid):
 
         user_id = user["id"]
         duration = int(time.time() - user.get("_start_time", time.time()))
-        ph.capture(user_id, "user_session_end", {
-            "session_id": sid,
-            "duration_seconds": duration,
-        })
+        ph.capture(
+            user_id,
+            "user_session_end",
+            {
+                "session_id": sid,
+                "duration_seconds": duration,
+            },
+        )
 
         USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
 
@@ -719,7 +723,9 @@ def get_event_emitter(request_info, update_db=True):
                     if request_info.get("chapter_id"):
                         message_data["chapter_id"] = request_info["chapter_id"]
                     if request_info.get("proficiency_level"):
-                        message_data["proficiency_level"] = request_info["proficiency_level"]
+                        message_data["proficiency_level"] = request_info[
+                            "proficiency_level"
+                        ]
                     if request_info.get("response_style"):
                         message_data["response_style"] = request_info["response_style"]
 
@@ -739,7 +745,9 @@ def get_event_emitter(request_info, update_db=True):
                 if request_info.get("chapter_id"):
                     message_data["chapter_id"] = request_info["chapter_id"]
                 if request_info.get("proficiency_level"):
-                    message_data["proficiency_level"] = request_info["proficiency_level"]
+                    message_data["proficiency_level"] = request_info[
+                        "proficiency_level"
+                    ]
                 if request_info.get("response_style"):
                     message_data["response_style"] = request_info["response_style"]
 

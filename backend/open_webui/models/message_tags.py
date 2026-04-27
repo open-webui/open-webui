@@ -12,7 +12,16 @@ from typing import Optional, List
 from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Integer, JSON, Index, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    String,
+    Integer,
+    JSON,
+    Index,
+    UniqueConstraint,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -27,7 +36,9 @@ class MessageTagDefinition(Base):
     id = Column(String, primary_key=True)  # Normalized tag ID (e.g., "calculus_basics")
     name = Column(String, nullable=False)  # Display name (e.g., "Calculus Basics")
     usage_count = Column(Integer, default=0)  # For consolidation priority
-    is_protected = Column(Boolean, default=False)  # Admin-created tags that can't be auto-deleted
+    is_protected = Column(
+        Boolean, default=False
+    )  # Admin-created tags that can't be auto-deleted
     chapter_id = Column(String, nullable=True)  # Link to textbook_chapter
     meta = Column(JSON, nullable=True)  # For AI similarity hints
     created_at = Column(BigInteger, nullable=False)
@@ -60,7 +71,9 @@ class MessageTag(Base):
 
     id = Column(String, primary_key=True)
     chat_id = Column(String, nullable=False)  # Reference to chat.id
-    message_id = Column(String, nullable=False)  # Key from chat.chat["history"]["messages"]
+    message_id = Column(
+        String, nullable=False
+    )  # Key from chat.chat["history"]["messages"]
     tag_id = Column(String, nullable=False)  # Reference to message_tag_definition.id
     summary = Column(String(100), nullable=True)  # Summary of the message
     user_id = Column(String, nullable=False)  # For access control
@@ -91,11 +104,14 @@ class MessageTagModel(BaseModel):
 ####################
 class TagFeedback(Base):
     """User feedback on tag definitions (not on individual message tags)."""
+
     __tablename__ = "tag_feedback"
 
     user_id = Column(String, primary_key=True)  # Composite PK
-    tag_id = Column(String, primary_key=True)   # Composite PK
-    status = Column(String, nullable=True)      # null, "not_interested", "understood", "confused"
+    tag_id = Column(String, primary_key=True)  # Composite PK
+    status = Column(
+        String, nullable=True
+    )  # null, "not_interested", "understood", "confused"
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
@@ -117,9 +133,11 @@ class TagFeedbackModel(BaseModel):
 
 class TagFeedbackForm(BaseModel):
     tag_id: str
-    status: Optional[str] = None  # null to clear, or one of: "not_interested", "understood", "confused"
+    status: Optional[str] = (
+        None  # null to clear, or one of: "not_interested", "understood", "confused"
+    )
     feedback_status: Optional[str] = None  # Alternative field name for compatibility
-    
+
     @property
     def effective_status(self) -> Optional[str]:
         """Return feedback_status if provided, otherwise status."""
@@ -143,12 +161,24 @@ class TaggingDaemonConfig(Base):
     lookback_days = Column(Integer, default=7)  # Process messages from last N days
     batch_size = Column(Integer, default=10)  # Messages per Gemini API call
     max_tags = Column(Integer, default=100)  # Maximum unique tags
-    consolidation_threshold = Column(Integer, default=90)  # Start consolidation at N tags
-    custom_tagging_prompt = Column(String, nullable=True)  # Custom prompt for AI tagging
-    custom_system_instruction = Column(String, nullable=True)  # Custom system instruction
-    blacklisted_tags = Column(JSON, nullable=True)  # List of tag IDs that should never be created
-    rag_store_names = Column(JSON, nullable=True)  # List of RAG store names to use for context
-    enable_rag_chapter_detection = Column(Boolean, default=False)  # Enable RAG-based chapter detection
+    consolidation_threshold = Column(
+        Integer, default=90
+    )  # Start consolidation at N tags
+    custom_tagging_prompt = Column(
+        String, nullable=True
+    )  # Custom prompt for AI tagging
+    custom_system_instruction = Column(
+        String, nullable=True
+    )  # Custom system instruction
+    blacklisted_tags = Column(
+        JSON, nullable=True
+    )  # List of tag IDs that should never be created
+    rag_store_names = Column(
+        JSON, nullable=True
+    )  # List of RAG store names to use for context
+    enable_rag_chapter_detection = Column(
+        Boolean, default=False
+    )  # Enable RAG-based chapter detection
     last_run_at = Column(BigInteger, nullable=True)
     last_run_status = Column(String, nullable=True)
     lock_acquired_at = Column(BigInteger, nullable=True)  # For distributed locking
@@ -183,6 +213,7 @@ class TaggingDaemonConfigModel(BaseModel):
 # Table Operations
 ####################
 
+
 class MessageTagTable:
     """Table operations for message_tag."""
 
@@ -192,7 +223,7 @@ class MessageTagTable:
         message_id: str,
         tag_id: str,
         summary: Optional[str],
-        user_id: str
+        user_id: str,
     ) -> Optional[MessageTagModel]:
         try:
             with get_db() as db:
@@ -203,7 +234,7 @@ class MessageTagTable:
                     tag_id=tag_id,
                     summary=summary[:100] if summary else None,
                     user_id=user_id,
-                    created_at=int(time.time())
+                    created_at=int(time.time()),
                 )
                 db.add(tag)
                 db.commit()
@@ -215,16 +246,20 @@ class MessageTagTable:
 
     def has_tags(self, chat_id: str, message_id: str) -> bool:
         with get_db() as db:
-            count = db.query(MessageTag).filter_by(
-                chat_id=chat_id, message_id=message_id
-            ).count()
+            count = (
+                db.query(MessageTag)
+                .filter_by(chat_id=chat_id, message_id=message_id)
+                .count()
+            )
             return count > 0
 
     def get_by_message(self, chat_id: str, message_id: str) -> List[MessageTagModel]:
         with get_db() as db:
-            tags = db.query(MessageTag).filter_by(
-                chat_id=chat_id, message_id=message_id
-            ).all()
+            tags = (
+                db.query(MessageTag)
+                .filter_by(chat_id=chat_id, message_id=message_id)
+                .all()
+            )
             return [MessageTagModel.model_validate(t) for t in tags]
 
     def get_by_tag(self, tag_id: str, limit: int = 100) -> List[MessageTagModel]:
@@ -236,16 +271,21 @@ class MessageTagTable:
         self, tag_id: str, user_id: str, limit: int = 100
     ) -> List[MessageTagModel]:
         with get_db() as db:
-            tags = db.query(MessageTag).filter_by(
-                tag_id=tag_id, user_id=user_id
-            ).limit(limit).all()
+            tags = (
+                db.query(MessageTag)
+                .filter_by(tag_id=tag_id, user_id=user_id)
+                .limit(limit)
+                .all()
+            )
             return [MessageTagModel.model_validate(t) for t in tags]
 
     def update_tag_id(self, old_tag_id: str, new_tag_id: str) -> int:
         """Update all messages with old_tag_id to new_tag_id (for consolidation)."""
         with get_db() as db:
-            count = db.query(MessageTag).filter_by(tag_id=old_tag_id).update(
-                {"tag_id": new_tag_id}
+            count = (
+                db.query(MessageTag)
+                .filter_by(tag_id=old_tag_id)
+                .update({"tag_id": new_tag_id})
             )
             db.commit()
             return count
@@ -284,7 +324,13 @@ class MessageTagTable:
 class MessageTagDefinitionTable:
     """Table operations for message_tag_definition."""
 
-    def create(self, name: str, is_protected: bool = False, tag_id: Optional[str] = None, chapter_id: Optional[str] = None) -> Optional[MessageTagDefinitionModel]:
+    def create(
+        self,
+        name: str,
+        is_protected: bool = False,
+        tag_id: Optional[str] = None,
+        chapter_id: Optional[str] = None,
+    ) -> Optional[MessageTagDefinitionModel]:
         """Create a new tag definition.
 
         Args:
@@ -305,7 +351,7 @@ class MessageTagDefinitionTable:
                     is_protected=is_protected,
                     chapter_id=chapter_id,
                     created_at=now,
-                    updated_at=now
+                    updated_at=now,
                 )
                 db.add(tag_def)
                 db.commit()
@@ -315,7 +361,9 @@ class MessageTagDefinitionTable:
             log.error(f"Error creating message tag definition: {e}")
             return None
 
-    def update_chapter_id(self, tag_id: str, chapter_id: str) -> Optional[MessageTagDefinitionModel]:
+    def update_chapter_id(
+        self, tag_id: str, chapter_id: str
+    ) -> Optional[MessageTagDefinitionModel]:
         """Update the chapter_id for a tag (only if currently null)."""
         try:
             with get_db() as db:
@@ -331,7 +379,9 @@ class MessageTagDefinitionTable:
             log.error(f"Error updating tag chapter_id: {e}")
             return None
 
-    def set_protected(self, id: str, is_protected: bool) -> Optional[MessageTagDefinitionModel]:
+    def set_protected(
+        self, id: str, is_protected: bool
+    ) -> Optional[MessageTagDefinitionModel]:
         """Set or unset protection status for a tag."""
         try:
             with get_db() as db:
@@ -373,9 +423,11 @@ class MessageTagDefinitionTable:
 
     def get_all_with_usage(self) -> List[MessageTagDefinitionModel]:
         with get_db() as db:
-            tags = db.query(MessageTagDefinition).order_by(
-                MessageTagDefinition.usage_count.desc()
-            ).all()
+            tags = (
+                db.query(MessageTagDefinition)
+                .order_by(MessageTagDefinition.usage_count.desc())
+                .all()
+            )
             return [MessageTagDefinitionModel.model_validate(t) for t in tags]
 
     def increment_usage(self, id: str) -> bool:
@@ -407,10 +459,14 @@ class MessageTagDefinitionTable:
         try:
             with get_db() as db:
                 # Filter out protected tags - they should not be merged
-                merge_tags_to_delete = db.query(MessageTagDefinition).filter(
-                    MessageTagDefinition.id.in_(merge_ids),
-                    MessageTagDefinition.is_protected == False
-                ).all()
+                merge_tags_to_delete = (
+                    db.query(MessageTagDefinition)
+                    .filter(
+                        MessageTagDefinition.id.in_(merge_ids),
+                        MessageTagDefinition.is_protected == False,
+                    )
+                    .all()
+                )
 
                 actual_merge_ids = [t.id for t in merge_tags_to_delete]
                 total_usage = sum(t.usage_count for t in merge_tags_to_delete)
@@ -423,9 +479,11 @@ class MessageTagDefinitionTable:
 
                 # Delete merged tags (only unprotected ones)
                 if actual_merge_ids:
-                    deleted_count = db.query(MessageTagDefinition).filter(
-                        MessageTagDefinition.id.in_(actual_merge_ids)
-                    ).delete(synchronize_session='fetch')
+                    deleted_count = (
+                        db.query(MessageTagDefinition)
+                        .filter(MessageTagDefinition.id.in_(actual_merge_ids))
+                        .delete(synchronize_session="fetch")
+                    )
                     log.info(f"Merged {deleted_count} tags into '{keep_id}'")
 
                 db.commit()
@@ -468,7 +526,7 @@ class TaggingDaemonConfigTable:
                     batch_size=10,
                     max_tags=100,
                     consolidation_threshold=90,
-                    updated_at=now
+                    updated_at=now,
                 )
                 db.add(config)
                 db.commit()
@@ -538,9 +596,11 @@ class TagFeedbackTable:
         try:
             with get_db() as db:
                 now = int(time.time())
-                existing = db.query(TagFeedback).filter_by(
-                    user_id=user_id, tag_id=tag_id
-                ).first()
+                existing = (
+                    db.query(TagFeedback)
+                    .filter_by(user_id=user_id, tag_id=tag_id)
+                    .first()
+                )
 
                 if existing:
                     existing.status = status
@@ -554,7 +614,7 @@ class TagFeedbackTable:
                         tag_id=tag_id,
                         status=status,
                         created_at=now,
-                        updated_at=now
+                        updated_at=now,
                     )
                     db.add(feedback)
                     db.commit()
@@ -569,9 +629,9 @@ class TagFeedbackTable:
     ) -> Optional[TagFeedbackModel]:
         """Get feedback for a specific user-tag pair."""
         with get_db() as db:
-            feedback = db.query(TagFeedback).filter_by(
-                user_id=user_id, tag_id=tag_id
-            ).first()
+            feedback = (
+                db.query(TagFeedback).filter_by(user_id=user_id, tag_id=tag_id).first()
+            )
             return TagFeedbackModel.model_validate(feedback) if feedback else None
 
     def get_by_user(self, user_id: str) -> List[TagFeedbackModel]:
@@ -590,9 +650,11 @@ class TagFeedbackTable:
         """Delete feedback for a user-tag pair."""
         try:
             with get_db() as db:
-                result = db.query(TagFeedback).filter_by(
-                    user_id=user_id, tag_id=tag_id
-                ).delete()
+                result = (
+                    db.query(TagFeedback)
+                    .filter_by(user_id=user_id, tag_id=tag_id)
+                    .delete()
+                )
                 db.commit()
                 return result > 0
         except Exception as e:

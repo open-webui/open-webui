@@ -65,10 +65,7 @@ class GeminiCacheManager:
         self._cache_registry: Dict[str, CacheEntry] = {}
 
     def generate_cache_key(
-        self,
-        model_id: str,
-        system_prompt: str,
-        stage: str  # "gating" or "execution"
+        self, model_id: str, system_prompt: str, stage: str  # "gating" or "execution"
     ) -> str:
         """
         Generate SHA256-based cache key.
@@ -87,12 +84,7 @@ class GeminiCacheManager:
         Returns:
             SHA256 hash (hex string)
         """
-        key_material = "\n".join([
-            model_id,
-            TOOL_SPEC_VERSION,
-            stage,
-            system_prompt
-        ])
+        key_material = "\n".join([model_id, TOOL_SPEC_VERSION, stage, system_prompt])
         return hashlib.sha256(key_material.encode()).hexdigest()
 
     def get_or_create_cache(
@@ -101,7 +93,7 @@ class GeminiCacheManager:
         system_prompt: str,
         stage: str,
         ttl_seconds: int = 3600,
-        cache_strategy: str = "auto"
+        cache_strategy: str = "auto",
     ) -> Optional[str]:
         """
         Get existing global cache or create new one.
@@ -134,7 +126,9 @@ class GeminiCacheManager:
         # - Pro models (3-pro-preview, etc.): May have different requirements
         #
         # To be safe, use the highest known requirement across all models
-        MIN_CHARS_FOR_CACHE = 10240  # 2048 tokens × 4.54 chars/token ≈ 9298, rounded to 10240
+        MIN_CHARS_FOR_CACHE = (
+            10240  # 2048 tokens × 4.54 chars/token ≈ 9298, rounded to 10240
+        )
 
         # Handle cache strategy
         # OFF: Disable caching entirely
@@ -145,11 +139,15 @@ class GeminiCacheManager:
         # AUTO: Only cache if prompt is long enough (no padding)
         if cache_strategy == "auto":
             if len(system_prompt) < MIN_CHARS_FOR_CACHE:
-                log.info(f"[CACHE] Strategy 'auto': Prompt too short ({len(system_prompt)} chars < {MIN_CHARS_FOR_CACHE}), skipping cache")
+                log.info(
+                    f"[CACHE] Strategy 'auto': Prompt too short ({len(system_prompt)} chars < {MIN_CHARS_FOR_CACHE}), skipping cache"
+                )
                 return None
             # Prompt is long enough, use as-is
             padded_prompt = system_prompt
-            log.info(f"[CACHE] Strategy 'auto': Prompt long enough ({len(system_prompt)} chars), using cache without padding")
+            log.info(
+                f"[CACHE] Strategy 'auto': Prompt long enough ({len(system_prompt)} chars), using cache without padding"
+            )
 
         # FORCE: Always cache (add padding if needed) - legacy behavior
         elif cache_strategy == "force":
@@ -160,15 +158,23 @@ class GeminiCacheManager:
                 # Use repeated whitespace and harmless text
                 padding = "\n\n" + "---\n" + "[CACHE_PADDING] " * (padding_needed // 17)
                 padded_prompt = system_prompt + padding
-                log.info(f"[CACHE] Strategy 'force': Added {len(padding)} chars padding (original: {len(system_prompt)} chars)")
+                log.info(
+                    f"[CACHE] Strategy 'force': Added {len(padding)} chars padding (original: {len(system_prompt)} chars)"
+                )
             else:
-                log.info(f"[CACHE] Strategy 'force': Prompt already long enough ({len(system_prompt)} chars)")
+                log.info(
+                    f"[CACHE] Strategy 'force': Prompt already long enough ({len(system_prompt)} chars)"
+                )
 
         # Unknown strategy: default to auto
         else:
-            log.warning(f"[CACHE] Unknown strategy '{cache_strategy}', defaulting to 'auto'")
+            log.warning(
+                f"[CACHE] Unknown strategy '{cache_strategy}', defaulting to 'auto'"
+            )
             if len(system_prompt) < MIN_CHARS_FOR_CACHE:
-                log.info(f"[CACHE] Prompt too short ({len(system_prompt)} chars), skipping cache")
+                log.info(
+                    f"[CACHE] Prompt too short ({len(system_prompt)} chars), skipping cache"
+                )
                 return None
             padded_prompt = system_prompt
 
@@ -204,8 +210,8 @@ class GeminiCacheManager:
                 model=model_id,
                 config=types.CreateCachedContentConfig(
                     system_instruction=padded_prompt,  # System prompt goes here!
-                    ttl=f"{ttl_seconds}s"
-                )
+                    ttl=f"{ttl_seconds}s",
+                ),
             )
 
             # Register cache in our local registry
@@ -216,7 +222,7 @@ class GeminiCacheManager:
                 stage=stage,
                 created_at=datetime.now(),
                 last_accessed=datetime.now(),
-                ttl_seconds=ttl_seconds
+                ttl_seconds=ttl_seconds,
             )
 
             # Evict old caches if we've exceeded the limit
@@ -239,7 +245,9 @@ class GeminiCacheManager:
         documentation purposes and potential future use.
         """
         log.info(f"[CACHE] Version {TOOL_SPEC_VERSION} in use")
-        log.info("[CACHE] Old version caches will naturally miss (cache keys are version-specific)")
+        log.info(
+            "[CACHE] Old version caches will naturally miss (cache keys are version-specific)"
+        )
 
     def _evict_if_needed(self):
         """
@@ -252,12 +260,13 @@ class GeminiCacheManager:
         if len(self._cache_registry) <= self.max_caches:
             return
 
-        log.warning(f"[CACHE] Cache limit reached ({self.max_caches}), evicting LRU entries")
+        log.warning(
+            f"[CACHE] Cache limit reached ({self.max_caches}), evicting LRU entries"
+        )
 
         # Sort by last access time (oldest first)
         sorted_entries = sorted(
-            self._cache_registry.items(),
-            key=lambda x: x[1].last_accessed
+            self._cache_registry.items(), key=lambda x: x[1].last_accessed
         )
 
         # Remove oldest entries
@@ -296,7 +305,7 @@ class GeminiCacheManager:
             "max_caches": self.max_caches,
             "by_stage": by_stage,
             "by_model": by_model,
-            "tool_spec_version": TOOL_SPEC_VERSION
+            "tool_spec_version": TOOL_SPEC_VERSION,
         }
 
     def clear_all_caches(self) -> Dict:
@@ -331,12 +340,14 @@ class GeminiCacheManager:
                 errors.append(error_msg)
                 log.error(f"[CACHE] {error_msg}")
 
-        log.info(f"[CACHE] Clear completed - deleted: {deleted_count}, failed: {failed_count}")
+        log.info(
+            f"[CACHE] Clear completed - deleted: {deleted_count}, failed: {failed_count}"
+        )
 
         return {
             "deleted_count": deleted_count,
             "failed_count": failed_count,
-            "errors": errors
+            "errors": errors,
         }
 
     def clear_caches_by_stage(self, stage: str) -> Dict:
@@ -362,20 +373,24 @@ class GeminiCacheManager:
                     self.client.caches.delete(name=entry.cache_name)
                     del self._cache_registry[cache_key]
                     deleted_count += 1
-                    log.info(f"[CACHE DELETED] {cache_key[:16]}... (stage: {entry.stage})")
+                    log.info(
+                        f"[CACHE DELETED] {cache_key[:16]}... (stage: {entry.stage})"
+                    )
                 except Exception as e:
                     failed_count += 1
                     error_msg = f"Failed to delete {cache_key[:16]}...: {str(e)}"
                     errors.append(error_msg)
                     log.error(f"[CACHE] {error_msg}")
 
-        log.info(f"[CACHE] Clear completed for stage {stage} - deleted: {deleted_count}, failed: {failed_count}")
+        log.info(
+            f"[CACHE] Clear completed for stage {stage} - deleted: {deleted_count}, failed: {failed_count}"
+        )
 
         return {
             "stage": stage,
             "deleted_count": deleted_count,
             "failed_count": failed_count,
-            "errors": errors
+            "errors": errors,
         }
 
 
@@ -399,7 +414,7 @@ class CacheEntry:
         stage: str,
         created_at: datetime,
         last_accessed: datetime,
-        ttl_seconds: int
+        ttl_seconds: int,
     ):
         self.cache_name = cache_name
         self.cache_key = cache_key

@@ -21,6 +21,7 @@ log.setLevel(SRC_LOG_LEVELS.get("MODELS", "INFO"))
 def _get_tracer():
     try:
         from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+
         return get_langfuse_tracer()
     except Exception:
         return None
@@ -54,7 +55,9 @@ def log_attempt(
         )
     )
     if record is None:
-        log.warning("[ATTEMPT] DB insert failed for user=%s problem=%s", user_id, problem_id)
+        log.warning(
+            "[ATTEMPT] DB insert failed for user=%s problem=%s", user_id, problem_id
+        )
 
     if trace_id:
         tracer = _get_tracer()
@@ -79,6 +82,7 @@ def log_attempt(
         # Emit attempt_log span (T2#16 / T3#12) so the timeline shows the call.
         try:
             from open_webui.integrations.learning_spans import build_emitter
+
             chat_type = (metadata or {}).get("chat_type") or "problem"
             emitter = build_emitter(
                 parent=None,

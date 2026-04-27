@@ -19,13 +19,9 @@ depends_on = None
 
 
 def upgrade():
+    op.add_column("prompt", sa.Column("tool_description", sa.Text(), nullable=True))
     op.add_column(
-        "prompt",
-        sa.Column("tool_description", sa.Text(), nullable=True)
-    )
-    op.add_column(
-        "prompt",
-        sa.Column("tool_priority", sa.Integer(), nullable=True, default=0)
+        "prompt", sa.Column("tool_priority", sa.Integer(), nullable=True, default=0)
     )
 
 

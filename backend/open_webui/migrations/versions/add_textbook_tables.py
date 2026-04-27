@@ -64,8 +64,12 @@ def upgrade():
     )
 
     # Create indexes for better query performance
-    op.create_index("idx_textbook_chapter_section_id", "textbook_chapter", ["section_id"])
-    op.create_index("idx_textbook_question_chapter_id", "textbook_question", ["chapter_id"])
+    op.create_index(
+        "idx_textbook_chapter_section_id", "textbook_chapter", ["section_id"]
+    )
+    op.create_index(
+        "idx_textbook_question_chapter_id", "textbook_question", ["chapter_id"]
+    )
 
 
 def downgrade():

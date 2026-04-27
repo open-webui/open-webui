@@ -30,19 +30,20 @@ log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
 # Pydantic Models for Tool Selection (Stage 1)
 # ============================================================
 
+
 class ToolSelectionResponse(BaseModel):
     """Pydantic model for structured tool selection response from Gemini."""
+
     need_tools: List[str] = Field(
         default_factory=list,
-        description="List of tool commands needed (e.g., ['system-graph-spec', 'system-step-solver']). Empty list if no tools needed."
+        description="List of tool commands needed (e.g., ['system-graph-spec', 'system-step-solver']). Empty list if no tools needed.",
     )
     reason: Optional[str] = Field(
-        None,
-        description="Brief reason for tool selection or why no tools are needed"
+        None, description="Brief reason for tool selection or why no tools are needed"
     )
     answer: Optional[str] = Field(
         None,
-        description="Direct answer if no tools are needed. Null if tools are required."
+        description="Direct answer if no tools are needed. Null if tools are required.",
     )
 
 
@@ -69,10 +70,7 @@ def build_tool_catalog(tool_prompts: List[Any]) -> str:
     return "\n".join(lines)
 
 
-def build_tool_selection_system_prompt(
-    base_system: str,
-    tool_catalog: str
-) -> str:
+def build_tool_selection_system_prompt(base_system: str, tool_catalog: str) -> str:
     """
     Build the Stage 1 system prompt with tool selection instructions.
 
@@ -136,13 +134,18 @@ def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[st
         # First, try Pydantic validation (if response_schema was used)
         try:
             from pydantic import ValidationError
+
             selection = ToolSelectionResponse.model_validate_json(response)
             tools = selection.need_tools or []
             answer = selection.answer
-            log.info(f"[TOOL GATING] Pydantic parsing succeeded - tools: {tools}, has_answer: {answer is not None}")
+            log.info(
+                f"[TOOL GATING] Pydantic parsing succeeded - tools: {tools}, has_answer: {answer is not None}"
+            )
             return (tools, answer)
         except (ValidationError, json.JSONDecodeError) as e:
-            log.debug(f"[TOOL GATING] Pydantic parsing failed, falling back to manual JSON parsing: {e}")
+            log.debug(
+                f"[TOOL GATING] Pydantic parsing failed, falling back to manual JSON parsing: {e}"
+            )
 
         # Fallback: Try to extract JSON from response (legacy format)
         # Handle potential markdown code blocks
@@ -150,11 +153,11 @@ def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[st
 
         # Remove markdown code block if present
         if json_str.startswith("```"):
-            json_str = re.sub(r'^```(?:json)?\s*', '', json_str)
-            json_str = re.sub(r'\s*```$', '', json_str)
+            json_str = re.sub(r"^```(?:json)?\s*", "", json_str)
+            json_str = re.sub(r"\s*```$", "", json_str)
 
         # Try to find JSON object in the response
-        match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', json_str, re.DOTALL)
+        match = re.search(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", json_str, re.DOTALL)
         if match:
             data = json.loads(match.group())
             tools = data.get("need_tools", [])
@@ -164,7 +167,9 @@ def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[st
             if isinstance(tools, str):
                 tools = [tools] if tools else []
 
-            log.info(f"[TOOL GATING] Parsed response - tools: {tools}, has_answer: {answer is not None}")
+            log.info(
+                f"[TOOL GATING] Parsed response - tools: {tools}, has_answer: {answer is not None}"
+            )
             return (tools, answer)
 
     except json.JSONDecodeError as e:
@@ -178,8 +183,7 @@ def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[st
 
 
 def get_tool_prompts_by_commands(
-    tool_prompts: List[Any],
-    selected_commands: List[str]
+    tool_prompts: List[Any], selected_commands: List[str]
 ) -> List[Any]:
     """
     Filter tool prompts by selected command names.
@@ -191,22 +195,24 @@ def get_tool_prompts_by_commands(
     Returns:
         Filtered list of tool prompts matching selected commands
     """
+
     # Normalize commands: strip leading slash for comparison
     def normalize(cmd: str) -> str:
-        return cmd.lstrip('/') if cmd else ''
+        return cmd.lstrip("/") if cmd else ""
 
     selected_normalized = {normalize(cmd) for cmd in selected_commands}
 
     result = [t for t in tool_prompts if normalize(t.command) in selected_normalized]
 
-    log.info(f"[TOOL GATING] Command matching: selected={selected_commands}, normalized={selected_normalized}, matched={[t.command for t in result]}")
+    log.info(
+        f"[TOOL GATING] Command matching: selected={selected_commands}, normalized={selected_normalized}, matched={[t.command for t in result]}"
+    )
 
     return result
 
 
 def compose_stage2_system_prompt(
-    base_system: str,
-    selected_tool_prompts: List[Any]
+    base_system: str, selected_tool_prompts: List[Any]
 ) -> str:
     """
     Compose the Stage 2 system prompt with selected tool contents.
@@ -223,9 +229,7 @@ def compose_stage2_system_prompt(
 
     # Sort by priority (higher priority first)
     sorted_tools = sorted(
-        selected_tool_prompts,
-        key=lambda t: t.tool_priority or 0,
-        reverse=True
+        selected_tool_prompts, key=lambda t: t.tool_priority or 0, reverse=True
     )
 
     tool_contents = "\n\n".join([t.content for t in sorted_tools])
@@ -259,7 +263,7 @@ class ToolGatingResult:
         text: str,
         used_tools: List[str],
         stage: int,
-        stage1_response: Optional[str] = None
+        stage1_response: Optional[str] = None,
     ):
         self.text = text
         self.used_tools = used_tools
@@ -271,7 +275,7 @@ class ToolGatingResult:
             "text": self.text,
             "used_tools": self.used_tools,
             "stage": self.stage,
-            "stage1_response": self.stage1_response
+            "stage1_response": self.stage1_response,
         }
 
 
@@ -285,7 +289,7 @@ async def execute_with_tool_gating(
     cache_gating_stage: Optional[str] = None,
     cache_execution_stage: Optional[str] = None,
     cache_strategy: str = "auto",
-    **llm_kwargs
+    **llm_kwargs,
 ) -> ToolGatingResult:
     """
     Execute two-stage tool gating with optional context caching.
@@ -328,10 +332,12 @@ async def execute_with_tool_gating(
     # Create kwargs for Stage 1 with gating model if provided
     stage1_kwargs = llm_kwargs.copy()
     if gating_model:
-        stage1_kwargs['model'] = gating_model
+        stage1_kwargs["model"] = gating_model
         log.info(f"[TOOL GATING] Stage 1 - Using gating model: {gating_model}")
     else:
-        log.info(f"[TOOL GATING] Stage 1 - Using main model: {llm_kwargs.get('model', 'N/A')}")
+        log.info(
+            f"[TOOL GATING] Stage 1 - Using main model: {llm_kwargs.get('model', 'N/A')}"
+        )
 
     log.info("[TOOL GATING] Stage 1 - Calling LLM for tool selection...")
     stage1_result = llm_call_fn(
@@ -339,7 +345,7 @@ async def execute_with_tool_gating(
         system_instruction=stage1_system,
         cache_stage=cache_gating_stage,  # Enable caching for Stage 1
         cache_strategy=cache_strategy,  # Cache strategy
-        **stage1_kwargs
+        **stage1_kwargs,
     )
 
     if not stage1_result.get("success"):
@@ -347,7 +353,7 @@ async def execute_with_tool_gating(
         return ToolGatingResult(
             text=stage1_result.get("error", "Tool gating failed"),
             used_tools=[],
-            stage=1
+            stage=1,
         )
 
     stage1_text = stage1_result.get("text", "")
@@ -360,10 +366,7 @@ async def execute_with_tool_gating(
     if not selected_tools and direct_answer:
         log.info("[TOOL GATING] No tools needed, returning direct answer")
         return ToolGatingResult(
-            text=direct_answer,
-            used_tools=[],
-            stage=1,
-            stage1_response=stage1_text
+            text=direct_answer, used_tools=[], stage=1, stage1_response=stage1_text
         )
 
     # Stage 2: Execute with selected tools
@@ -374,12 +377,20 @@ async def execute_with_tool_gating(
     # Use full_system for Stage 2 if provided (base + proficiency + style),
     # otherwise fall back to base_system
     system_for_stage2 = full_system if full_system else base_system
-    stage2_system = compose_stage2_system_prompt(system_for_stage2, selected_tool_prompts)
+    stage2_system = compose_stage2_system_prompt(
+        system_for_stage2, selected_tool_prompts
+    )
 
     log.info(f"[TOOL GATING] Stage 2 System Prompt Length: {len(stage2_system)} chars")
-    log.info(f"[TOOL GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
-    log.info(f"[TOOL GATING] Stage 2 - Using {'full_system' if full_system else 'base_system'} for prompt")
-    log.info(f"[TOOL GATING] Stage 2 - Using main model: {llm_kwargs.get('model', 'N/A')}")
+    log.info(
+        f"[TOOL GATING] Selected tools: {[t.command for t in selected_tool_prompts]}"
+    )
+    log.info(
+        f"[TOOL GATING] Stage 2 - Using {'full_system' if full_system else 'base_system'} for prompt"
+    )
+    log.info(
+        f"[TOOL GATING] Stage 2 - Using main model: {llm_kwargs.get('model', 'N/A')}"
+    )
 
     log.info("[TOOL GATING] Stage 2 - Calling LLM with tool prompts...")
     stage2_result = llm_call_fn(
@@ -387,7 +398,7 @@ async def execute_with_tool_gating(
         system_instruction=stage2_system,
         cache_stage=cache_execution_stage,  # Enable caching for Stage 2
         cache_strategy=cache_strategy,  # Cache strategy
-        **llm_kwargs
+        **llm_kwargs,
     )
 
     if not stage2_result.get("success"):
@@ -395,15 +406,12 @@ async def execute_with_tool_gating(
         # Fallback to Stage 1 answer if available
         if direct_answer:
             return ToolGatingResult(
-                text=direct_answer,
-                used_tools=[],
-                stage=1,
-                stage1_response=stage1_text
+                text=direct_answer, used_tools=[], stage=1, stage1_response=stage1_text
             )
         return ToolGatingResult(
             text=stage2_result.get("error", "Tool gating failed"),
             used_tools=selected_tools,
-            stage=2
+            stage=2,
         )
 
     log.info("[TOOL GATING] Stage 2 completed successfully")
@@ -411,11 +419,13 @@ async def execute_with_tool_gating(
         text=stage2_result.get("text", ""),
         used_tools=selected_tools,
         stage=2,
-        stage1_response=stage1_text
+        stage1_response=stage1_text,
     )
 
 
-def should_use_tool_gating(tool_prompts: List[Any], enable_tool_gating: bool = True) -> bool:
+def should_use_tool_gating(
+    tool_prompts: List[Any], enable_tool_gating: bool = True
+) -> bool:
     """
     Determine if tool gating should be used.
 

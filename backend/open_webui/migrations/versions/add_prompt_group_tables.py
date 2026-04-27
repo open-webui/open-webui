@@ -42,25 +42,20 @@ def upgrade():
     )
 
     # Create indexes for better query performance
-    op.create_index(
-        "idx_prompt_group_user",
-        "prompt_group",
-        ["user_id"],
-        unique=False
-    )
+    op.create_index("idx_prompt_group_user", "prompt_group", ["user_id"], unique=False)
 
     op.create_index(
         "idx_prompt_group_mapping_group",
         "prompt_group_mapping",
         ["group_id"],
-        unique=False
+        unique=False,
     )
 
     op.create_index(
         "idx_prompt_group_mapping_prompt",
         "prompt_group_mapping",
         ["prompt_command"],
-        unique=False
+        unique=False,
     )
 
     # Create unique constraint to prevent duplicate prompt in same group
@@ -68,7 +63,7 @@ def upgrade():
         "idx_prompt_group_mapping_unique",
         "prompt_group_mapping",
         ["group_id", "prompt_command"],
-        unique=True
+        unique=True,
     )
 
 

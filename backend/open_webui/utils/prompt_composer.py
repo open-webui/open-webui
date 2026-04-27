@@ -98,31 +98,48 @@ def compose_prompts_from_group(
         if not prompt:
             # Check if this is a hardcoded tool
             from open_webui.utils.hardcoded_tools import get_hardcoded_tool_by_command
+
             hardcoded_tool = get_hardcoded_tool_by_command(mapping.prompt_command)
             if hardcoded_tool:
-                log.info(f"[PROMPT COMPOSER] Found HARDCODED TOOL: {hardcoded_tool.command}")
+                log.info(
+                    f"[PROMPT COMPOSER] Found HARDCODED TOOL: {hardcoded_tool.command}"
+                )
                 log.info(f"  - name: {hardcoded_tool.name}")
                 log.info(f"  - description: {hardcoded_tool.description}")
-                log.info(f"  - system_prompt length: {len(hardcoded_tool.system_prompt)} chars")
-                log.info(f"  - response_schema: {hardcoded_tool.response_schema.__name__}")
+                log.info(
+                    f"  - system_prompt length: {len(hardcoded_tool.system_prompt)} chars"
+                )
+                log.info(
+                    f"  - response_schema: {hardcoded_tool.response_schema.__name__}"
+                )
                 # Add hardcoded tool to tool_prompts list
                 tool_prompts.append(hardcoded_tool)
                 continue
             else:
-                log.warning(f"[PROMPT COMPOSER] Prompt not found: {mapping.prompt_command}")
+                log.warning(
+                    f"[PROMPT COMPOSER] Prompt not found: {mapping.prompt_command}"
+                )
                 continue
 
-        log.debug(f"[PROMPT COMPOSER] Processing: {mapping.prompt_command} (type={prompt.prompt_type}, order={mapping.order})")
+        log.debug(
+            f"[PROMPT COMPOSER] Processing: {mapping.prompt_command} (type={prompt.prompt_type}, order={mapping.order})"
+        )
 
         # Handle tool prompts separately (basic_tool, json_tool, and legacy 'tool')
         if prompt.prompt_type in ("basic_tool", "json_tool", "tool"):
-            log.info(f"[PROMPT COMPOSER] Found TOOL prompt: {prompt.command} (type={prompt.prompt_type})")
+            log.info(
+                f"[PROMPT COMPOSER] Found TOOL prompt: {prompt.command} (type={prompt.prompt_type})"
+            )
             log.info(f"  - title: {prompt.title}")
             log.info(f"  - tool_description: {prompt.tool_description}")
             log.info(f"  - tool_priority: {prompt.tool_priority}")
-            log.info(f"  - content length: {len(prompt.content) if prompt.content else 0} chars")
+            log.info(
+                f"  - content length: {len(prompt.content) if prompt.content else 0} chars"
+            )
             if prompt.prompt_type == "json_tool" and prompt.validation_rules:
-                log.info(f"  - validation_rules: {len(prompt.validation_rules.get('allow', {}))} allow, {len(prompt.validation_rules.get('forbidden', {}))} forbidden patterns")
+                log.info(
+                    f"  - validation_rules: {len(prompt.validation_rules.get('allow', {}))} allow, {len(prompt.validation_rules.get('forbidden', {}))} forbidden patterns"
+                )
             tool_prompts.append(prompt)
             if include_tools:
                 # Legacy mode: include tools in composed string
@@ -143,7 +160,10 @@ def compose_prompts_from_group(
 
         elif prompt.prompt_type == "proficiency":
             # Include if proficiency_level matches
-            if proficiency_level is not None and proficiency_level == prompt.persona_value:
+            if (
+                proficiency_level is not None
+                and proficiency_level == prompt.persona_value
+            ):
                 should_include = True
                 reason = f"proficiency matches ({proficiency_level} == {prompt.persona_value})"
             else:
@@ -160,25 +180,31 @@ def compose_prompts_from_group(
         if should_include:
             prompt_parts.append(prompt.content)
             included_prompts.append(prompt.command)
-            log.info(f"[PROMPT COMPOSER] INCLUDED: {prompt.command} ({prompt.prompt_type}) - {reason}")
+            log.info(
+                f"[PROMPT COMPOSER] INCLUDED: {prompt.command} ({prompt.prompt_type}) - {reason}"
+            )
         else:
-            log.debug(f"[PROMPT COMPOSER] SKIPPED: {prompt.command} ({prompt.prompt_type}) - {reason}")
+            log.debug(
+                f"[PROMPT COMPOSER] SKIPPED: {prompt.command} ({prompt.prompt_type}) - {reason}"
+            )
 
     # Sort tool prompts by priority (higher first)
     # Note: hardcoded tools don't have tool_priority, so they'll be sorted as 0
-    tool_prompts.sort(key=lambda t: getattr(t, 'tool_priority', 0) or 0, reverse=True)
+    tool_prompts.sort(key=lambda t: getattr(t, "tool_priority", 0) or 0, reverse=True)
 
     # Summary logging
     log.info("=" * 60)
     log.info("[PROMPT COMPOSER] Composition Summary:")
     log.info(f"  Included prompts ({len(included_prompts)}): {included_prompts}")
-    log.info(f"  Tool prompts ({len(tool_prompts)}): {[getattr(t, 'command', 'unknown') for t in tool_prompts]}")
+    log.info(
+        f"  Tool prompts ({len(tool_prompts)}): {[getattr(t, 'command', 'unknown') for t in tool_prompts]}"
+    )
     if tool_prompts:
         log.info("  Tool details:")
         for t in tool_prompts:
-            priority = getattr(t, 'tool_priority', 0) or 0
-            desc = getattr(t, 'tool_description', None) or 'N/A'
-            cmd = getattr(t, 'command', 'unknown')
+            priority = getattr(t, "tool_priority", 0) or 0
+            desc = getattr(t, "tool_description", None) or "N/A"
+            cmd = getattr(t, "command", "unknown")
             log.info(f"    - {cmd}: priority={priority}, desc='{desc}'")
     log.info(f"  Total composed length: {len(''.join(prompt_parts))} chars")
     log.info("=" * 60)
@@ -220,11 +246,17 @@ def validate_persona_values(
     """
     if proficiency_level is not None:
         if proficiency_level not in VALID_PROFICIENCY_LEVELS:
-            return False, f"Invalid proficiency_level. Must be one of: {VALID_PROFICIENCY_LEVELS}"
+            return (
+                False,
+                f"Invalid proficiency_level. Must be one of: {VALID_PROFICIENCY_LEVELS}",
+            )
 
     if response_style is not None:
         if response_style not in VALID_RESPONSE_STYLES:
-            return False, f"Invalid response_style. Must be one of: {VALID_RESPONSE_STYLES}"
+            return (
+                False,
+                f"Invalid response_style. Must be one of: {VALID_RESPONSE_STYLES}",
+            )
 
     return True, None
 
@@ -286,7 +318,9 @@ def compose_with_fallback(
 
     # Optimization: For tool gating Stage 1, only use base prompts
     if use_only_base:
-        log.info("[PROMPT COMPOSER] use_only_base=True: Skipping proficiency/style prompts for tool gating")
+        log.info(
+            "[PROMPT COMPOSER] use_only_base=True: Skipping proficiency/style prompts for tool gating"
+        )
         proficiency_level = None
         response_style = None
 
@@ -330,7 +364,11 @@ def compose_with_fallback_legacy(
     For new code, use compose_with_fallback() instead.
     """
     composed, _ = compose_with_fallback(
-        group_id, system_prompt, default_group_id,
-        proficiency_level, response_style, include_tools=True
+        group_id,
+        system_prompt,
+        default_group_id,
+        proficiency_level,
+        response_style,
+        include_tools=True,
     )
     return composed

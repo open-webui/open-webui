@@ -40,10 +40,21 @@ router = APIRouter()
 
 
 class _SessionState:
-    __slots__ = ("session_id", "user_id", "started_at", "iteration_idx",
-                 "items_completed", "items_skipped", "scores", "trace", "emitter")
+    __slots__ = (
+        "session_id",
+        "user_id",
+        "started_at",
+        "iteration_idx",
+        "items_completed",
+        "items_skipped",
+        "scores",
+        "trace",
+        "emitter",
+    )
 
-    def __init__(self, session_id: str, user_id: str, trace: Any, emitter: LearningSpanEmitter):
+    def __init__(
+        self, session_id: str, user_id: str, trace: Any, emitter: LearningSpanEmitter
+    ):
         self.session_id = session_id
         self.user_id = user_id
         self.started_at = time.time()
@@ -132,6 +143,7 @@ def _new_session_trace(session_id: str, user_id: str) -> Optional[Any]:
         return None
     try:
         from langfuse.types import TraceContext
+
         normalized = session_id.replace("-", "").lower()[:32]
         trace_context = TraceContext(
             trace_id=normalized,
@@ -180,7 +192,9 @@ async def start_session(form: SessionStartForm, user=Depends(get_verified_user))
 
 
 @router.post("/{session_id}/iteration", response_model=IterationResponse)
-async def run_iteration(session_id: str, form: IterationForm, user=Depends(get_verified_user)):
+async def run_iteration(
+    session_id: str, form: IterationForm, user=Depends(get_verified_user)
+):
     state = _SESSIONS.get(session_id)
     if state is None:
         raise HTTPException(status_code=404, detail="session not found")
@@ -195,7 +209,9 @@ async def run_iteration(session_id: str, form: IterationForm, user=Depends(get_v
             item_id=form.item_id,
             topic_id=form.topic_id,
             prev_topic_id=form.prev_topic_id,
-            interleaved=(form.prev_topic_id != form.topic_id) if form.prev_topic_id else True,
+            interleaved=(
+                (form.prev_topic_id != form.topic_id) if form.prev_topic_id else True
+            ),
         )
         state.emitter.t4_problem_present(
             item_difficulty=form.item_difficulty,
@@ -231,7 +247,9 @@ async def run_iteration(session_id: str, form: IterationForm, user=Depends(get_v
             exit_reason=form.exit_reason,
         )
     finally:
-        state.emitter.end_iteration(output={"attempt_score": state.scores[-1] if state.scores else None})
+        state.emitter.end_iteration(
+            output={"attempt_score": state.scores[-1] if state.scores else None}
+        )
 
     return IterationResponse(
         iteration_idx=state.iteration_idx,
@@ -241,7 +259,9 @@ async def run_iteration(session_id: str, form: IterationForm, user=Depends(get_v
 
 
 @router.post("/{session_id}/end", response_model=SessionEndResponse)
-async def end_session(session_id: str, form: SessionEndForm, user=Depends(get_verified_user)):
+async def end_session(
+    session_id: str, form: SessionEndForm, user=Depends(get_verified_user)
+):
     state = _SESSIONS.pop(session_id, None)
     if state is None:
         raise HTTPException(status_code=404, detail="session not found")
