@@ -165,7 +165,7 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 		let error: string | undefined;
 
 		console.log('[GraphSpec Tokenizer] Raw JSON:', jsonContent);
-
+ 
 		// 1. Remove markdown code block wrapper if present (```json ... ``` or ``` ... ```)
 		if (jsonContent.startsWith('```')) {
 			jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/, '');
