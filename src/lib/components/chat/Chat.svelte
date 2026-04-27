@@ -92,6 +92,11 @@
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
+	import SolutionInput from '$lib/components/chat/SolutionInput.svelte';
+	import HintStepCard from '$lib/components/chat/Messages/HintStepCard.svelte';
+	import QuizSession from '$lib/components/chat/QuizSession.svelte';
+	import SessionSummaryCard from '$lib/components/chat/SessionSummaryCard.svelte';
+	import { learningSession } from '$lib/stores/learning';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatToolbar from '$lib/components/chat/ChatToolbar.svelte';
@@ -3097,6 +3102,31 @@
 									/>
 								</div>
 							</div>
+
+							<!-- 학습 모드별 UI -->
+							{#if $learningSession.mode === 'hint'}
+								<div class="px-4 pb-0">
+									<HintStepCard
+										steps={[
+											{ title: '핵심 개념 확인', content: '라플라스 변환의 정의 F(s) = ∫₀^∞ f(t)e^{-st} dt 를 먼저 확인하세요.' },
+											{ title: '적분 계산', content: '지수함수 e^{at}를 대입하면 ∫₀^∞ e^{at}·e^{-st} dt = ∫₀^∞ e^{(a-s)t} dt 가 됩니다.' },
+											{ title: '수렴 조건', content: 's > a 조건에서 수렴하며, 결과는 1/(s-a) 입니다.' }
+										]}
+										answer="L{e^{at}} = 1/(s-a), s > a"
+									/>
+								</div>
+							{:else if $learningSession.mode === 'solve'}
+								<div class="px-4 pb-0">
+									<SolutionInput on:submit={(e) => {
+										learningSession.update((s) => ({ ...s, mode: 'default' }));
+										submitPrompt(`[내 풀이] ${e.detail.solution}`);
+									}} />
+								</div>
+							{:else if $learningSession.mode === 'quiz'}
+								<div class="px-4 pb-0">
+									<QuizSession />
+								</div>
+							{/if}
 
 							<div class=" pb-2 z-10">
 								<MessageInput
