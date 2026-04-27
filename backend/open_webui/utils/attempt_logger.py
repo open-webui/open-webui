@@ -20,8 +20,8 @@ log.setLevel(SRC_LOG_LEVELS.get("MODELS", "INFO"))
 
 def _get_tracer():
     try:
-        from open_webui.integrations.langfuse_tracing import get_tracer
-        return get_tracer()
+        from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+        return get_langfuse_tracer()
     except Exception:
         return None
 
@@ -75,5 +75,34 @@ def log_attempt(
                     )
             except Exception as e:
                 log.warning(f"[ATTEMPT] score_trace failed: {e}")
+
+        # Emit attempt_log span (T2#16 / T3#12) so the timeline shows the call.
+        try:
+            from open_webui.integrations.learning_spans import build_emitter
+            chat_type = (metadata or {}).get("chat_type") or "problem"
+            emitter = build_emitter(
+                parent=None,
+                chat_type=chat_type,
+                base_meta={"trace_id": trace_id, "user_id": user_id},
+            )
+            attempt_id = record.id if record else "unknown"
+            if chat_type == "review":
+                emitter.t3_attempt_log(
+                    attempt_id=attempt_id,
+                    item_id=problem_id,
+                    topic_id=chapter_id,
+                    base_score=(metadata or {}).get("base_score"),
+                    time_factor=(metadata or {}).get("time_factor"),
+                    attempt_score=score,
+                )
+            else:
+                emitter.t2_attempt_log(
+                    attempt_id=attempt_id,
+                    item_id=problem_id,
+                    topic_id=chapter_id,
+                    user_solution_attached=bool(answer),
+                )
+        except Exception as e:
+            log.warning(f"[ATTEMPT] attempt_log span failed: {e}")
 
     return record

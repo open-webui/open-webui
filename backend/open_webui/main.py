@@ -102,6 +102,7 @@ from open_webui.routers import (
     message_tags,
     langfuse_proxy,
     analytics,
+    review_session,
 )
 
 from open_webui.routers.retrieval import (
@@ -1438,6 +1439,7 @@ app.include_router(textbook.router, prefix="/api/v1/textbook", tags=["textbook"]
 app.include_router(gemini_rag.router, prefix="/api/v1/gemini-rag", tags=["gemini-rag"])
 app.include_router(message_tags.router, prefix="/api/v1/message-tags", tags=["message-tags"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(review_session.router, prefix="/api/v1/review-session", tags=["review-session"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:

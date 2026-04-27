@@ -1190,6 +1190,42 @@ async def handle_gemini_native_request(
                             if trace and metadata is not None:
                                 metadata["langfuse_trace"] = trace
                             log.info(f"[LANGFUSE] Traced Gemini streaming completion: {chat_id}")
+
+                            # Type 1~4 learning spans (Phase B2)
+                            try:
+                                from open_webui.integrations.learning_spans import build_emitter
+                                from open_webui.utils.learning_response_parser import emit_post_response_spans
+                                ct = trace_metadata.get("chat_type")
+                                emitter = build_emitter(
+                                    parent=trace,
+                                    chat_type=ct,
+                                    base_meta={
+                                        "trace_id": metadata.get("message_id"),
+                                        "user_id": trace_metadata.get("user_id"),
+                                        "topic_id": chapter_id,
+                                        "proficiency": trace_metadata.get("proficiency_level"),
+                                        "model_tier": "pro" if "pro" in (model_id or "").lower() else "flash",
+                                        "prompt_version": trace_metadata.get("prompt_group_id") or "n/a",
+                                    },
+                                )
+                                if ct:
+                                    emitter.routing(routed_type=f"type_{ct}", confidence="heuristic")
+                                emitter.input_classification(
+                                    intent_class="high" if len(collected_text) > 80 else "low",
+                                    latency_ms=(llm_end_time - llm_start_time) * 1000,
+                                )
+                                if store_names:
+                                    emitter.rag_call(
+                                        topic_ids=[chapter_id] if chapter_id else [],
+                                        chunks_count=None,
+                                        latency_ms=None,
+                                    )
+                                emit_post_response_spans(emitter, collected_text, ct)
+                                emitter.trace_complete(
+                                    total_latency_ms=(llm_end_time - llm_start_time) * 1000,
+                                )
+                            except Exception as ls_err:
+                                log.warning(f"[LEARNING_SPAN] streaming emit failed: {ls_err}")
                     except Exception as trace_error:
                         # Don't fail the request if tracing fails
                         log.error(f"[LANGFUSE] Failed to trace streaming completion: {trace_error}")
@@ -1351,6 +1387,42 @@ async def handle_gemini_native_request(
                     if trace and metadata is not None:
                         metadata["langfuse_trace"] = trace
                     log.info(f"[LANGFUSE] Traced Gemini completion: {chat_id}")
+
+                    # Type 1~4 learning spans (Phase B2)
+                    try:
+                        from open_webui.integrations.learning_spans import build_emitter
+                        from open_webui.utils.learning_response_parser import emit_post_response_spans
+                        ct = trace_metadata.get("chat_type")
+                        emitter = build_emitter(
+                            parent=trace,
+                            chat_type=ct,
+                            base_meta={
+                                "trace_id": metadata.get("message_id"),
+                                "user_id": trace_metadata.get("user_id"),
+                                "topic_id": chapter_id,
+                                "proficiency": trace_metadata.get("proficiency_level"),
+                                "model_tier": "pro" if "pro" in (model_id or "").lower() else "flash",
+                                "prompt_version": trace_metadata.get("prompt_group_id") or "n/a",
+                            },
+                        )
+                        if ct:
+                            emitter.routing(routed_type=f"type_{ct}", confidence="heuristic")
+                        emitter.input_classification(
+                            intent_class="high" if len(text or "") > 80 else "low",
+                            latency_ms=(llm_end_time - llm_start_time) * 1000,
+                        )
+                        if store_names:
+                            emitter.rag_call(
+                                topic_ids=[chapter_id] if chapter_id else [],
+                                chunks_count=None,
+                                latency_ms=None,
+                            )
+                        emit_post_response_spans(emitter, text, ct)
+                        emitter.trace_complete(
+                            total_latency_ms=(llm_end_time - llm_start_time) * 1000,
+                        )
+                    except Exception as ls_err:
+                        log.warning(f"[LEARNING_SPAN] non-streaming emit failed: {ls_err}")
             except Exception as trace_error:
                 # Don't fail the request if tracing fails
                 log.error(f"[LANGFUSE] Failed to trace completion: {trace_error}")
