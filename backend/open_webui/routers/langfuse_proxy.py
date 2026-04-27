@@ -102,7 +102,15 @@ async def proxy_request(
 
                 # If HTML/JS/CSS, rewrite URLs to point to our proxy
                 content_type = response.headers.get("content-type", "").lower()
-                if any(ct in content_type for ct in ["text/html", "application/javascript", "text/javascript", "text/css"]):
+                if any(
+                    ct in content_type
+                    for ct in [
+                        "text/html",
+                        "application/javascript",
+                        "text/javascript",
+                        "text/css",
+                    ]
+                ):
                     try:
                         text = content.decode("utf-8")
 
@@ -118,11 +126,17 @@ async def proxy_request(
 
                         # Rewrite /_next/ paths (but NOT /api/v1/langfuse/_next/)
                         # This works for both HTML attributes and JavaScript strings
-                        text = re.sub(r'(["|\'])/_next/', r'\1/api/v1/langfuse/_next/', text)
+                        text = re.sub(
+                            r'(["|\'])/_next/', r"\1/api/v1/langfuse/_next/", text
+                        )
 
                         # Rewrite /api/ paths (but NOT /api/v1/langfuse/api/)
                         # Negative lookahead to avoid double-rewriting
-                        text = re.sub(r'(["|\'])/api/(?!v1/langfuse)', r'\1/api/v1/langfuse/api/', text)
+                        text = re.sub(
+                            r'(["|\'])/api/(?!v1/langfuse)',
+                            r"\1/api/v1/langfuse/api/",
+                            text,
+                        )
 
                         content = text.encode("utf-8")
                         response_headers["content-length"] = str(len(content))
@@ -164,13 +178,17 @@ async def langfuse_root(
     Proxy root Langfuse page.
     Only accessible by admin users.
     """
-    log.info(f"[LANGFUSE PROXY] Admin user {user.id} ({user.email}) accessing Langfuse dashboard")
+    log.info(
+        f"[LANGFUSE PROXY] Admin user {user.id} ({user.email}) accessing Langfuse dashboard"
+    )
 
     target_url = f"{LANGFUSE_BACKEND_URL}/"
     return await proxy_request(request, target_url, method="GET")
 
 
-@router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+@router.api_route(
+    "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
+)
 async def langfuse_proxy(
     path: str,
     request: Request,
@@ -211,13 +229,15 @@ async def langfuse_health():
     try:
         timeout = aiohttp.ClientTimeout(total=5)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(f"{LANGFUSE_BACKEND_URL}/api/public/health") as response:
+            async with session.get(
+                f"{LANGFUSE_BACKEND_URL}/api/public/health"
+            ) as response:
                 if response.status == 200:
                     return {
                         "status": "ok",
                         "langfuse_url": LANGFUSE_BACKEND_URL,
                         "accessible": True,
-                        "message": "Langfuse is running and accessible"
+                        "message": "Langfuse is running and accessible",
                     }
                 else:
                     return {
@@ -225,7 +245,7 @@ async def langfuse_health():
                         "langfuse_url": LANGFUSE_BACKEND_URL,
                         "accessible": False,
                         "http_status": response.status,
-                        "message": f"Langfuse returned status {response.status}"
+                        "message": f"Langfuse returned status {response.status}",
                     }
     except aiohttp.ClientConnectorError as e:
         log.error(f"Langfuse health check failed - connection error: {e}")

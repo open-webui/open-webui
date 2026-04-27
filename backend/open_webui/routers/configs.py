@@ -554,9 +554,7 @@ async def get_default_rag_store_config(request: Request, user=Depends(get_admin_
         current_value = request.app.state.config.DEFAULT_RAG_STORE_NAME
     except AttributeError:
         current_value = None
-    return {
-        "DEFAULT_RAG_STORE_NAME": current_value
-    }
+    return {"DEFAULT_RAG_STORE_NAME": current_value}
 
 
 @router.post("/default_rag_store")
@@ -567,9 +565,7 @@ async def set_default_rag_store_config(
 ):
     """Set the default RAG store name for chats without chapter_id."""
     request.app.state.config.DEFAULT_RAG_STORE_NAME = form_data.DEFAULT_RAG_STORE_NAME
-    return {
-        "DEFAULT_RAG_STORE_NAME": request.app.state.config.DEFAULT_RAG_STORE_NAME
-    }
+    return {"DEFAULT_RAG_STORE_NAME": request.app.state.config.DEFAULT_RAG_STORE_NAME}
 
 
 ############################
@@ -580,6 +576,7 @@ async def set_default_rag_store_config(
 @router.get("/langfuse_host")
 async def get_langfuse_host(user=Depends(get_admin_user)):
     from open_webui.env import LANGFUSE_HOST, LANGFUSE_ENABLED
+
     return {
         "host": LANGFUSE_HOST.rstrip("/") if LANGFUSE_HOST else None,
         "enabled": LANGFUSE_ENABLED,

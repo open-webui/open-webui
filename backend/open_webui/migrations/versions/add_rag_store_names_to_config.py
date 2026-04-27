@@ -19,8 +19,7 @@ depends_on = None
 
 def upgrade():
     op.add_column(
-        "tagging_daemon_config",
-        sa.Column("rag_store_names", sa.JSON(), nullable=True)
+        "tagging_daemon_config", sa.Column("rag_store_names", sa.JSON(), nullable=True)
     )
 
 

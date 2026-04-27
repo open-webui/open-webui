@@ -40,12 +40,18 @@ _RE_PURPOSE_LINE = re.compile(
 # Boundary / 조건·반례·예외
 _RE_BOUNDARY_KIND = {
     "condition": re.compile(r"(조건|성립.{0,4}(때|경우)|단,|단 |if\s)", re.UNICODE),
-    "constraint": re.compile(r"(제약|범위|한계|적용 ?(불가|되지 ?않)|domain)", re.UNICODE),
-    "counterexample": re.compile(r"(반례|counter ?example|예외|이 경우는 성립하지 않)", re.UNICODE),
+    "constraint": re.compile(
+        r"(제약|범위|한계|적용 ?(불가|되지 ?않)|domain)", re.UNICODE
+    ),
+    "counterexample": re.compile(
+        r"(반례|counter ?example|예외|이 경우는 성립하지 않)", re.UNICODE
+    ),
 }
 
 # Socratic-lite check question: "어떻게 …?", "왜 …?", "한번 풀어보세요", "?$"
-_RE_SOCRATIC = re.compile(r"(어떻게|왜|한번 (해|풀)|확인해보세요|시도해보세요)[^.]*\?", re.UNICODE)
+_RE_SOCRATIC = re.compile(
+    r"(어떻게|왜|한번 (해|풀)|확인해보세요|시도해보세요)[^.]*\?", re.UNICODE
+)
 _RE_SOCRATIC_QTYPE = {
     "why": re.compile(r"왜", re.UNICODE),
     "how": re.compile(r"어떻게", re.UNICODE),
@@ -54,7 +60,9 @@ _RE_SOCRATIC_QTYPE = {
 _RE_HINT = re.compile(r"(힌트|단서|먼저 ~?을?\s?생각|시작은)", re.UNICODE)
 
 # Type 2 — sub-expression (Case 1) / mid-goal (Case 2) / strategy / sanity check
-_RE_SUBEXPR = re.compile(r"(u\s?=|dv\s?=|치환:|놓으면|부분적분|let\s)", re.UNICODE | re.IGNORECASE)
+_RE_SUBEXPR = re.compile(
+    r"(u\s?=|dv\s?=|치환:|놓으면|부분적분|let\s)", re.UNICODE | re.IGNORECASE
+)
 _RE_MIDGOAL = re.compile(r"(중간 ?목표|먼저 .{0,20} 구하|첫 ?단계)", re.UNICODE)
 _RE_STRATEGY_RATIONALE = {
     "complexity": re.compile(r"(계산량|간단|복잡|효율)", re.UNICODE),
@@ -75,7 +83,9 @@ _RE_PINPOINT = re.compile(
 )
 _RE_ALT_ROUTE = re.compile(r"(다른 (방법|접근|풀이)|alternative|대안)", re.UNICODE)
 _RE_COUNTEREX = re.compile(r"(반례|이 경우는 성립하지|우연히 맞)", re.UNICODE)
-_RE_COMMON_MISTAKES = re.compile(r"(흔한 ?실수|자주 ?(하는|보이는) ?실수|함정)", re.UNICODE)
+_RE_COMMON_MISTAKES = re.compile(
+    r"(흔한 ?실수|자주 ?(하는|보이는) ?실수|함정)", re.UNICODE
+)
 _RE_NATURAL_PHRASING_BAD = re.compile(
     r"(Conceptual gap입니다|Procedural gap입니다|Interpretational gap입니다)",
     re.UNICODE,
@@ -154,7 +164,9 @@ def parse_t1(text: str) -> T1Signals:
     sig = T1Signals()
     sig.has_verbal_meaning = bool(_RE_VERBAL_MEANING.search(text))
     sig.has_purpose_line = bool(_RE_PURPOSE_LINE.search(text))
-    sig.has_example = bool(re.search(r"(예시|예를 들어|예:|for example)", text, re.UNICODE | re.IGNORECASE))
+    sig.has_example = bool(
+        re.search(r"(예시|예를 들어|예:|for example)", text, re.UNICODE | re.IGNORECASE)
+    )
 
     boundary_hits: List[str] = []
     for kind, pat in _RE_BOUNDARY_KIND.items():
@@ -219,7 +231,9 @@ def parse_t3(text: str) -> T3Signals:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def emit_post_response_spans(emitter, response_text: str, chat_type: Optional[str]) -> None:
+def emit_post_response_spans(
+    emitter, response_text: str, chat_type: Optional[str]
+) -> None:
     """
     Run all parsers relevant to chat_type and fire the matching spans.
     No-op if emitter is None or chat_type is unknown.

@@ -51,7 +51,11 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-from open_webui.utils.rate_limiter import limiter, get_role_based_limit, get_write_operation_limit
+from open_webui.utils.rate_limiter import (
+    limiter,
+    get_role_based_limit,
+    get_write_operation_limit,
+)
 from open_webui.utils.prompt_composer import compose_with_fallback
 
 

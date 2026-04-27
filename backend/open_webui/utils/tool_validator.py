@@ -43,7 +43,9 @@ class ToolValidator:
         """
         self.rules = validation_rules or {}
         self.allow_patterns = self._compile_patterns(self.rules.get("allow", {}))
-        self.forbidden_patterns = self._compile_patterns(self.rules.get("forbidden", {}))
+        self.forbidden_patterns = self._compile_patterns(
+            self.rules.get("forbidden", {})
+        )
 
         log.debug(
             f"[TOOL VALIDATOR] Initialized with {len(self.allow_patterns)} allow, "
@@ -74,13 +76,14 @@ class ToolValidator:
             Text with LaTeX content replaced by placeholders
         """
         import re
+
         # Remove inline LaTeX: $...$
-        text = re.sub(r'\$[^$]+\$', '[LATEX]', text)
+        text = re.sub(r"\$[^$]+\$", "[LATEX]", text)
         # Remove display LaTeX: $$...$$
-        text = re.sub(r'\$\$[^$]+\$\$', '[LATEX]', text)
+        text = re.sub(r"\$\$[^$]+\$\$", "[LATEX]", text)
         # Remove LaTeX blocks: \[...\] or \(...\)
-        text = re.sub(r'\\\[[^\]]+\\\]', '[LATEX]', text)
-        text = re.sub(r'\\\([^\)]+\\\)', '[LATEX]', text)
+        text = re.sub(r"\\\[[^\]]+\\\]", "[LATEX]", text)
+        text = re.sub(r"\\\([^\)]+\\\)", "[LATEX]", text)
         return text
 
     def validate(self, output: str) -> ValidationResult:
@@ -105,7 +108,9 @@ class ToolValidator:
 
         # Strip LaTeX content to avoid false positives on math symbols
         output_for_validation = self._strip_latex_content(output)
-        log.debug(f"[TOOL VALIDATOR] After stripping LaTeX: {len(output_for_validation)} chars")
+        log.debug(
+            f"[TOOL VALIDATOR] After stripping LaTeX: {len(output_for_validation)} chars"
+        )
 
         # Step 1: Check forbidden patterns
         for name, pattern in self.forbidden_patterns.items():

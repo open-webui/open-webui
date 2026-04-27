@@ -42,12 +42,13 @@ GraphType = Literal[
     "implicit_2d",
 ]
 
-MarkerType = Literal['circle', 'square', 'triangle', 'diamond', 'cross', 'sphere']
-LineStyle = Literal['solid', 'dashed', 'dotted']
+MarkerType = Literal["circle", "square", "triangle", "diamond", "cross", "sphere"]
+LineStyle = Literal["solid", "dashed", "dotted"]
 
 
 class AxisConfig(BaseModel):
     """Axis configuration"""
+
     label: str = Field(description="Axis label (x, y, z, t, etc.)")
     min: float = Field(description="Minimum value")
     max: float = Field(description="Maximum value")
@@ -55,99 +56,152 @@ class AxisConfig(BaseModel):
 
 class Domain2DConfig(BaseModel):
     """2D domain configuration for heatmap/contour/implicit graphs"""
+
     x: List[float] = Field(description="X domain [xmin, xmax]")
     y: List[float] = Field(description="Y domain [ymin, ymax]")
 
 
 class ContoursConfig(BaseModel):
     """Contour lines configuration"""
-    start: Optional[float] = Field(default=None, description="Start value for contour lines")
-    end: Optional[float] = Field(default=None, description="End value for contour lines")
-    size: Optional[float] = Field(default=None, description="Step size between contour lines")
+
+    start: Optional[float] = Field(
+        default=None, description="Start value for contour lines"
+    )
+    end: Optional[float] = Field(
+        default=None, description="End value for contour lines"
+    )
+    size: Optional[float] = Field(
+        default=None, description="Step size between contour lines"
+    )
 
 
 class StyleConfig(BaseModel):
     """Style configuration for graphs"""
-    color: Optional[Union[str, List[str]]] = Field(default=None, description="Color(s) for the graph")
-    marker: Optional[MarkerType] = Field(default=None, description="Marker type for scatter plots")
+
+    color: Optional[Union[str, List[str]]] = Field(
+        default=None, description="Color(s) for the graph"
+    )
+    marker: Optional[MarkerType] = Field(
+        default=None, description="Marker type for scatter plots"
+    )
     lineStyle: Optional[LineStyle] = Field(default=None, description="Line style")
     opacity: Optional[float] = Field(default=None, description="Opacity (0-1)")
 
 
 class GraphMeta(BaseModel):
     """Metadata for graph (title and caption)"""
+
     title: str = Field(description="Graph title in Korean")
     caption: str = Field(
         min_length=200,
-        description="Detailed caption in Korean (200+ chars minimum) explaining mathematical meaning, applications, and graph characteristics"
+        description="Detailed caption in Korean (200+ chars minimum) explaining mathematical meaning, applications, and graph characteristics",
     )
 
 
 class Function2DGraph(BaseModel):
     """2D function graph: y = f(x)"""
-    type: Literal["function_2d"] = Field(default="function_2d", description="Graph type")
-    expression: str = Field(description="Function expression ONLY in terms of x (e.g., 'sin(x)', 'x^2'). MUST NOT include y variable! If y is needed, use function_3d/heatmap_2d/contour_2d instead.")
+
+    type: Literal["function_2d"] = Field(
+        default="function_2d", description="Graph type"
+    )
+    expression: str = Field(
+        description="Function expression ONLY in terms of x (e.g., 'sin(x)', 'x^2'). MUST NOT include y variable! If y is needed, use function_3d/heatmap_2d/contour_2d instead."
+    )
     x_axis: AxisConfig = Field(description="X-axis configuration")
-    y_axis: Optional[AxisConfig] = Field(default=None, description="Y-axis configuration (optional)")
-    style: Optional[StyleConfig] = Field(default=None, description="Style configuration (optional)")
+    y_axis: Optional[AxisConfig] = Field(
+        default=None, description="Y-axis configuration (optional)"
+    )
+    style: Optional[StyleConfig] = Field(
+        default=None, description="Style configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class Parametric2DGraph(BaseModel):
     """2D parametric graph: x = f(t), y = g(t)"""
+
     type: str = Field(default="parametric_2d", description="Graph type")
     x_expression: str = Field(description="X expression in terms of t")
     y_expression: str = Field(description="Y expression in terms of t")
     t_axis: AxisConfig = Field(description="Parameter t configuration")
-    x_axis: Optional[AxisConfig] = Field(default=None, description="X-axis configuration (optional)")
-    y_axis: Optional[AxisConfig] = Field(default=None, description="Y-axis configuration (optional)")
+    x_axis: Optional[AxisConfig] = Field(
+        default=None, description="X-axis configuration (optional)"
+    )
+    y_axis: Optional[AxisConfig] = Field(
+        default=None, description="Y-axis configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class Scatter2DGraph(BaseModel):
     """2D scatter plot"""
+
     type: str = Field(default="scatter_2d", description="Graph type")
     points: List[List[float]] = Field(description="List of [x, y] coordinate pairs")
-    x_axis: Optional[AxisConfig] = Field(default=None, description="X-axis configuration (optional)")
-    y_axis: Optional[AxisConfig] = Field(default=None, description="Y-axis configuration (optional)")
+    x_axis: Optional[AxisConfig] = Field(
+        default=None, description="X-axis configuration (optional)"
+    )
+    y_axis: Optional[AxisConfig] = Field(
+        default=None, description="Y-axis configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class Function3DGraph(BaseModel):
     """3D function graph: z = f(x, y)"""
+
     type: str = Field(default="function_3d", description="Graph type")
-    expression: str = Field(description="Function expression in terms of BOTH x and y (e.g., 'sin(x) * cos(y)', 'x^2 + y^2'). Use this for 2-variable functions.")
+    expression: str = Field(
+        description="Function expression in terms of BOTH x and y (e.g., 'sin(x) * cos(y)', 'x^2 + y^2'). Use this for 2-variable functions."
+    )
     x_axis: AxisConfig = Field(description="X-axis configuration")
     y_axis: AxisConfig = Field(description="Y-axis configuration")
-    z_axis: Optional[AxisConfig] = Field(default=None, description="Z-axis configuration (optional)")
+    z_axis: Optional[AxisConfig] = Field(
+        default=None, description="Z-axis configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class Parametric3DGraph(BaseModel):
     """3D parametric graph: x = f(t), y = g(t), z = h(t)"""
+
     type: str = Field(default="parametric_3d", description="Graph type")
     x_expression: str = Field(description="X expression in terms of t")
     y_expression: str = Field(description="Y expression in terms of t")
     z_expression: str = Field(description="Z expression in terms of t")
     t_axis: AxisConfig = Field(description="Parameter t configuration")
-    x_axis: Optional[AxisConfig] = Field(default=None, description="X-axis configuration (optional)")
-    y_axis: Optional[AxisConfig] = Field(default=None, description="Y-axis configuration (optional)")
-    z_axis: Optional[AxisConfig] = Field(default=None, description="Z-axis configuration (optional)")
+    x_axis: Optional[AxisConfig] = Field(
+        default=None, description="X-axis configuration (optional)"
+    )
+    y_axis: Optional[AxisConfig] = Field(
+        default=None, description="Y-axis configuration (optional)"
+    )
+    z_axis: Optional[AxisConfig] = Field(
+        default=None, description="Z-axis configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class Scatter3DGraph(BaseModel):
     """3D scatter plot"""
+
     type: str = Field(default="scatter_3d", description="Graph type")
     points: List[List[float]] = Field(description="List of [x, y, z] coordinate tuples")
-    x_axis: Optional[AxisConfig] = Field(default=None, description="X-axis configuration (optional)")
-    y_axis: Optional[AxisConfig] = Field(default=None, description="Y-axis configuration (optional)")
-    z_axis: Optional[AxisConfig] = Field(default=None, description="Z-axis configuration (optional)")
+    x_axis: Optional[AxisConfig] = Field(
+        default=None, description="X-axis configuration (optional)"
+    )
+    y_axis: Optional[AxisConfig] = Field(
+        default=None, description="Y-axis configuration (optional)"
+    )
+    z_axis: Optional[AxisConfig] = Field(
+        default=None, description="Z-axis configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class VectorFieldConfig(BaseModel):
     """Vector field configuration (differential equations)"""
+
     dx: str = Field(description="dx/dt expression in terms of x, y (and z for 3D)")
     dy: str = Field(description="dy/dt expression in terms of x, y (and z for 3D)")
     dz: Optional[str] = Field(default=None, description="dz/dt expression (3D only)")
@@ -155,20 +209,27 @@ class VectorFieldConfig(BaseModel):
 
 class DomainConfig(BaseModel):
     """Domain configuration for vector fields"""
+
     x: List[float] = Field(description="X domain [min, max]")
     y: List[float] = Field(description="Y domain [min, max]")
-    z: Optional[List[float]] = Field(default=None, description="Z domain [min, max] (3D only)")
+    z: Optional[List[float]] = Field(
+        default=None, description="Z domain [min, max] (3D only)"
+    )
 
 
 class SamplingConfig(BaseModel):
     """Sampling configuration for vector fields"""
+
     x: int = Field(description="Number of samples along x-axis")
     y: int = Field(description="Number of samples along y-axis")
-    z: Optional[int] = Field(default=None, description="Number of samples along z-axis (3D only)")
+    z: Optional[int] = Field(
+        default=None, description="Number of samples along z-axis (3D only)"
+    )
 
 
 class PhasePlaneGraph(BaseModel):
     """2D vector field (phase plane) for differential equations"""
+
     type: str = Field(default="phase_plane", description="Graph type")
     field: VectorFieldConfig = Field(description="Vector field equations (dx, dy)")
     domain: DomainConfig = Field(description="Domain for x and y")
@@ -178,6 +239,7 @@ class PhasePlaneGraph(BaseModel):
 
 class VectorField3DGraph(BaseModel):
     """3D vector field visualization"""
+
     type: str = Field(default="vector_field_3d", description="Graph type")
     field: VectorFieldConfig = Field(description="Vector field equations (dx, dy, dz)")
     domain: DomainConfig = Field(description="Domain for x, y, and z")
@@ -187,6 +249,7 @@ class VectorField3DGraph(BaseModel):
 
 class VectorArrow(BaseModel):
     """Individual vector arrow"""
+
     start: List[float] = Field(description="Starting point [x, y]")
     end: List[float] = Field(description="Ending point [x, y]")
     color: Optional[str] = Field(default="blue", description="Arrow color (optional)")
@@ -194,6 +257,7 @@ class VectorArrow(BaseModel):
 
 class Vector2DGraph(BaseModel):
     """Individual 2D vector arrows"""
+
     type: str = Field(default="vector_2d", description="Graph type")
     data: List[VectorArrow] = Field(description="List of vector arrows")
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
@@ -209,45 +273,74 @@ GraphLayer = Union[
 
 class Composite2DGraph(BaseModel):
     """Composite 2D graph with multiple layers"""
-    type: Literal["composite_2d"] = Field(default="composite_2d", description="Graph type")
+
+    type: Literal["composite_2d"] = Field(
+        default="composite_2d", description="Graph type"
+    )
     layers: List[GraphLayer] = Field(description="List of graph layers to overlay")
-    x_axis: Optional[AxisConfig] = Field(default=None, description="Shared X-axis configuration (optional)")
-    y_axis: Optional[AxisConfig] = Field(default=None, description="Shared Y-axis configuration (optional)")
+    x_axis: Optional[AxisConfig] = Field(
+        default=None, description="Shared X-axis configuration (optional)"
+    )
+    y_axis: Optional[AxisConfig] = Field(
+        default=None, description="Shared Y-axis configuration (optional)"
+    )
     meta: GraphMeta = Field(description="Graph metadata (title and caption)")
 
 
 class Heatmap2DGraph(BaseModel):
     """2D heatmap for scalar field z = f(x, y) - temperature distribution, wave propagation"""
+
     type: Literal["heatmap_2d"] = Field(default="heatmap_2d", description="Graph type")
-    expression: str = Field(description="z = f(x, y) expression using BOTH x and y variables (e.g., 'exp(-(x^2 + y^2))', 'sin(x)*cos(y)', 'sin(x)*sin(y)'). Use this for 2-variable scalar fields.")
+    expression: str = Field(
+        description="z = f(x, y) expression using BOTH x and y variables (e.g., 'exp(-(x^2 + y^2))', 'sin(x)*cos(y)', 'sin(x)*sin(y)'). Use this for 2-variable scalar fields."
+    )
     domain: Domain2DConfig = Field(description="Domain for x and y")
-    color_scheme: Optional[str] = Field(default="Viridis", description="Plotly colorscale (Viridis, Hot, RdBu, etc.)")
-    style: Optional[StyleConfig] = Field(default=None, description="Style configuration (optional)")
-    meta: GraphMeta = Field(description="Graph metadata (title and caption, 200+ chars)")
+    color_scheme: Optional[str] = Field(
+        default="Viridis", description="Plotly colorscale (Viridis, Hot, RdBu, etc.)"
+    )
+    style: Optional[StyleConfig] = Field(
+        default=None, description="Style configuration (optional)"
+    )
+    meta: GraphMeta = Field(
+        description="Graph metadata (title and caption, 200+ chars)"
+    )
 
 
 class Contour2DGraph(BaseModel):
     """2D contour lines for z = f(x, y) - potential fields, gradient visualization"""
+
     type: Literal["contour_2d"] = Field(default="contour_2d", description="Graph type")
-    expression: str = Field(description="z = f(x, y) expression using BOTH x and y variables. Use this for 2-variable functions to show contour lines.")
+    expression: str = Field(
+        description="z = f(x, y) expression using BOTH x and y variables. Use this for 2-variable functions to show contour lines."
+    )
     domain: Domain2DConfig = Field(description="Domain for x and y")
     contours: Optional[ContoursConfig] = Field(
-        default=None,
-        description="Contour configuration (start, end, size)"
+        default=None, description="Contour configuration (start, end, size)"
     )
-    style: Optional[StyleConfig] = Field(default=None, description="Style configuration (optional)")
-    meta: GraphMeta = Field(description="Graph metadata (title and caption, 200+ chars)")
+    style: Optional[StyleConfig] = Field(
+        default=None, description="Style configuration (optional)"
+    )
+    meta: GraphMeta = Field(
+        description="Graph metadata (title and caption, 200+ chars)"
+    )
 
 
 class Implicit2DGraph(BaseModel):
     """Implicit curve where F(x, y) = 0 - conic sections, level sets"""
-    type: Literal["implicit_2d"] = Field(default="implicit_2d", description="Graph type")
+
+    type: Literal["implicit_2d"] = Field(
+        default="implicit_2d", description="Graph type"
+    )
     expression: str = Field(
         description="F(x, y) expression using BOTH x and y (plots where F(x,y) = 0). Example: 'x^2 + y^2 - 1' for unit circle, 'x^2/4 + y^2/9 - 1' for ellipse"
     )
     domain: Domain2DConfig = Field(description="Domain for x and y")
-    style: Optional[StyleConfig] = Field(default=None, description="Style configuration (optional)")
-    meta: GraphMeta = Field(description="Graph metadata (title and caption, 200+ chars)")
+    style: Optional[StyleConfig] = Field(
+        default=None, description="Style configuration (optional)"
+    )
+    meta: GraphMeta = Field(
+        description="Graph metadata (title and caption, 200+ chars)"
+    )
 
 
 # Union type for all graph types
@@ -271,13 +364,17 @@ GraphSpec = Union[
 
 class SuccessResponse(BaseModel):
     """Successful graph generation (Mode A)"""
+
     status: str = Field(default="success", description="Status of graph generation")
     graph: GraphSpec = Field(description="Graph specification")
 
 
 class UnsupportedResponse(BaseModel):
     """Unsupported graph request (Mode B)"""
-    status: str = Field(default="unsupported", description="Status indicating unsupported request")
+
+    status: str = Field(
+        default="unsupported", description="Status indicating unsupported request"
+    )
     reason: str = Field(description="Reason why graph cannot be generated in Korean")
 
 
@@ -287,6 +384,7 @@ class GraphGeneratorResponse(BaseModel):
     - Mode A (success): Return graph specification
     - Mode B (unsupported): Explain why graph cannot be generated
     """
+
     result: Union[SuccessResponse, UnsupportedResponse] = Field(
         description="Either successful graph spec or unsupported reason"
     )
@@ -296,38 +394,70 @@ class GraphGeneratorResponse(BaseModel):
 # Hardcoded Tool Metadata
 # ============================================================================
 
+
 class HardcodedToolMetadata(BaseModel):
     """
     Metadata for a hardcoded tool.
 
     Compatible with PromptModel - includes all fields needed for tool_prompts list.
     """
+
     # Core tool fields
     id: str = Field(description="Unique tool ID (e.g., 'hardcoded-system-graph-spec')")
-    command: str = Field(description="Tool command/tag name (e.g., 'system-graph-spec')")
+    command: str = Field(
+        description="Tool command/tag name (e.g., 'system-graph-spec')"
+    )
     name: str = Field(description="Display name")
     title: str = Field(description="Tool title")
     description: str = Field(description="Tool description")
-    system_prompt: str = Field(description="System prompt for this tool (focused on logic, not format)")
-    response_schema: type[BaseModel] = Field(description="Pydantic model for response_schema")
-    output_tag: str = Field(description="Tag name for wrapping output (e.g., 'graph-spec')")
+    system_prompt: str = Field(
+        description="System prompt for this tool (focused on logic, not format)"
+    )
+    response_schema: type[BaseModel] = Field(
+        description="Pydantic model for response_schema"
+    )
+    output_tag: str = Field(
+        description="Tag name for wrapping output (e.g., 'graph-spec')"
+    )
 
     # Hardcoded tool specific fields
     is_hardcoded: bool = True
     editable: bool = False
-    disable_afc: bool = Field(default=False, description="Disable AFC (Automatic Function Calling) when using response_schema for this tool")
-    force_model: Optional[str] = Field(default=None, description="Force specific Gemini model for this tool (e.g., 'gemini-2.5-flash-lite' to prevent thinking mode)")
+    disable_afc: bool = Field(
+        default=False,
+        description="Disable AFC (Automatic Function Calling) when using response_schema for this tool",
+    )
+    force_model: Optional[str] = Field(
+        default=None,
+        description="Force specific Gemini model for this tool (e.g., 'gemini-2.5-flash-lite' to prevent thinking mode)",
+    )
 
     # PromptModel compatibility fields
-    content: str = Field(default="", description="Prompt content (auto-populated from system_prompt)")
-    user_id: str = Field(default="system", description="User ID (always 'system' for hardcoded tools)")
-    timestamp: int = Field(default=0, description="Timestamp (always 0 for hardcoded tools)")
-    access_control: Optional[dict] = Field(default=None, description="Access control (always None/public)")
+    content: str = Field(
+        default="", description="Prompt content (auto-populated from system_prompt)"
+    )
+    user_id: str = Field(
+        default="system", description="User ID (always 'system' for hardcoded tools)"
+    )
+    timestamp: int = Field(
+        default=0, description="Timestamp (always 0 for hardcoded tools)"
+    )
+    access_control: Optional[dict] = Field(
+        default=None, description="Access control (always None/public)"
+    )
     prompt_type: str = Field(default="hardcoded_tool", description="Prompt type")
-    persona_value: Optional[str] = Field(default=None, description="Persona value (not used)")
-    tool_priority: int = Field(default=50, description="Tool priority for sorting (default: 50)")
-    tool_description: Optional[str] = Field(default=None, description="Tool description for catalog")
-    validation_rules: Optional[dict] = Field(default=None, description="Validation rules (not used)")
+    persona_value: Optional[str] = Field(
+        default=None, description="Persona value (not used)"
+    )
+    tool_priority: int = Field(
+        default=50, description="Tool priority for sorting (default: 50)"
+    )
+    tool_description: Optional[str] = Field(
+        default=None, description="Tool description for catalog"
+    )
+    validation_rules: Optional[dict] = Field(
+        default=None, description="Validation rules (not used)"
+    )
 
     def model_post_init(self, __context) -> None:
         """Auto-populate fields for PromptModel compatibility"""
@@ -337,7 +467,7 @@ class HardcodedToolMetadata(BaseModel):
 
         # Auto-populate content from system_prompt for compatibility
         # content field is used by some parts of the codebase
-        object.__setattr__(self, 'content', self.system_prompt)
+        object.__setattr__(self, "content", self.system_prompt)
 
 
 # ============================================================================
@@ -813,6 +943,7 @@ JSON을 생성하기 전에 반드시 다음을 검증하세요. 이 검증을 �
 # Native Function Calling Support
 # ============================================================================
 
+
 def create_graph_tool_declaration():
     """
     Create Gemini function declaration for graph tool (Native FC).
@@ -844,11 +975,11 @@ def create_graph_tool_declaration():
                         "Include the full context of what to visualize. "
                         "Examples: 'sin(x) * sin(y) 그려줘', 'y = x^2 그래프', "
                         "'원의 매개변수 방정식', '전기장 등전위선'"
-                    )
+                    ),
                 }
             },
-            "required": ["user_request"]
-        }
+            "required": ["user_request"],
+        },
     )
 
 
@@ -870,7 +1001,9 @@ def create_tool_declarations() -> list:
     ]
 
 
-def get_hardcoded_tool_by_function_name(function_name: str) -> Optional[HardcodedToolMetadata]:
+def get_hardcoded_tool_by_function_name(
+    function_name: str,
+) -> Optional[HardcodedToolMetadata]:
     """
     Get hardcoded tool by Native FC function name.
 
@@ -906,6 +1039,7 @@ def get_hardcoded_tool_by_function_name(function_name: str) -> Optional[Hardcode
 # ============================================================================
 # Public API
 # ============================================================================
+
 
 def get_hardcoded_tools() -> List[HardcodedToolMetadata]:
     """
@@ -956,7 +1090,7 @@ def get_hardcoded_tool_by_command(command: str) -> Optional[HardcodedToolMetadat
         Tool metadata if found, None otherwise
     """
     # Normalize command - remove leading slash if present
-    normalized_command = command.lstrip('/')
+    normalized_command = command.lstrip("/")
 
     tools = get_hardcoded_tools()
     for tool in tools:

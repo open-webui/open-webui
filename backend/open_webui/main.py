@@ -557,6 +557,7 @@ class SPAStaticFiles(StaticFiles):
             else:
                 raise ex
 
+
 print(
     rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
@@ -612,6 +613,7 @@ async def lifespan(app: FastAPI):
 
     # Start message tagging daemon
     from open_webui.services.message_tagging_daemon import MessageTaggingDaemon
+
     app.state.message_tagging_daemon = MessageTaggingDaemon(app)
     asyncio.create_task(app.state.message_tagging_daemon.start())
 
@@ -1423,7 +1425,9 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
-app.include_router(prompt_groups.router, prefix="/api/v1/prompt-groups", tags=["prompt-groups"])
+app.include_router(
+    prompt_groups.router, prefix="/api/v1/prompt-groups", tags=["prompt-groups"]
+)
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
@@ -1437,9 +1441,13 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(textbook.router, prefix="/api/v1/textbook", tags=["textbook"])
 app.include_router(gemini_rag.router, prefix="/api/v1/gemini-rag", tags=["gemini-rag"])
-app.include_router(message_tags.router, prefix="/api/v1/message-tags", tags=["message-tags"])
+app.include_router(
+    message_tags.router, prefix="/api/v1/message-tags", tags=["message-tags"]
+)
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
-app.include_router(review_session.router, prefix="/api/v1/review-session", tags=["review-session"])
+app.include_router(
+    review_session.router, prefix="/api/v1/review-session", tags=["review-session"]
+)
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -1574,7 +1582,9 @@ async def chat_completion(
     if tasks is None:
         tasks = {
             TASKS.TITLE_GENERATION: request.app.state.config.ENABLE_TITLE_GENERATION,
-            TASKS.TAGS_GENERATION: getattr(request.app.state.config, 'ENABLE_TAGS_GENERATION', False),
+            TASKS.TAGS_GENERATION: getattr(
+                request.app.state.config, "ENABLE_TAGS_GENERATION", False
+            ),
         }
         log.info(f"[CHAT COMPLETION] Default tasks created: {tasks}")
     else:
@@ -1661,12 +1671,16 @@ async def chat_completion(
 
         # Update chat settings if chat_id is available and any settings are provided
         if metadata.get("chat_id") and not metadata["chat_id"].startswith("local:"):
-            if chapter_id is not None or proficiency_level is not None or response_style is not None:
+            if (
+                chapter_id is not None
+                or proficiency_level is not None
+                or response_style is not None
+            ):
                 Chats.update_chat_settings_by_id(
                     metadata["chat_id"],
                     chapter_id=chapter_id,
                     proficiency_level=proficiency_level,
-                    response_style=response_style
+                    response_style=response_style,
                 )
 
         if metadata.get("chat_id") and (user and user.role != "admin"):

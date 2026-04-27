@@ -1018,7 +1018,9 @@ class OAuthManager:
             # "학생" or "휴학생" → user
             # Others → keep existing or default
             if user_type in ["직원", "교수"]:
-                log.debug(f"Assigning professor role for Hanyang user type: {user_type}")
+                log.debug(
+                    f"Assigning professor role for Hanyang user type: {user_type}"
+                )
                 return "professor"
             elif user_type in ["학생", "휴학생"]:
                 log.debug(f"Assigning user role for Hanyang user type: {user_type}")
@@ -1309,7 +1311,9 @@ class OAuthManager:
                         log.warning("No authorization code received from Hanyang OAuth")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-                    log.info(f"Hanyang OAuth: Received authorization code: {code[:10]}...")
+                    log.info(
+                        f"Hanyang OAuth: Received authorization code: {code[:10]}..."
+                    )
 
                     # Exchange code for token directly
                     from open_webui.config import (
@@ -1324,7 +1328,9 @@ class OAuthManager:
                     )
 
                     log.info(f"Hanyang OAuth: Using redirect_uri: {redirect_uri}")
-                    log.info(f"Hanyang OAuth: client_id: {HANYANG_CLIENT_ID.value[:8]}...")
+                    log.info(
+                        f"Hanyang OAuth: client_id: {HANYANG_CLIENT_ID.value[:8]}..."
+                    )
 
                     # Use GET method with query string (as documented by Hanyang API)
                     token_url = (
@@ -1345,23 +1351,35 @@ class OAuthManager:
                             ssl=AIOHTTP_CLIENT_SESSION_SSL,
                         ) as resp:
                             response_text = await resp.text()
-                            content_type = resp.headers.get('Content-Type', '')
-                            log.info(f"Hanyang token response: status={resp.status}, content_type={content_type}")
+                            content_type = resp.headers.get("Content-Type", "")
+                            log.info(
+                                f"Hanyang token response: status={resp.status}, content_type={content_type}"
+                            )
                             log.debug(f"Response body: {response_text[:500]}")
 
-                            if 'application/json' in content_type:
+                            if "application/json" in content_type:
                                 import json
+
                                 token = json.loads(response_text)
 
                                 # Check for error in response
                                 if "error" in token:
-                                    log.warning(f"Hanyang token error: {token.get('error')} - {token.get('error_description', '')}")
-                                    raise HTTPException(400, detail=f"OAuth error: {token.get('error_description', token.get('error'))}")
+                                    log.warning(
+                                        f"Hanyang token error: {token.get('error')} - {token.get('error_description', '')}"
+                                    )
+                                    raise HTTPException(
+                                        400,
+                                        detail=f"OAuth error: {token.get('error_description', token.get('error'))}",
+                                    )
 
                                 log.info("Successfully obtained Hanyang access token")
                             else:
-                                log.warning(f"Hanyang token endpoint returned non-JSON: {response_text[:500]}")
-                                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                log.warning(
+                                    f"Hanyang token endpoint returned non-JSON: {response_text[:500]}"
+                                )
+                                raise HTTPException(
+                                    400, detail=ERROR_MESSAGES.INVALID_CRED
+                                )
                 else:
                     token = await client.authorize_access_token(request, **auth_params)
             except HTTPException:
@@ -1391,13 +1409,18 @@ class OAuthManager:
                     # Hanyang uses custom headers: client_id, access_token, and swap_key
                     from open_webui.config import HANYANG_CLIENT_ID
                     import time as time_module
-                    swap_key = str(int(time_module.time() * 1000))  # milliseconds timestamp
+
+                    swap_key = str(
+                        int(time_module.time() * 1000)
+                    )  # milliseconds timestamp
                     headers = {
                         "client_id": HANYANG_CLIENT_ID.value,
                         "access_token": access_token,
                         "swap_key": swap_key,
                     }
-                    log.info(f"Hanyang OAuth: Fetching user info with access_token: {access_token[:10]}..., swap_key: {swap_key}")
+                    log.info(
+                        f"Hanyang OAuth: Fetching user info with access_token: {access_token[:10]}..., swap_key: {swap_key}"
+                    )
 
                     async with aiohttp.ClientSession(trust_env=True) as session:
                         # Use loginList endpoint to get all roles (handles staff/student/alumni)
@@ -1408,11 +1431,16 @@ class OAuthManager:
                             ssl=AIOHTTP_CLIENT_SESSION_SSL,
                         ) as resp:
                             response_text = await resp.text()
-                            log.info(f"Hanyang loginList response: status={resp.status}")
-                            log.debug(f"Hanyang loginList response body: {response_text[:1000]}")
+                            log.info(
+                                f"Hanyang loginList response: status={resp.status}"
+                            )
+                            log.debug(
+                                f"Hanyang loginList response body: {response_text[:1000]}"
+                            )
 
                             if resp.ok:
                                 import json
+
                                 try:
                                     raw_data = json.loads(response_text)
                                     log.info(f"Hanyang loginList parsed successfully")
@@ -1422,14 +1450,20 @@ class OAuthManager:
                                     user_list = response_obj.get("list", [])
 
                                     if not user_list:
-                                        log.warning(f"Empty user list in Hanyang response: {raw_data}")
-                                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                        log.warning(
+                                            f"Empty user list in Hanyang response: {raw_data}"
+                                        )
+                                        raise HTTPException(
+                                            400, detail=ERROR_MESSAGES.INVALID_CRED
+                                        )
 
                                     # Find the best role: prioritize 직원/교수 over 학생
                                     selected_user = None
                                     for user_entry in user_list:
                                         user_type = user_entry.get("userGbNm", "")
-                                        is_primary = user_entry.get("daepyoUserGbYn") == "1"
+                                        is_primary = (
+                                            user_entry.get("daepyoUserGbYn") == "1"
+                                        )
 
                                         # Prioritize 직원 or 교수
                                         if user_type in ["직원", "교수"]:
@@ -1446,14 +1480,20 @@ class OAuthManager:
                                     user_nm = selected_user.get("userNm", "")
                                     hanyang_uuid = selected_user.get("uuid", "")
                                     gaein_no = selected_user.get("gaeinNo", "")
-                                    user_type = selected_user.get("userGbNm", "")  # 직원, 학생, 교수, 수료생 등
-                                    sinbun_gb_nm = selected_user.get("sinbunGbNm", "")  # 직원, 학사, 석사, 박사 등 (상세 신분)
+                                    user_type = selected_user.get(
+                                        "userGbNm", ""
+                                    )  # 직원, 학생, 교수, 수료생 등
+                                    sinbun_gb_nm = selected_user.get(
+                                        "sinbunGbNm", ""
+                                    )  # 직원, 학사, 석사, 박사 등 (상세 신분)
                                     sosok_nm = selected_user.get("sosokNm", "")
 
                                     # Use uuid + gaeinNo as unique identifier
                                     unique_id = f"{hanyang_uuid}_{gaein_no}"
 
-                                    log.info(f"Hanyang user selected: name={user_nm}, type={user_type}, sinbun={sinbun_gb_nm}, sosok={sosok_nm}, uuid={hanyang_uuid}, gaeinNo={gaein_no}")
+                                    log.info(
+                                        f"Hanyang user selected: name={user_nm}, type={user_type}, sinbun={sinbun_gb_nm}, sosok={sosok_nm}, uuid={hanyang_uuid}, gaeinNo={gaein_no}"
+                                    )
 
                                     # Construct standard user_data
                                     user_data = {
@@ -1467,13 +1507,23 @@ class OAuthManager:
                                         "sosokNm": sosok_nm,
                                     }
 
-                                    log.info(f"Successfully constructed Hanyang user data: {user_nm} ({user_type}/{sinbun_gb_nm}) - {sosok_nm}")
+                                    log.info(
+                                        f"Successfully constructed Hanyang user data: {user_nm} ({user_type}/{sinbun_gb_nm}) - {sosok_nm}"
+                                    )
                                 except json.JSONDecodeError as e:
-                                    log.warning(f"Failed to parse Hanyang response as JSON: {e}")
-                                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                    log.warning(
+                                        f"Failed to parse Hanyang response as JSON: {e}"
+                                    )
+                                    raise HTTPException(
+                                        400, detail=ERROR_MESSAGES.INVALID_CRED
+                                    )
                             else:
-                                log.warning(f"Failed to fetch Hanyang user info: {resp.status} - {response_text[:500]}")
-                                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                log.warning(
+                                    f"Failed to fetch Hanyang user info: {resp.status} - {response_text[:500]}"
+                                )
+                                raise HTTPException(
+                                    400, detail=ERROR_MESSAGES.INVALID_CRED
+                                )
                 except HTTPException:
                     raise
                 except Exception as e:
@@ -1556,7 +1606,9 @@ class OAuthManager:
                     try:
                         access_token = token.get("access_token")
                         if not access_token:
-                            log.warning("No access token available for Hanyang user info")
+                            log.warning(
+                                "No access token available for Hanyang user info"
+                            )
                             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
                         # Fetch user info from Hanyang API
@@ -1583,7 +1635,9 @@ class OAuthManager:
                                         log.warning(
                                             f"Missing required fields in Hanyang response: {hanyang_data}"
                                         )
-                                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                        raise HTTPException(
+                                            400, detail=ERROR_MESSAGES.INVALID_CRED
+                                        )
 
                                     # Construct standard user_data
                                     user_data = {
@@ -1606,7 +1660,9 @@ class OAuthManager:
                                     log.warning(
                                         f"Failed to fetch Hanyang user info: {resp.status} - {error_text}"
                                     )
-                                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                                    raise HTTPException(
+                                        400, detail=ERROR_MESSAGES.INVALID_CRED
+                                    )
                     except HTTPException:
                         raise
                     except Exception as e:
@@ -1688,9 +1744,13 @@ class OAuthManager:
                         name = email
 
                     # Extract Hanyang-specific fields if available
-                    department = user_data.get("sosokNm") if provider == "hanyang" else None
+                    department = (
+                        user_data.get("sosokNm") if provider == "hanyang" else None
+                    )
                     # Use sinbunGbNm for detailed status (학사/석사/박사/교수/직원)
-                    user_status_value = user_data.get("sinbunGbNm") if provider == "hanyang" else None
+                    user_status_value = (
+                        user_data.get("sinbunGbNm") if provider == "hanyang" else None
+                    )
 
                     user = Auths.insert_new_auth(
                         email=email,
@@ -1783,7 +1843,9 @@ class OAuthManager:
 
             # Calculate expires_at if we have expires_in
             if "expires_in" in token and "expires_at" not in token:
-                token["expires_at"] = int(datetime.now().timestamp() + token["expires_in"])
+                token["expires_at"] = int(
+                    datetime.now().timestamp() + token["expires_in"]
+                )
 
             # Clean up any existing sessions for this user/provider first
             sessions = OAuthSessions.get_sessions_by_user_id(user.id)

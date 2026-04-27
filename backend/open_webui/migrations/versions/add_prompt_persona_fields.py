@@ -23,19 +23,15 @@ def upgrade():
     # Add prompt_type column to prompt table
     # This field identifies the type of prompt: base, proficiency, style, or None
     with op.batch_alter_table("prompt", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("prompt_type", sa.String(), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("persona_value", sa.String(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("prompt_type", sa.String(), nullable=True))
+        batch_op.add_column(sa.Column("persona_value", sa.String(), nullable=True))
 
     # Create index for faster persona-based queries
     op.create_index(
         "idx_prompt_type_persona",
         "prompt",
         ["prompt_type", "persona_value"],
-        unique=False
+        unique=False,
     )
 
 

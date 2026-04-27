@@ -1259,13 +1259,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 rag_service = get_rag_service(request)
                 # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
                 import asyncio
+
                 rag_result = await asyncio.to_thread(
                     rag_service.query,
                     question=user_message,
                     store_names=[store_name],
                     model="gemini-2.5-flash",
                     temperature=0.2,
-                    cache_stage="execution"  # Enable global caching for RAG queries
+                    cache_stage="execution",  # Enable global caching for RAG queries
                 )
 
                 if rag_result.get("success") and rag_result.get("text"):
@@ -1285,14 +1286,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     # Add citations to sources if available
                     if rag_result.get("citations"):
                         for citation in rag_result["citations"]:
-                            sources.append({
-                                "source": {
-                                    "name": f"Gemini RAG: {display_name}",
-                                    "url": citation.get("source", ""),
-                                },
-                                "document": [],
-                                "metadata": [{"chapter_id": chapter_id}],
-                            })
+                            sources.append(
+                                {
+                                    "source": {
+                                        "name": f"Gemini RAG: {display_name}",
+                                        "url": citation.get("source", ""),
+                                    },
+                                    "document": [],
+                                    "metadata": [{"chapter_id": chapter_id}],
+                                }
+                            )
 
                     log.info(f"Gemini RAG context added for chapter: {chapter_id}")
 
@@ -1680,14 +1683,26 @@ async def process_chat_response(
         form_metadata = form_data["metadata"]
         # Merge tool-related keys that may have been set by chat completion handler
         for key in [
-            "enable_tool_notifications", "tool_commands", "tool_prompts_dict", "tool_validation_rules",
-            "api_request_url", "api_headers", "api_cookies",
-            "is_gemini_backend", "gemini_api_key", "gemini_model_id", "gemini_tool_model"  # Gemini native SDK support
+            "enable_tool_notifications",
+            "tool_commands",
+            "tool_prompts_dict",
+            "tool_validation_rules",
+            "api_request_url",
+            "api_headers",
+            "api_cookies",
+            "is_gemini_backend",
+            "gemini_api_key",
+            "gemini_model_id",
+            "gemini_tool_model",  # Gemini native SDK support
         ]:
             if key in form_metadata:
                 metadata[key] = form_metadata[key]
-        log.info(f"[MIDDLEWARE] Merged metadata from form_data: enable_tool_notifications={metadata.get('enable_tool_notifications')}, tool_commands={metadata.get('tool_commands')}, is_gemini_backend={metadata.get('is_gemini_backend')}")
-        log.info(f"[MIDDLEWARE] Tool prompts dict keys: {list(metadata.get('tool_prompts_dict', {}).keys())}")
+        log.info(
+            f"[MIDDLEWARE] Merged metadata from form_data: enable_tool_notifications={metadata.get('enable_tool_notifications')}, tool_commands={metadata.get('tool_commands')}, is_gemini_backend={metadata.get('is_gemini_backend')}"
+        )
+        log.info(
+            f"[MIDDLEWARE] Tool prompts dict keys: {list(metadata.get('tool_prompts_dict', {}).keys())}"
+        )
 
     async def background_tasks_handler():
         message = None
@@ -1929,9 +1944,13 @@ async def process_chat_response(
 
     # Debug logging for response type
     log.info(f"[MIDDLEWARE] Response type: {type(response).__name__}")
-    log.info(f"[MIDDLEWARE] Is StreamingResponse: {isinstance(response, StreamingResponse)}")
+    log.info(
+        f"[MIDDLEWARE] Is StreamingResponse: {isinstance(response, StreamingResponse)}"
+    )
     log.info(f"[MIDDLEWARE] event_emitter created: {'YES' if event_emitter else 'NO'}")
-    log.info(f"[MIDDLEWARE] session_id={metadata.get('session_id')}, chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}")
+    log.info(
+        f"[MIDDLEWARE] session_id={metadata.get('session_id')}, chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}"
+    )
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
@@ -1955,9 +1974,7 @@ async def process_chat_response(
                             response.body.decode("utf-8", "replace")
                         )
                     except json.JSONDecodeError:
-                        response_data = {
-                            "error": {"detail": "Invalid JSON response"}
-                        }
+                        response_data = {"error": {"detail": "Invalid JSON response"}}
                 else:
                     response_data = response
 
@@ -1977,7 +1994,9 @@ async def process_chat_response(
                                 "error": {"content": error},
                             },
                         )
-                    if event_emitter and (isinstance(error, str) or isinstance(error, dict)):
+                    if event_emitter and (
+                        isinstance(error, str) or isinstance(error, dict)
+                    ):
                         await event_emitter(
                             {
                                 "type": "chat:message:error",
@@ -2007,7 +2026,11 @@ async def process_chat_response(
                                 }
                             )
 
-                        title = Chats.get_chat_title_by_id(metadata["chat_id"]) if can_save_to_db else "New Chat"
+                        title = (
+                            Chats.get_chat_title_by_id(metadata["chat_id"])
+                            if can_save_to_db
+                            else "New Chat"
+                        )
 
                         if event_emitter:
                             await event_emitter(
@@ -2031,9 +2054,13 @@ async def process_chat_response(
                             if metadata.get("chapter_id"):
                                 message_data["chapter_id"] = metadata["chapter_id"]
                             if metadata.get("proficiency_level"):
-                                message_data["proficiency_level"] = metadata["proficiency_level"]
+                                message_data["proficiency_level"] = metadata[
+                                    "proficiency_level"
+                                ]
                             if metadata.get("response_style"):
-                                message_data["response_style"] = metadata["response_style"]
+                                message_data["response_style"] = metadata[
+                                    "response_style"
+                                ]
 
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
@@ -2135,7 +2162,9 @@ async def process_chat_response(
     ]
 
     # Streaming response
-    log.info(f"[MIDDLEWARE] Checking streaming condition: event_emitter={bool(event_emitter)}, event_caller={bool(event_caller)}")
+    log.info(
+        f"[MIDDLEWARE] Checking streaming condition: event_emitter={bool(event_emitter)}, event_caller={bool(event_caller)}"
+    )
     if event_emitter and event_caller:
         log.info("[MIDDLEWARE] Entering streaming response handler block")
         task_id = str(uuid4())  # Create a unique task ID.
@@ -2580,9 +2609,15 @@ async def process_chat_response(
 
                     # Inline tool executor for prompt-based tools
                     tool_executor = None
-                    log.info(f"[MIDDLEWARE] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}")
-                    log.info(f"[MIDDLEWARE] tool_commands in metadata: {metadata.get('tool_commands')}")
-                    log.info(f"[MIDDLEWARE] event_emitter: {'SET' if event_emitter else 'NONE'}")
+                    log.info(
+                        f"[MIDDLEWARE] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}"
+                    )
+                    log.info(
+                        f"[MIDDLEWARE] tool_commands in metadata: {metadata.get('tool_commands')}"
+                    )
+                    log.info(
+                        f"[MIDDLEWARE] event_emitter: {'SET' if event_emitter else 'NONE'}"
+                    )
 
                     if metadata.get("enable_tool_notifications"):
                         tool_prompts_dict = metadata.get("tool_prompts_dict", {})
@@ -2591,10 +2626,20 @@ async def process_chat_response(
                         api_cookies = metadata.get("api_cookies", {})
 
                         if tool_prompts_dict and api_request_url:
-                            log.info(f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
+                            log.info(
+                                f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}"
+                            )
 
                             # Create LLM call function for inline tool execution
-                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False, response_schema: Optional[type] = None, disable_afc: bool = False, force_model: Optional[str] = None, enable_hardcoded_tools: bool = False) -> dict:
+                            async def make_inline_llm_call(
+                                system_prompt: str,
+                                user_message: str,
+                                use_fast_model: bool = False,
+                                response_schema: Optional[type] = None,
+                                disable_afc: bool = False,
+                                force_model: Optional[str] = None,
+                                enable_hardcoded_tools: bool = False,
+                            ) -> dict:
                                 """
                                 Make a non-streaming LLM call for inline tool execution or recovery.
 
@@ -2611,8 +2656,12 @@ async def process_chat_response(
                                 try:
                                     # Check if Gemini backend - use native SDK with caching
                                     is_gemini = metadata.get("is_gemini_backend", False)
-                                    log.info(f"[MIDDLEWARE] Tool execution - is_gemini_backend: {is_gemini}")
-                                    log.info(f"[MIDDLEWARE] Tool execution - metadata keys: {list(metadata.keys())}")
+                                    log.info(
+                                        f"[MIDDLEWARE] Tool execution - is_gemini_backend: {is_gemini}"
+                                    )
+                                    log.info(
+                                        f"[MIDDLEWARE] Tool execution - metadata keys: {list(metadata.keys())}"
+                                    )
                                     if is_gemini:
                                         gemini_api_key = metadata.get("gemini_api_key")
 
@@ -2621,29 +2670,52 @@ async def process_chat_response(
                                         # - Tool execution (use_fast_model=False): Use Pro model for accuracy
                                         # - Recovery (use_fast_model=True): Use Flash model for speed
                                         if force_model:
-                                            gemini_model = force_model  # Tool-specific model
-                                            log.info(f"[MIDDLEWARE] Using forced model for tool: {gemini_model}")
+                                            gemini_model = (
+                                                force_model  # Tool-specific model
+                                            )
+                                            log.info(
+                                                f"[MIDDLEWARE] Using forced model for tool: {gemini_model}"
+                                            )
                                         elif use_fast_model:
-                                            gemini_model = metadata.get("gemini_tool_model")  # Flash for recovery
-                                            log.info(f"[MIDDLEWARE] Using Flash model for recovery: {gemini_model}")
+                                            gemini_model = metadata.get(
+                                                "gemini_tool_model"
+                                            )  # Flash for recovery
+                                            log.info(
+                                                f"[MIDDLEWARE] Using Flash model for recovery: {gemini_model}"
+                                            )
                                         else:
-                                            gemini_model = metadata.get("gemini_model_id")  # Pro for tool execution
-                                            log.info(f"[MIDDLEWARE] Using Pro model for tool execution: {gemini_model}")
+                                            gemini_model = metadata.get(
+                                                "gemini_model_id"
+                                            )  # Pro for tool execution
+                                            log.info(
+                                                f"[MIDDLEWARE] Using Pro model for tool execution: {gemini_model}"
+                                            )
 
                                         if gemini_api_key and gemini_model:
-                                            log.info(f"[MIDDLEWARE] Using Gemini native SDK for tool execution")
-                                            log.info(f"[MIDDLEWARE] Model: {gemini_model}")
-                                            log.info(f"[MIDDLEWARE] System prompt length: {len(system_prompt)} chars")
+                                            log.info(
+                                                f"[MIDDLEWARE] Using Gemini native SDK for tool execution"
+                                            )
+                                            log.info(
+                                                f"[MIDDLEWARE] Model: {gemini_model}"
+                                            )
+                                            log.info(
+                                                f"[MIDDLEWARE] System prompt length: {len(system_prompt)} chars"
+                                            )
 
                                             # Import GeminiRAGService
-                                            from open_webui.utils.gemini_rag import GeminiRAGService
+                                            from open_webui.utils.gemini_rag import (
+                                                GeminiRAGService,
+                                            )
 
                                             # Create service instance
-                                            service = GeminiRAGService(api_key=gemini_api_key)
+                                            service = GeminiRAGService(
+                                                api_key=gemini_api_key
+                                            )
 
                                             # CRITICAL: Run sync Gemini API call in thread pool to avoid blocking event loop
                                             # This allows multiple users to use the service concurrently
                                             import asyncio
+
                                             result = await asyncio.to_thread(
                                                 service.query,
                                                 question=user_message,
@@ -2654,7 +2726,7 @@ async def process_chat_response(
                                                 cache_stage="tool_execution",  # Enable caching for tool prompts
                                                 response_schema=response_schema,  # For hardcoded tools with structured output
                                                 disable_afc=disable_afc,  # Tool-specific AFC control
-                                                enable_hardcoded_tools=enable_hardcoded_tools  # Native FC for Stage 1
+                                                enable_hardcoded_tools=enable_hardcoded_tools,  # Native FC for Stage 1
                                             )
 
                                             # Check for function_call (Native FC Stage 1)
@@ -2664,70 +2736,125 @@ async def process_chat_response(
                                                     tool_name = fc.get("name")
                                                     tool_args = fc.get("arguments", {})
 
-                                                    log.info(f"[NATIVE FC] Function call detected: {tool_name}")
-                                                    log.info(f"[NATIVE FC] Arguments: {tool_args}")
+                                                    log.info(
+                                                        f"[NATIVE FC] Function call detected: {tool_name}"
+                                                    )
+                                                    log.info(
+                                                        f"[NATIVE FC] Arguments: {tool_args}"
+                                                    )
 
                                                     # Map function name to hardcoded tool
-                                                    from open_webui.utils.hardcoded_tools import get_hardcoded_tool_by_function_name
-                                                    hardcoded_tool = get_hardcoded_tool_by_function_name(tool_name)
+                                                    from open_webui.utils.hardcoded_tools import (
+                                                        get_hardcoded_tool_by_function_name,
+                                                    )
+
+                                                    hardcoded_tool = get_hardcoded_tool_by_function_name(
+                                                        tool_name
+                                                    )
 
                                                     if hardcoded_tool:
                                                         # Stage 2: Execute with full system_prompt + response_schema
-                                                        user_request = tool_args.get("user_request", user_message)
+                                                        user_request = tool_args.get(
+                                                            "user_request", user_message
+                                                        )
 
-                                                        log.info(f"[NATIVE FC] Executing Stage 2 for tool: {hardcoded_tool.command}")
-                                                        log.info(f"[NATIVE FC] User request: {user_request[:100]}...")
-                                                        log.info(f"[NATIVE FC] System prompt length: {len(hardcoded_tool.system_prompt)} chars")
+                                                        log.info(
+                                                            f"[NATIVE FC] Executing Stage 2 for tool: {hardcoded_tool.command}"
+                                                        )
+                                                        log.info(
+                                                            f"[NATIVE FC] User request: {user_request[:100]}..."
+                                                        )
+                                                        log.info(
+                                                            f"[NATIVE FC] System prompt length: {len(hardcoded_tool.system_prompt)} chars"
+                                                        )
 
                                                         # Recursively call Stage 2 (no enable_hardcoded_tools, use full prompt)
                                                         result2 = await asyncio.to_thread(
                                                             service.query,
                                                             question=user_request,
                                                             store_names=[],
-                                                            model=hardcoded_tool.force_model or gemini_model,
+                                                            model=hardcoded_tool.force_model
+                                                            or gemini_model,
                                                             temperature=0.2,
                                                             system_instruction=hardcoded_tool.system_prompt,
                                                             cache_stage="tool_execution",
                                                             response_schema=hardcoded_tool.response_schema,
                                                             disable_afc=hardcoded_tool.disable_afc,
-                                                            enable_hardcoded_tools=False  # Stage 2: direct execution
+                                                            enable_hardcoded_tools=False,  # Stage 2: direct execution
                                                         )
 
                                                         if result2.get("success"):
-                                                            text = result2.get("text", "")
-                                                            log.info(f"[NATIVE FC] Stage 2 response: {len(text)} chars")
-                                                            return {"success": True, "text": text}
+                                                            text = result2.get(
+                                                                "text", ""
+                                                            )
+                                                            log.info(
+                                                                f"[NATIVE FC] Stage 2 response: {len(text)} chars"
+                                                            )
+                                                            return {
+                                                                "success": True,
+                                                                "text": text,
+                                                            }
                                                         else:
-                                                            error = result2.get("error", "Unknown error")
-                                                            log.error(f"[NATIVE FC] Stage 2 failed: {error}")
-                                                            return {"success": False, "error": error}
+                                                            error = result2.get(
+                                                                "error", "Unknown error"
+                                                            )
+                                                            log.error(
+                                                                f"[NATIVE FC] Stage 2 failed: {error}"
+                                                            )
+                                                            return {
+                                                                "success": False,
+                                                                "error": error,
+                                                            }
                                                     else:
-                                                        log.error(f"[NATIVE FC] Unknown function name: {tool_name}")
-                                                        return {"success": False, "error": f"Unknown tool: {tool_name}"}
+                                                        log.error(
+                                                            f"[NATIVE FC] Unknown function name: {tool_name}"
+                                                        )
+                                                        return {
+                                                            "success": False,
+                                                            "error": f"Unknown tool: {tool_name}",
+                                                        }
 
                                             # Normal response (no function_call)
                                             if result.get("success"):
                                                 text = result.get("text", "")
-                                                log.info(f"[MIDDLEWARE] Gemini inline LLM response: {len(text)} chars")
+                                                log.info(
+                                                    f"[MIDDLEWARE] Gemini inline LLM response: {len(text)} chars"
+                                                )
                                                 return {"success": True, "text": text}
                                             else:
-                                                error = result.get("error", "Unknown error")
-                                                log.error(f"[MIDDLEWARE] Gemini inline LLM call failed: {error}")
-                                                return {"success": False, "error": error}
+                                                error = result.get(
+                                                    "error", "Unknown error"
+                                                )
+                                                log.error(
+                                                    f"[MIDDLEWARE] Gemini inline LLM call failed: {error}"
+                                                )
+                                                return {
+                                                    "success": False,
+                                                    "error": error,
+                                                }
 
                                     # Fallback to OpenAI-compatible API
                                     payload = {
                                         "model": form_data.get("model"),
                                         "messages": [
-                                            {"role": "system", "content": system_prompt},
-                                            {"role": "user", "content": user_message}
+                                            {
+                                                "role": "system",
+                                                "content": system_prompt,
+                                            },
+                                            {"role": "user", "content": user_message},
                                         ],
-                                        "stream": False
+                                        "stream": False,
                                     }
-                                    log.info(f"[MIDDLEWARE] Inline LLM call to: {api_request_url}")
-                                    log.info(f"[MIDDLEWARE] System prompt length: {len(system_prompt)} chars")
+                                    log.info(
+                                        f"[MIDDLEWARE] Inline LLM call to: {api_request_url}"
+                                    )
+                                    log.info(
+                                        f"[MIDDLEWARE] System prompt length: {len(system_prompt)} chars"
+                                    )
 
-                                    async with aiohttp.ClientSession(trust_env=True) as session:
+                                    async with aiohttp.ClientSession(
+                                        trust_env=True
+                                    ) as session:
                                         async with session.post(
                                             api_request_url,
                                             data=json.dumps(payload),
@@ -2736,41 +2863,65 @@ async def process_chat_response(
                                         ) as r:
                                             if r.status >= 400:
                                                 error_text = await r.text()
-                                                log.error(f"[MIDDLEWARE] Inline LLM call failed: {r.status} - {error_text}")
-                                                return {"success": False, "error": f"HTTP {r.status}: {error_text}"}
+                                                log.error(
+                                                    f"[MIDDLEWARE] Inline LLM call failed: {r.status} - {error_text}"
+                                                )
+                                                return {
+                                                    "success": False,
+                                                    "error": f"HTTP {r.status}: {error_text}",
+                                                }
 
                                             response_json = await r.json()
                                             text = ""
-                                            if response_json.get("choices") and len(response_json["choices"]) > 0:
+                                            if (
+                                                response_json.get("choices")
+                                                and len(response_json["choices"]) > 0
+                                            ):
                                                 choice = response_json["choices"][0]
                                                 if choice.get("message"):
-                                                    text = choice["message"].get("content", "")
+                                                    text = choice["message"].get(
+                                                        "content", ""
+                                                    )
                                                 elif choice.get("text"):
                                                     text = choice["text"]
 
-                                            log.info(f"[MIDDLEWARE] Inline LLM response: {len(text)} chars")
+                                            log.info(
+                                                f"[MIDDLEWARE] Inline LLM response: {len(text)} chars"
+                                            )
                                             return {"success": True, "text": text}
 
                                 except Exception as e:
-                                    log.error(f"[MIDDLEWARE] Inline LLM call exception: {e}")
+                                    log.error(
+                                        f"[MIDDLEWARE] Inline LLM call exception: {e}"
+                                    )
                                     return {"success": False, "error": str(e)}
 
-                            tool_validation_rules = metadata.get("tool_validation_rules", {})
+                            tool_validation_rules = metadata.get(
+                                "tool_validation_rules", {}
+                            )
                             chat_id = metadata.get("chat_id")
-                            langfuse_trace = metadata.get("langfuse_trace")  # Get trace object from metadata
+                            langfuse_trace = metadata.get(
+                                "langfuse_trace"
+                            )  # Get trace object from metadata
                             tool_executor = ToolInlineExecutor(
                                 event_emitter=event_emitter,
                                 tool_prompts=tool_prompts_dict,
                                 tool_validation_rules=tool_validation_rules,
                                 llm_call_fn=make_inline_llm_call,
                                 chat_id=chat_id,
-                                langfuse_trace=langfuse_trace  # Pass trace object for linking tool calls
+                                langfuse_trace=langfuse_trace,  # Pass trace object for linking tool calls
                             )
-                            log.info(f"[MIDDLEWARE] ToolInlineExecutor created with Langfuse trace: {langfuse_trace is not None}")
-                            log.info(f"[MIDDLEWARE] Tool validation rules: {list(tool_validation_rules.keys())}")
+                            log.info(
+                                f"[MIDDLEWARE] ToolInlineExecutor created with Langfuse trace: {langfuse_trace is not None}"
+                            )
+                            log.info(
+                                f"[MIDDLEWARE] Tool validation rules: {list(tool_validation_rules.keys())}"
+                            )
                             log.info(f"[MIDDLEWARE] Chat ID for tracing: {chat_id}")
                         else:
-                            log.warning(f"[MIDDLEWARE] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
+                            log.warning(
+                                f"[MIDDLEWARE] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url"
+                            )
                     else:
                         log.info("[MIDDLEWARE] Tool notifications disabled")
 
@@ -2996,7 +3147,9 @@ async def process_chat_response(
                                     if value:
                                         # Process through inline tool executor if enabled
                                         if tool_executor:
-                                            value = await tool_executor.process_chunk(value)
+                                            value = await tool_executor.process_chunk(
+                                                value
+                                            )
                                             if not value:
                                                 # Tool marker detected and being processed - skip this chunk
                                                 continue
@@ -3122,12 +3275,16 @@ async def process_chat_response(
                                 content_blocks[-1]["content"] += remaining
 
                             # CRITICAL: Emit the tool execution results to frontend
-                            log.info(f"[MIDDLEWARE] Emitting tool execution results: {len(remaining)} chars")
+                            log.info(
+                                f"[MIDDLEWARE] Emitting tool execution results: {len(remaining)} chars"
+                            )
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
                                     "data": {
-                                        "content": serialize_content_blocks(content_blocks),
+                                        "content": serialize_content_blocks(
+                                            content_blocks
+                                        ),
                                     },
                                 }
                             )
@@ -3550,7 +3707,11 @@ async def process_chat_response(
                 }
 
                 # 항상 DB에 저장 (WebSocket 경로)
-                if metadata.get("chat_id") and metadata.get("message_id") and not metadata.get("chat_id", "").startswith("local:"):
+                if (
+                    metadata.get("chat_id")
+                    and metadata.get("message_id")
+                    and not metadata.get("chat_id", "").startswith("local:")
+                ):
                     try:
                         # Include persona info in message
                         message_data = {
@@ -3560,7 +3721,9 @@ async def process_chat_response(
                         if metadata.get("chapter_id"):
                             message_data["chapter_id"] = metadata["chapter_id"]
                         if metadata.get("proficiency_level"):
-                            message_data["proficiency_level"] = metadata["proficiency_level"]
+                            message_data["proficiency_level"] = metadata[
+                                "proficiency_level"
+                            ]
                         if metadata.get("response_style"):
                             message_data["response_style"] = metadata["response_style"]
 
@@ -3608,7 +3771,9 @@ async def process_chat_response(
                     if metadata.get("chapter_id"):
                         message_data["chapter_id"] = metadata["chapter_id"]
                     if metadata.get("proficiency_level"):
-                        message_data["proficiency_level"] = metadata["proficiency_level"]
+                        message_data["proficiency_level"] = metadata[
+                            "proficiency_level"
+                        ]
                     if metadata.get("response_style"):
                         message_data["response_style"] = metadata["response_style"]
 
@@ -3634,7 +3799,9 @@ async def process_chat_response(
             # Initialize inline tool executor for fallback path
             fallback_tool_executor = None
             tool_event_queue = None  # Queue for tool events
-            log.info(f"[MIDDLEWARE FALLBACK] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}")
+            log.info(
+                f"[MIDDLEWARE FALLBACK] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}"
+            )
 
             if metadata.get("enable_tool_notifications"):
                 tool_prompts_dict = metadata.get("tool_prompts_dict", {})
@@ -3643,7 +3810,9 @@ async def process_chat_response(
                 api_cookies = metadata.get("api_cookies", {})
 
                 if tool_prompts_dict and api_request_url:
-                    log.info(f"[MIDDLEWARE FALLBACK] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
+                    log.info(
+                        f"[MIDDLEWARE FALLBACK] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}"
+                    )
 
                     # Create event queue for streaming tool events
                     tool_event_queue = asyncio.Queue()
@@ -3655,7 +3824,7 @@ async def process_chat_response(
                         use_fast_model: bool = False,
                         response_schema: Optional[type] = None,
                         disable_afc: bool = False,
-                        force_model: Optional[str] = None
+                        force_model: Optional[str] = None,
                     ) -> dict:
                         """Make a non-streaming LLM call for inline tool execution.
 
@@ -3672,11 +3841,13 @@ async def process_chat_response(
                                 "model": form_data.get("model"),
                                 "messages": [
                                     {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": user_message}
+                                    {"role": "user", "content": user_message},
                                 ],
-                                "stream": False
+                                "stream": False,
                             }
-                            log.info(f"[MIDDLEWARE FALLBACK] Inline LLM call to: {api_request_url}")
+                            log.info(
+                                f"[MIDDLEWARE FALLBACK] Inline LLM call to: {api_request_url}"
+                            )
 
                             async with aiohttp.ClientSession() as session:
                                 async with session.post(
@@ -3688,40 +3859,63 @@ async def process_chat_response(
                                 ) as resp:
                                     if resp.status == 200:
                                         result = await resp.json()
-                                        text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                                        log.info(f"[MIDDLEWARE FALLBACK] Inline LLM call success: {len(text)} chars")
+                                        text = (
+                                            result.get("choices", [{}])[0]
+                                            .get("message", {})
+                                            .get("content", "")
+                                        )
+                                        log.info(
+                                            f"[MIDDLEWARE FALLBACK] Inline LLM call success: {len(text)} chars"
+                                        )
                                         return {"success": True, "text": text}
                                     else:
                                         error_text = await resp.text()
-                                        log.error(f"[MIDDLEWARE FALLBACK] Inline LLM call failed: {resp.status} - {error_text[:200]}")
-                                        return {"success": False, "error": f"HTTP {resp.status}"}
+                                        log.error(
+                                            f"[MIDDLEWARE FALLBACK] Inline LLM call failed: {resp.status} - {error_text[:200]}"
+                                        )
+                                        return {
+                                            "success": False,
+                                            "error": f"HTTP {resp.status}",
+                                        }
                         except Exception as e:
-                            log.error(f"[MIDDLEWARE FALLBACK] Inline LLM call exception: {e}")
+                            log.error(
+                                f"[MIDDLEWARE FALLBACK] Inline LLM call exception: {e}"
+                            )
                             return {"success": False, "error": str(e)}
 
                     # Event emitter that puts events into queue for streaming
                     async def stream_event_emitter(event: dict):
-                        event_type = event.get('type', 'unknown')
-                        log.info(f"[MIDDLEWARE FALLBACK] Event (no WebSocket): {event_type}")
+                        event_type = event.get("type", "unknown")
+                        log.info(
+                            f"[MIDDLEWARE FALLBACK] Event (no WebSocket): {event_type}"
+                        )
                         # Put event into queue for streaming
                         await tool_event_queue.put(event)
 
                     tool_validation_rules = metadata.get("tool_validation_rules", {})
                     chat_id = metadata.get("chat_id")
-                    langfuse_trace = metadata.get("langfuse_trace")  # Get trace object from metadata
+                    langfuse_trace = metadata.get(
+                        "langfuse_trace"
+                    )  # Get trace object from metadata
                     fallback_tool_executor = ToolInlineExecutor(
                         event_emitter=stream_event_emitter,
                         tool_prompts=tool_prompts_dict,
                         tool_validation_rules=tool_validation_rules,
                         llm_call_fn=make_fallback_inline_llm_call,
                         chat_id=chat_id,
-                        langfuse_trace=langfuse_trace  # Pass trace object for linking tool calls
+                        langfuse_trace=langfuse_trace,  # Pass trace object for linking tool calls
                     )
-                    log.info(f"[MIDDLEWARE FALLBACK] ToolInlineExecutor created with Langfuse trace: {langfuse_trace is not None}")
-                    log.info(f"[MIDDLEWARE FALLBACK] Tool validation rules: {list(tool_validation_rules.keys())}")
+                    log.info(
+                        f"[MIDDLEWARE FALLBACK] ToolInlineExecutor created with Langfuse trace: {langfuse_trace is not None}"
+                    )
+                    log.info(
+                        f"[MIDDLEWARE FALLBACK] Tool validation rules: {list(tool_validation_rules.keys())}"
+                    )
                     log.info(f"[MIDDLEWARE FALLBACK] Chat ID for tracing: {chat_id}")
                 else:
-                    log.warning(f"[MIDDLEWARE FALLBACK] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
+                    log.warning(
+                        f"[MIDDLEWARE FALLBACK] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url"
+                    )
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -3744,10 +3938,12 @@ async def process_chat_response(
                             # Convert tool event to SSE format
                             event_data = {
                                 "type": tool_event.get("type"),
-                                "data": tool_event.get("data", {})
+                                "data": tool_event.get("data", {}),
                             }
                             yield wrap_item(json.dumps(event_data))
-                            log.info(f"[MIDDLEWARE FALLBACK] Streamed tool event: {tool_event.get('type')}")
+                            log.info(
+                                f"[MIDDLEWARE FALLBACK] Streamed tool event: {tool_event.get('type')}"
+                            )
                         except asyncio.QueueEmpty:
                             break
 
@@ -3766,7 +3962,11 @@ async def process_chat_response(
 
                     if fallback_tool_executor:
                         try:
-                            data_str = data.decode('utf-8') if isinstance(data, bytes) else str(data)
+                            data_str = (
+                                data.decode("utf-8")
+                                if isinstance(data, bytes)
+                                else str(data)
+                            )
                             if data_str.startswith("data: "):
                                 json_str = data_str[6:].strip()
                                 if json_str and json_str != "[DONE]":
@@ -3775,24 +3975,40 @@ async def process_chat_response(
                                         delta = chunk["choices"][0].get("delta", {})
                                         if "content" in delta:
                                             original_content = delta["content"]
-                                            processed_content = await fallback_tool_executor.process_chunk(original_content)
+                                            processed_content = await fallback_tool_executor.process_chunk(
+                                                original_content
+                                            )
 
                                             if processed_content != original_content:
                                                 # Content was modified by tool executor
                                                 if processed_content:
                                                     # Update the chunk with processed content
-                                                    chunk["choices"][0]["delta"]["content"] = processed_content
-                                                    modified_data = f"data: {json.dumps(chunk)}\n\n"
+                                                    chunk["choices"][0]["delta"][
+                                                        "content"
+                                                    ] = processed_content
+                                                    modified_data = (
+                                                        f"data: {json.dumps(chunk)}\n\n"
+                                                    )
                                                     if isinstance(data, bytes):
-                                                        modified_data = modified_data.encode('utf-8')
-                                                    collected_content.append(processed_content)
+                                                        modified_data = (
+                                                            modified_data.encode(
+                                                                "utf-8"
+                                                            )
+                                                        )
+                                                    collected_content.append(
+                                                        processed_content
+                                                    )
                                                 else:
                                                     # Tool marker being processed, skip this chunk
                                                     should_yield = False
                                             else:
-                                                collected_content.append(original_content)
+                                                collected_content.append(
+                                                    original_content
+                                                )
                         except Exception as e:
-                            log.debug(f"[MIDDLEWARE FALLBACK] Tool processing error: {e}")
+                            log.debug(
+                                f"[MIDDLEWARE FALLBACK] Tool processing error: {e}"
+                            )
                             # Fall back to original behavior
                             pass
 
@@ -3802,7 +4018,11 @@ async def process_chat_response(
                         # 스트리밍 데이터에서 content 추출 (fallback_tool_executor가 없는 경우)
                         if not fallback_tool_executor:
                             try:
-                                data_str = data.decode('utf-8') if isinstance(data, bytes) else str(data)
+                                data_str = (
+                                    data.decode("utf-8")
+                                    if isinstance(data, bytes)
+                                    else str(data)
+                                )
                                 if data_str.startswith("data: "):
                                     json_str = data_str[6:].strip()
                                     if json_str and json_str != "[DONE]":
@@ -3811,7 +4031,9 @@ async def process_chat_response(
                                             for choice in chunk["choices"]:
                                                 delta = choice.get("delta", {})
                                                 if "content" in delta:
-                                                    collected_content.append(delta["content"])
+                                                    collected_content.append(
+                                                        delta["content"]
+                                                    )
                             except Exception:
                                 pass
 
@@ -3822,16 +4044,20 @@ async def process_chat_response(
                     if remaining:
                         # Send remaining content as a final chunk
                         final_chunk = {
-                            "choices": [{
-                                "delta": {"content": remaining},
-                                "finish_reason": None,
-                                "index": 0
-                            }]
+                            "choices": [
+                                {
+                                    "delta": {"content": remaining},
+                                    "finish_reason": None,
+                                    "index": 0,
+                                }
+                            ]
                         }
                         yield f"data: {json.dumps(final_chunk)}\n\n"
                         collected_content.append(remaining)
                 except Exception as e:
-                    log.error(f"[MIDDLEWARE FALLBACK] Error flushing tool executor: {e}")
+                    log.error(
+                        f"[MIDDLEWARE FALLBACK] Error flushing tool executor: {e}"
+                    )
 
             # Flush any remaining tool events in queue after stream ends
             if tool_event_queue:
@@ -3840,15 +4066,21 @@ async def process_chat_response(
                         tool_event = tool_event_queue.get_nowait()
                         event_data = {
                             "type": tool_event.get("type"),
-                            "data": tool_event.get("data", {})
+                            "data": tool_event.get("data", {}),
                         }
                         yield wrap_item(json.dumps(event_data))
-                        log.info(f"[MIDDLEWARE FALLBACK] Flushed remaining tool event: {tool_event.get('type')}")
+                        log.info(
+                            f"[MIDDLEWARE FALLBACK] Flushed remaining tool event: {tool_event.get('type')}"
+                        )
                     except asyncio.QueueEmpty:
                         break
 
             # 스트리밍 완료 후 DB에 저장
-            if collected_content and metadata.get("chat_id") and metadata.get("message_id"):
+            if (
+                collected_content
+                and metadata.get("chat_id")
+                and metadata.get("message_id")
+            ):
                 if not metadata.get("chat_id", "").startswith("local:"):
                     full_content = "".join(collected_content)
                     try:
@@ -3860,7 +4092,9 @@ async def process_chat_response(
                         if metadata.get("chapter_id"):
                             message_data["chapter_id"] = metadata["chapter_id"]
                         if metadata.get("proficiency_level"):
-                            message_data["proficiency_level"] = metadata["proficiency_level"]
+                            message_data["proficiency_level"] = metadata[
+                                "proficiency_level"
+                            ]
                         if metadata.get("response_style"):
                             message_data["response_style"] = metadata["response_style"]
 

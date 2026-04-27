@@ -33,17 +33,17 @@ def upgrade():
         batch_op.add_column(
             sa.Column("proficiency_level_new", sa.Text(), nullable=True)
         )
-        batch_op.add_column(
-            sa.Column("response_style_new", sa.Text(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("response_style_new", sa.Text(), nullable=True))
 
     # Copy data from old columns to new columns (converting to string)
-    op.execute("""
+    op.execute(
+        """
         UPDATE chat
         SET proficiency_level_new = CAST(proficiency_level AS TEXT),
             response_style_new = CAST(response_style AS TEXT)
         WHERE proficiency_level IS NOT NULL OR response_style IS NOT NULL
-    """)
+    """
+    )
 
     with op.batch_alter_table("chat") as batch_op:
         # Drop old columns
@@ -52,13 +52,9 @@ def upgrade():
 
         # Rename new columns to original names
         batch_op.alter_column(
-            "proficiency_level_new",
-            new_column_name="proficiency_level"
+            "proficiency_level_new", new_column_name="proficiency_level"
         )
-        batch_op.alter_column(
-            "response_style_new",
-            new_column_name="response_style"
-        )
+        batch_op.alter_column("response_style_new", new_column_name="response_style")
 
 
 def downgrade():
@@ -78,7 +74,8 @@ def downgrade():
 
     # Copy data, attempting to convert strings to integers
     # Non-numeric strings will become NULL
-    op.execute("""
+    op.execute(
+        """
         UPDATE chat
         SET proficiency_level_new = CASE
                 WHEN proficiency_level GLOB '[0-9]*' THEN CAST(proficiency_level AS INTEGER)
@@ -89,7 +86,8 @@ def downgrade():
                 ELSE NULL
             END
         WHERE proficiency_level IS NOT NULL OR response_style IS NOT NULL
-    """)
+    """
+    )
 
     with op.batch_alter_table("chat") as batch_op:
         # Drop old columns
@@ -98,10 +96,6 @@ def downgrade():
 
         # Rename new columns to original names
         batch_op.alter_column(
-            "proficiency_level_new",
-            new_column_name="proficiency_level"
+            "proficiency_level_new", new_column_name="proficiency_level"
         )
-        batch_op.alter_column(
-            "response_style_new",
-            new_column_name="response_style"
-        )
+        batch_op.alter_column("response_style_new", new_column_name="response_style")

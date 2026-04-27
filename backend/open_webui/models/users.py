@@ -39,7 +39,9 @@ class User(Base):
 
     # Hanyang University specific fields
     department = Column(Text, nullable=True)  # 소속 (e.g., "에듀테크혁신팀")
-    user_status = Column(Text, nullable=True)  # 상세 신분 (e.g., "학사", "석사", "박사", "교수", "직원")
+    user_status = Column(
+        Text, nullable=True
+    )  # 상세 신분 (e.g., "학사", "석사", "박사", "교수", "직원")
 
     info = Column(JSONField, nullable=True)
     settings = Column(JSONField, nullable=True)

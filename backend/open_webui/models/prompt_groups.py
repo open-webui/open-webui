@@ -98,6 +98,7 @@ class PromptGroupWithPromptsResponse(PromptGroupModel):
 
 class PromptGroupListResponse(PromptGroupModel):
     """Response for list endpoint - includes prompts but excludes user"""
+
     prompts: list[PromptModel] = []
 
 
@@ -255,14 +256,14 @@ class PromptGroupMappingTable:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
-                return PromptGroupMappingModel.model_validate(result) if result else None
+                return (
+                    PromptGroupMappingModel.model_validate(result) if result else None
+                )
             except Exception as e:
                 print(f"Error adding prompt to group: {e}")
                 return None
 
-    def get_mappings_by_group_id(
-        self, group_id: str
-    ) -> list[PromptGroupMappingModel]:
+    def get_mappings_by_group_id(self, group_id: str) -> list[PromptGroupMappingModel]:
         """Get all prompt mappings for a group, ordered by order field"""
         try:
             with get_db() as db:

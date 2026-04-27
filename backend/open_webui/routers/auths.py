@@ -559,11 +559,14 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         )
 
     if user:
-        ph.identify(user.id, {
-            "name": user.name,
-            "email": user.email,
-            "role": user.role,
-        })
+        ph.identify(
+            user.id,
+            {
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+            },
+        )
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
@@ -660,11 +663,14 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         )
 
         if user:
-            ph.identify(user.id, {
-                "name": user.name,
-                "email": user.email,
-                "role": user.role,
-            })
+            ph.identify(
+                user.id,
+                {
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role,
+                },
+            )
 
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
             expires_at = None

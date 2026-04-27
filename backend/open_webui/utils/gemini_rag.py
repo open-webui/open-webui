@@ -33,14 +33,21 @@ def remove_additional_properties(schema: Dict[str, Any]) -> Dict[str, Any]:
     """
     if isinstance(schema, dict):
         # Remove additionalProperties key
-        schema = {k: v for k, v in schema.items() if k != 'additionalProperties'}
+        schema = {k: v for k, v in schema.items() if k != "additionalProperties"}
 
         # Recursively process nested schemas
         for key, value in schema.items():
             if isinstance(value, dict):
                 schema[key] = remove_additional_properties(value)
             elif isinstance(value, list):
-                schema[key] = [remove_additional_properties(item) if isinstance(item, dict) else item for item in value]
+                schema[key] = [
+                    (
+                        remove_additional_properties(item)
+                        if isinstance(item, dict)
+                        else item
+                    )
+                    for item in value
+                ]
 
     return schema
 
@@ -78,17 +85,10 @@ class GeminiRAGService:
                 config={"display_name": display_name}
             )
             log.info(f"Created store: {store.name} ({display_name})")
-            return {
-                "name": store.name,
-                "display_name": display_name,
-                "success": True
-            }
+            return {"name": store.name, "display_name": display_name, "success": True}
         except Exception as e:
             log.error(f"Failed to create store: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     def list_stores(self) -> List[Dict[str, Any]]:
         """
@@ -175,7 +175,9 @@ class GeminiRAGService:
                 return [
                     {
                         "name": doc.get("name", "Unknown"),
-                        "display_name": doc.get("displayName", doc.get("name", "Unknown")),
+                        "display_name": doc.get(
+                            "displayName", doc.get("name", "Unknown")
+                        ),
                         "create_time": doc.get("createTime"),
                         "update_time": doc.get("updateTime"),
                         "state": doc.get("state"),
@@ -185,7 +187,9 @@ class GeminiRAGService:
                     for doc in documents
                 ]
             else:
-                log.error(f"Failed to list files: {response.status_code} - {response.text}")
+                log.error(
+                    f"Failed to list files: {response.status_code} - {response.text}"
+                )
                 return []
         except Exception as e:
             log.error(f"Failed to list files in store {store_name}: {e}")
@@ -202,7 +206,7 @@ class GeminiRAGService:
         max_tokens_per_chunk: int = 400,
         max_overlap_tokens: int = 40,
         wait_for_completion: bool = True,
-        timeout_seconds: int = 300
+        timeout_seconds: int = 300,
     ) -> Dict[str, Any]:
         """
         파일을 Store에 업로드 (자동 청킹 및 임베딩)
@@ -226,20 +230,17 @@ class GeminiRAGService:
                     "chunking_config": {
                         "white_space_config": {
                             "max_tokens_per_chunk": max_tokens_per_chunk,
-                            "max_overlap_tokens": max_overlap_tokens
+                            "max_overlap_tokens": max_overlap_tokens,
                         }
                     }
-                }
+                },
             )
 
             if wait_for_completion:
                 start_time = time.time()
                 while not operation.done:
                     if time.time() - start_time > timeout_seconds:
-                        return {
-                            "success": False,
-                            "error": "Upload timeout"
-                        }
+                        return {"success": False, "error": "Upload timeout"}
                     time.sleep(5)
                     operation = self.client.operations.get(operation)
 
@@ -247,14 +248,11 @@ class GeminiRAGService:
             return {
                 "success": True,
                 "operation_name": operation.name,
-                "done": operation.done
+                "done": operation.done,
             }
         except Exception as e:
             log.error(f"Failed to upload file {file_path}: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     def upload_file_bytes(
         self,
@@ -264,7 +262,7 @@ class GeminiRAGService:
         max_tokens_per_chunk: int = 400,
         max_overlap_tokens: int = 40,
         wait_for_completion: bool = True,
-        timeout_seconds: int = 300
+        timeout_seconds: int = 300,
     ) -> Dict[str, Any]:
         """
         파일 바이트를 Store에 업로드
@@ -298,7 +296,7 @@ class GeminiRAGService:
                 max_tokens_per_chunk=max_tokens_per_chunk,
                 max_overlap_tokens=max_overlap_tokens,
                 wait_for_completion=wait_for_completion,
-                timeout_seconds=timeout_seconds
+                timeout_seconds=timeout_seconds,
             )
 
             # 임시 파일 삭제
@@ -307,10 +305,7 @@ class GeminiRAGService:
             return result
         except Exception as e:
             log.error(f"Failed to upload file bytes: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     # ============================================================
     # RAG 쿼리
@@ -329,7 +324,7 @@ class GeminiRAGService:
         response_schema: Optional[type] = None,
         disable_afc: bool = False,
         enable_hardcoded_tools: bool = False,
-        force_tool_use: bool = False
+        force_tool_use: bool = False,
     ) -> Dict[str, Any]:
         """
         RAG 쿼리 실행 (문서 검색 + 응답 생성)
@@ -376,7 +371,7 @@ class GeminiRAGService:
             else:
                 return {
                     "success": False,
-                    "error": "Either question or contents must be provided"
+                    "error": "Either question or contents must be provided",
                 }
 
             # Normalize store names to ensure they have the correct prefix
@@ -385,12 +380,14 @@ class GeminiRAGService:
                 for name in store_names:
                     if name and not name.startswith("fileSearchStores/"):
                         normalized_name = f"fileSearchStores/{name}"
-                        log.warning(f"[GEMINI RAG QUERY] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                        log.warning(
+                            f"[GEMINI RAG QUERY] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'"
+                        )
                         normalized_store_names.append(normalized_name)
                     else:
                         normalized_store_names.append(name)
 
-            log.info("="*80)
+            log.info("=" * 80)
             log.info("[GEMINI RAG QUERY] RAG 쿼리 시작")
             log.info(f"  질문/메시지: {log_preview}...")
             log.info(f"  대화 히스토리: {len(contents) if contents else 1} turns")
@@ -398,12 +395,16 @@ class GeminiRAGService:
             log.info(f"  Temperature: {temperature}")
             log.info(f"  원본 Store Names: {store_names}")
             log.info(f"  정규화된 Store Names: {normalized_store_names}")
-            log.info(f"  Store Names 길이: {len(normalized_store_names) if normalized_store_names else 0}")
+            log.info(
+                f"  Store Names 길이: {len(normalized_store_names) if normalized_store_names else 0}"
+            )
             if normalized_store_names:
                 for i, name in enumerate(normalized_store_names):
                     log.info(f"    [{i}] '{name}' (길이: {len(name) if name else 0})")
-            log.info(f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}")
-            log.info("="*80)
+            log.info(
+                f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}"
+            )
+            log.info("=" * 80)
 
             # Get or create GLOBAL cache for system prompt (multi-user safe)
             cached_content_name = None
@@ -412,13 +413,17 @@ class GeminiRAGService:
                     model_id=model,
                     system_prompt=system_instruction,
                     stage=cache_stage,
-                    cache_strategy=cache_strategy
+                    cache_strategy=cache_strategy,
                 )
                 if cached_content_name:
-                    log.info(f"[CACHE] ✅ Using global cache for {cache_stage} stage (strategy: {cache_strategy})")
+                    log.info(
+                        f"[CACHE] ✅ Using global cache for {cache_stage} stage (strategy: {cache_strategy})"
+                    )
                     log.info(f"[CACHE] Cache name: {cached_content_name}")
                 else:
-                    log.info(f"[CACHE] ⚠️  No cache used for {cache_stage} stage (strategy: {cache_strategy})")
+                    log.info(
+                        f"[CACHE] ⚠️  No cache used for {cache_stage} stage (strategy: {cache_strategy})"
+                    )
 
             # Build tools list (file_search + hardcoded tools via Native FC)
             # IMPORTANT: Store selection is per-request, NOT cached
@@ -437,9 +442,12 @@ class GeminiRAGService:
             # Add hardcoded tools via Native Function Calling
             if enable_hardcoded_tools:
                 from open_webui.utils.hardcoded_tools import create_tool_declarations
+
                 tool_declarations = create_tool_declarations()
                 tools.append(types.Tool(function_declarations=tool_declarations))
-                log.info(f"[NATIVE FC] Registered {len(tool_declarations)} hardcoded tools via Native FC")
+                log.info(
+                    f"[NATIVE FC] Registered {len(tool_declarations)} hardcoded tools via Native FC"
+                )
 
             # Create config with tools (if any)
             # Note: AFC and tool_config.mode="ANY" conflict, so we conditionally configure AFC
@@ -447,8 +455,8 @@ class GeminiRAGService:
                 temperature=temperature,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
                     disable=force_tool_use,  # Disable AFC when forcing tool use (they conflict)
-                    maximum_remote_calls=5   # Limit to 5 calls when AFC is enabled
-                )
+                    maximum_remote_calls=5,  # Limit to 5 calls when AFC is enabled
+                ),
             )
 
             # Add tools to config if any
@@ -462,18 +470,24 @@ class GeminiRAGService:
                             mode="ANY"  # Require model to call at least one function
                         )
                     )
-                    log.info("[FORCE TOOL USE] AFC disabled, FileSearch mode set to ANY (required)")
+                    log.info(
+                        "[FORCE TOOL USE] AFC disabled, FileSearch mode set to ANY (required)"
+                    )
 
             # Add response_schema if provided (for hardcoded tools)
             if response_schema:
                 config.response_mime_type = "application/json"
                 # Convert Pydantic model to JSON schema and remove additionalProperties
                 # (Gemini API doesn't support additionalProperties field)
-                if isinstance(response_schema, type) and issubclass(response_schema, BaseModel):
+                if isinstance(response_schema, type) and issubclass(
+                    response_schema, BaseModel
+                ):
                     json_schema = response_schema.model_json_schema()
                     json_schema = remove_additional_properties(json_schema)
                     config.response_schema = json_schema
-                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (cleaned)")
+                    log.info(
+                        f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (cleaned)"
+                    )
                 else:
                     config.response_schema = response_schema
                     log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema}")
@@ -482,14 +496,20 @@ class GeminiRAGService:
                 # For tools like graph generation: response_schema already constrains output, AFC is redundant and slows down
                 # For other tools: They may need AFC for RAG (file_search), so keep it enabled
                 if disable_afc:
-                    config.automatic_function_calling = types.AutomaticFunctionCallingConfig(disable=True)
-                    log.info("[OPTIMIZATION] AFC disabled for this tool (disable_afc=True, faster JSON generation)")
+                    config.automatic_function_calling = (
+                        types.AutomaticFunctionCallingConfig(disable=True)
+                    )
+                    log.info(
+                        "[OPTIMIZATION] AFC disabled for this tool (disable_afc=True, faster JSON generation)"
+                    )
 
             # Use cached content if available, otherwise use system_instruction
             # CRITICAL: When using cached_content, do NOT set system_instruction
             if cached_content_name:
                 config.cached_content = cached_content_name
-                log.info("[CACHE] Using cached system prompt (system_instruction NOT set)")
+                log.info(
+                    "[CACHE] Using cached system prompt (system_instruction NOT set)"
+                )
             elif system_instruction:
                 config.system_instruction = system_instruction
                 log.info("[CACHE] No cache, using system_instruction directly")
@@ -499,42 +519,43 @@ class GeminiRAGService:
             response = self.client.models.generate_content(
                 model=model,
                 contents=api_contents,  # Conversation history or single question (per-request, NOT cached)
-                config=config
+                config=config,
             )
             log.info("[GEMINI RAG QUERY] ✅ 응답 받음")
 
             # Process response (handles both text and function_call via Native FC)
             return self._process_response(response, model=model)
         except Exception as e:
-            log.error("="*80)
+            log.error("=" * 80)
             log.error(f"[GEMINI RAG QUERY] ❌ 에러 발생!")
             log.error(f"  에러 타입: {type(e).__name__}")
             log.error(f"  에러 메시지: {e}")
             log.error(f"  원본 store_names: {store_names}")
-            log.error(f"  정규화된 store_names: {normalized_store_names if 'normalized_store_names' in locals() else 'N/A'}")
-            log.error(f"  질문: {question[:100] if question else 'N/A (using contents)'}...")
-            log.error("="*80)
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            log.error(
+                f"  정규화된 store_names: {normalized_store_names if 'normalized_store_names' in locals() else 'N/A'}"
+            )
+            log.error(
+                f"  질문: {question[:100] if question else 'N/A (using contents)'}..."
+            )
+            log.error("=" * 80)
+            return {"success": False, "error": str(e)}
 
     def _extract_citations(self, response) -> List[Dict]:
         """Extract citations from response grounding_metadata."""
         citations = []
         if hasattr(response, "grounding_metadata") and response.grounding_metadata:
             for citation in getattr(response.grounding_metadata, "citations", []):
-                citations.append({
-                    "source": getattr(citation, "source", "Unknown"),
-                    "start_index": getattr(citation, "start_index", None),
-                    "end_index": getattr(citation, "end_index", None)
-                })
+                citations.append(
+                    {
+                        "source": getattr(citation, "source", "Unknown"),
+                        "start_index": getattr(citation, "start_index", None),
+                        "end_index": getattr(citation, "end_index", None),
+                    }
+                )
         return citations
 
     def _process_response(
-        self,
-        response,
-        model: str = "gemini-2.5-flash"
+        self, response, model: str = "gemini-2.5-flash"
     ) -> Dict[str, Any]:
         """
         Process Gemini response, handling both text and function_call (Native FC).
@@ -563,25 +584,29 @@ class GeminiRAGService:
             }
         """
         # Check for function_call in response parts
-        if hasattr(response, 'candidates') and response.candidates:
+        if hasattr(response, "candidates") and response.candidates:
             for candidate in response.candidates:
-                if hasattr(candidate, 'content') and candidate.content:
-                    if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                if hasattr(candidate, "content") and candidate.content:
+                    if hasattr(candidate.content, "parts") and candidate.content.parts:
                         for part in candidate.content.parts:
                             # Check if this part is a function_call
-                            if hasattr(part, 'function_call') and part.function_call:
+                            if hasattr(part, "function_call") and part.function_call:
                                 fc = part.function_call
-                                log.info(f"[NATIVE FC] Function call detected: {fc.name}")
+                                log.info(
+                                    f"[NATIVE FC] Function call detected: {fc.name}"
+                                )
                                 log.info(f"[NATIVE FC] Arguments: {fc.args}")
 
                                 return {
                                     "success": True,
                                     "function_call": {
                                         "name": fc.name,
-                                        "arguments": dict(fc.args)  # Convert to regular dict
+                                        "arguments": dict(
+                                            fc.args
+                                        ),  # Convert to regular dict
                                     },
                                     "requires_tool_execution": True,
-                                    "model": model
+                                    "model": model,
                                 }
 
         # No function_call found, return text response
@@ -594,7 +619,7 @@ class GeminiRAGService:
             usage_dict = {
                 "prompt_tokens": getattr(usage, "prompt_token_count", 0),
                 "completion_tokens": getattr(usage, "candidates_token_count", 0),
-                "total_tokens": getattr(usage, "total_token_count", 0)
+                "total_tokens": getattr(usage, "total_token_count", 0),
             }
 
         return {
@@ -602,7 +627,7 @@ class GeminiRAGService:
             "text": response.text,
             "citations": citations,
             "usage": usage_dict,
-            "model": model
+            "model": model,
         }
 
     async def query_stream(
@@ -617,7 +642,7 @@ class GeminiRAGService:
         response_schema: Optional[type] = None,
         disable_afc: bool = False,
         enable_hardcoded_tools: bool = False,
-        force_tool_use: bool = False
+        force_tool_use: bool = False,
     ):
         """
         RAG 쿼리 실행 (스트리밍 모드)
@@ -669,34 +694,40 @@ class GeminiRAGService:
                 for name in store_names:
                     if name and not name.startswith("fileSearchStores/"):
                         normalized_name = f"fileSearchStores/{name}"
-                        log.warning(f"[GEMINI RAG STREAM] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                        log.warning(
+                            f"[GEMINI RAG STREAM] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'"
+                        )
                         normalized_store_names.append(normalized_name)
                     else:
                         normalized_store_names.append(name)
 
-            log.info("="*80)
+            log.info("=" * 80)
             log.info("[GEMINI RAG STREAM] RAG 스트리밍 쿼리 시작")
             log.info(f"  질문/메시지: {log_preview}...")
             log.info(f"  대화 히스토리: {len(contents) if contents else 1} turns")
             log.info(f"  모델: {model}")
             log.info(f"  Temperature: {temperature}")
             log.info(f"  정규화된 Store Names: {normalized_store_names}")
-            log.info(f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}")
-            log.info("="*80)
+            log.info(
+                f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}"
+            )
+            log.info("=" * 80)
 
             # Get or create GLOBAL cache for system prompt
             cached_content_name = None
             if cache_stage and system_instruction:
                 cached_content_name = self.cache_manager.get_or_create_cache(
-                    model_id=model,
-                    system_prompt=system_instruction,
-                    stage=cache_stage
+                    model_id=model, system_prompt=system_instruction, stage=cache_stage
                 )
                 if cached_content_name:
-                    log.info(f"[CACHE] ✅ Using global cache for {cache_stage} stage (streaming)")
+                    log.info(
+                        f"[CACHE] ✅ Using global cache for {cache_stage} stage (streaming)"
+                    )
                     log.info(f"[CACHE] Cache name: {cached_content_name}")
                 else:
-                    log.warning(f"[CACHE] ⚠️  Cache creation failed for {cache_stage} stage, fallback to non-cached")
+                    log.warning(
+                        f"[CACHE] ⚠️  Cache creation failed for {cache_stage} stage, fallback to non-cached"
+                    )
 
             # Build tools list (file_search + hardcoded tools via Native FC)
             tools = []
@@ -714,9 +745,12 @@ class GeminiRAGService:
             # Add hardcoded tools via Native Function Calling
             if enable_hardcoded_tools:
                 from open_webui.utils.hardcoded_tools import create_tool_declarations
+
                 tool_declarations = create_tool_declarations()
                 tools.append(types.Tool(function_declarations=tool_declarations))
-                log.info(f"[NATIVE FC] Registered {len(tool_declarations)} hardcoded tools via Native FC (streaming)")
+                log.info(
+                    f"[NATIVE FC] Registered {len(tool_declarations)} hardcoded tools via Native FC (streaming)"
+                )
 
             # Create config with tools
             # Note: AFC and tool_config.mode="ANY" conflict, so we conditionally configure AFC
@@ -724,8 +758,8 @@ class GeminiRAGService:
                 temperature=temperature,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
                     disable=force_tool_use,  # Disable AFC when forcing tool use (they conflict)
-                    maximum_remote_calls=5   # Limit to 5 calls when AFC is enabled
-                )
+                    maximum_remote_calls=5,  # Limit to 5 calls when AFC is enabled
+                ),
             )
 
             # Add tools to config if any
@@ -739,33 +773,47 @@ class GeminiRAGService:
                             mode="ANY"  # Require model to call at least one function
                         )
                     )
-                    log.info("[FORCE TOOL USE] AFC disabled, FileSearch mode set to ANY (required) - streaming")
+                    log.info(
+                        "[FORCE TOOL USE] AFC disabled, FileSearch mode set to ANY (required) - streaming"
+                    )
 
             # Add response_schema if provided (for hardcoded tools)
             if response_schema:
                 config.response_mime_type = "application/json"
                 # Convert Pydantic model to JSON schema and remove additionalProperties
                 # (Gemini API doesn't support additionalProperties field)
-                if isinstance(response_schema, type) and issubclass(response_schema, BaseModel):
+                if isinstance(response_schema, type) and issubclass(
+                    response_schema, BaseModel
+                ):
                     json_schema = response_schema.model_json_schema()
                     json_schema = remove_additional_properties(json_schema)
                     config.response_schema = json_schema
-                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (streaming, cleaned)")
+                    log.info(
+                        f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (streaming, cleaned)"
+                    )
                 else:
                     config.response_schema = response_schema
-                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema} (streaming)")
+                    log.info(
+                        f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema} (streaming)"
+                    )
 
                 # OPTIMIZATION: Disable AFC if tool specifically requests it (e.g., graph generation)
                 # For tools like graph generation: response_schema already constrains output, AFC is redundant and slows down
                 # For other tools: They may need AFC for RAG (file_search), so keep it enabled
                 if disable_afc:
-                    config.automatic_function_calling = types.AutomaticFunctionCallingConfig(disable=True)
-                    log.info("[OPTIMIZATION] AFC disabled for this tool (disable_afc=True, faster JSON generation - streaming)")
+                    config.automatic_function_calling = (
+                        types.AutomaticFunctionCallingConfig(disable=True)
+                    )
+                    log.info(
+                        "[OPTIMIZATION] AFC disabled for this tool (disable_afc=True, faster JSON generation - streaming)"
+                    )
 
             # Use cached content if available
             if cached_content_name:
                 config.cached_content = cached_content_name
-                log.info("[CACHE] Using cached system prompt (system_instruction NOT set)")
+                log.info(
+                    "[CACHE] Using cached system prompt (system_instruction NOT set)"
+                )
             elif system_instruction:
                 config.system_instruction = system_instruction
                 log.info("[CACHE] No cache, using system_instruction directly")
@@ -777,14 +825,14 @@ class GeminiRAGService:
             stream = self.client.models.generate_content_stream(
                 model=model,
                 contents=api_contents,  # Conversation history or single question (per-request, NOT cached)
-                config=config
+                config=config,
             )
 
             # Stream chunks
             # Use 'for' (not 'async for') since Gemini SDK returns sync generator
             final_response = None
             for chunk in stream:
-                if hasattr(chunk, 'text') and chunk.text:
+                if hasattr(chunk, "text") and chunk.text:
                     yield chunk.text
                 # Keep track of the last chunk which contains the final response
                 final_response = chunk
@@ -793,14 +841,24 @@ class GeminiRAGService:
 
             # Extract citations from final response (after streaming completes)
             citations = []
-            if final_response and hasattr(final_response, "grounding_metadata") and final_response.grounding_metadata:
-                for citation in getattr(final_response.grounding_metadata, "citations", []):
-                    citations.append({
-                        "source": getattr(citation, "source", "Unknown"),
-                        "start_index": getattr(citation, "start_index", None),
-                        "end_index": getattr(citation, "end_index", None)
-                    })
-                log.info(f"[GEMINI RAG STREAM] Extracted {len(citations)} citations from final response")
+            if (
+                final_response
+                and hasattr(final_response, "grounding_metadata")
+                and final_response.grounding_metadata
+            ):
+                for citation in getattr(
+                    final_response.grounding_metadata, "citations", []
+                ):
+                    citations.append(
+                        {
+                            "source": getattr(citation, "source", "Unknown"),
+                            "start_index": getattr(citation, "start_index", None),
+                            "end_index": getattr(citation, "end_index", None),
+                        }
+                    )
+                log.info(
+                    f"[GEMINI RAG STREAM] Extracted {len(citations)} citations from final response"
+                )
             else:
                 log.info("[GEMINI RAG STREAM] No citations found in final response")
 
@@ -815,19 +873,21 @@ class GeminiRAGService:
                 usage_dict = {
                     "prompt_tokens": getattr(usage, "prompt_token_count", 0),
                     "completion_tokens": getattr(usage, "candidates_token_count", 0),
-                    "total_tokens": getattr(usage, "total_token_count", 0)
+                    "total_tokens": getattr(usage, "total_token_count", 0),
                 }
                 log.info(f"[GEMINI RAG STREAM] Usage: {usage_dict}")
                 # Yield usage as a special marker
                 yield f"\n__USAGE__:{json.dumps(usage_dict)}"
 
         except Exception as e:
-            log.error("="*80)
+            log.error("=" * 80)
             log.error(f"[GEMINI RAG STREAM] ❌ 에러 발생!")
             log.error(f"  에러 타입: {type(e).__name__}")
             log.error(f"  에러 메시지: {e}")
-            log.error(f"  질문: {question[:100] if question else 'N/A (using contents)'}...")
-            log.error("="*80)
+            log.error(
+                f"  질문: {question[:100] if question else 'N/A (using contents)'}..."
+            )
+            log.error("=" * 80)
             yield f"Error: {str(e)}"
 
     def generate_with_rag(
@@ -836,7 +896,7 @@ class GeminiRAGService:
         store_names: List[str],
         model: str = "gemini-2.5-flash",
         temperature: float = 0.7,
-        system_instruction: Optional[str] = None
+        system_instruction: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         대화 컨텍스트와 함께 RAG 응답 생성
@@ -857,7 +917,9 @@ class GeminiRAGService:
             for name in store_names:
                 if name and not name.startswith("fileSearchStores/"):
                     normalized_name = f"fileSearchStores/{name}"
-                    log.warning(f"[GEMINI RAG] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                    log.warning(
+                        f"[GEMINI RAG] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'"
+                    )
                     normalized_store_names.append(normalized_name)
                 else:
                     normalized_store_names.append(name)
@@ -867,10 +929,7 @@ class GeminiRAGService:
             for msg in messages:
                 role = "user" if msg["role"] == "user" else "model"
                 contents.append(
-                    types.Content(
-                        role=role,
-                        parts=[types.Part(text=msg["content"])]
-                    )
+                    types.Content(role=role, parts=[types.Part(text=msg["content"])])
                 )
 
             # Only include tools if there are store names to search
@@ -885,51 +944,48 @@ class GeminiRAGService:
                     ],
                     temperature=temperature,
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                        disable=False,          # Enable automatic function calling
-                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
-                    )
+                        disable=False,  # Enable automatic function calling
+                        maximum_remote_calls=5,  # Limit to 5 calls (default is 10)
+                    ),
                 )
             else:
                 # No RAG - simple text generation
                 config = types.GenerateContentConfig(
                     temperature=temperature,
                     automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                        disable=False,          # Enable automatic function calling
-                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
-                    )
+                        disable=False,  # Enable automatic function calling
+                        maximum_remote_calls=5,  # Limit to 5 calls (default is 10)
+                    ),
                 )
 
             if system_instruction:
                 config.system_instruction = system_instruction
 
             response = self.client.models.generate_content(
-                model=model,
-                contents=contents,
-                config=config
+                model=model, contents=contents, config=config
             )
 
             # 출처 정보 추출
             citations = []
             if hasattr(response, "grounding_metadata") and response.grounding_metadata:
                 for citation in getattr(response.grounding_metadata, "citations", []):
-                    citations.append({
-                        "source": getattr(citation, "source", "Unknown"),
-                        "start_index": getattr(citation, "start_index", None),
-                        "end_index": getattr(citation, "end_index", None)
-                    })
+                    citations.append(
+                        {
+                            "source": getattr(citation, "source", "Unknown"),
+                            "start_index": getattr(citation, "start_index", None),
+                            "end_index": getattr(citation, "end_index", None),
+                        }
+                    )
 
             return {
                 "success": True,
                 "text": response.text,
                 "citations": citations,
-                "model": model
+                "model": model,
             }
         except Exception as e:
             log.error(f"Failed to generate with RAG: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
 
 # ============================================================

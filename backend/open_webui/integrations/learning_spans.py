@@ -84,6 +84,7 @@ SPAN_T4_LOG_API_CALL = "log_api_call"
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _safe(fn):
     """Decorator: swallow exceptions so instrumentation never breaks the request."""
 
@@ -110,9 +111,15 @@ class _SpanCtx:
     def set_output(self, output: Any) -> None:
         self._output = output
 
-    def end(self, output: Any = None, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def end(
+        self, output: Any = None, metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
         if self._tracer and self._span is not None:
-            self._tracer.end_span(self._span, output=output if output is not None else self._output, metadata=metadata)
+            self._tracer.end_span(
+                self._span,
+                output=output if output is not None else self._output,
+                metadata=metadata,
+            )
         self._span = None
 
     def __enter__(self) -> "_SpanCtx":
@@ -175,7 +182,9 @@ class LearningSpanEmitter:
     ):
         if self.tracer is None:
             return None
-        return self.tracer.start_span(self._parent(), name=name, input=input, metadata=self._meta(meta))
+        return self.tracer.start_span(
+            self._parent(), name=name, input=input, metadata=self._meta(meta)
+        )
 
     def _emit(
         self,
@@ -200,12 +209,16 @@ class LearningSpanEmitter:
         if not fields or self.tracer is None:
             return
         meta = self._meta({"_kind": "tag", **fields})
-        self._emit(name="tag:" + ",".join(f"{k}={v}" for k, v in fields.items()), meta=meta)
+        self._emit(
+            name="tag:" + ",".join(f"{k}={v}" for k, v in fields.items()), meta=meta
+        )
 
     # ── Base / shared (T1#1~4, T2#1~6, T3#1~6, T4#1~2) ─────────────────────
 
     @_safe
-    def input_classification(self, intent_class: str, latency_ms: Optional[float] = None) -> None:
+    def input_classification(
+        self, intent_class: str, latency_ms: Optional[float] = None
+    ) -> None:
         """T1#2 / T2#2 / T3#2 — Base input classification (low/high)."""
         self._emit(
             name=SPAN_INPUT_CLASSIFICATION,
@@ -252,7 +265,9 @@ class LearningSpanEmitter:
     @_safe
     def followup(self, kind: str, within_session: bool = True) -> None:
         """T1#14 / T2#20 / T3#16 — user follow-up signal (post-hoc)."""
-        self._tag(followup_within_session=str(within_session).lower(), followup_kind=kind)
+        self._tag(
+            followup_within_session=str(within_session).lower(), followup_kind=kind
+        )
 
     # ── Type 1: Concept (#5~10, #13) ───────────────────────────────────────
 
@@ -384,7 +399,10 @@ class LearningSpanEmitter:
         """T2#4 — Case 1 (mechanical) vs Case 2 (deep-thinking) self-classification."""
         self._emit(
             name=SPAN_T2_PROBLEM_CLASSIFICATION,
-            output={"case": case, "classification_confidence": classification_confidence},
+            output={
+                "case": case,
+                "classification_confidence": classification_confidence,
+            },
         )
 
     @_safe
@@ -431,7 +449,10 @@ class LearningSpanEmitter:
         """T2#9 — Case 2 mid-goal."""
         self._emit(
             name=SPAN_T2_STEP2_MIDGOAL,
-            output={"midgoal_count": midgoal_count, "midgoal_concrete": midgoal_concrete},
+            output={
+                "midgoal_count": midgoal_count,
+                "midgoal_concrete": midgoal_concrete,
+            },
         )
 
     @_safe
@@ -494,7 +515,9 @@ class LearningSpanEmitter:
         )
 
     @_safe
-    def t2_multi_solution(self, multi: bool, conditions_specified: bool = False) -> None:
+    def t2_multi_solution(
+        self, multi: bool, conditions_specified: bool = False
+    ) -> None:
         """T2#15 — multi-solution branch (R6)."""
         self._tag(
             multi_solution=str(multi).lower(),
@@ -637,7 +660,9 @@ class LearningSpanEmitter:
         )
 
     @_safe
-    def t3_nonstandard(self, accepted: bool, comparison_with_standard: bool = False) -> None:
+    def t3_nonstandard(
+        self, accepted: bool, comparison_with_standard: bool = False
+    ) -> None:
         """T3#11 — non-standard acceptance tag (R6)."""
         self._tag(
             nonstandard_accepted=str(accepted).lower(),
@@ -700,7 +725,9 @@ class LearningSpanEmitter:
         self._tag(
             retry_attempt_score=retry_attempt_score,
             retry_within_n_turns=retry_within_n_turns,
-            gap_persisted=str(gap_persisted).lower() if gap_persisted is not None else "n/a",
+            gap_persisted=(
+                str(gap_persisted).lower() if gap_persisted is not None else "n/a"
+            ),
         )
 
     # ── Type 4: Session (loop-scoped) ──────────────────────────────────────
@@ -919,6 +946,7 @@ def build_emitter(
     """Construct an emitter using the singleton tracer (None-safe)."""
     try:
         from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+
         tracer = get_langfuse_tracer()
     except Exception:
         tracer = None

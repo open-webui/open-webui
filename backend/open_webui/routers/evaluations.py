@@ -170,9 +170,7 @@ async def upsert_message_feedback(
     # rating이 None이면 피드백 삭제
     if form_data.rating is None:
         if existing:
-            success = Feedbacks.delete_feedback_by_id_and_user_id(
-                existing.id, user.id
-            )
+            success = Feedbacks.delete_feedback_by_id_and_user_id(existing.id, user.id)
             if not success:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

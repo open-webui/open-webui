@@ -15,7 +15,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.utils.hardcoded_tools import (
     get_hardcoded_tools,
     get_hardcoded_tool_by_command,
-    is_hardcoded_tool
+    is_hardcoded_tool,
 )
 
 log = logging.getLogger(__name__)
@@ -28,10 +28,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[PromptModel])
-async def get_prompts(
-    user=Depends(get_verified_user),
-    include_hardcoded: bool = True
-):
+async def get_prompts(user=Depends(get_verified_user), include_hardcoded: bool = True):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts()
     else:
@@ -55,7 +52,7 @@ async def get_prompts(
                     persona_value=None,
                     tool_description=tool.description,
                     tool_priority=0,
-                    validation_rules=None
+                    validation_rules=None,
                 )
             )
 
@@ -64,8 +61,7 @@ async def get_prompts(
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(
-    user=Depends(get_verified_user),
-    include_hardcoded: bool = True
+    user=Depends(get_verified_user), include_hardcoded: bool = True
 ):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts()
@@ -75,7 +71,9 @@ async def get_prompt_list(
     # Add hardcoded tools to the list
     if include_hardcoded:
         hardcoded_tools = get_hardcoded_tools()
-        log.info(f"[PROMPTS API] Adding {len(hardcoded_tools)} hardcoded tools to prompts list")
+        log.info(
+            f"[PROMPTS API] Adding {len(hardcoded_tools)} hardcoded tools to prompts list"
+        )
 
         for tool in hardcoded_tools:
             # Convert HardcodedToolMetadata to PromptUserResponse format
@@ -93,7 +91,7 @@ async def get_prompt_list(
                     tool_description=tool.description,
                     tool_priority=0,
                     validation_rules=None,
-                    user=None  # No user info for hardcoded tools
+                    user=None,  # No user info for hardcoded tools
                 )
             )
 
@@ -126,7 +124,7 @@ async def get_hardcoded_tools_list(user=Depends(get_verified_user)):
                 tool_description=tool.description,
                 tool_priority=0,
                 validation_rules=None,
-                user=None
+                user=None,
             )
         )
 
@@ -139,10 +137,7 @@ async def get_hardcoded_tools_list(user=Depends(get_verified_user)):
 
 
 @router.get("/by-type/{prompt_type}", response_model=list[PromptModel])
-async def get_prompts_by_type(
-    prompt_type: str,
-    user=Depends(get_verified_user)
-):
+async def get_prompts_by_type(prompt_type: str, user=Depends(get_verified_user)):
     """Get all prompts of a specific type (base, proficiency, style)"""
     prompts = Prompts.get_prompts_by_type(prompt_type)
 
@@ -161,15 +156,14 @@ async def get_prompts_by_type(
 
 @router.get("/by-persona", response_model=list[PromptModel])
 async def get_prompts_by_persona(
-    prompt_type: str,
-    persona_value: str,
-    user=Depends(get_verified_user)
+    prompt_type: str, persona_value: str, user=Depends(get_verified_user)
 ):
     """Get prompts matching both type and persona value"""
     prompts = Prompts.get_prompts_by_persona(prompt_type, persona_value)
 
     # Filter by access control
     from open_webui.models.groups import Groups
+
     user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
     accessible_prompts = [
         prompt
@@ -249,7 +243,7 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
                 persona_value=None,
                 tool_description=tool.description,
                 tool_priority=0,
-                validation_rules=None
+                validation_rules=None,
             )
 
     # Check DB prompts
@@ -361,7 +355,7 @@ async def get_prompt_versions(command: str, user=Depends(get_admin_user)):
     if not adapter:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Langfuse not configured or disabled"
+            detail="Langfuse not configured or disabled",
         )
 
     try:
@@ -375,15 +369,13 @@ async def get_prompt_versions(command: str, user=Depends(get_admin_user)):
         log.error(f"Failed to fetch versions for {command}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch versions: {str(e)}"
+            detail=f"Failed to fetch versions: {str(e)}",
         )
 
 
 @router.post("/command/{command}/rollback/{version}", response_model=bool)
 async def rollback_prompt_version(
-    command: str,
-    version: int,
-    user=Depends(get_admin_user)
+    command: str, version: int, user=Depends(get_admin_user)
 ):
     """
     Rollback a prompt to a specific Langfuse version.
@@ -398,18 +390,20 @@ async def rollback_prompt_version(
     if not adapter:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Langfuse not configured or disabled"
+            detail="Langfuse not configured or disabled",
         )
 
     # Normalize command: ensure it starts with /
     normalized_command = f"/{command.lstrip('/')}"
 
     # Fetch specific version from Langfuse
-    prompt_content = adapter.fetch_prompt_from_langfuse(normalized_command, version=version)
+    prompt_content = adapter.fetch_prompt_from_langfuse(
+        normalized_command, version=version
+    )
     if not prompt_content:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Version {version} not found in Langfuse"
+            detail=f"Version {version} not found in Langfuse",
         )
 
     # Get current prompt from local DB
@@ -417,7 +411,7 @@ async def rollback_prompt_version(
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Prompt {normalized_command} not found in local database"
+            detail=f"Prompt {normalized_command} not found in local database",
         )
 
     # Update local DB with rollback content
@@ -435,12 +429,14 @@ async def rollback_prompt_version(
 
     updated = Prompts.update_prompt_by_command(normalized_command, form_data)
     if updated:
-        log.info(f"[LANGFUSE] Rolled back prompt {normalized_command} to version {version}")
+        log.info(
+            f"[LANGFUSE] Rolled back prompt {normalized_command} to version {version}"
+        )
         return True
     else:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update prompt in local database"
+            detail="Failed to update prompt in local database",
         )
 
 
@@ -482,7 +478,7 @@ async def get_prompt_group_usage(
     if not adapter:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Langfuse not configured or disabled"
+            detail="Langfuse not configured or disabled",
         )
 
     try:
@@ -499,14 +495,18 @@ async def get_prompt_group_usage(
         )
 
         mode = "summary" if summary else "detailed"
-        log.info(f"[LANGFUSE] Fetched {mode} usage stats for prompt group: {group_id} (offset={offset}, limit={limit})")
+        log.info(
+            f"[LANGFUSE] Fetched {mode} usage stats for prompt group: {group_id} (offset={offset}, limit={limit})"
+        )
 
         return result
     except Exception as e:
-        log.error(f"Failed to fetch usage stats for group {group_id}: {e}", exc_info=True)
+        log.error(
+            f"Failed to fetch usage stats for group {group_id}: {e}", exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch usage statistics: {str(e)}"
+            detail=f"Failed to fetch usage statistics: {str(e)}",
         )
 
 
@@ -529,7 +529,7 @@ async def migrate_prompts_to_langfuse(user=Depends(get_admin_user)):
     if not adapter:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Langfuse not configured or disabled"
+            detail="Langfuse not configured or disabled",
         )
 
     try:
@@ -540,7 +540,9 @@ async def migrate_prompts_to_langfuse(user=Depends(get_admin_user)):
         failed = 0
         errors = []
 
-        log.info(f"[LANGFUSE MIGRATION] Starting migration of {len(all_prompts)} prompts...")
+        log.info(
+            f"[LANGFUSE MIGRATION] Starting migration of {len(all_prompts)} prompts..."
+        )
 
         for prompt in all_prompts:
             try:
@@ -559,17 +561,19 @@ async def migrate_prompts_to_langfuse(user=Depends(get_admin_user)):
                 errors.append(error_msg)
                 log.error(f"[LANGFUSE MIGRATION] ✗ Error: {error_msg}")
 
-        log.info(f"[LANGFUSE MIGRATION] Migration complete: {synced} synced, {failed} failed")
+        log.info(
+            f"[LANGFUSE MIGRATION] Migration complete: {synced} synced, {failed} failed"
+        )
 
         return {
             "total": len(all_prompts),
             "synced": synced,
             "failed": failed,
-            "errors": errors[:10]  # Return first 10 errors only
+            "errors": errors[:10],  # Return first 10 errors only
         }
     except Exception as e:
         log.error(f"[LANGFUSE MIGRATION] Migration failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Migration failed: {str(e)}"
+            detail=f"Migration failed: {str(e)}",
         )

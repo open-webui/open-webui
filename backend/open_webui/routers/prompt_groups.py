@@ -44,15 +44,19 @@ async def get_available_personas(user=Depends(get_verified_user)):
     tool_prompts = Prompts.get_all_tool_prompts()
 
     # Extract unique persona values
-    proficiency_levels = sorted(list(set(
-        p.persona_value for p in proficiency_prompts
-        if p.persona_value is not None
-    )))
+    proficiency_levels = sorted(
+        list(
+            set(
+                p.persona_value
+                for p in proficiency_prompts
+                if p.persona_value is not None
+            )
+        )
+    )
 
-    response_styles = sorted(list(set(
-        p.persona_value for p in style_prompts
-        if p.persona_value is not None
-    )))
+    response_styles = sorted(
+        list(set(p.persona_value for p in style_prompts if p.persona_value is not None))
+    )
 
     # Get prompt details for each persona value
     proficiency_details = [
@@ -62,7 +66,7 @@ async def get_available_personas(user=Depends(get_verified_user)):
                 {"command": p.command, "title": p.title}
                 for p in proficiency_prompts
                 if p.persona_value == value
-            ]
+            ],
         }
         for value in proficiency_levels
     ]
@@ -74,7 +78,7 @@ async def get_available_personas(user=Depends(get_verified_user)):
                 {"command": p.command, "title": p.title}
                 for p in style_prompts
                 if p.persona_value == value
-            ]
+            ],
         }
         for value in response_styles
     ]
@@ -100,10 +104,7 @@ async def get_available_personas(user=Depends(get_verified_user)):
 
 
 @router.get("/{group_id}/personas/available", response_model=dict)
-async def get_group_available_personas(
-    group_id: str,
-    user=Depends(get_verified_user)
-):
+async def get_group_available_personas(group_id: str, user=Depends(get_verified_user)):
     """
     Get available persona values for a specific group.
     Shows only the proficiency levels, response styles, and tools configured in this group.
@@ -133,18 +134,24 @@ async def get_group_available_personas(
     # Filter by type
     proficiency_prompts = [p for p in prompts if p.prompt_type == "proficiency"]
     style_prompts = [p for p in prompts if p.prompt_type == "style"]
-    tool_prompts = [p for p in prompts if p.prompt_type in ("basic_tool", "json_tool", "tool")]
+    tool_prompts = [
+        p for p in prompts if p.prompt_type in ("basic_tool", "json_tool", "tool")
+    ]
 
     # Extract unique persona values
-    proficiency_levels = sorted(list(set(
-        p.persona_value for p in proficiency_prompts
-        if p.persona_value is not None
-    )))
+    proficiency_levels = sorted(
+        list(
+            set(
+                p.persona_value
+                for p in proficiency_prompts
+                if p.persona_value is not None
+            )
+        )
+    )
 
-    response_styles = sorted(list(set(
-        p.persona_value for p in style_prompts
-        if p.persona_value is not None
-    )))
+    response_styles = sorted(
+        list(set(p.persona_value for p in style_prompts if p.persona_value is not None))
+    )
 
     # Get details
     proficiency_details = [
@@ -154,7 +161,7 @@ async def get_group_available_personas(
                 {"command": p.command, "title": p.title}
                 for p in proficiency_prompts
                 if p.persona_value == value
-            ]
+            ],
         }
         for value in proficiency_levels
     ]
@@ -166,7 +173,7 @@ async def get_group_available_personas(
                 {"command": p.command, "title": p.title}
                 for p in style_prompts
                 if p.persona_value == value
-            ]
+            ],
         }
         for value in response_styles
     ]
@@ -431,7 +438,9 @@ async def delete_prompt_group(
 ############################
 
 
-@router.post("/{group_id}/prompts/add", response_model=Optional[PromptGroupMappingModel])
+@router.post(
+    "/{group_id}/prompts/add", response_model=Optional[PromptGroupMappingModel]
+)
 async def add_prompt_to_group(
     group_id: str,
     form_data: PromptGroupMappingForm,
@@ -598,7 +607,11 @@ async def preview_composed_prompt(
 
     # Now returns (composed_prompt, tool_prompts)
     # Convert proficiency_level to string if provided
-    proficiency_str = str(form_data.proficiency_level) if form_data.proficiency_level is not None else None
+    proficiency_str = (
+        str(form_data.proficiency_level)
+        if form_data.proficiency_level is not None
+        else None
+    )
     composed, tool_prompts = compose_prompts_from_group(
         group_id,
         proficiency_str,

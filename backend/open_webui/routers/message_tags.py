@@ -11,7 +11,11 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_admin_user, get_verified_user, get_admin_or_professor_user
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_verified_user,
+    get_admin_or_professor_user,
+)
 from open_webui.models.message_tags import (
     MessageTags,
     MessageTagDefinitions,
@@ -37,6 +41,7 @@ router = APIRouter()
 # Request/Response Models
 # ============================================================
 
+
 class DaemonConfigUpdateRequest(BaseModel):
     enabled: Optional[bool] = None
     schedule: Optional[str] = None  # "daily" | "weekly"
@@ -49,7 +54,9 @@ class DaemonConfigUpdateRequest(BaseModel):
     custom_system_instruction: Optional[str] = None  # Custom system instruction
     blacklisted_tags: Optional[List[str]] = None  # Tags that should never be created
     rag_store_names: Optional[List[str]] = None  # RAG store names for context
-    enable_rag_chapter_detection: Optional[bool] = None  # Enable RAG-based chapter detection
+    enable_rag_chapter_detection: Optional[bool] = (
+        None  # Enable RAG-based chapter detection
+    )
 
 
 class BlacklistUpdateRequest(BaseModel):
@@ -93,6 +100,7 @@ class TagStatsResponse(BaseModel):
 
 class DaemonProgressResponse(BaseModel):
     """Daemon execution progress."""
+
     is_running: bool
     status: str  # idle, collecting, processing, consolidating, completed, error
     started_at: Optional[int] = None
@@ -106,6 +114,7 @@ class DaemonProgressResponse(BaseModel):
 
 class TagWithChapterResponse(BaseModel):
     """Tag definition with chapter information."""
+
     id: str
     name: str
     usage_count: int = 0
@@ -119,6 +128,7 @@ class TagWithChapterResponse(BaseModel):
 
 class TagMessageDetail(BaseModel):
     """Detail of a message associated with a tag."""
+
     message_id: str
     chat_id: str
     user_id: str
@@ -129,6 +139,7 @@ class TagMessageDetail(BaseModel):
 
 class TagMessagesStatsResponse(BaseModel):
     """Statistics for messages with a specific tag."""
+
     tag: MessageTagDefinitionModel
     total_messages: int
     messages: List[TagMessageDetail]
@@ -139,6 +150,7 @@ class TagMessagesStatsResponse(BaseModel):
 # ============================================================
 # Daemon Configuration Endpoints (Admin Only)
 # ============================================================
+
 
 @router.get("/admin/config", response_model=TaggingDaemonConfigModel)
 async def get_daemon_config(user=Depends(get_admin_user)):
@@ -151,24 +163,31 @@ async def get_daemon_config(user=Depends(get_admin_user)):
 
 @router.put("/admin/config", response_model=TaggingDaemonConfigModel)
 async def update_daemon_config(
-    body: DaemonConfigUpdateRequest,
-    user=Depends(get_admin_user)
+    body: DaemonConfigUpdateRequest, user=Depends(get_admin_user)
 ):
     """Update daemon configuration."""
     update_data = body.model_dump(exclude_none=True)
 
     # Validate schedule
     if "schedule" in update_data and update_data["schedule"] not in ["daily", "weekly"]:
-        raise HTTPException(status_code=400, detail="Invalid schedule. Use 'daily' or 'weekly'")
+        raise HTTPException(
+            status_code=400, detail="Invalid schedule. Use 'daily' or 'weekly'"
+        )
 
     # Validate run_time format
     if "run_time" in update_data:
         try:
             parts = update_data["run_time"].split(":")
-            if len(parts) != 2 or not (0 <= int(parts[0]) <= 23) or not (0 <= int(parts[1]) <= 59):
+            if (
+                len(parts) != 2
+                or not (0 <= int(parts[0]) <= 23)
+                or not (0 <= int(parts[1]) <= 59)
+            ):
                 raise ValueError()
         except Exception:
-            raise HTTPException(status_code=400, detail="Invalid run_time format. Use 'HH:MM'")
+            raise HTTPException(
+                status_code=400, detail="Invalid run_time format. Use 'HH:MM'"
+            )
 
     config = TaggingDaemonConfigs.update_config(**update_data)
     if not config:
@@ -203,7 +222,7 @@ async def force_unlock_daemon(user=Depends(get_admin_user)):
         "status": "unlocked",
         "message": "Daemon lock released successfully",
         "previous_lock_time": config.lock_acquired_at,
-        "previous_instance": config.lock_instance_id
+        "previous_instance": config.lock_instance_id,
     }
 
 
@@ -222,6 +241,7 @@ async def get_daemon_progress(request: Request, user=Depends(get_admin_user)):
 # Tag Definition Management (Admin Only)
 # ============================================================
 
+
 @router.get("/admin/tags", response_model=List[TagWithChapterResponse])
 async def list_all_tags(user=Depends(get_admin_user)):
     """List all tag definitions with usage counts and chapter information."""
@@ -231,15 +251,14 @@ async def list_all_tags(user=Depends(get_admin_user)):
 
     with get_db() as db:
         # Left join with textbook_chapter to get chapter name
-        results = db.query(
-            MessageTagDefinition,
-            TextbookChapter.title.label("chapter_name")
-        ).outerjoin(
-            TextbookChapter,
-            MessageTagDefinition.chapter_id == TextbookChapter.id
-        ).order_by(
-            MessageTagDefinition.usage_count.desc()
-        ).all()
+        results = (
+            db.query(MessageTagDefinition, TextbookChapter.title.label("chapter_name"))
+            .outerjoin(
+                TextbookChapter, MessageTagDefinition.chapter_id == TextbookChapter.id
+            )
+            .order_by(MessageTagDefinition.usage_count.desc())
+            .all()
+        )
 
         return [
             TagWithChapterResponse(
@@ -251,7 +270,7 @@ async def list_all_tags(user=Depends(get_admin_user)):
                 chapter_name=chapter_name,
                 meta=tag.meta,
                 created_at=tag.created_at,
-                updated_at=tag.updated_at
+                updated_at=tag.updated_at,
             )
             for tag, chapter_name in results
         ]
@@ -292,11 +311,7 @@ async def merge_tags(body: TagMergeRequest, user=Depends(get_admin_user)):
 
 
 @router.post("/admin/tags/{tag_id}/rename")
-async def rename_tag(
-    tag_id: str,
-    new_name: str,
-    user=Depends(get_admin_user)
-):
+async def rename_tag(tag_id: str, new_name: str, user=Depends(get_admin_user)):
     """Rename a tag (changes display name, not ID)."""
     tag = MessageTagDefinitions.rename(tag_id, new_name)
     if not tag:
@@ -305,10 +320,7 @@ async def rename_tag(
 
 
 @router.post("/admin/tags/create", response_model=MessageTagDefinitionModel)
-async def create_admin_tag(
-    body: AdminTagCreateRequest,
-    user=Depends(get_admin_user)
-):
+async def create_admin_tag(body: AdminTagCreateRequest, user=Depends(get_admin_user)):
     """Create a new tag definition (admin-created, optionally protected)."""
     # Check if tag already exists
     tag_id = body.name.lower().replace(" ", "_")
@@ -324,9 +336,7 @@ async def create_admin_tag(
 
 @router.put("/admin/tags/{tag_id}/protection", response_model=MessageTagDefinitionModel)
 async def set_tag_protection(
-    tag_id: str,
-    body: TagProtectionRequest,
-    user=Depends(get_admin_user)
+    tag_id: str, body: TagProtectionRequest, user=Depends(get_admin_user)
 ):
     """Set or unset protection status for a tag."""
     tag = MessageTagDefinitions.set_protected(tag_id, body.is_protected)
@@ -339,6 +349,7 @@ async def set_tag_protection(
 # Blacklist Management (Admin Only)
 # ============================================================
 
+
 @router.get("/admin/blacklist", response_model=List[str])
 async def get_blacklist(user=Depends(get_admin_user)):
     """Get the list of blacklisted tag IDs."""
@@ -349,10 +360,7 @@ async def get_blacklist(user=Depends(get_admin_user)):
 
 
 @router.post("/admin/blacklist/add")
-async def add_to_blacklist(
-    body: BlacklistUpdateRequest,
-    user=Depends(get_admin_user)
-):
+async def add_to_blacklist(body: BlacklistUpdateRequest, user=Depends(get_admin_user)):
     """Add tag IDs to the blacklist. Also deletes existing tags with these IDs."""
     config = TaggingDaemonConfigs.get_config()
     if not config:
@@ -370,13 +378,16 @@ async def add_to_blacklist(
     updated_blacklist = list(current_blacklist | new_tags)
     TaggingDaemonConfigs.update_config(blacklisted_tags=updated_blacklist)
 
-    return {"success": True, "blacklisted_tags": updated_blacklist, "deleted_count": len(new_tags)}
+    return {
+        "success": True,
+        "blacklisted_tags": updated_blacklist,
+        "deleted_count": len(new_tags),
+    }
 
 
 @router.post("/admin/blacklist/remove")
 async def remove_from_blacklist(
-    body: BlacklistUpdateRequest,
-    user=Depends(get_admin_user)
+    body: BlacklistUpdateRequest, user=Depends(get_admin_user)
 ):
     """Remove tag IDs from the blacklist."""
     config = TaggingDaemonConfigs.get_config()
@@ -396,11 +407,10 @@ async def remove_from_blacklist(
 # Message Tag Endpoints (User)
 # ============================================================
 
+
 @router.get("/message/{chat_id}/{message_id}", response_model=MessageTagsResponse)
 async def get_message_tags(
-    chat_id: str,
-    message_id: str,
-    user=Depends(get_verified_user)
+    chat_id: str, message_id: str, user=Depends(get_verified_user)
 ):
     """Get tags for a specific message."""
     # Verify user owns the chat
@@ -419,10 +429,7 @@ async def get_message_tags(
 
 
 @router.post("/message/manual", response_model=MessageTagModel)
-async def add_manual_tag(
-    body: ManualTagRequest,
-    user=Depends(get_verified_user)
-):
+async def add_manual_tag(body: ManualTagRequest, user=Depends(get_verified_user)):
     """Manually add a tag to a message."""
     # Verify user owns the chat
     chat = Chats.get_chat_by_id_and_user_id(body.chat_id, user.id)
@@ -444,7 +451,7 @@ async def add_manual_tag(
         message_id=body.message_id,
         tag_id=tag_id,
         summary=body.summary or "",
-        user_id=user.id
+        user_id=user.id,
     )
 
     if not tag:
@@ -456,10 +463,7 @@ async def add_manual_tag(
 
 @router.delete("/message/{chat_id}/{message_id}/{tag_id}")
 async def remove_message_tag(
-    chat_id: str,
-    message_id: str,
-    tag_id: str,
-    user=Depends(get_verified_user)
+    chat_id: str, message_id: str, tag_id: str, user=Depends(get_verified_user)
 ):
     """Remove a tag from a message."""
     # Verify user owns the chat
@@ -478,11 +482,7 @@ async def remove_message_tag(
 
 
 @router.get("/search/{tag_id}", response_model=List[MessageTagModel])
-async def search_by_tag(
-    tag_id: str,
-    limit: int = 50,
-    user=Depends(get_verified_user)
-):
+async def search_by_tag(tag_id: str, limit: int = 50, user=Depends(get_verified_user)):
     """Search messages by tag (returns user's messages only)."""
     return MessageTags.get_by_tag_and_user(tag_id, user.id, limit)
 
@@ -491,11 +491,9 @@ async def search_by_tag(
 # Statistics Endpoints
 # ============================================================
 
+
 @router.get("/admin/tags/top", response_model=List[TagWithChapterResponse])
-async def get_top_tags(
-    limit: int = 10,
-    user=Depends(get_admin_or_professor_user)
-):
+async def get_top_tags(limit: int = 10, user=Depends(get_admin_or_professor_user)):
     """Get top N most frequently used tags with chapter information."""
     from open_webui.internal.db import get_db
     from open_webui.models.message_tags import MessageTagDefinition
@@ -503,15 +501,15 @@ async def get_top_tags(
 
     with get_db() as db:
         # Left join with textbook_chapter to get chapter name
-        results = db.query(
-            MessageTagDefinition,
-            TextbookChapter.title.label("chapter_name")
-        ).outerjoin(
-            TextbookChapter,
-            MessageTagDefinition.chapter_id == TextbookChapter.id
-        ).order_by(
-            MessageTagDefinition.usage_count.desc()
-        ).limit(limit).all()
+        results = (
+            db.query(MessageTagDefinition, TextbookChapter.title.label("chapter_name"))
+            .outerjoin(
+                TextbookChapter, MessageTagDefinition.chapter_id == TextbookChapter.id
+            )
+            .order_by(MessageTagDefinition.usage_count.desc())
+            .limit(limit)
+            .all()
+        )
 
         return [
             TagWithChapterResponse(
@@ -523,7 +521,7 @@ async def get_top_tags(
                 chapter_name=chapter_name,
                 meta=tag.meta,
                 created_at=tag.created_at,
-                updated_at=tag.updated_at
+                updated_at=tag.updated_at,
             )
             for tag, chapter_name in results
         ]
@@ -556,7 +554,7 @@ async def get_tag_messages_stats(
     tag_id: str,
     limit: int = 10,
     offset: int = 0,
-    user=Depends(get_admin_or_professor_user)
+    user=Depends(get_admin_or_professor_user),
 ):
     """Get detailed statistics for messages with a specific tag (Admin or Professor)."""
     from open_webui.internal.db import get_db
@@ -574,11 +572,20 @@ async def get_tag_messages_stats(
         total_messages = query.count()
 
         # Get unique counts
-        unique_users = db.query(MessageTag.user_id).filter_by(tag_id=tag_id).distinct().count()
-        unique_chats = db.query(MessageTag.chat_id).filter_by(tag_id=tag_id).distinct().count()
+        unique_users = (
+            db.query(MessageTag.user_id).filter_by(tag_id=tag_id).distinct().count()
+        )
+        unique_chats = (
+            db.query(MessageTag.chat_id).filter_by(tag_id=tag_id).distinct().count()
+        )
 
         # Get paginated messages
-        messages = query.order_by(MessageTag.created_at.desc()).offset(offset).limit(limit).all()
+        messages = (
+            query.order_by(MessageTag.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
 
         # Batch fetch user names
         user_ids = list(set(m.user_id for m in messages))
@@ -592,7 +599,7 @@ async def get_tag_messages_stats(
                 user_id=m.user_id,
                 user_name=user_map.get(m.user_id),
                 summary=m.summary,
-                created_at=m.created_at
+                created_at=m.created_at,
             )
             for m in messages
         ]
@@ -602,13 +609,14 @@ async def get_tag_messages_stats(
         total_messages=total_messages,
         messages=message_details,
         unique_users=unique_users,
-        unique_chats=unique_chats
+        unique_chats=unique_chats,
     )
 
 
 # ============================================================
 # User Tag List
 # ============================================================
+
 
 @router.get("/my-tags", response_model=List[MessageTagDefinitionModel])
 async def get_my_tags(user=Depends(get_verified_user)):
@@ -618,14 +626,19 @@ async def get_my_tags(user=Depends(get_verified_user)):
 
     with get_db() as db:
         # Get unique tag_ids from user's messages
-        tag_ids = db.query(MessageTag.tag_id).filter_by(user_id=user.id).distinct().all()
+        tag_ids = (
+            db.query(MessageTag.tag_id).filter_by(user_id=user.id).distinct().all()
+        )
         tag_ids = [t[0] for t in tag_ids]
 
         # Get the definitions
         if tag_ids:
-            tags = db.query(MessageTagDefinition).filter(
-                MessageTagDefinition.id.in_(tag_ids)
-            ).order_by(MessageTagDefinition.usage_count.desc()).all()
+            tags = (
+                db.query(MessageTagDefinition)
+                .filter(MessageTagDefinition.id.in_(tag_ids))
+                .order_by(MessageTagDefinition.usage_count.desc())
+                .all()
+            )
             return [MessageTagDefinitionModel.model_validate(t) for t in tags]
 
     return []
@@ -635,12 +648,14 @@ async def get_my_tags(user=Depends(get_verified_user)):
 # Tag Feedback Endpoints
 # ============================================================
 
+
 class TagWithFeedbackResponse(BaseModel):
     """Tag definition with user's feedback status."""
+
     id: str
     name: str
-    usage_count: int           # Global usage count
-    my_usage_count: int        # User's message count with this tag
+    usage_count: int  # Global usage count
+    my_usage_count: int  # User's message count with this tag
     chapter_id: Optional[str] = None
     chapter_name: Optional[str] = None
     feedback_status: Optional[str] = None  # User's feedback status
@@ -651,12 +666,12 @@ async def set_tag_feedback(body: TagFeedbackForm, user=Depends(get_verified_user
     """Set or update feedback for a tag."""
     # Get the effective status (prioritize feedback_status over status)
     status = body.effective_status
-    
+
     # Validate status
     if status is not None and status not in VALID_FEEDBACK_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid status. Must be one of: {list(VALID_FEEDBACK_STATUSES - {None})}"
+            detail=f"Invalid status. Must be one of: {list(VALID_FEEDBACK_STATUSES - {None})}",
         )
 
     # Verify tag exists
@@ -701,48 +716,54 @@ async def get_my_top_tags(limit: int = 10, user=Depends(get_verified_user)):
     - "not_interested" and "understood" last (deprioritized)
     """
     from open_webui.internal.db import get_db
-    from open_webui.models.message_tags import MessageTag, MessageTagDefinition, TagFeedback
+    from open_webui.models.message_tags import (
+        MessageTag,
+        MessageTagDefinition,
+        TagFeedback,
+    )
     from open_webui.models.textbooks import TextbookChapter
     from sqlalchemy import func, case, literal_column
 
     with get_db() as db:
         # Subquery to count user's messages per tag
-        my_usage_subq = db.query(
-            MessageTag.tag_id,
-            func.count(MessageTag.id).label("my_usage_count")
-        ).filter(
-            MessageTag.user_id == user.id
-        ).group_by(
-            MessageTag.tag_id
-        ).subquery()
+        my_usage_subq = (
+            db.query(
+                MessageTag.tag_id, func.count(MessageTag.id).label("my_usage_count")
+            )
+            .filter(MessageTag.user_id == user.id)
+            .group_by(MessageTag.tag_id)
+            .subquery()
+        )
 
         # Priority calculation based on feedback status
         priority = case(
             (TagFeedback.status == "confused", literal_column("3")),
             (TagFeedback.status.is_(None), literal_column("2")),
-            else_=literal_column("1")
+            else_=literal_column("1"),
         ).label("priority")
 
         # Main query with joins
-        results = db.query(
-            MessageTagDefinition,
-            my_usage_subq.c.my_usage_count,
-            TagFeedback.status.label("feedback_status"),
-            TextbookChapter.title.label("chapter_name"),
-            priority
-        ).join(
-            my_usage_subq,
-            MessageTagDefinition.id == my_usage_subq.c.tag_id
-        ).outerjoin(
-            TagFeedback,
-            (MessageTagDefinition.id == TagFeedback.tag_id) & (TagFeedback.user_id == user.id)
-        ).outerjoin(
-            TextbookChapter,
-            MessageTagDefinition.chapter_id == TextbookChapter.id
-        ).order_by(
-            priority.desc(),
-            my_usage_subq.c.my_usage_count.desc()
-        ).limit(limit).all()
+        results = (
+            db.query(
+                MessageTagDefinition,
+                my_usage_subq.c.my_usage_count,
+                TagFeedback.status.label("feedback_status"),
+                TextbookChapter.title.label("chapter_name"),
+                priority,
+            )
+            .join(my_usage_subq, MessageTagDefinition.id == my_usage_subq.c.tag_id)
+            .outerjoin(
+                TagFeedback,
+                (MessageTagDefinition.id == TagFeedback.tag_id)
+                & (TagFeedback.user_id == user.id),
+            )
+            .outerjoin(
+                TextbookChapter, MessageTagDefinition.chapter_id == TextbookChapter.id
+            )
+            .order_by(priority.desc(), my_usage_subq.c.my_usage_count.desc())
+            .limit(limit)
+            .all()
+        )
 
         return [
             TagWithFeedbackResponse(
@@ -752,7 +773,7 @@ async def get_my_top_tags(limit: int = 10, user=Depends(get_verified_user)):
                 my_usage_count=my_count or 0,
                 chapter_id=tag.chapter_id,
                 chapter_name=chapter_name,
-                feedback_status=feedback_status
+                feedback_status=feedback_status,
             )
             for tag, my_count, feedback_status, chapter_name, _ in results
         ]
@@ -770,60 +791,65 @@ async def get_global_top_tags(limit: int = 10, user=Depends(get_verified_user)):
        - "not_interested" / "understood" last (deprioritized)
     """
     from open_webui.internal.db import get_db
-    from open_webui.models.message_tags import MessageTag, MessageTagDefinition, TagFeedback
+    from open_webui.models.message_tags import (
+        MessageTag,
+        MessageTagDefinition,
+        TagFeedback,
+    )
     from open_webui.models.textbooks import TextbookChapter
     from sqlalchemy import func, case, literal_column
 
     with get_db() as db:
         # Subquery to count global messages per tag
-        global_usage_subq = db.query(
-            MessageTag.tag_id,
-            func.count(MessageTag.id).label("global_count")
-        ).group_by(
-            MessageTag.tag_id
-        ).subquery()
+        global_usage_subq = (
+            db.query(MessageTag.tag_id, func.count(MessageTag.id).label("global_count"))
+            .group_by(MessageTag.tag_id)
+            .subquery()
+        )
 
         # Subquery to count user's messages per tag (for my_usage_count)
-        my_usage_subq = db.query(
-            MessageTag.tag_id,
-            func.count(MessageTag.id).label("my_usage_count")
-        ).filter(
-            MessageTag.user_id == user.id
-        ).group_by(
-            MessageTag.tag_id
-        ).subquery()
+        my_usage_subq = (
+            db.query(
+                MessageTag.tag_id, func.count(MessageTag.id).label("my_usage_count")
+            )
+            .filter(MessageTag.user_id == user.id)
+            .group_by(MessageTag.tag_id)
+            .subquery()
+        )
 
         # Priority calculation based on feedback status
         priority = case(
             (TagFeedback.status == "confused", literal_column("3")),
             (TagFeedback.status.is_(None), literal_column("2")),
-            else_=literal_column("1")
+            else_=literal_column("1"),
         ).label("priority")
 
         # Main query - ordered by feedback priority, then global usage
-        results = db.query(
-            MessageTagDefinition,
-            global_usage_subq.c.global_count,
-            my_usage_subq.c.my_usage_count,
-            TagFeedback.status.label("feedback_status"),
-            TextbookChapter.title.label("chapter_name"),
-            priority
-        ).join(
-            global_usage_subq,
-            MessageTagDefinition.id == global_usage_subq.c.tag_id
-        ).outerjoin(
-            my_usage_subq,
-            MessageTagDefinition.id == my_usage_subq.c.tag_id
-        ).outerjoin(
-            TagFeedback,
-            (MessageTagDefinition.id == TagFeedback.tag_id) & (TagFeedback.user_id == user.id)
-        ).outerjoin(
-            TextbookChapter,
-            MessageTagDefinition.chapter_id == TextbookChapter.id
-        ).order_by(
-            priority.desc(),
-            global_usage_subq.c.global_count.desc()
-        ).limit(limit).all()
+        results = (
+            db.query(
+                MessageTagDefinition,
+                global_usage_subq.c.global_count,
+                my_usage_subq.c.my_usage_count,
+                TagFeedback.status.label("feedback_status"),
+                TextbookChapter.title.label("chapter_name"),
+                priority,
+            )
+            .join(
+                global_usage_subq, MessageTagDefinition.id == global_usage_subq.c.tag_id
+            )
+            .outerjoin(my_usage_subq, MessageTagDefinition.id == my_usage_subq.c.tag_id)
+            .outerjoin(
+                TagFeedback,
+                (MessageTagDefinition.id == TagFeedback.tag_id)
+                & (TagFeedback.user_id == user.id),
+            )
+            .outerjoin(
+                TextbookChapter, MessageTagDefinition.chapter_id == TextbookChapter.id
+            )
+            .order_by(priority.desc(), global_usage_subq.c.global_count.desc())
+            .limit(limit)
+            .all()
+        )
 
         return [
             TagWithFeedbackResponse(
@@ -833,7 +859,7 @@ async def get_global_top_tags(limit: int = 10, user=Depends(get_verified_user)):
                 my_usage_count=my_count or 0,
                 chapter_id=tag.chapter_id,
                 chapter_name=chapter_name,
-                feedback_status=feedback_status
+                feedback_status=feedback_status,
             )
             for tag, global_count, my_count, feedback_status, chapter_name, _ in results
         ]

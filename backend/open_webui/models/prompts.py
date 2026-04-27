@@ -27,13 +27,21 @@ class Prompt(Base):
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
 
     # Persona-based prompt fields
-    prompt_type = Column(String, nullable=True)  # 'base', 'proficiency', 'style', 'tool', or None
+    prompt_type = Column(
+        String, nullable=True
+    )  # 'base', 'proficiency', 'style', 'tool', or None
     persona_value = Column(String, nullable=True)  # '1','2','3' or 'simple','detailed'
 
     # Tool gating fields (for prompt_type='basic_tool' or 'json_tool')
-    tool_description = Column(Text, nullable=True)  # Short description for tool catalog (50-100 chars)
-    tool_priority = Column(Integer, nullable=True, default=0)  # Priority for ordering tools
-    validation_rules = Column(JSON, nullable=True)  # Regex validation rules for json_tool type
+    tool_description = Column(
+        Text, nullable=True
+    )  # Short description for tool catalog (50-100 chars)
+    tool_priority = Column(
+        Integer, nullable=True, default=0
+    )  # Priority for ordering tools
+    validation_rules = Column(
+        JSON, nullable=True
+    )  # Regex validation rules for json_tool type
 
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -116,13 +124,17 @@ class PromptsTable:
 
                     # Sync to Langfuse for version control
                     try:
-                        from open_webui.integrations.langfuse_adapter import get_langfuse_adapter
+                        from open_webui.integrations.langfuse_adapter import (
+                            get_langfuse_adapter,
+                        )
+
                         adapter = get_langfuse_adapter()
                         if adapter:
                             adapter.sync_prompt_to_langfuse(validated_prompt)
                     except Exception as e:
                         # Log but don't fail the operation if Langfuse sync fails
                         import logging
+
                         logging.error(f"Failed to sync new prompt to Langfuse: {e}")
 
                     return validated_prompt
@@ -235,13 +247,17 @@ class PromptsTable:
 
                 # Sync to Langfuse (creates new version)
                 try:
-                    from open_webui.integrations.langfuse_adapter import get_langfuse_adapter
+                    from open_webui.integrations.langfuse_adapter import (
+                        get_langfuse_adapter,
+                    )
+
                     adapter = get_langfuse_adapter()
                     if adapter:
                         adapter.sync_prompt_to_langfuse(validated_prompt)
                 except Exception as e:
                     # Log but don't fail the operation if Langfuse sync fails
                     import logging
+
                     logging.error(f"Failed to sync updated prompt to Langfuse: {e}")
 
                 return validated_prompt
@@ -262,9 +278,11 @@ class PromptsTable:
         """Get all tool prompts (both basic_tool and json_tool types)"""
         try:
             with get_db() as db:
-                prompts = db.query(Prompt).filter(
-                    Prompt.prompt_type.in_(["basic_tool", "json_tool", "tool"])
-                ).all()
+                prompts = (
+                    db.query(Prompt)
+                    .filter(Prompt.prompt_type.in_(["basic_tool", "json_tool", "tool"]))
+                    .all()
+                )
                 return [PromptModel.model_validate(p) for p in prompts]
         except Exception:
             return []
