@@ -259,6 +259,10 @@
 		</div>
 	</div>
 
+	<div class="w-full border-b border-violet-500/30 px-4 py-1 text-violet-300 text-xs text-center font-medium tracking-wide">
+		Freiheit Media – Internal LLM
+	</div>
+
 	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
