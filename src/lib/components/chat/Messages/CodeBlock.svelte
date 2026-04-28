@@ -589,6 +589,8 @@
 				{#if executing || stdout || stderr || result || files}
 					<div
 						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-2xl! pt-2 pb-3 px-3.5 flex flex-col gap-2"
+						aria-live="polite"
+						aria-busy={executing}
 					>
 						{#if executing}
 							<div class=" ">
