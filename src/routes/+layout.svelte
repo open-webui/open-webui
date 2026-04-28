@@ -925,15 +925,9 @@
 				css.setAttribute('data-theme-style', 'light');
 				css.id = 'theme-style-light';
 				css.textContent = `
-					:root, [data-theme="light"] {
-						--color-gray-1: #fff8ed !important;
-						--color-gray-50: #F5EFE6 !important;
-						--color-gray-100: #E8E4D9 !important;
-					}
-					* { border-color: var(--color-gray-200) !important; }
-					#sidebar { background-color: var(--color-gray-100) !important; }
-					.bg-white { background-color: var(--color-gray-50) !important; }
-					.bg-whiter { background-color: var(--color-gray-1) !important; }
+					html:not(.dark) #sidebar { background-color: var(--color-gray-100); }
+					html:not(.dark) .bg-white { background-color: var(--color-gray-50); }
+					html:not(.dark) .bg-whiter { background-color: var(--color-gray-1); }
 				`;
 				const existing = document.getElementById('theme-style-light');
 				if (existing) {
