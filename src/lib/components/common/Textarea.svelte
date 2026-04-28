@@ -35,6 +35,9 @@
 
 	const resize = () => {
 		if (textareaElement) {
+			// Preserve scroll position to prevent page jumping to top on focus/resize
+			const scrollY = window.scrollY;
+
 			textareaElement.style.height = '';
 
 			let height = textareaElement.scrollHeight;
@@ -46,6 +49,9 @@
 			}
 
 			textareaElement.style.height = `${height}px`;
+
+			// Restore scroll position after height recalculation
+			window.scrollTo({ top: scrollY, behavior: 'instant' });
 		}
 	};
 </script>
