@@ -33,9 +33,12 @@ def search_duckduckgo(
 
         # Use the ddgs.text() method to perform the search
         try:
-            search_results = ddgs.text(query, safesearch='moderate', max_results=count, backend=backend)
+            results = ddgs.text(query, safesearch='moderate', max_results=count, backend=backend)
+            # ddgs >= 9.x can return None on error or empty backend
+            search_results = results if results is not None else []
         except RatelimitException as e:
             log.error(f'RatelimitException: {e}')
+            search_results = []
     if filter_list:
         search_results = get_filtered_results(search_results, filter_list)
 
