@@ -930,6 +930,7 @@
 						--color-gray-50: #F5EFE6 !important;
 						--color-gray-100: #E8E4D9 !important;
 					}
+					* { border-color: var(--color-gray-200) !important; }
 					#sidebar { background-color: var(--color-gray-100) !important; }
 					.bg-white { background-color: var(--color-gray-50) !important; }
 					.bg-whiter { background-color: var(--color-gray-1) !important; }
@@ -960,6 +961,9 @@
 						--color-gray-900: #000000 !important;
 						--color-gray-950: #000000 !important;
 					}
+					* { border-color: var(--color-gray-400) !important; }
+					.bg-white { background-color: var(--color-gray-850) !important; }
+					.bg-whiter { background-color: var(--color-gray-800) !important; }
 				`;
 				const existing = document.getElementById('theme-style-dark');
 				if (existing) {

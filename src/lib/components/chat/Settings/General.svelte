@@ -199,11 +199,7 @@
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
-						{#if $config?.features?.enable_easter_eggs}
-							<option value="her">🌷 Her</option>
-						{/if}
 					</select>
 				</div>
 			</div>
