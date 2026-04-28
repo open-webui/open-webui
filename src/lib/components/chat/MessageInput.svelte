@@ -1169,6 +1169,7 @@
 						>
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								aria-label={$i18n.t('Scroll to bottom')}
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -1179,6 +1180,7 @@
 									viewBox="0 0 20 20"
 									fill="currentColor"
 									class="w-5 h-5"
+									aria-hidden="true"
 								>
 									<path
 										fill-rule="evenodd"
