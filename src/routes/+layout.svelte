@@ -887,6 +887,97 @@
 		document.addEventListener('touchmove', touchmoveHandler, { passive: false });
 		document.addEventListener('touchend', touchendHandler);
 
+		const applyThemeCSS = (themeValue) => {
+			const existingStyles = document.querySelectorAll('[data-theme-style]');
+			existingStyles.forEach((el) => el.remove());
+
+			// Determine actual theme for class management
+			let themeToApply = themeValue;
+
+			// Handle system theme - use browser preference
+			if (themeValue === 'system') {
+				const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				themeToApply = isDark ? 'dark' : 'light';
+			}
+
+			// Normalize theme value - undefined/null defaults to 'light'
+			if (!themeValue) {
+				themeValue = 'light';
+				themeToApply = 'light';
+			}
+
+			// Handle oled-dark as dark theme
+			if (themeValue === 'oled-dark') {
+				themeValue = 'dark';
+				themeToApply = 'dark';
+			}
+
+			// Manage CSS classes - remove inactive, add active
+			['light', 'dark'].forEach((t) => {
+				document.documentElement.classList.remove(t);
+			});
+			if (themeToApply) {
+				document.documentElement.classList.add(themeToApply);
+			}
+
+			if (themeValue === 'light' || themeValue === 'her') {
+				const css = document.createElement('style');
+				css.setAttribute('data-theme-style', 'light');
+				css.id = 'theme-style-light';
+				css.textContent = `
+					:root, [data-theme="light"] {
+						--color-gray-1: #fff8ed !important;
+						--color-gray-50: #F5EFE6 !important;
+						--color-gray-100: #E8E4D9 !important;
+					}
+					#sidebar { background-color: var(--color-gray-100) !important; }
+					.bg-white { background-color: var(--color-gray-50) !important; }
+					.bg-whiter { background-color: var(--color-gray-1) !important; }
+				`;
+				const existing = document.getElementById('theme-style-light');
+				if (existing) {
+					existing.replaceWith(css);
+				} else {
+					document.head.appendChild(css);
+				}
+			} else if (themeValue === 'dark') {
+				const css = document.createElement('style');
+				css.setAttribute('data-theme-style', 'dark');
+				css.id = 'theme-style-dark';
+				css.textContent = `
+					:root, .dark {
+						--color-gray-1: #fcfcfc !important;
+						--color-gray-50: #f3f3f3 !important;
+						--color-gray-100: #e5e5e5 !important;
+						--color-gray-200: #d4d4d4 !important;
+						--color-gray-300: #a3a3a3 !important;
+						--color-gray-400: #737373 !important;
+						--color-gray-500: #525252 !important;
+						--color-gray-600: #404040 !important;
+						--color-gray-700: #262626 !important;
+						--color-gray-800: #171717 !important;
+						--color-gray-850: #0a0a0a !important;
+						--color-gray-900: #000000 !important;
+						--color-gray-950: #000000 !important;
+					}
+				`;
+				const existing = document.getElementById('theme-style-dark');
+				if (existing) {
+					existing.replaceWith(css);
+				} else {
+					document.head.appendChild(css);
+				}
+			}
+		};
+
+		// Subscribe theme changes - apply CSS when theme updates
+		// Note: Svelte subscription fires immediately with current value
+		theme.subscribe((value) => {
+			if (value) {
+				applyThemeCSS(value);
+			}
+		});
+
 		if (typeof window !== 'undefined') {
 			if (window.applyTheme) {
 				window.applyTheme();
@@ -942,6 +1033,7 @@
 		handleVisibilityChange();
 
 		theme.set(localStorage.theme);
+		applyThemeCSS(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
 

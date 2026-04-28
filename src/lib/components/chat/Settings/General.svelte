@@ -130,34 +130,6 @@
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		if (themeToApply === 'dark' && !_theme.includes('oled')) {
-			const css = document.createElement('style');
-			css.textContent = `
-				--color-gray-1: oklch(0.98 0 0);
-				--color-gray-50: oklch(0.98 0 0);
-				--color-gray-100: oklch(0.94 0 0);
-				--color-gray-200: oklch(0.92 0 0);
-				--color-gray-300: oklch(0.85 0 0);
-				--color-gray-400: oklch(0.77 0 0);
-				--color-gray-500: oklch(0.69 0 0);
-				--color-gray-600: oklch(0.51 0 0);
-				--color-gray-700: oklch(0.42 0 0);
-				--color-gray-800: oklch(0.32 0 0);
-				--color-gray-850: oklch(0.27 0 0);
-				--color-gray-900: oklch(0.2 0 0);
-				--color-gray-950: oklch(0.16 0 0);
-			`;
-			document.head.appendChild(css);
-		} else if (_theme === 'light') { // but this is not being applied on page open
-			const css = document.createElement('style');
-			css.textContent = `
-			#sidebar { background-color: var(--color-gray-100) !important; }
-			.bg-white { background-color: var(--color-gray-50) !important; }
-			.bg-whiter { background-color: var(--color-gray-1) !important; }
-			`;
-			document.head.appendChild(css);
-		}
-
 		themes
 			.filter((e) => e !== themeToApply)
 			.forEach((e) => {
@@ -176,10 +148,8 @@
 				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
 					? 'dark'
 					: 'light';
-				console.log('Setting system meta theme color: ' + systemTheme);
 				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
 			} else {
-				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
 					'content',
 					_theme === 'dark'
@@ -188,15 +158,11 @@
 							? '#000000'
 							: _theme === 'her'
 								? '#983724'
-									: _theme === 'light'
-										? '#F5EFE6'
-										: '#ffffff'
+								: _theme === 'light'
+									? '#F5EFE6'
+									: '#ffffff'
 				);
 			}
-		}
-
-		if (typeof window !== 'undefined' && window.applyTheme) {
-			window.applyTheme();
 		}
 
 		if (_theme.includes('oled')) {
@@ -206,8 +172,6 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
 		}
-
-		console.log(_theme);
 	};
 
 	const themeChangeHandler = (_theme: string) => {
