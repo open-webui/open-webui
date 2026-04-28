@@ -14,6 +14,9 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - /home/shared/hyu-math/backend/open_webui/data:/app/backend/data
     depends_on:
@@ -25,6 +28,7 @@ services:
       - 'WEBUI_SECRET_KEY='
       - 'DATA_DIR=/app/backend/data'
       - 'FRONTEND_BUILD_DIR=/app/build'
+      - 'LANGFUSE_ENABLED=true'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
