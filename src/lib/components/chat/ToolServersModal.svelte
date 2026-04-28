@@ -78,7 +78,8 @@
 					{$i18n.t('Open WebUI can use tools provided by any OpenAPI server.')} <br /><a
 						class="underline"
 						href="https://github.com/open-webui/openapi-servers"
-						target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')}</a
+						target="_blank"
+						rel="noopener noreferrer">{$i18n.t('Learn more about OpenAPI tool servers.')}</a
 					>
 				</div>
 				<div class=" text-sm dark:text-gray-300 mb-1">

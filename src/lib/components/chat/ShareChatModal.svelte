@@ -129,7 +129,7 @@
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
 				<div class="text-sm dark:text-gray-300">
 					{#if chat.share_id}
-						<a href="/s/{chat.share_id}" target="_blank"
+						<a href="/s/{chat.share_id}" target="_blank" rel="noopener noreferrer"
 							>{$i18n.t('You have shared this chat')}
 							<span class=" underline">{$i18n.t('before')}</span>.</a
 						>

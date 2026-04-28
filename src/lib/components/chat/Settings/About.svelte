@@ -123,21 +123,21 @@
 			</div>
 		{:else}
 			<div class="flex space-x-1">
-				<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
+				<a href="https://discord.gg/5rJgQTnV4s" target="_blank" rel="noopener noreferrer">
 					<img
 						alt="Discord"
 						src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
 					/>
 				</a>
 
-				<a href="https://twitter.com/OpenWebUI" target="_blank">
+				<a href="https://twitter.com/OpenWebUI" target="_blank" rel="noopener noreferrer">
 					<img
 						alt="X (formerly Twitter) Follow"
 						src="https://img.shields.io/twitter/follow/OpenWebUI"
 					/>
 				</a>
 
-				<a href="https://github.com/open-webui/open-webui" target="_blank">
+				<a href="https://github.com/open-webui/open-webui" target="_blank" rel="noopener noreferrer">
 					<img
 						alt="Github Repo"
 						src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
@@ -148,8 +148,8 @@
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 			Emoji graphics provided by
-			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
-			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
+			<a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener noreferrer">Twemoji</a>, licensed under
+			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC-BY 4.0</a>.
 		</div>
 
 		<div>
@@ -157,8 +157,9 @@
 				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
 					href="https://openwebui.com"
 					target="_blank"
+					rel="noopener noreferrer"
 					class="underline">Open WebUI Inc.</a
-				> <a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
+				> <a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"
 					>All rights reserved.</a
 				>
 </pre>
@@ -169,7 +170,8 @@
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
 				href="https://github.com/tjbck"
-				target="_blank">Timothy J. Baek</a
+				target="_blank"
+				rel="noopener noreferrer">Timothy J. Baek</a
 			>
 		</div>
 	</div>
