@@ -4,6 +4,21 @@
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { Toaster, toast } from 'svelte-sonner';
 
+	// Load Google Fonts
+	const loadFonts = () => {
+		const links = [
+			'https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600&display=swap',
+			'https://fonts.googleapis.com/css2?family=Harmattan:wght@400;500;600;700&display=swap'
+		];
+		links.forEach((href) => {
+			const link = document.createElement('link');
+			link.rel = 'stylesheet';
+			link.href = href;
+			document.head.appendChild(link);
+		});
+	};
+	loadFonts();
+
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
 	});
