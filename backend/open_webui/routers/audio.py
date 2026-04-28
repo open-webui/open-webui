@@ -576,7 +576,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
                 mistral_payload = {
                     'input': payload.get('input', ''),
-                    'model': request.app.state.config.TTS_MODEL or 'mistral-tts-latest',
+                    'model': request.app.state.config.TTS_MODEL or 'voxtral-mini-tts-2603',
                     'voice_id': payload.get('voice', ''),
                     'response_format': 'mp3',
                 }
@@ -1345,7 +1345,7 @@ async def get_available_models(request: Request) -> list[dict]:
         except Exception as e:
             log.error(f'Error fetching models: {str(e)}')
     elif request.app.state.config.TTS_ENGINE == 'mistral':
-        available_models = [{'id': 'mistral-tts-latest'}]
+        available_models = [{'id': 'voxtral-mini-tts-2603'}]
     return available_models
 
 
@@ -1431,11 +1431,14 @@ async def get_available_voices(request) -> dict:
                         response.raise_for_status()
                         voices_data = await response.json()
 
-                        for voice in voices_data:
-                            voice_id = voice.get('voice_id', voice.get('id', ''))
-                            voice_name = voice.get('name', voice_id)
-                            if voice_id:
-                                available_voices[voice_id] = voice_name
+                        # Mistral returns a paginated response: {"items": [...], "page": ..., "total": ...}
+                        voices_list = voices_data.get('items', []) if isinstance(voices_data, dict) else voices_data
+                        for voice in voices_list:
+                            if isinstance(voice, dict):
+                                voice_id = voice.get('voice_id', voice.get('id', ''))
+                                voice_name = voice.get('name', voice_id)
+                                if voice_id:
+                                    available_voices[voice_id] = voice_name
             except Exception as e:
                 log.error(f'Error fetching Mistral voices: {str(e)}')
 

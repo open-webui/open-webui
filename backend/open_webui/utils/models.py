@@ -287,9 +287,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # imported/custom model configs may reference tools or filters the user
     # hasn't installed, and trying to load those would cause persistent
     # "Failed to load function module" log spam on every model refresh.
-    for function_id in functions_by_id:
+    for function_id, function in functions_by_id.items():
         try:
-            await get_function_module_from_cache(request, function_id)
+            await get_function_module_from_cache(request, function_id, function=function)
         except Exception as e:
             log.debug(f'Failed to load function module for {function_id}: {e}')
 

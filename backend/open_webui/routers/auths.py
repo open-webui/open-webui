@@ -172,10 +172,17 @@ async def get_session_user(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    token = None
     auth_header = request.headers.get('Authorization')
-    auth_token = get_http_authorization_cred(auth_header)
-    token = auth_token.credentials
-    data = decode_token(token)
+    if auth_header:
+        auth_token = get_http_authorization_cred(auth_header)
+        if auth_token is not None:
+            token = auth_token.credentials
+    if token is None:
+        token = request.cookies.get('token')
+    if token is None and getattr(request.state, 'token', None):
+        token = request.state.token.credentials
+    data = decode_token(token) if token else None
 
     expires_at = None
 
@@ -773,8 +780,9 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
     auth_header = request.headers.get('Authorization')
     if auth_header:
         auth_cred = get_http_authorization_cred(auth_header)
-        token = auth_cred.credentials
-    else:
+        if auth_cred is not None:
+            token = auth_cred.credentials
+    if token is None:
         token = request.cookies.get('token')
 
     if token:
@@ -851,6 +859,31 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         )
 
     return JSONResponse(status_code=200, content={'status': True}, headers=response.headers)
+
+
+############################
+# OAuth Session Management
+############################
+
+
+@router.delete('/oauth/sessions/{provider:path}', response_model=bool)
+async def delete_oauth_session_by_provider(
+    provider: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Disconnect the current user's OAuth session for a specific provider.
+    The provider string matches the 'provider' field in the oauth_session table
+    (e.g. 'mcp:server-id' for MCP connections).
+    """
+    result = await OAuthSessions.delete_sessions_by_user_id_and_provider(user.id, provider, db=db)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='No OAuth session found for this provider',
+        )
+    return True
 
 
 ############################

@@ -138,4 +138,3 @@
 		contain-intrinsic-size: auto 150px;
 	}
 </style>
-

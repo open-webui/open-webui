@@ -238,9 +238,13 @@ async def fetch_url(
         content, _ = await asyncio.to_thread(get_content_from_url, __request__, url)
 
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
-        max_length = getattr(__request__.app.state.config, 'WEB_FETCH_MAX_CONTENT_LENGTH', None)
-        if max_length and max_length > 0 and len(content) > max_length:
-            content = content[:max_length] + '\n\n[Content truncated...]'
+        # Guard: content may be None if the web loader silently failed
+        if content is not None:
+            max_length = getattr(__request__.app.state.config, 'WEB_FETCH_MAX_CONTENT_LENGTH', None)
+            if max_length and max_length > 0 and len(content) > max_length:
+                content = content[:max_length] + '\n\n[Content truncated...]'
+        else:
+            content = ''
 
         return content
     except Exception as e:
@@ -2568,8 +2572,11 @@ async def create_automation(
         if not user:
             return json.dumps({'error': 'User not found'})
 
-        # Always use the calling model for the automation
-        model_id = (__metadata__ or {}).get('model_id')
+        # Fall back to model dict ID since __metadata__ may predate model_id assignment
+        metadata = __metadata__ or {}
+        model_id = metadata.get('model_id') or (
+            metadata.get('model', {}).get('id') if isinstance(metadata.get('model'), dict) else None
+        )
         if not model_id:
             return json.dumps({'error': 'Could not detect current model'})
 
@@ -2888,6 +2895,9 @@ def _ns_to_dt(ns: int, tz) -> str:
 
 def _event_to_dict(event, tz) -> dict:
     """Convert a calendar event model to a human-friendly dict with local timestamps."""
+    alert_minutes = None
+    if event.meta and 'alert_minutes' in event.meta:
+        alert_minutes = event.meta['alert_minutes']
     return {
         'id': event.id,
         'calendar_id': event.calendar_id,
@@ -2897,6 +2907,7 @@ def _event_to_dict(event, tz) -> dict:
         'end': _ns_to_dt(event.end_at, tz) if event.end_at else None,
         'all_day': event.all_day,
         'location': event.location or '',
+        'reminder_minutes': alert_minutes if alert_minutes is not None else 10,
         'color': event.color,
         'is_cancelled': event.is_cancelled,
     }
@@ -3003,6 +3014,7 @@ async def create_calendar_event(
     calendar_id: Optional[str] = None,
     all_day: bool = False,
     location: Optional[str] = None,
+    reminder_minutes: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -3017,6 +3029,7 @@ async def create_calendar_event(
     :param calendar_id: Target calendar ID (optional, uses default calendar if omitted)
     :param all_day: Whether this is an all-day event (default: false)
     :param location: Event location (optional)
+    :param reminder_minutes: Minutes before the event to send a reminder notification (optional, default: 10). Use 0 for "at time of event", -1 for no reminder. Accepts any positive integer for custom timing (e.g. 120 for 2 hours before).
     :return: JSON with the created event details including id
     """
     if __request__ is None:
@@ -3079,6 +3092,18 @@ async def create_calendar_event(
             # Default to 1 hour duration
             end_ns = start_ns + 3_600_000_000_000
 
+        # Build meta with reminder setting
+        meta = {}
+        if reminder_minutes is not None:
+            if isinstance(reminder_minutes, str):
+                try:
+                    reminder_minutes = int(reminder_minutes)
+                except ValueError:
+                    reminder_minutes = 10
+            meta['alert_minutes'] = reminder_minutes
+        else:
+            meta['alert_minutes'] = 10
+
         form = CalendarEventForm(
             calendar_id=calendar_id,
             title=title,
@@ -3087,6 +3112,7 @@ async def create_calendar_event(
             end_at=end_ns,
             all_day=all_day,
             location=location,
+            meta=meta,
         )
 
         event = await CalendarEvents.insert_new_event(user_id, form)
@@ -3114,6 +3140,7 @@ async def update_calendar_event(
     all_day: Optional[bool] = None,
     location: Optional[str] = None,
     is_cancelled: Optional[bool] = None,
+    reminder_minutes: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -3129,6 +3156,7 @@ async def update_calendar_event(
     :param all_day: Whether this is an all-day event (optional)
     :param location: New event location (optional)
     :param is_cancelled: Set to true to cancel the event (optional)
+    :param reminder_minutes: Minutes before the event to send a reminder notification (optional). Use 0 for "at time of event", -1 for no reminder. Accepts any positive integer for custom timing (e.g. 120 for 2 hours before).
     :return: JSON with the updated event details
     """
     if __request__ is None:
@@ -3183,6 +3211,17 @@ async def update_calendar_event(
             except (ValueError, TypeError) as e:
                 return json.dumps({'error': f'Invalid end datetime: {e}'})
 
+        # Build meta update with reminder setting if provided
+        meta = None
+        if reminder_minutes is not None:
+            if isinstance(reminder_minutes, str):
+                try:
+                    reminder_minutes = int(reminder_minutes)
+                except ValueError:
+                    reminder_minutes = None
+            if reminder_minutes is not None:
+                meta = {'alert_minutes': reminder_minutes}
+
         form = CalendarEventUpdateForm(
             title=title,
             description=description,
@@ -3191,6 +3230,7 @@ async def update_calendar_event(
             all_day=all_day,
             location=location,
             is_cancelled=is_cancelled,
+            meta=meta,
         )
 
         updated = await CalendarEvents.update_event_by_id(event_id, form)

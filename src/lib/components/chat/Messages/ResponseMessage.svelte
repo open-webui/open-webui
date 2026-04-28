@@ -788,9 +788,6 @@
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
-									messageId={message.id}
-									{history}
-									{selectedModels}
 									content={message.content}
 									sources={message.sources}
 									floatingButtons={message?.done &&
@@ -814,8 +811,8 @@
 											citationsElement?.showSourceModal(id);
 										}
 									}}
-									onAddMessages={({ modelId, parentId, messages }) => {
-										addMessages({ modelId, parentId, messages });
+									onSetInputText={(text) => {
+										setInputText(text);
 									}}
 									onSave={({ raw, oldContent, newContent }) => {
 										history.messages[message.id].content = history.messages[

@@ -23,9 +23,9 @@ from open_webui.retrieval.loaders.external_document import ExternalDocumentLoade
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
+from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
 
-
-from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
+from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY, AIOHTTP_CLIENT_SESSION_SSL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -205,6 +205,7 @@ class DoclingLoader:
                     **self.params,
                 },
                 headers=headers,
+                verify=AIOHTTP_CLIENT_SESSION_SSL,
             )
         if r.ok:
             result = r.json()
@@ -400,6 +401,12 @@ class Loader:
                 file_path=file_path,
                 use_base64=self.kwargs.get("MISTRAL_OCR_USE_BASE64", False),
                 model=self.kwargs.get("MISTRAL_OCR_MODEL", "mistral-ocr-latest"),
+            )
+        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+            loader = PaddleOCRVLLoader(
+                api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
+                token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
+                file_path=file_path,
             )
         else:
             if file_ext == 'pdf':

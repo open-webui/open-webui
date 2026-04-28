@@ -482,6 +482,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'MISTRAL_OCR_API_KEY': request.app.state.config.MISTRAL_OCR_API_KEY,
         'MISTRAL_OCR_USE_BASE64': request.app.state.config.MISTRAL_OCR_USE_BASE64,
         'MISTRAL_OCR_MODEL': request.app.state.config.MISTRAL_OCR_MODEL,
+        'PADDLEOCR_VL_BASE_URL': request.app.state.config.PADDLEOCR_VL_BASE_URL,
+        'PADDLEOCR_VL_TOKEN': request.app.state.config.PADDLEOCR_VL_TOKEN,
+
         # MinerU settings
         'MINERU_API_MODE': request.app.state.config.MINERU_API_MODE,
         'MINERU_API_URL': request.app.state.config.MINERU_API_URL,
@@ -690,6 +693,8 @@ class ConfigForm(BaseModel):
     MISTRAL_OCR_API_KEY: Optional[str] = None
     MISTRAL_OCR_USE_BASE64: Optional[bool] = None
     MISTRAL_OCR_MODEL: Optional[str] = None
+    PADDLEOCR_VL_BASE_URL: Optional[str] = None
+    PADDLEOCR_VL_TOKEN: Optional[str] = None
 
     # MinerU settings
     MINERU_API_MODE: Optional[str] = None
@@ -891,6 +896,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
     )
+
     request.app.state.config.MISTRAL_OCR_USE_BASE64 = (
         form_data.MISTRAL_OCR_USE_BASE64
         if form_data.MISTRAL_OCR_USE_BASE64 is not None
@@ -900,6 +906,16 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.MISTRAL_OCR_MODEL
         if form_data.MISTRAL_OCR_MODEL is not None
         else request.app.state.config.MISTRAL_OCR_MODEL
+    )
+    request.app.state.config.PADDLEOCR_VL_BASE_URL = (
+        form_data.PADDLEOCR_VL_BASE_URL
+        if form_data.PADDLEOCR_VL_BASE_URL is not None
+        else request.app.state.config.PADDLEOCR_VL_BASE_URL
+    )
+    request.app.state.config.PADDLEOCR_VL_TOKEN = (
+        form_data.PADDLEOCR_VL_TOKEN
+        if form_data.PADDLEOCR_VL_TOKEN is not None
+        else request.app.state.config.PADDLEOCR_VL_TOKEN
     )
 
     # MinerU settings
@@ -1168,6 +1184,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'MISTRAL_OCR_API_KEY': request.app.state.config.MISTRAL_OCR_API_KEY,
         'MISTRAL_OCR_USE_BASE64': request.app.state.config.MISTRAL_OCR_USE_BASE64,
         'MISTRAL_OCR_MODEL': request.app.state.config.MISTRAL_OCR_MODEL,
+        'PADDLEOCR_VL_BASE_URL': request.app.state.config.PADDLEOCR_VL_BASE_URL,
+        'PADDLEOCR_VL_TOKEN': request.app.state.config.PADDLEOCR_VL_TOKEN,
+
         # MinerU settings
         'MINERU_API_MODE': request.app.state.config.MINERU_API_MODE,
         'MINERU_API_URL': request.app.state.config.MINERU_API_URL,

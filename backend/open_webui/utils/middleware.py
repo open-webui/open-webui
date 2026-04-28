@@ -1164,6 +1164,15 @@ async def process_tool_result(
                                 'url': file_url,
                             }
                         )
+                    elif item.get('type') == 'resource':
+                        resource = item.get('resource', {})
+                        text = resource.get('text', '')
+                        if isinstance(text, str) and text:
+                            try:
+                                text = json.loads(text)
+                            except json.JSONDecodeError:
+                                pass
+                            tool_response.append(text)
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
             for item in tool_result:
@@ -1546,11 +1555,11 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
 
     except Exception as e:
         log.exception(e)
-        queries = [user_message]
+        queries = [user_message or '']
 
     # Check if generated queries are empty
     if len(queries) == 1 and queries[0].strip() == '':
-        queries = [user_message]
+        queries = [user_message or '']
 
     # Check if queries are not found
     if len(queries) == 0:
@@ -1991,7 +2000,7 @@ async def chat_completion_files_handler(
             )
 
         if len(queries) == 0:
-            queries = [get_last_user_message(body['messages'])]
+            queries = [get_last_user_message(body['messages']) or '']
 
         try:
             # Directly await async get_sources_from_items (no thread needed - fully async now)
@@ -2178,6 +2187,43 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
         processed.append(clean_message)
 
     return processed
+
+
+SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)\|?[^>]*>')
+
+
+def _get_text_parts(message: dict) -> list[str]:
+    """Return all text segments from a message's content."""
+    content = message.get('content')
+    if isinstance(content, str):
+        return [content]
+    if isinstance(content, list):
+        return [p.get('text', '') for p in content if isinstance(p, dict) and p.get('type') == 'text']
+    return []
+
+
+def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
+    """Extract skill IDs from <$skillId|label> mention tags in messages."""
+    ids: set[str] = set()
+    for message in messages:
+        for text in _get_text_parts(message):
+            ids.update(m.group(1) for m in SKILL_MENTION_RE.finditer(text))
+    return ids
+
+
+def strip_skill_mentions(messages: list[dict]) -> None:
+    """Strip <$skillId|label> mention tags from message content in-place."""
+    strip_re = re.compile(r'<\$[^>]+>')
+    for message in messages:
+        content = message.get('content')
+        if isinstance(content, str) and strip_re.search(content):
+            message['content'] = strip_re.sub('', content).strip()
+        elif isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict) and part.get('type') == 'text':
+                    text = part.get('text', '')
+                    if strip_re.search(text):
+                        part['text'] = strip_re.sub('', text).strip()
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
@@ -2465,8 +2511,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # tool resolution (tool_ids, MCP servers, builtin tools).
     payload_tools = form_data.get('tools', None)
 
-    # Skills
+    # Skills — extract IDs from message content (<$skillId|label> tags) so
+    # persisted chats work without relying on the frontend to send skill_ids.
     user_skill_ids = set(form_data.pop('skill_ids', None) or [])
+    user_skill_ids |= extract_skill_ids_from_messages(form_data.get('messages', []))
     model_skill_ids = set(model.get('info', {}).get('meta', {}).get('skillIds', []))
 
     all_skill_ids = user_skill_ids | model_skill_ids
@@ -2501,6 +2549,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data['messages'],
                 append=True,
             )
+
+    # Strip <$skillId|label> mention tags so the model doesn't see raw markup.
+    strip_skill_mentions(form_data.get('messages', []))
 
     prompt = get_last_user_message(form_data['messages'])
     # TODO: re-enable URL extraction from prompt
@@ -4269,6 +4320,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             'data': data,
                                         }
                                     )
+                        except (asyncio.CancelledError, KeyboardInterrupt):
+                            raise
                         except Exception as e:
                             done = 'data: [DONE]' in line
                             if done:
@@ -4656,6 +4709,7 @@ async def streaming_chat_response_handler(response, ctx):
                             **form_data,
                             'model': model_id,
                             'stream': True,
+                            'metadata': metadata,
                         }
 
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
@@ -4879,6 +4933,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 **form_data,
                                 'model': model_id,
                                 'stream': True,
+                                'metadata': metadata,
                                 'messages': [
                                     *form_data['messages'],
                                     *convert_output_to_messages(output, raw=True),
@@ -4971,31 +5026,39 @@ async def streaming_chat_response_handler(response, ctx):
                 await outlet_filter_handler(ctx)
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
-                try:
-                    await asyncio.shield(event_emitter({'type': 'chat:tasks:cancel'}))
 
+                # Close the response body iterator to trigger cleanup
+                # in stream_wrapper's finally block and release the
+                # upstream connection.  Without this, the async
+                # generator is orphaned and may spin in anyio internals.
+                if hasattr(response, 'body_iterator') and hasattr(response.body_iterator, 'aclose'):
+                    try:
+                        await asyncio.shield(response.body_iterator.aclose())
+                    except (asyncio.CancelledError, Exception):
+                        pass
+
+                async def save_cancelled_state():
+                    await event_emitter({'type': 'chat:tasks:cancel'})
                     if not ENABLE_REALTIME_CHAT_SAVE:
-                        # Save message in the database
-                        await asyncio.shield(
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata['chat_id'],
-                                metadata['message_id'],
-                                {
-                                    'done': True,
-                                    'content': serialize_output(output),
-                                    'output': output,
-                                },
-                            )
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {
+                                'done': True,
+                                'content': serialize_output(output),
+                                'output': output,
+                            },
                         )
                     else:
-                        await asyncio.shield(
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata['chat_id'],
-                                metadata['message_id'],
-                                {'done': True},
-                            )
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {'done': True},
                         )
-                except Exception:
+
+                try:
+                    await asyncio.shield(save_cancelled_state())
+                except (asyncio.CancelledError, Exception):
                     pass
                 raise  # re-raise CancelledError for proper propagation
 
