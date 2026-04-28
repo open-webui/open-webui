@@ -774,9 +774,9 @@
 			theme.set(newTheme);
 
 			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
-			const themes = ['dark', 'light', 'oled-dark', 'coffee'];
+			const themes = ['dark', 'light', 'oled-dark'];
 			let themeToApply =
-				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' || newTheme === 'coffee' ? 'light coffee' : newTheme;
+				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
 			if (newTheme === 'system') {
 				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 			}

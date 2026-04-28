@@ -46,10 +46,6 @@
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
 				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-				if (!localStorage?.theme) {
-					localStorage.theme = 'coffee';
-				}
-
 				if (localStorage.theme === 'system') {
 					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
 					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
@@ -66,15 +62,6 @@
 				} else if (localStorage.theme === 'her') {
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
-				} else if (localStorage.theme === 'coffee') {
-					document.documentElement.style.setProperty('--color-gray-50', '#F5EFE6');
-					document.documentElement.style.setProperty('--color-gray-100', '#EBE4DA');
-					document.documentElement.style.setProperty('--color-gray-200', '#D4C4B4');
-					document.documentElement.style.setProperty('--color-gray-700', '#3D2B20');
-					document.documentElement.style.setProperty('--color-gray-800', '#4A3A30');
-					document.documentElement.style.setProperty('--color-gray-900', '#3D2B20');
-					document.documentElement.classList.add('light', 'coffee');
-					metaThemeColorTag.setAttribute('content', '#F5EFE6');
 				} else {
 					document.documentElement.classList.add('dark');
 					metaThemeColorTag.setAttribute('content', '#171717');
@@ -214,10 +201,6 @@
 
 		html.her #splash-screen {
 			background: #983724;
-		}
-
-		html.coffee #splash-screen {
-			background: #FDF8F3;
 		}
 
 		#logo-her {

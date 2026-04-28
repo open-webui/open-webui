@@ -14,8 +14,8 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark', 'coffee'];
-	let selectedTheme = 'coffee';
+	let themes = ['dark', 'light', 'oled-dark'];
+	let selectedTheme = 'light';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
@@ -108,7 +108,7 @@
 	};
 
 	onMount(async () => {
-		selectedTheme = localStorage.theme ?? 'coffee';
+		selectedTheme = localStorage.theme ?? 'light';
 
 		languages = await getLanguages();
 
@@ -124,60 +124,37 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme === 'her' || _theme === 'coffee' ? 'light coffee' : _theme;
+		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme === 'her' ? 'light' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
 		if (themeToApply === 'dark' && !_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
-		} else if (_theme === 'coffee') {
-			const colors = {
-			50: '#F5EFE6',
-			100: '#EBE4DA',
-			200: '#D4C4B4',
-			700: '#3D2B20',
-			800: '#4A3A30',
-			900: '#3D2B20'
-			};
-
-			Object.entries(colors).forEach(([shade, value]) => {
-			document.documentElement.style.setProperty(`--color-gray-${shade}`, value);
-			});
-
 			const css = document.createElement('style');
 			css.textContent = `
-			@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600&display=swap');
-			*, body { font-family: 'Lexend Deca', sans-serif !important; }
-
-			* { border-color: ${colors[200]} !important; }
-
-			.text-gray-700,
-			.text-gray-800,
-			.text-gray-900 {
-				color: ${colors[700]} !important;
-			}
-
-			.bg-whiter { background-color: #fff8ed !important; }
-			
-			.bg-gray-50,
-			.bg-white {
-				background-color: ${colors[50]} !important;
-			}
-
-			.bg-gray-100 {
-				background-color: ${colors[100]} !important;
-			}
-
-			#sidebar {
-				background-color: #E8E4D9 !important;
-			}
+				--color-gray-1: oklch(0.98 0 0);
+				--color-gray-50: oklch(0.98 0 0);
+				--color-gray-100: oklch(0.94 0 0);
+				--color-gray-200: oklch(0.92 0 0);
+				--color-gray-300: oklch(0.85 0 0);
+				--color-gray-400: oklch(0.77 0 0);
+				--color-gray-500: oklch(0.69 0 0);
+				--color-gray-600: oklch(0.51 0 0);
+				--color-gray-700: oklch(0.42 0 0);
+				--color-gray-800: oklch(0.32 0 0);
+				--color-gray-850: oklch(0.27 0 0);
+				--color-gray-900: oklch(0.2 0 0);
+				--color-gray-950: oklch(0.16 0 0);
 			`;
-
+			document.head.appendChild(css);
+		} else if (_theme === 'light') { // but this is not being applied on page open
+			const css = document.createElement('style');
+			css.textContent = `
+			#sidebar { background-color: var(--color-gray-100) !important; }
+			.bg-white { background-color: var(--color-gray-50) !important; }
+			.bg-whiter { background-color: var(--color-gray-1) !important; }
+			`;
 			document.head.appendChild(css);
 		}
 
@@ -211,9 +188,7 @@
 							? '#000000'
 							: _theme === 'her'
 								? '#983724'
-								: _theme === 'latte'
-									? '#FDF8F3'
-									: _theme === 'coffee'
+									: _theme === 'light'
 										? '#F5EFE6'
 										: '#ffffff'
 				);
@@ -262,7 +237,6 @@
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
 						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="coffee">🫘 {$i18n.t('Coffee')}</option>
 						{#if $config?.features?.enable_easter_eggs}
 							<option value="her">🌷 Her</option>
 						{/if}

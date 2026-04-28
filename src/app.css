@@ -30,6 +30,11 @@
 	font-display: swap;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600&display=swap');
+*, body { font-family: 'Lexend Deca', sans-serif !important; }
+
+* { border-color: var(--color-gray-200) !important; }
+
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
 	--app-text-scale: 1;

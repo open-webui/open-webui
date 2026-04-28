@@ -3,18 +3,19 @@
 @config '../tailwind.config.js';
 
 @theme {
-	--color-gray-50: oklch(0.98 0 0);
-	--color-gray-100: oklch(0.94 0 0);
-	--color-gray-200: oklch(0.92 0 0);
-	--color-gray-300: oklch(0.85 0 0);
-	--color-gray-400: oklch(0.77 0 0);
-	--color-gray-500: oklch(0.69 0 0);
-	--color-gray-600: oklch(0.51 0 0);
-	--color-gray-700: oklch(0.42 0 0);
-	--color-gray-800: oklch(0.32 0 0);
-	--color-gray-850: oklch(0.27 0 0);
-	--color-gray-900: oklch(0.2 0 0);
-	--color-gray-950: oklch(0.16 0 0);
+	--color-gray-1: #fff8ed;
+	--color-gray-50:  #F5EFE6;
+	--color-gray-100: #EBE4DA;
+	--color-gray-200: #D4C4B4;
+	--color-gray-300: #BFA28F;
+	--color-gray-400: #A68A78;
+	--color-gray-500: #8C6F5E;
+	--color-gray-600: #6E4F3F;
+	--color-gray-700: #3D2B20;
+	--color-gray-800: #4A3A30;
+	--color-gray-850: #423329;
+	--color-gray-900: #3D2B20;
+	--color-gray-950: #2A1D16;
 }
 
 /*
