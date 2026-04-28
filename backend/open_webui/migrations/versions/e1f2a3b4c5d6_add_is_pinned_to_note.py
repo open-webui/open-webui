@@ -16,7 +16,13 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('note', sa.Column('is_pinned', sa.Boolean(), nullable=True))
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='note' AND column_name='is_pinned'"
+    ))
+    if result.fetchone() is None:
+        op.add_column('note', sa.Column('is_pinned', sa.Boolean(), nullable=True))
 
 
 def downgrade():

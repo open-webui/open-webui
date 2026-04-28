@@ -17,35 +17,55 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        'automation',
-        sa.Column('id', sa.Text(), primary_key=True),
-        sa.Column('user_id', sa.Text(), nullable=False),
-        sa.Column('name', sa.Text(), nullable=False),
-        sa.Column('data', sa.JSON(), nullable=False),
-        sa.Column('meta', sa.JSON(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, default=True),
-        sa.Column('last_run_at', sa.BigInteger(), nullable=True),
-        sa.Column('next_run_at', sa.BigInteger(), nullable=True),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-        sa.Column('updated_at', sa.BigInteger(), nullable=False),
-    )
-    op.create_index('ix_automation_next_run', 'automation', ['next_run_at'])
+    conn = op.get_bind()
 
-    op.create_table(
-        'automation_run',
-        sa.Column('id', sa.Text(), primary_key=True),
-        sa.Column('automation_id', sa.Text(), nullable=False),
-        sa.Column('chat_id', sa.Text(), nullable=True),
-        sa.Column('status', sa.Text(), nullable=False),
-        sa.Column('error', sa.Text(), nullable=True),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-    )
-    op.create_index(
-        'ix_automation_run_automation_id',
-        'automation_run',
-        ['automation_id'],
-    )
+    # Create automation table if it does not exist
+    if not conn.dialect.has_table(conn, 'automation'):
+        op.create_table(
+            'automation',
+            sa.Column('id', sa.Text(), primary_key=True),
+            sa.Column('user_id', sa.Text(), nullable=False),
+            sa.Column('name', sa.Text(), nullable=False),
+            sa.Column('data', sa.JSON(), nullable=False),
+            sa.Column('meta', sa.JSON(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, default=True),
+            sa.Column('last_run_at', sa.BigInteger(), nullable=True),
+            sa.Column('next_run_at', sa.BigInteger(), nullable=True),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+            sa.Column('updated_at', sa.BigInteger(), nullable=False),
+        )
+
+    # Create index if it does not exist
+    result = conn.execute(sa.text(
+        "SELECT indexname FROM pg_indexes "
+        "WHERE tablename='automation' AND indexname='ix_automation_next_run'"
+    ))
+    if result.fetchone() is None:
+        op.create_index('ix_automation_next_run', 'automation', ['next_run_at'])
+
+    # Create automation_run table if it does not exist
+    if not conn.dialect.has_table(conn, 'automation_run'):
+        op.create_table(
+            'automation_run',
+            sa.Column('id', sa.Text(), primary_key=True),
+            sa.Column('automation_id', sa.Text(), nullable=False),
+            sa.Column('chat_id', sa.Text(), nullable=True),
+            sa.Column('status', sa.Text(), nullable=False),
+            sa.Column('error', sa.Text(), nullable=True),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+        )
+
+    # Create index if it does not exist
+    result = conn.execute(sa.text(
+        "SELECT indexname FROM pg_indexes "
+        "WHERE tablename='automation_run' AND indexname='ix_automation_run_automation_id'"
+    ))
+    if result.fetchone() is None:
+        op.create_index(
+            'ix_automation_run_automation_id',
+            'automation_run',
+            ['automation_id'],
+        )
 
 
 def downgrade():
