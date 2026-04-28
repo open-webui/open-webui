@@ -145,20 +145,7 @@
 						in:fade={{ duration: 100 }}
 						dir="rtl"
 					>
-						/*{#if models[selectedModelIdx]?.name}
-							<Tooltip
-								content={models[selectedModelIdx]?.name}
-								placement="top"
-								className=" flex items-center "
-							>
-								<span class="line-clamp-1">
-									{models[selectedModelIdx]?.name}
-								</span>
-							</Tooltip>
-						{:else}*/
-							/* {$i18n.t('Hello, {{name}}', { name: $user?.name })} */
-							{`عسلامة ${$user?.name} تفضل`}
-						/*{/if}*/
+						{`عسلامة ${$user?.name} تفضل`}
 					</div>
 				</div>
 
