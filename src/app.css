@@ -31,8 +31,14 @@
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;600&display=swap');
-*, body { font-family: 'Lexend Deca', sans-serif !important; }
+@import url('https://fonts.googleapis.com/css2?family=Harmattan:wght@400;500;600;700&display=swap');
 
+*, body { font-family: 'Lexend Deca', sans-serif; }
+p, .text-3xl, .text-2xl, .text-xl {
+  font-family: 'Harmattan', sans-serif;
+  font-weight: 500;
+  font-size-adjust: 0.58;
+}
 
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
