@@ -3945,6 +3945,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             response_id = response_metadata.pop('response_id', None)
                                             if response_id:
                                                 last_response_id = response_id
+                                        if response_metadata.get('usage'):
+                                            usage = normalize_usage(response_metadata['usage'])
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
 
