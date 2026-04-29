@@ -103,6 +103,17 @@
 		}
 	};
 
+	const handleKeydown = (event: KeyboardEvent) => {
+		const mod = event.ctrlKey || event.metaKey;
+
+		if (mod && !event.shiftKey && event.key === 'Enter') {
+			if (!loading) {
+				event.preventDefault();
+				submitHandler();
+			}
+		}
+	};
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
@@ -118,6 +129,8 @@
 		loaded = true;
 	});
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">

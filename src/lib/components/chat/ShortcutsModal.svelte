@@ -97,6 +97,11 @@
 						<!-- {$i18n.t('Only active when the chat input is in focus.')} -->
 						<!-- {$i18n.t('Only active when the chat input is in focus and an LLM is generating a response.')} -->
 						<!-- {$i18n.t('Only can be triggered when the chat input is in focus.')} -->
+						<!-- {$i18n.t('Edit Last User Message')} -->
+						<!-- {$i18n.t('Playground')} -->
+						<!-- {$i18n.t('Run')} -->
+						<!-- {$i18n.t('Add Message')} -->
+						<!-- {$i18n.t('Toggle Role')} -->
 						{#each items as shortcut}
 							<div class="col-span-1 flex items-start">
 								<ShortcutItem {shortcut} {isMac} />

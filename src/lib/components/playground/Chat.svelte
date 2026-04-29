@@ -288,6 +288,24 @@
 		toast.success($i18n.t('Chat exported successfully'));
 	};
 
+	const handleKeydown = (event: KeyboardEvent) => {
+		const mod = event.ctrlKey || event.metaKey;
+
+		if (mod && !event.shiftKey && event.key === 'Enter') {
+			if (!loading) {
+				event.preventDefault();
+				submitHandler();
+			}
+		} else if (mod && event.shiftKey && event.key.toLowerCase() === 'a') {
+			event.preventDefault();
+			addHandler();
+			role = role === 'user' ? 'assistant' : 'user';
+		} else if (mod && event.shiftKey && event.key.toLowerCase() === 'x') {
+			event.preventDefault();
+			role = role === 'user' ? 'assistant' : 'user';
+		}
+	};
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
@@ -303,6 +321,8 @@
 		loaded = true;
 	});
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">

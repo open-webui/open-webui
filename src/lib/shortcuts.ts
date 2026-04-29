@@ -40,7 +40,13 @@ export enum Shortcut {
 	REGENERATE_RESPONSE = 'regenerateResponse',
 	COPY_LAST_CODE_BLOCK = 'copyLastCodeBlock',
 	COPY_LAST_RESPONSE = 'copyLastResponse',
-	STOP_GENERATING = 'stopGenerating'
+	STOP_GENERATING = 'stopGenerating',
+	EDIT_LAST_MESSAGE = 'editLastMessage',
+
+	//Playground
+	PLAYGROUND_SUBMIT = 'playgroundSubmit',
+	PLAYGROUND_ADD_MESSAGE = 'playgroundAddMessage',
+	PLAYGROUND_TOGGLE_ROLE = 'playgroundToggleRole'
 }
 
 export const shortcuts: ShortcutRegistry = {
@@ -164,5 +170,27 @@ export const shortcuts: ShortcutRegistry = {
 		name: 'Copy Last Code Block',
 		keys: ['mod', 'shift', ';'],
 		category: 'Message'
+	},
+	[Shortcut.EDIT_LAST_MESSAGE]: {
+		name: 'Edit Last User Message',
+		keys: ['mod', 'E'],
+		category: 'Message'
+	},
+
+	//Playground
+	[Shortcut.PLAYGROUND_SUBMIT]: {
+		name: 'Run',
+		keys: ['mod', 'Enter'],
+		category: 'Playground'
+	},
+	[Shortcut.PLAYGROUND_ADD_MESSAGE]: {
+		name: 'Add Message',
+		keys: ['mod', 'shift', 'A'],
+		category: 'Playground'
+	},
+	[Shortcut.PLAYGROUND_TOGGLE_ROLE]: {
+		name: 'Toggle Role',
+		keys: ['mod', 'shift', 'X'],
+		category: 'Playground'
 	}
 };
