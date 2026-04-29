@@ -89,7 +89,7 @@ def get_license_data(app, key):
         for k, v in data.items():
             if k == 'resources':
                 for p, c in v.items():
-                    globals().get('override_static', lambda a, b: None)(p, c)
+                    override_static(p, c)
             elif k == 'count':
                 setattr(app.state, 'USER_COUNT', v)
             elif k == 'name':
@@ -213,7 +213,12 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
 
 def decode_token(token: str) -> Optional[dict]:
     try:
-        decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
+        decoded = jwt.decode(
+            token,
+            SESSION_SECRET,
+            algorithms=[ALGORITHM],
+            options={"verify_signature": True},
+        )
         return decoded
     except Exception:
         return None
