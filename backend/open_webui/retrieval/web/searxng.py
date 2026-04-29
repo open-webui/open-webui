@@ -39,6 +39,8 @@ def search_searxng(
 
     # Default values for optional parameters are provided as empty strings or None when not specified.
     language = kwargs.get('language', 'all')
+    if isinstance(language, list):
+        language = ','.join(language)
     safesearch = kwargs.get('safesearch', '1')
     time_range = kwargs.get('time_range', '')
     categories = ''.join(kwargs.get('categories', []))
