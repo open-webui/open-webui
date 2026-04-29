@@ -827,7 +827,9 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-									<option value="token_transformers">{$i18n.t('Token')} ({$i18n.t('Transformers')})</option>
+									<option value="token_transformers"
+										>{$i18n.t('Token')} ({$i18n.t('Transformers')})</option
+									>
 								</select>
 							</div>
 						</div>
@@ -840,7 +842,7 @@
 											<Tooltip
 												placement="top-start"
 												content={$i18n.t(
-													'HuggingFace repository name of a model to load its tokenizer locally for exact token length calculation (e.g. sentence-transformers/all-MiniLM-L6-v2). Takes priority over the local embedding model\'s tokenizer when set. Required when using an external embedding API.'
+													"HuggingFace repository name of a model to load its tokenizer locally for exact token length calculation (e.g. sentence-transformers/all-MiniLM-L6-v2). Takes priority over the local embedding model's tokenizer when set. Required when using an external embedding API."
 												)}
 											>
 												{$i18n.t('Tokenizer Model (HuggingFace Repo)')}

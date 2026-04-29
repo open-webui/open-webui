@@ -1173,11 +1173,11 @@ try:
         app.state.rag_tokenizer = get_rag_tokenizer(tokenizer_model_name)
         if app.state.rag_tokenizer is None:
             log.error(
-                f'RAG tokenizer model \'{tokenizer_model_name}\' could not be loaded at startup. '
+                f"RAG tokenizer model '{tokenizer_model_name}' could not be loaded at startup. "
                 f'Uploads using token_transformers splitter will fail until the model is available.'
             )
         else:
-            log.info(f'RAG tokenizer model \'{tokenizer_model_name}\' loaded successfully')
+            log.info(f"RAG tokenizer model '{tokenizer_model_name}' loaded successfully")
 except Exception as e:
     log.error(f'Error updating models: {e}')
     pass

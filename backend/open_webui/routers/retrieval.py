@@ -1097,7 +1097,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     request.app.state.config.CHUNK_OVERLAP = (
         form_data.CHUNK_OVERLAP if form_data.CHUNK_OVERLAP is not None else request.app.state.config.CHUNK_OVERLAP
     )
-    if form_data.RAG_TOKENIZER_MODEL is not None and form_data.RAG_TOKENIZER_MODEL != str(request.app.state.config.RAG_TOKENIZER_MODEL):
+    if form_data.RAG_TOKENIZER_MODEL is not None and form_data.RAG_TOKENIZER_MODEL != str(
+        request.app.state.config.RAG_TOKENIZER_MODEL
+    ):
         request.app.state.config.RAG_TOKENIZER_MODEL = form_data.RAG_TOKENIZER_MODEL
         request.app.state.rag_tokenizer = None  # invalidate cache so it reloads on next ingestion
 
@@ -1370,13 +1372,13 @@ def get_transformers_tokenizer_for_text_splitter(request: Request):
         if tokenizer is None:
             raise ValueError(
                 f"RAG_TOKENIZER_MODEL is set to '{tokenizer_model}' but failed to load — "
-                f"check the application logs for details. "
-                f"Ensure the model name is correct and the model can be downloaded or is already cached locally."
+                f'check the application logs for details. '
+                f'Ensure the model name is correct and the model can be downloaded or is already cached locally.'
             )
         request.app.state.rag_tokenizer = tokenizer
         return tokenizer
 
-    if request.app.state.ef is not None and hasattr(request.app.state.ef, "tokenizer"):
+    if request.app.state.ef is not None and hasattr(request.app.state.ef, 'tokenizer'):
         return request.app.state.ef.tokenizer
 
     return None
@@ -1408,7 +1410,9 @@ def merge_docs_to_target_size(
         if tokenizer is not None:
             measure_chunk_size = lambda text: len(tokenizer.encode(text, add_special_tokens=False))
         else:
-            log.warning('token_transformers tokenizer unavailable in merge_docs_to_target_size, falling back to character counting')
+            log.warning(
+                'token_transformers tokenizer unavailable in merge_docs_to_target_size, falling back to character counting'
+            )
 
     processed_chunks: list[Document] = []
 
