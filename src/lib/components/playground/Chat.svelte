@@ -5,7 +5,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext } from 'svelte';
 
 	import {
 		OLLAMA_API_BASE_URL,
@@ -13,16 +13,19 @@
 		WEBUI_API_BASE_URL,
 		WEBUI_BASE_URL
 	} from '$lib/constants';
-	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
+	import { WEBUI_NAME, config, user, models, settings, showControls } from '$lib/stores';
 
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownSub from '../common/DropdownSub.svelte';
+	import Drawer from '../common/Drawer.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
+	import PlaygroundControls from '$lib/components/playground/Chat/Controls.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Pencil from '../icons/Pencil.svelte';
@@ -31,8 +34,10 @@
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Download from '../icons/Download.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import Knobs from '../icons/Knobs.svelte';
+	import XMark from '../icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext('i18n') as any;
 
 	let loaded = false;
 
@@ -47,11 +52,18 @@
 	let showSettings = false;
 
 	let system = '';
+	let params: Record<string, any> = {};
 
 	let role = 'user';
 	let message = '';
 
 	let messages = [];
+	let largeScreen = false;
+	let mediaQuery: MediaQueryList | null = null;
+
+	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
+		largeScreen = event.matches;
+	};
 
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
@@ -78,6 +90,27 @@
 		resizeSystemTextarea();
 	}
 
+	const getStopTokens = () => {
+		const stop = params?.stop as string | string[] | null | undefined;
+		if (!stop) return undefined;
+
+		const tokens = Array.isArray(stop) ? stop : stop.split(',').map((s: string) => s.trim());
+
+		return tokens
+			.filter(Boolean)
+			.map((token: string) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
+	};
+
+	const getRequestParams = () => {
+		const requestParams = { ...params };
+
+		if (params?.stop) {
+			requestParams.stop = getStopTokens();
+		}
+
+		return requestParams;
+	};
+
 	const chatCompletionHandler = async () => {
 		if (selectedModelId === '') {
 			toast.error($i18n.t('Please select a model.'));
@@ -90,11 +123,14 @@
 			return;
 		}
 
+		const requestParams = getRequestParams();
+
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
 				model: model.id,
 				stream: true,
+				...(Object.keys(requestParams).length > 0 ? { params: requestParams } : {}),
 				messages: [
 					system
 						? {
@@ -249,7 +285,10 @@
 			chat: {
 				title: 'Playground Chat',
 				models: [selectedModelId],
-				params: system ? { system } : {},
+				params: {
+					...params,
+					...(system ? { system } : {})
+				},
 				history: {
 					messages: messagesMap,
 					currentId
@@ -288,7 +327,17 @@
 		toast.success($i18n.t('Chat exported successfully'));
 	};
 
+	onDestroy(() => {
+		mediaQuery?.removeEventListener('change', handleMediaQuery);
+		showControls.set(false);
+	});
+
 	onMount(async () => {
+		showControls.set(false);
+		mediaQuery = window.matchMedia('(min-width: 1024px)');
+		mediaQuery.addEventListener('change', handleMediaQuery);
+		handleMediaQuery(mediaQuery);
+
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		}
@@ -304,7 +353,7 @@
 	});
 </script>
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
+<div class="relative flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
 		<div class=" flex flex-col h-full px-3.5">
 			<div class="flex w-full items-center gap-1.5">
@@ -390,12 +439,30 @@
 										downloadTxt();
 									}}
 								>
-									<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+									<div class="flex items-center line-clamp-1">
+										{$i18n.t('Plain text (.txt)')}
+									</div>
 								</button>
 							</DropdownSub>
 						</div>
 					</div>
 				</Dropdown>
+
+				{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+					<Tooltip content={$i18n.t('Controls')}>
+						<button
+							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition text-gray-500 dark:text-gray-400"
+							on:click={async () => {
+								await showControls.set(!$showControls);
+							}}
+							aria-label="Controls"
+						>
+							<div class="m-auto self-center">
+								<Knobs className=" size-5" strokeWidth="1" />
+							</div>
+						</button>
+					</Tooltip>
+				{/if}
 			</div>
 
 			<div
@@ -513,4 +580,61 @@
 			</div>
 		</div>
 	</div>
+	{#if largeScreen && $showControls}
+		<div
+			class="absolute top-0 right-0 bottom-0 w-[360px] max-w-[40vw] border-l border-gray-50 dark:border-gray-850/30 bg-white dark:bg-gray-850 z-10 shadow-lg"
+		>
+			<div class="flex flex-col h-full min-h-0">
+				<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
+					<div
+						class="px-2.5 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white"
+					>
+						{$i18n.t('Controls')}
+					</div>
+
+					<button
+						class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+						on:click={() => showControls.set(false)}
+						aria-label={$i18n.t('Close')}
+					>
+						<XMark className="size-4" />
+					</button>
+				</div>
+
+				<div class="flex-1 min-h-0 overflow-y-auto px-3 pt-1">
+					<PlaygroundControls bind:params />
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
+
+{#if !largeScreen && $showControls}
+	<Drawer
+		show={$showControls}
+		onClose={() => showControls.set(false)}
+		className="min-h-[100dvh] !bg-white dark:!bg-gray-850"
+	>
+		<div class="h-[100dvh] flex flex-col">
+			<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
+				<div
+					class="px-2.5 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white"
+				>
+					{$i18n.t('Controls')}
+				</div>
+
+				<button
+					class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+					on:click={() => showControls.set(false)}
+					aria-label={$i18n.t('Close')}
+				>
+					<XMark className="size-4" />
+				</button>
+			</div>
+
+			<div class="flex-1 min-h-0 overflow-y-auto px-3 pt-1">
+				<PlaygroundControls bind:params />
+			</div>
+		</div>
+	</Drawer>
+{/if}
