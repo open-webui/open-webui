@@ -683,7 +683,7 @@ def generate_openai_batch_embeddings(
     user: UserModel = None,
 ) -> list[list[float]]:
     log.debug(f'generate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
-    json_data = {'input': texts, 'model': model}
+    json_data = {'input': texts, 'model': model.strip() if model else model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
@@ -716,7 +716,7 @@ async def agenerate_openai_batch_embeddings(
     user: UserModel = None,
 ) -> list[list[float]]:
     log.debug(f'agenerate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
-    form_data = {'input': texts, 'model': model}
+    form_data = {'input': texts, 'model': model.strip() if model else model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
