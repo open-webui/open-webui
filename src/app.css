@@ -37,7 +37,9 @@ p, .text-3xl, .text-2xl, .text-xl {
   font-size-adjust: 0.58;
 }
 /* hide nav */
-nav {
+nav,
+/* settings */
+#settings-search, [aria-controls="tab-general"],[aria-controls="tab-interface"],[aria-controls="tab-tools"],[aria-controls="tab-personalization"],[aria-controls="tab-audio"] {
 	display: none;
 }
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
