@@ -40,7 +40,7 @@
 		}
 		addScrollListener();
 	} else {
-		selectedTab = 'general';
+		selectedTab = 'account';
 		removeScrollListener();
 	}
 
@@ -551,7 +551,7 @@
 		);
 	};
 
-	let selectedTab = 'general';
+	let selectedTab = 'account';
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
