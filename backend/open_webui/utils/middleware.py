@@ -1956,9 +1956,10 @@ async def chat_completion_files_handler(
     if files := body.get('metadata', {}).get('files', None):
         # Check if all files are in full context mode
         all_full_context = all(item.get('context') == 'full' for item in files)
+        user_prompt = get_last_user_message(body['messages']) or ''
 
         queries = []
-        if not all_full_context:
+        if not all_full_context and user_prompt.strip():
             try:
                 queries_response = await generate_queries(
                     request,
@@ -2000,7 +2001,12 @@ async def chat_completion_files_handler(
             )
 
         if len(queries) == 0:
-            queries = [get_last_user_message(body['messages']) or '']
+            queries = [user_prompt] if user_prompt.strip() else []
+
+        # If the user only attached file(s), don't run semantic retrieval with
+        # prior-chat or generic queries. Treat it like full-context mode for
+        # this turn so the model actually sees the attachment.
+        full_context = all_full_context or request.app.state.config.RAG_FULL_CONTEXT or not user_prompt.strip()
 
         try:
             # Directly await async get_sources_from_items (no thread needed - fully async now)
@@ -2021,7 +2027,7 @@ async def chat_completion_files_handler(
                 r=request.app.state.config.RELEVANCE_THRESHOLD,
                 hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
                 hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                full_context=all_full_context or request.app.state.config.RAG_FULL_CONTEXT,
+                full_context=full_context,
                 user=user,
             )
         except Exception as e:
@@ -2842,13 +2848,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # restore to the true original (before file-source injection) rather
     # than a snapshot that already has the RAG template baked in.
     system_message = get_system_message(form_data['messages'])
+    effective_user_prompt = prompt
+    if sources and not (effective_user_prompt or '').strip():
+        effective_user_prompt = 'Use the attached document(s) to respond based on the conversation so far.'
+
     metadata['system_prompt'] = get_content_from_message(system_message) if system_message else None
-    metadata['user_prompt'] = get_last_user_message(form_data['messages'])
+    metadata['user_prompt'] = effective_user_prompt
     metadata['sources'] = sources[:] if sources else []
 
     # If context is not empty, insert it into the messages
-    if sources and prompt:
-        form_data['messages'] = apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
+    if sources and effective_user_prompt:
+        form_data['messages'] = apply_source_context_to_messages(
+            request, form_data['messages'], sources, effective_user_prompt
+        )
 
     # If there are citations, add them to the data_items
     sources = [
@@ -4667,7 +4679,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 rag_content = rag_template(
                                     request.app.state.config.RAG_TEMPLATE,
                                     source_context,
-                                    user_message,
+                                    original_user_message,
                                 )
                                 if RAG_SYSTEM_CONTEXT:
                                     form_data['messages'] = add_or_update_system_message(
