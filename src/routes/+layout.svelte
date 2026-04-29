@@ -903,9 +903,6 @@
 		document.addEventListener('touchend', touchendHandler);
 
 		const applyThemeCSS = (themeValue) => {
-			const existingStyles = document.querySelectorAll('[data-theme-style]');
-			existingStyles.forEach((el) => el.remove());
-
 			// Determine actual theme for class management
 			let themeToApply = themeValue;
 
@@ -1270,7 +1267,7 @@
 {/if}
 
 <Toaster
-	theme={$theme.includes('dark')
+	theme={$theme?.includes('dark')
 		? 'dark'
 		: $theme === 'system'
 			? window.matchMedia('(prefers-color-scheme: dark)').matches
