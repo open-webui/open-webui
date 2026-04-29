@@ -67,6 +67,15 @@ class Chat(Base):
         Index('user_id_archived_idx', 'user_id', 'archived'),
         Index('updated_at_user_id_idx', 'updated_at', 'user_id'),
         Index('folder_id_user_id_idx', 'folder_id', 'user_id'),
+        Index(
+            'chat_sidebar_default_idx',
+            user_id,
+            updated_at.desc(),
+            id,
+            sqlite_where=text(
+                'folder_id IS NULL AND archived = 0 AND (pinned = 0 OR pinned IS NULL)'
+            ),
+        ),
     )
 
 
