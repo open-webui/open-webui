@@ -36,7 +36,10 @@ p, .text-3xl, .text-2xl, .text-xl {
   font-weight: 500;
   font-size-adjust: 0.58;
 }
-
+/* hide nav */
+nav {
+	display: none;
+}
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
 	--app-text-scale: 1;
