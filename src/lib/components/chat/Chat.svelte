@@ -1954,8 +1954,16 @@
 
 					// Bug A: hide Svelte-managed paragraphs so only the overlay is visible
 					const originalParagraphs = Array.from(bubble.querySelectorAll('p'));
-					originalParagraphs.forEach(p => { p.style.visibility = 'hidden'; });
+					originalParagraphs.forEach(p => { p.style.display = 'none'; });
 					const animOverlay = document.createElement('div');
+					animOverlay.style.position = 'relative';
+					animOverlay.style.top = '0';
+					animOverlay.style.margin = '0';
+					animOverlay.style.padding = '0';
+					animOverlay.style.width = '100%';
+					animOverlay.style.lineHeight = '1.5';
+					animOverlay.style.whiteSpace = 'pre-wrap';
+					animOverlay.style.wordBreak = 'break-word';
 					contentBox.appendChild(animOverlay);
 
 					const tokens = userPrompt.split(/(\s+)/);
@@ -1994,7 +2002,7 @@
 					// hold highlighted state for 2s so user can hover for tooltips
 					await new Promise(r => setTimeout(r, 2000));
 					animOverlay.remove();
-					originalParagraphs.forEach(p => { p.style.visibility = ''; });
+					originalParagraphs.forEach(p => { p.style.display = ''; });
 					style.remove();
 				}
 			}
