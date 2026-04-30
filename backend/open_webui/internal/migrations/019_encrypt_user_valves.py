@@ -77,7 +77,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Decrypt user valves back to plaintext."""
-    from open_webui.utils.crypto import decrypt_user_valves
+    from open_webui.utils.valve_encryption import decrypt_user_valves
 
     cursor = database.execute_sql('SELECT "id", "settings" FROM "user" WHERE "settings" IS NOT NULL')
 
