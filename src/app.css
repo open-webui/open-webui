@@ -31,7 +31,7 @@
 }
 
 *, body { font-family: 'Lexend Deca', sans-serif; }
-p, .text-3xl, .text-2xl, .text-xl {
+p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
   font-family: 'Harmattan', sans-serif;
   font-weight: 500;
   font-size-adjust: 0.58;
