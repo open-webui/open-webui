@@ -1978,6 +1978,7 @@
 
 					for (let i = 0; i <= marked.length; i++) {
 						animOverlay.innerHTML = marked.map((t, j) => {
+							const cleanToken = t.token.replace(/\*\*/g, '').replace(/\*/g, '');
 							if (j < i) {
 								if (t.entity) {
 									const entityType = t.entity.type ?? t.entity.entity_type;
@@ -1989,13 +1990,13 @@
 										: entityType === 'IBAN_CODE' ? '#eab308'
 										: entityType === 'ID' ? '#ec4899'
 										: '#f59e0b';
-									return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color}">${t.token}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${entityType}</span></span>`;
+									return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color}">${entityType}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${entityType}</span></span>`;
 								}
-								return `<span>${t.token}</span>`;
+								return `<span>${cleanToken}</span>`;
 							} else if (j === i) {
-								return `<span style="border-left:2px solid white;animation:garnet-blink 0.8s infinite"></span>${t.token}`;
+								return `<span style="border-left:2px solid white;animation:garnet-blink 0.8s infinite"></span>${cleanToken}`;
 							}
-							return `<span style="opacity:0.4">${t.token}</span>`;
+							return `<span style="opacity:0.4">${cleanToken}</span>`;
 						}).join('');
 						await new Promise(r => setTimeout(r, delay));
 					}
