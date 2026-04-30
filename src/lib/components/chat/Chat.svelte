@@ -1977,10 +1977,12 @@
 					const delay = Math.max(1, Math.floor(2000 / marked.length));
 
 					for (let i = 0; i <= marked.length; i++) {
+						const labeledEntities = new Set();
 						animOverlay.innerHTML = marked.map((t, j) => {
 							const cleanToken = t.token.replace(/\*\*/g, '').replace(/\*/g, '');
 							if (j < i) {
 								if (t.entity) {
+									const entityKey = `${t.entity.start}-${t.entity.end}`;
 									const entityType = t.entity.type ?? t.entity.entity_type;
 									const color = entityType === 'PERSON' ? '#3b82f6'
 										: entityType === 'EMAIL_ADDRESS' ? '#ef4444'
@@ -1990,6 +1992,10 @@
 										: entityType === 'IBAN_CODE' ? '#eab308'
 										: entityType === 'ID' ? '#ec4899'
 										: '#f59e0b';
+									if (labeledEntities.has(entityKey)) {
+										return `<span style="color:${color}"></span>`;
+									}
+									labeledEntities.add(entityKey);
 									return `<span style="position:relative;display:inline;cursor:pointer" onmouseenter="this.lastChild.style.display='block'" onmouseleave="this.lastChild.style.display='none'"><span style="color:${color}">${entityType}</span><span style="display:none;position:absolute;bottom:100%;left:0;background:#1a1a1a;color:white;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:9999;pointer-events:none">${entityType}</span></span>`;
 								}
 								return `<span>${cleanToken}</span>`;
