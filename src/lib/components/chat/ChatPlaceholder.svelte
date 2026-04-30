@@ -86,8 +86,8 @@
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }} dir="rtl">
-					{`عسلامة ${$user?.name} تفضل`}
+				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+					{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 				</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>

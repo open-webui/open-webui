@@ -1,4 +1,5 @@
 {
+	"Hello, {{name}}": "مرحباً، {{name}}",
 	"-1 for no limit, or a positive integer for a specific limit": "-1 لعدم وجود حد، أو عدد صحيح موجب لحد معين",
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "الحروف 's'، 'm'، 'h'، 'd'، 'w' أو '-1' لعدم انتهاء الصلاحية.",
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "(مثال: `sh webui.sh --api --api-auth اسم_المستخدم_كلمة_المرور`)",

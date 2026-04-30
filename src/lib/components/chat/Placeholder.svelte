@@ -143,9 +143,8 @@
 					<div
 						class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
 						in:fade={{ duration: 100 }}
-						dir="rtl"
 					>
-						{`عسلامة ${$user?.name} تفضل`}
+						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					</div>
 				</div>
 
