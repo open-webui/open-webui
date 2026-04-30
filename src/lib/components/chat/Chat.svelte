@@ -1947,11 +1947,17 @@
 			if (filteredEntities.length > 0) {
 				const bubble = document.getElementById(`message-${userMessageId}`);
 				if (bubble) {
-					const textEl = bubble.querySelector('.prose p') ?? bubble.querySelector('p') ?? bubble;
-					const originalHTML = textEl.innerHTML;
+					const contentBox = bubble.querySelector('.rounded-3xl') ?? bubble;
 					const style = document.createElement('style');
 					style.textContent = '@keyframes garnet-blink { 50% { opacity: 0; } }';
 					bubble.appendChild(style);
+
+					// Bug A: hide Svelte-managed paragraphs so only the overlay is visible
+					const originalParagraphs = Array.from(bubble.querySelectorAll('p'));
+					originalParagraphs.forEach(p => { p.style.visibility = 'hidden'; });
+					const animOverlay = document.createElement('div');
+					contentBox.appendChild(animOverlay);
+
 					const tokens = userPrompt.split(/(\s+)/);
 					let pos = 0;
 					const marked = tokens.map(token => {
@@ -1959,9 +1965,11 @@
 						const entity = filteredEntities.find(e => start < e.end && end > e.start);
 						return { token, entity };
 					});
-					const delayPerToken = Math.max(15, Math.floor(2000 / marked.length));
+
+					const delay = Math.max(1, Math.floor(2000 / marked.length));
+
 					for (let i = 0; i <= marked.length; i++) {
-						textEl.innerHTML = marked.map((t, j) => {
+						animOverlay.innerHTML = marked.map((t, j) => {
 							if (j < i) {
 								if (t.entity) {
 									const entityType = t.entity.type ?? t.entity.entity_type;
@@ -1981,12 +1989,13 @@
 							}
 							return `<span style="opacity:0.4">${t.token}</span>`;
 						}).join('');
-						await new Promise(r => setTimeout(r, delayPerToken));
+						await new Promise(r => setTimeout(r, delay));
 					}
 					// hold highlighted state for 2s so user can hover for tooltips
 					await new Promise(r => setTimeout(r, 2000));
+					animOverlay.remove();
+					originalParagraphs.forEach(p => { p.style.visibility = ''; });
 					style.remove();
-					textEl.innerHTML = originalHTML;
 				}
 			}
 		}
