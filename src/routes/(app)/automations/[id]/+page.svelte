@@ -4,7 +4,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { page } from '$app/stores';
-	import { user, showSidebar } from '$lib/stores';
+	import { user, showSidebar, config } from '$lib/stores';
 	import { getAutomationById } from '$lib/apis/automations';
 
 	import AutomationEditor from '$lib/components/automations/AutomationEditor.svelte';
@@ -18,7 +18,10 @@
 	$: automationId = $page.params.id;
 
 	onMount(async () => {
-		if ($user?.role !== 'admin' && !($user?.permissions?.features?.automations ?? false)) {
+		if (
+			!$config?.features?.enable_automations ||
+			($user?.role !== 'admin' && !($user?.permissions?.features?.automations ?? false))
+		) {
 			goto('/');
 			return;
 		}

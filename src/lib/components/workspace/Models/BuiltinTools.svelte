@@ -50,21 +50,16 @@
 		automations: {
 			label: $i18n.t('Automations'),
 			description: $i18n.t('Create and manage scheduled automations')
+		},
+		calendar: {
+			label: $i18n.t('Calendar'),
+			description: $i18n.t('List calendars, search, create, update, and delete calendar events')
 		}
 	};
 
 	const allTools = Object.keys(toolLabels);
 
 	export let builtinTools: Record<string, boolean> = {};
-
-	// Initialize missing keys to true (default enabled)
-	$: {
-		for (const tool of allTools) {
-			if (!(tool in builtinTools)) {
-				builtinTools[tool] = true;
-			}
-		}
-	}
 </script>
 
 <div>
@@ -77,10 +72,12 @@
 				<Checkbox
 					state={builtinTools[tool] !== false ? 'checked' : 'unchecked'}
 					on:change={(e) => {
-						builtinTools = {
-							...builtinTools,
-							[tool]: e.detail === 'checked'
-						};
+						if (e.detail === 'checked') {
+							delete builtinTools[tool];
+						} else {
+							builtinTools[tool] = false;
+						}
+						builtinTools = builtinTools;
 					}}
 				/>
 

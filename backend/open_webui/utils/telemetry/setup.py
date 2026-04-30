@@ -55,4 +55,4 @@ def setup(app: FastAPI, db_engine: Engine):
 
     # set up metrics only if enabled
     if ENABLE_OTEL_METRICS:
-        setup_metrics(app, resource)
+        setup_metrics(app, resource, db_engine)

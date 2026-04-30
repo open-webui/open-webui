@@ -39,6 +39,11 @@ PAGE_ITEM_COUNT = 30
 
 
 async def check_automations_permission(request, user):
+    if not request.app.state.config.ENABLE_AUTOMATIONS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
     if user.role != 'admin' and not await has_permission(
         user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
     ):
@@ -158,7 +163,7 @@ async def create_new_automation(
 ):
     await check_automations_permission(request, user)
     try:
-        validate_rrule(form_data.data.rrule)
+        validate_rrule(form_data.data.rrule, tz=user.timezone)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -208,7 +213,7 @@ async def update_automation_by_id(
     check_automation_access(automation, user)
 
     try:
-        validate_rrule(form_data.data.rrule)
+        validate_rrule(form_data.data.rrule, tz=user.timezone)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -144,6 +144,38 @@ async def query_memory(
         limit=form_data.k,
     )
 
+    # Filter results by relevance threshold to avoid returning unrelated
+    # memories.  Vector similarity search always returns the top-K nearest
+    # neighbours even when they are completely irrelevant; applying the
+    # same RELEVANCE_THRESHOLD used by RAG ensures only genuinely matching
+    # memories are surfaced (distances are normalised to 0→1, higher is
+    # better).
+    relevance_threshold = getattr(request.app.state.config, 'RELEVANCE_THRESHOLD', 0.0)
+    if results and relevance_threshold > 0.0 and results.distances and results.distances[0]:
+        from open_webui.retrieval.vector.main import SearchResult
+
+        filtered_ids = []
+        filtered_docs = []
+        filtered_metas = []
+        filtered_dists = []
+
+        for idx, score in enumerate(results.distances[0]):
+            if score >= relevance_threshold:
+                if results.ids and results.ids[0]:
+                    filtered_ids.append(results.ids[0][idx])
+                if results.documents and results.documents[0]:
+                    filtered_docs.append(results.documents[0][idx])
+                if results.metadatas and results.metadatas[0]:
+                    filtered_metas.append(results.metadatas[0][idx])
+                filtered_dists.append(score)
+
+        results = SearchResult(
+            ids=[filtered_ids] if filtered_ids else [[]],
+            documents=[filtered_docs] if filtered_docs else [[]],
+            metadatas=[filtered_metas] if filtered_metas else [[]],
+            distances=[filtered_dists] if filtered_dists else [[]],
+        )
+
     return results
 
 

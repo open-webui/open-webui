@@ -172,10 +172,17 @@ async def get_session_user(
     user=Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    token = None
     auth_header = request.headers.get('Authorization')
-    auth_token = get_http_authorization_cred(auth_header)
-    token = auth_token.credentials
-    data = decode_token(token)
+    if auth_header:
+        auth_token = get_http_authorization_cred(auth_header)
+        if auth_token is not None:
+            token = auth_token.credentials
+    if token is None:
+        token = request.cookies.get('token')
+    if token is None and getattr(request.state, 'token', None):
+        token = request.state.token.credentials
+    data = decode_token(token) if token else None
 
     expires_at = None
 
@@ -773,8 +780,9 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
     auth_header = request.headers.get('Authorization')
     if auth_header:
         auth_cred = get_http_authorization_cred(auth_header)
-        token = auth_cred.credentials
-    else:
+        if auth_cred is not None:
+            token = auth_cred.credentials
+    if token is None:
         token = request.cookies.get('token')
 
     if token:
@@ -810,7 +818,7 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
             oauth_id_token = session.token.get('id_token')
             try:
                 async with ClientSession(trust_env=True) as session:
-                    async with session.get(oauth_server_metadata_url) as r:
+                    async with session.get(oauth_server_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
                         if r.status == 200:
                             openid_data = await r.json()
                             logout_url = openid_data.get('end_session_endpoint')
@@ -851,6 +859,31 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         )
 
     return JSONResponse(status_code=200, content={'status': True}, headers=response.headers)
+
+
+############################
+# OAuth Session Management
+############################
+
+
+@router.delete('/oauth/sessions/{provider:path}', response_model=bool)
+async def delete_oauth_session_by_provider(
+    provider: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Disconnect the current user's OAuth session for a specific provider.
+    The provider string matches the 'provider' field in the oauth_session table
+    (e.g. 'mcp:server-id' for MCP connections).
+    """
+    result = await OAuthSessions.delete_sessions_by_user_id_and_provider(user.id, provider, db=db)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='No OAuth session found for this provider',
+        )
+    return True
 
 
 ############################
@@ -971,7 +1004,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         'FOLDER_MAX_FILE_COUNT': request.app.state.config.FOLDER_MAX_FILE_COUNT,
         'AUTOMATION_MAX_COUNT': request.app.state.config.AUTOMATION_MAX_COUNT,
         'AUTOMATION_MIN_INTERVAL': request.app.state.config.AUTOMATION_MIN_INTERVAL,
+        'ENABLE_AUTOMATIONS': request.app.state.config.ENABLE_AUTOMATIONS,
         'ENABLE_CHANNELS': request.app.state.config.ENABLE_CHANNELS,
+        'ENABLE_CALENDAR': request.app.state.config.ENABLE_CALENDAR,
         'ENABLE_MEMORIES': request.app.state.config.ENABLE_MEMORIES,
         'ENABLE_NOTES': request.app.state.config.ENABLE_NOTES,
         'ENABLE_USER_WEBHOOKS': request.app.state.config.ENABLE_USER_WEBHOOKS,
@@ -999,7 +1034,9 @@ class AdminConfig(BaseModel):
     FOLDER_MAX_FILE_COUNT: Optional[int | str] = None
     AUTOMATION_MAX_COUNT: Optional[int | str] = None
     AUTOMATION_MIN_INTERVAL: Optional[int | str] = None
+    ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
+    ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
@@ -1030,7 +1067,9 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
     request.app.state.config.AUTOMATION_MIN_INTERVAL = (
         int(form_data.AUTOMATION_MIN_INTERVAL) if form_data.AUTOMATION_MIN_INTERVAL else ''
     )
+    request.app.state.config.ENABLE_AUTOMATIONS = form_data.ENABLE_AUTOMATIONS
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
+    request.app.state.config.ENABLE_CALENDAR = form_data.ENABLE_CALENDAR
     request.app.state.config.ENABLE_MEMORIES = form_data.ENABLE_MEMORIES
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
@@ -1073,7 +1112,9 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         'FOLDER_MAX_FILE_COUNT': request.app.state.config.FOLDER_MAX_FILE_COUNT,
         'AUTOMATION_MAX_COUNT': request.app.state.config.AUTOMATION_MAX_COUNT,
         'AUTOMATION_MIN_INTERVAL': request.app.state.config.AUTOMATION_MIN_INTERVAL,
+        'ENABLE_AUTOMATIONS': request.app.state.config.ENABLE_AUTOMATIONS,
         'ENABLE_CHANNELS': request.app.state.config.ENABLE_CHANNELS,
+        'ENABLE_CALENDAR': request.app.state.config.ENABLE_CALENDAR,
         'ENABLE_MEMORIES': request.app.state.config.ENABLE_MEMORIES,
         'ENABLE_NOTES': request.app.state.config.ENABLE_NOTES,
         'ENABLE_USER_WEBHOOKS': request.app.state.config.ENABLE_USER_WEBHOOKS,

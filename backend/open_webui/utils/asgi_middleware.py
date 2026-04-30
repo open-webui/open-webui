@@ -41,6 +41,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from open_webui.env import CUSTOM_API_KEY_HEADER
 from open_webui.internal.db import ScopedSession
 from open_webui.utils.auth import get_http_authorization_cred
 
@@ -119,8 +120,15 @@ class CommitSessionMiddleware:
 
 
 class AuthTokenMiddleware:
-    """Extract the bearer/cookie/x-api-key credential and stash it on
+    """Extract the bearer/cookie/API-key credential and stash it on
     `request.state.token`.
+
+    The header used for API-key transport is controlled by the
+    ``CUSTOM_API_KEY_HEADER`` environment variable (default ``x-api-key``).
+    This is useful when Open WebUI sits behind a reverse proxy that
+    consumes the ``Authorization`` header for its own authentication —
+    set the env var to a unique header (e.g. ``X-OpenWebUI-Key``) so
+    the middleware checks that instead and avoids the 401 short-circuit.
 
     Routes that depend on `get_verified_user` etc. read this state.
     Also exposes `request.state.enable_api_keys` (snapshotted at request
@@ -146,7 +154,7 @@ class AuthTokenMiddleware:
             if cookie_token:
                 token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=cookie_token)
         if token is None:
-            api_key = request.headers.get('x-api-key')
+            api_key = request.headers.get(CUSTOM_API_KEY_HEADER)
             if api_key:
                 token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=api_key)
 

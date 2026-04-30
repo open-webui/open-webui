@@ -539,10 +539,10 @@ async def update_knowledge_access_by_id(
         'sharing.public_knowledge',
     )
 
-    await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
+    knowledge.access_grants = await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
 
     return KnowledgeFilesResponse(
-        **(await Knowledges.get_knowledge_by_id(id=id, db=db)).model_dump(),
+        **knowledge.model_dump(),
         files=await Knowledges.get_file_metadatas_by_id(id, db=db),
     )
 
@@ -826,7 +826,11 @@ async def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-    if delete_file:
+    # Only the file owner or an admin may permanently delete the underlying
+    # file.  Collaborators with KB write access can unlink a file from the
+    # knowledge base but must not be able to destroy files they do not own,
+    # as the same file may be referenced by other KBs and chats.
+    if delete_file and (file.user_id == user.id or user.role == 'admin'):
         try:
             # Remove the file's collection from vector database
             file_collection = f'file-{form_data.file_id}'
@@ -901,16 +905,7 @@ async def delete_knowledge_by_id(
             if len(updated_knowledge) != len(knowledge_list):
                 log.info(f'Updating model {model.id} to remove knowledge base {id}')
                 model.meta.knowledge = updated_knowledge
-                # Create a ModelForm for the update
-                model_form = ModelForm(
-                    id=model.id,
-                    name=model.name,
-                    base_model_id=model.base_model_id,
-                    meta=model.meta,
-                    params=model.params,
-                    access_grants=model.access_grants,
-                    is_active=model.is_active,
-                )
+                model_form = ModelForm(**model.model_dump())
                 await Models.update_model_by_id(model.id, model_form, db=db)
 
     # Clean up vector DB

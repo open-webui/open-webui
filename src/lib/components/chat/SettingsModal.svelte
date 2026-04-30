@@ -31,11 +31,16 @@
 
 	const i18n = getContext('i18n');
 
-	export let show = false;
+	export let show: boolean | string = false;
 
 	$: if (show) {
+		if (typeof show === 'string') {
+			selectedTab = show;
+			show = true;
+		}
 		addScrollListener();
 	} else {
+		selectedTab = 'general';
 		removeScrollListener();
 	}
 

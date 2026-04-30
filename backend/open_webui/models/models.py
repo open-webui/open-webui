@@ -143,6 +143,8 @@ class ModelAccessListResponse(BaseModel):
 
 
 class ModelForm(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
     id: str
     base_model_id: Optional[str] = None
     name: str
@@ -388,6 +390,52 @@ class ModelsTable:
                 )
 
             return ModelListResponse(items=models, total=total)
+
+    async def get_model_meta_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[tuple[dict, int]]:
+        """Return (meta, updated_at) for a model, skipping access grant resolution."""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(Model.meta, Model.updated_at).filter_by(id=id))
+                return result.first()
+        except Exception:
+            return None
+
+    async def get_all_tags(
+        self,
+        user_id: str,
+        is_admin: bool = False,
+        db: Optional[AsyncSession] = None,
+    ) -> set[str]:
+        """Extract unique tag names from model meta, querying only the meta column."""
+        async with get_async_db_context(db) as db:
+            stmt = select(Model.meta).filter(Model.base_model_id != None)
+
+            if not is_admin:
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_group_ids = [group.id for group in user_groups]
+
+                filter_dict = {'user_id': user_id}
+                if user_group_ids:
+                    filter_dict['group_ids'] = user_group_ids
+
+                stmt = self._has_permission(db, stmt, filter_dict, permission='read')
+
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
+
+            tags_set: set[str] = set()
+            for meta in rows:
+                if not meta:
+                    continue
+                for tag in meta.get('tags', []):
+                    try:
+                        name = tag.get('name') if isinstance(tag, dict) else str(tag)
+                        if name:
+                            tags_set.add(name)
+                    except Exception:
+                        continue
+
+            return tags_set
 
     async def get_model_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ModelModel]:
         try:

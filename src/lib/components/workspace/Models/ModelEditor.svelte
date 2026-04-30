@@ -839,9 +839,11 @@
 						</div>
 					{/if}
 
-					<div class="my-4">
-						<TerminalSelector bind:terminalId />
-					</div>
+					{#if capabilities.terminal}
+						<div class="my-4">
+							<TerminalSelector bind:terminalId />
+						</div>
+					{/if}
 
 					<div class="my-4">
 						<div class="flex w-full justify-between mb-1">

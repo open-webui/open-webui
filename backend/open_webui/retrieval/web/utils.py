@@ -5,6 +5,8 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
+
+import requests
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
@@ -28,6 +30,7 @@ from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -45,6 +48,7 @@ from open_webui.config import (
     WEB_FETCH_FILTER_LIST,
 )
 from open_webui.utils.misc import is_string_allowed
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 
@@ -215,39 +219,20 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 
     def lazy_load(self) -> Iterator[Document]:
         try:
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.api_key}',
-            }
-
             for url in self.web_paths:
-                payload = {
-                    'url': url,
-                    'formats': ['markdown'],
-                    **self.params,
-                }
-                if self.timeout:
-                    payload['timeout'] = self.timeout * 1000
-
-                response = requests.post(
-                    f'{self.api_url}/v1/scrape',
-                    headers=headers,
-                    json=payload,
-                    timeout=self.timeout or 60,
-                    verify=self.verify_ssl,
+                doc = scrape_firecrawl_url(
+                    self.api_url,
+                    self.api_key,
+                    url,
+                    verify_ssl=self.verify_ssl,
+                    timeout=self.timeout,
+                    params=self.params,
                 )
-                response.raise_for_status()
-                data = response.json().get('data', {})
-                metadata = data.get('metadata', {})
-                source = metadata.get('url') or metadata.get('sourceURL') or url
-
-                yield Document(
-                    page_content=data.get('markdown', ''),
-                    metadata={'source': source},
-                )
+                if doc is not None:
+                    yield doc
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f'Error extracting content from URLs: {e}')
+                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
 
@@ -258,7 +243,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield doc
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f'Error extracting content from URLs: {e}')
+                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
 
@@ -511,6 +496,8 @@ class SafeWebBaseLoader(WebBaseLoader):
                     )
                     if not self.session.verify:
                         kwargs['ssl'] = False
+                    else:
+                        kwargs['ssl'] = AIOHTTP_CLIENT_SESSION_SSL
 
                     async with session.get(
                         url,

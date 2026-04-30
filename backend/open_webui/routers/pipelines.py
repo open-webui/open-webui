@@ -94,9 +94,24 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
                     response.raise_for_status()
                     payload = await response.json()
             except aiohttp.ClientResponseError as e:
-                res = await response.json() if response.content_type == 'application/json' else {}
-                if 'detail' in res:
-                    raise Exception(response.status, res['detail'])
+                try:
+                    res = await response.json() if 'application/json' in response.content_type else {}
+                    if 'detail' in res:
+                        raise HTTPException(
+                            status_code=response.status,
+                            detail=res['detail'],
+                        )
+                except HTTPException:
+                    raise
+                except Exception:
+                    pass
+
+                raise HTTPException(
+                    status_code=response.status,
+                    detail=e.message,
+                )
+            except HTTPException:
+                raise
             except Exception as e:
                 log.exception(f'Connection error: {e}')
 
@@ -146,9 +161,21 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
                 try:
                     res = await response.json() if 'application/json' in response.content_type else {}
                     if 'detail' in res:
-                        raise Exception(response.status, res)
+                        raise HTTPException(
+                            status_code=response.status,
+                            detail=res['detail'],
+                        )
+                except HTTPException:
+                    raise
                 except Exception:
                     pass
+
+                raise HTTPException(
+                    status_code=response.status,
+                    detail=e.message,
+                )
+            except HTTPException:
+                raise
             except Exception as e:
                 log.exception(f'Connection error: {e}')
 

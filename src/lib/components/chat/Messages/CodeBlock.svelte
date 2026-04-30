@@ -15,6 +15,7 @@
 	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
+	import equal from 'fast-deep-equal';
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
@@ -391,7 +392,7 @@
 	$: if (token) {
 		if (token.text !== _token?.text || token.raw !== _token?.raw) {
 			_token = token;
-		} else if (JSON.stringify(token) !== JSON.stringify(_token)) {
+		} else if (!equal(token, _token)) {
 			_token = token;
 		}
 	}

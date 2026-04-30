@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { getContext, tick, onDestroy } from 'svelte';
 	import { formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
@@ -8,6 +9,7 @@
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
 	import Pencil from '../../icons/Pencil.svelte';
+	import Clipboard from '../../icons/Clipboard.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -313,6 +315,24 @@
 							/>
 						</svg>
 						<div class="flex items-center">{$i18n.t('Download')}</div>
+					</button>
+
+					<button
+						type="button"
+						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						on:click={(e) => {
+							e.stopPropagation();
+							const path =
+								entry.type === 'directory'
+									? `${currentPath}${entry.name}/`
+									: `${currentPath}${entry.name}`;
+							navigator.clipboard.writeText(path).then(() => {
+								toast.success($i18n.t('Path copied'));
+							});
+						}}
+					>
+						<Clipboard className="size-4" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Copy Path')}</div>
 					</button>
 
 					<button

@@ -14,7 +14,7 @@ from open_webui.env import (
     OFFLINE_MODE,
     ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
 )
-from open_webui.models.functions import Functions
+from open_webui.models.functions import FunctionModel, Functions
 from open_webui.models.tools import Tools
 
 log = logging.getLogger(__name__)
@@ -335,13 +335,16 @@ async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
     return tool_module, frontmatter
 
 
-async def get_function_module_from_cache(request, function_id, load_from_db=True):
+async def get_function_module_from_cache(
+    request, function_id, function: FunctionModel | None = None, load_from_db=True
+):
     if load_from_db:
         # Always load from the database by default
         # This is useful for hooks like "inlet" or "outlet" where the content might change
         # and we want to ensure the latest content is used.
 
-        function = await Functions.get_function_by_id(function_id)
+        if function is None:
+            function = await Functions.get_function_by_id(function_id)
         if not function:
             raise Exception(f'Function not found: {function_id}')
         content = function.content

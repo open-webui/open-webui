@@ -16,6 +16,7 @@ from starlette.background import BackgroundTask
 
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_connection_access
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 
@@ -141,6 +142,7 @@ async def proxy_terminal(
             headers=headers,
             cookies=cookies,
             data=body or None,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
@@ -279,7 +281,7 @@ async def ws_terminal(
 
     session = aiohttp.ClientSession()
     try:
-        async with session.ws_connect(upstream_url) as upstream:
+        async with session.ws_connect(upstream_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as upstream:
             import asyncio
             import json as _json
 

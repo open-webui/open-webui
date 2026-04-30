@@ -86,6 +86,17 @@ log = logging.getLogger(__name__)
 #
 ##########################################
 
+# Headers that become stale after aiohttp auto-decompresses the upstream
+# response body.  Forwarding them verbatim causes desktop / programmatic
+# clients to attempt decompression of an already-decoded payload, resulting
+# in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
+_STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
+
+
+def _clean_proxy_headers(raw_headers) -> dict:
+    """Return a copy of *raw_headers* with stale encoding headers removed."""
+    return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
+
 
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
@@ -163,7 +174,7 @@ async def send_request(
         r.raise_for_status()
 
         if stream:
-            response_headers = dict(r.headers)
+            response_headers = _clean_proxy_headers(r.headers)
             if content_type:
                 response_headers['Content-Type'] = content_type
 
@@ -1383,29 +1394,9 @@ async def generate_responses(
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
 
-        # Check if user has access to the model
-        if user.role == 'user':
-            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or await AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-                )
+        await check_model_access(user, model_info)
     else:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
-            )
+        await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(

@@ -3,7 +3,9 @@ from logging.config import fileConfig
 
 from alembic import context
 from open_webui.models.auths import Auth
+from open_webui.models.calendar import Calendar, CalendarEvent, CalendarEventAttendee  # noqa: F401
 from open_webui.env import DATABASE_URL, DATABASE_PASSWORD, LOG_FORMAT
+from open_webui.internal.db import extract_ssl_params_from_url, reattach_ssl_params_to_url
 from sqlalchemy import engine_from_config, pool, create_engine
 
 # this is the Alembic Config object, which provides
@@ -34,6 +36,10 @@ target_metadata = Auth.metadata
 # ... etc.
 
 DB_URL = DATABASE_URL
+
+# Normalize SSL query params for psycopg2 (Alembic uses psycopg2 for sync migrations).
+url_without_ssl, ssl_params = extract_ssl_params_from_url(DB_URL)
+DB_URL = reattach_ssl_params_to_url(url_without_ssl, ssl_params) if ssl_params else DB_URL
 
 if DB_URL:
     config.set_main_option('sqlalchemy.url', DB_URL.replace('%', '%%'))
