@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 import asyncio
+import httpx
 
 from fastapi import (
     BackgroundTasks,
@@ -88,6 +89,27 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         return False
 
 
+PROXY_URL = os.getenv("OPENAI_API_BASE_URL", "http://privacy-proxy:8080").replace("/openai", "")
+
+def vault_scan_file(file_id: str, text: str) -> dict:
+    try:
+        response = httpx.post(
+            f"{PROXY_URL}/vault/scan",
+            json={"text": text, "file_id": file_id},
+            timeout=30.0
+        )
+        if response.status_code == 200:
+            data = response.json()
+            log.info(f"[VAULT] file_id={file_id} entities={data.get('entity_count', 0)}")
+            return data
+        else:
+            log.warning(f"[VAULT] scan failed status={response.status_code}")
+            return {}
+    except Exception as e:
+        log.warning(f"[VAULT] error: {e} → using raw text")
+        return {}
+
+
 def process_uploaded_file(
     request,
     file,
@@ -122,12 +144,39 @@ def process_uploaded_file(
                 elif (not content_type.startswith(('image/', 'video/'))) or (
                     request.app.state.config.CONTENT_EXTRACTION_ENGINE == 'external'
                 ):
-                    process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id),
-                        user=user,
-                        db=db_session,
-                    )
+                    try:
+                        from open_webui.retrieval.loaders.main import Loader
+                        file_path_resolved = Storage.get_file(file_path)
+                        loader = Loader(engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE)
+                        docs = loader.load(file_item.meta.get('name', ''), content_type, file_path_resolved)
+                        raw_text = " ".join([d.page_content for d in docs])
+
+                        vault_result = vault_scan_file(file_item.id, raw_text)
+                        clean_text = vault_result.get("pseudonymized_text") or raw_text
+
+                        Files.update_file_data_by_id(
+                            file_item.id,
+                            {
+                                "garnet_entity_count": vault_result.get("entity_count", 0),
+                                "garnet_breakdown": vault_result.get("entity_breakdown", {}),
+                            },
+                            db=db_session,
+                        )
+
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id, content=clean_text),
+                            user=user,
+                            db=db_session,
+                        )
+                    except Exception as extract_err:
+                        log.warning(f"[VAULT] extraction failed: {extract_err} → fallback")
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id),
+                            user=user,
+                            db=db_session,
+                        )
                 else:
                     raise Exception(f'File type {content_type} is not supported for processing')
             else:
