@@ -135,6 +135,9 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
 
 async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
     has_tool_calls = False
+    # All chunks in a single completion must share the same id (OpenAI spec).
+    completion_id = f'chatcmpl-{str(uuid4())}'
+    first = True
     async for data in ollama_streaming_response.body_iterator:
         data = json.loads(data)
 
@@ -155,6 +158,12 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             usage = convert_ollama_usage_to_openai(data)
 
         data = openai_chat_chunk_message_template(model, message_content, reasoning_content, openai_tool_calls, usage)
+        data['id'] = completion_id
+
+        # First chunk must carry delta.role (OpenAI spec).
+        if first:
+            data['choices'][0]['delta']['role'] = 'assistant'
+            first = False
 
         if done and has_tool_calls:
             data['choices'][0]['finish_reason'] = 'tool_calls'

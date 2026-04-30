@@ -25,6 +25,7 @@
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import TerminalSelector from './TerminalSelector.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { updateModelAccessGrants } from '$lib/apis/models';
@@ -102,6 +103,7 @@
 
 	let actionIds = [];
 	let accessGrants = [];
+	let terminalId = '';
 	let tts = { voice: '' };
 
 	const submitHandler = async () => {
@@ -203,6 +205,14 @@
 		} else {
 			if (info.meta.builtinTools) {
 				delete info.meta.builtinTools;
+			}
+		}
+
+		if (terminalId) {
+			info.meta.terminalId = terminalId;
+		} else {
+			if (info.meta.terminalId) {
+				delete info.meta.terminalId;
 			}
 		}
 
@@ -316,6 +326,7 @@
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultFeatureIds;
 			builtinTools = model?.meta?.builtinTools ?? builtinTools;
+			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
 			accessGrants = model?.access_grants ?? [];
@@ -825,6 +836,12 @@
 					{#if capabilities.builtin_tools}
 						<div class="my-4">
 							<BuiltinTools bind:builtinTools />
+						</div>
+					{/if}
+
+					{#if capabilities.terminal}
+						<div class="my-4">
+							<TerminalSelector bind:terminalId />
 						</div>
 					{/if}
 

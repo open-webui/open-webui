@@ -14,7 +14,7 @@ from open_webui.env import (
     OFFLINE_MODE,
     ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
 )
-from open_webui.models.functions import Functions
+from open_webui.models.functions import FunctionModel, Functions
 from open_webui.models.tools import Tools
 
 log = logging.getLogger(__name__)
@@ -199,16 +199,16 @@ def replace_imports(content):
 
 # May the intent of the one who wrote it survive every
 # import and transformation, as a deed survives the generations.
-def load_tool_module_by_id(tool_id, content=None):
+async def load_tool_module_by_id(tool_id, content=None):
     if content is None:
-        tool = Tools.get_tool_by_id(tool_id)
+        tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
             raise Exception(f'Toolkit not found: {tool_id}')
 
         content = tool.content
 
         content = replace_imports(content)
-        Tools.update_tool_by_id(tool_id, {'content': content})
+        await Tools.update_tool_by_id(tool_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
@@ -245,15 +245,15 @@ def load_tool_module_by_id(tool_id, content=None):
         os.unlink(temp_file.name)
 
 
-def load_function_module_by_id(function_id: str, content: str | None = None):
+async def load_function_module_by_id(function_id: str, content: str | None = None):
     if content is None:
-        function = Functions.get_function_by_id(function_id)
+        function = await Functions.get_function_by_id(function_id)
         if not function:
             raise Exception(f'Function not found: {function_id}')
         content = function.content
 
         content = replace_imports(content)
-        Functions.update_function_by_id(function_id, {'content': content})
+        await Functions.update_function_by_id(function_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
         install_frontmatter_requirements(frontmatter.get('requirements', ''))
@@ -290,16 +290,16 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
         # Cleanup by removing the module in case of error
         del sys.modules[module_name]
 
-        Functions.update_function_by_id(function_id, {'is_active': False})
+        await Functions.update_function_by_id(function_id, {'is_active': False})
         raise e
     finally:
         os.unlink(temp_file.name)
 
 
-def get_tool_module_from_cache(request, tool_id, load_from_db=True):
+async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
     if load_from_db:
         # Always load from the database by default
-        tool = Tools.get_tool_by_id(tool_id)
+        tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
             raise Exception(f'Tool not found: {tool_id}')
         content = tool.content
@@ -308,7 +308,7 @@ def get_tool_module_from_cache(request, tool_id, load_from_db=True):
         if new_content != content:
             content = new_content
             # Update the tool content in the database
-            Tools.update_tool_by_id(tool_id, {'content': content})
+            await Tools.update_tool_by_id(tool_id, {'content': content})
 
         if (hasattr(request.app.state, 'TOOL_CONTENTS') and tool_id in request.app.state.TOOL_CONTENTS) and (
             hasattr(request.app.state, 'TOOLS') and tool_id in request.app.state.TOOLS
@@ -316,12 +316,12 @@ def get_tool_module_from_cache(request, tool_id, load_from_db=True):
             if request.app.state.TOOL_CONTENTS[tool_id] == content:
                 return request.app.state.TOOLS[tool_id], None
 
-        tool_module, frontmatter = load_tool_module_by_id(tool_id, content)
+        tool_module, frontmatter = await load_tool_module_by_id(tool_id, content)
     else:
         if hasattr(request.app.state, 'TOOLS') and tool_id in request.app.state.TOOLS:
             return request.app.state.TOOLS[tool_id], None
 
-        tool_module, frontmatter = load_tool_module_by_id(tool_id)
+        tool_module, frontmatter = await load_tool_module_by_id(tool_id)
 
     if not hasattr(request.app.state, 'TOOLS'):
         request.app.state.TOOLS = {}
@@ -335,13 +335,16 @@ def get_tool_module_from_cache(request, tool_id, load_from_db=True):
     return tool_module, frontmatter
 
 
-def get_function_module_from_cache(request, function_id, load_from_db=True):
+async def get_function_module_from_cache(
+    request, function_id, function: FunctionModel | None = None, load_from_db=True
+):
     if load_from_db:
         # Always load from the database by default
         # This is useful for hooks like "inlet" or "outlet" where the content might change
         # and we want to ensure the latest content is used.
 
-        function = Functions.get_function_by_id(function_id)
+        if function is None:
+            function = await Functions.get_function_by_id(function_id)
         if not function:
             raise Exception(f'Function not found: {function_id}')
         content = function.content
@@ -350,7 +353,7 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
         if new_content != content:
             content = new_content
             # Update the function content in the database
-            Functions.update_function_by_id(function_id, {'content': content})
+            await Functions.update_function_by_id(function_id, {'content': content})
 
         if (
             hasattr(request.app.state, 'FUNCTION_CONTENTS') and function_id in request.app.state.FUNCTION_CONTENTS
@@ -358,7 +361,7 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
             if request.app.state.FUNCTION_CONTENTS[function_id] == content:
                 return request.app.state.FUNCTIONS[function_id], None, None
 
-        function_module, function_type, frontmatter = load_function_module_by_id(function_id, content)
+        function_module, function_type, frontmatter = await load_function_module_by_id(function_id, content)
     else:
         # Load from cache (e.g. "stream" hook)
         # This is useful for performance reasons
@@ -366,7 +369,7 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
         if hasattr(request.app.state, 'FUNCTIONS') and function_id in request.app.state.FUNCTIONS:
             return request.app.state.FUNCTIONS[function_id], None, None
 
-        function_module, function_type, frontmatter = load_function_module_by_id(function_id)
+        function_module, function_type, frontmatter = await load_function_module_by_id(function_id)
 
     if not hasattr(request.app.state, 'FUNCTIONS'):
         request.app.state.FUNCTIONS = {}
@@ -404,7 +407,7 @@ def install_frontmatter_requirements(requirements: str):
         log.info('No requirements found in frontmatter.')
 
 
-def install_tool_and_function_dependencies():
+async def install_tool_and_function_dependencies():
     """
     Install all dependencies for all admin tools and active functions.
 
@@ -412,8 +415,8 @@ def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
-    function_list = Functions.get_functions(active_only=True)
-    tool_list = Tools.get_tools()
+    function_list = await Functions.get_functions(active_only=True)
+    tool_list = await Tools.get_tools()
 
     all_dependencies = ''
     try:
