@@ -3,6 +3,7 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import select, delete, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
@@ -111,39 +112,39 @@ class AuthsTable:
                 result = Auth(**auth.model_dump())
                 db.add(result)
 
-            user = await Users.insert_new_user(id, name, email, profile_image_url, role, oauth=oauth, db=db)
+                user = await Users.insert_new_user(id, name, email, profile_image_url, role, oauth=oauth, db=db)
 
-            await db.commit()
-            await db.refresh(result)
+                await db.commit()
+                await db.refresh(result)
 
                 if result and user:
                     return user
                 else:
                     return None
             except IntegrityError as e:
-                db.rollback()
+                await db.rollback()
                 # Handle case where auth ID already exists (e.g., user deleted from UI
                 # but auth record remained, common with stable AD SID-based IDs)
                 if 'UNIQUE constraint failed' in str(e) or 'duplicate key' in str(e).lower():
                     log.info(f'Auth ID {id} already exists, reactivating and updating existing records')
                     try:
-                        existing_auth = db.query(Auth).filter_by(id=id).first()
+                        result = await db.execute(select(Auth).filter_by(id=id))
+                        existing_auth = result.scalars().first()
                         if existing_auth:
                             existing_auth.email = email
                             existing_auth.password = password
                             existing_auth.active = True
                         else:
-                            new_auth = Auth(
-                                **AuthModel(id=id, email=email, password=password, active=True).model_dump()
-                            )
-                            db.add(new_auth)
-                        db.commit()
+                            db.add(Auth(**AuthModel(id=id, email=email, password=password, active=True).model_dump()))
+                        await db.commit()
 
-                        user = Users.get_user_by_id(id, db=db)
+                        user = await Users.get_user_by_id(id, db=db)
                         if not user:
-                            user = Users.insert_new_user(id, name, email, profile_image_url, role, oauth=oauth, db=db)
+                            user = await Users.insert_new_user(
+                                id, name, email, profile_image_url, role, oauth=oauth, db=db
+                            )
                         else:
-                            Users.update_user_by_id(
+                            await Users.update_user_by_id(
                                 id,
                                 {'email': email, 'name': name, 'profile_image_url': profile_image_url},
                                 db=db,
