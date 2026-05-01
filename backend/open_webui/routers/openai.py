@@ -1225,6 +1225,7 @@ async def generate_chat_completion(
             async def _stream_with_pseudo_prompt():
                 pseudo_prompt = ""
                 file_entity_count = 0
+                garnet_breakdown = {}
                 async for chunk in stream_wrapper(r, session, stream_chunks_handler):
                     try:
                         chunk_str = chunk.decode('utf-8', errors='replace') if isinstance(chunk, bytes) else chunk
@@ -1235,12 +1236,13 @@ async def generate_chat_completion(
                         if parsed.get("type") == "pseudonymized_prompt":
                             pseudo_prompt = parsed.get("content", "")
                             file_entity_count = parsed.get("file_entity_count", 0)
+                            garnet_breakdown = parsed.get("garnet_breakdown", {})
                             continue
                     except Exception:
                         pass
                     yield chunk
                 if pseudo_prompt or file_entity_count:
-                    synthetic = f'data: {json.dumps({"pseudonymized_prompt": pseudo_prompt, "file_entity_count": file_entity_count})}\n\n'
+                    synthetic = f'data: {json.dumps({"pseudonymized_prompt": pseudo_prompt, "file_entity_count": file_entity_count, "garnet_breakdown": garnet_breakdown})}\n\n'
                     yield synthetic.encode('utf-8')
 
             return StreamingResponse(

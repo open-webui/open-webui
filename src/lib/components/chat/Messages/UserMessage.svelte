@@ -564,9 +564,21 @@
 				</Tooltip>
 
 				{#if message.file_entity_count > 0}
-					<span class="text-xs text-gray-400 mt-1">
-						📎 {message.file_entity_count} sensitive items detected in file
-					</span>
+					<div class="text-xs text-gray-500 mt-1 flex flex-col gap-1">
+						<span>📎 {message.file_entity_count} sensitive items detected in file</span>
+						{#if message.garnet_breakdown && Object.keys(message.garnet_breakdown).length > 0}
+							{@const maxCount = Math.max(...Object.values(message.garnet_breakdown))}
+							{#each Object.entries(message.garnet_breakdown) as [type, count]}
+								<div class="flex items-center gap-2">
+									<span class="text-gray-400 w-28 truncate">{type}</span>
+									<div class="flex-1 bg-gray-700 rounded h-1.5">
+										<div class="h-1.5 rounded bg-green-400" style="width: {(count / maxCount) * 100}%"></div>
+									</div>
+									<span class="text-gray-300 w-4 text-right">{count}</span>
+								</div>
+							{/each}
+						{/if}
+					</div>
 				{/if}
 
 				{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}

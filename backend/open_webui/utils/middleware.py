@@ -3479,6 +3479,7 @@ async def streaming_chat_response_handler(response, ctx):
             last_response_id = None
             pseudonymized_prompt = None
             file_entity_count = 0
+            garnet_breakdown = {}
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -3520,6 +3521,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal last_response_id
                     nonlocal pseudonymized_prompt
                     nonlocal file_entity_count
+                    nonlocal garnet_breakdown
 
                     response_tool_calls = []
 
@@ -3566,6 +3568,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 pseudonymized_prompt = data['pseudonymized_prompt']
                             if 'file_entity_count' in data:
                                 file_entity_count = data['file_entity_count']
+                            if 'garnet_breakdown' in data:
+                                garnet_breakdown = data['garnet_breakdown']
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -4629,6 +4633,11 @@ async def streaming_chat_response_handler(response, ctx):
                     **(
                         {'file_entity_count': file_entity_count}
                         if file_entity_count
+                        else {}
+                    ),
+                    **(
+                        {'garnet_breakdown': garnet_breakdown}
+                        if garnet_breakdown
                         else {}
                     ),
                 }
