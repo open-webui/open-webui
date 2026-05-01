@@ -61,13 +61,7 @@ async def get_prompts(user=Depends(get_verified_user), db: AsyncSession = Depend
 async def get_prompt_tags(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         return await Prompts.get_tags(db=db)
-    else:
-        prompts = await Prompts.get_prompts_by_user_id(user.id, 'read', db=db)
-        tags = set()
-        for prompt in prompts:
-            if prompt.tags:
-                tags.update(prompt.tags)
-        return sorted(list(tags))
+    return await Prompts.get_tags_by_user_id(user.id, db=db)
 
 
 @router.get('/list', response_model=PromptAccessListResponse)

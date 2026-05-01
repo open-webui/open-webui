@@ -632,12 +632,38 @@ class PromptsTable:
     async def get_tags(self, db: Optional[AsyncSession] = None) -> list[str]:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Prompt).filter_by(is_active=True))
-                prompts = result.scalars().all()
+                result = await db.execute(select(Prompt.tags).filter(Prompt.is_active == True))
                 tags = set()
-                for prompt in prompts:
-                    if prompt.tags:
-                        for tag in prompt.tags:
+                for (tag_list,) in result.all():
+                    if tag_list:
+                        for tag in tag_list:
+                            if tag:
+                                tags.add(tag)
+                return sorted(list(tags))
+        except Exception:
+            return []
+
+    async def get_tags_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[str]:
+        try:
+            async with get_async_db_context(db) as db:
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_group_ids = [group.id for group in user_groups]
+
+                query = select(Prompt.tags).filter(Prompt.is_active == True)
+                query = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=query,
+                    DocumentModel=Prompt,
+                    filter={'user_id': user_id, 'group_ids': user_group_ids},
+                    resource_type='prompt',
+                    permission='read',
+                )
+
+                result = await db.execute(query)
+                tags = set()
+                for (tag_list,) in result.all():
+                    if tag_list:
+                        for tag in tag_list:
                             if tag:
                                 tags.add(tag)
                 return sorted(list(tags))
