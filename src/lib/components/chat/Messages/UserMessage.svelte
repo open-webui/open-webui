@@ -570,8 +570,8 @@
 							{#if message.garnet_breakdown && Object.keys(message.garnet_breakdown).length > 0}
 								<span class="cursor-pointer text-gray-400 hover:text-white">ℹ️</span>
 								<div class="absolute bottom-5 left-0 z-50 hidden group-hover/vault:flex flex-col gap-1 bg-gray-800 border border-gray-700 rounded-lg p-2 w-48 shadow-lg">
-									{@const maxCount = Math.max(...Object.values(message.garnet_breakdown))}
 									{#each Object.entries(message.garnet_breakdown) as [type, count]}
+										{@const maxCount = Math.max(...Object.values(message.garnet_breakdown))}
 										<div class="flex items-center gap-2">
 											<span class="text-gray-400 w-24 truncate text-xs">{type}</span>
 											<div class="flex-1 bg-gray-700 rounded h-1.5">
