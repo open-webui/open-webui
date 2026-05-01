@@ -2393,9 +2393,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     terminal_id = form_data.pop('terminal_id', None)
     files = form_data.pop('files', None)
 
-    # Caller-provided OpenAI-style tools take precedence over server-side
-    # tool resolution (tool_ids, MCP servers, builtin tools).
+    # Caller-provided OpenAI-style `function` tools take precedence over server-side
+    # tool resolution (tool_ids, MCP servers, builtin tools). Provider-native tool
+    # entries (e.g. filters adding openrouter:web_search) contain no `function`
+    # specs — temporarily remove them so internal tools still resolve, then merge.
     payload_tools = form_data.get('tools', None)
+    provider_native_tool_addons = None
+    if (
+        isinstance(payload_tools, list)
+        and payload_tools
+        and all(isinstance(t, dict) and t.get('type') != 'function' for t in payload_tools)
+    ):
+        provider_native_tool_addons = list(payload_tools)
+        form_data.pop('tools', None)
 
     # Skills
     user_skill_ids = set(form_data.pop('skill_ids', None) or [])
@@ -2466,10 +2476,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     }
     form_data['metadata'] = metadata
 
-    # When the caller provides an explicit OpenAI-style `tools` array in the
-    # request body, skip all server-side tool resolution and pass the caller's
-    # tools through to the model unchanged.
-    if not payload_tools:
+    # When the caller provides explicit OpenAI-style `function` tools in the body,
+    # skip server-side tool resolution and pass those tools through unchanged.
+    # (Provider-native-only lists were stripped above so resolution still runs.)
+    if not form_data.get('tools'):
         # Server side tools
         tool_ids = metadata.get('tool_ids', None)
         # Client side tools
@@ -2706,6 +2716,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     sources.extend(flags.get('sources', []))
                 except Exception as e:
                     log.exception(e)
+
+        if provider_native_tool_addons:
+            merged_tools = form_data.get('tools')
+            if isinstance(merged_tools, list):
+                form_data['tools'] = [*merged_tools, *provider_native_tool_addons]
+            else:
+                form_data['tools'] = list(provider_native_tool_addons)
 
     # Check if file context extraction is enabled for this model (default True)
     file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
