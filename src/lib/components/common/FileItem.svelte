@@ -40,10 +40,12 @@
 
 	let showVaultPreview = false;
 
-	$: garnetCount = item?.file?.data?.garnet_entity_count ?? 0;
-	$: garnetBreakdown = item?.file?.data?.garnet_breakdown ?? {};
+	$: garnetCount = (item?.file?.data?.garnet_entity_count || 0) as number;
+	$: garnetBreakdown = (item?.file?.data?.garnet_breakdown || {}) as Record<string, number>;
+	$: hasVaultData = garnetCount > 0;
+	$: if (hasVaultData) console.warn('[GARNET] vault data:', garnetCount, garnetBreakdown);
 
-	const ENTITY_COLORS = {
+	const ENTITY_COLORS: Record<string, string> = {
 		PERSON: 'bg-blue-400',
 		EMAIL_ADDRESS: 'bg-red-400',
 		ORGANIZATION: 'bg-green-400',
@@ -190,7 +192,7 @@
 		</Tooltip>
 	{/if}
 
-	{#if garnetCount > 0}
+	{#if hasVaultData}
 		<div class="w-full px-2.5 pb-1.5" on:click|stopPropagation>
 			<div class="flex items-center gap-1 text-xs text-green-400 font-medium mb-1">
 				<span>🛡</span>
