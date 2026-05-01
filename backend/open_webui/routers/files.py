@@ -170,7 +170,9 @@ def process_uploaded_file(
                             db=db_session,
                         )
                     except Exception as extract_err:
+                        import traceback
                         log.warning(f"[VAULT] extraction failed: {extract_err} → fallback")
+                        log.warning(f"[VAULT] traceback: {traceback.format_exc()}")
                         process_file(
                             request,
                             ProcessFileForm(file_id=file_item.id),
