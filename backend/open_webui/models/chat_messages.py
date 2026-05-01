@@ -366,7 +366,6 @@ class ChatMessageTable:
             ).filter(
                 ChatMessage.role == 'assistant',
                 ChatMessage.model_id.isnot(None),
-                ChatMessage.usage.isnot(None),
             )
 
             if start_date:
@@ -427,7 +426,6 @@ class ChatMessageTable:
             ).filter(
                 ChatMessage.role == 'assistant',
                 ChatMessage.user_id.isnot(None),
-                ChatMessage.usage.isnot(None),
             )
 
             if start_date:

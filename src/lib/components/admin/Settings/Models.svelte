@@ -208,15 +208,23 @@
 	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
 		model = { ...model, base_model_id: null, ...overrides };
 
-		if (workspaceModels.find((m) => m.id === model.id)) {
-			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
-				return null;
-			});
+		if (model.id) {
+			const existingModel = models.find((m) => m.id === model.id);
+			if (existingModel) {
+				const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
+					return null;
+				});
 
-			if (res && showToast) {
-				toast.success($i18n.t('Model updated successfully'));
+				if (res && showToast) {
+					toast.success($i18n.t('Model updated successfully'));
+				}
+
+				if (showToast) {
+					await init();
+				}
+				return;
 			}
-		} else {
+
 			const res = await createNewModel(localStorage.token, {
 				meta: {},
 				id: model.id,
