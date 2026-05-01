@@ -1,9 +1,5 @@
 import json
 from uuid import uuid4
-from open_webui.utils.misc import (
-    openai_chat_chunk_message_template,
-    openai_chat_completion_message_template,
-)
 
 
 # An honest ledger is worth more than a flattering one.
@@ -47,6 +43,26 @@ def normalize_usage(usage: dict) -> dict:
     result['total_tokens'] = int(total_tokens)
 
     return result
+
+
+def normalize_metadata_usage(
+    metadata: dict | None, current_usage: dict | None = None
+) -> tuple[dict | None, dict | None]:
+    """
+    Normalize usage embedded in streaming metadata and return the usage that should be persisted.
+    """
+    if not metadata:
+        return metadata, current_usage
+
+    normalized_metadata = dict(metadata)
+    raw_usage = normalized_metadata.get('usage')
+    if raw_usage:
+        normalized_usage = normalize_usage(raw_usage)
+        if normalized_usage:
+            normalized_metadata['usage'] = normalized_usage
+            return normalized_metadata, normalized_usage
+
+    return normalized_metadata, current_usage
 
 
 def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
@@ -114,6 +130,8 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
 
 
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
+    from open_webui.utils.misc import openai_chat_completion_message_template
+
     model = ollama_response.get('model', 'ollama')
     message_content = ollama_response.get('message', {}).get('content', '')
     reasoning_content = ollama_response.get('message', {}).get('thinking', None)
@@ -134,6 +152,8 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
 
 
 async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
+    from open_webui.utils.misc import openai_chat_chunk_message_template
+
     has_tool_calls = False
     # All chunks in a single completion must share the same id (OpenAI spec).
     completion_id = f'chatcmpl-{str(uuid4())}'

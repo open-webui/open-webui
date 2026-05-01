@@ -113,7 +113,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
-from open_webui.utils.response import normalize_usage
+from open_webui.utils.response import normalize_metadata_usage, normalize_usage
 from open_webui.utils.mcp.client import MCPClient
 
 
@@ -3940,6 +3940,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     # it but we may still need to execute tool
                                     # calls. The outer middleware manages the
                                     # actual completion signal.
+                                    response_metadata, usage = normalize_metadata_usage(response_metadata, usage)
                                     if response_metadata:
                                         if ENABLE_RESPONSES_API_STATEFUL:
                                             response_id = response_metadata.pop('response_id', None)
