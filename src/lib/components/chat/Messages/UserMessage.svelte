@@ -568,7 +568,7 @@
 						<div class="flex items-center gap-1 relative group/vault">
 							<span>📎 {message.file_entity_count} sensitive items detected in file</span>
 							{#if message.garnet_breakdown && Object.keys(message.garnet_breakdown).length > 0}
-								<span class="cursor-pointer text-gray-400 hover:text-white">ℹ️</span>
+								<span class="cursor-pointer text-gray-400 hover:text-white text-xs">▸ details</span>
 								<div class="absolute bottom-5 left-0 z-50 hidden group-hover/vault:flex flex-col gap-1 bg-gray-800 border border-gray-700 rounded-lg p-2 w-48 shadow-lg">
 									{#each Object.entries(message.garnet_breakdown) as [type, count]}
 										{@const maxCount = Math.max(...Object.values(message.garnet_breakdown))}
