@@ -231,24 +231,55 @@ class PromptsTable:
     async def get_prompts_by_user_id(
         self, user_id: str, permission: str = 'write', db: Optional[AsyncSession] = None
     ) -> list[PromptUserResponse]:
-        prompts = await self.get_prompts(db=db)
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
+        async with get_async_db_context(db) as db:
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_group_ids = [group.id for group in user_groups]
 
-        result = []
-        for prompt in prompts:
-            if prompt.user_id == user_id:
-                result.append(prompt)
-            elif await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='prompt',
-                resource_id=prompt.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
+            query = (
+                select(Prompt)
+                .filter(Prompt.is_active == True)
+                .order_by(Prompt.updated_at.desc())
+            )
+            query = AccessGrants.has_permission_filter(
                 db=db,
-            ):
-                result.append(prompt)
-        return result
+                query=query,
+                DocumentModel=Prompt,
+                filter={'user_id': user_id, 'group_ids': user_group_ids},
+                resource_type='prompt',
+                permission=permission,
+            )
+
+            result = await db.execute(query)
+            accessible_prompts = result.scalars().all()
+
+            if not accessible_prompts:
+                return []
+
+            prompt_ids = [p.id for p in accessible_prompts]
+            owner_ids = list({p.user_id for p in accessible_prompts})
+
+            users = await Users.get_users_by_user_ids(owner_ids, db=db)
+            users_dict = {u.id: u for u in users}
+            grants_map = await AccessGrants.get_grants_by_resources('prompt', prompt_ids, db=db)
+
+            results = []
+            for prompt in accessible_prompts:
+                user = users_dict.get(prompt.user_id)
+                results.append(
+                    PromptUserResponse.model_validate(
+                        {
+                            **(
+                                await self._to_prompt_model(
+                                    prompt,
+                                    access_grants=grants_map.get(prompt.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
+                            'user': user.model_dump() if user else None,
+                        }
+                    )
+                )
+            return results
 
     async def search_prompts(
         self,
