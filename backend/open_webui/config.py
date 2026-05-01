@@ -37,6 +37,7 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import Base, get_db, get_async_db
+from open_webui.utils.env_vars import get_env_with_aliases
 from open_webui.utils.redis import get_redis_connection
 
 
@@ -624,15 +625,19 @@ FEISHU_CLIENT_SECRET = PersistentConfig(
 )
 
 FEISHU_OAUTH_SCOPE = PersistentConfig(
-    'FEISHU_OAUTH_SCOPE',
+    'FEISHU_CLIENT_SCOPE',
     'oauth.feishu.scope',
-    os.environ.get('FEISHU_OAUTH_SCOPE', 'contact:user.base:readonly'),
+    get_env_with_aliases(
+        'FEISHU_CLIENT_SCOPE',
+        'FEISHU_OAUTH_SCOPE',
+        default='contact:user.base:readonly',
+    ),
 )
 
 FEISHU_REDIRECT_URI = PersistentConfig(
-    'FEISHU_REDIRECT_URI',
+    'FEISHU_CLIENT_REDIRECT_URI',
     'oauth.feishu.redirect_uri',
-    os.environ.get('FEISHU_REDIRECT_URI', ''),
+    get_env_with_aliases('FEISHU_CLIENT_REDIRECT_URI', 'FEISHU_REDIRECT_URI'),
 )
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
