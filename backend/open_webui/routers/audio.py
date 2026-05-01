@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -1247,7 +1248,7 @@ async def transcription(
         id = uuid.uuid4()
 
         filename = f'{id}.{ext}'
-        contents = file.file.read()
+        contents = await file.read()
 
         file_dir = os.path.join(CACHE_DIR, 'audio', 'transcriptions')
         os.makedirs(file_dir, exist_ok=True)
@@ -1266,7 +1267,7 @@ async def transcription(
             if language:
                 metadata = {'language': language}
 
-            result = transcribe(request, file_path, metadata, user)
+            result = await asyncio.to_thread(transcribe, request, file_path, metadata, user)
 
             return {
                 **result,
