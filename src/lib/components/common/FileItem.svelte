@@ -66,7 +66,7 @@
 {/if}
 
 <button
-	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
+	class="relative group p-1.5 {className} flex flex-col gap-1 {colorClassName} {small
 		? 'rounded-xl p-2'
 		: 'rounded-2xl'} text-left"
 	type="button"
@@ -190,7 +190,7 @@
 		</Tooltip>
 	{/if}
 
-	{#if garnetCount > 0 && !small}
+	{#if garnetCount > 0}
 		<div class="w-full px-2.5 pb-1.5" on:click|stopPropagation>
 			<div class="flex items-center gap-1 text-xs text-green-400 font-medium mb-1">
 				<span>🛡</span>
