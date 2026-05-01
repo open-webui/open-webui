@@ -39,7 +39,7 @@ def search_exa(
         'query': query,
         'numResults': count or 5,
         'includeDomains': filter_list,
-        'contents': {'text': True, 'highlights': True},
+        'contents': {'highlights': {'max_characters': 600}},
         'type': 'auto',  # Use the auto search type (keyword or neural)
     }
 
@@ -54,7 +54,7 @@ def search_exa(
                 ExaResult(
                     url=result['url'],
                     title=result['title'],
-                    text=result['text'],
+                    text=result['highlights'][0],
                 )
             )
 
