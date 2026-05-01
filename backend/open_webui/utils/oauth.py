@@ -356,10 +356,15 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
 def _build_well_known_urls(server_url: str) -> list[str]:
     """Build RFC 8414 / OIDC Discovery well-known URLs for a server URL."""
     parsed, base_url = get_parsed_and_base_url(server_url)
+    path = parsed.path.rstrip('/')
+    if path.startswith('/.well-known/oauth-authorization-server') or path.startswith(
+        '/.well-known/openid-configuration'
+    ):
+        return [server_url.rstrip('/')]
+
     urls = []
 
     if parsed.path and parsed.path != '/':
-        path = parsed.path.rstrip('/')
         urls.extend(
             [
                 urllib.parse.urljoin(base_url, f'/.well-known/oauth-authorization-server{path}'),
@@ -378,7 +383,10 @@ def _build_well_known_urls(server_url: str) -> list[str]:
     return urls
 
 
-async def get_discovery_urls(server_url) -> list[str]:
+async def get_discovery_urls(server_url: str, authorization_server_url: str | None = None) -> list[str]:
+    if authorization_server_url:
+        return _build_well_known_urls(authorization_server_url)
+
     urls = await get_authorization_server_discovery_urls(server_url)
     urls.extend(_build_well_known_urls(server_url))
     return urls
@@ -391,6 +399,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
     client_id: str,
     oauth_server_url: str,
     oauth_server_key: Optional[str] = None,
+    authorization_server_url: Optional[str] = None,
 ) -> OAuthClientInformationFull:
     try:
         oauth_server_metadata = None
@@ -406,7 +415,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         )
 
         # Attempt to fetch OAuth server metadata to get registration endpoint & scopes
-        discovery_urls = await get_discovery_urls(oauth_server_url)
+        discovery_urls = await get_discovery_urls(oauth_server_url, authorization_server_url)
         for url in discovery_urls:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as oauth_server_metadata_response:
@@ -441,7 +450,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         if oauth_server_metadata and oauth_server_metadata.registration_endpoint:
             registration_url = str(oauth_server_metadata.registration_endpoint)
         else:
-            _, base_url = get_parsed_and_base_url(oauth_server_url)
+            _, base_url = get_parsed_and_base_url(authorization_server_url or oauth_server_url)
             registration_url = urllib.parse.urljoin(base_url, '/register')
 
         registration_data = oauth_client_metadata.model_dump(
@@ -502,6 +511,7 @@ async def get_oauth_client_info_with_static_credentials(
     oauth_server_url: str,
     oauth_client_id: str,
     oauth_client_secret: str,
+    authorization_server_url: Optional[str] = None,
 ) -> OAuthClientInformationFull:
     """
     Build an OAuthClientInformationFull from user-provided static credentials.
@@ -516,7 +526,7 @@ async def get_oauth_client_info_with_static_credentials(
         redirect_uri = f'{redirect_base_url}/oauth/clients/{client_id}/callback'
 
         # Discover server metadata (authorization endpoint, token endpoint, scopes, etc.)
-        discovery_urls = await get_discovery_urls(oauth_server_url)
+        discovery_urls = await get_discovery_urls(oauth_server_url, authorization_server_url)
         for url in discovery_urls:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:

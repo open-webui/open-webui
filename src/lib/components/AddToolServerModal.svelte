@@ -60,12 +60,20 @@
 
 	let oauthClientId = '';
 	let oauthClientSecret = '';
+	let oauthServerUrl = '';
 
 	let enable = true;
 	let loading = false;
 	let showAdvanced = false;
 	let showAccessControlModal = false;
 	let showDeleteConfirmDialog = false;
+
+	const getOAuthServerUrlConfig = () => {
+		const trimmedOAuthServerUrl = oauthServerUrl.trim();
+		return auth_type === 'oauth_2.1_static' && trimmedOAuthServerUrl
+			? { oauth_server_url: trimmedOAuthServerUrl }
+			: {};
+	};
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -86,10 +94,16 @@
 		// client_id is the tool server ID (used as the internal lookup key for both flows).
 		// For static, client_secret signals the backend to use the static credential path.
 		// The actual OAuth client_id/secret come from the connection info at save time.
-		const formData: { url: string; client_id: string; client_secret?: string } = {
+		const formData: {
+			url: string;
+			client_id: string;
+			client_secret?: string;
+			oauth_server_url?: string;
+		} = {
 			url: url,
 			client_id: id,
-			...(auth_type === 'oauth_2.1_static' ? { client_secret: oauthClientSecret } : {})
+			...(auth_type === 'oauth_2.1_static' ? { client_secret: oauthClientSecret } : {}),
+			...getOAuthServerUrlConfig()
 		};
 
 		const res = await registerOAuthClient(localStorage.token, formData, 'mcp').catch((err) => {
@@ -164,7 +178,8 @@
 				key,
 				config: {
 					enable: enable,
-					access_grants: accessGrants
+					access_grants: accessGrants,
+					...getOAuthServerUrlConfig()
 				},
 				info: {
 					id,
@@ -222,6 +237,7 @@
 				if (data.config) {
 					enable = data.config.enable ?? true;
 					accessGrants = data.config.access_grants ?? [];
+					oauthServerUrl = data.config.oauth_server_url ?? '';
 				}
 
 				toast.success($i18n.t('Import successful'));
@@ -246,6 +262,9 @@
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
 				key,
+				...(Object.keys(getOAuthServerUrlConfig()).length
+					? { config: getOAuthServerUrlConfig() }
+					: {}),
 
 				info: {
 					id: id,
@@ -328,7 +347,8 @@
 			config: {
 				enable: enable,
 				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
+				access_grants: accessGrants,
+				...getOAuthServerUrlConfig()
 			},
 			info: {
 				id: id,
@@ -364,6 +384,7 @@
 		oauthClientInfo = null;
 		oauthClientId = '';
 		oauthClientSecret = '';
+		oauthServerUrl = '';
 
 		enable = true;
 		functionNameFilterList = '';
@@ -390,6 +411,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 			oauthClientId = connection.info?.oauth_client_id ?? '';
 			oauthClientSecret = connection.info?.oauth_client_secret ?? '';
+			oauthServerUrl = connection.config?.oauth_server_url ?? '';
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
@@ -729,6 +751,17 @@
 													bind:value={oauthClientSecret}
 													placeholder={$i18n.t('Client Secret')}
 													required={false}
+												/>
+												<label for="oauth-server-url" class="sr-only"
+													>{$i18n.t('Authorization Server URL')}</label
+												>
+												<input
+													id="oauth-server-url"
+													class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													type="text"
+													bind:value={oauthServerUrl}
+													placeholder={$i18n.t('Authorization Server or Discovery URL (optional)')}
+													autocomplete="off"
 												/>
 											</div>
 										{/if}

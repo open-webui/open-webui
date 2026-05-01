@@ -102,6 +102,7 @@ class OAuthClientRegistrationForm(BaseModel):
     client_id: str
     client_name: Optional[str] = None
     client_secret: Optional[str] = None
+    oauth_server_url: Optional[str] = None
 
 
 @router.post('/oauth/clients/register')
@@ -124,10 +125,11 @@ async def register_oauth_client(
                 form_data.url,
                 oauth_client_id=form_data.client_id,
                 oauth_client_secret=form_data.client_secret,
+                authorization_server_url=form_data.oauth_server_url,
             )
         else:
             oauth_client_info = await get_oauth_client_info_with_dynamic_client_registration(
-                request, oauth_client_id, form_data.url
+                request, oauth_client_id, form_data.url, authorization_server_url=form_data.oauth_server_url
             )
         return {
             'status': True,
@@ -368,7 +370,8 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
     try:
         if form_data.type == 'mcp':
             if form_data.auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-                discovery_urls = await get_discovery_urls(form_data.url)
+                oauth_server_url = (form_data.config or {}).get('oauth_server_url')
+                discovery_urls = await get_discovery_urls(form_data.url, oauth_server_url)
                 for discovery_url in discovery_urls:
                     log.debug(f'Trying to fetch OAuth 2.1 discovery document from {discovery_url}')
                     async with aiohttp.ClientSession(
