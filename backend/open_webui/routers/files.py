@@ -154,19 +154,19 @@ def process_uploaded_file(
                         vault_result = vault_scan_file(file_item.id, raw_text)
                         clean_text = vault_result.get("pseudonymized_text") or raw_text
 
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id, content=clean_text),
+                            user=user,
+                            db=db_session,
+                        )
+
                         Files.update_file_data_by_id(
                             file_item.id,
                             {
                                 "garnet_entity_count": vault_result.get("entity_count", 0),
                                 "garnet_breakdown": vault_result.get("entity_breakdown", {}),
                             },
-                            db=db_session,
-                        )
-
-                        process_file(
-                            request,
-                            ProcessFileForm(file_id=file_item.id, content=clean_text),
-                            user=user,
                             db=db_session,
                         )
                     except Exception as extract_err:
