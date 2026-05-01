@@ -566,7 +566,7 @@
 				{#if message.file_entity_count > 0}
 					<div class="text-xs text-gray-500 mt-1 flex flex-col gap-1">
 						<span>📎 {message.file_entity_count} sensitive items detected in file</span>
-						{#if message.garnet_breakdown && Object.keys(message.garnet_breakdown).length > 0}
+						{#if message.garnet_breakdown && Object.keys(message.garnet_breakdown).length > 0 && console.warn('[GARNET BD]', message.garnet_breakdown) !== 'x'}
 							{@const maxCount = Math.max(...Object.values(message.garnet_breakdown))}
 							{#each Object.entries(message.garnet_breakdown) as [type, count]}
 								<div class="flex items-center gap-2">
