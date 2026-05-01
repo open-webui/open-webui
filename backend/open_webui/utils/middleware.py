@@ -2467,7 +2467,43 @@ async def process_chat_response(
                                     )
 
                                     if delta_reasoning_details:
-                                        reasoning_details.extend(delta_reasoning_details)
+                                        # Merge by index — same as the frontend (Chat.svelte).
+                                        # OpenRouter streams reasoning_details as deltas keyed
+                                        # by `index`: chunks with the same index carry progressive
+                                        # `text`/`data` that must be concatenated. A naive .extend()
+                                        # produces duplicate-id items, which OpenAI's Responses API
+                                        # rejects on tool-call follow-ups (other providers tolerate
+                                        # it, which is why the bug only surfaced for OpenAI).
+                                        for detail in delta_reasoning_details:
+                                            idx = detail.get("index", 0)
+                                            existing = next(
+                                                (
+                                                    d
+                                                    for d in reasoning_details
+                                                    if d.get("index") == idx
+                                                ),
+                                                None,
+                                            )
+                                            if existing is not None:
+                                                if detail.get("text"):
+                                                    existing["text"] = (
+                                                        existing.get("text") or ""
+                                                    ) + detail["text"]
+                                                if detail.get("data"):
+                                                    existing["data"] = (
+                                                        existing.get("data") or ""
+                                                    ) + detail["data"]
+                                                for k in (
+                                                    "type",
+                                                    "id",
+                                                    "summary",
+                                                    "signature",
+                                                    "format",
+                                                ):
+                                                    if detail.get(k) is not None:
+                                                        existing[k] = detail[k]
+                                            else:
+                                                reasoning_details.append({**detail})
 
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
