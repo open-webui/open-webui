@@ -467,7 +467,11 @@ class KnowledgeTable:
                 if filter:
                     query_key = filter.get('query')
                     if query_key:
-                        stmt = stmt.filter(or_(File.filename.ilike(f'%{query_key}%')))
+                        if db.bind.dialect.name == 'sqlite':
+                            stmt_content = File.data['content'].ilike(f'%{query_key}%')
+                        else:
+                            stmt_content = File.data.op('->>')('content').ilike(f'%{query_key}%')
+                        stmt = stmt.filter(or_(File.filename.ilike(f'%{query_key}%'), stmt_content))
 
                     view_option = filter.get('view_option')
                     if view_option == 'created':
