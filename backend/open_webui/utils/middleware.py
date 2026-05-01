@@ -115,6 +115,7 @@ from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.mcp.results import extract_mcp_text_content
 
 
 from open_webui.config import (
@@ -1137,13 +1138,8 @@ async def process_tool_result(
             tool_response = []
             for item in tool_result:
                 if isinstance(item, dict):
-                    if item.get('type') == 'text':
-                        text = item.get('text', '')
-                        if isinstance(text, str):
-                            try:
-                                text = json.loads(text)
-                            except json.JSONDecodeError:
-                                pass
+                    has_text_content, text = extract_mcp_text_content(item)
+                    if has_text_content:
                         tool_response.append(text)
                     elif item.get('type') in ['image', 'audio']:
                         file_url = await get_file_url_from_base64(
@@ -1164,15 +1160,6 @@ async def process_tool_result(
                                 'url': file_url,
                             }
                         )
-                    elif item.get('type') == 'resource':
-                        resource = item.get('resource', {})
-                        text = resource.get('text', '')
-                        if isinstance(text, str) and text:
-                            try:
-                                text = json.loads(text)
-                            except json.JSONDecodeError:
-                                pass
-                            tool_response.append(text)
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
             for item in tool_result:
