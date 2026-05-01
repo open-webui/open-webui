@@ -12,7 +12,7 @@ def get_env_with_aliases(
 
     for name in (env_name, *aliases):
         value = values.get(name)
-        if value is not None:
+        if value is not None and value != '':
             return value
 
     return default
