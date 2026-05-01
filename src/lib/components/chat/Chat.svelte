@@ -2960,7 +2960,14 @@
 					return {
 						role: 'assistant',
 						content: (message?.merged?.content ?? message.content) || null,
-						tool_calls: message.tool_calls
+						tool_calls: message.tool_calls,
+						// OpenAI Responses API (and Anthropic) require the reasoning that
+						// led to a function_call to be preserved on the assistant message
+						// in follow-up requests. Dropping it breaks the reasoning chain on
+						// multi-turn tool-call conversations.
+						...(message.reasoning_details
+							? { reasoning_details: message.reasoning_details }
+							: {})
 					};
 				}
 
