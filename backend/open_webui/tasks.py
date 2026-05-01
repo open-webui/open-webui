@@ -22,6 +22,10 @@ item_tasks = {}
 # Key: task_id, Value: {"model_id": str, "timestamp": float}
 pending_model_switches: Dict[str, dict] = {}
 
+# A dictionary to track pending service_tier switches for active tasks
+# Key: task_id, Value: {"service_tier": str, "timestamp": float}
+pending_service_tier_switches: Dict[str, dict] = {}
+
 
 REDIS_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks"
 REDIS_ITEM_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks:item"
@@ -246,3 +250,52 @@ async def get_pending_model_switches_for_chat(redis, chat_id: str) -> List[dict]
                 **pending_model_switches[task_id]
             })
     return switches
+
+
+# ===============================
+# PENDING SERVICE TIER MANAGEMENT
+# ===============================
+
+
+async def set_pending_service_tier(task_id: str, service_tier: str) -> dict:
+    """
+    Set a pending service_tier change for an active task.
+    The agentic loop will pick this up at its next iteration so the next
+    outbound request uses the new tier without restarting the agent.
+    """
+    import time
+
+    if task_id not in tasks:
+        return {"status": False, "message": f"Task {task_id} not found or not active."}
+
+    pending_service_tier_switches[task_id] = {
+        "service_tier": service_tier,
+        "timestamp": time.time(),
+    }
+
+    log.info(
+        f"Pending service_tier change set for task {task_id}: switching to {service_tier}"
+    )
+    return {
+        "status": True,
+        "message": f"service_tier change to {service_tier} queued for task {task_id}.",
+    }
+
+
+def get_pending_service_tier(task_id: str) -> Optional[str]:
+    """
+    Check if there's a pending service_tier change for a task.
+    Returns the service_tier value if pending, None otherwise.
+    """
+    if task_id in pending_service_tier_switches:
+        return pending_service_tier_switches[task_id].get("service_tier")
+    return None
+
+
+def clear_pending_service_tier(task_id: str) -> None:
+    """
+    Clear the pending service_tier change after it has been applied.
+    """
+    if task_id in pending_service_tier_switches:
+        del pending_service_tier_switches[task_id]
+        log.info(f"Pending service_tier change cleared for task {task_id}")

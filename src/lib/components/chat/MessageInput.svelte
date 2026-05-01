@@ -660,29 +660,44 @@
 	let showToolsButton = false;
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
+	// $config and $_user start as undefined and populate asynchronously (cache
+	// hits resolve fast, but on first visits and slow mobile networks they
+	// don't). Treating undefined as "feature disabled" / "no permission" caused
+	// buttons to silently vanish until the user reloaded — particularly the
+	// web-search button on mobile. Treat undefined/null as "not loaded yet,
+	// assume yes". The backend re-validates the feature flag and permissions
+	// on actual use, so an optimistic button is safe; the alternative (UI
+	// disappearing for the first paint) is worse.
+
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			webSearchCapableModels.length &&
-		!!$config?.features?.enable_web_search &&
-		($_user?.role === 'admin' || !!$_user?.permissions?.features?.web_search);
+		($config == null || !!$config?.features?.enable_web_search) &&
+		($_user == null ||
+			$_user?.role === 'admin' ||
+			!!$_user?.permissions?.features?.web_search);
 
 	let showStudyModeButton = false;
-	$: showStudyModeButton = !!$config?.features?.enable_study_mode;
+	$: showStudyModeButton = $config == null || !!$config?.features?.enable_study_mode;
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			imageGenerationCapableModels.length &&
-		!!$config?.features?.enable_image_generation &&
-		($_user?.role === 'admin' || !!$_user?.permissions?.features?.image_generation);
+		($config == null || !!$config?.features?.enable_image_generation) &&
+		($_user == null ||
+			$_user?.role === 'admin' ||
+			!!$_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			codeInterpreterCapableModels.length &&
-		!!$config?.features?.enable_code_interpreter &&
-		($_user?.role === 'admin' || !!$_user?.permissions?.features?.code_interpreter);
+		($config == null || !!$config?.features?.enable_code_interpreter) &&
+		($_user == null ||
+			$_user?.role === 'admin' ||
+			!!$_user?.permissions?.features?.code_interpreter);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');

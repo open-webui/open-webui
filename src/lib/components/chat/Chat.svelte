@@ -238,6 +238,32 @@
 	// Service tier tracking
 	let serviceTier: 'default' | 'flex' | 'priority' = 'default';
 
+	// Baseline so we only push a service-tier change to active task(s) when the
+	// user actually flips it mid-run (and not when it's first set at task start).
+	// Reset to null when no active task is running.
+	let _serviceTierBaseline: typeof serviceTier | null = null;
+	$: {
+		if (taskIds && taskIds.length > 0) {
+			if (_serviceTierBaseline === null) {
+				_serviceTierBaseline = serviceTier;
+			} else if (serviceTier !== _serviceTierBaseline) {
+				const cid = getVisibleChatId();
+				if (cid && $socket) {
+					for (const tid of taskIds) {
+						$socket.emit('service-tier-switch', {
+							chat_id: cid,
+							task_id: tid,
+							service_tier: serviceTier
+						});
+					}
+				}
+				_serviceTierBaseline = serviceTier;
+			}
+		} else {
+			_serviceTierBaseline = null;
+		}
+	}
+
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);
 		const reasoningConfig = model?.info?.meta?.reasoning;
@@ -628,9 +654,23 @@
 	let activeChatId = '';
 
 	$: routeChatId = resolveRouteChatId();
+	// Explicitly read $page and chatIdProp here so Svelte still re-evaluates
+	// activeChatId when SvelteKit navigates (the `resolveRouteChatId()` call
+	// below also reads them, but Svelte's compiler doesn't trace through
+	// function calls when computing reactive dependencies).
 	$: activeChatId = (() => {
-		if (routeChatId) {
-			return routeChatId;
+		void $page;
+		void chatIdProp;
+		// Re-resolve at evaluation time. `routeChatId` is reactive on $page and
+		// chatIdProp, but not on `window.location.pathname` — which can be
+		// updated out-of-band via `history.replaceState` (e.g. when persisting a
+		// brand-new chat in `initChatHandler`). Without a fresh resolution here,
+		// activeChatId can be momentarily empty after a new chat is created,
+		// hiding the Navbar's persistent-chat UI (token-stats box, etc.) until
+		// the user navigates explicitly.
+		const currentRouteChatId = resolveRouteChatId();
+		if (currentRouteChatId) {
+			return currentRouteChatId;
 		}
 
 		const currentChatId = $chatId ?? '';
@@ -1704,7 +1744,10 @@
 					timestamp: m.timestamp,
 					...(m.usage ? { usage: m.usage } : {}),
 					...(m.sources ? { sources: m.sources } : {}),
-					...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
+					...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {}),
+					...(m.reasoning_details_per_round
+						? { reasoning_details_per_round: m.reasoning_details_per_round }
+						: {})
 				})),
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				model_item: $models.find((m) => m.id === modelId),
@@ -1781,7 +1824,10 @@
 					info: m.info ? m.info : undefined,
 					timestamp: m.timestamp,
 					...(m.sources ? { sources: m.sources } : {}),
-					...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {})
+					...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {}),
+					...(m.reasoning_details_per_round
+						? { reasoning_details_per_round: m.reasoning_details_per_round }
+						: {})
 				})),
 				...(event ? { event: event } : {}),
 				model_item: $models.find((m) => m.id === modelId),
@@ -1971,7 +2017,8 @@
 			selected_model_id,
 			error,
 			usage,
-			reasoning_details
+			reasoning_details,
+			reasoning_details_per_round
 		} = data;
 
 		if (error) {
@@ -2010,9 +2057,26 @@
 						message.reasoning_details = [];
 					}
 
+					// Prefer matching by `id` (stable across deltas for one OpenAI
+					// Responses reasoning item) and fall back to `index` for providers
+					// that don't emit ids in early chunks. Matching only by index can
+					// collapse distinct reasoning items if a provider emits multiple
+					// items at the same array position in different deltas.
 					for (const detail of choices[0].delta.reasoning_details) {
-						const index = detail.index ?? 0;
-						let existing = message.reasoning_details.find((d) => d.index === index);
+						const detailId = detail.id ?? null;
+						const detailIdx = detail.index ?? 0;
+
+						let existing = null;
+						if (detailId !== null) {
+							existing = message.reasoning_details.find((d) => d.id === detailId);
+							if (!existing) {
+								existing = message.reasoning_details.find(
+									(d) => d.id == null && d.index === detailIdx
+								);
+							}
+						} else {
+							existing = message.reasoning_details.find((d) => d.index === detailIdx);
+						}
 
 						if (existing) {
 							if (detail.text) existing.text = (existing.text || '') + detail.text;
@@ -2021,6 +2085,7 @@
 							if (detail.summary) existing.summary = detail.summary;
 							if (detail.signature) existing.signature = detail.signature;
 							if (detail.data) existing.data = (existing.data || '') + detail.data;
+							if (detail.index != null) existing.index = detail.index;
 						} else {
 							message.reasoning_details.push({ ...detail });
 						}
@@ -2071,6 +2136,17 @@
 			}
 		} else if (reasoning_details) {
 			message.reasoning_details = reasoning_details;
+		}
+
+		// Per-round reasoning_details (one array per stream round / tool-call
+		// round) lets the chat replay attach the correct round's reasoning to
+		// each tool_calls assistant message in multi-turn follow-ups. Without
+		// this, only the last round's reasoning survives in `reasoning_details`.
+		if (
+			Array.isArray(reasoning_details_per_round) &&
+			reasoning_details_per_round.length > 0
+		) {
+			message.reasoning_details_per_round = reasoning_details_per_round;
 		}
 
 		if (content) {
@@ -2678,6 +2754,7 @@
 						let retryCancelled = false;
 						let savedToolContent = null;
 						let savedReasoningDetails = null;
+						let savedReasoningDetailsPerRound = null;
 
 						for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 							let responseMessage = _history.messages[responseMessageId];
@@ -2692,6 +2769,10 @@
 									responseMessage.preservedToolContext = true;
 									if (savedReasoningDetails) {
 										responseMessage.reasoning_details = savedReasoningDetails;
+									}
+									if (savedReasoningDetailsPerRound) {
+										responseMessage.reasoning_details_per_round =
+											savedReasoningDetailsPerRound;
 									}
 								} else {
 									responseMessage.content = '';
@@ -2745,6 +2826,8 @@
 							if (failedToolContext?.hasCompletedToolCall) {
 								savedToolContent = failedToolContext.content;
 								savedReasoningDetails = responseMessage.reasoning_details || null;
+								savedReasoningDetailsPerRound =
+									responseMessage.reasoning_details_per_round || null;
 							}
 
 							if (attempt < MAX_RETRIES) {
@@ -2796,6 +2879,10 @@
 								responseMessage.preservedToolContext = true;
 								if (savedReasoningDetails) {
 									responseMessage.reasoning_details = savedReasoningDetails;
+								}
+								if (savedReasoningDetailsPerRound) {
+									responseMessage.reasoning_details_per_round =
+										savedReasoningDetailsPerRound;
 								}
 							}
 
@@ -3393,9 +3480,11 @@
 		const originalToolContext = getRetryableToolContext(message?.content ?? '');
 		let savedToolContent = null;
 		let savedReasoningDetails = null;
+		let savedReasoningDetailsPerRound = null;
 		if (originalToolContext?.hasCompletedToolCall) {
 			savedToolContent = originalToolContext.content;
 			savedReasoningDetails = message.reasoning_details || null;
+			savedReasoningDetailsPerRound = message.reasoning_details_per_round || null;
 			message.content = savedToolContent;
 			message.preservedToolContext = true;
 		} else {
@@ -3424,6 +3513,10 @@
 						responseMessage.preservedToolContext = true;
 						if (savedReasoningDetails) {
 							responseMessage.reasoning_details = savedReasoningDetails;
+						}
+						if (savedReasoningDetailsPerRound) {
+							responseMessage.reasoning_details_per_round =
+								savedReasoningDetailsPerRound;
 						}
 					} else {
 						responseMessage.content = '';
@@ -3475,6 +3568,8 @@
 				if (failedToolContext?.hasCompletedToolCall) {
 					savedToolContent = failedToolContext.content;
 					savedReasoningDetails = responseMessage.reasoning_details || null;
+					savedReasoningDetailsPerRound =
+						responseMessage.reasoning_details_per_round || null;
 				}
 
 				if (attempt < MAX_RETRIES) {
@@ -3735,16 +3830,21 @@
 
 		// Where do reasoning_details belong?
 		//
-		// The frontend accumulates reasoning_details from ALL turns into one array, but each
-		// new turn's SSE chunks overwrite previous ones (same indices). So message.reasoning_details
-		// is always from the LAST turn's reasoning — i.e. the most recent thinking.
+		// Newer messages have `reasoning_details_per_round` — one entry per stream
+		// round (tool-call round or the trailing text round). When present, attach
+		// per-round entries to the matching tool_calls group (and any final entry
+		// to the trailing text). This preserves multi-round reasoning continuity
+		// for OpenAI's Responses API.
 		//
-		// Two cases:
-		// - No trailing text (retry): the error happened during the continuation after the last
-		//   tool call round. reasoning_details = that round's thinking → attach to last group.
-		// - Has trailing text (completed message): the model finished with a final response.
-		//   reasoning_details = the final turn's thinking → attach to the trailing text message,
-		//   NOT to any tool call group (we can't reconstruct earlier rounds' thinking anyway).
+		// Older messages only have a flat `message.reasoning_details` (the last
+		// round's reasoning, since earlier rounds were overwritten by index). Fall
+		// back to the legacy heuristic for those:
+		// - No trailing text (retry): attach to last group.
+		// - Has trailing text: attach only to the trailing text message.
+
+		const reasoningPerRound = Array.isArray(message.reasoning_details_per_round)
+			? message.reasoning_details_per_round
+			: null;
 
 		const expandedMessages = [];
 
@@ -3756,11 +3856,16 @@
 				content.slice(group.textBeforeStart, firstTc.matchStart)
 			);
 
-			// Attach reasoning_details only on the last group, and only when there is no
-			// trailing text (retry case). For completed messages the reasoning belongs to
-			// the final response turn, not to the tool-call turns.
-			const groupReasoningDetails =
-				isLastGroup && !hasTrailingText ? message.reasoning_details : undefined;
+			let groupReasoningDetails;
+			if (reasoningPerRound && reasoningPerRound[groupIdx] !== undefined) {
+				groupReasoningDetails = reasoningPerRound[groupIdx];
+			} else if (isLastGroup && !hasTrailingText) {
+				// Legacy: attach the (single) reasoning_details to the last group
+				// when there's no trailing text.
+				groupReasoningDetails = message.reasoning_details;
+			} else {
+				groupReasoningDetails = undefined;
+			}
 
 			expandedMessages.push({
 				...message,
@@ -3789,14 +3894,24 @@
 		}
 
 		// Trailing text = model's final response after all tool calls completed.
-		// reasoning_details from the message is this final turn's thinking — attach it here.
+		// Per-round: anything beyond `groups.length` is the final round's reasoning.
+		// Legacy: keep `message.reasoning_details` (the spread already includes it).
 		if (hasTrailingText) {
+			let trailingReasoning;
+			if (reasoningPerRound && reasoningPerRound.length > groups.length) {
+				trailingReasoning = reasoningPerRound[reasoningPerRound.length - 1];
+			} else if (!reasoningPerRound) {
+				trailingReasoning = message.reasoning_details;
+			} else {
+				trailingReasoning = undefined;
+			}
+
 			expandedMessages.push({
 				...message,
 				content: trailingText,
 				preservedToolContext: undefined,
-				tool_calls: undefined
-				// reasoning_details kept from ...message spread — correct for this turn
+				tool_calls: undefined,
+				reasoning_details: trailingReasoning
 			});
 		}
 
@@ -3853,7 +3968,10 @@
 			modelIdx: message.modelIdx ?? 0,
 			timestamp: Math.floor(Date.now() / 1000),
 			preservedToolContext: true,
-			...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
+			...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {}),
+			...(message.reasoning_details_per_round
+				? { reasoning_details_per_round: message.reasoning_details_per_round }
+				: {})
 		};
 
 		history.messages[responseMessageId] = responseMessage;
@@ -4020,9 +4138,19 @@
 			);
 
 			_chatId = chat.id;
-			await chatId.set(_chatId);
 
+			// Order matters here: update the URL FIRST, then $chatId. The
+			// `activeChatId` reactive falls back to `isPersistentChatView()`
+			// (which reads `window.location.pathname`, untracked by Svelte) when
+			// `routeChatId` is stale. If we set $chatId first, the reactive
+			// flushes on the next microtask while pathname is still `/`,
+			// computes `activeChatId = ''`, and Navbar mounts with no chat —
+			// hiding the token-stats box (and any other persistent-chat-only UI)
+			// until the user navigates again. Doing replaceState first means the
+			// reactive sees the new pathname and resolves activeChatId
+			// correctly on the same flush.
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			chatId.set(_chatId);
 
 			await tick();
 

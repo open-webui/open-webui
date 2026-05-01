@@ -31,7 +31,13 @@ from open_webui.env import (
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks, set_pending_model_switch, list_task_ids_by_item_id
+from open_webui.tasks import (
+    create_task,
+    stop_item_tasks,
+    set_pending_model_switch,
+    set_pending_service_tier,
+    list_task_ids_by_item_id,
+)
 from open_webui.utils.redis import get_redis_connection
 from open_webui.utils.access_control import has_access, get_users_with_access
 from open_webui.models.token_usage import token_groups
@@ -388,7 +394,83 @@ async def model_switch(sid, data):
             return {"status": True, "message": f"Model switch queued for {len(task_ids)} active task(s)"}
         else:
             return {"status": False, "message": "No active tasks found for this chat"}
-    
+
+    return {"status": False, "message": "No chat_id or task_id provided"}
+
+
+@sio.on("service-tier-switch")
+async def service_tier_switch(sid, data):
+    """
+    Handle service_tier change requests during an active agentic loop.
+    The change will be applied at the next iteration of the tool call loop
+    so the next outbound LLM request uses the new tier.
+    """
+    if sid not in SESSION_POOL:
+        return {"status": False, "message": "Session not found"}
+
+    chat_id = data.get("chat_id")
+    new_tier = data.get("service_tier")
+    task_id = data.get("task_id")
+
+    if not new_tier:
+        return {"status": False, "message": "No service_tier provided"}
+
+    log.info(
+        f"service_tier change request: chat_id={chat_id}, task_id={task_id}, new_tier={new_tier}"
+    )
+
+    # If a specific task_id is provided, change tier for that task
+    if task_id:
+        result = await set_pending_service_tier(task_id, new_tier)
+
+        await sio.emit(
+            "events",
+            {
+                "chat_id": chat_id,
+                "message_id": data.get("message_id"),
+                "data": {
+                    "type": "service-tier-switch:pending",
+                    "data": {
+                        "task_id": task_id,
+                        "service_tier": new_tier,
+                    },
+                },
+            },
+            to=sid,
+        )
+
+        return result
+
+    # If no task_id provided, queue for all active tasks on this chat
+    if chat_id:
+        task_ids = await list_task_ids_by_item_id(REDIS, chat_id)
+        if task_ids:
+            for tid in task_ids:
+                await set_pending_service_tier(tid, new_tier)
+
+            await sio.emit(
+                "events",
+                {
+                    "chat_id": chat_id,
+                    "message_id": data.get("message_id"),
+                    "data": {
+                        "type": "service-tier-switch:pending",
+                        "data": {
+                            "task_ids": task_ids,
+                            "service_tier": new_tier,
+                        },
+                    },
+                },
+                to=sid,
+            )
+
+            return {
+                "status": True,
+                "message": f"service_tier change queued for {len(task_ids)} active task(s)",
+            }
+        else:
+            return {"status": False, "message": "No active tasks found for this chat"}
+
     return {"status": False, "message": "No chat_id or task_id provided"}
 
 

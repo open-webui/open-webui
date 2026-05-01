@@ -36,6 +36,8 @@ from open_webui.socket.main import (
 from open_webui.tasks import (
     get_pending_model_switch,
     clear_pending_model_switch,
+    get_pending_service_tier,
+    clear_pending_service_tier,
 )
 from open_webui.routers.tasks import (
     generate_queries,
@@ -2281,6 +2283,16 @@ async def process_chat_response(
                 else []
             )
 
+            # Per-round reasoning_details, in order. Each stream_body_handler
+            # invocation appends one entry: the reasoning_details captured during
+            # that round (whether or not the round produced tool_calls). This
+            # preserves multi-round reasoning continuity for OpenAI's Responses
+            # API on tool-call replays — without this, the saved flat array
+            # cannot distinguish which round each reasoning item came from, and
+            # earlier rounds get attached to the wrong assistant message on
+            # follow-up turns.
+            round_reasoning_details = []
+
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
             DETECT_CODE_INTERPRETER = metadata.get("features", {}).get(
@@ -2323,6 +2335,7 @@ async def process_chat_response(
                     nonlocal response_usage
                     nonlocal chunk_count
                     nonlocal model_id
+                    nonlocal round_reasoning_details
 
                     response_tool_calls = []
                     reasoning_details = []
@@ -2467,23 +2480,50 @@ async def process_chat_response(
                                     )
 
                                     if delta_reasoning_details:
-                                        # Merge by index — same as the frontend (Chat.svelte).
-                                        # OpenRouter streams reasoning_details as deltas keyed
-                                        # by `index`: chunks with the same index carry progressive
-                                        # `text`/`data` that must be concatenated. A naive .extend()
-                                        # produces duplicate-id items, which OpenAI's Responses API
-                                        # rejects on tool-call follow-ups (other providers tolerate
-                                        # it, which is why the bug only surfaced for OpenAI).
+                                        # Merge streaming reasoning_details deltas. Prefer matching
+                                        # by `id` (stable across deltas for one OpenAI Responses
+                                        # reasoning item) and fall back to `index` for providers
+                                        # that don't emit ids in early chunks. A naive .extend()
+                                        # produces duplicate-id items that OpenAI's Responses API
+                                        # rejects on tool-call follow-ups; matching only by `index`
+                                        # would collapse distinct items if a provider sends them
+                                        # at the same array position in different deltas.
                                         for detail in delta_reasoning_details:
-                                            idx = detail.get("index", 0)
-                                            existing = next(
-                                                (
-                                                    d
-                                                    for d in reasoning_details
-                                                    if d.get("index") == idx
-                                                ),
-                                                None,
-                                            )
+                                            detail_id = detail.get("id")
+                                            detail_idx = detail.get("index", 0)
+
+                                            existing = None
+                                            if detail_id is not None:
+                                                existing = next(
+                                                    (
+                                                        d
+                                                        for d in reasoning_details
+                                                        if d.get("id") == detail_id
+                                                    ),
+                                                    None,
+                                                )
+                                                # Adopt an id-less entry that matches by index
+                                                # (covers providers that emit `id` only later).
+                                                if existing is None:
+                                                    existing = next(
+                                                        (
+                                                            d
+                                                            for d in reasoning_details
+                                                            if d.get("id") is None
+                                                            and d.get("index") == detail_idx
+                                                        ),
+                                                        None,
+                                                    )
+                                            else:
+                                                existing = next(
+                                                    (
+                                                        d
+                                                        for d in reasoning_details
+                                                        if d.get("index") == detail_idx
+                                                    ),
+                                                    None,
+                                                )
+
                                             if existing is not None:
                                                 if detail.get("text"):
                                                     existing["text"] = (
@@ -2499,6 +2539,7 @@ async def process_chat_response(
                                                     "summary",
                                                     "signature",
                                                     "format",
+                                                    "index",
                                                 ):
                                                     if detail.get(k) is not None:
                                                         existing[k] = detail[k]
@@ -2716,19 +2757,21 @@ async def process_chat_response(
                                                 ),
                                             }
 
-                                            # Collect reasoning_details from ALL tool_calls blocks
-                                            all_reasoning_details = []
-                                            for block in content_blocks:
-                                                if block["type"] == "tool_calls" and block.get(
-                                                    "reasoning_details"
-                                                ):
-                                                    all_reasoning_details.extend(
-                                                        block["reasoning_details"]
-                                                    )
-                                            if all_reasoning_details:
-                                                update_data["reasoning_details"] = (
-                                                    all_reasoning_details
+                                            # Per-round reasoning lets multi-turn replays attach
+                                            # the right round's reasoning to each tool_calls
+                                            # message. Flat array kept for backward compat with
+                                            # older saved messages.
+                                            if round_reasoning_details:
+                                                update_data["reasoning_details_per_round"] = (
+                                                    round_reasoning_details
                                                 )
+                                                flat = [
+                                                    item
+                                                    for round_details in round_reasoning_details
+                                                    for item in round_details
+                                                ]
+                                                if flat:
+                                                    update_data["reasoning_details"] = flat
 
                                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata["chat_id"],
@@ -2799,6 +2842,14 @@ async def process_chat_response(
                                 "reasoning_details": reasoning_details,
                             }
                         )
+
+                    # Track this round's reasoning regardless of whether it
+                    # produced tool_calls. The trailing (final, non-tool-call)
+                    # round's reasoning is otherwise lost when stream_body_handler
+                    # returns, so multi-turn replays would miss it on the final
+                    # assistant message.
+                    if reasoning_details:
+                        round_reasoning_details.append(reasoning_details)
 
                     if response.background:
                         await response.background()
@@ -3018,7 +3069,7 @@ async def process_chat_response(
                             model_id = pending_model
                             clear_pending_model_switch(task_id)
                             log.info(f"Model switched from {old_model_id} to {model_id} for task {task_id}")
-                            
+
                             # Notify frontend that model switch was applied
                             await event_emitter(
                                 {
@@ -3026,6 +3077,29 @@ async def process_chat_response(
                                     "data": {
                                         "old_model_id": old_model_id,
                                         "new_model_id": model_id,
+                                        "task_id": task_id,
+                                    },
+                                }
+                            )
+
+                        # Check for pending service_tier change. Mutating
+                        # form_data here means the next round (and all subsequent
+                        # rounds, until changed again) uses the new tier — the
+                        # **form_data spread below picks it up.
+                        pending_tier = get_pending_service_tier(task_id)
+                        if pending_tier:
+                            old_tier = form_data.get("service_tier")
+                            form_data["service_tier"] = pending_tier
+                            clear_pending_service_tier(task_id)
+                            log.info(
+                                f"service_tier switched from {old_tier} to {pending_tier} for task {task_id}"
+                            )
+                            await event_emitter(
+                                {
+                                    "type": "service-tier-switch:applied",
+                                    "data": {
+                                        "old_service_tier": old_tier,
+                                        "new_service_tier": pending_tier,
                                         "task_id": task_id,
                                     },
                                 }
@@ -3095,7 +3169,13 @@ async def process_chat_response(
                                     "tool_calls": res_tool_calls,
                                     "reasoning_details": message.get("reasoning_details")
                                 })
-                                
+
+                            # Track per-round reasoning_details for the
+                            # non-streaming branch (mirrors stream_body_handler).
+                            msg_reasoning = message.get("reasoning_details")
+                            if msg_reasoning:
+                                round_reasoning_details.append(msg_reasoning)
+
                             usage = res.get("usage", {})
                             if usage:
                                 response_usage = usage
@@ -3367,7 +3447,13 @@ async def process_chat_response(
                                         "tool_calls": res_tool_calls,
                                         "reasoning_details": message.get("reasoning_details")
                                     })
-                                    
+
+                                # Track per-round reasoning_details for the
+                                # non-streaming branch (mirrors stream_body_handler).
+                                msg_reasoning = message.get("reasoning_details")
+                                if msg_reasoning:
+                                    round_reasoning_details.append(msg_reasoning)
+
                                 usage = res.get("usage", {})
                                 if usage:
                                     response_usage = usage
@@ -3439,13 +3525,20 @@ async def process_chat_response(
                         "content": serialize_content_blocks(content_blocks),
                     }
 
-                    # Collect reasoning_details from ALL tool_calls blocks
-                    all_reasoning_details = []
-                    for block in content_blocks:
-                        if block["type"] == "tool_calls" and block.get("reasoning_details"):
-                            all_reasoning_details.extend(block["reasoning_details"])
-                    if all_reasoning_details:
-                        update_data["reasoning_details"] = all_reasoning_details
+                    # Per-round reasoning lets multi-turn replays attach the right
+                    # round's reasoning to each tool_calls message. Flat array kept
+                    # for backward compat with older saved messages.
+                    if round_reasoning_details:
+                        update_data["reasoning_details_per_round"] = (
+                            round_reasoning_details
+                        )
+                        flat = [
+                            item
+                            for round_details in round_reasoning_details
+                            for item in round_details
+                        ]
+                        if flat:
+                            update_data["reasoning_details"] = flat
 
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
@@ -3494,13 +3587,20 @@ async def process_chat_response(
                         "content": serialize_content_blocks(content_blocks),
                     }
 
-                    # Collect reasoning_details from ALL tool_calls blocks
-                    all_reasoning_details = []
-                    for block in content_blocks:
-                        if block["type"] == "tool_calls" and block.get("reasoning_details"):
-                            all_reasoning_details.extend(block["reasoning_details"])
-                    if all_reasoning_details:
-                        update_data["reasoning_details"] = all_reasoning_details
+                    # Per-round reasoning lets multi-turn replays attach the right
+                    # round's reasoning to each tool_calls message. Flat array kept
+                    # for backward compat with older saved messages.
+                    if round_reasoning_details:
+                        update_data["reasoning_details_per_round"] = (
+                            round_reasoning_details
+                        )
+                        flat = [
+                            item
+                            for round_details in round_reasoning_details
+                            for item in round_details
+                        ]
+                        if flat:
+                            update_data["reasoning_details"] = flat
 
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],

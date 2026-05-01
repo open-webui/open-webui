@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import {
 		chatId as currentChatIdStore,
 		chatTokenStats,
@@ -45,6 +46,23 @@
 			chatTokenStats.set(null);
 		}
 	}
+
+	// Belt-and-suspenders: the reactive comparison above can silently miss the
+	// initial fetch in two cases:
+	//   1. The component mounts with chatId already at its final value, and the
+	//      reactive batches the assignments such that trackedChatId and
+	//      lastTrackedChatId are both '' on the only run that fires.
+	//   2. The component is freshly mounted right after a previous instance was
+	//      destroyed (which `set(null)`'d the store) and our prop is the same
+	//      string we ended on — no transition for the comparison to detect.
+	// An explicit onMount fetch closes both holes. fetchTokenStats is internally
+	// idempotent (a stale-id check guards against double-application).
+	onMount(() => {
+		const initial = chatId || get(currentChatIdStore) || '';
+		if (initial && !initial.startsWith('local:')) {
+			fetchTokenStats(initial);
+		}
+	});
 
 	// Reactive fetch when refresh trigger changes (debounced)
 	$: if (
@@ -161,7 +179,13 @@
 
 	onDestroy(() => {
 		clearRetry();
-		chatTokenStats.set(null);
+		// Intentionally do NOT clear the store on destroy. If a new ChatTokenStats
+		// instance has already mounted and started fetching for a different chat,
+		// `set(null)` here would race-clobber its loading state and the box would
+		// vanish until the next reactive trigger. The next instance overwrites the
+		// store on mount (via fetchTokenStats), so leaving stale data here is fine
+		// — at worst the new instance flashes the previous chat's numbers for a
+		// few ms before its own fetch completes.
 	});
 </script>
 
