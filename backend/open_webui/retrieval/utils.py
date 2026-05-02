@@ -66,11 +66,7 @@ def get_loader(request, url: str):
             proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         )
     else:
-        return get_web_loader(
-            url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-        )
+        return get_web_loader(url)
 
 
 def get_content_from_url(request, url: str) -> str:

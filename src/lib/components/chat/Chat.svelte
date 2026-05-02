@@ -144,7 +144,9 @@
 	let webSearchEnabled = false;
 	let lastPersistedWebSearchEnabled: boolean | null = null;
 	let studyModeEnabled = false;
+	let lastPersistedStudyModeEnabled: boolean | null = null;
 	let dataVizEnabled = false;
+	let lastPersistedDataVizEnabled: boolean | null = null;
 	let codeInterpreterEnabled = false;
 
 	// Auto-save tool preferences when they change
@@ -185,6 +187,46 @@
 
 		params = nextParams;
 		lastPersistedWebSearchEnabled = webSearchEnabled;
+
+		void saveChatHandler(chatIdToPersist, history, nextParams);
+	}
+
+	// Same pattern for studyModeEnabled — persist per-chat so reloads remember.
+	$: if (studyModeEnabled !== params.studyModeEnabled) {
+		params = { ...params, studyModeEnabled };
+	}
+	$: if (
+		activeChatId &&
+		!loading &&
+		!$temporaryChatEnabled &&
+		lastPersistedStudyModeEnabled !== null &&
+		studyModeEnabled !== lastPersistedStudyModeEnabled
+	) {
+		const nextParams = { ...params, studyModeEnabled };
+		const chatIdToPersist = activeChatId;
+
+		params = nextParams;
+		lastPersistedStudyModeEnabled = studyModeEnabled;
+
+		void saveChatHandler(chatIdToPersist, history, nextParams);
+	}
+
+	// Same pattern for dataVizEnabled.
+	$: if (dataVizEnabled !== params.dataVizEnabled) {
+		params = { ...params, dataVizEnabled };
+	}
+	$: if (
+		activeChatId &&
+		!loading &&
+		!$temporaryChatEnabled &&
+		lastPersistedDataVizEnabled !== null &&
+		dataVizEnabled !== lastPersistedDataVizEnabled
+	) {
+		const nextParams = { ...params, dataVizEnabled };
+		const chatIdToPersist = activeChatId;
+
+		params = nextParams;
+		lastPersistedDataVizEnabled = dataVizEnabled;
 
 		void saveChatHandler(chatIdToPersist, history, nextParams);
 	}
@@ -435,6 +477,8 @@
 		const myGeneration = ++navigateGeneration;
 		loading = true;
 		lastPersistedWebSearchEnabled = null;
+		lastPersistedStudyModeEnabled = null;
+		lastPersistedDataVizEnabled = null;
 
 		prompt = '';
 		messageInput?.setText('');
@@ -487,6 +531,8 @@
 						selectedFilterIds = input.selectedFilterIds;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						studyModeEnabled = input.studyModeEnabled ?? false;
+						dataVizEnabled = input.dataVizEnabled ?? false;
 					}
 				} catch (e) {}
 			}
@@ -1148,6 +1194,8 @@
 					}
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					studyModeEnabled = input.studyModeEnabled ?? false;
+					dataVizEnabled = input.dataVizEnabled ?? false;
 				}
 			} catch (e) {}
 		}
@@ -1697,6 +1745,18 @@
 		}
 
 		lastPersistedWebSearchEnabled = webSearchEnabled;
+
+		// Restore study mode + data viz toggles from saved params (feature-flag gated
+		// at submit time, so restoring true here is safe even if the global flag flips).
+		if (params.studyModeEnabled !== undefined) {
+			studyModeEnabled = params.studyModeEnabled;
+		}
+		lastPersistedStudyModeEnabled = studyModeEnabled;
+
+		if (params.dataVizEnabled !== undefined) {
+			dataVizEnabled = params.dataVizEnabled;
+		}
+		lastPersistedDataVizEnabled = dataVizEnabled;
 
 		autoScroll = true;
 
@@ -4176,6 +4236,8 @@
 		}
 		await tick();
 		lastPersistedWebSearchEnabled = webSearchEnabled;
+		lastPersistedStudyModeEnabled = studyModeEnabled;
+		lastPersistedDataVizEnabled = dataVizEnabled;
 
 		return _chatId;
 	};

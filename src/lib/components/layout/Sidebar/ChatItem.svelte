@@ -348,12 +348,7 @@
 	{#if confirmEdit}
 		<div
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
-				? 'bg-manilla/40 dark:bg-manilla-dark selected'
-				: selected
-					? 'bg-manilla/40 dark:bg-manilla-dark selected'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-800'}  whitespace-nowrap text-ellipsis relative {generating
+			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] relative bg-manilla/40 dark:bg-manilla-dark selected before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:bg-book-cloth before:rounded-r whitespace-nowrap text-ellipsis {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -402,11 +397,10 @@
 		<a
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] relative {id === $chatId ||
-			confirmEdit
-				? 'bg-manilla/40 dark:bg-manilla-dark selected before:content-[\'\'] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[2px] before:bg-book-cloth before:rounded-r'
-				: selected
-					? 'bg-manilla/40 dark:bg-manilla-dark selected'
-					: 'active:bg-gray-100 dark:active:bg-gray-800'}  whitespace-nowrap text-ellipsis"
+			confirmEdit ||
+			selected
+				? 'bg-manilla/40 dark:bg-manilla-dark selected before:content-[\'\'] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:bg-book-cloth before:rounded-r'
+				: 'hover:bg-manilla/20 dark:hover:bg-manilla-dark/50'}  whitespace-nowrap text-ellipsis"
 			style="-webkit-tap-highlight-color: transparent;"
 			href="/c/{id}"
 			on:click={() => {
@@ -452,11 +446,9 @@
 	<div
 		id="sidebar-chat-item-menu"
 		class="
-		      {id === $chatId || confirmEdit
-			? 'from-gray-100 dark:from-gray-900 selected'
-			: selected
-				? 'from-gray-100 dark:from-gray-950 selected'
-				: `invisible ${$mobile ? '' : 'group-hover:visible'} from-gray-100 dark:from-gray-950`}
+		      {id === $chatId || confirmEdit || selected
+			? 'from-manilla/40 dark:from-manilla-dark selected'
+			: `invisible ${$mobile ? '' : 'group-hover:visible'} from-gray-50 dark:from-gray-950`}
 		          absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%

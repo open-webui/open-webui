@@ -306,6 +306,8 @@
 		imageGenerationEnabled,
 		webSearchEnabled,
 		codeInterpreterEnabled,
+		studyModeEnabled,
+		dataVizEnabled,
 		// Only include reasoning when the selected model is configured as a reasoning model.
 		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {}),
 		service_tier: serviceTier

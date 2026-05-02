@@ -1566,7 +1566,7 @@ def process_web(
         content, docs = get_content_from_url(request, form_data.url)
         log.debug(f"text_content: {content}")
 
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+        if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             save_docs_to_vector_db(
                 request,
                 docs,
@@ -1599,13 +1599,12 @@ def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(request: Request, query: str) -> list[SearchResult]:
     """Search the web using Exa.
-    
+
     Args:
         query (str): The query to search for
     """
-    # We only support Exa now, regardless of what 'engine' says
     if request.app.state.config.EXA_API_KEY:
         return search_exa(
             request.app.state.config.EXA_API_KEY,
@@ -1628,15 +1627,12 @@ async def process_web_search(
     result_items = []
 
     try:
-        logging.debug(
-            f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
-        )
+        logging.debug(f"trying to web search with exa: {form_data.queries}")
 
         search_tasks = [
             run_in_threadpool(
                 search_web,
                 request,
-                request.app.state.config.WEB_SEARCH_ENGINE,
                 query,
             )
             for query in form_data.queries
@@ -1669,32 +1665,8 @@ async def process_web_search(
         )
 
     try:
-        if request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER:
-            search_results = [
-                item for result in search_results for item in result if result
-            ]
-
-            docs = [
-                Document(
-                    page_content=result.snippet,
-                    metadata={
-                        "source": result.link,
-                        "title": result.title,
-                        "snippet": result.snippet,
-                        "link": result.link,
-                    },
-                )
-                for result in search_results
-                if hasattr(result, "snippet") and result.snippet is not None
-            ]
-        else:
-            loader = get_web_loader(
-                urls,
-                verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-                requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-                trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
-            )
-            docs = await loader.aload()
+        loader = get_web_loader(urls)
+        docs = await loader.aload()
 
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
@@ -1703,7 +1675,7 @@ async def process_web_search(
             dict(item) for item in result_items if item.link in urls
         ]  # only keep the search results that have been loaded
 
-        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+        if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
                 "collection_name": None,

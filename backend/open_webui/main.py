@@ -75,6 +75,7 @@ from open_webui.socket.main import (
 from open_webui.routers import (
     analytics,
     audio,
+    data_viz,
     images,
     ollama,
     openai,
@@ -275,12 +276,6 @@ from open_webui.config import (
     YOUTUBE_LOADER_PROXY_URL,
     # Retrieval (Web Search - Exa only)
     ENABLE_WEB_SEARCH,
-    WEB_SEARCH_ENGINE,
-    WEB_SEARCH_TRUST_ENV,
-    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
-    BYPASS_WEB_SEARCH_WEB_LOADER,
-    ENABLE_WEB_LOADER_SSL_VERIFICATION,
-    WEB_LOADER_CONCURRENT_REQUESTS,
     EXA_API_KEY,
     EXA_SEARCH_NUM_RESULTS,
     EXA_SEARCH_TYPE,
@@ -304,6 +299,9 @@ from open_webui.config import (
     DATA_VIZ_MODULE_ART_PROMPT,
     DATA_VIZ_MODULE_ELICITATION_ENABLED,
     DATA_VIZ_MODULE_ELICITATION_PROMPT,
+    DATA_VIZ_AUTO_REPAIR_ENABLED,
+    DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS,
+    DATA_VIZ_AUTO_REPAIR_MODEL,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
@@ -888,14 +886,6 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 # Web Search (Exa-only configuration)
 app.state.config.ENABLE_WEB_SEARCH = ENABLE_WEB_SEARCH
-app.state.config.WEB_SEARCH_ENGINE = WEB_SEARCH_ENGINE
-app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
-app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
-    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-)
-app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
-app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = ENABLE_WEB_LOADER_SSL_VERIFICATION
-app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = WEB_LOADER_CONCURRENT_REQUESTS
 app.state.config.EXA_API_KEY = EXA_API_KEY
 app.state.config.EXA_SEARCH_NUM_RESULTS = EXA_SEARCH_NUM_RESULTS
 app.state.config.EXA_SEARCH_TYPE = EXA_SEARCH_TYPE
@@ -927,6 +917,9 @@ app.state.config.DATA_VIZ_MODULE_ART_ENABLED = DATA_VIZ_MODULE_ART_ENABLED
 app.state.config.DATA_VIZ_MODULE_ART_PROMPT = DATA_VIZ_MODULE_ART_PROMPT
 app.state.config.DATA_VIZ_MODULE_ELICITATION_ENABLED = DATA_VIZ_MODULE_ELICITATION_ENABLED
 app.state.config.DATA_VIZ_MODULE_ELICITATION_PROMPT = DATA_VIZ_MODULE_ELICITATION_PROMPT
+app.state.config.DATA_VIZ_AUTO_REPAIR_ENABLED = DATA_VIZ_AUTO_REPAIR_ENABLED
+app.state.config.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS = DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS
+app.state.config.DATA_VIZ_AUTO_REPAIR_MODEL = DATA_VIZ_AUTO_REPAIR_MODEL
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
@@ -1272,6 +1265,7 @@ app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
+app.include_router(data_viz.router, prefix="/api/v1/data_viz", tags=["data_viz"])
 
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])

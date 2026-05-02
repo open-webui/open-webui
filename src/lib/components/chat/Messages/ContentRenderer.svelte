@@ -143,6 +143,8 @@
 		{done}
 		{editCodeBlock}
 		{topPadding}
+		{chatId}
+		{messageId}
 		sourceIds={(sources ?? []).reduce((acc, source) => {
 			let ids = [];
 			source.document.forEach((document, index) => {

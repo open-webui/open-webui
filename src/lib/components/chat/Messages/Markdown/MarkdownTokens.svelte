@@ -50,6 +50,8 @@
 	export let attributes = {};
 
 	export let done = true;
+	export let chatId = '';
+	export let messageId = '';
 
 	export let save = false;
 	export let preview = false;
@@ -230,6 +232,8 @@
 					tokens={token.tokens}
 					{done}
 					{editCodeBlock}
+					{chatId}
+					{messageId}
 					{onTaskClick}
 					{onSourceClick}
 				/>
@@ -323,6 +327,8 @@
 			title={args.title ?? 'widget'}
 			widgetCode={args.widget_code ?? ''}
 			loadingMessages={Array.isArray(args.loading_messages) ? args.loading_messages : []}
+			{chatId}
+			{messageId}
 		/>
 	{:else if token.type === 'details'}
 		<Collapsible
@@ -339,6 +345,8 @@
 					attributes={token?.attributes}
 					{done}
 					{editCodeBlock}
+					{chatId}
+					{messageId}
 					{onTaskClick}
 					{onSourceClick}
 				/>

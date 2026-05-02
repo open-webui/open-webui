@@ -17,6 +17,9 @@
 	export let save = false;
 	export let preview = false;
 
+	export let chatId = '';
+	export let messageId = '';
+
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
@@ -113,6 +116,8 @@
 		{preview}
 		{editCodeBlock}
 		{topPadding}
+		{chatId}
+		{messageId}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

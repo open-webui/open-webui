@@ -27,7 +27,12 @@
 	let elicitationEnabled = true;
 	let elicitationPrompt = '';
 
+	let autoRepairEnabled = true;
+	let autoRepairMaxAttempts = 3;
+	let autoRepairModel = '';
+
 	const submitHandler = async () => {
+		const clampedAttempts = Math.max(1, Math.min(5, Number(autoRepairMaxAttempts) || 1));
 		const res = await updateDataVizConfig(localStorage.token, {
 			ENABLE_DATA_VIZ: enableDataViz,
 			DATA_VIZ_SHARED_CORE_PROMPT: sharedCorePrompt,
@@ -40,7 +45,10 @@
 			DATA_VIZ_MODULE_ART_ENABLED: artEnabled,
 			DATA_VIZ_MODULE_ART_PROMPT: artPrompt,
 			DATA_VIZ_MODULE_ELICITATION_ENABLED: elicitationEnabled,
-			DATA_VIZ_MODULE_ELICITATION_PROMPT: elicitationPrompt
+			DATA_VIZ_MODULE_ELICITATION_PROMPT: elicitationPrompt,
+			DATA_VIZ_AUTO_REPAIR_ENABLED: autoRepairEnabled,
+			DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS: clampedAttempts,
+			DATA_VIZ_AUTO_REPAIR_MODEL: autoRepairModel
 		});
 
 		if (res) {
@@ -69,6 +77,10 @@
 
 			elicitationEnabled = res.DATA_VIZ_MODULE_ELICITATION_ENABLED ?? true;
 			elicitationPrompt = res.DATA_VIZ_MODULE_ELICITATION_PROMPT ?? '';
+
+			autoRepairEnabled = res.DATA_VIZ_AUTO_REPAIR_ENABLED ?? true;
+			autoRepairMaxAttempts = res.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS ?? 3;
+			autoRepairModel = res.DATA_VIZ_AUTO_REPAIR_MODEL ?? '';
 		}
 	});
 </script>
@@ -218,6 +230,71 @@
 								placeholder={$i18n.t('Paste elicitation module prompt...')}
 								bind:value={elicitationPrompt}
 							></textarea>
+						</div>
+					{/if}
+
+					<hr class="border-gray-100 dark:border-gray-850 my-3" />
+
+					<div class="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+						{$i18n.t('Auto-repair')}
+					</div>
+
+					<div class="mb-2.5 flex w-full justify-between">
+						<div class="self-center text-xs font-medium">
+							<Tooltip
+								content={$i18n.t(
+									'When a rendered widget throws a runtime error, re-prompt the model with the error and replace the broken widget in-place.'
+								)}
+							>
+								{$i18n.t('Auto-repair widget errors')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={autoRepairEnabled} />
+						</div>
+					</div>
+
+					{#if autoRepairEnabled}
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class="self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Max number of repair attempts per broken widget (1–5). Each attempt is a separate model call.'
+									)}
+								>
+									{$i18n.t('Max repair attempts')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<input
+									type="number"
+									min="1"
+									max="5"
+									step="1"
+									class="w-20 rounded-lg py-1.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden text-right"
+									bind:value={autoRepairMaxAttempts}
+								/>
+							</div>
+						</div>
+
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class="self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Model id to use for repair calls. Leave blank to use the same model that produced the original widget.'
+									)}
+								>
+									{$i18n.t('Repair model (optional)')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<input
+									type="text"
+									placeholder={$i18n.t('Use chat model')}
+									class="w-56 rounded-lg py-1.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden text-right"
+									bind:value={autoRepairModel}
+								/>
+							</div>
 						</div>
 					{/if}
 				{/if}

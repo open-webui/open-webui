@@ -55,6 +55,7 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 	export let studyModeEnabled = false;
+	export let dataVizEnabled = false;
 
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
@@ -250,6 +251,7 @@
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:studyModeEnabled
+					bind:dataVizEnabled
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}
