@@ -21,7 +21,7 @@
 	export let history;
 	export let messageId;
 	export let chatId = '';
-	export let dataVizOverrides: Record<string, string> = {};
+	export let dataVizOverrides = {};
 
 	export let selectedModels = [];
 

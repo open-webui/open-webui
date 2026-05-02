@@ -19,7 +19,7 @@
 
 	export let chatId = '';
 	export let messageId = '';
-	export let dataVizOverrides: Record<string, string> = {};
+	export let dataVizOverrides = {};
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
