@@ -1,95 +1,63 @@
 /**
- * Registry of in-flight data-viz widget render handlers, keyed by
- * `${messageId}:${overrideKey}`. The backend's show_widget tool calls
- * `__event_call__({type: 'data_viz:render', ...})`, which arrives at the
- * frontend's chat events socket listener; that listener delegates to
- * `dispatchWidgetRender(...)`, which finds the right DataVizWidget instance
- * and asks it to render-and-report.
+ * Live data-viz render dispatch.
  *
- * Why register by (messageId, overrideKey) instead of tool_call_id:
- * - The backend hashes the original widget_code to produce overrideKey, and
- *   the frontend's DataVizWidget computes the same hash on its arguments.
- *   That gives us a stable correlation that survives reloads and doesn't
- *   require plumbing tool_call_id into the tool's execution context.
- * - On the same message, multiple widgets with different code get distinct
- *   keys naturally.
+ * Why this isn't a registry of mounted DataVizWidgets:
+ * - The backend's show_widget tool calls __event_call__('data_viz:render', ...)
+ *   while the chat completion stream is still mid-flight. The streaming
+ *   `<details done="false">` block that mounts the visible DataVizWidget may
+ *   not reach the frontend until AFTER the tool's __event_call__ has already
+ *   arrived. A registry-based dispatch that waits for the widget to mount
+ *   races and times out, returning {status: 'ok'} to the backend even when
+ *   the iframe later throws — the user sees a broken widget while the model
+ *   thinks everything rendered fine.
+ * - Instead, every render request gets its own hidden iframe (via
+ *   liveRenderWidget). It's independent of widget mounting and always
+ *   available. The visible DataVizWidget mounts later and renders the final
+ *   widget_code (possibly with override applied for the persisted fix).
  */
 
-export type WidgetRenderRequest = {
-	request_id: string;
-	title: string;
-	widget_code: string;
-	attempt: number;
-	is_repair: boolean;
-	loading_messages: string[];
-	override_key: string;
-};
+import {
+	liveRenderWidget,
+	type WidgetRenderRequest,
+	type WidgetRenderResponse
+} from './dataVizLiveRender';
 
-export type WidgetRenderResponse = {
-	status: 'ok' | 'error';
-	error_message?: string;
-	error_stack?: string;
-};
+export type { WidgetRenderRequest, WidgetRenderResponse };
 
 export type WidgetRenderHandler = (req: WidgetRenderRequest) => Promise<WidgetRenderResponse>;
 
-const handlers = new Map<string, WidgetRenderHandler>();
-
-const composeKey = (messageId: string, overrideKey: string) => `${messageId}:${overrideKey}`;
-
 /**
- * DataVizWidget instances call this on mount. Returns an unregister function
- * to call on destroy.
+ * No-op kept for back-compat with DataVizWidget which still calls this on
+ * mount. The actual live verification happens via liveRenderWidget regardless
+ * of whether a widget is mounted.
  */
 export function registerWidgetHandler(
-	messageId: string,
-	overrideKey: string,
-	handler: WidgetRenderHandler
+	_messageId: string,
+	_overrideKey: string,
+	_handler: WidgetRenderHandler
 ): () => void {
-	const k = composeKey(messageId, overrideKey);
-	handlers.set(k, handler);
-	return () => {
-		if (handlers.get(k) === handler) {
-			handlers.delete(k);
-		}
-	};
+	return () => {};
 }
 
 /**
- * Called by the chat events socket listener when a `data_viz:render` event
- * arrives. Looks up the matching widget handler. If none is registered yet
- * (race during streaming — widget hasn't mounted), waits briefly. If still
- * absent, returns `{status: 'ok'}` so the model can proceed (better than
- * stalling).
+ * Called by Chat.svelte's chatEventHandler when a `data_viz:render` event
+ * arrives from the backend's show_widget tool. Spins up a hidden iframe,
+ * renders, captures errors, and returns the outcome. Decoupled from any
+ * visible widget — works whether or not DataVizWidget has mounted yet.
  */
 export async function dispatchWidgetRender(
-	messageId: string | undefined,
+	_messageId: string | undefined,
 	req: WidgetRenderRequest
 ): Promise<WidgetRenderResponse> {
-	if (!messageId || !req?.override_key) {
+	if (!req || typeof req.widget_code !== 'string') {
 		return { status: 'ok' };
 	}
-	const k = composeKey(messageId, req.override_key);
-
-	let handler = handlers.get(k);
-	if (!handler) {
-		const startedAt = Date.now();
-		while (!handler && Date.now() - startedAt < 5000) {
-			await new Promise((r) => setTimeout(r, 100));
-			handler = handlers.get(k);
-		}
-	}
-	if (!handler) {
-		console.warn('[dataViz] no widget handler registered for', k);
-		return { status: 'ok' };
-	}
-
 	try {
-		return await handler(req);
+		return await liveRenderWidget(req);
 	} catch (err: any) {
 		return {
 			status: 'error',
-			error_message: String(err?.message ?? err ?? 'handler threw')
+			error_message: String(err?.message ?? err ?? 'live render threw')
 		};
 	}
 }

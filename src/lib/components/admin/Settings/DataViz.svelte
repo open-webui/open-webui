@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getDataVizConfig, updateDataVizConfig } from '$lib/apis';
+	import { getDataVizConfig, updateDataVizConfig, getModels as _getModels } from '$lib/apis';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -8,6 +8,8 @@
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
+
+	let availableModels: { id: string; name?: string }[] = [];
 
 	let enableDataViz = false;
 	let sharedCorePrompt = '';
@@ -59,6 +61,17 @@
 	};
 
 	onMount(async () => {
+		// Populate the repair-model dropdown with available models.
+		try {
+			const m = await _getModels(localStorage.token);
+			availableModels = (m?.models ?? []).map((x: any) => ({
+				id: x.id,
+				name: x.name ?? x.id
+			}));
+		} catch (e) {
+			availableModels = [];
+		}
+
 		const res = await getDataVizConfig(localStorage.token);
 
 		if (res) {
@@ -284,19 +297,22 @@
 							<div class="self-center text-xs font-medium">
 								<Tooltip
 									content={$i18n.t(
-										'Model id to use for repair calls. Leave blank to use the same model that produced the original widget.'
+										'Model to use for repair calls. Leave on Use chat model to default to the same model that produced the original widget.'
 									)}
 								>
 									{$i18n.t('Repair model (optional)')}
 								</Tooltip>
 							</div>
 							<div class="flex items-center relative">
-								<input
-									type="text"
-									placeholder={$i18n.t('Use chat model')}
+								<select
 									class="w-56 rounded-lg py-1.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden text-right"
 									bind:value={autoRepairModel}
-								/>
+								>
+									<option value="">{$i18n.t('Use chat model')}</option>
+									{#each availableModels as m (m.id)}
+										<option value={m.id}>{m.name}</option>
+									{/each}
+								</select>
 							</div>
 						</div>
 

@@ -84,6 +84,24 @@
 		}
 	}
 
+	// When dataVizOverrides arrives or updates AFTER mount (typical case: the
+	// backend's auto-repair persisted a fix, the socket event reaches the
+	// frontend after this widget already mounted with the broken code), pick
+	// up the override and swap the iframe to render the working version.
+	$: if (overrideKey && dataVizOverrides && typeof dataVizOverrides[overrideKey] === 'string') {
+		const o = dataVizOverrides[overrideKey];
+		if (o && o !== displayedCode) {
+			lastPropCode = widgetCode; // suppress the prop-watcher's reset path
+			displayedCode = o;
+			// The previously-rendered iframe may have set renderState='failed';
+			// we just swapped to the corrected code, so clear that state.
+			if (renderState === 'failed') {
+				renderState = 'idle';
+				lastErrorMessage = '';
+			}
+		}
+	}
+
 	$: trimmedCode = (displayedCode ?? '').trimStart();
 	$: isSvg = trimmedCode.startsWith('<svg');
 

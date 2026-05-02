@@ -1981,6 +1981,34 @@
 											</Tooltip>
 										{/if}
 
+										{#if showDataVizButton && dataVizEnabled}
+											<Tooltip content={$i18n.t('Data Visualization')} placement="top">
+												<button
+													on:click|preventDefault={() => (dataVizEnabled = false)}
+													type="button"
+													class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden text-gray-900 dark:text-gray-100 bg-manilla/60 hover:bg-manilla/80 dark:bg-manilla-dark dark:hover:bg-manilla-dark/80 border-hairline border-book-cloth/30 dark:border-book-cloth/40"
+													aria-label={$i18n.t('Disable Data Visualization')}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="1.75"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="size-5"
+													>
+														<path d="M3 3v18h18" />
+														<path d="M7 14l4-4 4 4 5-6" />
+													</svg>
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												</button>
+											</Tooltip>
+										{/if}
+
 										{#if toolSelectionReady}
 											{#each activeServerToolIds as toolId (toolId)}
 												<Tooltip content={getToolLabel(toolId)} placement="top">

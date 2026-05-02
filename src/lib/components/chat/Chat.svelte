@@ -688,10 +688,10 @@
 	};
 
 	const resolveRouteChatId = () => {
+		const fromPage = parseChatIdFromPath($page.url.pathname);
+		if (fromPage) return fromPage;
 		const browserPathname = typeof window !== 'undefined' ? window.location.pathname : '';
-		return (
-			chatIdProp || parseChatIdFromPath(browserPathname) || parseChatIdFromPath($page.url.pathname)
-		);
+		return parseChatIdFromPath(browserPathname) || chatIdProp || '';
 	};
 
 	const isPersistentChatView = () => {
@@ -999,6 +999,19 @@
 			message.files = data.files;
 		} else if (type === 'chat:message:embeds' || type === 'embeds') {
 			message.embeds = data.embeds;
+		} else if (type === 'data_viz:override') {
+			// Backend's show_widget tool just persisted a corrected widget_code.
+			// Merge into the in-memory message so the soon-to-mount DataVizWidget
+			// (or any already-mounted one) picks it up without waiting for reload.
+			if (data?.key && typeof data.widget_code === 'string') {
+				const existing =
+					message.dataVizOverrides && typeof message.dataVizOverrides === 'object'
+						? message.dataVizOverrides
+						: {};
+				message.dataVizOverrides = { ...existing, [data.key]: data.widget_code };
+				history.messages[resolvedMessageId] = message;
+				history = { ...history };
+			}
 		} else if (type === 'chat:message:error') {
 			message.error = data.error;
 			message.done = true;
