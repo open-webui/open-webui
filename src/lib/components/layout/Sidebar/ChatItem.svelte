@@ -397,13 +397,15 @@
 		<a
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] relative {id === $chatId ||
-			confirmEdit ||
-			selected
+			confirmEdit
 				? 'bg-manilla/40 dark:bg-manilla-dark selected before:content-[\'\'] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:bg-book-cloth before:rounded-r'
-				: 'hover:bg-manilla/20 dark:hover:bg-manilla-dark/50'}  whitespace-nowrap text-ellipsis"
+				: selected
+					? 'bg-manilla/40 dark:bg-manilla-dark selected'
+					: 'hover:bg-manilla/20 dark:hover:bg-manilla-dark/50'}  whitespace-nowrap text-ellipsis"
 			style="-webkit-tap-highlight-color: transparent;"
 			href="/c/{id}"
 			on:click={() => {
+				chatId.set(id);
 				dispatch('select');
 
 				if ($selectedFolder) {

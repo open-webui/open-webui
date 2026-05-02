@@ -103,6 +103,7 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import Image from '../common/Image.svelte';
 	import { updateFolderById } from '$lib/apis/folders';
+	import { dispatchWidgetRender } from '$lib/utils/dataVizRegistry';
 
 	export let chatIdProp = '';
 	export let preloadedData = null;
@@ -894,6 +895,17 @@
 				console.error('Error executing code:', error);
 			}
 
+			return;
+		}
+
+		if (type === 'data_viz:render') {
+			// Backend's show_widget tool is awaiting a render result.
+			// dispatchWidgetRender finds the DataVizWidget by message_id+override_key,
+			// asks it to render the (possibly repaired) widget_code, and resolves
+			// with `{status, error_message?, error_stack?}` once the iframe either
+			// succeeds or throws.
+			const result = await dispatchWidgetRender(event.message_id, data);
+			if (cb) cb(result);
 			return;
 		}
 

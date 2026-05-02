@@ -1,13 +1,18 @@
 <script lang="ts">
-	import { onDestroy, onMount, getContext } from 'svelte';
+	import { onDestroy, onMount, getContext, tick } from 'svelte';
 	import { settings } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import ArrowsPointingOut from '$lib/components/icons/ArrowsPointingOut.svelte';
+
+	import {
+		registerWidgetHandler,
+		type WidgetRenderRequest,
+		type WidgetRenderResponse
+	} from '$lib/utils/dataVizRegistry';
 
 	const i18n = getContext('i18n');
 
@@ -17,45 +22,69 @@
 	export let chatId: string = '';
 	export let messageId: string = '';
 
+	/**
+	 * Reload-time persisted overrides from the message: if the original
+	 * widget_code (the model's emission) errored at runtime and was
+	 * auto-repaired, the backend stored {hash(original_widget_code): final_code}
+	 * on the message. We hash our incoming widgetCode and look it up here.
+	 */
+	export let dataVizOverrides: Record<string, string> = {};
+
 	let iframeElement: HTMLIFrameElement;
 	let svgContainer: HTMLDivElement;
-	let widgetHeight: number = 80; // initial height before ResizeObserver reports
+	let widgetHeight: number = 80;
 	let messageIndex = 0;
 	let messageInterval: ReturnType<typeof setInterval> | null = null;
 	let widgetId = `data-viz-${Math.random().toString(36).slice(2, 10)}`;
 
-	// Auto-repair state. Starts idle, transitions to 'repairing' on first error,
-	// then 'fixed' (briefly, with chip) or 'failed'. Resets on widgetCode prop
-	// changes from upstream (new tool call).
-	type RepairState = 'idle' | 'repairing' | 'fixed' | 'failed';
-	let repairState: RepairState = 'idle';
-	let attemptsUsed = 0;
-	let lastError: { msg: string; stack?: string } | null = null;
-	let abortController: AbortController | null = null;
-	let firstErrorTimer: ReturnType<typeof setTimeout> | null = null;
-	let repairFlashTimer: ReturnType<typeof setTimeout> | null = null;
-	let lastRenderedCode = widgetCode;
-	const MAX_ATTEMPTS_HARDCAP = 5; // server enforces too; this is a UI safety net
+	// Hash of the ORIGINAL widget_code (matches backend's _override_key). Used
+	// both for live registry lookup and reload-time override application.
+	// Async-computed in onMount, so the iframe waits one tick to render.
+	let overrideKey = '';
+	let unregister: (() => void) | null = null;
 
-	$: if (widgetCode !== lastRenderedCode) {
-		// Upstream pushed a new widget — cancel any in-flight repair, reset state.
-		lastRenderedCode = widgetCode;
-		abortController?.abort();
-		abortController = null;
-		if (firstErrorTimer) {
-			clearTimeout(firstErrorTimer);
-			firstErrorTimer = null;
+	// What's actually displayed in the iframe right now. Mirrors widgetCode by
+	// default, but the live render handler can swap it in (during a backend
+	// tool roundtrip), and reload override can preempt it on first mount.
+	let displayedCode = widgetCode;
+	let lastPropCode = widgetCode;
+
+	type RenderState = 'idle' | 'live' | 'repairing' | 'fixed' | 'failed';
+	let renderState: RenderState = 'idle';
+	let attemptsSeen = 0;
+	let lastErrorMessage = '';
+	let fixedFlashTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// In-flight render promise machinery. `pendingResolve` is set when the
+	// backend asks us to render+report; it gets called either by the iframe
+	// load+grace timer (success) or by handleIframeError (failure).
+	let pendingResolve: ((res: WidgetRenderResponse) => void) | null = null;
+	let pendingHardTimeout: ReturnType<typeof setTimeout> | null = null;
+	let loadGraceTimer: ReturnType<typeof setTimeout> | null = null;
+	const LOAD_GRACE_MS = 300; // window for async errors to surface after onload
+	const HARD_TIMEOUT_MS = 12_000; // upper bound; longer than typical repair latency
+
+	// When the parent passes a different widgetCode (e.g., new tool call in a
+	// fresh assistant turn), reset state and re-apply any persisted override.
+	$: if (widgetCode !== lastPropCode) {
+		lastPropCode = widgetCode;
+
+		// Drop any in-flight pending resolver — it belongs to a previous render
+		// request and is no longer relevant.
+		clearPending('ok');
+
+		const override = overrideKey ? dataVizOverrides?.[overrideKey] : null;
+		displayedCode = override ?? widgetCode;
+		renderState = 'idle';
+		attemptsSeen = 0;
+		lastErrorMessage = '';
+		if (fixedFlashTimer) {
+			clearTimeout(fixedFlashTimer);
+			fixedFlashTimer = null;
 		}
-		if (repairFlashTimer) {
-			clearTimeout(repairFlashTimer);
-			repairFlashTimer = null;
-		}
-		attemptsUsed = 0;
-		repairState = 'idle';
-		lastError = null;
 	}
 
-	$: trimmedCode = (widgetCode ?? '').trimStart();
+	$: trimmedCode = (displayedCode ?? '').trimStart();
 	$: isSvg = trimmedCode.startsWith('<svg');
 
 	$: sandboxAttr = `allow-scripts allow-downloads${
@@ -63,7 +92,6 @@
 	}${($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}`;
 
 	const themeVars = (dark: boolean) => {
-		// Shared across modes (typography + radii — values don't depend on theme)
 		const shared = `
 			--font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			--font-serif: Georgia, 'Times New Roman', serif;
@@ -78,7 +106,6 @@
 			return `
 				${shared}
 
-				/* Text */
 				--color-text-primary: #F0F0EB;
 				--color-text-secondary: #BFBFBA;
 				--color-text-tertiary: #91918D;
@@ -87,12 +114,10 @@
 				--color-text-success: #9CB07F;
 				--color-text-warning: #E2B873;
 
-				/* Backgrounds (short names — back-compat) */
 				--color-bg-primary: transparent;
 				--color-bg-secondary: rgba(255,255,255,0.04);
 				--color-bg-tertiary: rgba(255,255,255,0.08);
 
-				/* Backgrounds (full namespace — what the prompt advertises) */
 				--color-background-primary: transparent;
 				--color-background-secondary: rgba(255,255,255,0.04);
 				--color-background-tertiary: rgba(255,255,255,0.08);
@@ -101,7 +126,6 @@
 				--color-background-success: rgba(156,176,127,0.12);
 				--color-background-warning: rgba(226,184,115,0.12);
 
-				/* Borders */
 				--color-border-primary: rgba(255,255,255,0.10);
 				--color-border-secondary: rgba(255,255,255,0.06);
 				--color-border-tertiary: rgba(255,255,255,0.03);
@@ -110,16 +134,13 @@
 				--color-border-success: rgba(156,176,127,0.30);
 				--color-border-warning: rgba(226,184,115,0.30);
 
-				/* Accents (Book Cloth + Kraft, hex-stable across modes) */
 				--color-accent-primary: #CC785C;
 				--color-accent-secondary: #D4A27F;
 
-				/* Status (use as text/icon/border, not as solid backgrounds) */
 				--color-success: #9CB07F;
 				--color-warning: #E2B873;
 				--color-danger: #D88577;
 
-				/* SVG short aliases (diagram / art modules) */
 				--p: #F0F0EB;
 				--s: #BFBFBA;
 				--t: #91918D;
@@ -130,7 +151,6 @@
 		return `
 			${shared}
 
-			/* Text */
 			--color-text-primary: #191919;
 			--color-text-secondary: #666663;
 			--color-text-tertiary: #91918D;
@@ -139,12 +159,10 @@
 			--color-text-success: #5C7048;
 			--color-text-warning: #A8783E;
 
-			/* Backgrounds (short names — back-compat) */
 			--color-bg-primary: transparent;
 			--color-bg-secondary: rgba(0,0,0,0.04);
 			--color-bg-tertiary: rgba(0,0,0,0.08);
 
-			/* Backgrounds (full namespace — what the prompt advertises) */
 			--color-background-primary: transparent;
 			--color-background-secondary: rgba(0,0,0,0.04);
 			--color-background-tertiary: rgba(0,0,0,0.08);
@@ -153,7 +171,6 @@
 			--color-background-success: rgba(92,112,72,0.10);
 			--color-background-warning: rgba(168,120,62,0.10);
 
-			/* Borders */
 			--color-border-primary: rgba(0,0,0,0.10);
 			--color-border-secondary: rgba(0,0,0,0.06);
 			--color-border-tertiary: rgba(0,0,0,0.03);
@@ -162,16 +179,13 @@
 			--color-border-success: rgba(92,112,72,0.30);
 			--color-border-warning: rgba(168,120,62,0.30);
 
-			/* Accents (Book Cloth + Kraft) */
 			--color-accent-primary: #CC785C;
 			--color-accent-secondary: #D4A27F;
 
-			/* Status */
 			--color-success: #5C7048;
 			--color-warning: #A8783E;
 			--color-danger: #BF4D43;
 
-			/* SVG short aliases */
 			--p: #191919;
 			--s: #666663;
 			--t: #91918D;
@@ -182,8 +196,7 @@
 
 	const buildIframeDoc = (fragment: string): string => {
 		const dark =
-			typeof document !== 'undefined' &&
-			document.documentElement.classList.contains('dark');
+			typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 		const css = `:root { ${themeVars(dark)} }
 html, body {
 	margin: 0;
@@ -210,6 +223,9 @@ body { overflow: hidden; }`;
 	setTimeout(post, 250);
 })();`;
 
+		// Captures the FIRST runtime error (sync throws + unhandled rejections)
+		// and reports back to the parent. Once posted, further errors in the same
+		// frame load are dropped — the first one is enough.
 		const errorScript = `(function () {
 	const ID = ${JSON.stringify(widgetId)};
 	const truncate = (s, n) => {
@@ -249,8 +265,6 @@ body { overflow: hidden; }`;
 	});
 })();`;
 
-		// Hide the inline <style> and <script> tags from the Svelte preprocessor
-		// by reassembling them at runtime with `<${''}tag>`.
 		return `<!DOCTYPE html>
 <html>
 <head>
@@ -266,11 +280,121 @@ ${fragment}
 </html>`;
 	};
 
-	// Note: `done` is the "tool callable returned" flag. The args (and thus
-	// widget_code) are already complete by the time the <details> block is
-	// emitted, so we render whenever trimmedCode is present. This also makes
-	// persistence robust to streams that crashed before the done="true" rewrite.
 	$: iframeDoc = !isSvg && trimmedCode ? buildIframeDoc(trimmedCode) : '';
+
+	// ───── Live render machinery ──────────────────────────────────────────────
+
+	const clearPending = (defaultStatus: 'ok' | 'error' = 'ok') => {
+		if (pendingHardTimeout) {
+			clearTimeout(pendingHardTimeout);
+			pendingHardTimeout = null;
+		}
+		if (loadGraceTimer) {
+			clearTimeout(loadGraceTimer);
+			loadGraceTimer = null;
+		}
+		if (pendingResolve) {
+			const r = pendingResolve;
+			pendingResolve = null;
+			r({ status: defaultStatus });
+		}
+	};
+
+	const renderHandler = async (req: WidgetRenderRequest): Promise<WidgetRenderResponse> => {
+		// A new request supersedes anything in flight.
+		clearPending('ok');
+
+		attemptsSeen = req.attempt;
+		renderState = req.is_repair ? 'repairing' : 'live';
+		lastErrorMessage = '';
+
+		// Force an iframe re-render even if widget_code is identical to what's
+		// already shown (rare but possible: same widget asked for re-confirmation).
+		if (displayedCode === req.widget_code) {
+			displayedCode = '';
+			await tick();
+		}
+		// Suppress the prop-watcher's reset path — this update is internal.
+		lastPropCode = widgetCode;
+		displayedCode = req.widget_code;
+
+		return new Promise<WidgetRenderResponse>((resolve) => {
+			pendingResolve = (res: WidgetRenderResponse) => {
+				resolve(res);
+				pendingResolve = null;
+				if (pendingHardTimeout) {
+					clearTimeout(pendingHardTimeout);
+					pendingHardTimeout = null;
+				}
+				if (loadGraceTimer) {
+					clearTimeout(loadGraceTimer);
+					loadGraceTimer = null;
+				}
+
+				if (res.status === 'ok') {
+					if (req.is_repair) {
+						renderState = 'fixed';
+						if (fixedFlashTimer) clearTimeout(fixedFlashTimer);
+						fixedFlashTimer = setTimeout(() => {
+							if (renderState === 'fixed') renderState = 'idle';
+						}, 3000);
+					} else {
+						renderState = 'idle';
+					}
+				} else {
+					renderState = 'failed';
+					lastErrorMessage = (res.error_message ?? '').slice(0, 240);
+				}
+			};
+
+			// Fail-soft hard timeout. If neither load nor error arrives, assume
+			// rendered so the model can move on.
+			pendingHardTimeout = setTimeout(() => {
+				if (pendingResolve) {
+					const r = pendingResolve;
+					pendingResolve = null;
+					r({ status: 'ok' });
+				}
+			}, HARD_TIMEOUT_MS);
+		});
+	};
+
+	const handleIframeLoad = () => {
+		if (!pendingResolve) return;
+		// Schedule "ok" for after the grace window. If an error postMessage
+		// arrives before then, handleIframeError will preempt this.
+		if (loadGraceTimer) clearTimeout(loadGraceTimer);
+		loadGraceTimer = setTimeout(() => {
+			loadGraceTimer = null;
+			if (pendingResolve) {
+				const r = pendingResolve;
+				pendingResolve = null;
+				r({ status: 'ok' });
+			}
+		}, LOAD_GRACE_MS);
+	};
+
+	const handleIframeError = (data: { msg: string; stack?: string }) => {
+		if (loadGraceTimer) {
+			clearTimeout(loadGraceTimer);
+			loadGraceTimer = null;
+		}
+		if (pendingResolve) {
+			const r = pendingResolve;
+			pendingResolve = null;
+			r({
+				status: 'error',
+				error_message: String(data.msg ?? '').slice(0, 500),
+				error_stack: data.stack ?? undefined
+			});
+			return;
+		}
+		// No active resolver — this is a reload-time render error. The tool
+		// already finished long ago; just surface a small "render error" chip
+		// so the user has context.
+		renderState = 'failed';
+		lastErrorMessage = String(data.msg ?? '').slice(0, 240);
+	};
 
 	const handleMessage = (event: MessageEvent) => {
 		const data = event.data;
@@ -285,76 +409,22 @@ ${fragment}
 		}
 	};
 
-	const handleIframeError = (data: { msg: string; stack?: string }) => {
-		// Don't pile on if we're already repairing or just succeeded.
-		if (repairState === 'repairing' || repairState === 'fixed') return;
-		if (attemptsUsed >= MAX_ATTEMPTS_HARDCAP) return;
-		// Debounce rapid chained errors during initial load — first one wins.
-		if (firstErrorTimer) return;
-		lastError = { msg: String(data.msg ?? 'Unknown error'), stack: data.stack };
-		firstErrorTimer = setTimeout(() => {
-			firstErrorTimer = null;
-			triggerRepair();
-		}, 250);
-	};
+	// ───── Hash + override registration ───────────────────────────────────────
 
-	const triggerRepair = async () => {
-		if (!lastError || !widgetCode) return;
-		abortController?.abort();
-		abortController = new AbortController();
-		attemptsUsed += 1;
-		repairState = 'repairing';
-
-		const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+	const computeOverrideKey = async (code: string): Promise<string> => {
 		try {
-			const res = await fetch(`${WEBUI_API_BASE_URL}/data_viz/repair`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					...(token ? { Authorization: `Bearer ${token}` } : {})
-				},
-				signal: abortController.signal,
-				body: JSON.stringify({
-					chat_id: chatId || null,
-					message_id: messageId || null,
-					title,
-					widget_code: widgetCode,
-					error_message: lastError.msg,
-					error_stack: lastError.stack ?? null,
-					attempt: attemptsUsed
-				})
-			});
-			if (!res.ok) {
-				repairState = 'failed';
-				return;
-			}
-			const body = await res.json();
-			if (body?.success && typeof body.widget_code === 'string') {
-				lastRenderedCode = body.widget_code; // suppress reactive reset
-				widgetCode = body.widget_code;
-				lastError = null;
-				repairState = 'fixed';
-				clearTimeout(repairFlashTimer);
-				repairFlashTimer = setTimeout(() => {
-					if (repairState === 'fixed') repairState = 'idle';
-				}, 3000);
-			} else {
-				repairState = 'failed';
-			}
-		} catch (err: any) {
-			if (err?.name === 'AbortError') return;
-			repairState = 'failed';
-			console.warn('data_viz repair failed', err);
+			const enc = new TextEncoder();
+			const buf = await crypto.subtle.digest('SHA-256', enc.encode(code));
+			return Array.from(new Uint8Array(buf))
+				.map((b) => b.toString(16).padStart(2, '0'))
+				.join('')
+				.slice(0, 16);
+		} catch {
+			return '';
 		}
 	};
 
-	const manualRetry = () => {
-		if (!lastError) return;
-		// Don't bypass the hardcap; the server also enforces it.
-		if (attemptsUsed >= MAX_ATTEMPTS_HARDCAP) return;
-		repairState = 'idle';
-		triggerRepair();
-	};
+	// ───── Misc UI ────────────────────────────────────────────────────────────
 
 	const cycleLoadingMessages = () => {
 		if (messageInterval) clearInterval(messageInterval);
@@ -365,13 +435,13 @@ ${fragment}
 	};
 
 	const handleCopy = async () => {
-		const ok = await copyToClipboard(widgetCode);
+		const ok = await copyToClipboard(displayedCode || widgetCode);
 		if (ok) toast.success($i18n.t('Copying to clipboard was successful!'));
 	};
 
 	const handleDownload = () => {
 		const ext = isSvg ? 'svg' : 'html';
-		const content = isSvg ? widgetCode : iframeDoc;
+		const content = isSvg ? displayedCode : iframeDoc;
 		const blob = new Blob([content], {
 			type: isSvg ? 'image/svg+xml' : 'text/html'
 		});
@@ -393,17 +463,34 @@ ${fragment}
 		else if (target.webkitRequestFullscreen) target.webkitRequestFullscreen();
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		window.addEventListener('message', handleMessage);
 		cycleLoadingMessages();
+
+		// Compute override key from the original widgetCode and apply persisted
+		// override (if any) before the first paint.
+		overrideKey = await computeOverrideKey(widgetCode);
+		if (overrideKey) {
+			const override = dataVizOverrides?.[overrideKey];
+			if (override && override !== widgetCode) {
+				lastPropCode = widgetCode; // suppress reactive reset
+				displayedCode = override;
+			}
+			// Register with the registry so backend live-render calls find us.
+			if (messageId) {
+				unregister = registerWidgetHandler(messageId, overrideKey, renderHandler);
+			}
+		}
 	});
 
 	onDestroy(() => {
 		window.removeEventListener('message', handleMessage);
 		if (messageInterval) clearInterval(messageInterval);
-		if (firstErrorTimer) clearTimeout(firstErrorTimer);
-		if (repairFlashTimer) clearTimeout(repairFlashTimer);
-		abortController?.abort();
+		if (loadGraceTimer) clearTimeout(loadGraceTimer);
+		if (pendingHardTimeout) clearTimeout(pendingHardTimeout);
+		if (fixedFlashTimer) clearTimeout(fixedFlashTimer);
+		clearPending('ok');
+		if (unregister) unregister();
 	});
 
 	$: if (loadingMessages) cycleLoadingMessages();
@@ -415,7 +502,7 @@ ${fragment}
 			bind:this={svgContainer}
 			class="w-full overflow-hidden [&>svg]:w-full [&>svg]:h-auto [&>svg]:max-w-full"
 		>
-			{@html widgetCode}
+			{@html displayedCode}
 		</div>
 	{:else if !isSvg && trimmedCode}
 		<iframe
@@ -426,6 +513,7 @@ ${fragment}
 			style="border:0; height:{widgetHeight}px; background:transparent;"
 			sandbox={sandboxAttr}
 			referrerpolicy="strict-origin-when-cross-origin"
+			on:load={handleIframeLoad}
 		></iframe>
 	{:else if loadingMessages.length > 0}
 		<div class="text-xs text-gray-500 dark:text-gray-400 italic select-none">
@@ -433,32 +521,23 @@ ${fragment}
 		</div>
 	{/if}
 
-	{#if trimmedCode && repairState !== 'idle'}
+	{#if trimmedCode && renderState !== 'idle' && renderState !== 'live'}
 		<div
 			class="absolute top-1 left-1 z-10 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border-hairline bg-manilla/60 dark:bg-manilla-dark border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 backdrop-blur-sm"
 		>
-			{#if repairState === 'repairing'}
+			{#if renderState === 'repairing'}
 				<span
 					class="inline-block w-1.5 h-1.5 rounded-full bg-book-cloth animate-pulse"
 					aria-hidden="true"
 				></span>
 				<span>{$i18n.t('Auto-fixing widget…')}</span>
-			{:else if repairState === 'fixed'}
+			{:else if renderState === 'fixed'}
 				<span class="text-book-cloth" aria-hidden="true">✓</span>
 				<span>{$i18n.t('Auto-fixed')}</span>
-			{:else if repairState === 'failed'}
-				<Tooltip content={lastError?.msg ?? ''}>
-					<span class="text-gray-600 dark:text-gray-400">{$i18n.t("Couldn't auto-fix")}</span>
+			{:else if renderState === 'failed'}
+				<Tooltip content={lastErrorMessage}>
+					<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Render error')}</span>
 				</Tooltip>
-				{#if attemptsUsed < MAX_ATTEMPTS_HARDCAP}
-					<button
-						on:click={manualRetry}
-						class="ml-1 underline text-gray-700 dark:text-gray-200 hover:text-book-cloth transition-colors duration-200 ease-paper"
-						type="button"
-					>
-						{$i18n.t('Retry')}
-					</button>
-				{/if}
 			{/if}
 		</div>
 	{/if}

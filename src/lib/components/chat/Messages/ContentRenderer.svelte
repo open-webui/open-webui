@@ -21,6 +21,7 @@
 	export let history;
 	export let messageId;
 	export let chatId = '';
+	export let dataVizOverrides: Record<string, string> = {};
 
 	export let selectedModels = [];
 
@@ -145,6 +146,7 @@
 		{topPadding}
 		{chatId}
 		{messageId}
+		{dataVizOverrides}
 		sourceIds={(sources ?? []).reduce((acc, source) => {
 			let ids = [];
 			source.document.forEach((document, index) => {

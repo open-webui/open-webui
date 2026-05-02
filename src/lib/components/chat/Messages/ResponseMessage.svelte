@@ -798,6 +798,7 @@
 										{selectedModels}
 										content={messageTextContent}
 										sources={message.sources}
+										dataVizOverrides={message?.dataVizOverrides ?? {}}
 										floatingButtons={message?.done &&
 											!readOnly &&
 											($settings?.showFloatingActionButtons ?? true)}

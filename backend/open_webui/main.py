@@ -75,7 +75,6 @@ from open_webui.socket.main import (
 from open_webui.routers import (
     analytics,
     audio,
-    data_viz,
     images,
     ollama,
     openai,
@@ -302,6 +301,7 @@ from open_webui.config import (
     DATA_VIZ_AUTO_REPAIR_ENABLED,
     DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS,
     DATA_VIZ_AUTO_REPAIR_MODEL,
+    DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
@@ -920,6 +920,9 @@ app.state.config.DATA_VIZ_MODULE_ELICITATION_PROMPT = DATA_VIZ_MODULE_ELICITATIO
 app.state.config.DATA_VIZ_AUTO_REPAIR_ENABLED = DATA_VIZ_AUTO_REPAIR_ENABLED
 app.state.config.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS = DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS
 app.state.config.DATA_VIZ_AUTO_REPAIR_MODEL = DATA_VIZ_AUTO_REPAIR_MODEL
+app.state.config.DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT = (
+    DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT
+)
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
@@ -1265,7 +1268,6 @@ app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
-app.include_router(data_viz.router, prefix="/api/v1/data_viz", tags=["data_viz"])
 
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])

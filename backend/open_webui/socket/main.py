@@ -1040,6 +1040,30 @@ def get_event_emitter(request_info, update_db=True):
                     },
                 )
 
+            if "type" in event_data and event_data["type"] == "data_viz:override":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
+
+                payload = event_data.get("data", {}) or {}
+                key = payload.get("key")
+                widget_code = payload.get("widget_code")
+
+                if key and isinstance(widget_code, str) and message is not None:
+                    overrides = message.get("dataVizOverrides") or {}
+                    if not isinstance(overrides, dict):
+                        overrides = {}
+                    overrides[key] = widget_code
+
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "dataVizOverrides": overrides,
+                        },
+                    )
+
             if "type" in event_data and event_data["type"] == "files":
                 message = Chats.get_message_by_id_and_message_id(
                     request_info["chat_id"],

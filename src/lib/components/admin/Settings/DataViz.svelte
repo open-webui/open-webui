@@ -30,6 +30,7 @@
 	let autoRepairEnabled = true;
 	let autoRepairMaxAttempts = 3;
 	let autoRepairModel = '';
+	let autoRepairReasoningEffort = ''; // '' | 'low' | 'medium' | 'high'
 
 	const submitHandler = async () => {
 		const clampedAttempts = Math.max(1, Math.min(5, Number(autoRepairMaxAttempts) || 1));
@@ -48,7 +49,8 @@
 			DATA_VIZ_MODULE_ELICITATION_PROMPT: elicitationPrompt,
 			DATA_VIZ_AUTO_REPAIR_ENABLED: autoRepairEnabled,
 			DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS: clampedAttempts,
-			DATA_VIZ_AUTO_REPAIR_MODEL: autoRepairModel
+			DATA_VIZ_AUTO_REPAIR_MODEL: autoRepairModel,
+			DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT: autoRepairReasoningEffort
 		});
 
 		if (res) {
@@ -81,6 +83,7 @@
 			autoRepairEnabled = res.DATA_VIZ_AUTO_REPAIR_ENABLED ?? true;
 			autoRepairMaxAttempts = res.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS ?? 3;
 			autoRepairModel = res.DATA_VIZ_AUTO_REPAIR_MODEL ?? '';
+			autoRepairReasoningEffort = res.DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT ?? '';
 		}
 	});
 </script>
@@ -294,6 +297,29 @@
 									class="w-56 rounded-lg py-1.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden text-right"
 									bind:value={autoRepairModel}
 								/>
+							</div>
+						</div>
+
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class="self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Reasoning effort to apply on repair model calls. Leave on Default for non-reasoning models — sending an effort to a model that doesn\'t support it can error.'
+									)}
+								>
+									{$i18n.t('Reasoning effort')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<select
+									class="w-32 rounded-lg py-1.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden text-right"
+									bind:value={autoRepairReasoningEffort}
+								>
+									<option value="">{$i18n.t('Default')}</option>
+									<option value="low">{$i18n.t('Low')}</option>
+									<option value="medium">{$i18n.t('Medium')}</option>
+									<option value="high">{$i18n.t('High')}</option>
+								</select>
 							</div>
 						</div>
 					{/if}

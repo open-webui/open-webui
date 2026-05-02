@@ -19,6 +19,7 @@
 
 	export let chatId = '';
 	export let messageId = '';
+	export let dataVizOverrides: Record<string, string> = {};
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -118,6 +119,7 @@
 		{topPadding}
 		{chatId}
 		{messageId}
+		{dataVizOverrides}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

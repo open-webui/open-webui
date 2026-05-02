@@ -548,6 +548,7 @@ class DataVizConfigForm(BaseModel):
     DATA_VIZ_AUTO_REPAIR_ENABLED: bool
     DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS: int
     DATA_VIZ_AUTO_REPAIR_MODEL: str
+    DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT: str
 
 
 def _data_viz_config_response(request: Request) -> dict:
@@ -568,6 +569,7 @@ def _data_viz_config_response(request: Request) -> dict:
         "DATA_VIZ_AUTO_REPAIR_ENABLED": cfg.DATA_VIZ_AUTO_REPAIR_ENABLED,
         "DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS": cfg.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS,
         "DATA_VIZ_AUTO_REPAIR_MODEL": cfg.DATA_VIZ_AUTO_REPAIR_MODEL,
+        "DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT": cfg.DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT,
     }
 
 
@@ -608,5 +610,8 @@ async def set_data_viz_config(
     cfg.DATA_VIZ_AUTO_REPAIR_ENABLED = form_data.DATA_VIZ_AUTO_REPAIR_ENABLED
     cfg.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS = form_data.DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS
     cfg.DATA_VIZ_AUTO_REPAIR_MODEL = form_data.DATA_VIZ_AUTO_REPAIR_MODEL
+    cfg.DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT = (
+        form_data.DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT
+    )
 
     return _data_viz_config_response(request)

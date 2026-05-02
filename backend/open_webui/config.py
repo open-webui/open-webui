@@ -2977,6 +2977,15 @@ DATA_VIZ_AUTO_REPAIR_MODEL = PersistentConfig(
     os.getenv("DATA_VIZ_AUTO_REPAIR_MODEL", ""),
 )
 
+# Empty string = don't send a reasoning_effort param (use model default).
+# Otherwise: 'low' | 'medium' | 'high'. The backend converts this into the
+# canonical reasoning={effort: ...} object before dispatching to the provider.
+DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT = PersistentConfig(
+    "DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT",
+    "data_viz.auto_repair.reasoning_effort",
+    os.getenv("DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT", ""),
+)
+
 ####################################
 # Images
 ####################################

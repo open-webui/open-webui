@@ -52,6 +52,7 @@
 	export let done = true;
 	export let chatId = '';
 	export let messageId = '';
+	export let dataVizOverrides: Record<string, string> = {};
 
 	export let save = false;
 	export let preview = false;
@@ -234,6 +235,7 @@
 					{editCodeBlock}
 					{chatId}
 					{messageId}
+					{dataVizOverrides}
 					{onTaskClick}
 					{onSourceClick}
 				/>
@@ -329,6 +331,7 @@
 			loadingMessages={Array.isArray(args.loading_messages) ? args.loading_messages : []}
 			{chatId}
 			{messageId}
+			{dataVizOverrides}
 		/>
 	{:else if token.type === 'details'}
 		<Collapsible
@@ -347,6 +350,7 @@
 					{editCodeBlock}
 					{chatId}
 					{messageId}
+					{dataVizOverrides}
 					{onTaskClick}
 					{onSourceClick}
 				/>
