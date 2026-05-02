@@ -144,6 +144,7 @@
 	let webSearchEnabled = false;
 	let lastPersistedWebSearchEnabled: boolean | null = null;
 	let studyModeEnabled = false;
+	let dataVizEnabled = false;
 	let codeInterpreterEnabled = false;
 
 	// Auto-save tool preferences when they change
@@ -581,6 +582,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		studyModeEnabled = false;
+		dataVizEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -1126,6 +1128,7 @@
 			selectedFilterIds = [];
 			webSearchEnabled = false;
 			studyModeEnabled = false;
+			dataVizEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
 
@@ -2473,9 +2476,13 @@
 
 		await tick();
 
-		_history = structuredClone(history);
-		// Save chat after all messages have been created
-		await saveChatHandler(_chatId, _history);
+		// Skip the structuredClone of `history` — saveChatHandler only reads it
+		// to serialize a request body, and the LLM request is fired in parallel
+		// below, so the save no longer gates the upstream call.
+		_history = history;
+		void saveChatHandler(_chatId, _history).catch((err) => {
+			console.error('saveChatHandler failed:', err);
+		});
 
 		try {
 			if (!generating) {
@@ -2935,7 +2942,8 @@
 					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 						? webSearchEnabled
 						: false,
-				study_mode: $config?.features?.enable_study_mode ? studyModeEnabled : false
+				study_mode: $config?.features?.enable_study_mode ? studyModeEnabled : false,
+				data_viz: $config?.features?.enable_data_viz ? dataVizEnabled : false
 			};
 
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
@@ -4154,8 +4162,12 @@
 
 			await tick();
 
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			// Refresh the sidebar list in the background — this is purely cosmetic
+			// and was previously gating the entire send pipeline on a network round-trip.
 			currentChatPage.set(1);
+			getChatList(localStorage.token, $currentChatPage)
+				.then((list) => chats.set(list))
+				.catch((err) => console.error('getChatList refresh failed:', err));
 
 			selectedFolder.set(null);
 		} else {
@@ -4179,7 +4191,10 @@
 					files: chatFiles
 				});
 				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				// Refresh sidebar list in background — purely cosmetic, never gates the LLM request.
+				getChatList(localStorage.token, $currentChatPage)
+					.then((list) => chats.set(list))
+					.catch((err) => console.error('getChatList refresh failed:', err));
 			}
 		}
 	};
@@ -4443,6 +4458,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:studyModeEnabled
+									bind:dataVizEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -4505,6 +4521,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:studyModeEnabled
+									bind:dataVizEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

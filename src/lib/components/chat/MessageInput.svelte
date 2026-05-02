@@ -112,6 +112,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let studyModeEnabled = false;
+	export let dataVizEnabled = false;
 	export let codeInterpreterEnabled = false;
 
 	// Reasoning effort functionality
@@ -680,6 +681,9 @@
 
 	let showStudyModeButton = false;
 	$: showStudyModeButton = $config == null || !!$config?.features?.enable_study_mode;
+
+	let showDataVizButton = false;
+	$: showDataVizButton = $config == null || !!$config?.features?.enable_data_viz;
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
@@ -1998,18 +2002,20 @@
 											{/each}
 										{/if}
 
-										{#if showStudyModeButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+										{#if showStudyModeButton || showDataVizButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 												{toggleFilters}
 												showWebSearchButton={false}
 												{showStudyModeButton}
+												{showDataVizButton}
 												{showImageGenerationButton}
 												{showCodeInterpreterButton}
 												bind:selectedToolIds
 												bind:selectedFilterIds
 												bind:webSearchEnabled
 												bind:studyModeEnabled
+												bind:dataVizEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}

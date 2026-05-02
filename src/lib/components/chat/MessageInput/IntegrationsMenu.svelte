@@ -37,6 +37,8 @@
 	export let webSearchEnabled = false;
 	export let showStudyModeButton = false;
 	export let studyModeEnabled = false;
+	export let showDataVizButton = false;
+	export let dataVizEnabled = false;
 	export let showImageGenerationButton = false;
 	export let imageGenerationEnabled = false;
 	export let showCodeInterpreterButton = false;
@@ -248,6 +250,51 @@
 								<div class=" shrink-0">
 									<Switch
 										state={studyModeEnabled}
+										on:change={async (e) => {
+											const state = e.detail;
+											await tick();
+										}}
+									/>
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
+
+					{#if showDataVizButton}
+						<Tooltip content={$i18n.t('Data Visualization')} placement="top-start">
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={() => {
+									dataVizEnabled = !dataVizEnabled;
+								}}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<div class="shrink-0">
+											<div class="size-4 flex justify-center items-center">
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="1.75"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													class="size-4"
+												>
+													<path d="M3 3v18h18" />
+													<path d="M7 14l4-4 4 4 5-6" />
+												</svg>
+											</div>
+										</div>
+
+										<div class=" truncate">{$i18n.t('Data Visualization')}</div>
+									</div>
+								</div>
+
+								<div class=" shrink-0">
+									<Switch
+										state={dataVizEnabled}
 										on:change={async (e) => {
 											const state = e.detail;
 											await tick();

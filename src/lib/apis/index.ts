@@ -1753,3 +1753,60 @@ export const updateStudyModeConfig = async (token: string, config: object) => {
 
 	return res;
 };
+
+export const getDataVizConfig = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/configs/data_viz`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateDataVizConfig = async (token: string, config: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/configs/data_viz`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

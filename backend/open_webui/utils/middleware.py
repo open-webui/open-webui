@@ -1115,6 +1115,35 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
             log.info("Processed study mode")
 
+        # Data Visualization
+        # Registers the built-in show_widget tool and injects the assembled
+        # system prompt (shared core + each enabled module).
+        if "data_viz" in features and features["data_viz"]:
+            from open_webui.utils.data_viz_prompts import (
+                assemble_data_viz_system_prompt,
+            )
+
+            if tool_ids is None:
+                tool_ids = []
+            if "builtin:data_viz" not in tool_ids:
+                tool_ids.append("builtin:data_viz")
+
+            if "params" not in metadata:
+                metadata["params"] = {}
+            metadata["params"]["function_calling"] = "native"
+
+            data_viz_prompt = assemble_data_viz_system_prompt(
+                request.app.state.config
+            )
+            if data_viz_prompt:
+                form_data["messages"] = add_or_update_system_message(
+                    data_viz_prompt,
+                    form_data["messages"],
+                )
+                log.info("Injected data viz system prompt")
+
+            log.info("Auto-enabled data visualization tool with native function calling")
+
         # OLD WEB SEARCH HANDLER - DISABLED IN FAVOR OF TOOL-BASED APPROACH
         # if "web_search" in features and features["web_search"]:
         #     form_data = await chat_web_search_handler(

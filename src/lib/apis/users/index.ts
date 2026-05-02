@@ -361,14 +361,30 @@ export const updateUserInfo = async (token: string, info: object) => {
 	return res;
 };
 
+// Cache location in memory for the session — geolocation lookups can take
+// hundreds of ms (especially the first call after a permissions prompt) and
+// the server-side updateUserInfo is purely a persistence call. Repeating both
+// on every send is wasted latency on the user's send-button click path.
+const LOCATION_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedLocation: { value: any; expires: number } | null = null;
+
 export const getAndUpdateUserLocation = async (token: string) => {
+	if (cachedLocation && cachedLocation.expires > Date.now()) {
+		return cachedLocation.value;
+	}
+
 	const location = await getUserPosition().catch((err) => {
 		console.error(err);
 		return null;
 	});
 
 	if (location) {
-		await updateUserInfo(token, { location: location });
+		cachedLocation = { value: location, expires: Date.now() + LOCATION_CACHE_TTL_MS };
+		// Persist to the server in the background — the LLM request only needs
+		// the location value itself, which we already have client-side.
+		updateUserInfo(token, { location: location }).catch((err) =>
+			console.error('updateUserInfo(location) failed:', err)
+		);
 		return location;
 	} else {
 		console.info('Failed to get user location');

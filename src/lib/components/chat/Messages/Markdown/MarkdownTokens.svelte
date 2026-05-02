@@ -22,6 +22,27 @@
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
 	import HtmlToken from './HTMLToken.svelte';
+	import DataVizWidget from '$lib/components/chat/Messages/DataVizWidget.svelte';
+
+	const parseToolCallArguments = (raw: unknown): Record<string, any> => {
+		if (raw == null) return {};
+		try {
+			let value: any = raw;
+			if (typeof value === 'string') {
+				value = unescapeHtml(value);
+				value = JSON.parse(value);
+			}
+			// `function.arguments` is a JSON string per the OpenAI tool-call spec,
+			// so the backend's `json.dumps(tool_arguments)` double-encodes it.
+			if (typeof value === 'string') {
+				value = JSON.parse(value);
+			}
+			return value && typeof value === 'object' ? value : {};
+		} catch (err) {
+			console.warn('Failed to parse tool_call arguments', err);
+			return {};
+		}
+	};
 
 	export let id: string;
 	export let tokens: Token[];
@@ -296,6 +317,13 @@
 				{/each}
 			</ul>
 		{/if}
+	{:else if token.type === 'details' && token?.attributes?.type === 'tool_calls' && token?.attributes?.name === 'show_widget'}
+		{@const args = parseToolCallArguments(token.attributes.arguments)}
+		<DataVizWidget
+			title={args.title ?? 'widget'}
+			widgetCode={args.widget_code ?? ''}
+			loadingMessages={Array.isArray(args.loading_messages) ? args.loading_messages : []}
+		/>
 	{:else if token.type === 'details'}
 		<Collapsible
 			title={token.summary}

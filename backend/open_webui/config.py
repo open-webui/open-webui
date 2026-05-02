@@ -2875,6 +2875,89 @@ STUDY_MODE_SYSTEM_PROMPT = PersistentConfig(
 )
 
 ####################################
+# Data Visualization
+####################################
+
+from open_webui.utils.data_viz_prompts import (
+    SHARED_CORE as _DATA_VIZ_DEFAULT_SHARED_CORE,
+    MODULE_DIAGRAM as _DATA_VIZ_DEFAULT_DIAGRAM,
+    MODULE_MOCKUP_INTERACTIVE as _DATA_VIZ_DEFAULT_MOCKUP_INTERACTIVE,
+    MODULE_CHART_DATAVIZ as _DATA_VIZ_DEFAULT_CHART_DATAVIZ,
+    MODULE_ART as _DATA_VIZ_DEFAULT_ART,
+    MODULE_ELICITATION as _DATA_VIZ_DEFAULT_ELICITATION,
+)
+
+ENABLE_DATA_VIZ = PersistentConfig(
+    "ENABLE_DATA_VIZ",
+    "data_viz.enable",
+    os.getenv("ENABLE_DATA_VIZ", "False").lower() == "true",
+)
+
+DATA_VIZ_SHARED_CORE_PROMPT = PersistentConfig(
+    "DATA_VIZ_SHARED_CORE_PROMPT",
+    "data_viz.shared_core_prompt",
+    os.getenv("DATA_VIZ_SHARED_CORE_PROMPT", _DATA_VIZ_DEFAULT_SHARED_CORE),
+)
+
+DATA_VIZ_MODULE_DIAGRAM_ENABLED = PersistentConfig(
+    "DATA_VIZ_MODULE_DIAGRAM_ENABLED",
+    "data_viz.module.diagram.enabled",
+    os.getenv("DATA_VIZ_MODULE_DIAGRAM_ENABLED", "True").lower() == "true",
+)
+DATA_VIZ_MODULE_DIAGRAM_PROMPT = PersistentConfig(
+    "DATA_VIZ_MODULE_DIAGRAM_PROMPT",
+    "data_viz.module.diagram.prompt",
+    os.getenv("DATA_VIZ_MODULE_DIAGRAM_PROMPT", _DATA_VIZ_DEFAULT_DIAGRAM),
+)
+
+DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED = PersistentConfig(
+    "DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED",
+    "data_viz.module.mockup_interactive.enabled",
+    os.getenv("DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED", "True").lower() == "true",
+)
+DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT = PersistentConfig(
+    "DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT",
+    "data_viz.module.mockup_interactive.prompt",
+    os.getenv(
+        "DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT",
+        _DATA_VIZ_DEFAULT_MOCKUP_INTERACTIVE,
+    ),
+)
+
+DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED = PersistentConfig(
+    "DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED",
+    "data_viz.module.chart_dataviz.enabled",
+    os.getenv("DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED", "True").lower() == "true",
+)
+DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT = PersistentConfig(
+    "DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT",
+    "data_viz.module.chart_dataviz.prompt",
+    os.getenv("DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT", _DATA_VIZ_DEFAULT_CHART_DATAVIZ),
+)
+
+DATA_VIZ_MODULE_ART_ENABLED = PersistentConfig(
+    "DATA_VIZ_MODULE_ART_ENABLED",
+    "data_viz.module.art.enabled",
+    os.getenv("DATA_VIZ_MODULE_ART_ENABLED", "True").lower() == "true",
+)
+DATA_VIZ_MODULE_ART_PROMPT = PersistentConfig(
+    "DATA_VIZ_MODULE_ART_PROMPT",
+    "data_viz.module.art.prompt",
+    os.getenv("DATA_VIZ_MODULE_ART_PROMPT", _DATA_VIZ_DEFAULT_ART),
+)
+
+DATA_VIZ_MODULE_ELICITATION_ENABLED = PersistentConfig(
+    "DATA_VIZ_MODULE_ELICITATION_ENABLED",
+    "data_viz.module.elicitation.enabled",
+    os.getenv("DATA_VIZ_MODULE_ELICITATION_ENABLED", "True").lower() == "true",
+)
+DATA_VIZ_MODULE_ELICITATION_PROMPT = PersistentConfig(
+    "DATA_VIZ_MODULE_ELICITATION_PROMPT",
+    "data_viz.module.elicitation.prompt",
+    os.getenv("DATA_VIZ_MODULE_ELICITATION_PROMPT", _DATA_VIZ_DEFAULT_ELICITATION),
+)
+
+####################################
 # Images
 ####################################
 

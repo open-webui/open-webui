@@ -525,3 +525,79 @@ async def set_study_mode_config(
         "ENABLE_STUDY_MODE": request.app.state.config.ENABLE_STUDY_MODE,
         "STUDY_MODE_SYSTEM_PROMPT": request.app.state.config.STUDY_MODE_SYSTEM_PROMPT,
     }
+
+
+############################
+# Data Visualization Config
+############################
+
+
+class DataVizConfigForm(BaseModel):
+    ENABLE_DATA_VIZ: bool
+    DATA_VIZ_SHARED_CORE_PROMPT: str
+    DATA_VIZ_MODULE_DIAGRAM_ENABLED: bool
+    DATA_VIZ_MODULE_DIAGRAM_PROMPT: str
+    DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED: bool
+    DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT: str
+    DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED: bool
+    DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT: str
+    DATA_VIZ_MODULE_ART_ENABLED: bool
+    DATA_VIZ_MODULE_ART_PROMPT: str
+    DATA_VIZ_MODULE_ELICITATION_ENABLED: bool
+    DATA_VIZ_MODULE_ELICITATION_PROMPT: str
+
+
+def _data_viz_config_response(request: Request) -> dict:
+    cfg = request.app.state.config
+    return {
+        "ENABLE_DATA_VIZ": cfg.ENABLE_DATA_VIZ,
+        "DATA_VIZ_SHARED_CORE_PROMPT": cfg.DATA_VIZ_SHARED_CORE_PROMPT,
+        "DATA_VIZ_MODULE_DIAGRAM_ENABLED": cfg.DATA_VIZ_MODULE_DIAGRAM_ENABLED,
+        "DATA_VIZ_MODULE_DIAGRAM_PROMPT": cfg.DATA_VIZ_MODULE_DIAGRAM_PROMPT,
+        "DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED": cfg.DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED,
+        "DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT": cfg.DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT,
+        "DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED": cfg.DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED,
+        "DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT": cfg.DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT,
+        "DATA_VIZ_MODULE_ART_ENABLED": cfg.DATA_VIZ_MODULE_ART_ENABLED,
+        "DATA_VIZ_MODULE_ART_PROMPT": cfg.DATA_VIZ_MODULE_ART_PROMPT,
+        "DATA_VIZ_MODULE_ELICITATION_ENABLED": cfg.DATA_VIZ_MODULE_ELICITATION_ENABLED,
+        "DATA_VIZ_MODULE_ELICITATION_PROMPT": cfg.DATA_VIZ_MODULE_ELICITATION_PROMPT,
+    }
+
+
+@router.get("/data_viz", response_model=DataVizConfigForm)
+async def get_data_viz_config(request: Request, user=Depends(get_admin_user)):
+    return _data_viz_config_response(request)
+
+
+@router.post("/data_viz", response_model=DataVizConfigForm)
+async def set_data_viz_config(
+    request: Request,
+    form_data: DataVizConfigForm,
+    user=Depends(get_admin_user),
+):
+    cfg = request.app.state.config
+    cfg.ENABLE_DATA_VIZ = form_data.ENABLE_DATA_VIZ
+    cfg.DATA_VIZ_SHARED_CORE_PROMPT = form_data.DATA_VIZ_SHARED_CORE_PROMPT
+    cfg.DATA_VIZ_MODULE_DIAGRAM_ENABLED = form_data.DATA_VIZ_MODULE_DIAGRAM_ENABLED
+    cfg.DATA_VIZ_MODULE_DIAGRAM_PROMPT = form_data.DATA_VIZ_MODULE_DIAGRAM_PROMPT
+    cfg.DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED = (
+        form_data.DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_ENABLED
+    )
+    cfg.DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT = (
+        form_data.DATA_VIZ_MODULE_MOCKUP_INTERACTIVE_PROMPT
+    )
+    cfg.DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED = (
+        form_data.DATA_VIZ_MODULE_CHART_DATAVIZ_ENABLED
+    )
+    cfg.DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT = (
+        form_data.DATA_VIZ_MODULE_CHART_DATAVIZ_PROMPT
+    )
+    cfg.DATA_VIZ_MODULE_ART_ENABLED = form_data.DATA_VIZ_MODULE_ART_ENABLED
+    cfg.DATA_VIZ_MODULE_ART_PROMPT = form_data.DATA_VIZ_MODULE_ART_PROMPT
+    cfg.DATA_VIZ_MODULE_ELICITATION_ENABLED = (
+        form_data.DATA_VIZ_MODULE_ELICITATION_ENABLED
+    )
+    cfg.DATA_VIZ_MODULE_ELICITATION_PROMPT = form_data.DATA_VIZ_MODULE_ELICITATION_PROMPT
+
+    return _data_viz_config_response(request)

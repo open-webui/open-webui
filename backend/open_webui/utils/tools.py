@@ -102,6 +102,14 @@ async def get_tools(
                     tools_dict[tool_name] = tool_spec
             continue
 
+        # Handle built-in data visualization tool
+        if tool_id == "builtin:data_viz":
+            data_viz_tools = get_data_viz_tool_specs(extra_params)
+            if data_viz_tools:
+                for tool_name, tool_spec in data_viz_tools.items():
+                    tools_dict[tool_name] = tool_spec
+            continue
+
         tool = Tools.get_tool_by_id(tool_id)
         if tool is None:
 
@@ -884,6 +892,48 @@ def get_web_search_tool_specs(extra_params: dict) -> dict:
             "spec": spec_map["web_fetch"],
             "callable": callable_fetch,
             "metadata": {"parallelizable": True},
+        }
+
+    return tools
+
+
+def get_data_viz_tool_specs(extra_params: dict) -> dict:
+    """
+    Generate tool specs for the built-in data visualization tool.
+
+    Args:
+        extra_params: Extra parameters to inject (__request__, __user__, etc.)
+    """
+    from open_webui.utils.data_viz_tool import get_data_viz_tools_instance
+
+    tool_instance = get_data_viz_tools_instance()
+    specs = get_tool_specs(tool_instance)
+
+    if not specs:
+        return {}
+
+    spec_map = {}
+    for spec in specs:
+        if "function" in spec:
+            name = spec["function"].get("name")
+        else:
+            name = spec.get("name")
+
+        if name:
+            spec_map[name] = spec
+
+    tools = {}
+
+    if "show_widget" in spec_map:
+        callable_show_widget = get_async_tool_function_and_apply_extra_params(
+            tool_instance.show_widget, extra_params
+        )
+        tools["show_widget"] = {
+            "id": "builtin:data_viz",
+            "name": "show_widget",
+            "spec": spec_map["show_widget"],
+            "callable": callable_show_widget,
+            "metadata": {"parallelizable": False},
         }
 
     return tools

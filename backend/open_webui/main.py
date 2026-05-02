@@ -1693,6 +1693,7 @@ async def get_app_config(request: Request):
                     "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
                     "enable_study_mode": app.state.config.ENABLE_STUDY_MODE,
+                    "enable_data_viz": app.state.config.ENABLE_DATA_VIZ,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
