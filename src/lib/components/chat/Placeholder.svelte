@@ -213,12 +213,12 @@
 							<div class="flex items-center justify-between mb-1 last:mb-0">
 								<span
 									class="font-medium {isOverLimit
-										? 'text-red-600 dark:text-red-400'
+										? 'text-error-brick dark:text-[#D88577]'
 										: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
 								>
 								<div
 									class="flex items-center space-x-2 {isOverLimit
-										? 'text-red-600 dark:text-red-400'
+										? 'text-error-brick dark:text-[#D88577]'
 										: 'text-gray-600 dark:text-gray-400'}"
 								>
 									<span>{effectiveUsage.in.toLocaleString()} IN</span>

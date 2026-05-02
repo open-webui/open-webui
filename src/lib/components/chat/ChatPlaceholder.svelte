@@ -58,7 +58,7 @@
 									($i18n.language === 'dg-DG'
 										? `${WEBUI_BASE_URL}/doge.png`
 										: `${WEBUI_BASE_URL}/static/favicon.png`)}
-								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
+								class=" size-[2.7rem] rounded-full border-hairline border-gray-300 dark:border-none"
 								alt="logo"
 								draggable="false"
 							/>
@@ -81,10 +81,10 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
+			class=" mt-2 mb-4 text-4xl text-gray-900 dark:text-gray-100 text-left flex items-center gap-4 font-display tracking-tight leading-tight"
 		>
 			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+				<div class="line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}

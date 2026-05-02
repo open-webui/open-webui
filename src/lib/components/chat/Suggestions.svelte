@@ -89,8 +89,9 @@
 				<button
 					role="listitem"
 					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
-				       dark:hover:bg-white/5 transition group"
+				       px-3 py-2 rounded-xl border-hairline border-gray-200 dark:border-gray-700
+				       hover:border-book-cloth/40 hover:bg-manilla/30 dark:hover:bg-manilla-dark
+				       transition-colors duration-200 ease-paper group"
 					style="animation-delay: {idx * 60}ms"
 					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
 				>

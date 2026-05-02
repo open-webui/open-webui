@@ -41,16 +41,65 @@ code {
 }
 
 .editor-selection {
-	background: rgba(180, 213, 255, 0.5);
+	background: rgba(235, 219, 188, 0.5);
 	border-radius: 2px;
+}
+
+::selection {
+	background: rgba(235, 219, 188, 0.6);
+	color: #191919;
+}
+
+::-moz-selection {
+	background: rgba(235, 219, 188, 0.6);
+	color: #191919;
+}
+
+.dark ::selection {
+	background: rgba(204, 120, 92, 0.3);
+	color: #F0F0EB;
+}
+
+.dark ::-moz-selection {
+	background: rgba(204, 120, 92, 0.3);
+	color: #F0F0EB;
 }
 
 .font-secondary {
 	font-family: 'InstrumentSerif', sans-serif;
 }
 
+.font-display {
+	font-family: var(--font-display);
+	font-weight: 400;
+	letter-spacing: -0.01em;
+}
+
+/* Two-weight discipline — bold and semibold render at medium so the UI feels
+   like ink on paper rather than printed bureaucracy. Use .font-emphasis on the
+   rare element that genuinely needs heavier weight. */
+@layer base {
+	.font-bold,
+	.font-semibold {
+		font-weight: 500;
+	}
+
+	.font-emphasis {
+		font-weight: 600;
+	}
+}
+
 .marked a {
-	@apply underline;
+	@apply underline text-gray-900 dark:text-gray-100 decoration-book-cloth decoration-1 underline-offset-2;
+	transition: color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.marked a:hover {
+	@apply text-book-cloth;
+}
+
+kbd {
+	@apply rounded border-hairline border-gray-300 dark:border-gray-700 bg-manilla/40 dark:bg-manilla-dark px-1.5 py-0.5 text-xs font-medium;
 }
 
 math {
@@ -90,7 +139,12 @@ textarea::placeholder {
 }
 
 .markdown a {
-	@apply underline;
+	@apply underline text-gray-900 dark:text-gray-100 decoration-book-cloth decoration-1 underline-offset-2;
+	transition: color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.markdown a:hover {
+	@apply text-book-cloth;
 }
 
 .font-primary {
@@ -115,17 +169,14 @@ li p {
 }
 
 ::-webkit-scrollbar-thumb {
-	--tw-border-opacity: 1;
-	background-color: rgba(215, 215, 215, 0.6);
-	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+	background-color: rgba(102, 102, 99, 0.3); /* Cloud Dark, overlay-style */
 	border-radius: 9999px;
-	border-width: 1px;
+	border: none;
 }
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
-	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
+	background-color: rgba(145, 145, 141, 0.3); /* Cloud Medium translucent */
 }
 
 ::-webkit-scrollbar {
@@ -162,23 +213,23 @@ select {
 }
 
 .shimmer {
-	background: linear-gradient(90deg, #9a9b9e 25%, #2a2929 50%, #9a9b9e 75%);
+	background: linear-gradient(90deg, #91918D 25%, #262625 50%, #91918D 75%);
 	background-size: 200% 100%;
 	background-clip: text;
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	animation: shimmer 4s linear infinite;
-	color: #818286; /* Fallback color */
+	color: #91918D; /* Cloud Medium fallback */
 }
 
 :global(.dark) .shimmer {
-	background: linear-gradient(90deg, #818286 25%, #eae5e5 50%, #818286 75%);
+	background: linear-gradient(90deg, #666663 25%, #F0F0EB 50%, #666663 75%);
 	background-size: 200% 100%;
 	background-clip: text;
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	animation: shimmer 4s linear infinite;
-	color: #a1a3a7; /* Darker fallback color for dark mode */
+	color: #91918D; /* Cloud Medium fallback */
 }
 
 @keyframes smoothFadeIn {
@@ -283,15 +334,23 @@ input[type='number'] {
 }
 
 .cm-gutters {
-	@apply !bg-white dark:!bg-black !border-none;
+	@apply !bg-[#FAFAF7] dark:!bg-[#262625] !border-none;
 }
 
 .cm-editor {
-	@apply bg-white dark:bg-black;
+	@apply bg-[#FAFAF7] dark:bg-[#262625];
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded-lg bg-gray-850 text-xs border-[0.5px] border-gray-700 text-gray-100 shadow-md;
+}
+
+.tippy-box[data-theme~='claude'] {
+	@apply rounded-lg bg-white text-xs border-[0.5px] border-gray-300 text-gray-800 shadow-md;
+}
+
+.dark .tippy-box[data-theme~='claude'] {
+	@apply bg-gray-850 border-gray-700 text-gray-100;
 }
 
 .password {
@@ -299,12 +358,10 @@ input[type='number'] {
 }
 
 .codespan {
-	color: #eb5757;
 	border-width: 0px;
-	padding: 3px 8px;
-	font-size: 0.8em;
-	font-weight: 600;
-	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+	padding: 2px 6px;
+	font-size: 0.85em;
+	@apply rounded-md text-gray-900 dark:text-gray-100 bg-manilla/60 dark:bg-manilla-dark mx-0.5;
 }
 
 .svelte-flow {
@@ -321,7 +378,7 @@ input[type='number'] {
 }
 
 .bg-gray-950-90 {
-	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+	background-color: color-mix(in srgb, var(--color-gray-950, #191919) 90%, transparent);
 }
 
 .ProseMirror {
@@ -335,9 +392,8 @@ input[type='number'] {
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	/* Below color is from tailwind, and has the proper contrast
-	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	/* Cloud Dark — secondary text */
+	color: #666663;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
@@ -413,7 +469,7 @@ input[type='number'] {
 	border-radius: 0.4rem;
 	box-decoration-break: clone;
 	padding: 0.1rem 0.3rem;
-	@apply text-sky-800 dark:text-sky-200 bg-sky-300/15 dark:bg-sky-500/15;
+	@apply text-gray-900 dark:text-gray-100 bg-manilla/40 dark:bg-manilla-dark;
 }
 
 .mention::after {
@@ -424,7 +480,7 @@ input[type='number'] {
 	border-radius: 0.4rem;
 	box-decoration-break: clone;
 	padding: 0.1rem 0.3rem;
-	@apply text-sky-800 dark:text-sky-200 bg-sky-300/15 dark:bg-sky-500/15;
+	@apply text-gray-900 dark:text-gray-100 bg-manilla/40 dark:bg-manilla-dark;
 }
 
 .tiptap .suggestion::after {
@@ -509,7 +565,7 @@ input[type='number'] {
 }
 
 .ai-autocompletion::after {
-	color: #a0a0a0;
+	color: #91918D;
 
 	content: attr(data-suggestion);
 	pointer-events: none;
@@ -520,31 +576,30 @@ input[type='number'] {
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
 
-	@apply dark:bg-gray-800 bg-gray-50;
+	@apply bg-manilla/60 dark:bg-manilla-dark text-gray-900 dark:text-gray-100;
 }
 
 .tiptap pre {
-	border-radius: 0.5rem;
+	border-radius: 0.75rem;
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
-	@apply dark:bg-gray-800 bg-gray-50;
+	@apply bg-manilla/60 dark:bg-manilla-dark;
 }
 
 .tiptap p code {
-	color: #eb5757;
 	border-width: 0px;
-	padding: 3px 8px;
-	font-size: 0.8em;
-	font-weight: 600;
-	@apply rounded-md dark:bg-gray-800 bg-gray-50 mx-0.5;
+	padding: 2px 6px;
+	font-size: 0.85em;
+	@apply rounded-md text-gray-900 dark:text-gray-100 bg-manilla/60 dark:bg-manilla-dark mx-0.5;
 }
 
-/* Code styling */
+/* Code styling — warm earth palette on Manilla bg (light) / lightened on manilla-dark (dark) */
 .hljs-comment,
 .hljs-quote {
-	color: #616161;
+	color: #91918D;
+	font-style: italic;
 }
 
 .hljs-variable,
@@ -556,7 +611,7 @@ input[type='number'] {
 .hljs-name,
 .hljs-selector-id,
 .hljs-selector-class {
-	color: #f98181;
+	color: #8A4A3A;
 }
 
 .hljs-number,
@@ -566,23 +621,62 @@ input[type='number'] {
 .hljs-literal,
 .hljs-type,
 .hljs-params {
-	color: #fbbc88;
+	color: #A8783E;
 }
 
 .hljs-string,
 .hljs-symbol,
 .hljs-bullet {
-	color: #b9f18d;
+	color: #5C7048;
 }
 
 .hljs-title,
 .hljs-section {
-	color: #faf594;
+	color: #6B4F37;
 }
 
 .hljs-keyword,
 .hljs-selector-tag {
-	color: #70cff8;
+	color: #5A6B8A;
+	font-style: italic;
+}
+
+.dark .hljs-variable,
+.dark .hljs-template-variable,
+.dark .hljs-attribute,
+.dark .hljs-tag,
+.dark .hljs-regexp,
+.dark .hljs-link,
+.dark .hljs-name,
+.dark .hljs-selector-id,
+.dark .hljs-selector-class {
+	color: #D4A27F;
+}
+
+.dark .hljs-number,
+.dark .hljs-meta,
+.dark .hljs-built_in,
+.dark .hljs-builtin-name,
+.dark .hljs-literal,
+.dark .hljs-type,
+.dark .hljs-params {
+	color: #E2B873;
+}
+
+.dark .hljs-string,
+.dark .hljs-symbol,
+.dark .hljs-bullet {
+	color: #9CB07F;
+}
+
+.dark .hljs-title,
+.dark .hljs-section {
+	color: #C9A57E;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag {
+	color: #A4B5D6;
 }
 
 .hljs-emphasis {
@@ -590,7 +684,7 @@ input[type='number'] {
 }
 
 .hljs-strong {
-	font-weight: 700;
+	font-weight: 500;
 }
 
 /* Table styling for tiptap editors */
@@ -653,13 +747,13 @@ input[type='number'] {
 }
 
 body {
-	background: #fff;
-	color: #000;
+	background: #FAFAF7;
+	color: #191919;
 }
 
 .dark body {
-	background: #171717;
-	color: #eee;
+	background: #262625;
+	color: #F0F0EB;
 }
 
 /* Position the handle relative to each LI */

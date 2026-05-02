@@ -437,7 +437,7 @@
 
 							<button
 								id="confirm-edit-message-button"
-								class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								class="px-3.5 py-1.5 bg-book-cloth hover:bg-kraft text-white transition-colors duration-200 ease-paper rounded-2xl"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
@@ -453,8 +453,8 @@
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
-							class="rounded-3xl {($settings?.chatBubble ?? true)
-								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
+							class="rounded-2xl {($settings?.chatBubble ?? true)
+								? `max-w-[90%] px-4 py-2 bg-manilla/40 dark:bg-manilla-dark border-hairline border-gray-200 dark:border-gray-700 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"

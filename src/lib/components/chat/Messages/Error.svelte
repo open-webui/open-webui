@@ -6,10 +6,10 @@
 	let showRaw = false;
 </script>
 
-<div class="flex flex-col my-2 gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-lg">
+<div class="flex flex-col my-2 gap-2.5 border-hairline px-4 py-3 border-error-brick/20 bg-error-brick/10 rounded-lg">
 	<div class="flex gap-2.5">
 		<div class=" self-start mt-0.5">
-			<Info className="size-5 text-red-700 dark:text-red-400" />
+			<Info className="size-5 text-error-brick dark:text-[#D88577]" />
 		</div>
 
 		<div class=" self-center text-sm">
@@ -41,7 +41,7 @@
 			</button>
 		{/if}
 		<button
-			class="text-xs text-red-700 dark:text-red-400 underline"
+			class="text-xs text-error-brick dark:text-[#D88577] underline"
 			on:click={() => (showRaw = !showRaw)}
 		>
 			{showRaw ? 'Hide' : 'Show'} Raw
@@ -50,7 +50,7 @@
 
 	{#if showRaw}
 		<pre
-			class="text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-words mt-2 p-2 bg-red-600/5 rounded-sm">
+			class="text-xs text-error-brick dark:text-[#D88577] whitespace-pre-wrap break-words mt-2 p-2 bg-error-brick/5 rounded-sm">
 			{JSON.stringify(content, null, 2)}
 		</pre>
 	{/if}

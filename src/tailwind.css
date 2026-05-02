@@ -21,12 +21,37 @@
 }
 
 @layer base {
-	html,
-	pre {
-		font-family:
+	:root {
+		--font-body:
 			-apple-system, BlinkMacSystemFont, 'Inter', 'Vazirmatn', ui-sans-serif, system-ui, 'Segoe UI',
 			Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial,
 			'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+		--font-display: 'InstrumentSerif', 'Source Serif 4', Georgia, serif;
+		--font-mono:
+			'JetBrainsMono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+	}
+
+	html[data-font='system'] {
+		--font-body:
+			-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', 'Vazirmatn', ui-sans-serif,
+			system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+	}
+
+	html[data-font='inter'] {
+		--font-body:
+			'Inter', 'Vazirmatn', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+			'Segoe UI Emoji';
+	}
+
+	html[data-font='mona'] {
+		--font-body:
+			'Mona Sans', 'Inter', 'Vazirmatn', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+			'Segoe UI Emoji';
+	}
+
+	html,
+	pre {
+		font-family: var(--font-body);
 	}
 
 	pre {
@@ -43,13 +68,13 @@
 	}
 
 	input[type='checkbox'] {
-		@apply appearance-none size-3.5 align-middle bg-white border border-gray-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 self-center;
+		@apply appearance-none size-3.5 align-middle bg-white border border-gray-300 rounded transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#61AAF2]/40 focus:outline-none dark:bg-gray-800 dark:border-gray-600 self-center;
 		/* Center the custom mark */
 		display: inline-block;
 		position: relative;
 	}
 	input[type='checkbox']:checked {
-		@apply bg-blue-600 border-blue-600;
+		@apply bg-book-cloth border-book-cloth;
 	}
 	input[type='checkbox']:after {
 		content: '';

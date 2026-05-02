@@ -42,9 +42,10 @@
 					placement: placement,
 					allowHTML: allowHTML,
 					touch: touch,
-					...(theme !== '' ? { theme } : { theme: 'dark' }),
+					...(theme !== '' ? { theme } : { theme: 'claude' }),
 					arrow: false,
 					offset: offset,
+					delay: [400, 100],
 					...(interactive ? { interactive: true } : {}),
 					...tippyOptions
 				});

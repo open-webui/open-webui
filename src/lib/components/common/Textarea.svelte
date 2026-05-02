@@ -9,7 +9,7 @@
 	export let required = false;
 	export let readonly = false;
 	export let className =
-		'w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden  h-full';
+		'w-full rounded-lg px-3.5 py-2 text-sm bg-white border-hairline border-gray-300 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700 outline-hidden focus-visible:ring-2 focus-visible:ring-[#61AAF2]/40 focus-visible:border-[#61AAF2] transition-colors duration-200 ease-paper h-full';
 
 	export let onBlur = () => {};
 	let textareaElement;

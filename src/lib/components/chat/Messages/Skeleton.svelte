@@ -3,36 +3,33 @@
 </script>
 
 <span
-	class="relative flex {size === 'md'
-		? 'size-3 my-2'
+	class="relative inline-flex items-center mx-1 {size === 'md'
+		? 'h-4 my-2'
 		: size === 'xs'
-			? 'size-1.5 my-1'
-			: 'size-2 my-1'} mx-1"
+			? 'h-2 my-1'
+			: 'h-3 my-1'}"
 >
 	<span
-		class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-gray-700 dark:bg-gray-200 opacity-75"
-	></span>
-	<span
-		class="relative inline-flex {size === 'md'
-			? 'size-3'
+		class="block {size === 'md'
+			? 'w-[3px] h-4'
 			: size === 'xs'
-				? 'size-1.5'
-				: 'size-2'} rounded-full bg-black dark:bg-white animate-size"
+				? 'w-[2px] h-2'
+				: 'w-[2px] h-3'} bg-gray-700 dark:bg-gray-200 rounded-[1px] animate-typewriter"
 	></span>
 </span>
 
 <style>
-	@keyframes size {
+	@keyframes typewriter {
 		0%,
 		100% {
-			transform: scale(1);
+			opacity: 0.85;
 		}
 		50% {
-			transform: scale(1.25);
+			opacity: 0.25;
 		}
 	}
 
-	.animate-size {
-		animation: size 1.5s ease-in-out infinite;
+	.animate-typewriter {
+		animation: typewriter 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	}
 </style>

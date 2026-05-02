@@ -422,14 +422,14 @@
 
 <div>
 	<div
-		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
+		class="relative {className} flex flex-col rounded-xl border-hairline border-gray-300 dark:border-gray-700 my-0.5"
 		dir="ltr"
 		bind:this={codeBlockElement}
 	>
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" rounded-3xl max-h-fit overflow-hidden"
+					className=" rounded-xl max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -439,7 +439,7 @@
 		{:else if lang === 'vega' || lang === 'vega-lite'}
 			{#if vegaHtml}
 				<SvgPanZoom
-					className="rounded-3xl max-h-fit overflow-hidden"
+					className="rounded-xl max-h-fit overflow-hidden"
 					svg={vegaHtml}
 					content={_token.text}
 				/>
@@ -458,7 +458,7 @@
 			>
 				<div class="flex items-center gap-0.5">
 					<button
-						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white/70 dark:bg-gray-800"
 						on:click={collapseCodeBlock}
 					>
 						<div class=" -translate-y-[0.5px]">
@@ -473,13 +473,13 @@
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
 							<div
-								class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
+								class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white/70 dark:bg-gray-800"
 							>
 								{$i18n.t('Running')}
 							</div>
 						{:else if run}
 							<button
-								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white/70 dark:bg-gray-800"
 								on:click={async () => {
 									code = _code;
 									await tick();
@@ -495,7 +495,7 @@
 
 					{#if save}
 						<button
-							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white/70 dark:bg-gray-800"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
@@ -503,13 +503,13 @@
 					{/if}
 
 					<button
-						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white/70 dark:bg-gray-800"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
 
 					{#if preview && ['html', 'svg'].includes(lang)}
 						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white/70 dark:bg-gray-800"
 							on:click={previewCode}
 						>
 							<div>
@@ -521,13 +521,13 @@
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-3xl -mt-9 {editorClassName
+				class="language-{lang} rounded-t-xl -mt-9 bg-manilla/60 dark:bg-manilla-dark {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-3xl'} overflow-hidden"
+						: 'rounded-b-xl'} overflow-hidden"
 			>
-				<div class=" pt-8 bg-white dark:bg-black"></div>
+				<div class=" pt-8 bg-manilla/60 dark:bg-manilla-dark"></div>
 
 				{#if !collapsed}
 					{#if edit}
@@ -557,7 +557,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-white dark:bg-black dark:text-white rounded-b-3xl! pt-0.5 pb-3 px-4 flex flex-col gap-2 text-xs"
+						class="bg-manilla/60 dark:bg-manilla-dark dark:text-white rounded-b-xl! pt-0.5 pb-3 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
@@ -571,12 +571,12 @@
 			{#if !collapsed}
 				<div
 					id="plt-canvas-{id}"
-					class="bg-gray-50 dark:bg-black dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
+					class="bg-gray-50 dark:bg-gray-900 dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
 				/>
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-3xl! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-gray-900 dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">

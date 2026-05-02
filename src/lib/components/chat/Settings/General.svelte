@@ -4,7 +4,7 @@
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, theme, user } from '$lib/stores';
+	import { config, fontFamily, models, settings, theme, user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -16,6 +16,7 @@
 	// General
 	let themes = ['dark', 'light', 'oled-dark'];
 	let selectedTheme = 'system';
+	let selectedFont = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
@@ -109,6 +110,7 @@
 
 	onMount(async () => {
 		selectedTheme = localStorage.theme ?? 'system';
+		selectedFont = localStorage.font ?? 'system';
 
 		languages = await getLanguages();
 
@@ -127,10 +129,10 @@
 		}
 
 		if (themeToApply === 'dark' && !_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
+			document.documentElement.style.setProperty('--color-gray-800', '#33332E');
+			document.documentElement.style.setProperty('--color-gray-850', '#262625');
+			document.documentElement.style.setProperty('--color-gray-900', '#1F1F1E');
+			document.documentElement.style.setProperty('--color-gray-950', '#191919');
 		}
 
 		themes
@@ -151,19 +153,17 @@
 				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
 					? 'dark'
 					: 'light';
-				console.log('Setting system meta theme color: ' + systemTheme);
-				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#FAFAF7' : '#262625');
 			} else {
-				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
 					'content',
 					_theme === 'dark'
-						? '#171717'
+						? '#262625'
 						: _theme === 'oled-dark'
 							? '#000000'
 							: _theme === 'her'
 								? '#983724'
-								: '#ffffff'
+								: '#FAFAF7'
 				);
 			}
 		}
@@ -187,6 +187,12 @@
 		theme.set(_theme);
 		localStorage.setItem('theme', _theme);
 		applyTheme(_theme);
+	};
+
+	const fontChangeHandler = (_font: string) => {
+		fontFamily.set(_font);
+		localStorage.setItem('font', _font);
+		document.documentElement.setAttribute('data-font', _font);
 	};
 </script>
 
@@ -213,6 +219,24 @@
 						<option value="her">🌷 Her</option>
 						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
+					</select>
+				</div>
+			</div>
+
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Font')}</div>
+				<div class="flex items-center relative">
+					<select
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+							? ''
+							: 'outline-hidden'}"
+						bind:value={selectedFont}
+						placeholder={$i18n.t('Select a font')}
+						on:change={() => fontChangeHandler(selectedFont)}
+					>
+						<option value="system">{$i18n.t('System (SF Pro on macOS)')}</option>
+						<option value="inter">Inter</option>
+						<option value="mona">Mona Sans</option>
 					</select>
 				</div>
 			</div>
@@ -317,7 +341,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-book-cloth hover:bg-kraft text-white dark:bg-book-cloth dark:text-white dark:hover:bg-kraft transition-colors duration-200 ease-paper rounded-full"
 			on:click={() => {
 				saveHandler();
 			}}

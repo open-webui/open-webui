@@ -11,7 +11,7 @@
 </script>
 
 <div
-	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border dark:border-gray-900 w-60 h-20 group"
+	class="px-4 py-3 shadow-md rounded-xl dark:bg-gray-900 bg-white border dark:border-gray-900 w-60 h-20 group"
 >
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : data.message.content}

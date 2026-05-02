@@ -2785,6 +2785,45 @@ ENABLE_WEB_SEARCH = PersistentConfig(
     os.getenv("ENABLE_WEB_SEARCH", "False").lower() == "true",
 )
 
+# Generic web-search/loader knobs (referenced from routers/retrieval.py;
+# kept registered so cfg accesses don't AttributeError even though this fork
+# is Exa-only at runtime).
+WEB_SEARCH_ENGINE = PersistentConfig(
+    "WEB_SEARCH_ENGINE",
+    "rag.web.search.engine",
+    os.getenv("WEB_SEARCH_ENGINE", "exa"),
+)
+
+WEB_SEARCH_TRUST_ENV = PersistentConfig(
+    "WEB_SEARCH_TRUST_ENV",
+    "rag.web.search.trust_env",
+    os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
+)
+
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+    "rag.web.search.bypass_embedding_and_retrieval",
+    os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
+)
+
+BYPASS_WEB_SEARCH_WEB_LOADER = PersistentConfig(
+    "BYPASS_WEB_SEARCH_WEB_LOADER",
+    "rag.web.search.bypass_web_loader",
+    os.getenv("BYPASS_WEB_SEARCH_WEB_LOADER", "False").lower() == "true",
+)
+
+ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
+    "ENABLE_WEB_LOADER_SSL_VERIFICATION",
+    "rag.web.loader.ssl_verification",
+    os.getenv("ENABLE_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true",
+)
+
+WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
+    "WEB_LOADER_CONCURRENT_REQUESTS",
+    "rag.web.loader.concurrent_requests",
+    int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
+)
+
 # Exa API Configuration
 EXA_API_KEY = PersistentConfig(
     "EXA_API_KEY",

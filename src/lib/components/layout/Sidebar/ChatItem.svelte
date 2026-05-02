@@ -350,10 +350,10 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? 'bg-manilla/40 dark:bg-manilla-dark selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950 selected'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
+					? 'bg-manilla/40 dark:bg-manilla-dark selected'
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-800'}  whitespace-nowrap text-ellipsis relative {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -401,12 +401,12 @@
 	{:else}
 		<a
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] relative {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? 'bg-manilla/40 dark:bg-manilla-dark selected before:content-[\'\'] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[2px] before:bg-book-cloth before:rounded-r'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950 selected'
-					: 'active:bg-gray-100 dark:active:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-manilla/40 dark:bg-manilla-dark selected'
+					: 'active:bg-gray-100 dark:active:bg-gray-800'}  whitespace-nowrap text-ellipsis"
 			style="-webkit-tap-highlight-color: transparent;"
 			href="/c/{id}"
 			on:click={() => {

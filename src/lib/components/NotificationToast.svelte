@@ -71,7 +71,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class="flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-800 rounded-3xl px-4 py-3.5 cursor-pointer select-none"
+	class="flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border-hairline border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3.5 cursor-pointer select-none shadow-sm"
 	on:dragstart|preventDefault
 	on:pointerdown={onPointerDown}
 	on:pointermove={onPointerMove}
