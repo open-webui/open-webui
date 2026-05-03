@@ -3391,6 +3391,16 @@ async def non_streaming_chat_response_handler(response, ctx):
                     },
                 )
 
+            if 'selected_model_url' in response_data:
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata['chat_id'],
+                    metadata['message_id'],
+                    {
+                        'selectedModelUrl': response_data['selected_model_url'],
+                        'selectedModelUrlIdx': response_data.get('selected_model_url_idx'),
+                    },
+                )
+
             choices = response_data.get('choices', [])
             if choices and choices[0].get('message', {}).get('content'):
                 content = response_data['choices'][0]['message']['content']
@@ -3881,6 +3891,21 @@ async def streaming_chat_response_handler(response, ctx):
                                         metadata['message_id'],
                                         {
                                             'selectedModelId': model_id,
+                                        },
+                                    )
+                                    await event_emitter(
+                                        {
+                                            'type': 'chat:completion',
+                                            'data': data,
+                                        }
+                                    )
+                                if 'selected_model_url' in data:
+                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata['chat_id'],
+                                        metadata['message_id'],
+                                        {
+                                            'selectedModelUrl': data['selected_model_url'],
+                                            'selectedModelUrlIdx': data.get('selected_model_url_idx'),
                                         },
                                     )
                                     await event_emitter(

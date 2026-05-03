@@ -1648,7 +1648,19 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const {
+			id,
+			done,
+			choices,
+			content,
+			output,
+			sources,
+			selected_model_id,
+			selected_model_url,
+			selected_model_url_idx,
+			error,
+			usage
+		} = data;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
@@ -1744,6 +1756,11 @@
 		if (selected_model_id) {
 			message.selectedModelId = selected_model_id;
 			message.arena = true;
+		}
+
+		if (selected_model_url) {
+			message.selectedModelUrl = selected_model_url;
+			message.selectedModelUrlIdx = selected_model_url_idx;
 		}
 
 		if (usage) {

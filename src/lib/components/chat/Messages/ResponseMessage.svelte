@@ -68,6 +68,8 @@
 		id: string;
 		model: string;
 		content: string;
+		selectedModelUrl?: string;
+		selectedModelUrlIdx?: number;
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
@@ -167,7 +169,19 @@
 	let showDeleteConfirm = false;
 
 	let model = null;
+	let selectedModelEndpoint = '';
 	$: model = $models.find((m) => m.id === message.model);
+	$: selectedModelEndpoint = (() => {
+		if (!message?.selectedModelUrl) {
+			return '';
+		}
+
+		try {
+			return new URL(message.selectedModelUrl).host;
+		} catch {
+			return message.selectedModelUrl;
+		}
+	})();
 
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
 	$: hasVisibleStatus =
@@ -634,9 +648,17 @@
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
-						{model?.name ?? message.model}
-					</span>
+					<div class="flex flex-col min-w-0">
+						<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
+							{model?.name ?? message.model}
+						</span>
+
+						{#if selectedModelEndpoint}
+							<span class="line-clamp-1 text-[11px] font-normal text-gray-500 dark:text-gray-400">
+								{selectedModelEndpoint}
+							</span>
+						{/if}
+					</div>
 				</Tooltip>
 
 				{#if message.timestamp}

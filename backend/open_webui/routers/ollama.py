@@ -132,6 +132,7 @@ async def send_request(
     stream: bool = False,
     content_type: Optional[str] = None,
     metadata: Optional[dict] = None,
+    response_envelope: Optional[dict] = None,
 ):
     r = None
     streaming = False
@@ -179,14 +180,24 @@ async def send_request(
                 response_headers['Content-Type'] = content_type
 
             streaming = True
+
+            async def prefixed_stream():
+                if response_envelope:
+                    yield f"data: {json.dumps(response_envelope)}\n\n".encode('utf-8')
+                async for chunk in stream_wrapper(r):
+                    yield chunk
+
             return StreamingResponse(
-                stream_wrapper(r),
+                prefixed_stream(),
                 status_code=r.status,
                 headers=response_headers,
             )
         else:
             try:
-                return await r.json()
+                response = await r.json()
+                if response_envelope:
+                    response = {**response_envelope, **response}
+                return response
             except Exception:
                 return None
 
@@ -1151,6 +1162,10 @@ async def generate_chat_completion(
         stream=form_data.stream,
         content_type='application/x-ndjson',
         metadata=metadata,
+        response_envelope={
+            'selected_model_url': url,
+            'selected_model_url_idx': url_idx,
+        },
     )
 
 
@@ -1240,6 +1255,10 @@ async def generate_openai_completion(
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
+        response_envelope={
+            'selected_model_url': url,
+            'selected_model_url_idx': url_idx,
+        },
     )
 
 
@@ -1305,6 +1324,10 @@ async def generate_openai_chat_completion(
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
+        response_envelope={
+            'selected_model_url': url,
+            'selected_model_url_idx': url_idx,
+        },
     )
 
 
@@ -1357,6 +1380,10 @@ async def generate_anthropic_messages(
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
+        response_envelope={
+            'selected_model_url': url,
+            'selected_model_url_idx': url_idx,
+        },
     )
 
 
@@ -1415,6 +1442,10 @@ async def generate_responses(
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
+        response_envelope={
+            'selected_model_url': url,
+            'selected_model_url_idx': url_idx,
+        },
     )
 
 
