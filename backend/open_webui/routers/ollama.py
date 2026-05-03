@@ -1095,6 +1095,12 @@ async def generate_chat_completion(
         bypass_filter = True
 
     metadata = form_data.pop('metadata', None)
+
+    # Inject text file content into messages for attached files
+    if metadata and metadata.get('files'):
+        from open_webui.utils.files import inject_file_content_into_messages
+        inject_file_content_into_messages(form_data.get('messages', []), metadata['files'], request)
+
     try:
         form_data = GenerateChatCompletionForm(**form_data)
     except Exception as e:

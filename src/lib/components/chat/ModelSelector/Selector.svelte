@@ -31,6 +31,7 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
@@ -38,6 +39,25 @@
 	import ModelItem from './ModelItem.svelte';
 
 	const i18n = getContext('i18n');
+
+	let refreshing = false;
+
+	const refreshModelsHandler = async () => {
+		refreshing = true;
+		try {
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+			toast.success($i18n.t('Models refreshed successfully'));
+		} catch (error) {
+			toast.error($i18n.t('Failed to refresh models'));
+		} finally {
+			refreshing = false;
+		}
+	};
 	const dispatch = createEventDispatcher();
 
 	export let id = '';
@@ -687,6 +707,24 @@
 											</button>
 										</Tooltip>
 									{/each}
+								</div>
+
+
+								<div class="pb-2.5"></div>
+
+								<div class="px-2.5 pb-2.5">
+									<button
+										class="flex w-full items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+										on:click={refreshModelsHandler}
+										disabled={refreshing}
+									>
+										{#if refreshing}
+											<Spinner className="size-3" />
+										{:else}
+											<Refresh className="size-3" />
+										{/if}
+										{$i18n.t('Refresh Models')}
+									</button>
 								</div>
 							</div>
 						{/if}

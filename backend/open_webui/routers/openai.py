@@ -115,10 +115,13 @@ async def send_get_request(
                 cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
-                return await response.json()
+                data = await response.json()
+                model_count = len(data.get('data', [])) if isinstance(data, dict) else len(data) if isinstance(data, list) else 0
+                log.info(f'Fetched {model_count} models from {url}')
+                return data
     except Exception as e:
         # Handle connection error here
-        log.error(f'Connection error: {e}')
+        log.error(f'Failed to fetch models from {url}: {e} (timeout: {AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST}s)')
         return None
 
 
@@ -1057,6 +1060,11 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
+
+    # Inject text file content into messages for attached files
+    if metadata and metadata.get('files'):
+        from open_webui.utils.files import inject_file_content_into_messages
+        inject_file_content_into_messages(payload.get('messages', []), metadata['files'], request)
 
     model_id = form_data.get('model')
     model_info = await Models.get_model_by_id(model_id)
