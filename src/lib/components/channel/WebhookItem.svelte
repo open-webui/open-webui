@@ -92,7 +92,7 @@
 		<img
 			src={image || `${WEBUI_BASE_URL}/static/favicon.png`}
 			class="rounded-full size-8 object-cover flex-shrink-0"
-			alt=""
+			alt={name}
 		/>
 		<div class="flex-1 text-left min-w-0">
 			<div class="font-medium text-gray-900 dark:text-white truncate">
@@ -126,7 +126,7 @@
 					<img
 						src={image || `${WEBUI_BASE_URL}/static/favicon.png`}
 						class="size-8 object-cover"
-						alt=""
+						alt={name}
 					/>
 				</button>
 				<div class="flex-1">

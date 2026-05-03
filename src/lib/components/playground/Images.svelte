@@ -140,7 +140,7 @@
 									>
 										<img
 											src={image.url}
-											alt=""
+											alt={$i18n.t('Generated image')}
 											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
 										/>
 										<div
@@ -184,7 +184,7 @@
 							{#each sourceImages as image, index}
 								<div class=" relative group">
 									<div class="relative flex items-center">
-										<img src={image} alt="" class="size-10 rounded-xl object-cover" />
+										<img src={image} alt={$i18n.t('Source image')} class="size-10 rounded-xl object-cover" />
 									</div>
 									<div class=" absolute -top-1 -right-1">
 										<button

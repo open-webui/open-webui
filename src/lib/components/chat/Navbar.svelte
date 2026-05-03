@@ -247,7 +247,7 @@
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class="size-6 object-cover rounded-full"
-										alt=""
+										alt={$user?.name ? $i18n.t("{{name}}'s avatar", { name: $user.name }) : ""}
 										draggable="false"
 									/>
 								</div>
