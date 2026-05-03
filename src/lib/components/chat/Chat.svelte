@@ -458,6 +458,10 @@
 						message.statusHistory = [data];
 					}
 				} else if (type === 'chat:completion') {
+					if (data?.selected_model_url) {
+						message.selectedModelUrl = data.selected_model_url;
+						message.selectedModelUrlIdx = data.selected_model_url_idx;
+					}
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
 					if (event.message_id === history.currentId) {
