@@ -962,6 +962,16 @@
 			return;
 		}
 
+		// Stale-event guard: while we're in a retry countdown, any state
+		// mutation from the just-failed attempt (chat:completion done=true,
+		// chat:message:error, chat:tasks:cancel, content deltas, etc.) would
+		// corrupt the retry — flipping done=true, clearing generating, or
+		// stuffing in old content. Drop everything except the trailing
+		// stop-by-error guard below.
+		if (message.retrying) {
+			return;
+		}
+
 		if (type === 'status') {
 			if (message?.statusHistory) {
 				message.statusHistory.push(data);
@@ -1018,14 +1028,6 @@
 				history = { ...history };
 			}
 		} else if (type === 'chat:message:error') {
-			// If the retry loop has already moved past this attempt and is
-			// counting down to the next one, treat this as a stale leftover
-			// from the just-failed attempt. Mutating done/generating here
-			// would abort the in-flight retry sleep and strand the UI with
-			// "Retrying in Xs..." while completion buttons appear (done=true).
-			if (message.retrying) {
-				return;
-			}
 			message.error = data.error;
 			message.done = true;
 			taskIds = null;
