@@ -830,7 +830,7 @@
 									/>
 								{/if}
 
-								{#if message?.retrying}
+								{#if message?.retrying && !message?.done}
 									<div class="flex flex-col gap-2 py-3 px-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
 										<div class="flex items-center justify-between gap-2 text-sm text-yellow-700 dark:text-yellow-400">
 											<div class="flex items-center gap-2">

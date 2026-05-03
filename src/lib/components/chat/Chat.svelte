@@ -1018,6 +1018,14 @@
 				history = { ...history };
 			}
 		} else if (type === 'chat:message:error') {
+			// If the retry loop has already moved past this attempt and is
+			// counting down to the next one, treat this as a stale leftover
+			// from the just-failed attempt. Mutating done/generating here
+			// would abort the in-flight retry sleep and strand the UI with
+			// "Retrying in Xs..." while completion buttons appear (done=true).
+			if (message.retrying) {
+				return;
+			}
 			message.error = data.error;
 			message.done = true;
 			taskIds = null;
@@ -2997,6 +3005,19 @@
 						}
 
 						skipRemainingRetriesSet.delete(responseMessageId);
+
+						// Defensive cleanup: ensure the "Retrying in Xs..." UI never
+						// outlives the retry loop, even if state got corrupted by a
+						// stale socket event mid-countdown.
+						{
+							const finalMsg = _history.messages[responseMessageId];
+							if (finalMsg?.retrying) {
+								finalMsg.retrying = null;
+								_history.messages[responseMessageId] = finalMsg;
+								mirrorHistoryMessage(responseMessageId);
+							}
+						}
+
 						if (chatEventEmitter) clearInterval(chatEventEmitter);
 						startUsagePolling(SLOW_POLL_MS);
 					} else {
@@ -3780,6 +3801,18 @@
 				break;
 			}
 			skipRemainingRetriesSet.delete(message.id);
+
+			// Defensive cleanup mirrors the primary retry loop: never leave
+			// `retrying` set on the message after the loop exits.
+			{
+				const finalMsg = _history.messages[message.id];
+				if (finalMsg?.retrying) {
+					finalMsg.retrying = null;
+					_history.messages[message.id] = finalMsg;
+					history.messages[message.id] = structuredClone(finalMsg);
+					history = { ...history };
+				}
+			}
 		} finally {
 			generating = false;
 			generationController = null;
