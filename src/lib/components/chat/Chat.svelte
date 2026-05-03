@@ -84,7 +84,7 @@
 		orderReasoningEfforts
 	} from '$lib/constants/reasoning';
 	import { getTools } from '$lib/apis/tools';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, getFileContentById } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	import { fade } from 'svelte/transition';
@@ -3113,106 +3113,174 @@
 			}))
 		].filter((message) => message);
 
-		messages = messages
-			.map((message) => {
-				if (message.role === 'tool') {
-					return {
-						role: 'tool',
-						content: message.content ?? '',
-						...(message.tool_call_id ? { tool_call_id: message.tool_call_id } : {})
-					};
-				}
+		const TEXT_FILE_EXTS = new Set([
+			'txt', 'md', 'markdown', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson',
+			'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env', 'log', 'xml', 'svg',
+			'py', 'pyi', 'ipynb', 'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'vue',
+			'svelte', 'java', 'kt', 'kts', 'scala', 'groovy', 'c', 'cc', 'cpp',
+			'cxx', 'h', 'hpp', 'hxx', 'rs', 'go', 'rb', 'php', 'pl', 'pm', 'lua',
+			'r', 'jl', 'dart', 'swift', 'm', 'mm', 'cs', 'fs', 'fsx', 'ex', 'exs',
+			'erl', 'hs', 'ml', 'mli', 'clj', 'cljs', 'sh', 'bash', 'zsh', 'fish',
+			'ps1', 'bat', 'cmd', 'sql', 'graphql', 'gql', 'proto', 'css', 'scss',
+			'sass', 'less', 'tex', 'bib', 'srt', 'vtt', 'patch', 'diff',
+			'gitignore', 'dockerignore', 'editorconfig'
+		]);
 
-				if (message.tool_calls) {
-					if (Array.isArray(message.reasoning_details)) {
-						const signatureDetail = message.reasoning_details.find(
-							(d) => d.type === 'reasoning.encrypted' && d.data
-						);
+		const isTextFile = (file) => {
+			if (file?.type !== 'file') return false;
+			const name = (file.name || file.file?.filename || '').toLowerCase();
+			if (name.endsWith('.pdf')) return false;
+			const dot = name.lastIndexOf('.');
+			const ext = dot >= 0 ? name.slice(dot + 1) : name;
+			if (ext && TEXT_FILE_EXTS.has(ext)) return true;
+			const ct = (
+				file.content_type ||
+				file.file?.meta?.content_type ||
+				''
+			).toLowerCase();
+			if (ct.startsWith('text/') && !ct.includes('html')) return true;
+			return false;
+		};
 
-						if (signatureDetail) {
-							message.tool_calls = message.tool_calls.map((tc) => ({
-								...tc,
-								extra_content: { google: { thought_signature: signatureDetail.data } }
-							}));
+		const fetchTextFileContent = async (file) => {
+			if (typeof file._inlinedText === 'string') return file._inlinedText;
+			try {
+				const blob = await getFileContentById(file.id);
+				const text = blob ? await blob.text() : '';
+				file._inlinedText = text;
+				return text;
+			} catch (e) {
+				console.error('Failed to read text file content:', e);
+				file._inlinedText = '';
+				return '';
+			}
+		};
+
+		const escapeXmlAttr = (s) =>
+			String(s)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;');
+
+		const buildTextFileBlocks = async (files) => {
+			const textFiles = (files ?? []).filter(isTextFile);
+			if (!textFiles.length) return '';
+			const blocks = await Promise.all(
+				textFiles.map(async (f) => {
+					const name = f.name || f.file?.filename || 'file';
+					const text = await fetchTextFileContent(f);
+					return `<document filename="${escapeXmlAttr(name)}">\n${text}\n</document>`;
+				})
+			);
+			return blocks.join('\n\n') + '\n\n';
+		};
+
+		messages = (
+			await Promise.all(
+				messages.map(async (message) => {
+					if (message.role === 'tool') {
+						return {
+							role: 'tool',
+							content: message.content ?? '',
+							...(message.tool_call_id ? { tool_call_id: message.tool_call_id } : {})
+						};
+					}
+
+					if (message.tool_calls) {
+						if (Array.isArray(message.reasoning_details)) {
+							const signatureDetail = message.reasoning_details.find(
+								(d) => d.type === 'reasoning.encrypted' && d.data
+							);
+
+							if (signatureDetail) {
+								message.tool_calls = message.tool_calls.map((tc) => ({
+									...tc,
+									extra_content: { google: { thought_signature: signatureDetail.data } }
+								}));
+							}
 						}
+
+						return {
+							role: 'assistant',
+							content: (message?.merged?.content ?? message.content) || null,
+							tool_calls: message.tool_calls,
+							// OpenAI Responses API (and Anthropic) require the reasoning that
+							// led to a function_call to be preserved on the assistant message
+							// in follow-up requests. Dropping it breaks the reasoning chain on
+							// multi-turn tool-call conversations.
+							...(message.reasoning_details
+								? { reasoning_details: message.reasoning_details }
+								: {})
+						};
+					}
+
+					const hasImages = message.files?.some((file) => file.type === 'image');
+					const isUser = message.role === 'user';
+					const modelSupportsVision = model?.info?.meta?.capabilities?.vision ?? true;
+
+					// Check if message has PDF files
+					const hasPdfFiles = message.files?.some(
+						(file) =>
+							file.type === 'file' &&
+							(file.name?.toLowerCase().endsWith('.pdf') ||
+								file.file?.filename?.toLowerCase().endsWith('.pdf'))
+					);
+
+					const textPrefix = isUser ? await buildTextFileBlocks(message.files) : '';
+					const baseText = message?.merged?.content ?? message.content ?? '';
+
+					if ((hasImages || hasPdfFiles) && isUser && modelSupportsVision) {
+						return {
+							role: message.role,
+							content: [
+								{
+									type: 'text',
+									text: textPrefix + baseText
+								},
+								// Add image content parts
+								...message.files
+									.filter((file) => file.type === 'image')
+									.map((file) => ({
+										type: 'image_url',
+										image_url: {
+											url: file.url
+										}
+									})),
+								// Add PDF file content parts for OpenRouter native processing
+								...message.files
+									.filter(
+										(file) =>
+											file.type === 'file' &&
+											(file.name?.toLowerCase().endsWith('.pdf') ||
+												file.file?.filename?.toLowerCase().endsWith('.pdf'))
+									)
+									.map((file) => ({
+										type: 'file',
+										file: {
+											filename: file.name || file.file?.filename || 'document.pdf',
+											file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
+										}
+									}))
+							]
+						};
 					}
 
 					return {
-						role: 'assistant',
-						content: (message?.merged?.content ?? message.content) || null,
-						tool_calls: message.tool_calls,
-						// OpenAI Responses API (and Anthropic) require the reasoning that
-						// led to a function_call to be preserved on the assistant message
-						// in follow-up requests. Dropping it breaks the reasoning chain on
-						// multi-turn tool-call conversations.
-						...(message.reasoning_details
-							? { reasoning_details: message.reasoning_details }
-							: {})
-					};
-				}
-
-				const hasImages = message.files?.some((file) => file.type === 'image');
-				const isUser = message.role === 'user';
-				const modelSupportsVision = model?.info?.meta?.capabilities?.vision ?? true;
-
-				// Check if message has PDF files
-				const hasPdfFiles = message.files?.some(
-					(file) =>
-						file.type === 'file' &&
-						(file.name?.toLowerCase().endsWith('.pdf') ||
-							file.file?.filename?.toLowerCase().endsWith('.pdf'))
-				);
-
-				if ((hasImages || hasPdfFiles) && isUser && modelSupportsVision) {
-					return {
 						role: message.role,
-						content: [
-							{
-								type: 'text',
-								text: message?.merged?.content ?? message.content
-							},
-							// Add image content parts
-							...message.files
-								.filter((file) => file.type === 'image')
-								.map((file) => ({
-									type: 'image_url',
-									image_url: {
-										url: file.url
-									}
-								})),
-							// Add PDF file content parts for OpenRouter native processing
-							...message.files
-								.filter(
-									(file) =>
-										file.type === 'file' &&
-										(file.name?.toLowerCase().endsWith('.pdf') ||
-											file.file?.filename?.toLowerCase().endsWith('.pdf'))
-								)
-								.map((file) => ({
-									type: 'file',
-									file: {
-										filename: file.name || file.file?.filename || 'document.pdf',
-										file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
-									}
-								}))
-						]
+						content: isUser ? textPrefix + baseText : baseText,
+						...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 					};
-				}
-
-				return {
-					role: message.role,
-					content: message?.merged?.content ?? message.content,
-					...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
-				};
-			})
-			.filter(
-				(message) =>
-					message?.role === 'user' ||
-					message?.role === 'tool' ||
-					hasMessageContent(message?.content) ||
-					message?.reasoning_details ||
-					message?.tool_calls?.length
-			);
+				})
+			)
+		).filter(
+			(message) =>
+				message?.role === 'user' ||
+				message?.role === 'tool' ||
+				hasMessageContent(message?.content) ||
+				message?.reasoning_details ||
+				message?.tool_calls?.length
+		);
 
 		const toolIds = [];
 		const toolServerIds = [];

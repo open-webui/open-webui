@@ -1692,7 +1692,7 @@ JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
 ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
     "ENABLE_FOLLOW_UP_GENERATION",
     "task.follow_up.enable",
-    os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "False").lower() == "true",
 )
 
 FOLLOW_UP_GENERATION_OVERRIDE = PersistentConfig(
