@@ -563,7 +563,7 @@
 					</button>
 				</Tooltip>
 
-				{#if message.file_entity_count > 0}
+				{#if message.file_entity_count > 0 && message.files?.length > 0}
 					<div class="text-xs text-gray-500 mt-1">
 						<div class="flex items-center gap-1 relative group/vault">
 							<span>📎 {message.file_entity_count} sensitive items detected in file</span>
