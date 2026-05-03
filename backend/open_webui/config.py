@@ -1299,10 +1299,16 @@ MODEL_ORDER_LIST = PersistentConfig(
     [],
 )
 
+try:
+    default_model_metadata = json.loads(os.environ.get('DEFAULT_MODEL_METADATA', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_MODEL_METADATA: {e}')
+    default_model_metadata = {}
+
 DEFAULT_MODEL_METADATA = PersistentConfig(
     'DEFAULT_MODEL_METADATA',
     'models.default_metadata',
-    {},
+    default_model_metadata,
 )
 
 try:
