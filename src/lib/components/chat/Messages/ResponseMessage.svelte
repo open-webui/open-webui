@@ -137,7 +137,11 @@
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let retryWithoutProviderRestrictions: Function = () => {};
+	export let markSkipRemainingRetries: Function = () => {};
 	export let regenerateWithModel: Function = () => {};
+
+	let skipRetryClicked = false;
+	$: if (!message?.retrying) skipRetryClicked = false;
 
 	export let addMessages: Function;
 
@@ -828,14 +832,30 @@
 
 								{#if message?.retrying}
 									<div class="flex flex-col gap-2 py-3 px-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
-										<div class="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-400">
-											<svg class="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-												<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-												<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-											</svg>
-											<span>
-												Attempt {message.retrying.attempt} of {message.retrying.maxAttempts} failed. Retrying in {message.retrying.countdown}s...
-											</span>
+										<div class="flex items-center justify-between gap-2 text-sm text-yellow-700 dark:text-yellow-400">
+											<div class="flex items-center gap-2">
+												<svg class="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+													<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+													<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+												</svg>
+												<span>
+													Attempt {message.retrying.attempt} of {message.retrying.maxAttempts} failed. Retrying in {message.retrying.countdown}s...
+												</span>
+											</div>
+											{#if skipRetryClicked}
+												<span class="text-xs italic shrink-0">Will not retry if next request fails</span>
+											{:else}
+												<button
+													type="button"
+													class="text-xs underline hover:text-yellow-900 dark:hover:text-yellow-200 shrink-0"
+													on:click={() => {
+														markSkipRemainingRetries(message.id);
+														skipRetryClicked = true;
+													}}
+												>
+													Do not retry if next request fails
+												</button>
+											{/if}
 										</div>
 										<div class="w-full bg-yellow-200 dark:bg-yellow-800 rounded-full h-1">
 											<div

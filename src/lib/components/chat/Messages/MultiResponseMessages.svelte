@@ -44,6 +44,7 @@
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let retryWithoutProviderRestrictions: Function = () => {};
+	export let markSkipRemainingRetries: Function = () => {};
 	export let regenerateWithModel: Function = () => {};
 	export let mergeResponses: Function;
 
@@ -323,6 +324,7 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{retryWithoutProviderRestrictions}
+									{markSkipRemainingRetries}
 									regenerateWithModel={async (message, modelId, preserveToolContext = false) => {
 										regenerateWithModel(message, modelId, preserveToolContext);
 										await tick();
@@ -386,6 +388,7 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{retryWithoutProviderRestrictions}
+										{markSkipRemainingRetries}
 										regenerateWithModel={async (message, modelId, preserveToolContext = false) => {
 											regenerateWithModel(message, modelId, preserveToolContext);
 											await tick();

@@ -36,6 +36,7 @@
 
 	export let regenerateResponse;
 	export let retryWithoutProviderRestrictions: Function = () => {};
+	export let markSkipRemainingRetries: Function = () => {};
 	export let regenerateWithModel: Function = () => {};
 	export let continueResponse;
 	export let mergeResponses;
@@ -97,6 +98,7 @@
 				{continueResponse}
 				{regenerateResponse}
 				{retryWithoutProviderRestrictions}
+				{markSkipRemainingRetries}
 				{regenerateWithModel}
 				{addMessages}
 				{readOnly}
@@ -121,6 +123,7 @@
 				{continueResponse}
 				{regenerateResponse}
 				{retryWithoutProviderRestrictions}
+				{markSkipRemainingRetries}
 				{regenerateWithModel}
 				{mergeResponses}
 				{triggerScroll}

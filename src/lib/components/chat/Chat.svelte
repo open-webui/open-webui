@@ -238,6 +238,11 @@
 	let generationController = null;
 	let suppressErrorToast = false;
 
+	const skipRemainingRetriesSet = new Set();
+	const markSkipRemainingRetries = (messageId) => {
+		if (messageId) skipRemainingRetriesSet.add(messageId);
+	};
+
 	let chat = null;
 	let tags = [];
 
@@ -2922,7 +2927,7 @@
 									responseMessage.reasoning_details_per_round || null;
 							}
 
-							if (attempt < MAX_RETRIES) {
+							if (attempt < MAX_RETRIES && !skipRemainingRetriesSet.has(responseMessageId)) {
 								const waitSeconds = attempt * 2;
 
 								// Re-enable generating for countdown UI
@@ -2991,6 +2996,7 @@
 							break;
 						}
 
+						skipRemainingRetriesSet.delete(responseMessageId);
 						if (chatEventEmitter) clearInterval(chatEventEmitter);
 						startUsagePolling(SLOW_POLL_MS);
 					} else {
@@ -3733,7 +3739,7 @@
 						responseMessage.reasoning_details_per_round || null;
 				}
 
-				if (attempt < MAX_RETRIES) {
+				if (attempt < MAX_RETRIES && !skipRemainingRetriesSet.has(message.id)) {
 					generating = true;
 					const waitSeconds = attempt * 2;
 					responseMessage.error = null;
@@ -3773,6 +3779,7 @@
 				}
 				break;
 			}
+			skipRemainingRetriesSet.delete(message.id);
 		} finally {
 			generating = false;
 			generationController = null;
@@ -4551,6 +4558,7 @@
 										{continueResponse}
 										{regenerateResponse}
 										{retryWithoutProviderRestrictions}
+										{markSkipRemainingRetries}
 										{regenerateWithModel}
 										{mergeResponses}
 										{chatActionHandler}

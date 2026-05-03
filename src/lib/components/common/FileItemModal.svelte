@@ -8,7 +8,30 @@
 	import Modal from './Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Spinner from './Spinner.svelte';
-	import { getFileById } from '$lib/apis/files';
+	import { getFileById, getFileContentById } from '$lib/apis/files';
+
+	const TEXT_FILE_EXTS = new Set([
+		'txt', 'md', 'markdown', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson',
+		'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env', 'log', 'xml', 'svg',
+		'py', 'pyi', 'ipynb', 'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'vue',
+		'svelte', 'java', 'kt', 'kts', 'scala', 'groovy', 'c', 'cc', 'cpp',
+		'cxx', 'h', 'hpp', 'hxx', 'rs', 'go', 'rb', 'php', 'pl', 'pm', 'lua',
+		'r', 'jl', 'dart', 'swift', 'm', 'mm', 'cs', 'fs', 'fsx', 'ex', 'exs',
+		'erl', 'hs', 'ml', 'mli', 'clj', 'cljs', 'sh', 'bash', 'zsh', 'fish',
+		'ps1', 'bat', 'cmd', 'sql', 'graphql', 'gql', 'proto', 'css', 'scss',
+		'sass', 'less', 'tex', 'bib', 'srt', 'vtt', 'patch', 'diff',
+		'gitignore', 'dockerignore', 'editorconfig'
+	]);
+
+	const isTextLikeFile = (name: string, contentType: string) => {
+		const n = (name || '').toLowerCase();
+		if (n.endsWith('.pdf')) return false;
+		const dot = n.lastIndexOf('.');
+		const ext = dot >= 0 ? n.slice(dot + 1) : n;
+		if (ext && TEXT_FILE_EXTS.has(ext)) return true;
+		const ct = (contentType || '').toLowerCase();
+		return ct.startsWith('text/') && !ct.includes('html');
+	};
 
 	export let item;
 	export let show = false;
@@ -42,6 +65,22 @@
 			if (file) {
 				item.file = file || {};
 			}
+
+			const existing = (item?.file?.data?.content ?? '').trim();
+			const name = item?.name || item?.file?.filename || '';
+			const ct = item?.meta?.content_type || item?.file?.meta?.content_type || '';
+			if (!existing && !isPDF && !isAudio && isTextLikeFile(name, ct)) {
+				try {
+					const blob = await getFileContentById(item.id);
+					const text = blob ? await blob.text() : '';
+					if (!item.file) item.file = {};
+					if (!item.file.data) item.file.data = {};
+					item.file.data.content = text;
+				} catch (e) {
+					console.error('Error fetching file text content:', e);
+				}
+			}
+
 			loading = false;
 		}
 
