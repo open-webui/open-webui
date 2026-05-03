@@ -3824,6 +3824,35 @@ async def streaming_chat_response_handler(response, ctx):
                         },
                     )
 
+                selected_model_url = response.headers.get('X-Selected-Model-Url')
+                selected_model_url_idx = response.headers.get('X-Selected-Model-Url-Idx')
+                if selected_model_url:
+                    selected_model_url_idx_value = None
+                    try:
+                        selected_model_url_idx_value = int(selected_model_url_idx) if selected_model_url_idx is not None else None
+                    except (TypeError, ValueError):
+                        selected_model_url_idx_value = selected_model_url_idx
+
+                    selected_model_event = {
+                        'selected_model_url': selected_model_url,
+                        'selected_model_url_idx': selected_model_url_idx_value,
+                    }
+
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {
+                            'selectedModelUrl': selected_model_url,
+                            'selectedModelUrlIdx': selected_model_url_idx_value,
+                        },
+                    )
+                    await event_emitter(
+                        {
+                            'type': 'chat:completion',
+                            'data': selected_model_event,
+                        }
+                    )
+
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal usage

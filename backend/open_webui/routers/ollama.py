@@ -178,17 +178,16 @@ async def send_request(
             response_headers = _clean_proxy_headers(r.headers)
             if content_type:
                 response_headers['Content-Type'] = content_type
+            if response_envelope:
+                response_headers['X-Selected-Model-Url'] = response_envelope.get('selected_model_url', '')
+                selected_model_url_idx = response_envelope.get('selected_model_url_idx')
+                if selected_model_url_idx is not None:
+                    response_headers['X-Selected-Model-Url-Idx'] = str(selected_model_url_idx)
 
             streaming = True
 
-            async def prefixed_stream():
-                if response_envelope:
-                    yield f"data: {json.dumps(response_envelope)}\n\n".encode('utf-8')
-                async for chunk in stream_wrapper(r):
-                    yield chunk
-
             return StreamingResponse(
-                prefixed_stream(),
+                stream_wrapper(r),
                 status_code=r.status,
                 headers=response_headers,
             )
