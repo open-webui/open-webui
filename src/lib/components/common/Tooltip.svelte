@@ -2,6 +2,7 @@
 	import DOMPurify from 'dompurify';
 
 	import { onDestroy } from 'svelte';
+	import { mobile } from '$lib/stores';
 
 	import tippy from 'tippy.js';
 
@@ -12,7 +13,9 @@
 
 	export let placement = 'top';
 	export let content = `I'm a tooltip!`;
-	export let touch = true;
+	// Tippy.js touch prop: true|false|'hold'|['hold', delayMs].
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	export let touch: any = true;
 	export let theme = '';
 	export let offset = [0, 4];
 	export let allowHTML = true;
@@ -23,6 +26,15 @@
 
 	let tooltipElement;
 	let tooltipInstance;
+
+	// On mobile, tooltips intercept taps and need a second tap to dismiss —
+	// disable them by default. Callers that explicitly want long-press tooltips
+	// can pass touch="hold".
+	$: effectiveTouch = $mobile && touch !== 'hold' ? false : touch;
+
+	$: if (tooltipInstance) {
+		tooltipInstance.setProps({ touch: effectiveTouch });
+	}
 
 	$: if (tooltipElement && (content || elementId)) {
 		let tooltipContent = null;
@@ -41,7 +53,7 @@
 					content: tooltipContent,
 					placement: placement,
 					allowHTML: allowHTML,
-					touch: touch,
+					touch: effectiveTouch,
 					...(theme !== '' ? { theme } : { theme: 'claude' }),
 					arrow: false,
 					offset: offset,

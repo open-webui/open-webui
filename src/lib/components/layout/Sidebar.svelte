@@ -308,21 +308,32 @@
 	let touchend;
 
 	function checkDirection() {
+		if (!$mobile) return;
+
 		const screenWidth = window.innerWidth;
-		const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
-		if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
-			if (touchend.screenX < touchstart.screenX) {
-				showSidebar.set(false);
-			}
-			if (touchend.screenX > touchstart.screenX) {
+		const dx = touchend.screenX - touchstart.screenX;
+		const dy = Math.abs(touchend.screenY - touchstart.screenY);
+		const swipeDistance = Math.abs(dx);
+		const minDistance = Math.min(screenWidth / 8, 60);
+
+		// Reject mostly-vertical swipes (scrolls) and short flicks.
+		if (swipeDistance < minDistance || dy > swipeDistance) return;
+
+		if (!$showSidebar) {
+			// Open: must start near the left edge so we don't hijack normal taps.
+			if (touchstart.clientX < 24 && dx > 0) {
 				showSidebar.set(true);
+			}
+		} else {
+			// Close: any leftward swipe with sufficient horizontal intent.
+			if (dx < 0) {
+				showSidebar.set(false);
 			}
 		}
 	}
 
 	const onTouchStart = (e) => {
 		touchstart = e.changedTouches[0];
-		console.log(touchstart.clientX);
 	};
 
 	const onTouchEnd = (e) => {
@@ -505,12 +516,14 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
 {#if $showSidebar}
-	<div
+	<button
+		type="button"
+		aria-label={$i18n.t('Close Sidebar')}
 		class=" {$isApp
 			? ' ml-[4.5rem] md:ml-0'
-			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
-		on:mousedown={() => {
-			showSidebar.set(!$showSidebar);
+			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain cursor-default"
+		on:click={() => {
+			showSidebar.set(false);
 		}}
 	/>
 {/if}
@@ -1199,7 +1212,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
+			<div class="px-1.5 pt-1.5 pb-2 pb-safe sticky bottom-0 z-10 -mt-3 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>

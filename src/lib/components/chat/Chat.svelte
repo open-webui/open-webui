@@ -4641,7 +4641,7 @@
 							</div>
 							{/if}
 
-							<div class=" pb-2">
+							<div class=" pb-safe">
 								<MessageInput
 									bind:this={messageInput}
 									{history}

@@ -450,7 +450,7 @@
 		class="
 		      {id === $chatId || confirmEdit || selected
 			? 'from-manilla/40 dark:from-manilla-dark selected'
-			: `invisible ${$mobile ? '' : 'group-hover:visible'} from-gray-50 dark:from-gray-950`}
+			: `${$mobile ? '' : 'invisible group-hover:visible'} from-gray-50 dark:from-gray-950`}
 		          absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%

@@ -2435,7 +2435,7 @@
 														id="send-message-button"
 														class="{!(prompt === '' && files.length === 0)
 															? 'bg-book-cloth text-white hover:bg-kraft'
-															: 'text-white/70 bg-gray-200 dark:bg-gray-800 dark:text-gray-500 disabled'} transition-colors duration-200 ease-paper rounded-full p-1.5 self-center"
+															: 'text-white/70 bg-gray-200 dark:bg-gray-800 dark:text-gray-500 disabled'} transition-colors duration-200 ease-paper rounded-full p-1.5 max-md:p-2.5 self-center"
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>

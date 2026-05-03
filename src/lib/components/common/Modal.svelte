@@ -11,31 +11,34 @@
 
 	let modalElement = null;
 	let mounted = false;
+	let savedScrollY = 0;
 	// Create focus trap to trap user tabs inside modal
 	// https://www.w3.org/WAI/WCAG21/Understanding/focus-order.html
 	// https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
 	let focusTrap: FocusTrap.FocusTrap | null = null;
 
 	const sizeToWidth = (size) => {
+		// max-sm:w-full forces full width below Tailwind's sm breakpoint (640px)
+		// so modals don't get clipped on mobile while preserving desktop sizing.
 		if (size === 'full') {
 			return 'w-full';
 		}
 		if (size === 'xs') {
-			return 'w-[16rem]';
+			return 'max-sm:w-full w-[16rem]';
 		} else if (size === 'sm') {
-			return 'w-[30rem]';
+			return 'max-sm:w-full w-[30rem]';
 		} else if (size === 'md') {
-			return 'w-[42rem]';
+			return 'max-sm:w-full w-[42rem]';
 		} else if (size === 'lg') {
-			return 'w-[56rem]';
+			return 'max-sm:w-full w-[56rem]';
 		} else if (size === 'xl') {
-			return 'w-[70rem]';
+			return 'max-sm:w-full w-[70rem]';
 		} else if (size === '2xl') {
-			return 'w-[84rem]';
+			return 'max-sm:w-full w-[84rem]';
 		} else if (size === '3xl') {
-			return 'w-[100rem]';
+			return 'max-sm:w-full w-[100rem]';
 		} else {
-			return 'w-[56rem]';
+			return 'max-sm:w-full w-[56rem]';
 		}
 	};
 
@@ -51,6 +54,28 @@
 		return modals.length && modals[modals.length - 1] === modalElement;
 	};
 
+	const lockBodyScroll = () => {
+		// iOS Safari ignores `overflow:hidden` on body — pin position instead.
+		savedScrollY = window.scrollY;
+		document.body.style.position = 'fixed';
+		document.body.style.top = `-${savedScrollY}px`;
+		document.body.style.left = '0';
+		document.body.style.right = '0';
+		document.body.style.overflow = 'hidden';
+	};
+
+	const unlockBodyScroll = () => {
+		document.body.style.position = '';
+		document.body.style.top = '';
+		document.body.style.left = '';
+		document.body.style.right = '';
+		document.body.style.overflow = '';
+		if (savedScrollY) {
+			window.scrollTo(0, savedScrollY);
+			savedScrollY = 0;
+		}
+	};
+
 	onMount(() => {
 		mounted = true;
 	});
@@ -64,12 +89,12 @@
 		});
 		focusTrap.activate();
 		window.addEventListener('keydown', handleKeyDown);
-		document.body.style.overflow = 'hidden';
+		lockBodyScroll();
 	} else if (modalElement) {
 		focusTrap.deactivate();
 		window.removeEventListener('keydown', handleKeyDown);
 		document.body.removeChild(modalElement);
-		document.body.style.overflow = 'unset';
+		unlockBodyScroll();
 	}
 
 	onDestroy(() => {
@@ -80,6 +105,7 @@
 		if (modalElement) {
 			document.body.removeChild(modalElement);
 		}
+		unlockBodyScroll();
 	});
 </script>
 

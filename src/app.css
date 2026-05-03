@@ -864,3 +864,75 @@ body {
 	position: relative;
 	z-index: 0;
 }
+
+/*
+ * Mobile / touch baseline.
+ * (pointer: coarse) targets touchscreens. Splitting these from desktop styles
+ * keeps mouse-precise behaviors (precise tap-highlight, hover affordances) intact.
+ */
+@media (pointer: coarse) {
+	button,
+	a,
+	[role='button'],
+	input[type='button'],
+	input[type='submit'] {
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
+	}
+
+	/* Prevent iOS auto-zoom when focusing inputs (font-size must be >=16px). */
+	input:not([type='checkbox']):not([type='radio']),
+	textarea,
+	[contenteditable='true'] {
+		font-size: max(16px, 1em);
+	}
+}
+
+/* Expanded hit-target via ::after pseudo, without affecting layout/size.
+   Apply with class="tap-target" to icon-only buttons that visually <44px. */
+.tap-target {
+	position: relative;
+}
+.tap-target::after {
+	content: '';
+	position: absolute;
+	inset: 50% auto auto 50%;
+	width: max(100%, 44px);
+	height: max(100%, 44px);
+	transform: translate(-50%, -50%);
+}
+
+/* Safe-area utilities. Replace the equivalent Tailwind padding utility (pb-2,
+   py-1 etc.) on elements that touch the screen edge — env() is 0 on browsers
+   without safe areas, so the base value preserves the original design. */
+.pt-safe {
+	padding-top: calc(0.25rem + env(safe-area-inset-top));
+}
+.pb-safe {
+	padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+.pl-safe {
+	padding-left: env(safe-area-inset-left);
+}
+.pr-safe {
+	padding-right: env(safe-area-inset-right);
+}
+.mb-safe {
+	margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* Allow mobile body to size to visualViewport when keyboard is open
+   (input above keyboard). 100dvh handles dynamic viewport, fallback for older. */
+.h-screen-dvh {
+	height: 100vh;
+	height: 100dvh;
+}
+.min-h-screen-dvh {
+	min-height: 100vh;
+	min-height: 100dvh;
+}
+
+/* Pointer-fine-only tap-highlight (desktop browsers can keep their default). */
+@media (pointer: fine) {
+	/* No-op — default behavior preserved. */
+}

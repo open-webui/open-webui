@@ -75,7 +75,7 @@
 	aria-label="New Chat"
 />
 
-<nav class="sticky top-0 z-30 w-full py-1 -mb-8 flex flex-col items-center drag-region">
+<nav class="sticky top-0 z-30 w-full py-1 pt-safe -mb-8 flex flex-col items-center drag-region">
 	<div class="flex items-center w-full pl-1.5 pr-1">
 		<div
 			class=" bg-linear-to-b via-40% to-97% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
@@ -93,8 +93,9 @@
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
 								}}
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							>
-								<div class=" self-center p-1.5">
+								<div class=" self-center p-2.5">
 									<Sidebar />
 								</div>
 							</button>

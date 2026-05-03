@@ -97,4 +97,4 @@
 	}
 }
 
-@custom-variant hover (&:hover);
+@custom-variant hover (@media (hover: hover) and (pointer: fine) { &:hover });

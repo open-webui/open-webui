@@ -442,8 +442,10 @@
 		text-shadow: #c4c4c4 0 0 2px;
 	}
 
-	pre[class*='language-'] button:hover {
-		cursor: pointer;
-		background-color: #bcbabb;
+	@media (hover: hover) and (pointer: fine) {
+		pre[class*='language-'] button:hover {
+			cursor: pointer;
+			background-color: #bcbabb;
+		}
 	}
 </style>
