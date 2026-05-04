@@ -19,6 +19,7 @@
 		{ key: 'IBAN_CODE',     label: 'IBAN' },
 		{ key: 'PHONE_NUMBER',  label: 'Phone Number' },
 		{ key: 'ID',            label: 'ID' },
+		{ key: 'LOCATION',      label: 'Location' },
 	];
 
 	let entityToggles: Record<string, boolean> = {};
