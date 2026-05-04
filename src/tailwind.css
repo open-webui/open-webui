@@ -2,6 +2,13 @@
 
 @config '../tailwind.config.js';
 
+/* Tailwind v4's class detector doesn't reliably pick up `group-hover:visible`
+ * from the conditional class strings used by the message action buttons in
+ * ResponseMessage / UserMessage. Without these, the on-hover edit / copy /
+ * delete buttons stay `visibility: hidden` for every non-latest message.
+ * Source-list them so the variants always make it into the build. */
+@source inline("group-hover:visible group-hover:flex group-hover:opacity-100 group-hover:opacity-95");
+
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still

@@ -645,7 +645,7 @@
 
 {#key message.id}
 	<div
-		class=" flex w-full message-{message.id}"
+		class=" flex w-full message-{message.id} group"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
