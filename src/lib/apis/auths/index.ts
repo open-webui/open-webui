@@ -413,6 +413,9 @@ export const updateUserProfile = async (token: string, profile: object) => {
 		.catch((err) => {
 			console.error(err);
 			error = err.detail;
+			if (Array.isArray(error)) {
+				error = error.map((e: { msg?: string }) => e.msg).join('; ');
+			}
 			return null;
 		});
 
@@ -707,5 +710,35 @@ export const deleteAPIKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
+	return res;
+};
+
+export const deleteOAuthSession = async (token: string, provider: string) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/auths/oauth/sessions/${encodeURIComponent(provider)}`,
+		{
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
 	return res;
 };

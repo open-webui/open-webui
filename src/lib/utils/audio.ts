@@ -1,32 +1,39 @@
+type AudioQueueEvent = 'stop' | 'empty-queue' | 'id-change';
+
+interface AudioQueueStopDetail {
+	event: AudioQueueEvent;
+	id: string | null;
+}
+
+export type OnStoppedCallback = (detail: AudioQueueStopDetail) => void;
+
 export class AudioQueue {
-	constructor(audioElement) {
+	private audio: HTMLAudioElement;
+	private queue: string[] = [];
+	private current: string | null = null;
+	private readonly _onEnded = () => this.next();
+
+	id: string | null = null;
+	onStopped: OnStoppedCallback | null = null;
+
+	constructor(audioElement: HTMLAudioElement) {
 		this.audio = audioElement;
-		this.queue = [];
-		this.current = null;
-		this.id = null;
-
-		this._onEnded = () => this.next();
 		this.audio.addEventListener('ended', this._onEnded);
-
-		this.onStopped = null; // optional callback
 	}
 
-	setId(newId) {
-		console.log('Setting audio queue ID to:', newId);
-		if (this.id !== newId) {
-			this.stop();
-			this.id = newId;
-			if (this.onStopped) this.onStopped({ event: 'id-change', id: newId });
-		}
+	setId(newId: string) {
+		if (this.id === newId) return;
+
+		this.#halt();
+		this.id = newId;
+		this.onStopped?.({ event: 'id-change', id: newId });
 	}
 
-	setPlaybackRate(rate) {
-		console.log('Setting audio playback rate to:', rate);
+	setPlaybackRate(rate: number) {
 		this.audio.playbackRate = rate;
 	}
 
-	enqueue(url) {
-		console.log('Enqueuing audio URL:', url);
+	enqueue(url: string) {
 		this.queue.push(url);
 
 		// Auto-play if nothing is currently playing or loaded
@@ -44,30 +51,37 @@ export class AudioQueue {
 	}
 
 	next() {
-		this.current = this.queue.shift();
+		this.current = this.queue.shift() ?? null;
+
 		if (this.current) {
 			this.audio.src = this.current;
 			this.audio.play();
-			console.log('Playing audio URL:', this.current);
 		} else {
-			this.stop();
-			if (this.onStopped) this.onStopped({ event: 'empty-queue', id: this.id });
+			this.#halt();
+			this.onStopped?.({ event: 'empty-queue', id: this.id });
 		}
 	}
 
 	stop() {
+		this.#halt();
+		this.onStopped?.({ event: 'stop', id: this.id });
+	}
+
+	destroy() {
+		this.audio.removeEventListener('ended', this._onEnded);
+		this.#halt();
+		this.onStopped = null;
+	}
+
+	/**
+	 * Pause audio and clear queue without firing onStopped.
+	 * Callers that need the callback should invoke it themselves.
+	 */
+	#halt() {
 		this.audio.pause();
 		this.audio.currentTime = 0;
 		this.audio.src = '';
 		this.queue = [];
 		this.current = null;
-		if (this.onStopped) this.onStopped({ event: 'stop', id: this.id });
-	}
-
-	destroy() {
-		this.audio.removeEventListener('ended', this._onEnded);
-		this.stop();
-		this.onStopped = null;
-		this.audio = null;
 	}
 }

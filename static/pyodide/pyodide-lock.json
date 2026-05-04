@@ -4987,10 +4987,10 @@
     },
     "pathspec": {
       "name": "pathspec",
-      "version": "1.0.4",
-      "file_name": "pathspec-1.0.4-py3-none-any.whl",
+      "version": "1.1.0",
+      "file_name": "pathspec-1.1.0-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "fb6ae2fd4e7c921a165808a552060e722767cfa526f99ca5156ed2ce45a5c723",
+      "sha256": "574b128f7456bd899045ccd142dd446af7e6cfd0072d63ad73fbc55fbb4aaa42",
       "package_type": "package",
       "imports": [
         "pathspec"

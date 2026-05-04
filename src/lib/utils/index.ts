@@ -22,6 +22,7 @@ import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
+import { decode } from 'html-entities';
 
 //////////////////////////
 // Helper functions
@@ -52,6 +53,7 @@ export const replaceOutsideCode = (content: string, replacer: (str: string) => s
 };
 
 export const replaceTokens = (content, char, user) => {
+	if (!content.includes('{{')) return content;
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
@@ -103,6 +105,7 @@ function isChineseChar(char: string): boolean {
 // Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
 function processChineseContent(content: string): string {
 	// This function is used to process the response content before the response content is rendered.
+	if (!/[\u4e00-\u9fa5]/.test(content)) return content;
 	const lines = content.split('\n');
 	const processedLines = lines.map((line) => {
 		if (/[\u4e00-\u9fa5]/.test(line)) {
@@ -166,9 +169,8 @@ function processChineseDelimiters(
 	});
 }
 
-export function unescapeHtml(html: string) {
-	const doc = new DOMParser().parseFromString(html, 'text/html');
-	return doc.documentElement.textContent;
+export function unescapeHtml(html: string): string {
+	return decode(html);
 }
 
 export const capitalizeFirstLetter = (string) => {
@@ -518,7 +520,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			textArea.style.position = 'fixed';
 
 			document.body.appendChild(textArea);
-			textArea.focus();
+			textArea.focus({ preventScroll: true });
 			textArea.select();
 
 			try {
@@ -675,7 +677,9 @@ export const calculateSHA256 = async (file) => {
 
 export const getImportOrigin = (_chats) => {
 	// Check what external service chat imports are from
-	if ('mapping' in _chats[0]) {
+	// ChatGPT exports may include folder/project metadata entries without 'mapping',
+	// so we check if ANY item has a 'mapping' key instead of only the first one.
+	if (_chats.some((chat) => 'mapping' in chat)) {
 		return 'openai';
 	}
 	return 'webui';
@@ -704,6 +708,21 @@ export const getUserPosition = async (raw = false) => {
 	}
 };
 
+const extractOpenAIMessageContent = (message): string => {
+	// Extract text content from a ChatGPT message, handling various content formats
+	// (string parts, object parts like DALL-E images, text field fallback)
+	try {
+		const parts = message?.['content']?.['parts'];
+		if (Array.isArray(parts)) {
+			const textParts = parts.filter((p) => typeof p === 'string');
+			if (textParts.length > 0) return textParts.join('\n');
+		}
+		return message?.['content']?.['text'] || '';
+	} catch {
+		return '';
+	}
+};
+
 const convertOpenAIMessages = (convo) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
 	const mapping = convo['mapping'];
@@ -724,15 +743,18 @@ const convertOpenAIMessages = (convo) => {
 				// Skip chat messages with no content
 				continue;
 			} else {
+				const role = message['message']?.['author']?.['role'];
+				// Skip system and tool messages — they don't map to user/assistant
+				if (role === 'system' || role === 'tool') {
+					continue;
+				}
+
 				const new_chat = {
 					id: message_id,
 					parentId: lastId,
 					childrenIds: message['children'] || [],
-					role: message['message']?.['author']?.['role'] !== 'user' ? 'assistant' : 'user',
-					content:
-						message['message']?.['content']?.['parts']?.[0] ||
-						message['message']?.['content']?.['text'] ||
-						'',
+					role: role !== 'user' ? 'assistant' : 'user',
+					content: extractOpenAIMessageContent(message['message']),
 					model: 'gpt-3.5-turbo',
 					done: true,
 					context: null
@@ -743,6 +765,12 @@ const convertOpenAIMessages = (convo) => {
 		} catch (error) {
 			console.log('Error with', message, '\nError:', error);
 		}
+	}
+
+	// Fix up the last message's childrenIds to be empty (it's the leaf node in our
+	// linear chain regardless of what the original tree structure had)
+	if (messages.length > 0) {
+		messages[messages.length - 1].childrenIds = [];
 	}
 
 	const history: Record<PropertyKey, (typeof messages)[number]> = {};
@@ -771,18 +799,6 @@ const validateChat = (chat) => {
 		return false;
 	}
 
-	// Last message's children should be an empty array
-	const lastMessage = messages[messages.length - 1];
-	if (lastMessage.childrenIds.length !== 0) {
-		return false;
-	}
-
-	// First message's parent should be null
-	const firstMessage = messages[0];
-	if (firstMessage.parentId !== null) {
-		return false;
-	}
-
 	// Every message's content should be a string
 	for (const message of messages) {
 		if (typeof message.content !== 'string') {
@@ -797,7 +813,18 @@ export const convertOpenAIChats = (_chats) => {
 	// Create a list of dictionaries with each conversation from import
 	const chats = [];
 	let failed = 0;
+	let skipped = 0;
 	for (const convo of _chats) {
+		// Skip folder/project metadata entries that lack a 'mapping' key
+		if (!('mapping' in convo)) {
+			skipped++;
+			console.log(
+				'Skipping non-conversation entry (folder/project):',
+				convo['title'] ?? convo['id']
+			);
+			continue;
+		}
+
 		const chat = convertOpenAIMessages(convo);
 
 		if (validateChat(chat)) {
@@ -813,6 +840,9 @@ export const convertOpenAIChats = (_chats) => {
 		}
 	}
 	console.log(failed, 'Conversations could not be imported');
+	if (skipped > 0) {
+		console.log(skipped, 'Non-conversation entries (folders/projects) were skipped');
+	}
 	return chats;
 };
 
@@ -921,8 +951,19 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
+			// New format: result in body content; Old format: result in attribute
+			let resultText = '';
 			if (attributes.result) {
-				content = content.replace(match, unescapeHtml(attributes.result));
+				resultText = unescapeHtml(attributes.result);
+			} else {
+				// Extract body content (strip <summary>...</summary>)
+				const bodyMatch = match.match(/<summary>[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i);
+				if (bodyMatch && bodyMatch[1].trim()) {
+					resultText = unescapeHtml(bodyMatch[1].trim());
+				}
+			}
+			if (resultText) {
+				content = content.replace(match, resultText);
 			}
 		}
 	}
@@ -1700,13 +1741,33 @@ export const initMermaid = async () => {
 	return mermaid;
 };
 
-export const renderMermaidDiagram = async (mermaid, code: string) => {
-	const parseResult = await mermaid.parse(code, { suppressErrors: false });
-	if (parseResult) {
-		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-		return svg;
+const cleanupMermaidTempElements = (id: string) => {
+	if (typeof document === 'undefined') {
+		return;
 	}
-	return '';
+
+	document.getElementById(id)?.remove();
+	document.getElementById(`d${id}`)?.remove();
+	document.getElementById(`i${id}`)?.remove();
+};
+
+export const renderMermaidDiagram = async (
+	mermaid: typeof import('mermaid').default,
+	code: string,
+	renderId?: string
+) => {
+	const id = renderId ?? `mermaid-${uuidv4()}`;
+	try {
+		const parseResult = await mermaid.parse(code, { suppressErrors: false });
+		if (parseResult) {
+			const { svg } = await mermaid.render(id, code);
+			return svg;
+		}
+		return '';
+	} finally {
+		// Mermaid can leave temporary d*/i* wrappers on error paths.
+		cleanupMermaidTempElements(id);
+	}
 };
 
 export const renderVegaVisualization = async (spec: string, i18n?: any) => {

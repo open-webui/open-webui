@@ -245,6 +245,12 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
+                    # NOTE: Some providers (e.g. Moonshot/Kimi K2.5) require
+                    # reasoning_content as a top-level field on assistant
+                    # messages.  This should be handled externally via a
+                    # pipeline filter or connection-level middleware, not
+                    # here — adding it universally breaks strict providers
+                    # (OpenAI, Vertex AI, Azure) that reject unknown fields.
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == 'open_webui:code_interpreter':
@@ -591,6 +597,9 @@ def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
+    # Fast path: skip work when there are no null bytes (the common case)
+    if '\x00' not in text:
+        return text
     # Remove null bytes
     text = text.replace('\x00', '').replace('\u0000', '')
     # Remove invalid UTF-8 surrogate characters that can cause encoding errors
@@ -602,15 +611,36 @@ def sanitize_text_for_db(text: str) -> str:
     return text
 
 
-def sanitize_data_for_db(obj):
-    """Recursively sanitize all strings in a data structure for database storage."""
+def _strip_null_bytes_deep(obj):
+    """Inner recursive walk — only called when null bytes are known to be present."""
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     elif isinstance(obj, dict):
-        return {k: sanitize_data_for_db(v) for k, v in obj.items()}
+        return {k: _strip_null_bytes_deep(v) for k, v in obj.items()}
     elif isinstance(obj, list):
-        return [sanitize_data_for_db(v) for v in obj]
+        return [_strip_null_bytes_deep(v) for v in obj]
     return obj
+
+
+def sanitize_data_for_db(obj):
+    """Recursively sanitize all strings in a data structure for database storage.
+
+    Performs a fast pre-check: serializes the structure once and scans for
+    null bytes.  If none are found (the overwhelmingly common case), the
+    original object is returned immediately, skipping the expensive
+    recursive walk.
+    """
+    if isinstance(obj, str):
+        return sanitize_text_for_db(obj)
+    # Fast path: check for null bytes in the serialized form.
+    # json.dumps is implemented in C and much faster than a Python-level
+    # recursive walk over every leaf string.
+    try:
+        if '\x00' not in json.dumps(obj, ensure_ascii=False):
+            return obj
+    except (TypeError, ValueError):
+        pass
+    return _strip_null_bytes_deep(obj)
 
 
 def sanitize_metadata(metadata: dict) -> dict:
@@ -837,9 +867,9 @@ def throttle(interval: float = 10.0):
         last_calls = {}
         lock = threading.Lock()
 
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             if interval is None:
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
 
             key = (args, freeze(kwargs))
             now = time.time()
@@ -849,7 +879,7 @@ def throttle(interval: float = 10.0):
                 if now - last_calls.get(key, 0) < interval:
                     return None
                 last_calls[key] = now
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 
@@ -905,9 +935,17 @@ async def cleanup_response(
     session: Optional[aiohttp.ClientSession],
 ):
     if response:
-        response.close()
+        if not response.closed:
+            # aiohttp 3.9+ made ClientResponse.close() synchronous (returns None).
+            # Older versions returned a coroutine.  Handle both gracefully.
+            result = response.close()
+            if result is not None:
+                await result
     if session:
-        await session.close()
+        if not session.closed:
+            result = session.close()
+            if result is not None:
+                await result
 
 
 async def stream_wrapper(response, session, content_handler=None):
@@ -961,18 +999,15 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                         skip_mode = False
                         yield line
                     else:
-                        yield b'data: {}'
-                        yield b'\n'
+                        yield b'data: {}\n'
                 else:
                     # Normal mode: check if line exceeds limit
                     if len(line) > max_buffer_size:
                         skip_mode = True
-                        yield b'data: {}'
-                        yield b'\n'
+                        yield b'data: {}\n'
                         log.info(f'Skip mode triggered, line size: {len(line)}')
                     else:
-                        yield line
-                        yield b'\n'
+                        yield line + b'\n'
 
             # Save the last incomplete fragment
             buffer = lines[-1]
@@ -986,7 +1021,6 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
 
         # Process remaining buffer data
         if buffer and not skip_mode:
-            yield buffer
-            yield b'\n'
+            yield buffer + b'\n'
 
     return yield_safe_stream_chunks()

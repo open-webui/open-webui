@@ -44,6 +44,7 @@ from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.utils.access_control import has_access, has_connection_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
@@ -51,6 +52,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
@@ -85,16 +87,30 @@ from open_webui.tools.builtin import (
     view_file,
     view_knowledge_file,
     view_skill,
+    create_tasks,
+    update_task,
+    create_automation,
+    update_automation,
+    list_automations,
+    toggle_automation,
+    delete_automation,
+    search_calendar_events,
+    create_calendar_event,
+    update_calendar_event,
+    delete_calendar_event,
 )
 
 import copy
+from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 
 
 # Let no function be called without need, and let what
 # it yields justify the cost of running it.
-def get_async_tool_function_and_apply_extra_params(function: Callable, extra_params: dict) -> Callable[..., Awaitable]:
+async def get_async_tool_function_and_apply_extra_params(
+    function: Callable, extra_params: dict
+) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
@@ -131,13 +147,13 @@ def get_async_tool_function_and_apply_extra_params(function: Callable, extra_par
     return new_function
 
 
-def get_updated_tool_function(function: Callable, extra_params: dict):
+async def get_updated_tool_function(function: Callable, extra_params: dict):
     # Get the original function and merge updated params
     __function__ = getattr(function, '__function__', None)
     __extra_params__ = getattr(function, '__extra_params__', None)
 
     if __function__ is not None and __extra_params__ is not None:
-        return get_async_tool_function_and_apply_extra_params(
+        return await get_async_tool_function_and_apply_extra_params(
             __function__,
             {**__extra_params__, **extra_params},
         )
@@ -153,16 +169,16 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     tools_dict = {}
 
     # Get user's group memberships for access control checks
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
     for tool_id in tool_ids:
-        tool = Tools.get_tool_by_id(tool_id)
+        tool = await Tools.get_tool_by_id(tool_id)
         if tool:
             # Check access control for local tools
             if (
                 not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
                 and tool.user_id != user.id
-                and not AccessGrants.has_access(
+                and not await AccessGrants.has_access(
                     user_id=user.id,
                     resource_type='tool',
                     resource_id=tool.id,
@@ -175,7 +191,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
             module = request.app.state.TOOLS.get(tool_id, None)
             if module is None:
-                module, _ = load_tool_module_by_id(tool_id)
+                module, _ = await load_tool_module_by_id(tool_id)
                 request.app.state.TOOLS[tool_id] = module
 
             __user__ = {
@@ -184,11 +200,11 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
             # Set valves for the tool
             if hasattr(module, 'valves') and hasattr(module, 'Valves'):
-                valves = Tools.get_tool_valves_by_id(tool_id) or {}
+                valves = await Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
             if hasattr(module, 'UserValves'):
                 __user__['valves'] = module.UserValves(  # type: ignore
-                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                    **await Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
                 )
 
             for spec in tool.specs:
@@ -206,7 +222,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                 # convert to function that takes only model params and inserts custom params
                 function_name = spec['name']
                 tool_function = getattr(module, function_name)
-                callable = get_async_tool_function_and_apply_extra_params(
+                callable = await get_async_tool_function_and_apply_extra_params(
                     tool_function,
                     {
                         **extra_params,
@@ -278,7 +294,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                     tool_server_connection = connections[tool_server_idx]
 
                     # Check access control for tool server
-                    if not has_connection_access(user, tool_server_connection, user_group_ids):
+                    if not await has_connection_access(user, tool_server_connection, user_group_ids):
                         log.warning(f'Access denied to tool server {server_id} for user {user.id}')
                         continue
 
@@ -332,7 +348,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                             if metadata and metadata.get('message_id'):
                                 headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
 
-                        def make_tool_function(function_name, tool_server_data, headers):
+                        async def make_tool_function(function_name, tool_server_data, headers):
                             async def tool_function(**kwargs):
                                 return await execute_tool_server(
                                     url=tool_server_data['url'],
@@ -345,9 +361,9 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                             return tool_function
 
-                        tool_function = make_tool_function(function_name, tool_server_data, headers)
+                        tool_function = await make_tool_function(function_name, tool_server_data, headers)
 
-                        callable = get_async_tool_function_and_apply_extra_params(
+                        callable = await get_async_tool_function_and_apply_extra_params(
                             tool_function,
                             {},
                         )
@@ -374,7 +390,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     return tools_dict
 
 
-def get_builtin_tools(
+async def get_builtin_tools(
     request: Request, extra_params: dict, features: dict = None, model: dict = None
 ) -> dict[str, dict]:
     """
@@ -395,6 +411,18 @@ def get_builtin_tools(
     def is_builtin_tool_enabled(category: str) -> bool:
         builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools', {})
         return builtin_tools.get(category, True)
+
+    # Helper to check user-level feature permission (admins always pass)
+    user = extra_params.get('__user__', {})
+
+    async def has_user_permission(feature_key: str) -> bool:
+        if user.get('role') == 'admin':
+            return True
+        return await has_permission(
+            user.get('id', ''),
+            f'features.{feature_key}',
+            request.app.state.config.USER_PERMISSIONS,
+        )
 
     # Time utilities - available for date calculations
     if is_builtin_tool_enabled('time'):
@@ -439,7 +467,11 @@ def get_builtin_tools(
         builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools if builtin category enabled AND enabled for this chat
-    if is_builtin_tool_enabled('memory') and (features.get('memory') or get_model_capability('memory', False)):
+    if (
+        is_builtin_tool_enabled('memory')
+        and (features.get('memory') or get_model_capability('memory', False))
+        and await has_user_permission('memories')
+    ):
         builtin_functions.extend(
             [
                 search_memories,
@@ -456,6 +488,7 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_WEB_SEARCH', False)
         and get_model_capability('web_search')
         and features.get('web_search')
+        and await has_user_permission('web_search')
     ):
         builtin_functions.extend([search_web, fetch_url])
 
@@ -465,6 +498,7 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_IMAGE_GENERATION', False)
         and get_model_capability('image_generation')
         and features.get('image_generation')
+        and await has_user_permission('image_generation')
     ):
         builtin_functions.append(generate_image)
     if (
@@ -472,6 +506,7 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_IMAGE_EDIT', False)
         and get_model_capability('image_generation')
         and features.get('image_generation')
+        and await has_user_permission('image_generation')
     ):
         builtin_functions.append(edit_image)
 
@@ -481,15 +516,24 @@ def get_builtin_tools(
         and getattr(request.app.state.config, 'ENABLE_CODE_INTERPRETER', True)
         and get_model_capability('code_interpreter')
         and features.get('code_interpreter')
+        and await has_user_permission('code_interpreter')
     ):
         builtin_functions.append(execute_code)
 
-    # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
-    if is_builtin_tool_enabled('notes') and getattr(request.app.state.config, 'ENABLE_NOTES', False):
+    # Notes tools - search, view, create, and update user's notes
+    if (
+        is_builtin_tool_enabled('notes')
+        and getattr(request.app.state.config, 'ENABLE_NOTES', False)
+        and await has_user_permission('notes')
+    ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
 
-    # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
-    if is_builtin_tool_enabled('channels') and getattr(request.app.state.config, 'ENABLE_CHANNELS', False):
+    # Channels tools - search channels and messages
+    if (
+        is_builtin_tool_enabled('channels')
+        and getattr(request.app.state.config, 'ENABLE_CHANNELS', False)
+        and await has_user_permission('channels')
+    ):
         builtin_functions.extend(
             [
                 search_channels,
@@ -503,8 +547,32 @@ def get_builtin_tools(
     if extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
 
+    # Task management - break down complex work into trackable steps
+    if is_builtin_tool_enabled('tasks'):
+        builtin_functions.extend([create_tasks, update_task])
+
+    # Automation tools - create and manage scheduled automations from chat
+    if (
+        is_builtin_tool_enabled('automations')
+        and getattr(request.app.state.config, 'ENABLE_AUTOMATIONS', False)
+        and await has_user_permission('automations')
+    ):
+        builtin_functions.extend(
+            [create_automation, update_automation, list_automations, toggle_automation, delete_automation]
+        )
+
+    # Calendar tools - search/create/update/delete events
+    if (
+        is_builtin_tool_enabled('calendar')
+        and getattr(request.app.state.config, 'ENABLE_CALENDAR', False)
+        and await has_user_permission('calendar')
+    ):
+        builtin_functions.extend(
+            [search_calendar_events, create_calendar_event, update_calendar_event, delete_calendar_event]
+        )
+
     for func in builtin_functions:
-        callable = get_async_tool_function_and_apply_extra_params(
+        callable = await get_async_tool_function_and_apply_extra_params(
             func,
             {
                 '__request__': request,
@@ -691,20 +759,31 @@ def get_tool_specs(tool_module: object) -> list[dict]:
     return specs
 
 
-def resolve_schema(schema, components):
+def resolve_schema(schema, components, resolved_schemas=None):
     """
     Recursively resolves a JSON schema using OpenAPI components.
     """
     if not schema:
         return {}
 
+    if resolved_schemas is None:
+        resolved_schemas = set()
+
     if '$ref' in schema:
         ref_path = schema['$ref']
+        schema_name = ref_path.split('/')[-1]
+
+        if schema_name in resolved_schemas:
+            # Avoid infinite recursion on circular references
+            return {}
+
+        resolved_schemas.add(schema_name)
+
         ref_parts = ref_path.strip('#/').split('/')
         resolved = components
         for part in ref_parts[1:]:  # Skip the initial 'components'
             resolved = resolved.get(part, {})
-        return resolve_schema(resolved, components)
+        return resolve_schema(resolved, components, resolved_schemas)
 
     resolved_schema = copy.deepcopy(schema)
 
@@ -752,7 +831,7 @@ def convert_openapi_to_tool_payload(openapi_spec):
                     if not description:
                         description = param.get('description') or ''
                     if param_schema.get('enum') and isinstance(param_schema.get('enum'), list):
-                        description += f'. Possible values: {", ".join(param_schema.get("enum"))}'
+                        description += f'. Possible values: {", ".join(str(v) for v in param_schema.get("enum"))}'
                     param_property = {
                         'type': param_schema.get('type') or 'string',
                         'description': description,
@@ -795,7 +874,9 @@ async def set_tool_servers(request: Request):
     request.app.state.TOOL_SERVERS = await get_tool_servers_data(request.app.state.config.TOOL_SERVER_CONNECTIONS)
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set('tool_servers', json.dumps(request.app.state.TOOL_SERVERS))
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:tool_servers', json.dumps(request.app.state.TOOL_SERVERS)
+        )
 
     return request.app.state.TOOL_SERVERS
 
@@ -804,7 +885,7 @@ async def get_tool_servers(request: Request):
     tool_servers = []
     if request.app.state.redis is not None:
         try:
-            tool_servers = json.loads(await request.app.state.redis.get('tool_servers'))
+            tool_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
             request.app.state.TOOL_SERVERS = tool_servers
         except Exception as e:
             log.error(f'Error fetching tool_servers from Redis: {e}')
@@ -827,7 +908,9 @@ async def get_terminal_cwd(
             timeout=aiohttp.ClientTimeout(total=5),
             trust_env=True,
         ) as session:
-            async with session.get(cwd_url, headers=headers, cookies=cookies or {}) as resp:
+            async with session.get(
+                cwd_url, headers=headers, cookies=cookies or {}, ssl=AIOHTTP_CLIENT_SESSION_SSL
+            ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get('cwd')
@@ -854,7 +937,7 @@ async def get_terminal_system_prompt(
             trust_env=True,
         ) as session:
             # 1. Check feature flag
-            async with session.get(f'{base}/api/config') as resp:
+            async with session.get(f'{base}/api/config', ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
                 if resp.status != 200:
                     return None
                 config = await resp.json()
@@ -862,7 +945,9 @@ async def get_terminal_system_prompt(
                     return None
 
             # 2. Fetch system prompt
-            async with session.get(f'{base}/system', headers=headers, cookies=cookies or {}) as resp:
+            async with session.get(
+                f'{base}/system', headers=headers, cookies=cookies or {}, ssl=AIOHTTP_CLIENT_SESSION_SSL
+            ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get('prompt')
@@ -930,7 +1015,9 @@ async def set_terminal_servers(request: Request):
     )
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set('terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS))
+        await request.app.state.redis.set(
+            f'{REDIS_KEY_PREFIX}:terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS)
+        )
 
     return request.app.state.TERMINAL_SERVERS
 
@@ -940,7 +1027,7 @@ async def get_terminal_servers(request: Request):
     terminal_servers = []
     if request.app.state.redis is not None:
         try:
-            terminal_servers = json.loads(await request.app.state.redis.get('terminal_servers'))
+            terminal_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
             request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
@@ -970,8 +1057,8 @@ async def get_terminal_tools(
         log.warning(f'Terminal server not found: {terminal_id}')
         return {}
 
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-    if not has_connection_access(user, connection, user_group_ids):
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    if not await has_connection_access(user, connection, user_group_ids):
         log.warning(f'Access denied to terminal {terminal_id} for user {user.id}')
         return {}
 
@@ -1004,6 +1091,13 @@ async def get_terminal_tools(
     # auth_type == "none": no Authorization header
 
     system_prompt = server_data.get('system_prompt')
+
+    # Use chat_id as the per-session key for cwd tracking
+    metadata = extra_params.get('__metadata__', {})
+    session_id = metadata.get('chat_id')
+    if session_id:
+        headers['X-Session-Id'] = session_id
+
     terminal_cwd = await get_terminal_cwd(connection.get('url', ''), headers, cookies)
 
     tools_dict = {}
@@ -1016,7 +1110,7 @@ async def get_terminal_tools(
                 tool_spec.get('description', '') + f'\n\nThe current working directory is: {terminal_cwd}'
             )
 
-        def make_tool_function(fn_name, srv_data, hdrs, cks):
+        async def make_tool_function(fn_name, srv_data, hdrs, cks):
             async def tool_function(**kwargs):
                 return await execute_tool_server(
                     url=srv_data['url'],
@@ -1029,8 +1123,8 @@ async def get_terminal_tools(
 
             return tool_function
 
-        tool_function = make_tool_function(function_name, server_data, headers, cookies)
-        callable = get_async_tool_function_and_apply_extra_params(tool_function, {})
+        tool_function = await make_tool_function(function_name, server_data, headers, cookies)
+        callable = await get_async_tool_function_and_apply_extra_params(tool_function, {})
 
         tools_dict[function_name] = {
             'tool_id': f'terminal:{terminal_id}',

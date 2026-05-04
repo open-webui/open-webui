@@ -22,6 +22,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import PageEdit from '$lib/components/icons/PageEdit.svelte';
 	import Chats from './InputMenu/Chats.svelte';
+	import Files from './InputMenu/Files.svelte';
 	import Notes from './InputMenu/Notes.svelte';
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
@@ -141,6 +142,7 @@
 							on:click={() => {
 								if (fileUploadEnabled) {
 									uploadFilesHandler();
+									show = false;
 								}
 							}}
 						>
@@ -174,6 +176,7 @@
 											cameraInputElement.click();
 										}
 									}
+									show = false;
 								}
 							}}
 						>
@@ -196,11 +199,44 @@
 							on:click={() => {
 								if (webUploadEnabled) {
 									showAttachWebpageModal = true;
+									show = false;
 								}
 							}}
 						>
 							<GlobeAlt />
 							<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
+						</button>
+					</Tooltip>
+
+					<Tooltip
+						content={fileUploadCapableModels.length !== selectedModels.length
+							? $i18n.t('Model(s) do not support file upload')
+							: !fileUploadEnabled
+								? $i18n.t('You do not have permission to upload files.')
+								: ''}
+						className="w-full"
+					>
+						<button
+							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								? 'opacity-50'
+								: ''}"
+							on:click={() => {
+								if (fileUploadEnabled) {
+									tab = 'files';
+								}
+							}}
+						>
+							<DocumentArrowUp />
+
+							<div class="flex items-center w-full justify-between">
+								<div class="line-clamp-1">
+									{$i18n.t('Attach Files')}
+								</div>
+
+								<div class="text-gray-500">
+									<ChevronRight />
+								</div>
+							</div>
 						</button>
 					</Tooltip>
 
@@ -303,6 +339,7 @@
 								type="button"
 								on:click={() => {
 									uploadGoogleDriveHandler();
+									show = false;
 								}}
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="w-4">
@@ -481,6 +518,25 @@
 
 					<Notes {onSelect} />
 				</div>
+			{:else if tab === 'files'}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+
+						<div class="flex items-center w-full justify-between">
+							<div>
+								{$i18n.t('Files')}
+							</div>
+						</div>
+					</button>
+
+					<Files {onSelect} />
+				</div>
 			{:else if tab === 'chats'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
@@ -523,6 +579,7 @@
 							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
+								show = false;
 							}}
 						>
 							<div class="flex flex-col">
@@ -537,6 +594,7 @@
 							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
+								show = false;
 							}}
 						>
 							<div class="flex flex-col">

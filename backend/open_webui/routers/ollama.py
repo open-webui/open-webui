@@ -15,7 +15,7 @@ from typing import Optional, Union
 from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
-import requests
+
 
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.models.chats import Chats
@@ -39,17 +39,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_async_session
 
 
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
+from open_webui.utils.access_control import check_model_access
 from open_webui.utils.misc import (
     calculate_sha256,
+)
+from open_webui.utils.session_pool import (
     cleanup_response,
+    get_session,
     stream_wrapper,
 )
 from open_webui.utils.payload import (
@@ -82,6 +86,17 @@ log = logging.getLogger(__name__)
 #
 ##########################################
 
+# Headers that become stale after aiohttp auto-decompresses the upstream
+# response body.  Forwarding them verbatim causes desktop / programmatic
+# clients to attempt decompression of an already-decoded payload, resulting
+# in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
+_STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
+
+
+def _clean_proxy_headers(raw_headers) -> dict:
+    """Return a copy of *raw_headers* with stale encoding headers removed."""
+    return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
+
 
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
@@ -107,19 +122,21 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
-async def send_post_request(
+async def send_request(
     url: str,
-    payload: Union[str, bytes],
-    stream: bool = True,
+    method: str = 'POST',
+    *,
+    payload: Optional[Union[str, bytes]] = None,
     key: Optional[str] = None,
-    content_type: Optional[str] = None,
     user: UserModel = None,
+    stream: bool = False,
+    content_type: Optional[str] = None,
     metadata: Optional[dict] = None,
 ):
     r = None
     streaming = False
     try:
-        session = aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT))
+        session = await get_session()
 
         headers = {
             'Content-Type': 'application/json',
@@ -131,57 +148,58 @@ async def send_post_request(
             if metadata and metadata.get('chat_id'):
                 headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
 
-        r = await session.post(
+        r = await session.request(
+            method,
             url,
             data=payload,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
-        if r.ok is False:
+        if not r.ok:
             try:
                 res = await r.json()
-                await cleanup_response(r, session)
                 if 'error' in res:
                     raise HTTPException(status_code=r.status, detail=res['error'])
-            except HTTPException as e:
-                raise e  # Re-raise HTTPException to be handled by FastAPI
+            except HTTPException:
+                raise
             except Exception as e:
                 log.error(f'Failed to parse error response: {e}')
-                raise HTTPException(
-                    status_code=r.status,
-                    detail=f'Open WebUI: Server Connection Error',
-                )
+            raise HTTPException(
+                status_code=r.status,
+                detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
+            )
 
-        r.raise_for_status()  # Raises an error for bad responses (4xx, 5xx)
+        r.raise_for_status()
+
         if stream:
-            response_headers = dict(r.headers)
-
+            response_headers = _clean_proxy_headers(r.headers)
             if content_type:
                 response_headers['Content-Type'] = content_type
 
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r, session),
+                stream_wrapper(r),
                 status_code=r.status,
                 headers=response_headers,
             )
         else:
-            res = await r.json()
-            return res
+            try:
+                return await r.json()
+            except Exception:
+                return None
 
-    except HTTPException as e:
-        raise e  # Re-raise HTTPException to be handled by FastAPI
+    except HTTPException:
+        raise
     except Exception as e:
-        detail = f'Ollama: {e}'
-
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=detail if e else 'Open WebUI: Server Connection Error',
+            detail=f'Ollama: {e}' if str(e) else ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
         )
     finally:
         if not streaming:
-            await cleanup_response(r, session)
+            await cleanup_response(r)
 
 
 def get_api_key(idx, url, configs):
@@ -244,7 +262,7 @@ async def verify_connection(form_data: ConnectionVerificationForm, user=Depends(
                 return data
         except aiohttp.ClientError as e:
             log.exception(f'Client error: {str(e)}')
-            raise HTTPException(status_code=500, detail='Open WebUI: Server Connection Error')
+            raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
         except Exception as e:
             log.exception(f'Unexpected error: {e}')
             error_detail = f'Unexpected error: {str(e)}'
@@ -395,11 +413,11 @@ async def get_all_models(request: Request, user: UserModel = None):
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model['model'] for model in models.get('models', [])]
-    model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+    model_infos = {model_info.id: model_info for model_info in await Models.get_models_by_ids(model_ids, db=db)}
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
-    accessible_model_ids = AccessGrants.get_accessible_resource_ids(
+    accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user.id,
         resource_type='model',
         resource_ids=list(model_infos.keys()),
@@ -421,7 +439,7 @@ async def get_filtered_models(models, user, db=None):
 @router.get('/api/tags/{url_idx}')
 async def get_ollama_tags(request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     models = []
 
@@ -430,40 +448,7 @@ async def get_ollama_tags(request: Request, url_idx: Optional[int] = None, user=
     else:
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
         key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
-
-        r = None
-        try:
-            headers = {
-                **({'Authorization': f'Bearer {key}'} if key else {}),
-            }
-
-            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                headers = include_user_info_headers(headers, user)
-
-            r = requests.request(
-                method='GET',
-                url=f'{url}/api/tags',
-                headers=headers,
-            )
-            r.raise_for_status()
-
-            models = r.json()
-        except Exception as e:
-            log.exception(e)
-
-            detail = None
-            if r is not None:
-                try:
-                    res = r.json()
-                    if 'error' in res:
-                        detail = f'Ollama: {res["error"]}'
-                except Exception:
-                    detail = f'Ollama: {e}'
-
-            raise HTTPException(
-                status_code=r.status_code if r else 500,
-                detail=detail if detail else 'Open WebUI: Server Connection Error',
-            )
+        models = await send_request(f'{url}/api/tags', 'GET', key=key, user=user)
 
     if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
         models['models'] = await get_filtered_models(models, user)
@@ -569,29 +554,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
                 )
         else:
             url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-
-            r = None
-            try:
-                r = requests.request(method='GET', url=f'{url}/api/version')
-                r.raise_for_status()
-
-                return r.json()
-            except Exception as e:
-                log.exception(e)
-
-                detail = None
-                if r is not None:
-                    try:
-                        res = r.json()
-                        if 'error' in res:
-                            detail = f'Ollama: {res["error"]}'
-                    except Exception:
-                        detail = f'Ollama: {e}'
-
-                raise HTTPException(
-                    status_code=r.status_code if r else 500,
-                    detail=detail if detail else 'Open WebUI: Server Connection Error',
-                )
+            return await send_request(f'{url}/api/version', 'GET')
     else:
         return {'version': False}
 
@@ -640,10 +603,9 @@ async def unload_model(
         payload = {'model': model_name, 'keep_alive': 0, 'prompt': ''}
 
         try:
-            res = await send_post_request(
-                url=f'{url}/api/generate',
+            res = await send_request(
+                f'{url}/api/generate',
                 payload=json.dumps(payload),
-                stream=False,
                 key=key,
                 user=user,
             )
@@ -670,7 +632,7 @@ async def pull_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
@@ -681,11 +643,12 @@ async def pull_model(
     # Admin should be able to pull models from any source
     payload = {**form_data, 'insecure': True}
 
-    return await send_post_request(
-        url=f'{url}/api/pull',
+    return await send_request(
+        f'{url}/api/pull',
         payload=json.dumps(payload),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=True,
     )
 
 
@@ -704,7 +667,7 @@ async def push_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     if url_idx is None:
         await get_all_models(request, user=user)
@@ -721,11 +684,12 @@ async def push_model(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.debug(f'url: {url}')
 
-    return await send_post_request(
-        url=f'{url}/api/push',
+    return await send_request(
+        f'{url}/api/push',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=True,
     )
 
 
@@ -746,16 +710,17 @@ async def create_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.debug(f'form_data: {form_data}')
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
 
-    return await send_post_request(
-        url=f'{url}/api/create',
+    return await send_request(
+        f'{url}/api/create',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=True,
     )
 
 
@@ -773,7 +738,7 @@ async def copy_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     if url_idx is None:
         await get_all_models(request, user=user)
@@ -790,41 +755,13 @@ async def copy_model(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
-    try:
-        headers = {
-            'Content-Type': 'application/json',
-            **({'Authorization': f'Bearer {key}'} if key else {}),
-        }
-
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-
-        r = requests.request(
-            method='POST',
-            url=f'{url}/api/copy',
-            headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
-        r.raise_for_status()
-
-        log.debug(f'r.text: {r.text}')
-        return True
-    except Exception as e:
-        log.exception(e)
-
-        detail = None
-        if r is not None:
-            try:
-                res = r.json()
-                if 'error' in res:
-                    detail = f'Ollama: {res["error"]}'
-            except Exception:
-                detail = f'Ollama: {e}'
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=detail if detail else 'Open WebUI: Server Connection Error',
-        )
+    await send_request(
+        f'{url}/api/copy',
+        payload=form_data.model_dump_json(exclude_none=True).encode(),
+        key=key,
+        user=user,
+    )
+    return True
 
 
 @router.delete('/api/delete')
@@ -836,7 +773,7 @@ async def delete_model(
     user=Depends(get_admin_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
@@ -858,56 +795,31 @@ async def delete_model(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
-    r = None
-    try:
-        headers = {
-            'Content-Type': 'application/json',
-            **({'Authorization': f'Bearer {key}'} if key else {}),
-        }
-
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-
-        r = requests.request(
-            method='DELETE',
-            url=f'{url}/api/delete',
-            headers=headers,
-            json=form_data,
-        )
-        r.raise_for_status()
-
-        log.debug(f'r.text: {r.text}')
-        return True
-    except Exception as e:
-        log.exception(e)
-
-        detail = None
-        if r is not None:
-            try:
-                res = r.json()
-                if 'error' in res:
-                    detail = f'Ollama: {res["error"]}'
-            except Exception:
-                detail = f'Ollama: {e}'
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=detail if detail else 'Open WebUI: Server Connection Error',
-        )
+    await send_request(
+        f'{url}/api/delete',
+        'DELETE',
+        payload=json.dumps(form_data),
+        key=key,
+        user=user,
+    )
+    return True
 
 
 @router.post('/api/show')
 async def show_model_info(request: Request, form_data: ModelNameForm, user=Depends(get_verified_user)):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     form_data = form_data.model_dump(exclude_none=True)
     form_data['model'] = form_data.get('model', form_data.get('name'))
 
+    model = form_data.get('model')
+
+    # Enforce per-model access control
+    await check_model_access(user, await Models.get_model_by_id(model), BYPASS_MODEL_ACCESS_CONTROL)
+
     await get_all_models(request, user=user)
     models = request.app.state.OLLAMA_MODELS
-
-    model = form_data.get('model')
 
     if model not in models:
         raise HTTPException(
@@ -920,35 +832,12 @@ async def show_model_info(request: Request, form_data: ModelNameForm, user=Depen
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
-    try:
-        headers = {
-            'Content-Type': 'application/json',
-            **({'Authorization': f'Bearer {key}'} if key else {}),
-        }
-
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-
-        r = requests.request(method='POST', url=f'{url}/api/show', headers=headers, json=form_data)
-        r.raise_for_status()
-
-        return r.json()
-    except Exception as e:
-        log.exception(e)
-
-        detail = None
-        if r is not None:
-            try:
-                res = r.json()
-                if 'error' in res:
-                    detail = f'Ollama: {res["error"]}'
-            except Exception:
-                detail = f'Ollama: {e}'
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=detail if detail else 'Open WebUI: Server Connection Error',
-        )
+    return await send_request(
+        f'{url}/api/show',
+        payload=json.dumps(form_data),
+        key=key,
+        user=user,
+    )
 
 
 class GenerateEmbedForm(BaseModel):
@@ -972,9 +861,12 @@ async def embed(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.info(f'generate_ollama_batch_embeddings {form_data}')
+
+    # Enforce per-model access control
+    await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
 
     if url_idx is None:
         model = form_data.model
@@ -1004,41 +896,12 @@ async def embed(
     if prefix_id:
         form_data.model = form_data.model.replace(f'{prefix_id}.', '')
 
-    try:
-        headers = {
-            'Content-Type': 'application/json',
-            **({'Authorization': f'Bearer {key}'} if key else {}),
-        }
-
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-
-        r = requests.request(
-            method='POST',
-            url=f'{url}/api/embed',
-            headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
-        r.raise_for_status()
-
-        data = r.json()
-        return data
-    except Exception as e:
-        log.exception(e)
-
-        detail = None
-        if r is not None:
-            try:
-                res = r.json()
-                if 'error' in res:
-                    detail = f'Ollama: {res["error"]}'
-            except Exception:
-                detail = f'Ollama: {e}'
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=detail if detail else 'Open WebUI: Server Connection Error',
-        )
+    return await send_request(
+        f'{url}/api/embed',
+        payload=form_data.model_dump_json(exclude_none=True).encode(),
+        key=key,
+        user=user,
+    )
 
 
 class GenerateEmbeddingsForm(BaseModel):
@@ -1057,9 +920,12 @@ async def embeddings(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.info(f'generate_ollama_embeddings {form_data}')
+
+    # Enforce per-model access control
+    await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
 
     if url_idx is None:
         model = form_data.model
@@ -1089,41 +955,12 @@ async def embeddings(
     if prefix_id:
         form_data.model = form_data.model.replace(f'{prefix_id}.', '')
 
-    try:
-        headers = {
-            'Content-Type': 'application/json',
-            **({'Authorization': f'Bearer {key}'} if key else {}),
-        }
-
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-
-        r = requests.request(
-            method='POST',
-            url=f'{url}/api/embeddings',
-            headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
-        r.raise_for_status()
-
-        data = r.json()
-        return data
-    except Exception as e:
-        log.exception(e)
-
-        detail = None
-        if r is not None:
-            try:
-                res = r.json()
-                if 'error' in res:
-                    detail = f'Ollama: {res["error"]}'
-            except Exception:
-                detail = f'Ollama: {e}'
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=detail if detail else 'Open WebUI: Server Connection Error',
-        )
+    return await send_request(
+        f'{url}/api/embeddings',
+        payload=form_data.model_dump_json(exclude_none=True).encode(),
+        key=key,
+        user=user,
+    )
 
 
 class GenerateCompletionForm(BaseModel):
@@ -1150,13 +987,17 @@ async def generate_completion(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
+
+    # Enforce per-model access control
+    await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
 
     if url_idx is None:
         await get_all_models(request, user=user)
         models = request.app.state.OLLAMA_MODELS
 
         model = form_data.model
+
         if model in models:
             url_idx = random.choice(models[model]['urls'])
         else:
@@ -1175,11 +1016,12 @@ async def generate_completion(
     if prefix_id:
         form_data.model = form_data.model.replace(f'{prefix_id}.', '')
 
-    return await send_post_request(
-        url=f'{url}/api/generate',
+    return await send_request(
+        f'{url}/api/generate',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=True,
     )
 
 
@@ -1188,6 +1030,8 @@ class ChatMessage(BaseModel):
     content: Optional[str] = None
     tool_calls: Optional[list[dict]] = None
     images: Optional[list[str]] = None
+
+    model_config = ConfigDict(extra='allow')
 
     @validator('content', pre=True)
     @classmethod
@@ -1236,9 +1080,9 @@ async def generate_chat_completion(
     bypass_system_prompt: bool = False,
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
@@ -1267,7 +1111,7 @@ async def generate_chat_completion(
         del payload['metadata']
 
     model_id = payload['model']
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:
@@ -1285,29 +1129,9 @@ async def generate_chat_completion(
             if not bypass_system_prompt:
                 payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
-        # Check if user has access to the model
-        if not bypass_filter and user.role == 'user':
-            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
-    elif not bypass_filter:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        await check_model_access(user, model_info, bypass_filter)
+    else:
+        await check_model_access(user, None, bypass_filter)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -1319,13 +1143,13 @@ async def generate_chat_completion(
     if prefix_id:
         payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
-    return await send_post_request(
-        url=f'{url}/api/chat',
+    return await send_request(
+        f'{url}/api/chat',
         payload=json.dumps(payload),
-        stream=form_data.stream,
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
-        content_type='application/x-ndjson',
         user=user,
+        stream=form_data.stream,
+        content_type='application/x-ndjson',
         metadata=metadata,
     )
 
@@ -1365,7 +1189,7 @@ async def generate_openai_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
@@ -1385,7 +1209,7 @@ async def generate_openai_completion(
         del payload['metadata']
 
     model_id = form_data.model
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
@@ -1394,29 +1218,9 @@ async def generate_openai_completion(
         if params:
             payload = apply_model_params_to_body_openai(params, payload)
 
-        # Check if user has access to the model
-        if user.role == 'user':
-            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
+        await check_model_access(user, model_info)
     else:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -1429,12 +1233,12 @@ async def generate_openai_completion(
     if prefix_id:
         payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
-    return await send_post_request(
-        url=f'{url}/v1/completions',
+    return await send_request(
+        f'{url}/v1/completions',
         payload=json.dumps(payload),
-        stream=payload.get('stream', False),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=payload.get('stream', False),
         metadata=metadata,
     )
 
@@ -1447,7 +1251,7 @@ async def generate_openai_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
@@ -1467,7 +1271,7 @@ async def generate_openai_chat_completion(
         del payload['metadata']
 
     model_id = completion_form.model
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
@@ -1480,29 +1284,9 @@ async def generate_openai_chat_completion(
             payload = apply_model_params_to_body_openai(params, payload)
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
-        # Check if user has access to the model
-        if user.role == 'user':
-            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
+        await check_model_access(user, model_info)
     else:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -1514,12 +1298,12 @@ async def generate_openai_chat_completion(
     if prefix_id:
         payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
-    return await send_post_request(
-        url=f'{url}/v1/chat/completions',
+    return await send_request(
+        f'{url}/v1/chat/completions',
         payload=json.dumps(payload),
-        stream=payload.get('stream', False),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=payload.get('stream', False),
         metadata=metadata,
     )
 
@@ -1542,39 +1326,19 @@ async def generate_anthropic_messages(
     See https://docs.ollama.com/api/anthropic-compatibility
     """
     if not request.app.state.config.ENABLE_OLLAMA_API:
-        raise HTTPException(status_code=503, detail='Ollama API is disabled')
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     payload = {**form_data}
     model_id = payload.get('model', '')
 
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
 
-        # Check if user has access to the model
-        if user.role == 'user':
-            user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
-            if not (
-                user.id == model_info.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='model',
-                    resource_id=model_info.id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail='Model not found',
-                )
+        await check_model_access(user, model_info)
     else:
-        if user.role != 'admin':
-            raise HTTPException(
-                status_code=403,
-                detail='Model not found',
-            )
+        await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -1586,13 +1350,71 @@ async def generate_anthropic_messages(
     if prefix_id:
         payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
 
-    return await send_post_request(
-        url=f'{url}/v1/messages',
+    return await send_request(
+        f'{url}/v1/messages',
         payload=json.dumps(payload),
-        stream=payload.get('stream', False),
-        content_type='text/event-stream' if payload.get('stream', False) else None,
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        stream=payload.get('stream', False),
+        content_type='text/event-stream' if payload.get('stream', False) else None,
+    )
+
+
+class ResponsesForm(BaseModel):
+    model: str
+
+    model_config = ConfigDict(extra='allow')
+
+
+@router.post('/v1/responses')
+@router.post('/v1/responses/{url_idx}')
+async def generate_responses(
+    request: Request,
+    form_data: ResponsesForm,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    """
+    Proxy for Ollama's OpenAI-compatible /v1/responses endpoint.
+
+    Forwards the request as-is to the Ollama backend, applying the same
+    model resolution, access control, and prefix_id handling used by
+    the OpenAI-compatible /v1/chat/completions proxy.
+
+    See https://ollama.com/blog/responses-api
+    """
+    if not request.app.state.config.ENABLE_OLLAMA_API:
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
+
+    payload = form_data.model_dump()
+    model_id = form_data.model
+
+    model_info = await Models.get_model_by_id(model_id)
+    if model_info:
+        if model_info.base_model_id:
+            payload['model'] = model_info.base_model_id
+
+        await check_model_access(user, model_info)
+    else:
+        await check_model_access(user, None)
+
+    url, url_idx = await get_ollama_url(request, payload['model'], url_idx)
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
+
+    prefix_id = api_config.get('prefix_id', None)
+    if prefix_id:
+        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+
+    return await send_request(
+        f'{url}/v1/responses',
+        payload=json.dumps(payload),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
+        user=user,
+        stream=payload.get('stream', False),
+        content_type='text/event-stream' if payload.get('stream', False) else None,
     )
 
 
@@ -1602,7 +1424,7 @@ async def get_openai_models(
     request: Request,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     models = []
     if url_idx is None:
@@ -1619,45 +1441,26 @@ async def get_openai_models(
 
     else:
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-        try:
-            r = requests.request(method='GET', url=f'{url}/api/tags')
-            r.raise_for_status()
+        model_list = await send_request(f'{url}/api/tags', 'GET')
 
-            model_list = r.json()
-
-            models = [
-                {
-                    'id': model['model'],
-                    'object': 'model',
-                    'created': int(time.time()),
-                    'owned_by': 'openai',
-                }
-                for model in models['models']
-            ]
-        except Exception as e:
-            log.exception(e)
-            error_detail = 'Open WebUI: Server Connection Error'
-            if r is not None:
-                try:
-                    res = r.json()
-                    if 'error' in res:
-                        error_detail = f'Ollama: {res["error"]}'
-                except Exception:
-                    error_detail = f'Ollama: {e}'
-
-            raise HTTPException(
-                status_code=r.status_code if r else 500,
-                detail=error_detail,
-            )
+        models = [
+            {
+                'id': model['model'],
+                'object': 'model',
+                'created': int(time.time()),
+                'owned_by': 'openai',
+            }
+            for model in model_list.get('models', [])
+        ]
 
     if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         model_ids = [model['id'] for model in models]
-        model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+        model_infos = {model_info.id: model_info for model_info in await Models.get_models_by_ids(model_ids, db=db)}
+        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
         # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
-        accessible_model_ids = AccessGrants.get_accessible_resource_ids(
+        accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
             user_id=user.id,
             resource_type='model',
             resource_ids=list(model_infos.keys()),
@@ -1734,13 +1537,16 @@ async def download_file_stream(ollama_url, file_url, file_path, file_name, chunk
                     file.close()
                     hashed = calculate_sha256(file_path, chunk_size)
 
-                    with open(file_path, 'rb') as file:
-                        chunk_size = 1024 * 1024 * 2
-                        url = f'{ollama_url}/api/blobs/sha256:{hashed}'
-                        with requests.Session() as session:
-                            response = session.post(url, data=file, timeout=30)
+                    with open(file_path, 'rb') as f:
+                        blob_data = f.read()
 
-                            if response.ok:
+                    url = f'{ollama_url}/api/blobs/sha256:{hashed}'
+                    blob_timeout = aiohttp.ClientTimeout(total=30)
+                    async with aiohttp.ClientSession(timeout=blob_timeout, trust_env=True) as blob_session:
+                        async with blob_session.post(
+                            url, data=blob_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                        ) as blob_response:
+                            if blob_response.ok:
                                 res = {
                                     'done': done,
                                     'blob': f'sha256:{hashed}',
@@ -1777,7 +1583,7 @@ async def download_model(
     file_name = parse_huggingface_url(form_data.url)
 
     if file_name:
-        file_path = f'{UPLOAD_DIR}/{file_name}'
+        file_path = os.path.join(UPLOAD_DIR, file_name)
 
         return StreamingResponse(
             download_file_stream(url, form_data.url, file_path, file_name),
@@ -1836,47 +1642,51 @@ async def upload_model(
 
             # --- P3: Upload to ollama /api/blobs ---
             with open(file_path, 'rb') as f:
-                url = f'{ollama_url}/api/blobs/sha256:{file_hash}'
-                response = requests.post(url, data=f)
+                blob_data = f.read()
 
-            if response.ok:
-                log.info(f'Uploaded to /api/blobs')  # DEBUG
-                # Remove local file
-                os.remove(file_path)
+            url = f'{ollama_url}/api/blobs/sha256:{file_hash}'
+            upload_timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(timeout=upload_timeout, trust_env=True) as upload_session:
+                async with upload_session.post(url, data=blob_data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
+                    if not response.ok:
+                        raise Exception('Ollama: Could not create blob, Please try again.')
 
-                # Create model in ollama
-                model_name, ext = os.path.splitext(filename)
-                log.info(f'Created Model: {model_name}')  # DEBUG
+            log.info(f'Uploaded to /api/blobs')  # DEBUG
+            # Remove local file
+            os.remove(file_path)
 
-                create_payload = {
-                    'model': model_name,
-                    # Reference the file by its original name => the uploaded blob's digest
-                    'files': {filename: f'sha256:{file_hash}'},
-                }
-                log.info(f'Model Payload: {create_payload}')  # DEBUG
+            # Create model in ollama
+            model_name, ext = os.path.splitext(filename)
+            log.info(f'Created Model: {model_name}')  # DEBUG
 
-                # Call ollama /api/create
-                # https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
-                create_resp = requests.post(
-                    url=f'{ollama_url}/api/create',
+            create_payload = {
+                'model': model_name,
+                # Reference the file by its original name => the uploaded blob's digest
+                'files': {filename: f'sha256:{file_hash}'},
+            }
+            log.info(f'Model Payload: {create_payload}')  # DEBUG
+
+            # Call ollama /api/create
+            # https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
+            async with aiohttp.ClientSession(timeout=upload_timeout, trust_env=True) as create_session:
+                async with create_session.post(
+                    f'{ollama_url}/api/create',
                     headers={'Content-Type': 'application/json'},
                     data=json.dumps(create_payload),
-                )
-
-                if create_resp.ok:
-                    log.info(f'API SUCCESS!')  # DEBUG
-                    done_msg = {
-                        'done': True,
-                        'blob': f'sha256:{file_hash}',
-                        'name': filename,
-                        'model_created': model_name,
-                    }
-                    yield f'data: {json.dumps(done_msg)}\n\n'
-                else:
-                    raise Exception(f'Failed to create model in Ollama. {create_resp.text}')
-
-            else:
-                raise Exception('Ollama: Could not create blob, Please try again.')
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as create_resp:
+                    if create_resp.ok:
+                        log.info(f'API SUCCESS!')  # DEBUG
+                        done_msg = {
+                            'done': True,
+                            'blob': f'sha256:{file_hash}',
+                            'name': filename,
+                            'model_created': model_name,
+                        }
+                        yield f'data: {json.dumps(done_msg)}\n\n'
+                    else:
+                        resp_text = await create_resp.text()
+                        raise Exception(f'Failed to create model in Ollama. {resp_text}')
 
         except Exception as e:
             res = {'error': str(e)}

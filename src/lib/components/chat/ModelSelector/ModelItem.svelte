@@ -26,6 +26,7 @@
 
 	export let unloadModelHandler: (modelValue: string) => void = () => {};
 	export let pinModelHandler: (modelId: string) => void = () => {};
+	export let deleteModelHandler: (model: any) => void = () => {};
 
 	export let onClick: () => void = () => {};
 
@@ -255,6 +256,7 @@
 			bind:show={showMenu}
 			model={item.model}
 			{pinModelHandler}
+			{deleteModelHandler}
 			copyLinkHandler={() => {
 				copyLinkHandler(item.model);
 			}}

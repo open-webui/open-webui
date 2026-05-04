@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -35,7 +36,7 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db, get_async_db
 from open_webui.utils.redis import get_redis_connection
 
 
@@ -90,6 +91,7 @@ def load_json_config():
 
 
 def save_to_db(data):
+    """Sync save — used ONLY at startup/import time."""
     with get_db() as db:
         existing_config = db.query(Config).first()
         if not existing_config:
@@ -102,10 +104,37 @@ def save_to_db(data):
         db.commit()
 
 
+async def async_save_to_db(data):
+    """Async save — used for ALL runtime config persistence."""
+    from sqlalchemy import select
+
+    async with get_async_db() as db:
+        result = await db.execute(select(Config).limit(1))
+        existing_config = result.scalars().first()
+        if not existing_config:
+            new_config = Config(data=data, version=0)
+            db.add(new_config)
+        else:
+            existing_config.data = data
+            existing_config.updated_at = datetime.now()
+            db.add(existing_config)
+        await db.commit()
+
+
 def reset_config():
+    """Sync reset — used ONLY at startup."""
     with get_db() as db:
         db.query(Config).delete()
         db.commit()
+
+
+async def async_reset_config():
+    """Async reset — used at runtime."""
+    from sqlalchemy import delete as sa_delete
+
+    async with get_async_db() as db:
+        await db.execute(sa_delete(Config))
+        await db.commit()
 
 
 # When initializing, check if config.json exists and migrate it to the database
@@ -144,10 +173,28 @@ PERSISTENT_CONFIG_REGISTRY = []
 
 
 def save_config(config):
+    """Sync save — used ONLY at startup/import time."""
     global CONFIG_DATA
     global PERSISTENT_CONFIG_REGISTRY
     try:
         save_to_db(config)
+        CONFIG_DATA = config
+
+        # Trigger updates on all registered PersistentConfig entries
+        for config_item in PERSISTENT_CONFIG_REGISTRY:
+            config_item.update()
+    except Exception as e:
+        log.exception(e)
+        return False
+    return True
+
+
+async def async_save_config(config):
+    """Async save — used for ALL runtime config persistence."""
+    global CONFIG_DATA
+    global PERSISTENT_CONFIG_REGISTRY
+    try:
+        await async_save_to_db(config)
         CONFIG_DATA = config
 
         # Trigger updates on all registered PersistentConfig entries
@@ -202,6 +249,7 @@ class PersistentConfig(Generic[T]):
             log.info(f'Updated {self.env_name} to new value {self.value}')
 
     def save(self):
+        """Sync save — used ONLY at startup/import time."""
         log.info(f"Saving '{self.env_name}' to the database")
         path_parts = self.config_path.split('.')
         sub_config = CONFIG_DATA
@@ -211,6 +259,19 @@ class PersistentConfig(Generic[T]):
             sub_config = sub_config[key]
         sub_config[path_parts[-1]] = self.value
         save_to_db(CONFIG_DATA)
+        self.config_value = self.value
+
+    async def async_save(self):
+        """Async save — used for ALL runtime config persistence."""
+        log.info(f"Saving '{self.env_name}' to the database")
+        path_parts = self.config_path.split('.')
+        sub_config = CONFIG_DATA
+        for key in path_parts[:-1]:
+            if key not in sub_config:
+                sub_config[key] = {}
+            sub_config = sub_config[key]
+        sub_config[path_parts[-1]] = self.value
+        await async_save_to_db(CONFIG_DATA)
         self.config_value = self.value
 
 
@@ -246,11 +307,26 @@ class AppConfig:
             self._state[key] = value
         else:
             self._state[key].value = value
-            self._state[key].save()
+
+            # At runtime (inside the event loop) persist via the async engine
+            # to avoid blocking the loop and contending with the async DB pool.
+            # At startup/import time, fall back to sync.
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._async_persist(key))
+            except RuntimeError:
+                self._state[key].save()
 
             if self._redis and ENABLE_PERSISTENT_CONFIG:
                 redis_key = f'{self._redis_key_prefix}:config:{key}'
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
+
+    async def _async_persist(self, key):
+        """Persist a single config key via the async engine."""
+        try:
+            await self._state[key].async_save()
+        except Exception as e:
+            log.error(f'Failed to async-persist config key {key}: {e}')
 
     def __getattr__(self, key):
         if key not in self._state:
@@ -687,7 +763,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['google'] = {
-            'redirect_uri': GOOGLE_REDIRECT_URI.value,
             'register': google_oauth_register,
         }
 
@@ -708,7 +783,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['microsoft'] = {
-            'redirect_uri': MICROSOFT_REDIRECT_URI.value,
             'picture_url': MICROSOFT_CLIENT_PICTURE_URL.value,
             'register': microsoft_oauth_register,
         }
@@ -733,7 +807,6 @@ def load_oauth_providers():
             return client
 
         OAUTH_PROVIDERS['github'] = {
-            'redirect_uri': GITHUB_CLIENT_REDIRECT_URI.value,
             'register': github_oauth_register,
             'sub_claim': 'id',
         }
@@ -775,7 +848,6 @@ def load_oauth_providers():
 
         OAUTH_PROVIDERS['oidc'] = {
             'name': OAUTH_PROVIDER_NAME.value,
-            'redirect_uri': OPENID_REDIRECT_URI.value,
             'register': oidc_oauth_register,
         }
 
@@ -919,6 +991,7 @@ if CUSTOM_NAME:
 ####################################
 
 STORAGE_PROVIDER = os.environ.get('STORAGE_PROVIDER', 'local')  # defaults to local, s3
+STORAGE_LOCAL_CACHE = os.environ.get('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
 
 S3_ACCESS_KEY_ID = os.environ.get('S3_ACCESS_KEY_ID', None)
 S3_SECRET_ACCESS_KEY = os.environ.get('S3_SECRET_ACCESS_KEY', None)
@@ -1152,8 +1225,14 @@ ENABLE_SIGNUP = PersistentConfig(
 
 ENABLE_LOGIN_FORM = PersistentConfig(
     'ENABLE_LOGIN_FORM',
-    'ui.ENABLE_LOGIN_FORM',
+    'ui.enable_login_form',
     os.environ.get('ENABLE_LOGIN_FORM', 'True').lower() == 'true',
+)
+
+ENABLE_PASSWORD_CHANGE_FORM = PersistentConfig(
+    'ENABLE_PASSWORD_CHANGE_FORM',
+    'ui.enable_password_change_form',
+    os.environ.get('ENABLE_PASSWORD_CHANGE_FORM', 'True').lower() == 'true',
 )
 
 ENABLE_PASSWORD_AUTH = os.environ.get('ENABLE_PASSWORD_AUTH', 'True').lower() == 'true'
@@ -1226,10 +1305,16 @@ DEFAULT_MODEL_METADATA = PersistentConfig(
     {},
 )
 
+try:
+    default_model_params = json.loads(os.environ.get('DEFAULT_MODEL_PARAMS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_MODEL_PARAMS: {e}')
+    default_model_params = {}
+
 DEFAULT_MODEL_PARAMS = PersistentConfig(
     'DEFAULT_MODEL_PARAMS',
     'models.default_params',
-    {},
+    default_model_params,
 )
 
 DEFAULT_USER_ROLE = PersistentConfig(
@@ -1435,6 +1520,12 @@ USER_PERMISSIONS_FEATURES_API_KEYS = os.environ.get('USER_PERMISSIONS_FEATURES_A
 
 USER_PERMISSIONS_FEATURES_MEMORIES = os.environ.get('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
 
+USER_PERMISSIONS_FEATURES_AUTOMATIONS = (
+    os.environ.get('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
+)
+
+USER_PERMISSIONS_FEATURES_CALENDAR = os.environ.get('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
+
 
 USER_PERMISSIONS_SETTINGS_INTERFACE = os.environ.get('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
 
@@ -1504,6 +1595,8 @@ DEFAULT_USER_PERMISSIONS = {
         'image_generation': USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         'code_interpreter': USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         'memories': USER_PERMISSIONS_FEATURES_MEMORIES,
+        'automations': USER_PERMISSIONS_FEATURES_AUTOMATIONS,
+        'calendar': USER_PERMISSIONS_FEATURES_CALENDAR,
     },
     'settings': {
         'interface': USER_PERMISSIONS_SETTINGS_INTERFACE,
@@ -1532,6 +1625,30 @@ ENABLE_CHANNELS = PersistentConfig(
     'ENABLE_CHANNELS',
     'channels.enable',
     os.environ.get('ENABLE_CHANNELS', 'False').lower() == 'true',
+)
+
+ENABLE_CALENDAR = PersistentConfig(
+    'ENABLE_CALENDAR',
+    'calendar.enable',
+    os.environ.get('ENABLE_CALENDAR', 'True').lower() == 'true',
+)
+
+ENABLE_AUTOMATIONS = PersistentConfig(
+    'ENABLE_AUTOMATIONS',
+    'automations.enable',
+    os.environ.get('ENABLE_AUTOMATIONS', 'True').lower() == 'true',
+)
+
+AUTOMATION_MAX_COUNT = PersistentConfig(
+    'AUTOMATION_MAX_COUNT',
+    'automations.max_count',
+    os.environ.get('AUTOMATION_MAX_COUNT', ''),
+)
+
+AUTOMATION_MIN_INTERVAL = PersistentConfig(
+    'AUTOMATION_MIN_INTERVAL',
+    'automations.min_interval',
+    os.environ.get('AUTOMATION_MIN_INTERVAL', ''),
 )
 
 ENABLE_NOTES = PersistentConfig(
@@ -2710,6 +2827,18 @@ MISTRAL_OCR_API_KEY = PersistentConfig(
     os.getenv('MISTRAL_OCR_API_KEY', ''),
 )
 
+PADDLEOCR_VL_BASE_URL = PersistentConfig(
+    'PADDLEOCR_VL_BASE_URL',
+    'rag.paddleocr_vl_base_url',
+    os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080'),
+)
+
+PADDLEOCR_VL_TOKEN = PersistentConfig(
+    'PADDLEOCR_VL_TOKEN',
+    'rag.paddleocr_vl_token',
+    os.getenv('PADDLEOCR_VL_TOKEN', ''),
+)
+
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     'BYPASS_EMBEDDING_AND_RETRIEVAL',
     'rag.bypass_embedding_and_retrieval',
@@ -2861,6 +2990,12 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
+)
+
+RAG_RERANKING_BATCH_SIZE = PersistentConfig(
+    'RAG_RERANKING_BATCH_SIZE',
+    'rag.reranking_batch_size',
+    int(os.environ.get('RAG_RERANKING_BATCH_SIZE', '32')),
 )
 
 RAG_EXTERNAL_RERANKER_URL = PersistentConfig(
@@ -3084,7 +3219,7 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
 
 WEB_FETCH_MAX_CONTENT_LENGTH = PersistentConfig(
     'WEB_FETCH_MAX_CONTENT_LENGTH',
-    'rag.web.search.fetch_url_max_content_length',
+    'rag.web.fetch.max_content_length',
     (int(os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH') else None),
 )
 
@@ -3931,6 +4066,18 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     'AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT',
     'audio.tts.azure.speech_output_format',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'),
+)
+
+AUDIO_TTS_MISTRAL_API_KEY = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_KEY',
+    'audio.tts.mistral.api_key',
+    os.getenv('AUDIO_TTS_MISTRAL_API_KEY', ''),
+)
+
+AUDIO_TTS_MISTRAL_API_BASE_URL = PersistentConfig(
+    'AUDIO_TTS_MISTRAL_API_BASE_URL',
+    'audio.tts.mistral.api_base_url',
+    os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1'),
 )
 
 

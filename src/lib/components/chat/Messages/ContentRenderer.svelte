@@ -37,7 +37,7 @@
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
 	export let onTaskClick = (e) => {};
-	export let onAddMessages = (e) => {};
+	export let onSetInputText = (text) => {};
 
 	let contentContainerElement;
 	let floatingButtonsElement;
@@ -140,27 +140,45 @@
 		}
 	};
 
-	onMount(() => {
-		if (floatingButtons) {
-			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+	// Reactive listener attachment: re-attaches when floatingButtons
+	// transitions from false → true (e.g. when message.done flips).
+	let listenersAttached = false;
+
+	function attachListeners() {
+		if (!listenersAttached && contentContainerElement) {
+			contentContainerElement.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('keydown', keydownHandler);
+			listenersAttached = true;
 		}
-	});
+	}
 
-	onDestroy(() => {
-		if (floatingButtons) {
+	function detachListeners() {
+		if (listenersAttached) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('keydown', keydownHandler);
+			listenersAttached = false;
 		}
+	}
+
+	$: if (floatingButtons && contentContainerElement) {
+		attachListeners();
+	} else {
+		detachListeners();
+	}
+
+	onDestroy(() => {
+		detachListeners();
 	});
 </script>
 
 <div bind:this={contentContainerElement}>
 	<Markdown
 		{id}
-		{content}
+		content={model?.info?.meta?.capabilities?.citations == false
+			? content.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+			: content}
 		{model}
 		{save}
 		{preview}
@@ -199,17 +217,9 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		{messageId}
 		actions={$settings?.floatingActionButtons ?? []}
-		model={(selectedModels ?? []).includes(model?.id)
-			? model?.id
-			: (selectedModels ?? []).length > 0
-				? selectedModels.at(0)
-				: (model?.id ?? null)}
-		messages={createMessagesList(history, messageId)}
-		onAdd={({ modelId, parentId, messages }) => {
-			console.log(modelId, parentId, messages);
-			onAddMessages({ modelId, parentId, messages });
+		onSetInputText={(text) => {
+			onSetInputText(text);
 			closeFloatingButtons();
 		}}
 	/>
