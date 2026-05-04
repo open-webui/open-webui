@@ -16,13 +16,26 @@ Based on a precedent of an unacceptable degree of spamming and unsolicited commu
 
 Any reports or solicitations arriving from sources other than our designated GitHub repository will be dismissed without consideration. We’ve seen how external engagements can dilute and compromise the integrity of community-driven projects, and we’re not here to gamble with the security and privacy of our user community.
 
+## Foreign CNAs and Vendor Disposition
+
+When a report is filed via GitHub Security Advisories and the maintainers close it as out-of-scope per this policy, that closure is the **vendor's disposition** of the issue. A CVE Numbering Authority (CNA) that mints a CVE for such an issue without reflecting that vendor disposition in the resulting record is acting against vendor disposition.
+
+We respond to such records by:
+
+1. Filing a **REJECT** request with the CVE Program (with **DISPUTED** as fallback);
+2. Cataloging the record publicly, naming the issuing CNA;
+3. Refusing to provide vendor statements, version mappings, fix references, or any other coordination that would lend authority to the record;
+4. Escalating repeated patterns from a single CNA to the CVE Program Root.
+
+**Channel compliance does not entitle a CNA to override vendor disposition.** Reporters who escalate a closed-as-out-of-scope GHSA report to a third-party CNA after vendor disposition has been issued are likewise considered to have acted against vendor disposition, and will be permanently barred from future GHSA submissions.
+
 ## Reporting a Vulnerability
 
 Reports not submitted through our designated GitHub repository will be disregarded, and we will categorically reject invitations to collaborate on external platforms. Our aggressive stance on this matter underscores our commitment to a secure, transparent, and open community where all operations are visible and contributors are accountable.
 
 We appreciate the community's interest in identifying potential vulnerabilities. However, effective immediately, we will **not** accept low-effort vulnerability reports. Ensure that **submissions are constructive, actionable, reproducible, well documented and adhere to the following guidelines**:
 
-1. **Report MUST be a vulnerability:** A security vulnerability is an exploitable weakness where the system behaves in an unintended way, allowing attackers to bypass security controls, gain unauthorized access, execute arbitrary code, or escalate privileges. Configuration options, missing features, and expected protocol behavior are **not vulnerabilities**.
+1. **Report MUST be a vulnerability:** A security vulnerability is an exploitable weakness where the system behaves in an unintended way, allowing attackers to bypass security controls, gain unauthorized access, execute arbitrary code, or escalate privileges. Configuration options, missing features, and expected protocol behavior are **not vulnerabilities**. A vulnerability must cross at least one of the five security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation)
 
 2. **No Vague Reports**: Submissions such as "I found a vulnerability" without any details will be treated as spam and will not be accepted.
 
@@ -105,7 +118,14 @@ Your remediation guidance can include, for example:
 > - wrote comments with conflicting information
 > - used illogical and conflicting arguments
 
-**Non-compliant submissions will be closed, and repeat or extreme violators may be banned.** Our goal is to foster a constructive reporting environment where quality submissions promote better security for all users.
+12. **Self-Affecting Issues Are Not Vulnerabilities:** A vulnerability requires crossing a security boundary that affects **a party other than the reporter**. Crossing one of the five recognized security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation) only against the reporter's own data, account, session, or environment is **not a vulnerability** - it is a bug, and belongs in the [Issue Tracker](https://github.com/open-webui/open-webui/issues), not in a security report.
+
+> [!NOTE]
+> This rule is about **who is harmed**, not about severity. A user modifying or deleting their own data, impairing their own session, observing their own configuration, or disabling security controls on their own account is out of scope under this rule, regardless of impact.
+>
+> If the same action also affects another user, the operator, the host system, or shared resources, identify that second party clearly in the PoC, and we want to hear about it.
+
+**Non-compliant submissions will be closed, and repeat or extreme violators may be banned from submitting reports.** Our goal is to foster a constructive reporting environment where quality submissions promote better security for all users.
 
 ## Where to report the vulnerability
 
@@ -114,7 +134,7 @@ If you feel like you are not able to follow ALL outlined requirements for vulner
 
 ## Expected Response Timeframe
 
-Due to the volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by a large number of invalid AI-generated reports (see [AI report transparency](#ai-report-transparency)) — our capacity to respond is limited. Open WebUI is a community-driven project maintained by a small team, and security reports are handled alongside all other project responsibilities.
+Due to the very high volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by an unbelievably high number of AI-generated reports (see [AI report transparency](#ai-report-transparency)) — our capacity to respond is limited. Open WebUI is a community-driven project maintained by a small team, and security reports are handled alongside all other project responsibilities.
 
 **Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means we have not yet had the capacity to address it. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
 
@@ -157,4 +177,4 @@ For any other immediate concerns and questions, please create an issue in our [i
 
 ---
 
-_Last updated on **2026-03-20**._
+_Last updated on **2026-05-04**._
