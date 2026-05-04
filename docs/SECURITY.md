@@ -35,7 +35,7 @@ Reports not submitted through our designated GitHub repository will be disregard
 
 We appreciate the community's interest in identifying potential vulnerabilities. However, effective immediately, we will **not** accept low-effort vulnerability reports. Ensure that **submissions are constructive, actionable, reproducible, well documented and adhere to the following guidelines**:
 
-1. **Report MUST be a vulnerability:** A security vulnerability is an exploitable weakness where the system behaves in an unintended way, allowing attackers to bypass security controls, gain unauthorized access, execute arbitrary code, or escalate privileges. Configuration options, missing features, and expected protocol behavior are **not vulnerabilities**. A vulnerability must cross at least one of the five security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation)
+1. **Report MUST be a vulnerability:** A security vulnerability is an exploitable weakness where the system behaves in an unintended way, allowing attackers to bypass security controls, gain unauthorized access, execute arbitrary code, or escalate privileges. Configuration options, missing features, and expected protocol behavior are **not vulnerabilities**. A vulnerability must cross at least one of the security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation). **These boundaries are interpreted broadly; equivalent concepts in other security frameworks fall within them.**
 
 2. **No Vague Reports**: Submissions such as "I found a vulnerability" without any details will be treated as spam and will not be accepted.
 
@@ -46,7 +46,7 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 > [!NOTE]
 > A PoC (Proof of Concept) is a **demonstration of exploitation of a vulnerability**. Your PoC must show:
 >
-> 1. Exactly what security boundary was crossed (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation)
+> 1. Exactly what security boundary was crossed (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation - These boundaries are interpreted broadly; equivalent concepts in other security frameworks fall within them)
 > 2. How this vulnerability is triggered/abused (inputs, endpoints, UI actions, etc.)
 > 3. What actions the attacker can now perform
 > 4. What data/action becomes possible that should not be possible
@@ -118,7 +118,7 @@ Your remediation guidance can include, for example:
 > - wrote comments with conflicting information
 > - used illogical and conflicting arguments
 
-12. **Self-Affecting Issues Are Not Vulnerabilities:** A vulnerability requires crossing a security boundary that affects **a party other than the reporter**. Crossing one of the five recognized security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation) only against the reporter's own data, account, session, or environment is **not a vulnerability** - it is a bug, and belongs in the [Issue Tracker](https://github.com/open-webui/open-webui/issues), not in a security report.
+12. **Self-Affecting Issues Are Not Vulnerabilities:** A vulnerability requires crossing a security boundary that affects **a party other than the reporter**. Crossing one of the five recognized security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation - These boundaries are interpreted broadly; equivalent concepts in other security frameworks fall within them) only against the reporter's own data, account, session, or environment is **not a vulnerability** - it is a bug, and belongs in the [Issue Tracker](https://github.com/open-webui/open-webui/issues), not in a security report.
 
 > [!NOTE]
 > This rule is about **who is harmed**, not about severity. A user modifying or deleting their own data, impairing their own session, observing their own configuration, or disabling security controls on their own account is out of scope under this rule, regardless of impact.
