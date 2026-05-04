@@ -22,9 +22,17 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Add window_duration column to token_group table
     # flexible unit, implies seconds if not specified otherwise by UI, but defined as BigInteger
-    op.add_column('token_group', sa.Column('window_duration', sa.BigInteger(), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {c['name'] for c in inspector.get_columns('token_group')}
+    if 'window_duration' not in existing_columns:
+        op.add_column('token_group', sa.Column('window_duration', sa.BigInteger(), nullable=True))
 
 
 def downgrade() -> None:
     # Remove window_duration column
-    op.drop_column('token_group', 'window_duration')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {c['name'] for c in inspector.get_columns('token_group')}
+    if 'window_duration' in existing_columns:
+        op.drop_column('token_group', 'window_duration')
