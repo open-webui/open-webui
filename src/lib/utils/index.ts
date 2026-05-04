@@ -879,6 +879,80 @@ export const removeAllDetails = (content) => {
 	return content;
 };
 
+/**
+ * Render a typed content_blocks array as the HTML+markdown string the chat UI
+ * already knows how to display. Mirrors the backend's serialize_content_blocks
+ * (raw=False) so display stays consistent whether the content is rendered from
+ * blocks (new chats) or from the legacy stored HTML string (pre-migration).
+ */
+const escapeHtmlAttr = (s: unknown): string =>
+	String(s ?? '')
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+
+export const blocksToDisplayMarkdown = (content_blocks: any[] = []): string => {
+	if (!Array.isArray(content_blocks) || content_blocks.length === 0) return '';
+	let out = '';
+
+	const ensureNewline = () => {
+		if (out && !out.endsWith('\n')) out += '\n';
+	};
+
+	for (const block of content_blocks) {
+		const type = block?.type;
+
+		if (type === 'text') {
+			const text = (block?.content ?? '').toString().trim();
+			if (text) out += `${text}\n`;
+		} else if (type === 'reasoning') {
+			ensureNewline();
+			const reasoning = (block?.content ?? '').toString();
+			const quoted = reasoning
+				.split('\n')
+				.map((line) => (line.startsWith('>') ? line : `> ${line}`))
+				.join('\n');
+			const duration = block?.duration;
+			if (duration != null) {
+				out += `<details type="reasoning" done="true" duration="${escapeHtmlAttr(duration)}">\n<summary>Thought for ${escapeHtmlAttr(duration)} seconds</summary>\n${quoted}\n</details>\n`;
+			} else {
+				out += `<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n${quoted}\n</details>\n`;
+			}
+		} else if (type === 'tool_calls') {
+			ensureNewline();
+			const calls = block?.content ?? [];
+			const results = block?.results ?? [];
+			for (const call of calls) {
+				const id = call?.id ?? '';
+				const name = call?.function?.name ?? '';
+				const args = call?.function?.arguments ?? '';
+				const result = results.find((r: any) => r?.tool_call_id === id);
+				if (result !== undefined) {
+					const resultContent = result?.content ?? null;
+					const resultFiles = result?.files ?? null;
+					const resultEmbeds = result?.embeds ?? '';
+					out += `<details type="tool_calls" done="true" id="${escapeHtmlAttr(id)}" name="${escapeHtmlAttr(name)}" arguments="${escapeHtmlAttr(JSON.stringify(args))}" result="${escapeHtmlAttr(JSON.stringify(resultContent))}" files="${resultFiles ? escapeHtmlAttr(JSON.stringify(resultFiles)) : ''}" embeds="${escapeHtmlAttr(JSON.stringify(resultEmbeds))}">\n<summary>Tool Executed</summary>\n</details>\n`;
+				} else {
+					out += `<details type="tool_calls" done="false" id="${escapeHtmlAttr(id)}" name="${escapeHtmlAttr(name)}" arguments="${escapeHtmlAttr(JSON.stringify(args))}">\n<summary>Executing...</summary>\n</details>\n`;
+				}
+			}
+		} else if (type === 'code_interpreter') {
+			ensureNewline();
+			const lang = block?.attributes?.lang ?? '';
+			const code = block?.content ?? '';
+			const output = block?.output;
+			if (output != null) {
+				out += `<details type="code_interpreter" done="true" output="${escapeHtmlAttr(JSON.stringify(output))}">\n<summary>Analyzed</summary>\n\`\`\`${lang}\n${code}\n\`\`\`\n</details>\n`;
+			} else {
+				out += `<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n\`\`\`${lang}\n${code}\n\`\`\`\n</details>\n`;
+			}
+		}
+	}
+
+	return out.trim();
+};
+
 export const processDetails = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 

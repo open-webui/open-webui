@@ -121,96 +121,81 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
 
 
 def update_message_content(message: dict, content: str, append: bool = True) -> dict:
-    if isinstance(message["content"], list):
-        for item in message["content"]:
-            if item["type"] == "text":
+    """Return a copy of ``message`` with ``content`` appended (or prepended) to its text.
+    Pure: does not mutate ``message``. List-shaped content is reshaped per-text-part."""
+    msg_content = message.get("content")
+    if isinstance(msg_content, list):
+        new_parts = []
+        for item in msg_content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text = item.get("text", "")
                 if append:
-                    item["text"] = f"{item['text']}\n{content}"
+                    new_parts.append({**item, "text": f"{text}\n{content}"})
                 else:
-                    item["text"] = f"{content}\n{item['text']}"
-    else:
-        if append:
-            message["content"] = f"{message['content']}\n{content}"
-        else:
-            message["content"] = f"{content}\n{message['content']}"
-    return message
+                    new_parts.append({**item, "text": f"{content}\n{text}"})
+            else:
+                new_parts.append(item)
+        return {**message, "content": new_parts}
+
+    if append:
+        return {**message, "content": f"{msg_content}\n{content}"}
+    return {**message, "content": f"{content}\n{msg_content}"}
 
 
-def replace_system_message_content(content: str, messages: list[dict]) -> dict:
-    for message in messages:
-        if message["role"] == "system":
-            message["content"] = content
+def replace_system_message_content(content: str, messages: list[dict]) -> list[dict]:
+    """Return a new list with the first system message's content replaced. Pure."""
+    out = list(messages)
+    for idx, message in enumerate(out):
+        if message.get("role") == "system":
+            out[idx] = {**message, "content": content}
             break
-    return messages
+    return out
 
 
 def add_or_update_system_message(
     content: str, messages: list[dict], append: bool = False
-):
-    """
-    Adds a new system message at the beginning of the messages list
-    or updates the existing system message at the beginning.
-
-    :param msg: The message to be added or appended.
-    :param messages: The list of message dictionaries.
-    :return: The updated list of message dictionaries.
-    """
-
+) -> list[dict]:
+    """Return a new list whose head system message contains ``content`` (appended,
+    prepended, or freshly inserted). Pure: does not mutate ``messages`` or its dicts."""
     if messages and messages[0].get("role") == "system":
-        messages[0] = update_message_content(messages[0], content, append)
-    else:
-        # Insert at the beginning
-        messages.insert(0, {"role": "system", "content": content})
-
-    return messages
+        return [update_message_content(messages[0], content, append), *messages[1:]]
+    return [{"role": "system", "content": content}, *messages]
 
 
-def add_or_update_user_message(content: str, messages: list[dict], append: bool = True):
-    """
-    Adds a new user message at the end of the messages list
-    or updates the existing user message at the end.
-
-    :param msg: The message to be added or appended.
-    :param messages: The list of message dictionaries.
-    :return: The updated list of message dictionaries.
-    """
-
+def add_or_update_user_message(
+    content: str, messages: list[dict], append: bool = True
+) -> list[dict]:
+    """Return a new list whose tail user message contains ``content`` (appended or
+    prepended). If the tail isn't a user message, append a fresh one. Pure."""
     if messages and messages[-1].get("role") == "user":
-        messages[-1] = update_message_content(messages[-1], content, append)
-    else:
-        # Insert at the end
-        messages.append({"role": "user", "content": content})
-
-    return messages
+        return [*messages[:-1], update_message_content(messages[-1], content, append)]
+    return [*messages, {"role": "user", "content": content}]
 
 
 def prepend_to_first_user_message_content(
     content: str, messages: list[dict]
 ) -> list[dict]:
-    for message in messages:
-        if message["role"] == "user":
-            message = update_message_content(message, content, append=False)
+    """Return a new list with ``content`` prepended to the first user message. Pure."""
+    out = list(messages)
+    for idx, message in enumerate(out):
+        if message.get("role") == "user":
+            out[idx] = update_message_content(message, content, append=False)
             break
-    return messages
+    return out
 
 
-def append_or_update_assistant_message(content: str, messages: list[dict]):
-    """
-    Adds a new assistant message at the end of the messages list
-    or updates the existing assistant message at the end.
-
-    :param msg: The message to be added or appended.
-    :param messages: The list of message dictionaries.
-    :return: The updated list of message dictionaries.
-    """
-
+def append_or_update_assistant_message(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    """Return a new list whose tail assistant message has ``content`` appended (or a
+    fresh assistant message added). Pure."""
     if messages and messages[-1].get("role") == "assistant":
-        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
-    else:
-        # Insert at the end
-        messages.append({"role": "assistant", "content": content})
-
-    return messages
+        last = messages[-1]
+        return [
+            *messages[:-1],
+            {**last, "content": f"{last.get('content', '')}\n{content}"},
+        ]
+    return [*messages, {"role": "assistant", "content": content}]
 
 
 def openai_chat_message_template(model: str):

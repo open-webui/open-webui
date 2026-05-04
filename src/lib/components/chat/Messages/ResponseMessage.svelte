@@ -26,7 +26,8 @@
 		createMessagesList,
 		formatDate,
 		removeDetails,
-		removeAllDetails
+		removeAllDetails,
+		blocksToDisplayMarkdown
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -211,7 +212,13 @@
 		return '';
 	};
 
-	$: messageTextContent = getMessageTextContent(message?.content);
+	// Prefer the structured content_blocks (canonical for new messages) and render
+	// to the same HTML+markdown shape the existing Markdown component already knows.
+	// Falls back to message.content for legacy chats that pre-date the migration.
+	$: messageTextContent =
+		Array.isArray(message?.content_blocks) && message.content_blocks.length > 0
+			? blocksToDisplayMarkdown(message.content_blocks)
+			: getMessageTextContent(message?.content);
 
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {

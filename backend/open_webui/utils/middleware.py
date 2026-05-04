@@ -102,6 +102,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.messages import blocks_to_api_messages, blocks_to_plain_text
 from open_webui.utils.mcp.client import MCPClient
 
 
@@ -1064,61 +1065,41 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        # Memory ships its own user-context retrieval; it has to run inline
+        # because it touches the vector store. Everything else is just a
+        # config-driven prompt fragment, gathered below and applied once at
+        # the end as a single deterministic compose step (keeps the prompt
+        # cache stable across turns when feature flags don't change).
         if "memory" in features and features["memory"]:
             form_data = await chat_memory_handler(
                 request, form_data, extra_params, user
             )
 
-        # AUTO-ENABLE WEB SEARCH AS NATIVE TOOL
-        # When web_search feature is enabled, automatically register the built-in
-        # web search tool and enable native function calling mode
-        if "web_search" in features and features["web_search"]:
-            # Get or create tool_ids list
+        feature_prompt_parts: list[str] = []
+
+        if features.get("web_search"):
             if tool_ids is None:
                 tool_ids = []
-
-            # Add built-in web search tool ID
             if "builtin:web_search" not in tool_ids:
                 tool_ids.append("builtin:web_search")
+            metadata.setdefault("params", {})["function_calling"] = "native"
 
-            # Enable native function calling mode
-            if "params" not in metadata:
-                metadata["params"] = {}
-            metadata["params"]["function_calling"] = "native"
-
-            # Inject web search system prompt to guide the model
             web_search_prompt = getattr(
-                request.app.state.config, 
-                'WEB_SEARCH_SYSTEM_PROMPT', 
-                ''
+                request.app.state.config, "WEB_SEARCH_SYSTEM_PROMPT", ""
             )
             if web_search_prompt:
-                form_data["messages"] = add_or_update_system_message(
-                    web_search_prompt,
-                    form_data["messages"],
-                )
-                log.info("Injected web search system prompt")
-
+                feature_prompt_parts.append(web_search_prompt)
             log.info("Auto-enabled web search tools with native function calling")
 
-        # Study Mode
-        if "study_mode" in features and features["study_mode"]:
+        if features.get("study_mode"):
             study_prompt = getattr(
-                request.app.state.config,
-                "STUDY_MODE_SYSTEM_PROMPT",
-                "",
+                request.app.state.config, "STUDY_MODE_SYSTEM_PROMPT", ""
             )
             if study_prompt:
-                form_data["messages"] = add_or_update_system_message(
-                    study_prompt,
-                    form_data["messages"],
-                )
+                feature_prompt_parts.append(study_prompt)
             log.info("Processed study mode")
 
-        # Data Visualization
-        # Registers the built-in show_widget tool and injects the assembled
-        # system prompt (shared core + each enabled module).
-        if "data_viz" in features and features["data_viz"]:
+        if features.get("data_viz"):
             from open_webui.utils.data_viz_prompts import (
                 assemble_data_viz_system_prompt,
             )
@@ -1127,22 +1108,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 tool_ids = []
             if "builtin:data_viz" not in tool_ids:
                 tool_ids.append("builtin:data_viz")
-
-            if "params" not in metadata:
-                metadata["params"] = {}
-            metadata["params"]["function_calling"] = "native"
+            metadata.setdefault("params", {})["function_calling"] = "native"
 
             data_viz_prompt = assemble_data_viz_system_prompt(
                 request.app.state.config
             )
             if data_viz_prompt:
-                form_data["messages"] = add_or_update_system_message(
-                    data_viz_prompt,
-                    form_data["messages"],
-                )
-                log.info("Injected data viz system prompt")
-
+                feature_prompt_parts.append(data_viz_prompt)
             log.info("Auto-enabled data visualization tool with native function calling")
+
+        if feature_prompt_parts:
+            form_data["messages"] = add_or_update_system_message(
+                "\n\n".join(feature_prompt_parts),
+                form_data["messages"],
+            )
 
         # OLD WEB SEARCH HANDLER - DISABLED IN FAVOR OF TOOL-BASED APPROACH
         # if "web_search" in features and features["web_search"]:
@@ -1918,7 +1897,12 @@ async def process_chat_response(
         async def response_handler(response, events):
             nonlocal model_id
 
-            def serialize_content_blocks(content_blocks, raw=False):
+            def serialize_content_blocks(content_blocks):
+                # Display-only HTML+markdown projection of the structured content_blocks.
+                # The API-bound conversion lives in `blocks_to_api_messages`; this is
+                # purely what the UI's existing Markdown renderer + native <details>
+                # collapsibles consume. Kept for older frontend builds that don't
+                # render directly from content_blocks (post-Task 5 frontends do).
                 content = ""
 
                 for block in content_blocks:
@@ -1962,8 +1946,7 @@ async def process_chat_response(
                                 else:
                                     tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
-                            if not raw:
-                                content = f"{content}{tool_calls_display_content}"
+                            content = f"{content}{tool_calls_display_content}"
                         else:
                             tool_calls_display_content = ""
 
@@ -1978,8 +1961,7 @@ async def process_chat_response(
 
                                 tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
-                            if not raw:
-                                content = f"{content}{tool_calls_display_content}"
+                            content = f"{content}{tool_calls_display_content}"
 
                     elif block["type"] == "reasoning":
                         reasoning_display_content = "\n".join(
@@ -1989,26 +1971,13 @@ async def process_chat_response(
 
                         reasoning_duration = block.get("duration", None)
 
-                        start_tag = block.get("start_tag", "")
-                        end_tag = block.get("end_tag", "")
-
                         if content and not content.endswith("\n"):
                             content += "\n"
 
                         if reasoning_duration is not None:
-                            if raw:
-                                content = (
-                                    f'{content}{start_tag}{block["content"]}{end_tag}\n'
-                                )
-                            else:
-                                content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
+                            content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
-                            if raw:
-                                content = (
-                                    f'{content}{start_tag}{block["content"]}{end_tag}\n'
-                                )
-                            else:
-                                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
+                            content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
                     elif block["type"] == "code_interpreter":
                         attributes = block.get("attributes", {})
@@ -2033,16 +2002,9 @@ async def process_chat_response(
 
                         if output:
                             output = html.escape(json.dumps(output))
-
-                            if raw:
-                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n```output\n{output}\n```\n'
-                            else:
-                                content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+                            content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
                         else:
-                            if raw:
-                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n'
-                            else:
-                                content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+                            content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
 
                     else:
                         block_content = str(block["content"]).strip()
@@ -2050,50 +2012,6 @@ async def process_chat_response(
                             content = f"{content}{block['type']}: {block_content}\n"
 
                 return content.strip()
-
-            def convert_content_blocks_to_messages(content_blocks, raw=False):
-                messages = []
-
-                temp_blocks = []
-                for idx, block in enumerate(content_blocks):
-                    if block["type"] == "tool_calls":
-                        serialized = serialize_content_blocks(temp_blocks, raw)
-                        message = {
-                            "role": "assistant",
-                            "content": serialized if serialized else None,
-                            "tool_calls": block.get("content"),
-                        }
-
-                        if block.get("reasoning_details"):
-                            message["reasoning_details"] = block["reasoning_details"]
-
-                        messages.append(message)
-
-                        results = block.get("results", [])
-
-                        for result in results:
-                            messages.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": result["tool_call_id"],
-                                    "content": result.get("content", "") or "",
-                                }
-                            )
-                        temp_blocks = []
-                    else:
-                        temp_blocks.append(block)
-
-                if temp_blocks:
-                    content = serialize_content_blocks(temp_blocks, raw)
-                    if content:
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": content,
-                            }
-                        )
-
-                return messages
 
             def tag_content_handler(content_type, tags, content, content_blocks):
                 end_flag = False
@@ -2704,7 +2622,8 @@ async def process_chat_response(
                                             data = {
                                                 "content": serialize_content_blocks(
                                                     content_blocks
-                                                )
+                                                ),
+                                                "content_blocks": content_blocks,
                                             }
 
                                     # Skip processing 'value' if reasoning_content was already handled
@@ -2784,6 +2703,7 @@ async def process_chat_response(
                                                 "content": serialize_content_blocks(
                                                     content_blocks
                                                 ),
+                                                "content_blocks": content_blocks,
                                             }
 
                                             # Per-round reasoning lets multi-turn replays attach
@@ -2812,6 +2732,7 @@ async def process_chat_response(
                                                 "content": serialize_content_blocks(
                                                     content_blocks
                                                 ),
+                                                "content_blocks": content_blocks,
                                             }
 
                                 if delta:
@@ -2918,6 +2839,7 @@ async def process_chat_response(
                             "type": "chat:completion",
                             "data": {
                                 "content": serialize_content_blocks(content_blocks),
+                                "content_blocks": content_blocks,
                             },
                         }
                     )
@@ -3086,6 +3008,7 @@ async def process_chat_response(
                             "type": "chat:completion",
                             "data": {
                                 "content": serialize_content_blocks(content_blocks),
+                                "content_blocks": content_blocks,
                             },
                         }
                     )
@@ -3134,15 +3057,22 @@ async def process_chat_response(
                                 }
                             )
 
+                        in_flight_assistant: dict = {
+                            "role": "assistant",
+                            "content_blocks": content_blocks,
+                        }
+                        if round_reasoning_details:
+                            in_flight_assistant["reasoning_details_per_round"] = list(
+                                round_reasoning_details
+                            )
+
                         new_form_data = {
                             **form_data,
                             "model": model_id,
                             "stream": True,
                             "messages": [
                                 *form_data["messages"],
-                                *convert_content_blocks_to_messages(
-                                    content_blocks, True
-                                ),
+                                in_flight_assistant,
                             ],
                         }
 
@@ -3226,6 +3156,7 @@ async def process_chat_response(
                                 "type": "chat:completion",
                                 "data": {
                                     "content": serialize_content_blocks(content_blocks),
+                                    "content_blocks": content_blocks,
                                 }
                             })
                         else:
@@ -3273,6 +3204,7 @@ async def process_chat_response(
                                 "type": "chat:completion",
                                 "data": {
                                     "content": serialize_content_blocks(content_blocks),
+                                    "content_blocks": content_blocks,
                                 },
                             }
                         )
@@ -3404,6 +3336,7 @@ async def process_chat_response(
                                 "type": "chat:completion",
                                 "data": {
                                     "content": serialize_content_blocks(content_blocks),
+                                    "content_blocks": content_blocks,
                                 },
                             }
                         )
@@ -3417,9 +3350,7 @@ async def process_chat_response(
                                     *form_data["messages"],
                                     {
                                         "role": "assistant",
-                                        "content": serialize_content_blocks(
-                                            content_blocks, raw=True
-                                        ),
+                                        "content_blocks": content_blocks,
                                     },
                                 ],
                             }
@@ -3504,6 +3435,7 @@ async def process_chat_response(
                                     "type": "chat:completion",
                                     "data": {
                                         "content": serialize_content_blocks(content_blocks),
+                                        "content_blocks": content_blocks,
                                     }
                                 })
                             else:
@@ -3540,6 +3472,7 @@ async def process_chat_response(
                 data = {
                     "done": True,
                     "content": serialize_content_blocks(content_blocks),
+                    "content_blocks": content_blocks,
                     "title": title,
                 }
 
@@ -3552,6 +3485,7 @@ async def process_chat_response(
                     # Save message in the database
                     update_data = {
                         "content": serialize_content_blocks(content_blocks),
+                        "content_blocks": content_blocks,
                     }
 
                     # Per-round reasoning lets multi-turn replays attach the right
@@ -3614,6 +3548,7 @@ async def process_chat_response(
                     # Save message in the database
                     update_data = {
                         "content": serialize_content_blocks(content_blocks),
+                        "content_blocks": content_blocks,
                     }
 
                     # Per-round reasoning lets multi-turn replays attach the right

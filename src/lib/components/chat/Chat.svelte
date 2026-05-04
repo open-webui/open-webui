@@ -2116,6 +2116,7 @@
 			done,
 			choices,
 			content,
+			content_blocks,
 			sources,
 			selected_model_id,
 			error,
@@ -2250,6 +2251,13 @@
 			reasoning_details_per_round.length > 0
 		) {
 			message.reasoning_details_per_round = reasoning_details_per_round;
+		}
+
+		if (Array.isArray(content_blocks)) {
+			// Structured content blocks are the canonical replay form. They travel
+			// alongside the legacy `content` HTML projection for backwards compat
+			// and keep the API replay byte-stable with the live tool-call loop.
+			message.content_blocks = content_blocks;
 		}
 
 		if (content) {
@@ -3208,6 +3216,26 @@
 		messages = (
 			await Promise.all(
 				messages.map(async (message) => {
+					// Structured content_blocks travel through to the backend untouched —
+					// `blocks_to_api_messages` on the server is the single source of truth
+					// for the internal-message → API-message conversion.
+					if (
+						message?.role === 'assistant' &&
+						Array.isArray(message?.content_blocks) &&
+						message.content_blocks.length > 0
+					) {
+						return {
+							role: 'assistant',
+							content_blocks: message.content_blocks,
+							...(message.reasoning_details_per_round
+								? { reasoning_details_per_round: message.reasoning_details_per_round }
+								: {}),
+							...(message.reasoning_details
+								? { reasoning_details: message.reasoning_details }
+								: {})
+						};
+					}
+
 					if (message.role === 'tool') {
 						return {
 							role: 'tool',
@@ -3308,7 +3336,8 @@
 				message?.role === 'tool' ||
 				hasMessageContent(message?.content) ||
 				message?.reasoning_details ||
-				message?.tool_calls?.length
+				message?.tool_calls?.length ||
+				(Array.isArray(message?.content_blocks) && message.content_blocks.length > 0)
 		);
 
 		const toolIds = [];
@@ -3361,6 +3390,10 @@
 				session_id: $socket?.id,
 				chat_id: _chatId,
 				id: responseMessageId,
+
+				// Lets the backend stamp `Current Date: YYYY-MM-DD (TZ)` in the
+				// system prompt using the user's local time, not the server's UTC.
+				timezone: Intl?.DateTimeFormat?.()?.resolvedOptions?.()?.timeZone,
 
 				background_tasks: {
 					...(!$temporaryChatEnabled &&
@@ -4123,17 +4156,28 @@
 
 	const expandMessagesForToolResumption = (messages = []) => {
 		return messages.flatMap((message) => {
+			// Preferred path: assistant messages that carry structured content_blocks
+			// pass through as-is. The backend's blocks_to_api_messages converts them
+			// to OpenAI shape — the same function the live tool loop uses, so live
+			// and replay produce byte-identical messages and prompt caching holds.
+			if (
+				message?.role === 'assistant' &&
+				Array.isArray(message?.content_blocks) &&
+				message.content_blocks.length > 0
+			) {
+				return [message];
+			}
+
 			if (message?.preservedToolContext) {
 				return expandPreservedToolContextMessage(message);
 			}
 
-			// Also expand completed assistant messages that have tool call HTML blocks.
-			// These are messages that finished normally (not retries), but still need
-			// to be sent to the API in proper tool_calls format rather than as raw HTML.
+			// Legacy fallback: assistant messages stored before the content_blocks
+			// migration only have tool-call HTML in their content string. Recover
+			// tool_calls by parsing the HTML — drift-prone, hence the migration.
 			if (message?.role === 'assistant' && !message?.tool_calls) {
 				const content = getStringMessageContent(message.content ?? '');
 				if (/<details\s+type="tool_calls"[^>]+done="true"/.test(content)) {
-					// Pass the full content (trailing text = model's final response, keep it)
 					return expandPreservedToolContextMessage({ ...message, preservedToolContext: true });
 				}
 			}

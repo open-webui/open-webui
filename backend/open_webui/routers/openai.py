@@ -39,6 +39,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 
 
+from open_webui.utils.messages import blocks_to_api_messages
 from open_webui.utils.payload import (
     apply_ephemeral_cache_control_to_last_message,
     apply_model_params_to_body_openai,
@@ -1112,6 +1113,11 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+
+    # Normalize internal content_blocks → API shape. Single source of truth for the
+    # internal-message → upstream-API conversion (shared with the live tool-call loop).
+    if isinstance(payload.get("messages"), list):
+        payload["messages"] = blocks_to_api_messages(payload["messages"])
 
     has_pdf_files = False
 

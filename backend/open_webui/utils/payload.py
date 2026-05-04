@@ -9,8 +9,26 @@ from typing import Callable, Optional
 import json
 from datetime import datetime
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # pragma: no cover - py<3.9 fallback
+    ZoneInfo = None  # type: ignore[assignment]
 
-# inplace function: form_data is modified
+
+def _resolve_local_now(metadata: Optional[dict]) -> tuple[datetime, str]:
+    """Return (now, label) where ``now`` is the current time in the user's local timezone
+    (when supplied via ``metadata['timezone']``) and ``label`` is the timezone identifier
+    to surface in the system prompt. Falls back to server time / ``UTC`` label when the
+    timezone is missing or invalid — matching the historical behaviour."""
+    tz_name = (metadata or {}).get("timezone") if isinstance(metadata, dict) else None
+    if tz_name and ZoneInfo is not None:
+        try:
+            return datetime.now(ZoneInfo(tz_name)), tz_name
+        except Exception:
+            pass
+    return datetime.now(), "UTC"
+
+
 def apply_system_prompt_to_body(
     system: Optional[str],
     form_data: dict,
@@ -18,8 +36,11 @@ def apply_system_prompt_to_body(
     user=None,
     replace: bool = False,
 ) -> dict:
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    date_prompt = f"Current Date: {current_date}"
+    """Returns a new ``form_data`` with the system prompt applied. Pure: does not mutate
+    ``form_data`` or its message list."""
+    now, tz_label = _resolve_local_now(metadata)
+    date_str = now.strftime("%Y-%m-%d")
+    date_prompt = f"Current Date: {date_str} ({tz_label})"
 
     if not system:
         system = date_prompt
@@ -27,120 +48,117 @@ def apply_system_prompt_to_body(
         if date_prompt not in system:
             system = f"{system}\n{date_prompt}"
 
-    # Metadata (WebUI Usage)
     if metadata:
         variables = metadata.get("variables", {})
         if variables:
             system = prompt_variables_template(system, variables)
 
-    # Legacy (API Usage)
     system = prompt_template(system, user)
 
+    messages = list(form_data.get("messages") or [])
     if replace:
-        form_data["messages"] = replace_system_message_content(
-            system, form_data.get("messages", [])
-        )
+        new_messages = replace_system_message_content(system, messages)
     else:
-        form_data["messages"] = add_or_update_system_message(
-            system, form_data.get("messages", [])
-        )
+        new_messages = add_or_update_system_message(system, messages)
 
-    return form_data
+    return {**form_data, "messages": new_messages}
 
 
-# inplace function: form_data is modified
 def apply_model_params_to_body(
     params: dict, form_data: dict, mappings: dict[str, Callable]
 ) -> dict:
+    """Returns a new ``form_data`` with the params applied. Pure."""
     if not params:
         return form_data
 
+    out = {**form_data}
     for key, value in params.items():
         if value is not None:
             if key in mappings:
                 cast_func = mappings[key]
                 if isinstance(cast_func, Callable):
-                    form_data[key] = cast_func(value)
+                    out[key] = cast_func(value)
             else:
-                form_data[key] = value
+                out[key] = value
 
-    return form_data
+    return out
+
+
+def _with_cache_control(message: dict) -> dict:
+    """Return a copy of ``message`` whose final content part carries an ephemeral
+    cache_control marker. String content is reshaped into a single text-part list to
+    accommodate the marker. Pure: does not mutate ``message``."""
+    content = message.get("content")
+
+    if isinstance(content, list) and content:
+        new_parts = list(content)
+        last_part = new_parts[-1]
+        if isinstance(last_part, dict):
+            new_parts[-1] = {**last_part, "cache_control": {"type": "ephemeral"}}
+        return {**message, "content": new_parts}
+
+    if isinstance(content, str):
+        return {
+            **message,
+            "content": [
+                {
+                    "type": "text",
+                    "text": content,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+        }
+
+    return message
 
 
 def apply_ephemeral_cache_control_to_last_message(
     form_data: dict, enabled: bool = True
 ) -> dict:
+    """Return a new ``form_data`` whose last message carries an ephemeral cache_control
+    marker on its final content part. Pure: previous-round messages stay byte-stable
+    across the live tool-call loop because their original objects are never mutated."""
     if not enabled:
         return form_data
 
     messages = form_data.get("messages")
-    if not isinstance(messages, list) or len(messages) == 0:
+    if not isinstance(messages, list) or not messages:
         return form_data
 
     last_message = messages[-1]
     if not isinstance(last_message, dict):
         return form_data
 
-    # Preserve multipart content and only mark the final user-visible part.
-    if isinstance(last_message.get("content"), list) and len(last_message["content"]) > 0:
-        last_part = last_message["content"][-1]
-        if isinstance(last_part, dict):
-            last_part["cache_control"] = {"type": "ephemeral"}
-    elif isinstance(last_message.get("content"), str):
-        last_message["content"] = [
-            {
-                "type": "text",
-                "text": last_message["content"],
-                "cache_control": {"type": "ephemeral"},
-            }
-        ]
-
-    return form_data
+    return {**form_data, "messages": [*messages[:-1], _with_cache_control(last_message)]}
 
 
 def remove_open_webui_params(params: dict) -> dict:
-    """
-    Removes OpenWebUI specific parameters from the provided dictionary.
-
-    Args:
-        params (dict): The dictionary containing parameters.
-
-    Returns:
-        dict: The modified dictionary with OpenWebUI parameters removed.
-    """
+    """Returns a new params dict with OpenWebUI-specific keys removed. Pure."""
     open_webui_params = {
-        "stream_response": bool,
-        "stream_delta_chunk_size": int,
-        "function_calling": str,
-        "reasoning_tags": list,
-        "system": str,
+        "stream_response",
+        "stream_delta_chunk_size",
+        "function_calling",
+        "reasoning_tags",
+        "system",
     }
-
-    for key in list(params.keys()):
-        if key in open_webui_params:
-            del params[key]
-
-    return params
+    return {k: v for k, v in params.items() if k not in open_webui_params}
 
 
-# inplace function: form_data is modified
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
+    """Returns a new ``form_data`` with OpenAI-shape model params applied. Pure."""
     params = remove_open_webui_params(params)
+    params = dict(params)  # local copy so .pop is safe
 
     custom_params = params.pop("custom_params", {})
     if custom_params:
-        # Attempt to parse custom_params if they are strings
-        for key, value in custom_params.items():
+        custom_params = dict(custom_params)
+        for key, value in list(custom_params.items()):
             if isinstance(value, str):
                 try:
-                    # Attempt to parse the string as JSON
                     custom_params[key] = json.loads(value)
                 except json.JSONDecodeError:
-                    # If it fails, keep the original string
                     pass
-
-        # If there are custom parameters, we need to apply them first
-        params = deep_update(params, custom_params)
+        params = deep_update(dict(params), custom_params)
 
     mappings = {
         "temperature": float,
@@ -159,35 +177,30 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
 
 
 def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    """Returns a new ``form_data`` with Ollama-shape model params applied. Pure."""
     params = remove_open_webui_params(params)
+    params = dict(params)
 
     custom_params = params.pop("custom_params", {})
     if custom_params:
-        # Attempt to parse custom_params if they are strings
-        for key, value in custom_params.items():
+        custom_params = dict(custom_params)
+        for key, value in list(custom_params.items()):
             if isinstance(value, str):
                 try:
-                    # Attempt to parse the string as JSON
                     custom_params[key] = json.loads(value)
                 except json.JSONDecodeError:
-                    # If it fails, keep the original string
                     pass
+        params = deep_update(dict(params), custom_params)
 
-        # If there are custom parameters, we need to apply them first
-        params = deep_update(params, custom_params)
-
-    # Convert OpenAI parameter names to Ollama parameter names if needed.
     name_differences = {
         "max_tokens": "num_predict",
     }
 
     for key, value in name_differences.items():
         if (param := params.get(key, None)) is not None:
-            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
             params[value] = params[key]
             del params[key]
 
-    # See https://github.com/ollama/ollama/blob/main/docs/api.md#request-8
     mappings = {
         "temperature": float,
         "top_p": float,
@@ -213,12 +226,9 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     }
 
     def parse_json(value: str) -> dict:
-        """
-        Parses a JSON string into a dictionary, handling potential JSONDecodeError.
-        """
         try:
             return json.loads(value)
-        except Exception as e:
+        except Exception:
             return value
 
     ollama_root_params = {
@@ -227,41 +237,35 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "think": bool,
     }
 
+    out = {**form_data}
     for key, value in ollama_root_params.items():
         if (param := params.get(key, None)) is not None:
-            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
-            form_data[key] = value(param)
+            out[key] = value(param)
             del params[key]
 
-    # Unlike OpenAI, Ollama does not support params directly in the body
-    form_data["options"] = apply_model_params_to_body(
-        params, (form_data.get("options", {}) or {}), mappings
+    out["options"] = apply_model_params_to_body(
+        params, dict(form_data.get("options") or {}), mappings
     )
-    return form_data
+    return out
 
 
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
     ollama_messages = []
 
     for message in messages:
-        # Initialize the new message structure with the role
         new_message = {"role": message["role"]}
 
         content = message.get("content", [])
         tool_calls = message.get("tool_calls", None)
         tool_call_id = message.get("tool_call_id", None)
 
-        # Check if the content is a string (just a simple message)
         if isinstance(content, str) and not tool_calls:
-            # If the content is a string, it's pure text
             new_message["content"] = content
 
-            # If message is a tool call, add the tool call id to the message
             if tool_call_id:
                 new_message["tool_call_id"] = tool_call_id
 
         elif tool_calls:
-            # If tool calls are present, add them to the message
             ollama_tool_calls = []
             for tool_call in tool_calls:
                 ollama_tool_call = {
@@ -277,38 +281,29 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
                 ollama_tool_calls.append(ollama_tool_call)
             new_message["tool_calls"] = ollama_tool_calls
 
-            # Put the content to empty string (Ollama requires an empty string for tool calls)
             new_message["content"] = ""
 
         else:
-            # Otherwise, assume the content is a list of dicts, e.g., text followed by an image URL
             content_text = ""
             images = []
 
-            # Iterate through the list of content items
             for item in content:
-                # Check if it's a text type
                 if item.get("type") == "text":
                     content_text += item.get("text", "")
 
-                # Check if it's an image URL type
                 elif item.get("type") == "image_url":
                     img_url = item.get("image_url", {}).get("url", "")
                     if img_url:
-                        # If the image url starts with data:, it's a base64 image and should be trimmed
                         if img_url.startswith("data:"):
                             img_url = img_url.split(",")[-1]
                         images.append(img_url)
 
-            # Add content text (if any)
             if content_text:
                 new_message["content"] = content_text.strip()
 
-            # Add images (if any)
             if images:
                 new_message["images"] = images
 
-        # Append the new formatted message to the result
         ollama_messages.append(new_message)
 
     return ollama_messages
@@ -326,7 +321,6 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     """
     ollama_payload = {}
 
-    # Mapping basic model and message details
     ollama_payload["model"] = openai_payload.get("model")
     ollama_payload["messages"] = convert_messages_openai_to_ollama(
         openai_payload.get("messages")
@@ -335,18 +329,14 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if "tools" in openai_payload:
         ollama_payload["tools"] = openai_payload["tools"]
 
-    # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
 
         def parse_json(value: str) -> dict:
-            """
-            Parses a JSON string into a dictionary, handling potential JSONDecodeError.
-            """
             try:
                 return json.loads(value)
-            except Exception as e:
+            except Exception:
                 return value
 
         ollama_root_params = {
@@ -355,27 +345,21 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             "think": bool,
         }
 
-        # Ollama's options field can contain parameters that should be at the root level.
         for key, value in ollama_root_params.items():
             if (param := ollama_options.get(key, None)) is not None:
-                # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
                 ollama_payload[key] = value(param)
                 del ollama_options[key]
 
-        # Re-Mapping OpenAI's `max_tokens` -> Ollama's `num_predict`
         if "max_tokens" in ollama_options:
             ollama_options["num_predict"] = ollama_options["max_tokens"]
             del ollama_options["max_tokens"]
 
-        # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
-        # Comment: Not sure why this is needed, but we'll keep it for compatibility.
         if "system" in ollama_options:
             ollama_payload["system"] = ollama_options["system"]
             del ollama_options["system"]
 
         ollama_payload["options"] = ollama_options
 
-    # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
     if "stop" in openai_payload:
         ollama_options = ollama_payload.get("options", {})
         ollama_options["stop"] = openai_payload.get("stop")
@@ -409,7 +393,6 @@ def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
     ollama_payload = {"model": openai_payload.get("model")}
     input_value = openai_payload.get("input")
 
-    # Ollama expects 'input' as a list, and 'prompt' as a single string.
     if isinstance(input_value, list):
         ollama_payload["input"] = input_value
         ollama_payload["prompt"] = "\n".join(str(x) for x in input_value)
@@ -417,7 +400,6 @@ def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload["input"] = [input_value]
         ollama_payload["prompt"] = str(input_value)
 
-    # Optionally forward other fields if present
     for optional_key in ("options", "truncate", "keep_alive"):
         if optional_key in openai_payload:
             ollama_payload[optional_key] = openai_payload[optional_key]

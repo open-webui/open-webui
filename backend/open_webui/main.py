@@ -1476,6 +1476,7 @@ async def chat_completion(
             "files": form_data.get("files", None),
             "features": form_data.get("features", {}),
             "variables": form_data.get("variables", {}),
+            "timezone": form_data.pop("timezone", None),
             "model": model,
             "direct": model_item.get("direct", False),
             "params": {
