@@ -66,11 +66,18 @@ def _build_search_text(title: str, chat_data) -> str:
 
 
 def upgrade():
-    op.add_column("chat", sa.Column("search_text", sa.Text(), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    chat_columns = {c['name'] for c in inspector.get_columns('chat')}
+    if 'search_text' not in chat_columns:
+        op.add_column("chat", sa.Column("search_text", sa.Text(), nullable=True))
 
-    # Backfill existing rows
+    # Backfill rows that don't yet have a search_text value (covers both fresh
+    # adds and re-applies after the column was created out-of-band).
     connection = op.get_bind()
-    rows = connection.execute(sa.text("SELECT id, title, chat FROM chat")).fetchall()
+    rows = connection.execute(
+        sa.text("SELECT id, title, chat FROM chat WHERE search_text IS NULL")
+    ).fetchall()
     for row in rows:
         try:
             search_text = _build_search_text(row[1], row[2])
@@ -83,4 +90,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column("chat", "search_text")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    chat_columns = {c['name'] for c in inspector.get_columns('chat')}
+    if 'search_text' in chat_columns:
+        op.drop_column("chat", "search_text")
