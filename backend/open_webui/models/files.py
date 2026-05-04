@@ -245,29 +245,32 @@ class FilesTable:
             result = await db.execute(select(File).filter_by(user_id=user_id))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
 
-    def get_pending_files_by_knowledge_id(
+    async def get_pending_files_by_knowledge_id(
         self,
         knowledge_id: str,
         user_id: Optional[str] = None,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> list['FileModelResponse']:
         """Return files that reference knowledge_id in their meta.data and are
         still being processed (status pending or processing).  Used to surface
         in-flight uploads after a page refresh, before the background task has
         finished and linked the file to the knowledge base."""
-        with get_db_context(db) as db:
-            query = db.query(File).filter(
+        async with get_async_db_context(db) as db:
+            stmt = select(File).filter(
                 File.data['status'].as_string().in_(['pending', 'processing']),
                 File.meta['data']['knowledge_id'].as_string() == knowledge_id,
             )
             if user_id:
-                query = query.filter_by(user_id=user_id)
+                stmt = stmt.filter_by(user_id=user_id)
+
+            result = await db.execute(stmt.order_by(File.created_at.desc()))
+            files = result.scalars().all()
+
             return [
-                FileModelResponse.model_validate(f, from_attributes=True)
-                for f in query.order_by(File.created_at.desc()).all()
+                FileModelResponse.model_validate(f, from_attributes=True) for f in files
             ]
 
-    def get_file_list(
+    async def get_file_list(
         self,
         user_id: Optional[str] = None,
         skip: int = 0,
@@ -383,18 +386,20 @@ class FilesTable:
             except Exception:
                 return None
 
-    def reset_stuck_processing_files(self, db: Optional[Session] = None) -> int:
+    async def reset_stuck_processing_files(self, db: Optional[AsyncSession] = None) -> int:
         """Mark all files whose status is 'pending' or 'processing' as 'failed'.
 
         Called once at application startup to clean up orphaned background
-        tasks left behind by a previous server crash or restart.  Returns the
+        tasks left behind by a previous server crash or restart. Returns the
         number of files updated."""
         import time as _time
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             try:
-                rows = db.query(File).filter(
+                stmt = select(File).filter(
                     File.data['status'].as_string().in_(['pending', 'processing'])
-                ).all()
+                )
+                result = await db.execute(stmt)
+                rows = result.scalars().all()
                 now = int(_time.time())
                 for f in rows:
                     f.data = {
@@ -403,14 +408,14 @@ class FilesTable:
                         'error': 'Processing was interrupted by a server restart.',
                     }
                     f.updated_at = now
-                db.commit()
+                await db.commit()
                 return len(rows)
             except Exception as exc:
                 log.warning('reset_stuck_processing_files failed: %s', exc)
                 return 0
 
     async def update_file_data_by_id(
-        self, id: str, data: dict, db: Optional[Session] = None
+        self, id: str, data: dict, db: Optional[AsyncSession] = None
     ) -> Optional[FileModel]:
         async with get_async_db_context(db) as db:
             try:

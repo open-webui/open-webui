@@ -613,13 +613,13 @@ async def get_knowledge_files_by_id(
 async def get_pending_files_by_knowledge_id(
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Return files that are still being processed (pending/processing) for
     this knowledge base.  These have not yet been linked to the knowledge base
     but carry knowledge_id in their meta.data so they can be shown in the UI
     after a page refresh."""
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -629,7 +629,7 @@ async def get_pending_files_by_knowledge_id(
     if not (
         user.role == 'admin'
         or knowledge.user_id == user.id
-        or AccessGrants.has_access(
+        or await AccessGrants.has_access(
             user_id=user.id,
             resource_type='knowledge',
             resource_id=knowledge.id,
@@ -642,7 +642,7 @@ async def get_pending_files_by_knowledge_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    return Files.get_pending_files_by_knowledge_id(
+    return await Files.get_pending_files_by_knowledge_id(
         knowledge_id=id,
         user_id=None if user.role == 'admin' else user.id,
         db=db,
