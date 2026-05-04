@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-import ssl as _stdlib_ssl
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -37,90 +36,84 @@ from typing_extensions import Self
 log = logging.getLogger(__name__)
 
 
-def extract_ssl_mode_from_url(url: str) -> tuple[str, str | None]:
+# ── SSL URL normalization (used by sync engine & Alembic migrations) ─
+#
+# psycopg2 (sync) needs ``sslmode=`` in the connection string (it does
+# not recognise the bare ``ssl=`` key that some ORMs emit).  The helpers
+# below strip all SSL-related query params, normalise them, and
+# reattach them in the canonical libpq form.
+#
+# The **async** engine now uses psycopg (v3), which speaks libpq
+# natively, so it needs no translation at all — the DATABASE_URL is
+# passed through as-is.
+# ─────────────────────────────────────────────────────────────────────
+
+
+def _pop_first(params: dict[str, list[str]], key: str) -> str | None:
+    """Pop a single-valued query param, returning ``None`` if absent."""
+    values = params.pop(key, None)
+    return values[0] if values else None
+
+
+def _is_postgres_url(url: str) -> bool:
+    """Return True if *url* looks like a PostgreSQL connection string."""
+    return bool(url) and any(url.startswith(p) for p in ('postgresql://', 'postgresql+', 'postgres://'))
+
+
+def extract_ssl_params_from_url(url: str) -> tuple[str, dict[str, str]]:
     """Strip SSL query-string parameters from a PostgreSQL URL.
 
-    asyncpg and psycopg2 use different query-string keys for SSL
-    (``ssl`` vs ``sslmode``).  This helper removes **both** from the
-    URL so that each driver can receive the correct parameter through
-    its own mechanism (query-string re-injection for psycopg2,
-    ``connect_args`` for asyncpg).
-
-    Returns
-    -------
-    (url_without_ssl, ssl_mode)
-        *url_without_ssl* is the original URL with ``ssl`` / ``sslmode``
-        query parameters removed.  *ssl_mode* is the extracted mode
-        string (e.g. ``'require'``), or ``None`` if neither parameter
-        was present.
-
-    Non-PostgreSQL URLs are returned unchanged with ``ssl_mode=None``.
+    Returns ``(url_without_ssl, ssl_dict)`` where *ssl_dict* maps
+    canonical libpq key names (``sslmode``, ``sslrootcert``, …) to
+    their values.  Non-PostgreSQL URLs are returned unchanged with an
+    empty dict.
     """
-    if not url or not any(url.startswith(prefix) for prefix in ('postgresql://', 'postgresql+', 'postgres://')):
-        return url, None
+    if not _is_postgres_url(url):
+        return url, {}
 
     parsed = urlparse(url)
-    query_params = parse_qs(parsed.query, keep_blank_values=True)
+    qp = parse_qs(parsed.query, keep_blank_values=True)
 
-    # Prefer sslmode (libpq canonical) over the asyncpg-only ssl key.
-    ssl_mode: str | None = None
-    for key in ('sslmode', 'ssl'):
-        values = query_params.pop(key, None)
-        if values and ssl_mode is None:
-            ssl_mode = values[0]
+    # Prefer sslmode (libpq canonical) over the bare ``ssl`` key.
+    sslmode_val = _pop_first(qp, 'sslmode')
+    ssl_val = _pop_first(qp, 'ssl')
+    ssl_mode = sslmode_val or ssl_val
 
-    if ssl_mode is None:
-        # Nothing to strip — return the URL untouched.
-        return url, None
+    ssl_dict: dict[str, str] = {}
+    if ssl_mode:
+        ssl_dict['sslmode'] = ssl_mode
+    for key in ('sslrootcert', 'sslcert', 'sslkey', 'sslcrl'):
+        val = _pop_first(qp, key)
+        if val:
+            ssl_dict[key] = val
 
-    # Rebuild the query string without the SSL keys.
-    remaining_query = urlencode(query_params, doseq=True)
-    url_without_ssl = urlunparse(parsed._replace(query=remaining_query))
-    return url_without_ssl, ssl_mode
+    if not ssl_dict:
+        return url, ssl_dict
+
+    cleaned_query = urlencode(qp, doseq=True)
+    return urlunparse(parsed._replace(query=cleaned_query)), ssl_dict
 
 
-def build_asyncpg_ssl_args(ssl_mode: str | None) -> dict:
-    """Convert a libpq-style SSL mode value to asyncpg ``connect_args``.
+def reattach_ssl_params_to_url(url_without_ssl: str, ssl_dict: dict[str, str]) -> str:
+    """Re-append SSL query-string parameters to a cleaned PostgreSQL URL.
 
-    Returns a dict suitable for unpacking into
-    ``create_async_engine(..., connect_args=...)``.
+    Used for psycopg2/libpq consumers that expect ``sslmode`` and the
+    certificate-file keys in the connection string.
     """
-    if ssl_mode is None:
-        return {}
-
-    mode = ssl_mode.lower()
-    if mode == 'disable':
-        return {'connect_args': {'ssl': False}}
-    if mode in ('allow', 'prefer'):
-        # asyncpg has no direct equivalent — omit to let it try without.
-        return {}
-    if mode == 'require':
-        # SSL required but no certificate verification (matches libpq).
-        ctx = _stdlib_ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = _stdlib_ssl.CERT_NONE
-        return {'connect_args': {'ssl': ctx}}
-    if mode in ('verify-ca', 'verify-full'):
-        # Full verification — use the system trust store.
-        ctx = _stdlib_ssl.create_default_context()
-        if mode == 'verify-ca':
-            ctx.check_hostname = False
-        return {'connect_args': {'ssl': ctx}}
-
-    # Unknown value — pass through as-is and let asyncpg decide.
-    return {'connect_args': {'ssl': ssl_mode}}
-
-
-def reattach_ssl_mode_to_url(url_without_ssl: str, ssl_mode: str | None) -> str:
-    """Re-append ``sslmode=<value>`` to a cleaned PostgreSQL URL.
-
-    Used for psycopg2 / libpq consumers that expect the canonical
-    ``sslmode`` query-string key.
-    """
-    if ssl_mode is None:
+    if not ssl_dict:
         return url_without_ssl
-    separator = '&' if '?' in url_without_ssl else '?'
-    return f'{url_without_ssl}{separator}sslmode={ssl_mode}'
+
+    parts = [f'{k}={v}' for k, v in ssl_dict.items() if v]
+    if not parts:
+        return url_without_ssl
+
+    sep = '&' if '?' in url_without_ssl else '?'
+    return f'{url_without_ssl}{sep}{"&".join(parts)}'
+
+
+# Backwards-compatible aliases for external callers.
+extract_ssl_mode_from_url = extract_ssl_params_from_url
+reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
 class JSONField(types.TypeDecorator):
@@ -150,9 +143,10 @@ class JSONField(types.TypeDecorator):
 def handle_peewee_migration(DATABASE_URL):
     db = None
     try:
-        # Normalize SSL params so psycopg2 always sees `sslmode=` (never `ssl=`).
-        url_without_ssl, ssl_mode = extract_ssl_mode_from_url(DATABASE_URL)
-        normalized_url = reattach_ssl_mode_to_url(url_without_ssl, ssl_mode)
+        # Normalize SSL params so psycopg2 always sees `sslmode=` (never `ssl=`)
+        # and cert-file params are preserved in the connection string.
+        url_without_ssl, ssl_params = extract_ssl_params_from_url(DATABASE_URL)
+        normalized_url = reattach_ssl_params_to_url(url_without_ssl, ssl_params)
 
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(normalized_url.replace('postgresql://', 'postgres://'))
@@ -179,32 +173,36 @@ if ENABLE_DB_MIGRATIONS:
     handle_peewee_migration(DATABASE_URL)
 
 
-# Normalize SSL params from the URL once; each engine branch re-injects
-# the driver-appropriate form.
-DATABASE_URL_WITHOUT_SSL, DATABASE_SSL_MODE = extract_ssl_mode_from_url(DATABASE_URL)
+# Normalize SSL params from the URL once; the sync engine needs them
+# reattached in canonical libpq form for psycopg2.
+_url_without_ssl, _ssl_dict = extract_ssl_params_from_url(DATABASE_URL)
 
-# For psycopg2 (sync engine), re-append sslmode=<value>.
-SQLALCHEMY_DATABASE_URL = (
-    reattach_ssl_mode_to_url(DATABASE_URL_WITHOUT_SSL, DATABASE_SSL_MODE) if DATABASE_SSL_MODE else DATABASE_URL
-)
+# For psycopg2 (sync engine), re-append sslmode + cert-file params.
+SQLALCHEMY_DATABASE_URL = reattach_ssl_params_to_url(_url_without_ssl, _ssl_dict) if _ssl_dict else DATABASE_URL
 
 
 def _make_async_url(url: str) -> str:
-    """Convert a sync database URL to its async driver equivalent."""
+    """Convert a sync database URL to its async driver equivalent.
+
+    The async engine uses psycopg (v3) which speaks libpq natively,
+    so all standard connection-string parameters (``sslmode``,
+    ``options``, ``target_session_attrs``, etc.) are passed through
+    without any translation.
+    """
     if url.startswith('sqlite+sqlcipher://'):
-        # SQLCipher has no async driver — not supported for async
         raise ValueError(
             'sqlite+sqlcipher:// URLs are not supported with async engine. '
             'Use standard sqlite:// or postgresql:// instead.'
         )
     if url.startswith('sqlite:///') or url.startswith('sqlite://'):
         return url.replace('sqlite://', 'sqlite+aiosqlite://', 1)
+    # psycopg v3 — auto-selects async mode with create_async_engine
     if url.startswith('postgresql+psycopg2://'):
-        return url.replace('postgresql+psycopg2://', 'postgresql+asyncpg://', 1)
+        return url.replace('postgresql+psycopg2://', 'postgresql+psycopg://', 1)
     if url.startswith('postgresql://'):
-        return url.replace('postgresql://', 'postgresql+asyncpg://', 1)
+        return url.replace('postgresql://', 'postgresql+psycopg://', 1)
     if url.startswith('postgres://'):
-        return url.replace('postgres://', 'postgresql+asyncpg://', 1)
+        return url.replace('postgres://', 'postgresql+psycopg://', 1)
     # For other dialects, return as-is and let SQLAlchemy handle it
     return url
 
@@ -329,10 +327,10 @@ get_db = contextmanager(get_session)
 # ASYNC ENGINE (used for ALL runtime database operations)
 # ============================================================
 
-# Use the SSL-stripped URL for asyncpg — SSL is injected via connect_args.
-ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(
-    DATABASE_URL_WITHOUT_SSL if DATABASE_SSL_MODE else SQLALCHEMY_DATABASE_URL
-)
+# psycopg (v3) speaks libpq natively — the full DATABASE_URL is passed
+# through as-is.  SSL params, ``options``, ``target_session_attrs``, etc.
+# all work without any stripping or translation.
+ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     # Generous default — async coroutines + no session sharing = high connection demand.
@@ -350,10 +348,6 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     def _set_sqlite_pragmas(dbapi_connection, connection_record):
         _apply_sqlite_pragmas(dbapi_connection)
 else:
-    # Inject asyncpg-compatible SSL connect_args when the user specified
-    # sslmode/ssl in DATABASE_URL.
-    asyncpg_ssl_args = build_asyncpg_ssl_args(DATABASE_SSL_MODE)
-
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
             async_engine = create_async_engine(
@@ -363,20 +357,17 @@ else:
                 pool_timeout=DATABASE_POOL_TIMEOUT,
                 pool_recycle=DATABASE_POOL_RECYCLE,
                 pool_pre_ping=True,
-                **asyncpg_ssl_args,
             )
         else:
             async_engine = create_async_engine(
                 ASYNC_SQLALCHEMY_DATABASE_URL,
                 pool_pre_ping=True,
                 poolclass=NullPool,
-                **asyncpg_ssl_args,
             )
     else:
         async_engine = create_async_engine(
             ASYNC_SQLALCHEMY_DATABASE_URL,
             pool_pre_ping=True,
-            **asyncpg_ssl_args,
         )
 
 

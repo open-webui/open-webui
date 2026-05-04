@@ -114,6 +114,8 @@ def build_loader_from_config(request):
         DOCUMENT_INTELLIGENCE_MODEL=config.DOCUMENT_INTELLIGENCE_MODEL,
         MISTRAL_OCR_API_BASE_URL=config.MISTRAL_OCR_API_BASE_URL,
         MISTRAL_OCR_API_KEY=config.MISTRAL_OCR_API_KEY,
+        PADDLEOCR_VL_BASE_URL=config.PADDLEOCR_VL_BASE_URL,
+        PADDLEOCR_VL_TOKEN=config.PADDLEOCR_VL_TOKEN,
         MINERU_API_MODE=config.MINERU_API_MODE,
         MINERU_API_URL=config.MINERU_API_URL,
         MINERU_API_KEY=config.MINERU_API_KEY,
@@ -563,6 +565,13 @@ async def query_collection(
         except Exception as e:
             log.exception(f'Error when querying the collection: {e}')
             return None, e
+
+    # Sanitize: filter out None/empty queries to prevent embedding crashes
+    # (e.g. when get_last_user_message returns None)
+    queries = [q for q in queries if q]
+    if not queries:
+        log.warning('query_collection: all queries were None or empty, returning empty results')
+        return {'distances': [[]], 'documents': [[]], 'metadatas': [[]]}
 
     # Generate all query embeddings (in one call)
     query_embeddings = await embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)

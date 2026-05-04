@@ -489,7 +489,10 @@
 				const displayTitle = title || $i18n.t('New Chat');
 
 				if (done) {
-					if ($settings?.notificationSoundAlways ?? false) {
+					if (
+						($settings?.notificationSound ?? true) &&
+						($settings?.notificationSoundAlways ?? false)
+					) {
 						playingNotificationSound.set(true);
 
 						const audio = new Audio(`/audio/notification.mp3`);
