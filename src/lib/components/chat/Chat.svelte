@@ -1147,10 +1147,29 @@
 	let selectedFolderSubscribe = null;
 	let socketSubscribe = null;
 
+	// Cmd/Ctrl+S inside a temporary chat saves it instead of triggering the
+	// browser's "Save Page" dialog. Skip when an editable element is focused so
+	// it doesn't intercept normal text-input shortcuts.
+	const onSaveChatShortcut = (event: KeyboardEvent) => {
+		const isSaveCombo = (event.metaKey || event.ctrlKey) && event.key?.toLowerCase() === 's';
+		if (!isSaveCombo) return;
+		if (!$temporaryChatEnabled) return;
+
+		const target = event.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase();
+		if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return;
+
+		if (!history?.currentId || !Object.keys(history.messages ?? {}).length) return;
+
+		event.preventDefault();
+		saveTempChatHandler();
+	};
+
 	onMount(async () => {
 		loading = true;
 
 		window.addEventListener('message', onMessageHandler);
+		window.addEventListener('keydown', onSaveChatShortcut);
 
 		// Register socket event handler reactively
 		socketSubscribe = socket.subscribe((_socket) => {
@@ -1283,6 +1302,7 @@
 			socketSubscribe?.();
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
+			window.removeEventListener('keydown', onSaveChatShortcut);
 			$socket?.off('events', chatEventHandler);
 		} catch (e) {
 			console.error(e);
@@ -4487,6 +4507,68 @@
 			toast.error($i18n.t('Failed to move chat'));
 		}
 	};
+
+	// Promote the in-memory temporary chat into a permanent saved chat. Triggered
+	// from both the navbar button and the Cmd/Ctrl+S keyboard shortcut. The earlier
+	// implementation passed the user's first-message `content` directly as the
+	// title, which fails when the content is a multimodal list (image/file/etc.) —
+	// the API rejects the non-string title and the user sees a vague generic
+	// "Failed to save conversation" toast. Coerce to text first, fall back when
+	// empty, and surface real error messages so the user can act on them.
+	const saveTempChatHandler = async () => {
+		try {
+			if (!history?.currentId || !Object.keys(history.messages).length) {
+				toast.error($i18n.t('No conversation to save'));
+				return;
+			}
+
+			const messagesList = createMessagesList(history, history.currentId);
+			const firstUserContent = messagesList.find((m) => m.role === 'user')?.content;
+			let title = getStringMessageContent(firstUserContent ?? '').trim();
+			if (!title) {
+				title = $i18n.t('New Chat');
+			}
+			if (title.length > 50) {
+				title = `${title.slice(0, 50)}...`;
+			}
+
+			const savedChat = await createNewChat(
+				localStorage.token,
+				{
+					id: uuidv4(),
+					title,
+					models: selectedModels,
+					params: params,
+					history: history,
+					messages: messagesList,
+					timestamp: Date.now()
+				},
+				null
+			);
+
+			if (!savedChat) {
+				toast.error($i18n.t('Failed to save conversation'));
+				return;
+			}
+
+			temporaryChatEnabled.set(false);
+			chatId.set(savedChat.id);
+			chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+			await goto(`/c/${savedChat.id}`);
+			toast.success($i18n.t('Conversation saved successfully'));
+		} catch (error) {
+			console.error('Error saving conversation:', error);
+			const detail =
+				(error && (error.detail || error.message)) ||
+				(typeof error === 'string' ? error : null);
+			toast.error(
+				detail
+					? `${$i18n.t('Failed to save conversation')}: ${detail}`
+					: $i18n.t('Failed to save conversation')
+			);
+		}
+	};
 </script>
 
 <svelte:head>
@@ -4573,43 +4655,7 @@
 						{initNewChat}
 						archiveChatHandler={() => {}}
 						{moveChatHandler}
-						onSaveTempChat={async () => {
-							try {
-								if (!history?.currentId || !Object.keys(history.messages).length) {
-									toast.error($i18n.t('No conversation to save'));
-									return;
-								}
-								const messages = createMessagesList(history, history.currentId);
-								const title =
-									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
-
-								const savedChat = await createNewChat(
-									localStorage.token,
-									{
-										id: uuidv4(),
-										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-										models: selectedModels,
-										params: params,
-										history: history,
-										messages: messages,
-										timestamp: Date.now()
-									},
-									null
-								);
-
-								if (savedChat) {
-									temporaryChatEnabled.set(false);
-									chatId.set(savedChat.id);
-									chats.set(await getChatList(localStorage.token, $currentChatPage));
-
-									await goto(`/c/${savedChat.id}`);
-									toast.success($i18n.t('Conversation saved successfully'));
-								}
-							} catch (error) {
-								console.error('Error saving conversation:', error);
-								toast.error($i18n.t('Failed to save conversation'));
-							}
-						}}
+						onSaveTempChat={saveTempChatHandler}
 					/>
 
 					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">

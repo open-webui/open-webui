@@ -299,8 +299,15 @@
 	</div>
 
 	{#if isTemporaryLocalChat}
-		<div class=" w-full z-30 text-center">
-			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+		<div class=" w-full z-30 text-center text-xs text-gray-500">
+			{$i18n.t('Temporary Chat')}
+			<button
+				type="button"
+				class="ml-1 underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
+				on:click={() => onSaveTempChat?.()}
+			>
+				{$i18n.t('Save chat')}
+			</button>
 		</div>
 	{/if}
 
