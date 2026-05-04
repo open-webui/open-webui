@@ -138,6 +138,11 @@ Due to the very high volume of incoming vulnerability reports, issues, discussio
 
 **Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means we have not yet had the capacity to address it. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
 
+## Report Handling
+
+If you report a valid vulnerability that somebody else reported before you, we will close your report as a duplicate.
+The earliest filing of the vulnerability is the one we will handle going forward. We will not publish multiple reports for the same vulnerability.
+
 ## Confidential Disclosure
 
 Vulnerability reports submitted through GitHub Security Advisories are **private and confidential**. Public disclosure of **ANY** details related to a submitted vulnerability report is **STRICTLY PROHIBITED** until the advisory has been **fully published** — not merely when a CVE ID has been assigned, but when the advisory itself is publicly visible.
