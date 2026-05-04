@@ -2,12 +2,25 @@
 
 @config '../tailwind.config.js';
 
-/* Tailwind v4's class detector doesn't reliably pick up `group-hover:visible`
- * from the conditional class strings used by the message action buttons in
- * ResponseMessage / UserMessage. Without these, the on-hover edit / copy /
- * delete buttons stay `visibility: hidden` for every non-latest message.
- * Source-list them so the variants always make it into the build. */
-@source inline("group-hover:visible group-hover:flex group-hover:opacity-100 group-hover:opacity-95");
+/* Tailwind v4's class detector doesn't reliably pick up `group-hover:*`
+ * variants from the conditional class strings the app uses (message action
+ * buttons, sidebar reveals, leaderboard rows, …). Without these, on-hover
+ * reveals stay hidden. We do BOTH: source-list them so Tailwind generates
+ * the proper variants when it can, AND emit the rules manually so the
+ * common ones are guaranteed to ship even if detection misses. */
+@source inline("group-hover:{visible,flex,hidden,block,inline,opacity-100,opacity-95,opacity-20,scale-x-100,bg-gray-100,bg-gray-200,bg-gray-600,bg-gray-900,text-black,text-white,text-gray-200,text-gray-500,text-gray-600,text-gray-900}");
+
+@layer utilities {
+	.group:hover .group-hover\:visible { visibility: visible; }
+	.group:hover .group-hover\:flex { display: flex; }
+	.group:hover .group-hover\:hidden { display: none; }
+	.group:hover .group-hover\:block { display: block; }
+	.group:hover .group-hover\:inline { display: inline; }
+	.group:hover .group-hover\:opacity-100 { opacity: 1; }
+	.group:hover .group-hover\:opacity-95 { opacity: 0.95; }
+	.group:hover .group-hover\:opacity-20 { opacity: 0.2; }
+	.group:hover .group-hover\:scale-x-100 { --tw-scale-x: 1; transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y)); }
+}
 
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
