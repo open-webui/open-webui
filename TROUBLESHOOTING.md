@@ -29,7 +29,7 @@ Open WebUI has a default timeout of 5 minutes for Ollama to finish generating th
 **Troubleshooting Steps**:
 
 1. **Verify Ollama URL Format**:
-   - When running the Web UI container, ensure the `OLLAMA_BASE_URL` is correctly set. (e.g., `http://192.168.1.1:11434` for different host setups).
+   - When running the Web UI container, ensure the `OLLAMA_BASE_URL` is correctly set. (e.g., `http://<OLLAMA_HOST>:11434` for different host setups).
    - In the Open WebUI, navigate to "Settings" > "General".
    - Confirm that the Ollama Server URL is correctly set to `[OLLAMA URL]` (e.g., `http://localhost:11434`).
 
