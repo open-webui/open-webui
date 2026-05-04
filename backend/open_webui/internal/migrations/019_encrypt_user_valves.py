@@ -29,6 +29,7 @@ Some examples (model - class or model name)::
 from contextlib import suppress
 
 import json
+import logging
 
 import peewee as pw
 from peewee_migrate import Migrator
@@ -38,20 +39,31 @@ from open_webui.utils.valve_encryption import encrypt_user_valves
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
+log = logging.getLogger(__name__)
+
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Encrypt existing plaintext user valves in user.settings."""
-    cursor = database.execute_sql('SELECT "id", "settings" FROM "user" WHERE "settings" IS NOT NULL')
+    User = migrator.orm["user"]
 
-    for user_id, settings_raw in cursor.fetchall():
+    for user in User.select().where(User.settings.is_null(False)):
+        settings_raw = user.settings
         if not settings_raw:
             continue
 
-        settings = (
-            json.loads(settings_raw)
-            if isinstance(settings_raw, str)
-            else settings_raw
-        )
+        try:
+            settings = (
+                json.loads(settings_raw)
+                if isinstance(settings_raw, str)
+                else settings_raw
+            )
+        except (json.JSONDecodeError, TypeError):
+            log.warning("Skipping user %s: malformed settings JSON", user.id)
+            continue
+
+        if not isinstance(settings, dict):
+            log.warning("Skipping user %s: settings is not a dict", user.id)
+            continue
 
         changed = False
 
@@ -69,27 +81,35 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
                     changed = True
 
         if changed:
-            database.execute_sql(
-                'UPDATE "user" SET "settings" = %s WHERE "id" = %s',
-                (json.dumps(settings), user_id),
-            )
+            User.update(settings=json.dumps(settings)).where(
+                User.id == user.id
+            ).execute()
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Decrypt user valves back to plaintext."""
     from open_webui.utils.valve_encryption import decrypt_user_valves
 
-    cursor = database.execute_sql('SELECT "id", "settings" FROM "user" WHERE "settings" IS NOT NULL')
+    User = migrator.orm["user"]
 
-    for user_id, settings_raw in cursor.fetchall():
+    for user in User.select().where(User.settings.is_null(False)):
+        settings_raw = user.settings
         if not settings_raw:
             continue
 
-        settings = (
-            json.loads(settings_raw)
-            if isinstance(settings_raw, str)
-            else settings_raw
-        )
+        try:
+            settings = (
+                json.loads(settings_raw)
+                if isinstance(settings_raw, str)
+                else settings_raw
+            )
+        except (json.JSONDecodeError, TypeError):
+            log.warning("Rollback skipping user %s: malformed settings JSON", user.id)
+            continue
+
+        if not isinstance(settings, dict):
+            log.warning("Rollback skipping user %s: settings is not a dict", user.id)
+            continue
 
         changed = False
 
@@ -107,10 +127,12 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
                         )
                         changed = True
                     except Exception:
-                        pass
+                        log.warning(
+                            "Rollback failed to decrypt valve %s/%s for user %s",
+                            category, valve_id, user.id,
+                        )
 
         if changed:
-            database.execute_sql(
-                'UPDATE "user" SET "settings" = %s WHERE "id" = %s',
-                (json.dumps(settings), user_id),
-            )
+            User.update(settings=json.dumps(settings)).where(
+                User.id == user.id
+            ).execute()

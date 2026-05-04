@@ -3,22 +3,31 @@ import hashlib
 import json
 import logging
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 from open_webui.env import WEBUI_SECRET_KEY
 
 log = logging.getLogger(__name__)
 
+_DEFAULT_SECRET = "t0p-s3cr3t"
+
 
 def _make_fernet(key: str) -> Fernet:
     """Derive a Fernet instance from an arbitrary string key."""
-    if len(key) != 44:
+    try:
+        return Fernet(key.encode())
+    except Exception:
         key_bytes = hashlib.sha256(key.encode()).digest()
-        key_encoded = base64.urlsafe_b64encode(key_bytes)
-    else:
-        key_encoded = key.encode()
-    return Fernet(key_encoded)
+        return Fernet(base64.urlsafe_b64encode(key_bytes))
 
+
+if WEBUI_SECRET_KEY == _DEFAULT_SECRET:
+    log.warning(
+        "WEBUI_SECRET_KEY is set to the default value '%s'. "
+        "Encrypted valve data is trivially decryptable. "
+        "Set a strong, unique WEBUI_SECRET_KEY in production.",
+        _DEFAULT_SECRET,
+    )
 
 _fernet = _make_fernet(WEBUI_SECRET_KEY)
 
@@ -37,7 +46,19 @@ def decrypt_user_valves(stored) -> dict:
         try:
             decrypted = _fernet.decrypt(stored.encode()).decode()
             return json.loads(decrypted)
+        except InvalidToken:
+            log.error(
+                "Failed to decrypt user valves: key mismatch or corrupted data. "
+                "Returning empty valves. The original encrypted value is preserved in the database."
+            )
+            return {}
+        except json.JSONDecodeError:
+            log.error(
+                "Decrypted user valves but got malformed JSON. "
+                "Returning empty valves. The original encrypted value is preserved in the database."
+            )
+            return {}
         except Exception as e:
-            log.error(f"Error decrypting user valves: {type(e).__name__}: {e}")
-            raise
+            log.error("Unexpected error decrypting user valves: %s: %s", type(e).__name__, e)
+            return {}
     return {}
