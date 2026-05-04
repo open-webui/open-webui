@@ -46,7 +46,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Encrypt existing plaintext user valves in user.settings."""
     User = migrator.orm["user"]
 
-    for user in User.select().where(User.settings.is_null(False)):
+    for user in User.select().where(User.settings.is_null(False)).iterator():
         settings_raw = user.settings
         if not settings_raw:
             continue
@@ -88,11 +88,11 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Decrypt user valves back to plaintext."""
-    from open_webui.utils.valve_encryption import decrypt_user_valves
+    from open_webui.utils.valve_encryption import _fernet
 
     User = migrator.orm["user"]
 
-    for user in User.select().where(User.settings.is_null(False)):
+    for user in User.select().where(User.settings.is_null(False)).iterator():
         settings_raw = user.settings
         if not settings_raw:
             continue
@@ -122,13 +122,14 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
             for valve_id, valve_data in valves.items():
                 if isinstance(valve_data, str):
                     try:
-                        settings[category]["valves"][valve_id] = decrypt_user_valves(
-                            valve_data
-                        )
+                        decrypted = json.loads(_fernet.decrypt(valve_data.encode()).decode())
+                        if not isinstance(decrypted, dict):
+                            raise ValueError(f"Expected dict, got {type(decrypted).__name__}")
+                        settings[category]["valves"][valve_id] = decrypted
                         changed = True
                     except Exception:
                         log.warning(
-                            "Rollback failed to decrypt valve %s/%s for user %s",
+                            "Rollback failed to decrypt valve %s/%s for user %s; skipping",
                             category, valve_id, user.id,
                         )
 

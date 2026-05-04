@@ -45,17 +45,23 @@ def decrypt_user_valves(stored) -> dict:
     if isinstance(stored, str):
         try:
             decrypted = _fernet.decrypt(stored.encode()).decode()
-            return json.loads(decrypted)
+            result = json.loads(decrypted)
+            if not isinstance(result, dict):
+                log.error(
+                    "Decrypted user valves produced unexpected type %s; returning empty valves.",
+                    type(result).__name__,
+                )
+                return {}
+            return result
         except InvalidToken:
             log.error(
                 "Failed to decrypt user valves: key mismatch or corrupted data. "
-                "Returning empty valves. The original encrypted value is preserved in the database."
+                "Returning empty valves."
             )
             return {}
         except json.JSONDecodeError:
             log.error(
-                "Decrypted user valves but got malformed JSON. "
-                "Returning empty valves. The original encrypted value is preserved in the database."
+                "Decrypted user valves but got malformed JSON. Returning empty valves."
             )
             return {}
         except Exception as e:
