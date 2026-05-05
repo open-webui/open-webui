@@ -189,8 +189,21 @@
 				return preloadShellFonts().then(function () {
 					document.documentElement.classList.add('swept-shell-active');
 					ensureMounted(url);
-					new MutationObserver(function () {
-						ensureMounted(url);
+					/* SvelteKit doesn't replace document.body, so the shell
+					 * survives hydration without any observer. We only need
+					 * to react if something explicitly removes #swept-shell;
+					 * scope the observer to that single removal signal so
+					 * we're not running on every toast/modal mount. */
+					new MutationObserver(function (mutations) {
+						for (var i = 0; i < mutations.length; i++) {
+							var removed = mutations[i].removedNodes;
+							for (var j = 0; j < removed.length; j++) {
+								if (removed[j].id === 'swept-shell') {
+									ensureMounted(url);
+									return;
+								}
+							}
+						}
 					}).observe(document.body, { childList: true });
 				});
 			})

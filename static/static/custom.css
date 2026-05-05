@@ -204,8 +204,10 @@ html.dark .swept-shell {
 	html.swept-shell-active body {
 		padding-left: 16rem;
 	}
-	html.swept-shell-active aside[data-state],
-	html.swept-shell-active div[data-state] {
+	/* Targets the existing chat sidebar's outer fixed container by id
+	 * (Sidebar.svelte line 988). Narrow selector chosen over `[data-state]`
+	 * to avoid shifting future unrelated elements that adopt the attribute. */
+	html.swept-shell-active #sidebar {
 		left: 16rem !important;
 	}
 }
