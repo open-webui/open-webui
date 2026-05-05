@@ -2360,6 +2360,8 @@
 		// Use the user-selected terminal from the dropdown
 		const activeTerminalId = $selectedTerminalId ?? null;
 
+		const _privacyProxyNow = get(privacyProxy);
+		console.warn('[PRIVACY DEBUG] sending privacy_proxy:', _privacyProxyNow, '(reactive $privacyProxy was:', $privacyProxy, ')');
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -2386,7 +2388,7 @@
 					...($terminalServers ?? []).filter((t) => !t.id)
 				],
 				features: getFeatures(),
-				privacy_proxy: $privacyProxy,
+				privacy_proxy: _privacyProxyNow,
 				variables: {
 					...getPromptVariables(
 						$user?.name,
