@@ -14,7 +14,7 @@ IF /I "%WEB_LOADER_ENGINE%" == "playwright" (
         playwright install-deps chromium
     )
 
-    python -c "import nltk; nltk.download('punkt_tab')"
+    python -c "import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"
 )
 
 SET "KEY_FILE=.webui_secret_key"
