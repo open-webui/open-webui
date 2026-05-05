@@ -27,7 +27,11 @@ export const appData = writable(null);
 export const MODEL_DOWNLOAD_POOL = writable({});
 
 export const mobile = writable(false);
-export const privacyProxy = writable(true);
+const _stored = typeof localStorage !== 'undefined' ? localStorage.getItem('garnet_privacy_proxy') : null;
+export const privacyProxy = writable(_stored !== null ? _stored === 'true' : true);
+privacyProxy.subscribe(value => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('garnet_privacy_proxy', String(value));
+});
 export const highlightEntities = writable<{ text: string; entities: any[] } | null>(null);
 export const socket: Writable<null | Socket> = writable(null);
 export const activeUserIds: Writable<null | string[]> = writable(null);
