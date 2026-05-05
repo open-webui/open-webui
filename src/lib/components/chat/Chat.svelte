@@ -2423,10 +2423,7 @@
 						// loses them.  Only patch these fields — avoid writing
 						// history/messages which the backend is updating
 						// concurrently via streaming.
-						if (
-							Object.keys(params).length > 0 ||
-							chatFiles.length > 0
-						) {
+						if (Object.keys(params).length > 0 || chatFiles.length > 0) {
 							await updateChatById(localStorage.token, res.chat_id, {
 								params: params,
 								files: chatFiles

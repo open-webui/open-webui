@@ -279,7 +279,9 @@
 			<div class=" w-full z-30">
 				<div
 					bind:this={bannerContainer}
-					class=" flex flex-col gap-1 w-full {bannersExpanded ? '' : 'max-h-28'} md:max-h-none overflow-hidden"
+					class=" flex flex-col gap-1 w-full {bannersExpanded
+					? ''
+					: 'max-h-28'} md:max-h-none overflow-hidden"
 				>
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner
@@ -332,7 +334,9 @@
 				{#if bannersOverflowing || bannersExpanded}
 					<button
 						class="w-full text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-0.5 md:hidden"
-						on:click={() => { bannersExpanded = !bannersExpanded; }}
+						on:click={() => {
+						bannersExpanded = !bannersExpanded;
+					}}
 					>
 						{#if bannersExpanded}
 							{$i18n.t('Show less')}
