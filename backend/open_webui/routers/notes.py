@@ -434,7 +434,7 @@ async def pin_note_by_id(
             user_id=user.id,
             resource_type='note',
             resource_id=note.id,
-            permission='read',
+            permission='write',
             db=db,
         )
     ):
