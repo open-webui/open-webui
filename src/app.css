@@ -36,8 +36,13 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
   font-weight: 500;
   font-size-adjust: 0.58;
 }
-/* hide nav */
-nav,
+/* hide nav on desktop, show on mobile */
+@media (min-width: 768px) {
+	nav {
+		display: none;
+	}
+}
+
 /* settings */
 #settings-search, [aria-controls="tab-general"],[aria-controls="tab-interface"],[aria-controls="tab-tools"],[aria-controls="tab-personalization"],[aria-controls="tab-audio"] {
 	display: none;

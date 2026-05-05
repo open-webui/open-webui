@@ -458,6 +458,9 @@
 
 				{#if loaded}
 					<slot />
+					<div class="w-full pb-2 pt-1 text-center text-xs text-gray-400 dark:text-gray-500">
+						m3llm ‧ v0.9.2 ‧ Powered by OpenWebUI
+					</div>
 				{:else}
 					<div
 						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
