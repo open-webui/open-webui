@@ -645,7 +645,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'general';
@@ -669,7 +669,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'interface';
@@ -694,7 +694,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 									on:click={() => {
 										selectedTab = 'connections';
@@ -720,7 +720,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 									on:click={() => {
 										selectedTab = 'tools';
@@ -745,7 +745,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'personalization';
@@ -769,7 +769,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'audio';
@@ -793,7 +793,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'data_controls';
@@ -817,7 +817,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'account';
@@ -841,7 +841,7 @@
 											: ''
 										: ($settings?.highContrastMode ?? false)
 											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+											: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
 								}`}
 								on:click={() => {
 									selectedTab = 'about';
@@ -865,7 +865,7 @@
 						draggable="false"
 						class="px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex select-none text-left transition {$settings?.highContrastMode
 							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={async (e) => {
 							e.preventDefault();
 							await goto('/admin/settings');

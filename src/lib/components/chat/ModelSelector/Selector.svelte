@@ -612,7 +612,7 @@
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
 											selectedConnectionType === ''
 												? ''
-												: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+												: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 											aria-pressed={selectedTag === '' && selectedConnectionType === ''}
 											on:click={() => {
 												selectedConnectionType = '';
@@ -628,7 +628,7 @@
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'local'
 												? ''
-												: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+												: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 											aria-pressed={selectedConnectionType === 'local'}
 											on:click={() => {
 												selectedTag = '';
@@ -644,7 +644,7 @@
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'external'
 												? ''
-												: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+												: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 											aria-pressed={selectedConnectionType === 'external'}
 											on:click={() => {
 												selectedTag = '';
@@ -660,7 +660,7 @@
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'direct'
 												? ''
-												: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+												: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 											aria-pressed={selectedConnectionType === 'direct'}
 											on:click={() => {
 												selectedTag = '';
@@ -676,7 +676,7 @@
 											<button
 												class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
 													? ''
-													: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+													: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 												aria-pressed={selectedTag === tag}
 												on:click={() => {
 													selectedConnectionType = '';

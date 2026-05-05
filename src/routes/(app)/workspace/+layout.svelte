@@ -90,7 +90,7 @@
 								aria-current={$page.url.pathname.includes('/workspace/models') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/models')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/models">{$i18n.t('Models')}</a
 							>
 						{/if}
@@ -101,7 +101,7 @@
 								aria-current={$page.url.pathname.includes('/workspace/knowledge') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/knowledge')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/knowledge"
 							>
 								{$i18n.t('Knowledge')}
@@ -114,7 +114,7 @@
 								aria-current={$page.url.pathname.includes('/workspace/prompts') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/prompts')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
 						{/if}
@@ -125,7 +125,7 @@
 								aria-current={$page.url.pathname.includes('/workspace/skills') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/skills')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/skills"
 							>
 								{$i18n.t('Skills')}
@@ -138,7 +138,7 @@
 								aria-current={$page.url.pathname.includes('/workspace/tools') ? 'page' : null}
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									: 'text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}
