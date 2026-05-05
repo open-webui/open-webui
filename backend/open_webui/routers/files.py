@@ -91,11 +91,11 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
 
 PROXY_URL = os.getenv("OPENAI_API_BASE_URL", "http://privacy-proxy:8080").replace("/openai", "")
 
-def vault_scan_file(file_id: str, text: str) -> dict:
+def vault_scan_file(file_id: str, text: str, privacy_enabled: bool = True) -> dict:
     try:
         response = httpx.post(
             f"{PROXY_URL}/vault/scan",
-            json={"text": text, "file_id": file_id},
+            json={"text": text, "file_id": file_id, "privacy_proxy": privacy_enabled},
             timeout=30.0
         )
         if response.status_code == 200:
@@ -151,22 +151,31 @@ def process_uploaded_file(
                         docs = loader.load(file_item.meta.get('name', ''), content_type, file_path_resolved)
                         raw_text = " ".join([d.page_content for d in docs])
 
-                        vault_result = vault_scan_file(file_item.id, raw_text)
-                        clean_text = vault_result.get("pseudonymized_text") or raw_text
+                        privacy_enabled = request.headers.get("x-garnet-privacy", "true").lower() != "false"
+
+                        if privacy_enabled:
+                            vault_result = vault_scan_file(file_item.id, raw_text, privacy_enabled)
+                            clean_text = vault_result.get("pseudonymized_text") or raw_text
+                            Files.update_file_data_by_id(
+                                file_item.id,
+                                {
+                                    "garnet_entity_count": vault_result.get("entity_count", 0),
+                                    "garnet_breakdown": vault_result.get("entity_breakdown", {}),
+                                },
+                                db=db_session,
+                            )
+                        else:
+                            clean_text = raw_text
+                            Files.update_file_data_by_id(
+                                file_item.id,
+                                {"garnet_entity_count": 0, "garnet_breakdown": {}},
+                                db=db_session,
+                            )
 
                         process_file(
                             request,
                             ProcessFileForm(file_id=file_item.id, content=clean_text),
                             user=user,
-                            db=db_session,
-                        )
-
-                        Files.update_file_data_by_id(
-                            file_item.id,
-                            {
-                                "garnet_entity_count": vault_result.get("entity_count", 0),
-                                "garnet_breakdown": vault_result.get("entity_breakdown", {}),
-                            },
                             db=db_session,
                         )
                     except Exception as extract_err:

@@ -5,7 +5,8 @@ export const uploadFile = async (
 	token: string,
 	file: File,
 	metadata?: object | null,
-	process?: boolean | null
+	process?: boolean | null,
+	privacyEnabled: boolean = true
 ) => {
 	const data = new FormData();
 	data.append('file', file);
@@ -24,7 +25,8 @@ export const uploadFile = async (
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			'x-garnet-privacy': String(privacyEnabled)
 		},
 		body: data
 	})

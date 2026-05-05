@@ -886,7 +886,7 @@
 
 			// Upload file to server
 			console.log('Uploading file to server...');
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata, undefined, get(privacyProxy));
 
 			if (!uploadedFile) {
 				throw new Error('Server returned null response for file upload');

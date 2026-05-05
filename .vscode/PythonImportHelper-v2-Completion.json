@@ -33794,7 +33794,7 @@
         "kind": 2,
         "importPath": "backend.open_webui.routers.files",
         "description": "backend.open_webui.routers.files",
-        "peekOfCode": "def vault_scan_file(file_id: str, text: str) -> dict:\n    try:\n        response = httpx.post(\n            f\"{PROXY_URL}/vault/scan\",\n            json={\"text\": text, \"file_id\": file_id},\n            timeout=30.0\n        )\n        if response.status_code == 200:\n            data = response.json()\n            log.info(f\"[VAULT] file_id={file_id} entities={data.get('entity_count', 0)}\")",
+        "peekOfCode": "def vault_scan_file(file_id: str, text: str, privacy_enabled: bool = True) -> dict:\n    try:\n        response = httpx.post(\n            f\"{PROXY_URL}/vault/scan\",\n            json={\"text\": text, \"file_id\": file_id, \"privacy_proxy\": privacy_enabled},\n            timeout=30.0\n        )\n        if response.status_code == 200:\n            data = response.json()\n            log.info(f\"[VAULT] file_id={file_id} entities={data.get('entity_count', 0)}\")",
         "detail": "backend.open_webui.routers.files",
         "documentation": {}
     },
@@ -33857,7 +33857,7 @@
         "kind": 5,
         "importPath": "backend.open_webui.routers.files",
         "description": "backend.open_webui.routers.files",
-        "peekOfCode": "PROXY_URL = os.getenv(\"OPENAI_API_BASE_URL\", \"http://privacy-proxy:8080\").replace(\"/openai\", \"\")\ndef vault_scan_file(file_id: str, text: str) -> dict:\n    try:\n        response = httpx.post(\n            f\"{PROXY_URL}/vault/scan\",\n            json={\"text\": text, \"file_id\": file_id},\n            timeout=30.0\n        )\n        if response.status_code == 200:\n            data = response.json()",
+        "peekOfCode": "PROXY_URL = os.getenv(\"OPENAI_API_BASE_URL\", \"http://privacy-proxy:8080\").replace(\"/openai\", \"\")\ndef vault_scan_file(file_id: str, text: str, privacy_enabled: bool = True) -> dict:\n    try:\n        response = httpx.post(\n            f\"{PROXY_URL}/vault/scan\",\n            json={\"text\": text, \"file_id\": file_id, \"privacy_proxy\": privacy_enabled},\n            timeout=30.0\n        )\n        if response.status_code == 200:\n            data = response.json()",
         "detail": "backend.open_webui.routers.files",
         "documentation": {}
     },
