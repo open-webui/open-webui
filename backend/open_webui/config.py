@@ -1223,8 +1223,12 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
+            "title": ["Translate this document",  "into another language"],
+            "content":  "Translate this document into another language (follow up to specify which language). Preserve meaning and keep terminology accurate but easy to understand. Continue the conversation and all follow up prompts in this language.",
+        },
+        {
             "title": ["Simplify this document", "into plain language"],
-            "content": "Simplify this document: help me understand medical terminology the average person wouldn't understand, and give me an overview of the implications for my health.",
+            "content": "Simplify this document: help me understand complex medical terminology, and give me an overview of the implications for my health.",
         },
         {
             "title": ["Explain my lab results", "and what they could mean"],
@@ -1233,17 +1237,6 @@ if default_prompt_suggestions == []:
         {
             "title": ["Summarize this billing document", "in understandable terms"],
             "content": "Tell me what each charge is for, what insurance covers, and what the patient owes.",
-        },
-        {
-            "title": ["Replace medical terminology", "with plain-language explanations"],
-            "content": "Replace complex medical terminology with plain language. Keep the structure the same.",
-        },
-        {
-            "title": [
-                "Summarize this document",
-                "in 5-8 bullet points",
-            ],
-            "content": "Summarize this document in 8 bullet points or less. Include only the key points a patient would need to know.",
         },
         {
             "title": ["Rewrite this discharge summary", "so I know what to do after leaving."],
