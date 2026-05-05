@@ -13,11 +13,11 @@ If you only need to ship the Vertex feature, the tl;dr is in [Quickstart](#quick
 
 Open WebUI supports three ways to add a model provider:
 
-| Approach | When to use | Tradeoffs |
-|---|---|---|
-| **OpenAI-compatible connection** (Admin > Connections) | Provider exposes `/v1/chat/completions` _and_ accepts a static API key in `Authorization: Bearer …`. | Zero code. But useless for any provider that requires short-lived OAuth tokens (Vertex, Bedrock, Azure with managed identity). Token-refresh cron workarounds exist but are brittle. |
-| **Function plugin** (Admin > Functions) | Provider has a custom auth flow, multiple sub-models you want to expose under one entry, or per-request payload conversion. | Single Python file lives in the DB (or in source control + auto-installed). Hot-loadable. SDK pip-installs at first load via `requirements:` frontmatter. |
-| **First-class backend module** (`backend/open_webui/utils/<provider>.py` + router hook) | Provider is "official enough" that it should always be available, never disabled, with full backend integration. | Modifies fork internals; conflicts on every upstream rebase; forces every deployment to ship it. |
+| Approach                                                                                | When to use                                                                                                                 | Tradeoffs                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **OpenAI-compatible connection** (Admin > Connections)                                  | Provider exposes `/v1/chat/completions` _and_ accepts a static API key in `Authorization: Bearer …`.                        | Zero code. But useless for any provider that requires short-lived OAuth tokens (Vertex, Bedrock, Azure with managed identity). Token-refresh cron workarounds exist but are brittle. |
+| **Function plugin** (Admin > Functions)                                                 | Provider has a custom auth flow, multiple sub-models you want to expose under one entry, or per-request payload conversion. | Single Python file lives in the DB (or in source control + auto-installed). Hot-loadable. SDK pip-installs at first load via `requirements:` frontmatter.                            |
+| **First-class backend module** (`backend/open_webui/utils/<provider>.py` + router hook) | Provider is "official enough" that it should always be available, never disabled, with full backend integration.            | Modifies fork internals; conflicts on every upstream rebase; forces every deployment to ship it.                                                                                     |
 
 **For Vertex, the Function path wins** because the Vertex SDKs handle OAuth refresh transparently, and the same Function can speak both Gemini (via `google-genai`) and Claude on Vertex (via `anthropic.AsyncAnthropicVertex`) — surfacing both as selectable models in one manifold.
 
@@ -64,6 +64,7 @@ The loader at `backend/open_webui/functions.py:77` walks every `pipe`-typed Func
 ### Streaming contract
 
 `pipe()` may return any of:
+
 - `str` — wrapped into a single OpenAI chunk + `[DONE]`
 - `dict` — yielded raw as one SSE frame (assumed to already match the OpenAI shape)
 - `Generator` / `Iterator` — each item processed via `process_line` (lines starting with `data:` are passed through; others get wrapped)
@@ -114,6 +115,7 @@ else:
 The filter is `if v is not None`, so an **empty string is preserved**. If an admin opens the gear icon and clicks Save before the env var is set inside the container, the empty string `""` gets persisted to the DB and from then on overrides the env-var default.
 
 **Mitigations:**
+
 - Document the env vars in the README so admins set them before opening the Valves panel.
 - Optional: in `__init__`, raise if a required Valve is empty AND the env var is also empty, with a clear message pointing the admin at the env var.
 - If you hit this, the fix is one click: open the gear icon, type the value, save.
@@ -127,6 +129,7 @@ Many GCP orgs enforce `constraints/iam.disableServiceAccountKeyCreation`, which 
 **The pattern: impersonate the SA from your own user's ADC, then mount the user ADC into the container.**
 
 This works because:
+
 - Your user account has `roles/iam.serviceAccountTokenCreator` on the SA.
 - `gcloud auth application-default login --impersonate-service-account=…` writes an ADC file at `~/.config/gcloud/application_default_credentials.json` of type `impersonated_service_account`.
 - The Google SDKs (and `anthropic[vertex]`, which uses `google-auth` under the hood) recognise that file via `GOOGLE_APPLICATION_CREDENTIALS` and call `iamcredentials.googleapis.com:generateAccessToken` for every request — short-lived tokens, refreshed automatically, attributed to the SA in audit logs.
@@ -164,11 +167,11 @@ The env var override sends the host path of the impersonated ADC into the bind m
 
 When the workload moves to a federation-eligible runtime, drop the bind mount and let the metadata server handle ADC:
 
-| Runtime | Replacement |
-|---|---|
-| GKE | Workload Identity Federation: bind the K8s SA to the GCP SA. Remove `GOOGLE_APPLICATION_CREDENTIALS`. |
-| Cloud Run / Cloud Functions / GCE | Set the runtime SA on the deployment. Remove `GOOGLE_APPLICATION_CREDENTIALS`. |
-| GitHub Actions | WIF via `google-github-actions/auth`. |
+| Runtime                           | Replacement                                                                                           |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| GKE                               | Workload Identity Federation: bind the K8s SA to the GCP SA. Remove `GOOGLE_APPLICATION_CREDENTIALS`. |
+| Cloud Run / Cloud Functions / GCE | Set the runtime SA on the deployment. Remove `GOOGLE_APPLICATION_CREDENTIALS`.                        |
+| GitHub Actions                    | WIF via `google-github-actions/auth`.                                                                 |
 
 The Function code does not change in any of these — that's the point of using `google-auth`'s ADC discovery.
 
@@ -200,7 +203,7 @@ gcloud auth application-default print-access-token   # should print ya29....
 # Then in the chat UI, model picker > "Vertex / Gemini gemini-2.5-flash" > "hello"
 ```
 
-Full prereqs and gcloud commands (SA creation, IAM bindings) are in `~/.claude/plans/i-need-you-to-sequential-pike.md` and `plugins/functions/README.md`.
+Full prereqs (one-time SA creation, IAM bindings, Model Garden EULA acceptance for Claude variants) are in [`plugins/functions/README.md`](../../plugins/functions/README.md).
 
 ---
 

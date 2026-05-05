@@ -66,6 +66,8 @@ else
     red 'Token mint failed:'
     red "  ${TOKEN}"
     red "Check that ${USER_ACCOUNT} has roles/iam.serviceAccountTokenCreator on ${SA_EMAIL}."
+    red 'ADC at the path above will not work for Vertex calls.'
+    exit 1
 fi
 echo
 

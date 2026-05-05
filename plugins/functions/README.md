@@ -21,23 +21,41 @@ For dev/CI, `POST /api/v1/functions/sync` (admin auth required) — see `backend
 
 These Functions read secrets from the container environment, not from UI Valves. Required for `vertex_chat.py`:
 
-| env var | example | notes |
-|---|---|---|
-| `GOOGLE_APPLICATION_CREDENTIALS` | `/run/secrets/vertex-sa.json` | Service-account JSON path; both SDKs pick this up automatically. |
-| `VERTEX_PROJECT_ID` | `pioneer-insurance` | GCP project. |
-| `VERTEX_LOCATION` | `us-central1` or `global` | Gemini region. |
-| `VERTEX_CLAUDE_LOCATION` | `us-east5` | Claude-on-Vertex region (Anthropic models are only in specific regions). |
+| env var                          | example                       | notes                                                                    |
+| -------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| `GOOGLE_APPLICATION_CREDENTIALS` | `/run/secrets/vertex-sa.json` | Service-account JSON path; both SDKs pick this up automatically.         |
+| `VERTEX_PROJECT_ID`              | `pioneer-insurance`           | GCP project.                                                             |
+| `VERTEX_LOCATION`                | `us-central1` or `global`     | Gemini region.                                                           |
+| `VERTEX_CLAUDE_LOCATION`         | `us-east5`                    | Claude-on-Vertex region (Anthropic models are only in specific regions). |
 
 The `docker-compose.yaml` in the repo root mounts `./secrets/pioneer-chat-dev.json` → `/run/secrets/vertex-sa.json`. Override the host path by setting `VERTEX_SA_KEY_PATH` in your `.env`.
 
-For the gcloud commands that provision the service account and key, see the original plan at `~/.claude/plans/i-need-you-to-sequential-pike.md` (or have an admin re-run them — `roles/aiplatform.user` is the only role needed).
+First-time provisioning of the service account in `pioneer-insurance` (run by a project IAM admin):
+
+```bash
+PROJECT_ID="pioneer-insurance"
+SA_NAME="pioneer-chat-dev"
+SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud config set project "${PROJECT_ID}"
+gcloud services enable aiplatform.googleapis.com iamcredentials.googleapis.com
+
+gcloud iam service-accounts create "${SA_NAME}" \
+  --display-name="Pioneer Chat — Open WebUI Vertex client"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/aiplatform.user"
+```
+
+After that, in GCP Console > Vertex AI > Model Garden, click **Enable** on each Anthropic Claude variant you want — third-party models require one-time per-model EULA acceptance and `gcloud` cannot do this.
 
 ### Local dev quickstart (impersonation, no SA key)
 
 The `pioneer-insurance` project enforces `constraints/iam.disableServiceAccountKeyCreation`, so SA JSON keys can't be minted yet. To unblock local dev today, impersonate `pioneer-chat-dev` from your own gcloud user:
 
 ```bash
-# 1. Run the helper (does the IAM binding + browser login + quota project + smoke test)
+# 1. Run the helper (does the IAM binding + browser login + token-mint smoke test)
 ./scripts/vertex-impersonate.sh
 
 # 2. Point docker compose at the impersonated ADC and start

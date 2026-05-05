@@ -76,7 +76,7 @@ class Pipe:
         max_tokens = body.get('max_tokens')
 
         if provider == 'gemini':
-            return _gemini(
+            return await _gemini(
                 model=model,
                 messages=messages,
                 project=self.valves.VERTEX_PROJECT_ID,
@@ -86,7 +86,7 @@ class Pipe:
                 max_tokens=max_tokens,
             )
         if provider == 'claude':
-            return _claude(
+            return await _claude(
                 model=model,
                 messages=messages,
                 project=self.valves.VERTEX_PROJECT_ID,
@@ -120,7 +120,7 @@ def _split_system(messages: list[dict]) -> tuple[str | None, list[dict]]:
     return system, rest
 
 
-def _gemini(
+async def _gemini(
     *,
     model: str,
     messages: list[dict],
@@ -148,23 +148,26 @@ def _gemini(
     )
 
     if stream:
+
         async def gen() -> AsyncGenerator[str, None]:
             stream_iter = await client.aio.models.generate_content_stream(
-                model=model, contents=contents, config=config,
+                model=model,
+                contents=contents,
+                config=config,
             )
             async for chunk in stream_iter:
                 text = getattr(chunk, 'text', None)
                 if text:
                     yield text
+
         return gen()
 
-    async def once():
-        resp = await client.aio.models.generate_content(
-            model=model, contents=contents, config=config,
-        )
-        return resp.text or ''
-
-    return once()
+    resp = await client.aio.models.generate_content(
+        model=model,
+        contents=contents,
+        config=config,
+    )
+    return resp.text or ''
 
 
 def _to_gemini_content(message: dict) -> dict:
@@ -191,7 +194,7 @@ def _to_gemini_content(message: dict) -> dict:
     return {'role': role, 'parts': parts or [{'text': ''}]}
 
 
-def _claude(
+async def _claude(
     *,
     model: str,
     messages: list[dict],
@@ -221,18 +224,17 @@ def _claude(
         kwargs['temperature'] = temperature
 
     if stream:
+
         async def gen() -> AsyncGenerator[str, None]:
             async with client.messages.stream(**kwargs) as s:
                 async for text in s.text_stream:
                     if text:
                         yield text
+
         return gen()
 
-    async def once():
-        resp = await client.messages.create(**kwargs)
-        return ''.join(b.text for b in resp.content if getattr(b, 'type', None) == 'text')
-
-    return once()
+    resp = await client.messages.create(**kwargs)
+    return ''.join(b.text for b in resp.content if getattr(b, 'type', None) == 'text')
 
 
 def _to_anthropic_message(message: dict) -> dict:
