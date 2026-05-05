@@ -67,7 +67,6 @@ SAFE_INLINE_CONTENT_TYPES = {
     'image/jpeg',
     'image/gif',
     'image/webp',
-    'image/svg+xml',
     'image/bmp',
     'image/tiff',
     'audio/mpeg',
@@ -87,8 +86,10 @@ def _safe_content_type(content_type: str | None) -> tuple[str, bool]:
     Otherwise it is replaced with application/octet-stream to prevent
     browsers from interpreting uploaded files as executable HTML/JS.
     """
-    if content_type and content_type.lower() in SAFE_INLINE_CONTENT_TYPES:
-        return content_type, True
+    if content_type:
+        base_type = content_type.split(';')[0].strip().lower()
+        if base_type in SAFE_INLINE_CONTENT_TYPES:
+            return base_type, True
     return 'application/octet-stream', False
 
 
@@ -658,13 +659,9 @@ async def get_file_content_by_id(
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                # Handle Unicode filenames
-                filename = file.meta.get('name', file.filename)
-                encoded_filename = quote(filename)  # RFC5987 encoding
-
                 content_type = file.meta.get('content_type')
                 filename = file.meta.get('name', file.filename)
-                encoded_filename = quote(filename)
+                encoded_filename = quote(filename)  # RFC5987 encoding
                 headers = {
                     'X-Content-Type-Options': 'nosniff',
                 }
@@ -680,8 +677,6 @@ async def get_file_content_by_id(
 
                 if attachment or not is_safe:
                     headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
-                elif content_type == 'text/plain':
-                    headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
                 else:
                     headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
 
