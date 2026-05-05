@@ -1,4 +1,5 @@
 import json
+import re
 import logging
 import base64
 import io
@@ -70,6 +71,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# Pattern to match <details> blocks whose attributes contain type="tool_calls".
+# Used to strip potentially dangerous tool-call markup from user-authored
+# channel messages (defense-in-depth against stored XSS via the embeds→iframe
+# rendering path).
+_TOOL_CALL_DETAILS_RE = re.compile(
+    r'<details\b[^>]*\btype\s*=\s*["\']tool_calls["\'][^>]*>.*?</details>',
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def sanitize_channel_message_content(content: str) -> str:
+    """Strip <details type="tool_calls" ...> blocks from channel message content.
+
+    These blocks are only legitimately produced by assistant tool-call responses
+    in the chat pipeline. In channel messages they would be user-authored and
+    could carry a malicious ``embeds`` attribute that the frontend renders
+    inside an ``allow-scripts`` iframe, leading to stored XSS.
+    """
+    return _TOOL_CALL_DETAILS_RE.sub('', content)
+
 
 
 async def channel_has_access(
@@ -1053,6 +1076,7 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
+        form_data.content = sanitize_channel_message_content(form_data.content)
         message = await Messages.insert_new_message(form_data, channel.id, user.id, db=db)
         if message:
             if channel.type in ['group', 'dm']:
@@ -1377,6 +1401,7 @@ async def update_message_by_id(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
+        form_data.content = sanitize_channel_message_content(form_data.content)
         await Messages.update_message_by_id(message_id, form_data, db=db)
         message = await Messages.get_message_by_id(message_id, db=db)
 

@@ -31,6 +31,8 @@
 
 	export let messageDone = true;
 
+	export let untrustedSource = false;
+
 	let open = $settings?.expandDetails ?? false;
 
 	function parseJSONString(str: string) {
@@ -49,8 +51,12 @@
 
 	$: codeInterpreterCount = tokens.filter((t) => t?.attributes?.type === 'code_interpreter').length;
 
-	// Collect all embeds from tool_calls tokens
+	// Collect all embeds from tool_calls tokens.
+	// When rendering untrusted content (e.g. channel messages), skip entirely
+	// to prevent user-authored embeds from reaching the allow-scripts iframe.
 	$: allEmbeds = (() => {
+		if (untrustedSource) return [];
+
 		const result: Array<{ name: string; embed: string; args: string }> = [];
 		for (const t of tokens) {
 			if (t?.attributes?.type !== 'tool_calls') continue;

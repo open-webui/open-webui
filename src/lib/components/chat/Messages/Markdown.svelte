@@ -25,6 +25,8 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
+	export let untrustedSource = false;
+
 	export let sourceIds = [];
 
 	export let onSave = () => {};
@@ -98,6 +100,7 @@
 		{editCodeBlock}
 		{sourceIds}
 		{topPadding}
+		{untrustedSource}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

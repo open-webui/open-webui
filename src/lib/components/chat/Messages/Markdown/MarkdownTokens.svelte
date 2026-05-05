@@ -42,6 +42,8 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
+	export let untrustedSource = false;
+
 	export let onSave: Function = () => {};
 	export let onUpdate: Function = () => {};
 	export let onPreview: Function = () => {};
@@ -371,6 +373,7 @@
 			id={`${id}-${tokenIdx}-detail-group`}
 			tokens={token.items}
 			messageDone={done}
+			{untrustedSource}
 		>
 			<div slot="content" class="space-y-1">
 				{#each token.items as detailToken, detailIdx}
