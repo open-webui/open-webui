@@ -151,7 +151,10 @@ def process_uploaded_file(
                         docs = loader.load(file_item.meta.get('name', ''), content_type, file_path_resolved)
                         raw_text = " ".join([d.page_content for d in docs])
 
+                        print(f"[VAULT DEBUG] all headers: { {k:v for k,v in request.headers.items() if 'garnet' in k.lower() or 'privacy' in k.lower()} }")
+                        print(f"[VAULT DEBUG] x-garnet-privacy raw = '{request.headers.get('x-garnet-privacy', 'MISSING')}'")
                         privacy_enabled = request.headers.get("x-garnet-privacy", "true").lower() != "false"
+                        print(f"[VAULT DEBUG] privacy_enabled resolved = {privacy_enabled}")
 
                         if privacy_enabled:
                             vault_result = vault_scan_file(file_item.id, raw_text, privacy_enabled)
