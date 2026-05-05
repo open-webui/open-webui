@@ -177,7 +177,7 @@ def process_uploaded_file(
 
                         process_file(
                             request,
-                            ProcessFileForm(file_id=file_item.id, content=clean_text),
+                            ProcessFileForm(file_id=file_item.id, content=raw_text),
                             user=user,
                             db=db_session,
                         )
