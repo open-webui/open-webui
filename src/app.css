@@ -71,7 +71,7 @@ code {
 }
 
 .font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
+	font-family: 'Red Hat Display', ui-sans-serif, system-ui, sans-serif;
 }
 
 .marked a {
@@ -119,7 +119,7 @@ textarea::placeholder {
 }
 
 .font-primary {
-	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+	font-family: 'Red Hat Text', 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
 }
 
 .drag-region {
@@ -361,8 +361,14 @@ input[type='number'] {
 	@apply bg-white dark:bg-black;
 }
 
-.tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+/* Theme-aware tooltip. Tippy portals into <body>, which inherits html.dark,
+   so html.dark / html:not(.dark) gates each variant. text color must be set
+   explicitly because tippy.js's base CSS forces color: white on .tippy-box. */
+html:not(.dark) .tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-white text-gray-900 text-xs border border-gray-200 shadow-xl;
+}
+html.dark .tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-gray-950 text-white text-xs border border-gray-900 shadow-xl;
 }
 
 .password {

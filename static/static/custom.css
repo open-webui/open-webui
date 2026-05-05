@@ -149,24 +149,24 @@
 }
 
 /* Remap Open WebUI grayscale palette to Tailwind slate (what swept-workbench uses).
-   \!important is required because /static/custom.css loads before the bundled
+   !important is required because /static/custom.css loads before the bundled
    Tailwind v4 @theme output and we need to win cascade. */
 :root {
-	--color-gray-50: #f8fafc \!important;  /* slate-50  */
-	--color-gray-100: #f1f5f9 \!important; /* slate-100 */
-	--color-gray-200: #e2e8f0 \!important; /* slate-200 */
-	--color-gray-300: #cbd5e1 \!important; /* slate-300 */
-	--color-gray-400: #94a3b8 \!important; /* slate-400 */
-	--color-gray-500: #64748b \!important; /* slate-500 */
-	--color-gray-600: #475569 \!important; /* slate-600 */
-	--color-gray-700: #334155 \!important; /* slate-700 */
-	--color-gray-800: #1e293b \!important; /* slate-800 */
-	--color-gray-850: #172033 \!important; /* interpolated 800<->900 (no slate-850) */
-	--color-gray-900: #0f172a \!important; /* slate-900 */
-	--color-gray-950: #020617 \!important; /* slate-950 */
+	--color-gray-50: #f8fafc !important;  /* slate-50  */
+	--color-gray-100: #f1f5f9 !important; /* slate-100 */
+	--color-gray-200: #e2e8f0 !important; /* slate-200 */
+	--color-gray-300: #cbd5e1 !important; /* slate-300 */
+	--color-gray-400: #94a3b8 !important; /* slate-400 */
+	--color-gray-500: #64748b !important; /* slate-500 */
+	--color-gray-600: #475569 !important; /* slate-600 */
+	--color-gray-700: #334155 !important; /* slate-700 */
+	--color-gray-800: #1e293b !important; /* slate-800 */
+	--color-gray-850: #172033 !important; /* interpolated 800<->900 (no slate-850) */
+	--color-gray-900: #0f172a !important; /* slate-900 */
+	--color-gray-950: #020617 !important; /* slate-950 */
 
-	--font-sans: 'Red Hat Text', ui-sans-serif, system-ui, -apple-system, sans-serif \!important;
-	--font-display: 'Red Hat Display', ui-sans-serif, system-ui, sans-serif \!important;
+	--font-sans: 'Red Hat Text', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+	--font-display: 'Red Hat Display', ui-sans-serif, system-ui, sans-serif !important;
 }
 
 html,

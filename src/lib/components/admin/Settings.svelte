@@ -328,7 +328,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition select-none {selectedTab ===
 				tab.id
 					? ''
-					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+					: ' text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			>
 				<div class=" self-center mr-2">
 					{#if tab.id === 'general'}

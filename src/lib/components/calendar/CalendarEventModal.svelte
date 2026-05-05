@@ -197,7 +197,7 @@
 					<input type="date" class="bg-transparent outline-hidden" bind:value={startDate} />
 					{#if !allDay}
 						<input type="time" class="bg-transparent outline-hidden" bind:value={startTime} />
-						<span class="text-gray-300 dark:text-gray-600">–</span>
+						<span class="text-gray-500 dark:text-gray-600">–</span>
 						<input type="time" class="bg-transparent outline-hidden" bind:value={endTime} />
 					{/if}
 					<label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400 ml-auto">

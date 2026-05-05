@@ -451,7 +451,7 @@
 			</div>
 		{:else if entries.length === 0 && !creatingFolder && !creatingFile}
 			<div class="flex flex-col items-center justify-center flex-1 p-6 text-center gap-2">
-				<Folder className="size-5 text-gray-300 dark:text-gray-600" />
+				<Folder className="size-5 text-gray-500 dark:text-gray-600" />
 				<div class="text-xs text-gray-400 dark:text-gray-500">
 					{$i18n.t('No files yet. Upload files or run Python code to create them.')}
 				</div>

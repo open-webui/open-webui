@@ -67,7 +67,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition select-none {selectedTab ===
 			'overview'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 		>
 			<div class=" self-center mr-2">
 				<svg
@@ -91,7 +91,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition select-none {selectedTab ===
 			'groups'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 		>
 			<div class=" self-center mr-2">
 				<svg

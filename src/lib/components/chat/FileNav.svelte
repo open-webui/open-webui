@@ -871,7 +871,7 @@
 
 {#if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<Folder className="size-6 text-gray-500 dark:text-gray-600 mb-2" />
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
@@ -1287,7 +1287,7 @@
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('This folder is empty')}
 						</div>
-						<div class="text-[11px] text-gray-300 dark:text-gray-600">
+						<div class="text-[11px] text-gray-500 dark:text-gray-600">
 							{$i18n.t('Drop files here to upload')}
 						</div>
 					</div>
