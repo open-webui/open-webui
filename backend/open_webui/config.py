@@ -623,16 +623,26 @@ FEISHU_CLIENT_SECRET = PersistentConfig(
     os.environ.get('FEISHU_CLIENT_SECRET', ''),
 )
 
+_feishu_oauth_scope = (
+    os.environ.get('FEISHU_SCOPE')
+    or os.environ.get('FEISHU_OAUTH_SCOPE', 'contact:user.base:readonly')
+)
+
 FEISHU_OAUTH_SCOPE = PersistentConfig(
     'FEISHU_OAUTH_SCOPE',
     'oauth.feishu.scope',
-    os.environ.get('FEISHU_OAUTH_SCOPE', 'contact:user.base:readonly'),
+    _feishu_oauth_scope,
+)
+
+_feishu_redirect_uri = (
+    os.environ.get('FEISHU_REDIRECT_URL')
+    or os.environ.get('FEISHU_REDIRECT_URI', '')
 )
 
 FEISHU_REDIRECT_URI = PersistentConfig(
     'FEISHU_REDIRECT_URI',
     'oauth.feishu.redirect_uri',
-    os.environ.get('FEISHU_REDIRECT_URI', ''),
+    _feishu_redirect_uri,
 )
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
