@@ -126,8 +126,8 @@
 										}}
 									>
 										<img
-											src='/m3llm-avatar.png'
-											class="@sm:size-50 size-30 rounded-sm"
+											src='/static/m3llm-avatar.png'
+											class="@sm:size-40 size-20 rounded-sm"
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
