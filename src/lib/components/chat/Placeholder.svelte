@@ -106,9 +106,9 @@
 					}}
 				/>
 			{:else}
-				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
-					<div class="flex shrink-0 justify-center">
-						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
+				<div class="flex flex-col justify-center items-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
+					<div class="flex shrink-0 justify-center mb-1">
+						<div class="flex -space-x-4" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
 								<Tooltip
 									content={(models[modelIdx]?.info?.meta?.tags ?? [])
