@@ -53,7 +53,7 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 
 /* settings */
 #settings-search, [aria-controls="tab-general"],[aria-controls="tab-interface"],[aria-controls="tab-tools"],[aria-controls="tab-personalization"],[aria-controls="tab-audio"] {
-	display: 1;
+	display: none;
 }
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {

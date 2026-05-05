@@ -2004,7 +2004,7 @@
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
 													<button
-														class="bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition rounded-full p-2 self-center flex items-center justify-center"
+														class="text-gray-600 hover:text-black transition  p-1.5 self-center"
 														style="width: 36px; height: 36px;"
 														type="button"
 														on:click={async () => {
@@ -2059,7 +2059,7 @@
 														}}
 														aria-label={$i18n.t('Voice mode')}
 													>
-														<Voice className="size-4" strokeWidth="2.5" />
+														<Voice className="size-5" strokeWidth="2.5" />
 													</button>
 												</Tooltip>
 											</div>
