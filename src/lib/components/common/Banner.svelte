@@ -49,7 +49,7 @@
 			class="{className} top-0 left-0 right-0 py-1 flex justify-center items-center relative border border-transparent text-gray-800 dark:text-gary-100 bg-transparent backdrop-blur-xl z-30"
 			transition:fade={{ delay: 100, duration: 300 }}
 		>
-			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
+			<div class=" flex flex-row items-center flex-1 text-sm gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
 						class=" text-xs font-semibold {classNames[banner.type] ??

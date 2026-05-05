@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, afterUpdate } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import {
@@ -56,6 +56,15 @@
 	export let moveChatHandler: (id: string, folderId: string) => void;
 
 	let closedBannerIds = [];
+	let bannersExpanded = false;
+	let bannerContainer: HTMLDivElement;
+	let bannersOverflowing = false;
+
+	afterUpdate(() => {
+		if (bannerContainer) {
+			bannersOverflowing = bannerContainer.scrollHeight > bannerContainer.clientHeight;
+		}
+	});
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
@@ -268,7 +277,10 @@
 	<div class="absolute top-[100%] left-0 right-0 h-fit">
 		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
-				<div class=" flex flex-col gap-1 w-full">
+				<div
+					bind:this={bannerContainer}
+					class=" flex flex-col gap-1 w-full {bannersExpanded ? '' : 'max-h-28'} md:max-h-none overflow-hidden"
+				>
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner
 							banner={{
@@ -316,6 +328,19 @@
 						/>
 					{/each}
 				</div>
+
+				{#if bannersOverflowing || bannersExpanded}
+					<button
+						class="w-full text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-0.5 md:hidden"
+						on:click={() => { bannersExpanded = !bannersExpanded; }}
+					>
+						{#if bannersExpanded}
+							{$i18n.t('Show less')}
+						{:else}
+							{$i18n.t('Show more')}
+						{/if}
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</div>
