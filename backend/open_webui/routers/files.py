@@ -57,6 +57,40 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Content types that are safe to serve inline (not executable in browsers).
+# Everything else must be forced to attachment with application/octet-stream.
+SAFE_INLINE_CONTENT_TYPES = {
+    'application/pdf',
+    'text/plain',
+    'text/csv',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+    'image/bmp',
+    'image/tiff',
+    'audio/mpeg',
+    'audio/ogg',
+    'audio/wav',
+    'audio/webm',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+}
+
+
+def _safe_content_type(content_type: str | None) -> tuple[str, bool]:
+    """Return a (content_type, is_safe_inline) tuple.
+
+    If the content_type is in the safe allowlist it is returned as-is.
+    Otherwise it is replaced with application/octet-stream to prevent
+    browsers from interpreting uploaded files as executable HTML/JS.
+    """
+    if content_type and content_type.lower() in SAFE_INLINE_CONTENT_TYPES:
+        return content_type, True
+    return 'application/octet-stream', False
+
 
 from open_webui.utils.access_control.files import has_access_to_file
 
@@ -631,16 +665,25 @@ async def get_file_content_by_id(
                 content_type = file.meta.get('content_type')
                 filename = file.meta.get('name', file.filename)
                 encoded_filename = quote(filename)
-                headers = {}
+                headers = {
+                    'X-Content-Type-Options': 'nosniff',
+                }
 
-                if attachment:
+                # Normalize content type from file extension when appropriate
+                if filename.lower().endswith('.pdf'):
+                    content_type = 'application/pdf'
+
+                # Validate content type against the safe allowlist to prevent
+                # XSS via user-controlled Content-Type (e.g. uploading a file
+                # with Content-Type: text/html containing malicious scripts).
+                content_type, is_safe = _safe_content_type(content_type)
+
+                if attachment or not is_safe:
                     headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+                elif content_type == 'text/plain':
+                    headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
                 else:
-                    if content_type == 'application/pdf' or filename.lower().endswith('.pdf'):
-                        headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
-                        content_type = 'application/pdf'
-                    elif content_type != 'text/plain':
-                        headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+                    headers['Content-Disposition'] = f"inline; filename*=UTF-8''{encoded_filename}"
 
                 return FileResponse(file_path, headers=headers, media_type=content_type)
 
@@ -692,7 +735,14 @@ async def get_html_file_content_by_id(
             # Check if the file already exists in the cache
             if file_path.is_file():
                 log.info(f'file_path: {file_path}')
-                return FileResponse(file_path)
+                # Serve with Content-Security-Policy sandbox to prevent
+                # script execution even though the content is HTML.
+                # Also force nosniff to stop browsers from second-guessing.
+                headers = {
+                    'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:",
+                    'X-Content-Type-Options': 'nosniff',
+                }
+                return FileResponse(file_path, headers=headers, media_type='text/html')
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -732,7 +782,10 @@ async def get_file_content_by_id(
         # Handle Unicode filenames
         filename = file.meta.get('name', file.filename)
         encoded_filename = quote(filename)  # RFC5987 encoding
-        headers = {'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}"}
+        headers = {
+            'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}",
+            'X-Content-Type-Options': 'nosniff',
+        }
 
         if file_path:
             file_path = await asyncio.to_thread(Storage.get_file, file_path)
@@ -740,7 +793,7 @@ async def get_file_content_by_id(
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                return FileResponse(file_path, headers=headers)
+                return FileResponse(file_path, headers=headers, media_type='application/octet-stream')
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
