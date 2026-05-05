@@ -36,8 +36,21 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
   font-weight: 500;
   font-size-adjust: 0.58;
 }
-/* hide nav */
-nav,
+/* hide nav on desktop */
+@media (min-width: 768px) {
+	nav {
+		display: none;
+	}
+}
+
+/* Mobile nav: show sidebar toggle only */
+@media (max-width: 767px) {
+	nav .flex-1.overflow-hidden,
+	nav .self-start.flex.flex-none.items-center:not(:first-child) {
+		display: none;
+	}
+}
+
 /* settings */
 #settings-search, [aria-controls="tab-general"],[aria-controls="tab-interface"],[aria-controls="tab-tools"],[aria-controls="tab-personalization"],[aria-controls="tab-audio"] {
 	display: none;
