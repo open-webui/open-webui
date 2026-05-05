@@ -126,8 +126,8 @@
 										}}
 									>
 										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10"
+											src='/m3llm-avatar.png'
+											class="@sm:size-50 size-30 rounded-sm"
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
