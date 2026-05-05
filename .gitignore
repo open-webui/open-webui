@@ -8,6 +8,12 @@ node_modules
 .env
 .env.*
 !.env.example
+
+# Cloud service-account credentials (never commit)
+/secrets/
+/pioneer-chat-dev.json
+*-sa-key*.json
+application_default_credentials.json
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files

@@ -16,6 +16,11 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
+      # Vertex AI service-account JSON (read-only). Path on host is configurable
+      # via VERTEX_SA_KEY_PATH; defaults to ./secrets/pioneer-chat-dev.json.
+      # The file is optional — if absent, the bind mount is skipped by docker compose
+      # only when you remove this line, so create an empty placeholder if needed.
+      - ${VERTEX_SA_KEY_PATH:-./secrets/pioneer-chat-dev.json}:/run/secrets/vertex-sa.json:ro
     depends_on:
       - ollama
     ports:
@@ -23,6 +28,11 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      # Vertex AI (Gemini + Claude on Vertex). See plugins/functions/vertex_chat.py.
+      - 'GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/vertex-sa.json'
+      - 'VERTEX_PROJECT_ID=${VERTEX_PROJECT_ID-pioneer-insurance}'
+      - 'VERTEX_LOCATION=${VERTEX_LOCATION-us-central1}'
+      - 'VERTEX_CLAUDE_LOCATION=${VERTEX_CLAUDE_LOCATION-us-east5}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
