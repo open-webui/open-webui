@@ -60,6 +60,10 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	$: if ($models.find((m) => m.id === selectedModels[0])?.owned_by === 'ollama') {
+		$privacyProxy = true;
+	}
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
