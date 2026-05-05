@@ -1,0 +1,286 @@
+/* Swept rebrand — overrides only. No upstream source files modified. */
+
+/* Red Hat fonts, self-hosted to avoid runtime dependency on fonts.googleapis.com.
+   Source: Google Fonts CSS for Red Hat Display + Red Hat Text (latin + latin-ext, weights 400/500/600/700).
+   WOFF2 files live in static/static/fonts/. */
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg8z6hR4jNCH5Z.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg_T6hR4jNCA.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg8z6hR4jNCH5Z.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg_T6hR4jNCA.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg8z6hR4jNCH5Z.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg_T6hR4jNCA.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg8z6hR4jNCH5Z.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/static/fonts/8vIQ7wUr0m80wwYf0QCXZzYzUoTg_T6hR4jNCA.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQZqctMc-JPWCN.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQaKctMc-JPQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQZqctMc-JPWCN.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQaKctMc-JPQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQZqctMc-JPWCN.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQaKctMc-JPQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQZqctMc-JPWCN.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Red Hat Text';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/static/fonts/RrQXbohi_ic6B3yVSzGBrMxQaKctMc-JPQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Remap Open WebUI grayscale palette to Tailwind slate (what swept-workbench uses).
+   \!important is required because /static/custom.css loads before the bundled
+   Tailwind v4 @theme output and we need to win cascade. */
+:root {
+	--color-gray-50: #f8fafc \!important;  /* slate-50  */
+	--color-gray-100: #f1f5f9 \!important; /* slate-100 */
+	--color-gray-200: #e2e8f0 \!important; /* slate-200 */
+	--color-gray-300: #cbd5e1 \!important; /* slate-300 */
+	--color-gray-400: #94a3b8 \!important; /* slate-400 */
+	--color-gray-500: #64748b \!important; /* slate-500 */
+	--color-gray-600: #475569 \!important; /* slate-600 */
+	--color-gray-700: #334155 \!important; /* slate-700 */
+	--color-gray-800: #1e293b \!important; /* slate-800 */
+	--color-gray-850: #172033 \!important; /* interpolated 800<->900 (no slate-850) */
+	--color-gray-900: #0f172a \!important; /* slate-900 */
+	--color-gray-950: #020617 \!important; /* slate-950 */
+
+	--font-sans: 'Red Hat Text', ui-sans-serif, system-ui, -apple-system, sans-serif \!important;
+	--font-display: 'Red Hat Display', ui-sans-serif, system-ui, sans-serif \!important;
+}
+
+html,
+body,
+pre {
+	font-family: 'Red Hat Text', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* Swept embedded shell — workbench-styled left rail injected by loader.js
+   when /api/config returns a non-empty workbench_url. */
+.swept-shell {
+	position: fixed;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	width: 16rem;
+	z-index: 40;
+	display: none;
+	flex-direction: column;
+	background: #ffffff;
+	border-right: 1px solid #e2e8f0; /* slate-200 */
+	font-family: 'Red Hat Text', ui-sans-serif, system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+html.dark .swept-shell {
+	background: #0f172a;
+	border-right-color: #1e293b;
+}
+
+@media (min-width: 1024px) {
+	html.swept-shell-active .swept-shell {
+		display: flex;
+	}
+	html.swept-shell-active body {
+		padding-left: 16rem;
+	}
+	html.swept-shell-active aside[data-state],
+	html.swept-shell-active div[data-state] {
+		left: 16rem !important;
+	}
+}
+
+.swept-shell__logo {
+	display: block;
+	padding: 1.5rem 1.5rem 0.5rem;
+	color: #0f172a;
+	text-decoration: none;
+}
+html.dark .swept-shell__logo {
+	color: #ffffff;
+}
+.swept-shell__logo svg {
+	height: 1.75rem;
+	width: auto;
+}
+
+.swept-shell__nav {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	padding: 1rem 1.5rem;
+}
+.swept-shell__nav ul {
+	list-style: none;
+	padding: 0;
+	margin: 0 -0.5rem;
+}
+.swept-shell__nav li + li {
+	margin-top: 0.25rem;
+}
+.swept-shell__spacer {
+	flex: 1;
+}
+
+.swept-shell__link {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem;
+	border-radius: 0.75rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1.5rem;
+	color: #334155; /* slate-700 */
+	text-decoration: none;
+	cursor: pointer;
+}
+.swept-shell__link:hover {
+	background: #f8fafc; /* slate-50 */
+}
+html.dark .swept-shell__link {
+	color: #cbd5e1; /* slate-300 */
+}
+html.dark .swept-shell__link:hover {
+	background: rgba(30, 41, 59, 0.5); /* slate-800/50 */
+}
+.swept-shell__link.is-active {
+	background: #f1f5f9; /* slate-100 */
+	color: #2563eb; /* blue-600 */
+}
+html.dark .swept-shell__link.is-active {
+	background: #1e293b; /* slate-800 */
+	color: #60a5fa; /* blue-400 */
+}
+
+.swept-shell__icon {
+	width: 1.5rem;
+	height: 1.5rem;
+	flex-shrink: 0;
+	stroke: currentColor;
+	fill: none;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
