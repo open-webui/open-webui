@@ -29,7 +29,6 @@ from fastapi import (
     HTTPException,
     Request,
     status,
-    Response,
 )
 from fastapi.responses import RedirectResponse, StreamingResponse
 
@@ -467,12 +466,10 @@ async def get_model_profile_image(
         profile_image_url = (meta or {}).get('profile_image_url')
 
         if profile_image_url:
-            if profile_image_url.startswith('http'):
-                return Response(
-                    status_code=status.HTTP_302_FOUND,
-                    headers={'Location': profile_image_url},
-                )
-            elif profile_image_url.startswith('data:image'):
+            # External http(s) URLs are intentionally not honored to prevent
+            # client-side IP/UA/Referer leaks via 302 redirect to attacker-
+            # controlled origins.  Fall through to the default image instead.
+            if profile_image_url.startswith('data:image'):
                 try:
                     header, base64_data = profile_image_url.split(',', 1)
                     image_data = base64.b64decode(base64_data)
