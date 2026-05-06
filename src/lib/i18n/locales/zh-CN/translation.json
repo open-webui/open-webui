@@ -1726,6 +1726,7 @@
 	"Schedule": "定时",
 	"Scheduled time must be in the future": "定时时间必须晚于当前时间",
 	"Scroll On Branch Change": "切换对话分支时滚动到最新回答",
+	"Scroll During Generation": "生成时自动滚动",
 	"Search": "搜索",
 	"Search a model": "搜索模型",
 	"Search all emojis": "搜索 Emoji",

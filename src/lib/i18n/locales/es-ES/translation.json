@@ -1730,6 +1730,7 @@
 	"Schedule": "Programar",
 	"Scheduled time must be in the future": "El tiempo de programado debe ser futuro",
 	"Scroll On Branch Change": "Desplazamiento al Cambiar Rama",
+	"Scroll During Generation": "Desplazamiento Durante la Generación",
 	"Search": "Buscar",
 	"Search a model": "Buscar un Modelo",
 	"Search all emojis": "Buscar todos los emojis",
