@@ -12,7 +12,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    # Local-only tag so compose builds from ./Dockerfile instead of pulling
+    # upstream from ghcr.io. Bump the tag when you want a forced rebuild.
+    image: swept/open-webui:dev
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
@@ -33,6 +35,10 @@ services:
       - 'VERTEX_PROJECT_ID=${VERTEX_PROJECT_ID-pioneer-insurance}'
       - 'VERTEX_LOCATION=${VERTEX_LOCATION-us-central1}'
       - 'VERTEX_CLAUDE_LOCATION=${VERTEX_CLAUDE_LOCATION-us-east5}'
+      # Workbench shell rail — when set, loader.js injects the 256px Swept
+      # sidebar and links nav items to ${WORKBENCH_URL}/<route>. Empty/unset
+      # = vanilla open-webui.
+      - 'WORKBENCH_URL=${WORKBENCH_URL:-}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
