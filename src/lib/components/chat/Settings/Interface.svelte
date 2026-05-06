@@ -32,6 +32,7 @@
 	let widescreenMode = false;
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
+	let scrollDuringGeneration = true;
 	let userLocation = false;
 
 	// Interface
@@ -240,6 +241,7 @@
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		scrollDuringGeneration = $settings?.scrollDuringGeneration ?? true;
 
 		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
@@ -1023,6 +1025,24 @@
 				</div>
 			</div>
 
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="scroll-during-generation-label" class=" self-center text-xs">
+						{$i18n.t('Scroll During Generation')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="scroll-during-generation-label"
+							tooltip={true}
+							bind:state={scrollDuringGeneration}
+							on:change={() => {
+								saveSettings({ scrollDuringGeneration });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div id="stylized-pdf-export-label" class=" self-center text-xs">

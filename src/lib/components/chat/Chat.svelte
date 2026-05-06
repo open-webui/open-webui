@@ -121,6 +121,7 @@
 	let messageInput: MessageInput | undefined;
 
 	let autoScroll = true;
+	$: scrollDuringGeneration = $settings?.scrollDuringGeneration ?? true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
@@ -1414,6 +1415,7 @@
 	let scrollRAF = null;
 	let contentsRAF = null;
 	const scheduleScrollToBottom = () => {
+		if (!scrollDuringGeneration) return;
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
 				scrollRAF = null;

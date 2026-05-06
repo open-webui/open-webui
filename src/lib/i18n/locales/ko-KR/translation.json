@@ -1726,6 +1726,7 @@
 	"Schedule": "일정",
 	"Scheduled time must be in the future": "예약 시간은 미래여야 합니다",
 	"Scroll On Branch Change": "브랜치 변경 시 스크롤",
+	"Scroll During Generation": "",
 	"Search": "검색",
 	"Search a model": "모델 검색",
 	"Search all emojis": "모든 이모지 검색",

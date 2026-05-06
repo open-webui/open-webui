@@ -1726,6 +1726,7 @@
 	"Schedule": "排程",
 	"Scheduled time must be in the future": "排程時間必須晚於目前時間",
 	"Scroll On Branch Change": "切換分支時自動捲動",
+	"Scroll During Generation": "生成時自動捲動",
 	"Search": "搜尋",
 	"Search a model": "搜尋模型",
 	"Search all emojis": "搜尋 Emoji 表情符號",
