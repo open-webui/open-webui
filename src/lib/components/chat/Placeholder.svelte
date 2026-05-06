@@ -74,7 +74,7 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 </script>
 
-<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-1 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -125,15 +125,15 @@
 											selectedModelIdx = modelIdx;
 										}}
 									>
-										<img
-											src='/static/m3llm-avatar.png'
-											class="@sm:size-40 size-20 rounded-sm"
-											aria-hidden="true"
-											draggable="false"
-											on:error={(e) => {
-												e.currentTarget.src = '/favicon.png';
-											}}
-										/>
+									<img
+										src="/static/m3llm-avatar.png"
+										class="@sm:size-40 size-20 rounded-sm object-contain"
+										aria-hidden="true"
+										draggable="false"
+										on:error={(e) => {
+											e.currentTarget.src = '/favicon.png';
+										}}
+									/>
 									</button>
 								</Tooltip>
 							{/each}
@@ -141,7 +141,7 @@
 					</div>
 
 					<div
-						class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
+						class="text-xl @sm:text-3xl line-clamp-1 flex items-center"
 						in:fade={{ duration: 100 }}
 						dir="rtl"
 					>

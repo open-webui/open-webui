@@ -802,8 +802,9 @@
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
-								src="{WEBUI_BASE_URL}/static/favicon.png"
-								class="sidebar-new-chat-icon size-6 group-hover:hidden"
+								crossorigin="anonymous"
+								src="/favicon.png"
+								class="sidebar-new-chat-icon size-6 group-hover:hidden rounded-full object-contain"
 								alt=""
 							/>
 
@@ -986,7 +987,7 @@
 	<div
 		bind:this={navElement}
 		id="sidebar"
-		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+		class="h-screen max-h-[10dvh] min-h-screen select-none {$showSidebar
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
@@ -1011,8 +1012,8 @@
 				>
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="sidebar-new-chat-icon size-6"
+						src="/favicon.png"
+						class="sidebar-new-chat-icon size-8 rounded-full object-contain"
 						alt=""
 					/>
 				</a>
