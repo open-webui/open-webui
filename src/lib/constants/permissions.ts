@@ -24,7 +24,8 @@ export const DEFAULT_PERMISSIONS = {
 		skills: false,
 		public_skills: false,
 		notes: false,
-		public_notes: false
+		public_notes: false,
+		public_chats: true
 	},
 	access_grants: {
 		allow_users: true
