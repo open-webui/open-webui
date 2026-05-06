@@ -312,40 +312,11 @@ def _select_pdf_image_description_model_id(
     )
     if not configured_model_id:
         return None
-
-    # Check direct match first
     if configured_model_id in models:
         return configured_model_id
 
-    # Try to find a matching model by extracting prefixes from available models
-    # Models may have prefixes like "llms_aa12947." based on the user's LLM function setup
-    # The prefix format is: {function_id}_{user_identifier}. (e.g., llms_aa12947.)
-    #
-    # To extract the prefix, we look at model IDs and try to find patterns like:
-    # 1. If model has ".@" pattern: extract everything before ".@" (e.g., "llms_aa12947" from "llms_aa12947.@gpt-4o-mini/...")
-    # 2. If model has "@" pattern: extract everything before "@" (e.g., "llms" from "llms.@gpt-4o-mini/...")
-    for model_id in models.keys():
-        prefix = None
-        
-        # Case 1: .@ pattern (e.g., "llms_aa12947.@gpt-4o-mini/...")
-        if ".@" in model_id:
-            prefix = model_id.rsplit(".@", 1)[0] + "."
-        # Case 2: @ pattern but no .@ (e.g., "llms.@gpt-4o-mini/...")
-        elif "@" in model_id and ".@" not in model_id:
-            prefix = model_id.rsplit("@", 1)[0] + "."
-        
-        if prefix:
-            scoped_candidate = f"{prefix}{configured_model_id}"
-            if scoped_candidate in models:
-                log.info(
-                    "[PDF Image Description] Using user-scoped model: '%s' (configured: '%s')",
-                    scoped_candidate,
-                    configured_model_id,
-                )
-                return scoped_candidate
-
-    log.info(
-        "[PDF Image Description] Configured model unavailable: '%s' - falling back to default vision model",
+    log.warning(
+        "PDF image description configured model is unavailable: %s",
         configured_model_id,
     )
     return None
@@ -556,8 +527,8 @@ def describe_pdf_images_via_chat(
                 model_source = "fallback_vision_guess"
                 selected_model_id = _guess_vision_model_id(models)
                 if not selected_model_id:
-                    log.info(
-                        "[PDF Image Description] No vision-capable model available for user '%s' - skipping image descriptions",
+                    log.warning(
+                        "PDF image description skipped for %s: no candidate model available",
                         user.email,
                     )
                     return []
@@ -575,10 +546,10 @@ def describe_pdf_images_via_chat(
                     keyword in model_id_lower for keyword in ["gpt-4o", "gemini", "claude", "vision"]
                 )
                 if not likely_vision:
-                    log.info(
-                        "[PDF Image Description] Selected model '%s' is not vision-capable for user '%s' - skipping image descriptions",
-                        selected_model_id,
+                    log.warning(
+                        "PDF image description skipped for %s: selected model not vision-capable (%s)",
                         user.email,
+                        selected_model_id,
                     )
                     return []
 

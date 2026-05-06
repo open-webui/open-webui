@@ -18,15 +18,13 @@ services:
       - 'ENABLE_JOB_QUEUE=false'
       - 'ENABLE_OLLAMA_API=false'
       - 'RAG_PDF_COMPLEX_PARSER_ENABLED=true'
-      - 'PDF_IMAGE_DESCRIPTION_MODEL=@gpt-4o-mini/gpt-4o-mini'
+      - 'PDF_IMAGE_DESCRIPTION_MODEL=@gpt-4o-mini/gpt-4o-mini '
       # - 'PDF_EXTRACT_IMAGES=true'
       # - 'RAG_IMAGE_EMBEDDING_MODEL_USER=@vertexai/gemini-embedding-2-preview' # when using gemini multimodal embedding model
       # Backend logging (open_webui/env.py). GLOBAL_LOG_LEVEL is the default; MAIN_ / RAG_ override per subsystem.
-      # - 'GLOBAL_LOG_LEVEL=INFO'
-      # - 'MAIN_LOG_LEVEL=INFO'
-      # - 'RAG_LOG_LEVEL=INFO'
-      # - 'MODELS_LOG_LEVEL=INFO'
-      # - 'DB_LOG_LEVEL=INFO'
+      - 'GLOBAL_LOG_LEVEL=WARNING'
+      # - 'MAIN_LOG_LEVEL=DEBUG'
+      # - 'RAG_LOG_LEVEL=DEBUG'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
