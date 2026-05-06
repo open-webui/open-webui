@@ -30,6 +30,8 @@
 	font-display: swap;
 }
 
+/* M3LLM UI Tweaks */
+
 *, body { font-family: 'Lexend Deca', sans-serif; }
 p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
   font-family: 'Harmattan', sans-serif;
@@ -51,10 +53,39 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 	}
 }
 
+/* 1. Primary Buttons: Mocha Color (#6D3B07) */
+button.bg-black,
+button.bg-gray-800,
+button.bg-gray-900,
+button.bg-gray-700\/5,
+button.bg-gray-100\/5,
+button#send-message-button,
+#auth-page button[type="submit"],
+.dark button.bg-white,
+.dark button.bg-gray-100,
+.dark button.bg-gray-200 {
+    background-color: #6D3B07 !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+button.bg-black:hover,
+button.bg-gray-800:hover,
+button.bg-gray-900:hover,
+button#send-message-button:hover,
+#auth-page button[type="submit"]:hover,
+.dark button.bg-white:hover,
+.dark button.bg-gray-100:hover,
+.dark button.bg-gray-200:hover {
+    background-color: #5A2E05 !important;
+}
 /* settings */
 #settings-search, [aria-controls="tab-general"],[aria-controls="tab-interface"],[aria-controls="tab-tools"],[aria-controls="tab-personalization"],[aria-controls="tab-audio"] {
 	display: none;
 }
+
+/* M3LLM UI Tweaks */
+
+
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
 	--app-text-scale: 1;
