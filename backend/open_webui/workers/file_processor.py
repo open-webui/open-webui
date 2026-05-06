@@ -76,11 +76,6 @@ from open_webui.config import (
     RAG_RELEVANCE_THRESHOLD,  # PersistentConfig, used in retrieval
     PDF_IMAGE_DESCRIPTION_MODEL,
     PDF_IMAGE_DESCRIPTION_MODEL_USER,
-    # Required by get_all_base_models / get_models_for_user (used in PDF image description)
-    ENABLE_OPENAI_API,
-    ENABLE_OLLAMA_API,
-    ENABLE_EVALUATION_ARENA_MODELS,
-    EVALUATION_ARENA_MODELS,
 )
 from open_webui.retrieval.utils import get_embedding_function
 
@@ -211,12 +206,6 @@ def get_worker_config():
             _worker_config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
             _worker_config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
             _worker_config.BYPASS_EMBEDDING_AND_RETRIEVAL = BYPASS_EMBEDDING_AND_RETRIEVAL
-            
-            # Required by get_all_base_models / get_models_for_user (PDF image description path)
-            _worker_config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
-            _worker_config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
-            _worker_config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
-            _worker_config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
             
             # Verify config is populated
             if not hasattr(_worker_config, '_state') or 'RAG_EMBEDDING_ENGINE' not in _worker_config._state:
@@ -486,14 +475,6 @@ class _FallbackConfig:
         self.DOCUMENT_INTELLIGENCE_ENDPOINT = os.environ.get("DOCUMENT_INTELLIGENCE_ENDPOINT", "")
         self.DOCUMENT_INTELLIGENCE_KEY = os.environ.get("DOCUMENT_INTELLIGENCE_KEY", "")
         self.BYPASS_EMBEDDING_AND_RETRIEVAL = os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true"
-        
-        # Required by get_all_base_models / get_models_for_user (PDF image description path)
-        # Default to False since this project uses Portkey functions, not direct OpenAI/Ollama
-        self.ENABLE_OPENAI_API = os.environ.get("ENABLE_OPENAI_API", "False").lower() == "true"
-        self.ENABLE_OLLAMA_API = os.environ.get("ENABLE_OLLAMA_API", "False").lower() == "true"
-        self.ENABLE_EVALUATION_ARENA_MODELS = os.environ.get("ENABLE_EVALUATION_ARENA_MODELS", "False").lower() == "true"
-        self.EVALUATION_ARENA_MODELS = []
-        
         # Add TIKA_SERVER_URL for fallback (even though we don't use it, it might be accessed)
         self.TIKA_SERVER_URL = os.environ.get("TIKA_SERVER_URL", "")
         # Add missing config attributes that might be accessed (duplicates removed)
