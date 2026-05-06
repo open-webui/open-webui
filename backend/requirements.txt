@@ -1,16 +1,16 @@
 fastapi==0.135.1
 uvicorn[standard]==0.41.0
 pydantic==2.12.5
-python-multipart==0.0.22
+python-multipart==0.0.26
 itsdangerous==2.2.0
 
 python-socketio==5.16.1
 python-jose==3.5.0
-cryptography==46.0.5
+cryptography==46.0.7
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.11.0
-authlib==1.6.10
+authlib==1.6.11
 
 requests==2.33.1
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
@@ -46,13 +46,13 @@ tiktoken==0.12.0
 mcp==1.26.0
 
 openai==2.29.0
-anthropic==0.86.0
+anthropic==0.87.0
 google-genai==1.66.0
 
 langchain==1.2.10
 langchain-community==0.4.1
 langchain-classic==1.0.1
-langchain-text-splitters==1.1.1
+langchain-text-splitters==1.1.2
 
 fake-useragent==2.2.0
 chromadb==1.5.2
@@ -67,7 +67,7 @@ einops==0.8.2
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.7.5
+pypdf==6.10.2
 fpdf2==2.8.7
 pymdown-extensions==10.21
 docx2txt==0.9
@@ -75,7 +75,7 @@ python-pptx==1.0.2
 msoffcrypto-tool==6.0.0
 unstructured==0.18.31
 
-nltk==3.9.3
+nltk==3.9.4
 Markdown==3.10.2
 beautifulsoup4==4.14.3
 pypandoc==1.16.2
@@ -88,7 +88,7 @@ psutil==7.2.2
 sentencepiece==0.2.1
 soundfile==0.13.1
 
-pillow==12.1.1
+pillow==12.2.0
 opencv-python-headless==4.13.0.92
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
@@ -139,7 +139,7 @@ colbert-ai==0.2.22
 
 ## Tests
 docker~=7.1.0
-pytest~=8.4.1
+pytest~=9.0.3
 pytest-docker~=3.2.5
 
 ## LDAP
