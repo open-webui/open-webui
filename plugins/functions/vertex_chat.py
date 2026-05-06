@@ -256,13 +256,17 @@ def _to_anthropic_message(message: dict) -> dict:
                 if url.startswith('data:'):
                     header, _, b64 = url.partition(',')
                     mime = header.split(';')[0].removeprefix('data:') or 'image/png'
-                    blocks.append({
-                        'type': 'image',
-                        'source': {'type': 'base64', 'media_type': mime, 'data': b64},
-                    })
+                    blocks.append(
+                        {
+                            'type': 'image',
+                            'source': {'type': 'base64', 'media_type': mime, 'data': b64},
+                        }
+                    )
                 elif url:
-                    blocks.append({
-                        'type': 'image',
-                        'source': {'type': 'url', 'url': url},
-                    })
+                    blocks.append(
+                        {
+                            'type': 'image',
+                            'source': {'type': 'url', 'url': url},
+                        }
+                    )
     return {'role': role, 'content': blocks or [{'type': 'text', 'text': ''}]}

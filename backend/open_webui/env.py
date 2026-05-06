@@ -130,6 +130,8 @@ WEBUI_NAME = os.environ.get('WEBUI_NAME', 'Open WebUI')
 if WEBUI_NAME != 'Open WebUI':
     WEBUI_NAME += ' (Open WebUI)'
 
+WORKBENCH_URL = os.environ.get('WORKBENCH_URL', '').rstrip('/')
+
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 
 TRUSTED_SIGNATURE_KEY = os.environ.get('TRUSTED_SIGNATURE_KEY', '')
