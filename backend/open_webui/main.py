@@ -1009,13 +1009,6 @@ app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
 app.state.config.PDF_IMAGE_DESCRIPTION_MODEL = PDF_IMAGE_DESCRIPTION_MODEL
 app.state.config.PDF_IMAGE_DESCRIPTION_MODEL_USER = PDF_IMAGE_DESCRIPTION_MODEL_USER
 
-# Explicit INFO-level logging for key runtime configuration
-log.info("======================================================================")
-log.info("COMPLEX PDF RAG INGESTION CONFIGURATION:")
-log.info("  RAG_PDF_COMPLEX_PARSER_ENABLED:     %s", os.environ.get("RAG_PDF_COMPLEX_PARSER_ENABLED", "False"))
-log.info("  PDF_IMAGE_DESCRIPTION_MODEL:        %s", PDF_IMAGE_DESCRIPTION_MODEL.value)
-log.info("======================================================================")
-
 
 app.state.config.ENABLE_SEARCH_QUERY_GENERATION = ENABLE_SEARCH_QUERY_GENERATION
 app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENERATION
