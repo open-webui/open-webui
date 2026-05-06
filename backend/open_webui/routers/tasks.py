@@ -32,7 +32,7 @@ from open_webui.config import (
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
 )
-from open_webui.env import DEFAULT_TASK_MODEL_ID, SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.models import Models
 from open_webui.utils.access_control import has_access
 from open_webui.utils.workspace_access import item_assigned_to_user_groups
@@ -53,7 +53,7 @@ GEMINI_FLASH_LITE_PATTERNS = [
 ]
 
 # Preferred model ID to set when configuring
-PREFERRED_TASK_MODEL_ID = DEFAULT_TASK_MODEL_ID
+PREFERRED_TASK_MODEL_ID = "@vertexai/gemini-2.5-flash-lite"
 
 
 def find_gemini_flash_lite_model(models: dict) -> Optional[str]:

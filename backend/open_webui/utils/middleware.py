@@ -73,10 +73,7 @@ from open_webui.retrieval.utils import (
 from open_webui.routers.retrieval import get_ef
 
 
-from open_webui.utils.chat import (
-    generate_chat_completion,
-    _sanitize_form_data_for_logging,
-)
+from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
@@ -747,7 +744,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         f"model_id={model.get('id')}, chat_id={metadata.get('chat_id')}, session_id={metadata.get('session_id')}."
     )
     form_data = apply_params_to_form_data(form_data, model)
-    log.debug("form_data: %s", _sanitize_form_data_for_logging(form_data))
+    log.debug(f"form_data: {form_data}")
 
     log.debug(
         f"[DEBUG] [WS-CHAT 4] [inside process_chat_payload() from middleware.py] metadata before get_event_emitter: "

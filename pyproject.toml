@@ -66,8 +66,6 @@ dependencies = [
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
-    "pdfplumber==0.11.4",
-    "pymupdf==1.24.11",
     "fpdf2==2.8.2",
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",

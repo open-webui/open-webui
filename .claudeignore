@@ -1,0 +1,96 @@
+# Secrets and environment
+.env
+.env.*
+
+# IDE and editor config
+.cursor/
+
+# Lock files (large, rarely needed for code understanding)
+package-lock.json
+uv.lock
+
+# Build output and caches
+build/
+node_modules/
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+.cache/
+
+# Static assets and media
+static/
+demo.gif
+**/*.pdf
+**/*.gif
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.svg
+
+# Logs and temp files
+*.txt
+temp/
+logs/
+
+# One-off report/summary markdown files at repo root
+# (these are historical notes, not living documentation)
+CHANGELOG.md
+CODE_EVALUATION_FINAL.md
+CODE_EVALUATION_REPORT.md
+CODEBASE_IMPROVEMENTS_REPORT.md
+COMMIT_HISTORY_SUMMARY.md
+CONTAINER_ACCESS_GUIDE.md
+CRITICAL_BUG_FIX_TIKA_SERVER_URL.md
+DEPLOY_RQ_WORKERS_OPENSHIFT.sh
+DEPLOYMENT_READY_SUMMARY.md
+DEPLOYMENT_STEPS.md
+DOUBLE_CHECK_VERIFICATION.md
+EMBEDDING_PIPELINE_FAILURE_ANALYSIS.md
+FINAL_CODE_EVALUATION.md
+FINAL_VERIFICATION_REPORT.md
+FIXES_APPLIED.md
+IMPLEMENTATION_SUMMARY.md
+INSTALLATION.md
+LOCAL_REDIS_TESTING.md
+LOGGING_ENHANCEMENTS_SUMMARY.md
+LOGGING_GUIDE.md
+LOGICAL_BUGS_ANALYSIS.md
+MODEL_VISIBILITY_BUG_ANALYSIS.md
+MODEL_VISIBILITY_SOLUTION_PROPOSAL.md
+OPENSHIFT_RQ_WORKER_DEPLOYMENT.md
+PHASE1_IMPLEMENTATION_PLAN.md
+QUICK_DEPLOY_CHECKLIST.md
+QUICK_DEPLOYMENT_CHECKLIST.md
+QUICK_START.md
+REDIS_EMBEDDING_FAILURE_BUGS.md
+REDIS_RQ_ARCHITECTURE_EXPLANATION.md
+REPLICAS_AND_SCALING.md
+TEST_FIXES_SUMMARY.md
+TESTING_RQ_WORKER_CLEANUP.md
+TROUBLESHOOTING.md
+VECTOR_DB_CONFIG.md
+VERIFICATION_CHECKLIST.md
+WORKER_DEPLOYMENT_ISSUE.md
+
+# One-off scripts and test files at repo root
+test_worker_*.py
+test-redis-local.sh
+confirm_remove.sh
+view_logs.sh
+update_ollama_models.sh
+run-compose.sh
+run-ollama-docker.sh
+run.sh
+
+# Kubernetes manifests (infrastructure, not app code)
+kubernetes/
+
+# Cypress test fixtures and screenshots (large, not code)
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+
+# Docs folder (generated/external docs)
+docs/

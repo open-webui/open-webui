@@ -115,8 +115,6 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Pilot GenAI")
 
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
-DEFAULT_TASK_MODEL_ID = "@vertexai/gemini-2.5-flash-lite"
-
 TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 
 ####################################

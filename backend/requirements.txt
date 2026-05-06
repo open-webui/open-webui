@@ -60,8 +60,6 @@ einops==0.8.0
 
 ftfy==6.2.3
 pypdf==5.4.0
-pymupdf==1.24.11
-pdfplumber==0.11.4
 fpdf2==2.8.2
 reportlab==4.2.5
 pymdown-extensions==10.14.2

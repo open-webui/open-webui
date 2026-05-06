@@ -3,7 +3,6 @@ import requests
 import logging
 import ftfy
 import sys
-from typing import Any
 
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -180,59 +179,20 @@ class Loader:
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower() if "." in filename else ""
-
-        # PDF parsing: default engine uses complex two-pass parser, otherwise keep legacy path.
+        
+        # FORCE PyPDF for PDFs (OpenShift requirement) - check PDF first before engine logic
         if file_ext == "pdf":
-            use_complex_parser = os.environ.get("RAG_PDF_COMPLEX_PARSER_ENABLED", "True").lower() == "true"
-            extraction_engine = (self.engine or "").strip().lower()
-            request_obj: Any = self.kwargs.get("REQUEST")
-            user_obj: Any = self.kwargs.get("USER")
-
+            # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
+            extract_images = False
+            log.info(f"[LOADER] PDF_DETECTED | file={filename} | loader=PyPDFLoader (forced) | extract_images={extract_images} (FORCED TO FALSE)")
             if os.path.exists(file_path):
                 file_size = os.path.getsize(file_path)
                 log.info(f"[LOADER] PDF_INFO | file={filename} | size={file_size}B")
-
-            if use_complex_parser and extraction_engine == "":
-                try:
-                    from open_webui.retrieval.loaders.pdf_complex import (
-                        ComplexPDFLoader,
-                        describe_pdf_images_via_chat,
-                    )
-                except ImportError as import_error:
-                    log.warning(
-                        "[LOADER] Complex PDF parser unavailable; falling back to PyPDFLoader "
-                        f"| file={filename} | error={import_error}"
-                    )
-                else:
-                    log.info(f"[LOADER] PDF_DETECTED | file={filename} | loader=ComplexPDFLoader")
-                    raw_owner = self.kwargs.get("PDF_IMAGE_RBAC_OWNER_EMAIL")
-                    rbac_pdf = (
-                        raw_owner.strip()
-                        if isinstance(raw_owner, str) and raw_owner.strip()
-                        else None
-                    )
-                    return ComplexPDFLoader(
-                        file_path=file_path,
-                        image_describer=lambda page_number, images: describe_pdf_images_via_chat(
-                            request=request_obj,
-                            user=user_obj,
-                            page_number=page_number,
-                            images=images,
-                            rbac_owner_email=rbac_pdf,
-                        ),
-                    )
-
-            extract_images_cfg = self.kwargs.get("PDF_EXTRACT_IMAGES", False)
-            extract_images = (
-                extract_images_cfg
-                if isinstance(extract_images_cfg, bool)
-                else str(extract_images_cfg).lower() == "true"
-            )
-            log.info(
-                f"[LOADER] PDF_DETECTED | file={filename} | loader=PyPDFLoader "
-                f"(fallback) | extract_images={extract_images}"
-            )
+            print(f"[DEBUG] Creating PyPDFLoader for {filename} | extract_images={extract_images} | file_path={file_path}", flush=True)
+            log.info(f"[DEBUG] Creating PyPDFLoader for {filename} | extract_images={extract_images}")
             loader_instance = PyPDFLoader(file_path, extract_images=extract_images)
+            print(f"[DEBUG] PyPDFLoader created successfully for {filename}", flush=True)
+            log.info(f"[DEBUG] PyPDFLoader created successfully for {filename}")
             return loader_instance
         
         # Check if Document Intelligence is configured

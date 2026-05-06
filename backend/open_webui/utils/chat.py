@@ -101,95 +101,6 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
-_BASE64_URL_MARKER = ";base64,"
-
-
-def _truncate_base64_data_url(url: str, visible_chars: int = 80) -> str:
-    """Shorten data:image/...;base64,... URLs so debug logs do not contain full image payloads."""
-    if not isinstance(url, str):
-        return url
-    pos = url.find(_BASE64_URL_MARKER)
-    if pos == -1:
-        return url
-    payload = url[pos + len(_BASE64_URL_MARKER) :]
-    if len(payload) <= visible_chars:
-        return url
-    head = url[: pos + len(_BASE64_URL_MARKER)]
-    return f"{head}{payload[:visible_chars]}...(truncated, {len(payload)} base64 chars)"
-
-
-def _truncate_base64_in_text(text: str, visible_chars: int = 80) -> str:
-    """Truncate every data-URL base64 segment in a string (e.g. stringified message content)."""
-    if not isinstance(text, str) or _BASE64_URL_MARKER not in text:
-        return text
-    parts: list[str] = []
-    i = 0
-    while i < len(text):
-        j = text.find(_BASE64_URL_MARKER, i)
-        if j == -1:
-            parts.append(text[i:])
-            break
-        start_payload = j + len(_BASE64_URL_MARKER)
-        parts.append(text[i:start_payload])
-        k = start_payload
-        while k < len(text) and text[k] in (
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r \t"
-        ):
-            k += 1
-        segment = text[start_payload:k]
-        if len(segment) > visible_chars:
-            parts.append(segment[:visible_chars])
-            parts.append(f"...(truncated, {len(segment)} base64 chars)")
-        else:
-            parts.append(segment)
-        i = k
-    return "".join(parts)
-
-
-def _sanitize_messages_for_logging(messages: Any) -> Any:
-    if not isinstance(messages, list):
-        return messages
-    sanitized: list[Any] = []
-    for msg in messages:
-        if not isinstance(msg, dict):
-            sanitized.append(msg)
-            continue
-        entry = dict(msg)
-        content = msg.get("content")
-        if isinstance(content, list):
-            new_parts: list[Any] = []
-            for part in content:
-                if not isinstance(part, dict):
-                    new_parts.append(part)
-                    continue
-                p = dict(part)
-                if part.get("type") == "image_url":
-                    iu_val = part.get("image_url")
-                    if isinstance(iu_val, dict):
-                        iu = dict(iu_val)
-                        if "url" in iu:
-                            iu["url"] = _truncate_base64_data_url(iu["url"])
-                        p["image_url"] = iu
-                    elif isinstance(iu_val, str):
-                        p["image_url"] = _truncate_base64_data_url(iu_val)
-                new_parts.append(p)
-            entry["content"] = new_parts
-        elif isinstance(content, str):
-            entry["content"] = _truncate_base64_in_text(content)
-        sanitized.append(entry)
-    return sanitized
-
-
-def _sanitize_form_data_for_logging(form_data: dict) -> dict:
-    try:
-        out = dict(form_data)
-        if "messages" in out:
-            out["messages"] = _sanitize_messages_for_logging(out["messages"])
-        return out
-    except Exception:
-        return {"model": form_data.get("model"), "_log_sanitize": "failed"}
-
-
 # Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
 def safe_add_span_event(event_name, attributes=None):
     """Safely add span event - never fails, even if OTEL is broken"""
@@ -385,7 +296,7 @@ async def generate_chat_completion(
     log.debug(
         f"[DEBUG] [inside generate_chat_completion() from chat.py] entry. model_id={model_id}, user={getattr(user, 'email', None)} (id={getattr(user, 'id', None)}), stream={form_data.get('stream')}."
     )
-    log.debug("generate_chat_completion: %s", _sanitize_form_data_for_logging(form_data))
+    log.debug(f"generate_chat_completion: {form_data}")
     
     # Extract model and user info for instrumentation
     user_id = getattr(user, "id", None)
