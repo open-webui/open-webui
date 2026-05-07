@@ -1,0 +1,234 @@
+name: Build & Deploy
+
+# Builds the open-webui container image and deploys it to one of the three
+# Swept Cloud Run environments (prod / staging / demo) in GCP project
+# production-472518. Image goes to AR repo `chat-releases`. Auth via the
+# existing Swept WIF pool. Runbook: DEPLOYMENT.md.
+#
+# Triggers:
+# - push to `main`           → build + auto-deploy to STAGING
+# - workflow_dispatch        → build + deploy to chosen env (staging|demo|prod)
+#
+# Prod deploys go to the `production` GitHub Environment, which should be
+# configured with required reviewers in the repo settings.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        default: staging
+        options: [staging, demo, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGISTRY: us-central1-docker.pkg.dev
+  PROJECT: production-472518
+  REPOSITORY: chat-releases
+  REGION: us-central1
+  WIF_PROVIDER: projects/964226336245/locations/global/workloadIdentityPools/github-actions/providers/github
+  DEPLOY_SA: github-deploy@production-472518.iam.gserviceaccount.com
+  RUNTIME_SA: 964226336245-compute@developer.gserviceaccount.com
+  CLOUDSQL_INSTANCE: production-472518:us-central1:swept-chat-db
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.push.outputs.digest }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          IMAGE="${REGISTRY}/${PROJECT}/${REPOSITORY}/open-webui"
+          FULL_SHA="${GITHUB_SHA}"
+          SHORT_SHA="${FULL_SHA:0:7}"
+          REF_TAG=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
+          {
+            echo "image=${IMAGE}"
+            echo "short_sha=${SHORT_SHA}"
+            echo "full_sha_tag=${IMAGE}:${FULL_SHA}"
+            echo "short_sha_tag=${IMAGE}:${SHORT_SHA}"
+            echo "ref_tag=${IMAGE}:${REF_TAG}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.full_sha_tag }}
+            ${{ steps.meta.outputs.short_sha_tag }}
+            ${{ steps.meta.outputs.ref_tag }}
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+          cache-from: type=gha,scope=open-webui
+          cache-to: type=gha,scope=open-webui,mode=max
+          provenance: false
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### open-webui image"
+            echo ""
+            echo "- **Image:** \`${{ steps.meta.outputs.image }}\`"
+            echo "- **Full SHA tag:** \`${{ steps.meta.outputs.full_sha_tag }}\`"
+            echo "- **Short SHA tag:** \`${{ steps.meta.outputs.short_sha_tag }}\`"
+            echo "- **Ref tag:** \`${{ steps.meta.outputs.ref_tag }}\`"
+            echo "- **Digest:** \`${{ steps.push.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy to ${{ needs.resolve-env.outputs.environment }}
+    needs: [build, resolve-env]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-env.outputs.environment }}
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+
+      - name: Resolve env-specific config
+        id: cfg
+        env:
+          ENV_NAME: ${{ needs.resolve-env.outputs.environment }}
+        run: |
+          case "$ENV_NAME" in
+            prod)
+              SERVICE="swept-chat"
+              SECRET_PREFIX=""
+              BUCKET="swept-chat-uploads-prod"
+              DOMAIN="chat.swept.ai"
+              MIN_INSTANCES=1
+              ;;
+            staging)
+              SERVICE="staging-swept-chat"
+              SECRET_PREFIX="STAGING_"
+              BUCKET="swept-chat-uploads-staging"
+              DOMAIN="staging.chat.swept.ai"
+              MIN_INSTANCES=0
+              ;;
+            demo)
+              SERVICE="demo-swept-chat"
+              SECRET_PREFIX="DEMO_"
+              BUCKET="swept-chat-uploads-demo"
+              DOMAIN="demo.chat.swept.ai"
+              MIN_INSTANCES=0
+              ;;
+            *)
+              echo "Unknown env: $ENV_NAME" >&2; exit 1
+              ;;
+          esac
+          {
+            echo "service=${SERVICE}"
+            echo "secret_prefix=${SECRET_PREFIX}"
+            echo "bucket=${BUCKET}"
+            echo "domain=${DOMAIN}"
+            echo "min_instances=${MIN_INSTANCES}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloud Run
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}@${{ needs.build.outputs.digest }}
+          SERVICE: ${{ steps.cfg.outputs.service }}
+          BUCKET: ${{ steps.cfg.outputs.bucket }}
+          SECRET_PREFIX: ${{ steps.cfg.outputs.secret_prefix }}
+          MIN_INSTANCES: ${{ steps.cfg.outputs.min_instances }}
+          ENV_NAME: ${{ needs.resolve-env.outputs.environment }}
+          SHORT_SHA: ${{ needs.build.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          # TODO(WORKBENCH_URL): once staging.workbench.swept.ai and
+          # demo.workbench.swept.ai are mapped, source the URL per env
+          # instead of pinning all three to prod workbench.
+          gcloud run services update "$SERVICE" \
+            --image="$IMAGE" \
+            --region="$REGION" \
+            --project="$PROJECT" \
+            --service-account="$RUNTIME_SA" \
+            --add-cloudsql-instances="$CLOUDSQL_INSTANCE" \
+            --cpu=2 \
+            --memory=4Gi \
+            --min-instances="$MIN_INSTANCES" \
+            --max-instances=10 \
+            --timeout=300 \
+            --concurrency=40 \
+            --port=8080 \
+            --set-env-vars="ENV=prod,PORT=8080,FORWARDED_ALLOW_IPS=*,WEBUI_SESSION_COOKIE_SECURE=true,WORKBENCH_URL=https://workbench.swept.ai,STORAGE_PROVIDER=gcs,GCS_BUCKET_NAME=${BUCKET}" \
+            --set-secrets="WEBUI_SECRET_KEY=${SECRET_PREFIX}WEBUI_SECRET_KEY:latest,DATABASE_URL=${SECRET_PREFIX}OPENWEBUI_DATABASE_URL:latest" \
+            --update-labels="git-sha=${SHORT_SHA},environment=${ENV_NAME}"
+
+      - name: Smoke check /health
+        env:
+          DOMAIN: ${{ steps.cfg.outputs.domain }}
+        run: |
+          # Cloud Run domain mappings can take a few minutes to provision certs
+          # on first creation, so retry briefly.
+          for i in 1 2 3 4 5; do
+            if curl -fsS "https://${DOMAIN}/health" | grep -q '"status":true'; then
+              echo "✅ ${DOMAIN}/health OK"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "❌ ${DOMAIN}/health failed after 5 attempts" >&2
+          exit 1
+
+  # Tiny helper job: turns the trigger (push vs dispatch) into a single
+  # `environment` output that downstream jobs can consume. Push to main
+  # always targets staging.
+  resolve-env:
+    name: Resolve target environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.pick.outputs.environment }}
+    steps:
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=staging" >> "$GITHUB_OUTPUT"
+          fi
