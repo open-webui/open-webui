@@ -804,7 +804,7 @@
 							<img
 								crossorigin="anonymous"
 								src="/favicon.png"
-								class="sidebar-new-chat-icon size-6 group-hover:hidden rounded-full object-contain"
+								class="sidebar-new-chat-icon size-6 group-hover:hidden object-contain"
 								alt=""
 							/>
 
