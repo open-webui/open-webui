@@ -2,7 +2,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
 
-	import { config, user, tools as _tools, mobile, knowledge, imageGenEnabled } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, knowledge } from '$lib/stores';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import { createPicker } from '$lib/utils/google-drive-picker';
@@ -125,13 +125,6 @@
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
-					<button
-						on:click={() => { $imageGenEnabled = !$imageGenEnabled; }}
-						class="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md {$imageGenEnabled ? 'text-green-500' : ''}"
-					>
-						{$imageGenEnabled ? '🖼 Image ON' : '🖼 Image OFF'}
-					</button>
-
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
 							? $i18n.t('Model(s) do not support file upload')

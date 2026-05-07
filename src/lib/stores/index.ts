@@ -32,11 +32,7 @@ export const privacyProxy = writable(_stored !== null ? _stored === 'true' : tru
 privacyProxy.subscribe(value => {
     if (typeof localStorage !== 'undefined') localStorage.setItem('garnet_privacy_proxy', String(value));
 });
-const _storedImageGen = typeof localStorage !== 'undefined' ? localStorage.getItem('garnet_image_gen_enabled') : null;
-export const imageGenEnabled = writable(_storedImageGen !== null ? _storedImageGen === 'true' : false);
-imageGenEnabled.subscribe(value => {
-    if (typeof localStorage !== 'undefined') localStorage.setItem('garnet_image_gen_enabled', String(value));
-});
+
 export const highlightEntities = writable<{ text: string; entities: any[] } | null>(null);
 export const socket: Writable<null | Socket> = writable(null);
 export const activeUserIds: Writable<null | string[]> = writable(null);
