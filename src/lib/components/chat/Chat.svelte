@@ -47,7 +47,8 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-        privacyProxy
+        privacyProxy,
+        imageGenEnabled
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -2160,11 +2161,7 @@
 		if ($config?.features)
 			features = {
 				voice: $showCallOverlay,
-				image_generation:
-					$config?.features?.enable_image_generation &&
-					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-						? imageGenerationEnabled
-						: false,
+				image_generation: get(imageGenEnabled),
 				code_interpreter:
 					$config?.features?.enable_code_interpreter &&
 					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
