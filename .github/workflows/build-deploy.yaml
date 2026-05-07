@@ -142,21 +142,18 @@ jobs:
               SERVICE="swept-chat"
               SECRET_PREFIX=""
               BUCKET="swept-chat-uploads-prod"
-              DOMAIN="chat.swept.ai"
               MIN_INSTANCES=1
               ;;
             staging)
               SERVICE="staging-swept-chat"
               SECRET_PREFIX="STAGING_"
               BUCKET="swept-chat-uploads-staging"
-              DOMAIN="staging.chat.swept.ai"
               MIN_INSTANCES=0
               ;;
             demo)
               SERVICE="demo-swept-chat"
               SECRET_PREFIX="DEMO_"
               BUCKET="swept-chat-uploads-demo"
-              DOMAIN="demo.chat.swept.ai"
               MIN_INSTANCES=0
               ;;
             *)
@@ -167,7 +164,6 @@ jobs:
             echo "service=${SERVICE}"
             echo "secret_prefix=${SECRET_PREFIX}"
             echo "bucket=${BUCKET}"
-            echo "domain=${DOMAIN}"
             echo "min_instances=${MIN_INSTANCES}"
           } >> "$GITHUB_OUTPUT"
 
@@ -202,22 +198,10 @@ jobs:
             --set-secrets="WEBUI_SECRET_KEY=${SECRET_PREFIX}WEBUI_SECRET_KEY:latest,DATABASE_URL=${SECRET_PREFIX}OPENWEBUI_DATABASE_URL:latest" \
             --update-labels="git-sha=${SHORT_SHA},environment=${ENV_NAME}"
 
-      - name: Smoke check /health
-        env:
-          DOMAIN: ${{ steps.cfg.outputs.domain }}
-        run: |
-          # Cloud Run domain mappings can take a few minutes to provision certs
-          # on first creation, so retry briefly.
-          for i in 1 2 3 4 5; do
-            if curl -fsS "https://${DOMAIN}/health" | grep -q '"status":true'; then
-              echo "✅ ${DOMAIN}/health OK"
-              exit 0
-            fi
-            echo "Attempt $i failed, retrying in 10s..."
-            sleep 10
-          done
-          echo "❌ ${DOMAIN}/health failed after 5 attempts" >&2
-          exit 1
+      # No public smoke check — the services sit behind IAP so an
+      # unauthenticated curl gets a 302 to Google's auth flow, not /health.
+      # Confirm a deploy via `gcloud run revisions list` or the IAP-aware
+      # browser flow.
 
   # Tiny helper job: turns the trigger (push vs dispatch) into two outputs.
   #   env_name        — short token (prod / staging / demo) used to look up
