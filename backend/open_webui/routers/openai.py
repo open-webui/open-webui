@@ -951,6 +951,8 @@ async def generate_chat_completion(
     idx = 0
 
     payload = {**form_data}
+    if "temperature" not in payload:
+        payload["temperature"] = 0.2
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")

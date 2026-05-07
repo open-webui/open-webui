@@ -9,9 +9,53 @@ from typing import Callable, Optional
 import copy
 import json
 
+MEDICAL_GUARDRAILS = """
+You are a medical informational assistant.
+
+IMPORTANT SAFETY RULES:
+
+- Never claim certainty about a diagnosis.
+- Never state that a patient is definitely dying or definitely safe.
+- Never discourage seeking medical attention.
+- Never replace evaluation by a licensed healthcare professional.
+- Always encourage consultation with a qualified medical professional.
+- If symptoms could indicate a medical emergency, advise immediate emergency evaluation.
+- Clearly distinguish between known facts, possibilities, and uncertainty.
+- Never fabricate medical citations, studies, or evidence.
+- If uncertain, explicitly say you are uncertain.
+- Avoid overconfident language.
+- Do not provide dangerous medical instructions.
+- Do not claim to be a physician or healthcare provider.
+- Always prioritize patient safety.
+
+If users describe symptoms involving:
+- chest pain
+- difficulty breathing
+- stroke symptoms
+- seizures
+- suicidal thoughts
+- overdose symptoms
+- severe bleeding
+
+recommend immediate emergency medical care.
+"""
+
+EMERGENCY_TERMS = [
+    "chest pain",
+    "difficulty breathing",
+    "can't breathe",
+    "shortness of breath",
+    "stroke",
+    "seizure",
+    "suicidal",
+    "overdose",
+    "heavy bleeding",
+    "unconscious"
+]
+
 
 # inplace function: form_data is modified
-def apply_system_prompt_to_body(
+"""def apply_system_prompt_to_body(
     system: Optional[str],
     form_data: dict,
     metadata: Optional[dict] = None,
@@ -38,6 +82,92 @@ def apply_system_prompt_to_body(
         form_data["messages"] = add_or_update_system_message(
             system, form_data.get("messages", [])
         )
+
+    return form_data"""
+
+def apply_system_prompt_to_body(
+    system: Optional[str],
+    form_data: dict,
+    metadata: Optional[dict] = None,
+    user=None,
+    replace: bool = False,
+) -> dict:
+
+    messages = form_data.get("messages", [])
+
+    # Detect emergency-related user prompts
+    latest_user_message = ""
+
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            content = msg.get("content", "")
+
+            if isinstance(content, str):
+                latest_user_message = content.lower()
+            else:
+                latest_user_message = str(content).lower()
+
+            break
+
+    emergency_detected = any(
+        term in latest_user_message
+        for term in EMERGENCY_TERMS
+    )
+
+    emergency_prompt = ""
+
+    if emergency_detected:
+        emergency_prompt = """
+
+EMERGENCY MEDICAL SAFETY:
+
+The user may describe potentially dangerous symptoms.
+
+Strongly encourage immediate medical evaluation or emergency services.
+Do not minimize symptoms.
+Do not provide reassurance that the user is safe.
+"""
+
+    # Build combined guardrail prompt
+    combined_system = f"""
+{MEDICAL_GUARDRAILS}
+
+{emergency_prompt}
+
+{system if system else ""}
+"""
+
+    # Metadata (WebUI Usage)
+    if metadata:
+        variables = metadata.get("variables", {})
+        if variables:
+            combined_system = prompt_variables_template(
+                combined_system,
+                variables
+            )
+
+    # Legacy (API Usage)
+    combined_system = prompt_template(combined_system, user)
+
+    # Prevent duplicate insertion
+    already_exists = any(
+        msg.get("role") == "system"
+        and "IMPORTANT SAFETY RULES" in msg.get("content", "")
+        for msg in messages
+    )
+
+    if not already_exists:
+
+        if replace:
+            form_data["messages"] = replace_system_message_content(
+                combined_system,
+                messages
+            )
+        else:
+            form_data["messages"] = add_or_update_system_message(
+                combined_system,
+                messages
+            )
 
     return form_data
 
