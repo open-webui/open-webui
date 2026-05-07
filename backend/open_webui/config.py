@@ -1348,6 +1348,12 @@ RESPONSE_WATERMARK = PersistentConfig(
     os.environ.get('RESPONSE_WATERMARK', ''),
 )
 
+ARTIFACT_CONTENT_SECURITY_POLICY = PersistentConfig(
+    'ARTIFACT_CONTENT_SECURITY_POLICY',
+    'ui.artifacts.content_security_policy',
+    os.environ.get('ARTIFACT_CONTENT_SECURITY_POLICY', ''),
+)
+
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS', 'False').lower() == 'true'

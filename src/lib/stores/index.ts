@@ -309,6 +309,10 @@ type Config = {
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
+		response_watermark?: string;
+		artifacts?: {
+			content_security_policy?: string;
+		};
 	};
 };
 
