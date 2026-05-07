@@ -196,33 +196,15 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
             current_updated_at = getattr(tool, 'updated_at', None)
 
-            print(
-                '[tool-cache] check '
-                + f'tool_id={tool_id} '
-                + f'has_module={module is not None} '
-                + f'cached_updated_at={cached_updated_at} '
-                + f'db_updated_at={current_updated_at}'
+            needs_reload = module is None or (
+                # Be defensive: some rows may have null/legacy timestamps.
+                # Prefer reload over raising and breaking all tools.
+                cached_updated_at is None
+                or current_updated_at is None
+                or cached_updated_at != current_updated_at
             )
 
-            needs_reload = module is None
-            if not needs_reload:
-                # Be defensive here: some rows may have null/legacy timestamps.
-                # In those cases, prefer reload over raising and breaking all tools.
-                if cached_updated_at is None or current_updated_at is None:
-                    needs_reload = True
-                    print(
-                        '[tool-cache] reload reason=missing_timestamp '
-                        + f'tool_id={tool_id} cached={cached_updated_at} db={current_updated_at}'
-                    )
-                elif cached_updated_at != current_updated_at:
-                    needs_reload = True
-                    print(
-                        '[tool-cache] reload reason=timestamp_mismatch '
-                        + f'tool_id={tool_id} cached={cached_updated_at} db={current_updated_at}'
-                    )
-
             if needs_reload:
-                print(f'[tool-cache] reloading module tool_id={tool_id}')
                 # IMPORTANT: pass DB content directly to avoid the content=None
                 # code path in load_tool_module_by_id, which writes content back
                 # and can bump updated_at on every reload.
@@ -230,14 +212,10 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                 request.app.state.TOOLS[tool_id] = module
                 if not hasattr(request.app.state, 'TOOL_UPDATED_AT'):
                     request.app.state.TOOL_UPDATED_AT = {}
-                    print('[tool-cache] TOOL_UPDATED_AT cache missing in runtime; initialized')
                 request.app.state.TOOL_UPDATED_AT[tool_id] = current_updated_at
-                print(
-                    '[tool-cache] cache updated '
-                    + f'tool_id={tool_id} updated_at={current_updated_at} source=db'
-                )
+                log.debug(f'tool-cache reload tool_id={tool_id} updated_at={current_updated_at}')
             else:
-                print(f'[tool-cache] cache hit tool_id={tool_id} updated_at={cached_updated_at}')
+                log.debug(f'tool-cache hit tool_id={tool_id} updated_at={cached_updated_at}')
 
             __user__ = {
                 **extra_params['__user__'],

@@ -376,11 +376,7 @@ async def create_new_tools(
             if tools:
                 if not hasattr(request.app.state, 'TOOL_UPDATED_AT'):
                     request.app.state.TOOL_UPDATED_AT = {}
-                    print('[tool-cache] TOOL_UPDATED_AT cache missing on create; initialized')
                 request.app.state.TOOL_UPDATED_AT[form_data.id] = tools.updated_at
-                print(
-                    f"[tool-cache] create set updated_at tool_id={form_data.id} updated_at={tools.updated_at}"
-                )
 
             tool_cache_dir = CACHE_DIR / 'tools' / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -518,9 +514,7 @@ async def update_tools_by_id(
         if tools:
             if not hasattr(request.app.state, 'TOOL_UPDATED_AT'):
                 request.app.state.TOOL_UPDATED_AT = {}
-                print('[tool-cache] TOOL_UPDATED_AT cache missing on update; initialized')
             request.app.state.TOOL_UPDATED_AT[id] = tools.updated_at
-            print(f'[tool-cache] update set updated_at tool_id={id} updated_at={tools.updated_at}')
             return tools
         else:
             raise HTTPException(
@@ -628,13 +622,10 @@ async def delete_tools_by_id(
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
             del TOOLS[id]
-            print(f'[tool-cache] delete removed module cache tool_id={id}')
         if hasattr(request.app.state, 'TOOL_UPDATED_AT') and id in request.app.state.TOOL_UPDATED_AT:
             del request.app.state.TOOL_UPDATED_AT[id]
-            print(f'[tool-cache] delete removed updated_at cache tool_id={id}')
         if hasattr(request.app.state, 'TOOL_CONTENTS') and id in request.app.state.TOOL_CONTENTS:
             del request.app.state.TOOL_CONTENTS[id]
-            print(f'[tool-cache] delete removed content cache tool_id={id}')
 
     return result
 
