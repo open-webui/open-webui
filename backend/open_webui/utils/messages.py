@@ -60,36 +60,47 @@ def _expand_assistant(
         nonlocal pending_blocks, emission_index
 
         text = _assistant_content_from_blocks(pending_blocks)
-        message: dict = {"role": "assistant", "content": text if text else None}
+
+        tool_calls = (
+            tool_calls_block.get("content") or []
+            if tool_calls_block is not None
+            else []
+        )
 
         if tool_calls_block is not None:
-            message["tool_calls"] = tool_calls_block.get("content") or []
             chosen_reasoning = (
                 tool_calls_block.get("reasoning_details")
                 or reasoning_for_emission(emission_index, None)
             )
-            if chosen_reasoning:
-                message["reasoning_details"] = chosen_reasoning
         else:
             chosen_reasoning = reasoning_for_emission(
                 emission_index, fallback_reasoning_details
             )
-            if chosen_reasoning:
-                message["reasoning_details"] = chosen_reasoning
 
-        if (
-            tool_calls_block is None
-            and message.get("content") is None
-            and not message.get("reasoning_details")
-        ):
+        if not text and not tool_calls and not chosen_reasoning:
             pending_blocks = []
             return
+
+        # OpenAI requires content OR tool_calls to be set: content=null is only
+        # valid when tool_calls is non-empty. For reasoning-only emissions
+        # (preserved so providers like OpenRouter keep the encrypted chain),
+        # fall back to "" so the message still validates upstream.
+        if tool_calls:
+            content_value = text if text else None
+        else:
+            content_value = text if text else ""
+
+        message: dict = {"role": "assistant", "content": content_value}
+        if tool_calls:
+            message["tool_calls"] = tool_calls
+        if chosen_reasoning:
+            message["reasoning_details"] = chosen_reasoning
 
         api_messages.append(message)
         emission_index += 1
         pending_blocks = []
 
-        if tool_calls_block is not None:
+        if tool_calls:
             for result in tool_calls_block.get("results") or []:
                 # Tool results travel as list-of-text-parts so the cache_control
                 # transform applied during the live tool loop's last-message marker
@@ -121,7 +132,7 @@ def _expand_assistant(
         api_messages.append(
             {
                 "role": "assistant",
-                "content": None,
+                "content": "",
                 "reasoning_details": reasoning_details_per_round[emission_index],
             }
         )
@@ -155,13 +166,33 @@ def blocks_to_api_messages(messages: list[dict]) -> list[dict]:
         else:
             # `content_blocks` and `reasoning_details_per_round` are internal carriers;
             # the upstream API does not know about them.
-            out.append(
-                {
-                    k: v
-                    for k, v in msg.items()
-                    if k not in ("content_blocks", "reasoning_details_per_round")
-                }
-            )
+            cleaned = {
+                k: v
+                for k, v in msg.items()
+                if k not in ("content_blocks", "reasoning_details_per_round")
+            }
+            # Legacy assistant messages (pre-content_blocks migration, or chats
+            # whose backfill couldn't recover a text block) may arrive with
+            # content=None and no tool_calls — upstream rejects that with
+            # "content or tool_calls must be set". Coerce to "" when there's
+            # reasoning to preserve, otherwise drop the message entirely.
+            if cleaned.get("role") == "assistant":
+                content = cleaned.get("content")
+                has_content = (
+                    (isinstance(content, str) and content != "")
+                    or (isinstance(content, list) and len(content) > 0)
+                    or (
+                        content is not None
+                        and not isinstance(content, (str, list))
+                    )
+                )
+                has_tool_calls = bool(cleaned.get("tool_calls"))
+                if not has_content and not has_tool_calls:
+                    if cleaned.get("reasoning_details"):
+                        cleaned["content"] = ""
+                    else:
+                        continue
+            out.append(cleaned)
     return out
 
 
