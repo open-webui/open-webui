@@ -127,11 +127,20 @@
 									>
 									<img
 										src="/static/m3llm-avatar.png"
-										class="@sm:size-40 size-20 rounded-sm object-contain"
+										class="@sm:size-40 size-20 rounded-sm object-contain dark:hidden"
 										aria-hidden="true"
 										draggable="false"
 										on:error={(e) => {
 											e.currentTarget.src = '/favicon.png';
+										}}
+									/>
+									<img
+										src="/static/m3llm-avatar-dark.png"
+										class="@sm:size-40 size-20 rounded-sm object-contain hidden dark:block"
+										aria-hidden="true"
+										draggable="false"
+										on:error={(e) => {
+											e.currentTarget.src = '/static/favicon-dark.png';
 										}}
 									/>
 									</button>
