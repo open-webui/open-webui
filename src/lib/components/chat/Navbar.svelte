@@ -15,8 +15,7 @@
 		showSidebar,
 		temporaryChatEnabled,
 		user,
-		privacyProxy,
-		imageGenEnabled
+		privacyProxy
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -133,16 +132,6 @@
             <span class="relative inline-flex h-4 w-7 items-center rounded-full transition-colors {$privacyProxy ? 'bg-emerald-500' : 'bg-gray-500'}">
                 <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform {$privacyProxy ? 'translate-x-3.5' : 'translate-x-0.5'}" />
             </span>
-        </button>
-        {/if}
-        {#if $models.find((m) => m.id === selectedModels[0])?.owned_by !== 'ollama'}
-        <button
-          on:click={() => { $imageGenEnabled = !$imageGenEnabled; }}
-          class="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors
-            {$imageGenEnabled ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}"
-          title="Image Generation"
-        >
-          🖼 image
         </button>
         {/if}
     </div>
