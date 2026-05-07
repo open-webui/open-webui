@@ -1012,14 +1012,14 @@
 				>
 					<img
 						crossorigin="anonymous"
-						src="/favicon.png"
-						class="sidebar-new-chat-icon size-8 rounded-full object-contain dark:hidden"
+						src="{WEBUI_BASE_URL}/static/favicon.png"
+						class="sidebar-new-chat-icon size-6 rounded-full object-contain dark:hidden"
 						alt=""
 					/>
 					<img
 						crossorigin="anonymous"
-						src="/favicon-dark.png"
-						class="sidebar-new-chat-icon size-8 rounded-full object-contain hidden dark:block"
+						src="{WEBUI_BASE_URL}/static/favicon-dark.png"
+						class="sidebar-new-chat-icon size-6 rounded-full object-contain hidden dark:block"
 						alt=""
 					/>
 				</a>
