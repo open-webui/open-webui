@@ -140,8 +140,17 @@ Due to the very high volume of incoming vulnerability reports, issues, discussio
 
 ## Report Handling
 
-If you report a valid vulnerability that somebody else reported before you, we will close your report as a duplicate.
-The earliest filing of the vulnerability is the one we will handle going forward. We will not publish multiple reports for the same vulnerability.
+If you report a valid vulnerability that somebody else reported before you, we will close your report as a duplicate. The earliest filing is the one we will handle going forward, and we will not publish multiple advisories for the same vulnerability.
+
+When multiple independent reporters describe the same vulnerability class but each demonstrates a **distinct and separate exploitation vector** — for example, the same missing authorization check reached through different endpoints — we will consolidate them into the earliest filing and credit every reporter who demonstrated a distinct path. Only one CVE will be issued for the consolidated advisory.
+
+### Why duplicate reports don't receive credit
+
+We credit only the earliest filer of a given vulnerability:
+
+1. **The first report did the work.** By the time a later report arrives, triage and fix are already in motion. Later reports don't change the outcome or timeline; crediting them would misrepresent what moved the fix.
+2. **Credit-for-duplicates incentivizes flooding.** If similar-but-later filings earn credit, the rational play is to skim open advisories and file variations. We already see this pressure — the first-filer rule is what limits it.
+3. **Co-discovery is different from duplication.** Multiple reporters **are credited** on one advisory **when each contributes a *distinct* finding** — different vector, different affected component, different sub-path the earlier filing does not cover. That is the consolidation rule above. Filing a duplicate of an existing report is not co-discovery.
 
 ## Confidential Disclosure
 
