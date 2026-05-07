@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment"
+        description: 'Target environment'
         required: true
         type: choice
         default: staging
@@ -113,10 +113,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    name: Deploy to ${{ needs.resolve-env.outputs.environment }}
+    # `environment` binds to a GitHub Environment of the same name (production /
+    # staging / demo) for required-reviewer gating; `env_name` (prod / staging /
+    # demo) is the short token used for service / bucket / secret resolution.
+    name: Deploy to ${{ needs.resolve-env.outputs.gh_environment }}
     needs: [build, resolve-env]
     runs-on: ubuntu-latest
-    environment: ${{ needs.resolve-env.outputs.environment }}
+    environment: ${{ needs.resolve-env.outputs.gh_environment }}
     steps:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -132,7 +135,7 @@ jobs:
       - name: Resolve env-specific config
         id: cfg
         env:
-          ENV_NAME: ${{ needs.resolve-env.outputs.environment }}
+          ENV_NAME: ${{ needs.resolve-env.outputs.env_name }}
         run: |
           case "$ENV_NAME" in
             prod)
@@ -175,7 +178,7 @@ jobs:
           BUCKET: ${{ steps.cfg.outputs.bucket }}
           SECRET_PREFIX: ${{ steps.cfg.outputs.secret_prefix }}
           MIN_INSTANCES: ${{ steps.cfg.outputs.min_instances }}
-          ENV_NAME: ${{ needs.resolve-env.outputs.environment }}
+          ENV_NAME: ${{ needs.resolve-env.outputs.env_name }}
           SHORT_SHA: ${{ needs.build.outputs.short_sha }}
         run: |
           set -euo pipefail
@@ -216,19 +219,34 @@ jobs:
           echo "❌ ${DOMAIN}/health failed after 5 attempts" >&2
           exit 1
 
-  # Tiny helper job: turns the trigger (push vs dispatch) into a single
-  # `environment` output that downstream jobs can consume. Push to main
-  # always targets staging.
+  # Tiny helper job: turns the trigger (push vs dispatch) into two outputs.
+  #   env_name        — short token (prod / staging / demo) used to look up
+  #                     service names, bucket names, and secret prefixes.
+  #   gh_environment  — long name (production / staging / demo) used for the
+  #                     deploy job's `environment:` binding so required
+  #                     reviewers on `production` actually fire.
+  # Push to main always targets staging.
   resolve-env:
     name: Resolve target environment
     runs-on: ubuntu-latest
     outputs:
-      environment: ${{ steps.pick.outputs.environment }}
+      env_name: ${{ steps.pick.outputs.env_name }}
+      gh_environment: ${{ steps.pick.outputs.gh_environment }}
     steps:
       - id: pick
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "environment=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+            ENV_NAME="${{ github.event.inputs.environment }}"
           else
-            echo "environment=staging" >> "$GITHUB_OUTPUT"
+            ENV_NAME="staging"
           fi
+          case "$ENV_NAME" in
+            prod)    GH_ENV="production" ;;
+            staging) GH_ENV="staging" ;;
+            demo)    GH_ENV="demo" ;;
+            *) echo "Unknown env: $ENV_NAME" >&2; exit 1 ;;
+          esac
+          {
+            echo "env_name=${ENV_NAME}"
+            echo "gh_environment=${GH_ENV}"
+          } >> "$GITHUB_OUTPUT"

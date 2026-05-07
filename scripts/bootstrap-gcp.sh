@@ -41,6 +41,9 @@ green() { printf '\033[32m%s\033[0m\n' "$*"; }
 yellow(){ printf '\033[33m%s\033[0m\n' "$*"; }
 red()   { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 bold()  { printf '\033[1m%s\033[0m\n' "$*"; }
+# No-newline variant for use as a `read -p` prompt — the trailing newline from
+# the regular helpers would push the cursor to the next line and break input.
+yellow_inline() { printf '\033[33m%s\033[0m' "$*"; }
 
 # `run` either executes a command or just prints it (under --dry-run).
 DRY_RUN=0
@@ -59,7 +62,7 @@ run() {
 confirm() {
     local prompt="${1:-Continue?}"
     if [[ "${ASSUME_YES}" == "1" ]]; then return 0; fi
-    read -r -p "$(yellow "${prompt} [y/N] ")" reply
+    read -r -p "$(yellow_inline "${prompt} [y/N] ")" reply
     [[ "${reply}" =~ ^[Yy]$ ]]
 }
 
@@ -306,13 +309,15 @@ phase6_wif() {
         cyan "  Proposed new condition:"
         printf '    %s\n' "${new_condition}"
         if [[ "${UPDATE_WIF}" == "1" ]]; then
-            confirm "  Apply this change? (Affects swept-workbench too — make sure ${WORKBENCH_REPO} stays allowed.)" \
-                || { red "  Skipping WIF update."; }
-            run gcloud iam workload-identity-pools providers update-oidc "${WIF_PROVIDER}" \
-                --location=global --workload-identity-pool="${WIF_POOL}" \
-                --attribute-condition="${new_condition}" \
-                --project="${PROJECT}"
-            green "  ✓ Updated WIF provider condition"
+            if confirm "  Apply this change? (Affects swept-workbench too — make sure ${WORKBENCH_REPO} stays allowed.)"; then
+                run gcloud iam workload-identity-pools providers update-oidc "${WIF_PROVIDER}" \
+                    --location=global --workload-identity-pool="${WIF_POOL}" \
+                    --attribute-condition="${new_condition}" \
+                    --project="${PROJECT}"
+                green "  ✓ Updated WIF provider condition"
+            else
+                yellow "  Declined — WIF condition unchanged."
+            fi
         else
             yellow "  Skipping WIF condition update (re-run with --update-wif to apply)."
             yellow "  Manual command:"
@@ -449,7 +454,12 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -y|--yes)        ASSUME_YES=1; shift ;;
         --dry-run)       DRY_RUN=1; shift ;;
-        --phase)         START_PHASE="$2"; shift 2 ;;
+        --phase)
+            if [[ ! "${2:-}" =~ ^[1-9]$ ]]; then
+                red "--phase requires an integer in [1,9] (got '${2:-}')"
+                usage 1
+            fi
+            START_PHASE="$2"; shift 2 ;;
         --update-wif)    UPDATE_WIF=1; shift ;;
         -h|--help)       usage 0 ;;
         *)               red "Unknown flag: $1"; usage 1 ;;

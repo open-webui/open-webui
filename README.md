@@ -1,7 +1,9 @@
 <!-- swept:start -->
+
 > **Swept fork.** Deployment lives in `DEPLOYMENT.md`; architectural notes in `CLAUDE.md` (see "Deployment").
 >
 > **TODO — `WORKBENCH_URL`:** all three Cloud Run envs (chat.swept.ai / staging.chat.swept.ai / demo.chat.swept.ai) currently point at production workbench (`https://workbench.swept.ai`). Once `staging.workbench.swept.ai` and `demo.workbench.swept.ai` are mapped, edit `.github/workflows/build-deploy.yaml` (search for `TODO(WORKBENCH_URL)`) to source the URL per env.
+
 <!-- swept:end -->
 
 # Open WebUI 👋
