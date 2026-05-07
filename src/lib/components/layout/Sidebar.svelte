@@ -1013,7 +1013,13 @@
 					<img
 						crossorigin="anonymous"
 						src="/favicon.png"
-						class="sidebar-new-chat-icon size-8 rounded-full object-contain"
+						class="sidebar-new-chat-icon size-8 rounded-full object-contain dark:hidden"
+						alt=""
+					/>
+					<img
+						crossorigin="anonymous"
+						src="/favicon-dark.png"
+						class="sidebar-new-chat-icon size-8 rounded-full object-contain hidden dark:block"
 						alt=""
 					/>
 				</a>
