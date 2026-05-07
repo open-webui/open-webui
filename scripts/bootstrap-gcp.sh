@@ -184,8 +184,12 @@ phase3_cloud_sql() {
         yellow "  • Instance ${SQL_INSTANCE} already exists"
     else
         yellow "  Creating Postgres instance — this takes ~5–10 minutes."
+        # Pin to Enterprise edition — production-472518 defaults new
+        # instances to Enterprise Plus, which rejects db-custom-* tiers and
+        # would force us onto the much pricier db-perf-optimized-N-* family.
         run gcloud sql instances create "${SQL_INSTANCE}" \
             --database-version="${SQL_VERSION}" \
+            --edition=ENTERPRISE \
             --tier="${SQL_TIER}" \
             --region="${REGION}" \
             --storage-size=20GB \
@@ -352,21 +356,44 @@ phase7_cloud_run_placeholders() {
     echo
 }
 
-# ---- Phase 8: Custom domain mappings ----
+# ---- Phase 8: Custom domain mappings (manual) ----
 phase8_domain_mappings() {
-    bold "==> Phase 8: Cloud Run custom domain mappings"
+    bold "==> Phase 8: Cloud Run custom domain mappings (MANUAL — see notes)"
+    yellow "  This phase is intentionally not automated. \`gcloud beta run domain-mappings"
+    yellow "  create\` hangs silently when swept.ai is not verified in the operator's"
+    yellow "  Google Search Console account, and there is no async flag. The Console UI"
+    yellow "  walks through verification + mapping in one flow, so it's the right tool."
+    echo
+    cyan "  Steps:"
+    echo
+    cyan "    1. Verify swept.ai ownership (one-time, per Google account):"
+    cyan "         https://search.google.com/search-console"
+    cyan "         Add property → Domain → swept.ai → DNS TXT verification"
+    echo
+    cyan "    2. In GCP Console → Cloud Run → MANAGE CUSTOM DOMAINS → ADD MAPPING,"
+    cyan "       create one mapping per service:"
     for env in "${ENVS[@]}"; do
-        local svc="$(service_name "${env}")"
-        local domain="$(domain_name "${env}")"
-        if gcloud beta run domain-mappings describe --domain="${domain}" \
-                --region="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then
-            yellow "  • Mapping ${domain} → ${svc} already exists"
-        else
-            run gcloud beta run domain-mappings create --service="${svc}" \
-                --domain="${domain}" --region="${REGION}" --project="${PROJECT}"
-            green "  ✓ Mapped ${domain} → ${svc}"
-        fi
+        local svc domain
+        svc="$(service_name "${env}")"
+        domain="$(domain_name "${env}")"
+        printf '         • Service \033[1m%s\033[0m → Domain \033[1m%s\033[0m\n' "${svc}" "${domain}"
     done
+    echo
+    cyan "    3. Each mapping returns DNS records to add at the swept.ai DNS provider."
+    cyan "       Phase 9 of this script can also print them once mappings exist:"
+    cyan "         ./scripts/bootstrap-gcp.sh --phase 9 --yes"
+    echo
+    cyan "  Equivalent CLI (only AFTER Search Console verification completes; otherwise"
+    cyan "  this command will hang with no output):"
+    for env in "${ENVS[@]}"; do
+        local svc domain
+        svc="$(service_name "${env}")"
+        domain="$(domain_name "${env}")"
+        printf '    gcloud beta run domain-mappings create --service=%s \\\n' "${svc}"
+        printf '      --domain=%s --region=%s --project=%s --quiet\n' "${domain}" "${REGION}" "${PROJECT}"
+    done
+    echo
+    yellow "  Skipping automatic creation. Continuing to Phase 9."
     echo
 }
 
