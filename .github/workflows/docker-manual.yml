@@ -1,61 +1,41 @@
-name: Release
+name: Build Docker Image Manual
 
 on:
-  push:
-    branches:
-      - main # or whatever branch you want to use
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Etiqueta de la imagen (ej: v1.0.0, estable, pruebas-1)'
+        required: true
+        default: 'latest'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Check for changes in package.json
-        run: |
-          git diff --cached --diff-filter=d package.json || {
-            echo "No changes to package.json"
-            exit 1
-          }
-
-      - name: Get version number from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
-
-      - name: Extract latest CHANGELOG entry
-        run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md > /tmp/release-notes.md
-
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ steps.get_version.outputs.version }}" \
-            --title "v${{ steps.get_version.outputs.version }}" \
-            --notes-file /tmp/release-notes.md
-
-      - name: Upload package to GitHub release
-        uses: actions/upload-artifact@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
         with:
-          name: package
-          path: |
-            .
-            !.git
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger Docker build workflow
-        uses: actions/github-script@v8
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'docker-build.yaml',
-              ref: 'v${{ steps.get_version.outputs.version }}',
-            })
+          context: .
+          push: true
+          # Aquí usamos el input que escribes manualmente
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.tag_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
