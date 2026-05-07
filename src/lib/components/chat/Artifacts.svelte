@@ -31,12 +31,12 @@
 	let iframeElement: HTMLIFrameElement;
 
 	const applyArtifactContentSecurityPolicy = (html: string, policy: string) => {
-		if (!policy || typeof DOMParser === 'undefined') {
+		if (!policy || typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
 			return html;
 		}
 
 		try {
-			const document = new DOMParser().parseFromString(html, 'text/html');
+			const document = new window.DOMParser().parseFromString(html, 'text/html');
 			document
 				.querySelectorAll('meta[http-equiv]')
 				.forEach((meta) => {

@@ -1096,9 +1096,7 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
     request.app.state.config.PENDING_USER_OVERLAY_CONTENT = form_data.PENDING_USER_OVERLAY_CONTENT
 
     request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
-    request.app.state.config.ARTIFACT_CONTENT_SECURITY_POLICY = (
-        form_data.ARTIFACT_CONTENT_SECURITY_POLICY or ''
-    )
+    request.app.state.config.ARTIFACT_CONTENT_SECURITY_POLICY = form_data.ARTIFACT_CONTENT_SECURITY_POLICY
 
     return {
         'SHOW_ADMIN_DETAILS': request.app.state.config.SHOW_ADMIN_DETAILS,
