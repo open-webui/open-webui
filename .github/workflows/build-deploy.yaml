@@ -198,7 +198,7 @@ jobs:
             --timeout=300 \
             --concurrency=40 \
             --port=8080 \
-            --set-env-vars="ENV=prod,PORT=8080,FORWARDED_ALLOW_IPS=*,WEBUI_SESSION_COOKIE_SECURE=true,WORKBENCH_URL=https://workbench.swept.ai,STORAGE_PROVIDER=gcs,GCS_BUCKET_NAME=${BUCKET}" \
+            --set-env-vars="ENV=prod,FORWARDED_ALLOW_IPS=*,WEBUI_SESSION_COOKIE_SECURE=true,WORKBENCH_URL=https://workbench.swept.ai,STORAGE_PROVIDER=gcs,GCS_BUCKET_NAME=${BUCKET}" \
             --set-secrets="WEBUI_SECRET_KEY=${SECRET_PREFIX}WEBUI_SECRET_KEY:latest,DATABASE_URL=${SECRET_PREFIX}OPENWEBUI_DATABASE_URL:latest" \
             --update-labels="git-sha=${SHORT_SHA},environment=${ENV_NAME}"
 
