@@ -63,15 +63,15 @@ Docker / Compose:
 
 Swept ships this fork to GCP Cloud Run via `.github/workflows/build-deploy.yaml`. Three envs in GCP project `production-472518` / region `us-central1`, mirroring the `swept-workbench` setup:
 
-| Env | Cloud Run service | URL |
-|---|---|---|
-| production | `swept-chat` | https://chat.swept.ai |
-| staging | `staging-swept-chat` | https://staging.chat.swept.ai |
-| demo | `demo-swept-chat` | https://demo.chat.swept.ai |
+| Env        | Cloud Run service    | URL                           |
+| ---------- | -------------------- | ----------------------------- |
+| production | `swept-chat`         | https://chat.swept.ai         |
+| staging    | `staging-swept-chat` | https://staging.chat.swept.ai |
+| demo       | `demo-swept-chat`    | https://demo.chat.swept.ai    |
 
 Image: `us-central1-docker.pkg.dev/production-472518/chat-releases/open-webui`. Auth: Workload Identity Federation via the existing `swept-ai` GitHub org provider, impersonating `github-deploy@production-472518.iam.gserviceaccount.com`. Persistence: Cloud SQL `swept-chat-db` (one Postgres instance, three databases) + GCS buckets `swept-chat-uploads-{prod,staging,demo}` (native GCS storage backend, ADC). Secrets follow workbench's `STAGING_` / `DEMO_` prefix convention (prod = no prefix). Push to `main` auto-deploys staging; demo and prod require `workflow_dispatch` (prod additionally gated by the `production` GitHub Environment).
 
-**Important — manual setup, not Terraform.** The Swept side of the infra (workbench *and* this fork) was provisioned by hand with `gcloud`, mirroring how `swept-workbench` was originally bootstrapped. Pioneer (`pioneer-insurance` project) uses Terraform and is a separate story. Do not introduce Terraform here — it would drift from the manual source of truth. The runbook lives at `DEPLOYMENT.md`; when changing infra, update the runbook *and* re-run the affected `gcloud` commands.
+**Important — manual setup, not Terraform.** The Swept side of the infra (workbench _and_ this fork) was provisioned by hand with `gcloud`, mirroring how `swept-workbench` was originally bootstrapped. Pioneer (`pioneer-insurance` project) uses Terraform and is a separate story. Do not introduce Terraform here — it would drift from the manual source of truth. The runbook lives at `DEPLOYMENT.md`; when changing infra, update the runbook _and_ re-run the affected `gcloud` commands.
 
 Currently `WORKBENCH_URL` is pinned to `https://workbench.swept.ai` for all three envs — once the staging/demo workbench domains are mapped, source the URL per env in the workflow (search for `TODO(WORKBENCH_URL)`).
 
