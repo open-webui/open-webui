@@ -1013,13 +1013,13 @@
 					<img
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="sidebar-new-chat-icon size-6 rounded-full object-contain dark:hidden"
+						class="sidebar-new-chat-icon size-6 object-contain dark:hidden"
 						alt=""
 					/>
 					<img
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon-dark.png"
-						class="sidebar-new-chat-icon size-6 rounded-full object-contain hidden dark:block"
+						class="sidebar-new-chat-icon size-6 object-contain hidden dark:block"
 						alt=""
 					/>
 				</a>
