@@ -140,7 +140,7 @@
 										aria-hidden="true"
 										draggable="false"
 										on:error={(e) => {
-											e.currentTarget.src = '/favicon-dark.png';
+											e.currentTarget.src = '/static/favicon-dark.png';
 										}}
 									/>
 									</button>
