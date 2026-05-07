@@ -972,6 +972,8 @@ app.state.USER_COUNT = None
 
 app.state.TOOLS = {}
 app.state.TOOL_CONTENTS = {}
+app.state.TOOL_UPDATED_AT = {}
+print('[tool-cache] Initialized app.state.TOOL_UPDATED_AT cache')
 
 app.state.FUNCTIONS = {}
 app.state.FUNCTION_CONTENTS = {}
