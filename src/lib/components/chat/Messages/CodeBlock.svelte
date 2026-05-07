@@ -434,7 +434,7 @@
 
 <div>
 	<div
-		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
+		class="relative {className} flex min-w-0 max-w-full flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
 		dir="ltr"
 	>
 		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
@@ -556,7 +556,7 @@
 						/>
 					{:else}
 						<pre
-							class=" hljs p-4 px-5 overflow-x-auto"
+							class=" hljs max-w-full p-4 px-5 overflow-x-auto"
 							style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
 								stdout ||
 								stderr ||
