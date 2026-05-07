@@ -241,7 +241,7 @@
 									<img
 										id="logo"
 										crossorigin="anonymous"
-										src="/static/favicon.png"
+										src="{WEBUI_BASE_URL}/static/favicon.png"
 										class="size-24 rounded-full"
 										alt="{$WEBUI_NAME} logo"
 									/>
@@ -254,6 +254,26 @@
 									submitHandler();
 								}}
 							>
+								<div class="flex shrink-0 justify-center mb-4">
+									<img
+										src="/static/m3llm-avatar.png"
+										class="size-20 sm:size-30 rounded-sm object-contain dark:hidden"
+										aria-hidden="true"
+										draggable="false"
+										on:error={(e) => {
+											e.currentTarget.src = '/favicon.png';
+										}}
+									/>
+									<img
+										src="/static/m3llm-avatar-dark.png"
+										class="size-20 sm:size-30 rounded-sm object-contain hidden dark:block"
+										aria-hidden="true"
+										draggable="false"
+										on:error={(e) => {
+											e.currentTarget.src = '/static/favicon-dark.png';
+										}}
+									/>
+								</div>
 								<div class="mb-1">
 									<div class=" text-2xl font-medium">
 										{#if $config?.onboarding ?? false}
@@ -587,14 +607,14 @@
 		</div>
 
 		{#if !$config?.metadata?.auth_logo_position}
-			<div class="fixed m-8 z-50">
+			<div class="fixed m-10 z-50">
 				<div class="flex space-x-2">
 					<div class=" self-center">
 					<img
 						id="logo"
 						crossorigin="anonymous"
-						src="/static/favicon.png"
-						class="size-10 rounded-full object-contain"
+						src="{WEBUI_BASE_URL}/static/favicon.png"
+						class=" w-6 rounded-full"
 						alt=""
 					/>
 					</div>
