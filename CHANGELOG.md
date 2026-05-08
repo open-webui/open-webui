@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚀 **Faster prompt list loading.** Prompt and prompt-tag pages now load much faster for non-admin users, even with large prompt libraries, because accessible prompts are filtered efficiently in a single database query. [#24288](https://github.com/open-webui/open-webui/pull/24288), [#24258](https://github.com/open-webui/open-webui/discussions/24258)
 - 🎤 **Voice mode prompt toggle.** Administrators can now explicitly enable or disable the Voice Mode custom prompt behavior from Interface settings, giving finer control over how voice replies are guided. [Commit](https://github.com/open-webui/open-webui/commit/17893038869e3a763a8b34457f723b9666804e27)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Chinese and Catalan were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Chinese, Catalan, Filipino, and Korean were enhanced and expanded.
 
 ### Fixed
 
