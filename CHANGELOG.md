@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🧵 **Background code execution reliability.** Code execution no longer hangs indefinitely when you switch conversations or browser tabs during a run, and disconnected or inactive sessions now fail with a clear timeout error instead of endless processing. [Commit](https://github.com/open-webui/open-webui/commit/552bbcecfae5ae273ab98e2ce3e540d0771aa964), [#24089](https://github.com/open-webui/open-webui/issues/24089)
+- 🎙️ **Voice recording MIME fallback support.** Voice recording now tries a broader set of browser-supported audio formats and resets halted audio playback cleanly, improving microphone capture reliability in browsers where recording previously failed to start. [Commit](https://github.com/open-webui/open-webui/commit/8ffc3d746f20007e9eb4e3ae4f152f383bc371e1), [#24162](https://github.com/open-webui/open-webui/issues/24162)
+- 🧠 **Direct-connection task generation reliability.** Title, tags, follow-up, emoji, query, and related task-generation endpoints now work correctly when chats use direct-connection models instead of failing with model-not-found errors. [Commit](https://github.com/open-webui/open-webui/commit/1b4cd705d0b9a51a5e3a7851ec012fb3141eb0a9), [Commit](https://github.com/open-webui/open-webui/commit/005df577fec16733a64edbec8a1b46f42f4e9a43), [#24092](https://github.com/open-webui/open-webui/issues/24092)
+- 📌 **Per-user note pinning behavior.** Pinned notes are now tracked per user instead of with a shared note-level flag, so one person’s pin changes no longer affect everyone else. [Commit](https://github.com/open-webui/open-webui/commit/33e588cf09b294f0abe08b9566efa8545a7dbf92)
 - 🛡️ **Webhook avatar URL validation.** Channel webhook profile image URLs are now validated before saving, preventing invalid or unsafe avatar URLs from being accepted. [#24370](https://github.com/open-webui/open-webui/pull/24370)
 - 📈 **Imported chat analytics coverage.** Imported ChatGPT conversations now carry proper model and timestamp metadata and reliably write imported messages into analytics-backed storage, so imported chats are reflected correctly in Admin Analytics totals and model usage views. [Commit](https://github.com/open-webui/open-webui/commit/4d766a3edfa116abcefe7168f1d1284683b860b2), [#24263](https://github.com/open-webui/open-webui/issues/24263)
 - 📎 **Knowledge collection persistence.** Knowledge collections selected with the chat input selector now remain attached after reloads and chat switches, so attached context no longer disappears between sessions. [Commit](https://github.com/open-webui/open-webui/commit/7c398a625a8d51f79d80217f6d329fc30c72b782), [#24142](https://github.com/open-webui/open-webui/issues/24142)
@@ -52,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- _No changelog entries yet._
+- ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
 
 ## [0.9.2] - 2026-04-24
 
