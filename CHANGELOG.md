@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔔 **LDAP signup webhook parity.** New accounts created through LDAP now trigger the same signup webhook notifications as password and OAuth signups, so downstream provisioning and audit automations receive consistent events. [Commit](https://github.com/open-webui/open-webui/commit/fd3368c0bff168417e3c49ffd73491c344702339), [#24377](https://github.com/open-webui/open-webui/issues/24377)
 - 🤖 **Automation update tool reliability.** Updating existing automations in chat now works correctly instead of failing with a missing method error. [Commit](https://github.com/open-webui/open-webui/commit/f39f4a86aedc2769d8268670a020b1f3c16776dd), [#24405](https://github.com/open-webui/open-webui/issues/24405#issuecomment-4408011166)
 - 📅 **Calendar event permission checks.** Calendar event update and delete actions now handle ownership and access checks more reliably, returning clean access-denied results when appropriate. [Commit](https://github.com/open-webui/open-webui/commit/2977910ffd9d2369dfa504aa6ab12745b3dbd19a)
 - 🛡️ **Safer cached file delivery.** Cached files that are not recognized as image, audio, or video now download as attachments instead of rendering inline, reducing the risk of unsafe browser content handling. [Commit](https://github.com/open-webui/open-webui/commit/4754ece4a2de5bba85a1d53af2dc8d24fdfb58be)
