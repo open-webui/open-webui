@@ -161,7 +161,7 @@
 		const { excelToTable } = await import('$lib/utils/excelToTable');
 		const worksheet = excelWorkbook.Sheets[selectedSheet];
 		const result = await excelToTable(worksheet);
-		excelHtml = result.html;
+		excelHtml = DOMPurify.sanitize(result.html);
 		rowCount = result.rowCount;
 	};
 
