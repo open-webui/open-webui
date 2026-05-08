@@ -2776,7 +2776,15 @@ async def serve_cache_file(
         raise HTTPException(status_code=404, detail='File not found')
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail='File not found')
-    return FileResponse(file_path)
+
+    mime, _ = mimetypes.guess_type(file_path)
+    inline_safe = mime and mime.split('/', 1)[0] in {'image', 'audio', 'video'}
+
+    headers = {'X-Content-Type-Options': 'nosniff'}
+    if not inline_safe:
+        headers['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+
+    return FileResponse(file_path, headers=headers)
 
 
 def swagger_ui_html(*args, **kwargs):
