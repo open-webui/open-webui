@@ -1,4 +1,4 @@
-name: Create and publish Docker images with specific build args
+name: Create IADESmart Docker images
 
 on:
   workflow_dispatch:
