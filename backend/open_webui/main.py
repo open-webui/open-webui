@@ -1766,12 +1766,9 @@ async def chat_completion(
                 'stream_delta_chunk_size': stream_delta_chunk_size,
                 'reasoning_tags': reasoning_tags,
                 'function_calling': (
-                    'native'
-                    if (
-                        form_data.get('params', {}).get('function_calling') == 'native'
-                        or model_info_params.get('function_calling') == 'native'
-                    )
-                    else 'default'
+                    form_data.get('params', {}).get('function_calling')
+                    or model_info_params.get('function_calling')
+                    or 'default'
                 ),
             },
         }
@@ -1960,7 +1957,172 @@ async def chat_completion(
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
-            response = await chat_completion_handler(request, form_data, user)
+            # Native tool-calling loop for REST API (no WebSocket session).
+            is_api_native = (
+                not metadata.get('session_id')
+                and metadata.get('params', {}).get('function_calling') == 'native'
+                and metadata.get('tools')
+            )
+
+            if is_api_native:
+                from open_webui.env import CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES
+                from open_webui.utils.middleware import _split_tool_calls, process_tool_result
+                from open_webui.utils.tools import execute_tool_server, get_updated_tool_function
+                import ast as _ast
+
+                # NOTE: This loop does NOT extract citation sources (search_web,
+                # fetch_url, etc.) — API consumers won't receive citation metadata.
+                # Citation extraction is tightly coupled to the WebSocket event
+                # emitter and is not applicable to the REST API path.
+
+                original_stream = form_data.get('stream', False)
+                tools = metadata.get('tools', {})
+
+                async def _exec_tool(tc):
+                    func = tc.get('function', {})
+                    name = func.get('name', '')
+                    raw_args = func.get('arguments', '{}')
+
+                    tool_function_params = {}
+                    if raw_args and raw_args.strip():
+                        try:
+                            tool_function_params = _ast.literal_eval(raw_args)
+                        except Exception:
+                            try:
+                                tool_function_params = json.loads(raw_args)
+                            except Exception:
+                                log.error(f'Error parsing tool call arguments: {raw_args}')
+                                tool_function_params = {}
+
+                    tool = tools.get(name)
+                    if not tool:
+                        return {
+                            'role': 'tool',
+                            'tool_call_id': tc.get('id', ''),
+                            'content': f'Error: tool "{name}" not found',
+                        }
+
+                    tool_result = None
+                    tool_type = tool.get('type', '')
+                    direct_tool = tool.get('direct', False)
+
+                    spec = tool.get('spec', {})
+                    allowed = spec.get('parameters', {}).get('properties', {}).keys()
+                    tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed}
+
+                    try:
+                        if direct_tool:
+                            server = tool.get('server', {})
+                            tool_result = await execute_tool_server(
+                                url=server.get('url', ''),
+                                headers=server.get('headers', {}),
+                                cookies={},
+                                name=name,
+                                params=tool_function_params,
+                                server_data=server,
+                            )
+                            # execute_tool_server returns (data, headers) tuple;
+                            # convert to list so process_tool_result's
+                            # `isinstance(tool_result, list) and len == 2` check
+                            # unpacks it correctly (tuples don't match).
+                            if isinstance(tool_result, tuple) and len(tool_result) == 2:
+                                tool_result = list(tool_result)
+                        else:
+                            callable_fn = tool.get('callable')
+                            if callable_fn:
+                                callable_fn = await get_updated_tool_function(
+                                    function=callable_fn,
+                                    extra_params={
+                                        '__messages__': form_data.get('messages', []),
+                                        '__files__': metadata.get('files', []),
+                                    },
+                                )
+                                tool_result = await callable_fn(**tool_function_params)
+                    except Exception as e:
+                        log.exception(f'Error executing tool {name}: {e}')
+                        tool_result = str(e)
+
+                    tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
+                        request, name, tool_result, tool_type,
+                        direct_tool=direct_tool, metadata=metadata, user=user,
+                    )
+                    return {
+                        'role': 'tool',
+                        'tool_call_id': tc.get('id', ''),
+                        'content': str(tool_result) if tool_result is not None else '',
+                        **({"files": tool_result_files} if tool_result_files else {}),
+                        **({"embeds": tool_result_embeds} if tool_result_embeds else {}),
+                    }
+
+                async def _exec_tool_with_timeout(tc, timeout=30.0):
+                    """Wrap _exec_tool with a per-tool timeout to prevent a single
+                    slow/hanging tool from blocking the entire request."""
+                    try:
+                        return await asyncio.wait_for(_exec_tool(tc), timeout=timeout)
+                    except asyncio.TimeoutError:
+                        name = tc.get('function', {}).get('name', 'unknown')
+                        log.warning(f'Tool "{name}" timed out after {timeout}s')
+                        return {
+                            'role': 'tool',
+                            'tool_call_id': tc.get('id', ''),
+                            'content': f'Error: tool "{name}" timed out after {timeout}s',
+                        }
+
+                if original_stream:
+                    # Run tool loop eagerly (in request context), then stream
+                    # the final LLM response. MCP clients require same-task
+                    # execution so we cannot use an async generator here.
+                    form_data['stream'] = False
+
+                    for _ in range(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES):
+                        loop_response = await chat_completion_handler(request, form_data, user)
+
+                        if not isinstance(loop_response, dict):
+                            break
+                        data = loop_response
+
+                        choice = (data.get('choices') or [{}])[0]
+                        message = choice.get('message') or {}
+                        tool_calls = message.get('tool_calls') or []
+                        if not tool_calls:
+                            break
+
+                        tool_calls = _split_tool_calls(tool_calls)
+                        form_data['messages'].append(message)
+                        # Parallel execution (intentional): unlike the WebSocket
+                        # path which runs tools sequentially, we run all tools
+                        # concurrently for lower latency. Tools with ordering
+                        # dependencies within a single batch may be non-deterministic.
+                        tool_results = await asyncio.gather(*[_exec_tool_with_timeout(tc) for tc in tool_calls])
+                        form_data['messages'].extend(tool_results)
+
+                    # Always re-invoke with streaming for the final response.
+                    form_data['stream'] = True
+                    response = await chat_completion_handler(request, form_data, user)
+                else:
+                    # Non-streaming: run the loop and return the final dict.
+                    response = None
+                    form_data['stream'] = False
+                    needs_final_llm_call = False
+                    for _ in range(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES):
+                        response = await chat_completion_handler(request, form_data, user)
+                        if not isinstance(response, dict):
+                            break
+                        choice = (response.get('choices') or [{}])[0]
+                        message = choice.get('message') or {}
+                        tool_calls = message.get('tool_calls') or []
+                        if not tool_calls:
+                            break
+                        tool_calls = _split_tool_calls(tool_calls)
+                        form_data['messages'].append(message)
+                        tool_results = await asyncio.gather(*[_exec_tool_with_timeout(tc) for tc in tool_calls])
+                        form_data['messages'].extend(tool_results)
+                        needs_final_llm_call = True
+                    if needs_final_llm_call:
+                        response = await chat_completion_handler(request, form_data, user)
+            else:
+                response = await chat_completion_handler(request, form_data, user)
+
 
             # When the upstream provider returns an error (e.g. HTTP 400
             # content-filter, quota exceeded), generate_chat_completion
