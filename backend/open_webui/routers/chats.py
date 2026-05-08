@@ -676,11 +676,46 @@ async def get_user_pinned_chats(user=Depends(get_verified_user), db: AsyncSessio
 # GetChats
 ############################
 
+CHAT_EXPORT_BATCH_SIZE = 100
 
-@router.get('/all', response_model=list[ChatResponse])
-async def get_user_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    result = await Chats.get_chats_by_user_id(user.id, db=db)
-    return [ChatResponse(**chat.model_dump()) for chat in result.items]
+
+async def generate_chat_export_ndjson(user_id: str):
+    """
+    Async generator that streams all user chats as NDJSON (one JSON object per line).
+
+    Uses short-lived DB sessions per batch to avoid holding locks for the
+    entire duration, which is critical for SQLite environments.
+    """
+    skip = 0
+
+    while True:
+        result = await Chats.get_chats_by_user_id(
+            user_id,
+            skip=skip,
+            limit=CHAT_EXPORT_BATCH_SIZE,
+            db=None,
+        )
+        if not result.items:
+            break
+
+        for chat in result.items:
+            try:
+                yield ChatResponse(**chat.model_dump()).model_dump_json() + '\n'
+            except Exception as e:
+                log.exception(f'Error serializing chat {chat.id}: {e}')
+
+        if len(result.items) < CHAT_EXPORT_BATCH_SIZE:
+            break
+
+        skip += CHAT_EXPORT_BATCH_SIZE
+
+
+@router.get('/all')
+async def get_user_chats(user=Depends(get_verified_user)):
+    return StreamingResponse(
+        generate_chat_export_ndjson(user.id),
+        media_type='application/x-ndjson',
+    )
 
 
 ############################
