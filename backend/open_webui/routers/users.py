@@ -6,7 +6,7 @@ import io
 
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel, ConfigDict
 
 
@@ -29,7 +29,7 @@ from open_webui.models.users import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import STATIC_DIR
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
 from open_webui.internal.db import get_async_session
 
 
@@ -478,10 +478,16 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
     user = await Users.get_user_by_id(user_id)
     if user:
         if user.profile_image_url:
-            # External http(s) URLs are intentionally not honored to prevent
-            # client-side IP/UA/Referer leaks via 302 redirect to attacker-
-            # controlled origins.  Fall through to the default image instead.
-            if user.profile_image_url.startswith('data:image'):
+            if user.profile_image_url.startswith('http'):
+                if ENABLE_PROFILE_IMAGE_URL_FORWARDING:
+                    return Response(
+                        status_code=status.HTTP_302_FOUND,
+                        headers={'Location': user.profile_image_url},
+                    )
+                # When forwarding is disabled, fall through to the
+                # default image to prevent client-side IP/UA/Referer
+                # leaks via 302 redirect to external origins.
+            elif user.profile_image_url.startswith('data:image'):
                 try:
                     header, base64_data = user.profile_image_url.split(',', 1)
                     image_data = base64.b64decode(base64_data)

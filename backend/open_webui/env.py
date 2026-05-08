@@ -250,6 +250,19 @@ ENABLE_STAR_SESSIONS_MIDDLEWARE = os.environ.get('ENABLE_STAR_SESSIONS_MIDDLEWAR
 ENABLE_EASTER_EGGS = os.environ.get('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
 
 ####################################
+# ENABLE_PROFILE_IMAGE_URL_FORWARDING
+####################################
+
+# When True (default), the user and model profile-image endpoints
+# honour external http(s) URLs stored in profile_image_url by issuing a
+# 302 redirect to the original origin.  Set to False to suppress the
+# redirect (prevents client-side IP/UA/Referer leaks to attacker-
+# controlled origins) and fall through to the default image instead.
+ENABLE_PROFILE_IMAGE_URL_FORWARDING = os.environ.get(
+    'ENABLE_PROFILE_IMAGE_URL_FORWARDING', 'True'
+).lower() == 'true'
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 
