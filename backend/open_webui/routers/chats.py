@@ -676,11 +676,46 @@ async def get_user_pinned_chats(user=Depends(get_verified_user), db: AsyncSessio
 # GetChats
 ############################
 
+CHAT_EXPORT_BATCH_SIZE = 100
 
-@router.get('/all', response_model=list[ChatResponse])
-async def get_user_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    result = await Chats.get_chats_by_user_id(user.id, db=db)
-    return [ChatResponse(**chat.model_dump()) for chat in result.items]
+
+async def generate_chat_export_ndjson(user_id: str):
+    """
+    Async generator that streams all user chats as NDJSON (one JSON object per line).
+
+    Uses short-lived DB sessions per batch to avoid holding locks for the
+    entire duration, which is critical for SQLite environments.
+    """
+    skip = 0
+
+    while True:
+        result = await Chats.get_chats_by_user_id(
+            user_id,
+            skip=skip,
+            limit=CHAT_EXPORT_BATCH_SIZE,
+            db=None,
+        )
+        if not result.items:
+            break
+
+        for chat in result.items:
+            try:
+                yield ChatResponse(**chat.model_dump()).model_dump_json() + '\n'
+            except Exception as e:
+                log.exception(f'Error serializing chat {chat.id}: {e}')
+
+        if len(result.items) < CHAT_EXPORT_BATCH_SIZE:
+            break
+
+        skip += CHAT_EXPORT_BATCH_SIZE
+
+
+@router.get('/all')
+async def get_user_chats(user=Depends(get_verified_user)):
+    return StreamingResponse(
+        generate_chat_export_ndjson(user.id),
+        media_type='application/x-ndjson',
+    )
 
 
 ############################
@@ -829,29 +864,31 @@ async def get_shared_chat_by_id(
     if user.role == 'pending':
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
+    chat = await Chats.get_chat_by_share_id(share_id, db=db)
+
+    # Fallback: admins can also access any chat directly by chat ID
+    if not chat and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
         chat = await Chats.get_chat_by_id(share_id, db=db)
-    else:
-        chat = await Chats.get_chat_by_share_id(share_id, db=db)
 
     if not chat:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    # Look up the original chat_id to check access grants
-    shared = await SharedChats.get_by_id(share_id, db=db)
-    if shared:
-        has_grant = await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='shared_chat',
-            resource_id=shared.chat_id,
-            permission='read',
-            db=db,
-        )
-        if not has_grant:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+    # Look up the original chat_id to check access grants (admins bypass)
+    if user.role != 'admin' or not ENABLE_ADMIN_CHAT_ACCESS:
+        shared = await SharedChats.get_by_id(share_id, db=db)
+        if shared:
+            has_grant = await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='shared_chat',
+                resource_id=shared.chat_id,
+                permission='read',
+                db=db,
             )
+            if not has_grant:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
 
     return ChatResponse(**chat.model_dump())
 
@@ -1183,10 +1220,11 @@ async def clone_chat_by_id(
 async def clone_shared_chat_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    if user.role == 'admin':
+    chat = await Chats.get_chat_by_share_id(id, db=db)
+
+    # Fallback: admins can also access any chat directly by chat ID
+    if not chat and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
         chat = await Chats.get_chat_by_id(id, db=db)
-    else:
-        chat = await Chats.get_chat_by_share_id(id, db=db)
 
     if not chat:
         raise HTTPException(

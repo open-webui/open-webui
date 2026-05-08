@@ -366,20 +366,20 @@ class ChatTable:
             await db.commit()
 
             # Dual-write messages to chat_message table
-            try:
-                for form_data, chat_obj in zip(chat_import_forms, chats):
-                    history = form_data.chat.get('history', {})
-                    messages = history.get('messages', {})
-                    for message_id, message in messages.items():
-                        if isinstance(message, dict) and message.get('role'):
+            for form_data, chat_obj in zip(chat_import_forms, chats):
+                history = form_data.chat.get('history', {})
+                messages = history.get('messages', {})
+                for message_id, message in messages.items():
+                    if isinstance(message, dict) and message.get('role'):
+                        try:
                             await ChatMessages.upsert_message(
                                 message_id=message_id,
                                 chat_id=chat_obj.id,
                                 user_id=user_id,
                                 data=message,
                             )
-            except Exception as e:
-                log.warning(f'Failed to write imported messages to chat_message table: {e}')
+                        except Exception as e:
+                            log.warning(f'Failed to write imported message {message_id} for chat {chat_obj.id}: {e}')
 
             return [ChatModel.model_validate(chat) for chat in chats]
 

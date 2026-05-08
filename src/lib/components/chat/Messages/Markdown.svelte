@@ -71,11 +71,17 @@
 	};
 
 	const updateHandler = (content) => {
-		if (content && !pendingUpdate) {
-			pendingUpdate = requestAnimationFrame(() => {
+		if (content) {
+			if (done) {
+				cancelAnimationFrame(pendingUpdate);
 				pendingUpdate = null;
 				parseTokens();
-			});
+			} else if (!pendingUpdate) {
+				pendingUpdate = requestAnimationFrame(() => {
+					pendingUpdate = null;
+					parseTokens();
+				});
+			}
 		}
 	};
 

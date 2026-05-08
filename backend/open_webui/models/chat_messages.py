@@ -48,6 +48,25 @@ def get_usage(data: dict) -> Optional[dict]:
     return normalize_usage(usage) if usage else None
 
 
+def _token_columns(dialect: str):
+    """Return (input_tokens, output_tokens) SQL column expressions.
+
+    Falls back to OpenAI-style keys (prompt_tokens / completion_tokens)
+    when the normalized keys are absent.
+    """
+    if dialect == 'sqlite':
+        extract = lambda key: cast(func.json_extract(ChatMessage.usage, f'$.{key}'), Integer)
+    elif dialect == 'postgresql':
+        extract = lambda key: cast(func.json_extract_path_text(ChatMessage.usage, key), Integer)
+    else:
+        raise NotImplementedError(f'Unsupported dialect: {dialect}')
+
+    return (
+        func.coalesce(extract('input_tokens'), extract('prompt_tokens')),
+        func.coalesce(extract('output_tokens'), extract('completion_tokens')),
+    )
+
+
 ####################
 # ChatMessage DB Schema
 ####################
@@ -343,20 +362,7 @@ class ChatMessageTable:
             bind = await db.connection()
             dialect = bind.dialect.name
 
-            if dialect == 'sqlite':
-                input_tokens = cast(func.json_extract(ChatMessage.usage, '$.input_tokens'), Integer)
-                output_tokens = cast(func.json_extract(ChatMessage.usage, '$.output_tokens'), Integer)
-            elif dialect == 'postgresql':
-                input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'input_tokens'),
-                    Integer,
-                )
-                output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'output_tokens'),
-                    Integer,
-                )
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect}')
+            input_tokens, output_tokens = _token_columns(dialect)
 
             stmt = select(
                 ChatMessage.model_id,
@@ -404,20 +410,7 @@ class ChatMessageTable:
             bind = await db.connection()
             dialect = bind.dialect.name
 
-            if dialect == 'sqlite':
-                input_tokens = cast(func.json_extract(ChatMessage.usage, '$.input_tokens'), Integer)
-                output_tokens = cast(func.json_extract(ChatMessage.usage, '$.output_tokens'), Integer)
-            elif dialect == 'postgresql':
-                input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'input_tokens'),
-                    Integer,
-                )
-                output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'output_tokens'),
-                    Integer,
-                )
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect}')
+            input_tokens, output_tokens = _token_columns(dialect)
 
             stmt = select(
                 ChatMessage.user_id,

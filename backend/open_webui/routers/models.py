@@ -455,45 +455,61 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 
 @router.get('/model/profile/image')
 async def get_model_profile_image(
+    request: Request,
     id: str,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    model_meta = await Models.get_model_meta_by_id(id, db=db)
+    profile_image_url = None
+    updated_at = None
 
+    # First, check the database for regular models
+    model_meta = await Models.get_model_meta_by_id(id, db=db)
     if model_meta:
         meta, updated_at = model_meta
         profile_image_url = (meta or {}).get('profile_image_url')
 
-        if profile_image_url:
-            # External http(s) URLs are intentionally not honored to prevent
-            # client-side IP/UA/Referer leaks via 302 redirect to attacker-
-            # controlled origins.  Fall through to the default image instead.
-            if profile_image_url.startswith('data:image'):
-                try:
-                    header, base64_data = profile_image_url.split(',', 1)
-                    image_data = base64.b64decode(base64_data)
-                    image_buffer = io.BytesIO(image_data)
-                    media_type = header.split(';')[0].lstrip('data:')
+    # Fallback: check arena models stored in config (not in the DB)
+    if not profile_image_url:
+        arena_models = getattr(
+            getattr(request.app.state, 'config', None),
+            'EVALUATION_ARENA_MODELS',
+            [],
+        )
+        for arena_model in arena_models:
+            if arena_model.get('id') == id:
+                profile_image_url = arena_model.get('meta', {}).get('profile_image_url')
+                break
 
-                    headers = {'Content-Disposition': 'inline'}
-                    if updated_at:
-                        headers['ETag'] = f'"{updated_at}"'
+    if profile_image_url:
+        # External http(s) URLs are intentionally not honored to prevent
+        # client-side IP/UA/Referer leaks via 302 redirect to attacker-
+        # controlled origins.  Fall through to the default image instead.
+        if profile_image_url.startswith('data:image'):
+            try:
+                header, base64_data = profile_image_url.split(',', 1)
+                image_data = base64.b64decode(base64_data)
+                image_buffer = io.BytesIO(image_data)
+                media_type = header.split(';')[0].lstrip('data:')
 
-                    return StreamingResponse(
-                        image_buffer,
-                        media_type=media_type,
-                        headers=headers,
-                    )
-                except Exception:
-                    pass
-            else:
-                safe_static = _safe_static_redirect_path(profile_image_url)
-                if safe_static:
-                    return RedirectResponse(
-                        url=safe_static,
-                        status_code=status.HTTP_302_FOUND,
-                    )
+                headers = {'Content-Disposition': 'inline'}
+                if updated_at:
+                    headers['ETag'] = f'"{updated_at}"'
+
+                return StreamingResponse(
+                    image_buffer,
+                    media_type=media_type,
+                    headers=headers,
+                )
+            except Exception:
+                pass
+        else:
+            safe_static = _safe_static_redirect_path(profile_image_url)
+            if safe_static:
+                return RedirectResponse(
+                    url=safe_static,
+                    status_code=status.HTTP_302_FOUND,
+                )
 
     return RedirectResponse(
         url='/static/favicon.png',

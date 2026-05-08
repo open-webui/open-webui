@@ -948,17 +948,27 @@ async def get_event_emitter(request_info, update_db=True):
 
 async def get_event_call(request_info):
     async def __event_caller__(event_data):
-        response = await sio.call(
-            'events',
-            {
-                'chat_id': request_info.get('chat_id', None),
-                'message_id': request_info.get('message_id', None),
-                'data': event_data,
-            },
-            to=request_info['session_id'],
-            timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
-        )
-        return response
+        session_id = request_info['session_id']
+
+        # Fast-fail if the client has disconnected.
+        if session_id not in SESSION_POOL:
+            log.warning(f'Event caller: session {session_id} no longer connected')
+            return {'error': 'Client session disconnected.'}
+
+        try:
+            return await sio.call(
+                'events',
+                {
+                    'chat_id': request_info.get('chat_id', None),
+                    'message_id': request_info.get('message_id', None),
+                    'data': event_data,
+                },
+                to=session_id,
+                timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
+            )
+        except TimeoutError:
+            log.warning(f'Event caller timed out for session {session_id}')
+            return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
 
     if 'session_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:
         return __event_caller__
