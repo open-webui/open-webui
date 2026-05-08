@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.3] - 2026-05-08
+## [0.9.3] - 2026-05-09
 
 ### Added
 
@@ -81,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📊 **Streaming token analytics accuracy.** Admin Analytics now records and aggregates token usage correctly for streaming chats across Responses API and OpenAI-compatible providers, including fallback handling for provider usage formats that use prompt and completion token keys. [Commit](https://github.com/open-webui/open-webui/commit/989d5fd4e2ce285edf4475a1e13f0981a78d3821), [Commit](https://github.com/open-webui/open-webui/commit/a32d26e61d24d9f63650faed5cb8909ed90af661), [#24217](https://github.com/open-webui/open-webui/issues/24217), [#24294](https://github.com/open-webui/open-webui/issues/24294), [#24241](https://github.com/open-webui/open-webui/issues/24241)
 - 🔗 **Admin shared chat links.** Admin users can now open and clone shared chat links reliably without 401 errors because shared links are now resolved by share ID first, with safe fallback behavior for direct chat ID access. [Commit](https://github.com/open-webui/open-webui/commit/cde21b9f6dc11575a668484f42440824ec5a4fae), [#24311](https://github.com/open-webui/open-webui/issues/24311), [#24096](https://github.com/open-webui/open-webui/issues/24096)
 - 💾 **Chat settings persistence.** System prompts and other chat-level settings now persist correctly after creating a new chat and reloading, preventing prompt loss in affected conversations. [Commit](https://github.com/open-webui/open-webui/commit/86df8bf27e1b84abbe2eeedcc8650df59c7d23d6), [#24193](https://github.com/open-webui/open-webui/issues/24193), [#24270](https://github.com/open-webui/open-webui/issues/24270)
+- 💾 **Chat control autosave persistence.** Changes to chat controls like system prompt, parameters, and attached files are now autosaved on existing chats, so edits are no longer lost when you refresh or navigate away before sending a message. [Commit](https://github.com/open-webui/open-webui/commit/a938c8ae2e45a00d2f06151fdaeaee94e54a8095), [#23897](https://github.com/open-webui/open-webui/pull/23897)
 - ☁️ **OneDrive option visibility.** OneDrive personal and business upload options now appear only when their respective client IDs are configured, preventing unavailable options from showing in attachment menus. [Commit](https://github.com/open-webui/open-webui/commit/b72019db393a658ca0ceecdcc59b70f6cc5dcd40), [#24411](https://github.com/open-webui/open-webui/issues/24411)
 
 ### Changed
