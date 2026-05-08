@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👥 **User group prompt variable.** System and template prompts now support the "{{USER_GROUPS}}" variable, which expands to the user’s group memberships so prompts can adapt to role- or access-based context automatically. [Commit](https://github.com/open-webui/open-webui/commit/c1202a23277abb8e7080271a929dcc9d29b67e66), [#24462](https://github.com/open-webui/open-webui/issues/24462)
 - 🔇 **Voice Mode mute control.** Voice Mode now includes a dedicated mute toggle with an "M" shortcut and auto-unmute after assistant playback, so you can prevent accidental interruptions from background noise without leaving the call overlay. [Commit](https://github.com/open-webui/open-webui/commit/072d2000f35a9f7b96342fa9bb28f925a92e7b4c), [#23832](https://github.com/open-webui/open-webui/issues/23832)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Chinese were enhanced and expanded.
 
 ### Fixed
 
