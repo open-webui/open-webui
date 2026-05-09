@@ -216,13 +216,11 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            tool_allowed_extensions, tool_allowed_mime_types = (
-                await get_tool_server_file_allowlist_for_upload_context(
-                    request,
-                    user,
-                    file_metadata,
-                    db=db_session,
-                )
+            tool_allowed_extensions, tool_allowed_mime_types = await get_tool_server_file_allowlist_for_upload_context(
+                request,
+                user,
+                file_metadata,
+                db=db_session,
             )
             file_extension = _normalize_extension(Path(file_path).suffix)
             is_tool_allowed_file = file_extension in tool_allowed_extensions or (
