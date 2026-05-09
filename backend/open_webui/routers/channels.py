@@ -1256,7 +1256,8 @@ async def pin_channel_message(
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
-        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
+        # Pin/unpin mutates is_pinned/pinned_by/pinned_at — require write.
+        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='write', db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     message = await Messages.get_message_by_id(message_id, db=db)
