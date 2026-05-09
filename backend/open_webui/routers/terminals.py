@@ -27,6 +27,15 @@ router = APIRouter()
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
 STRIPPED_RESPONSE_HEADERS = frozenset(('transfer-encoding', 'connection', 'content-encoding', 'content-length'))
 
+# Sandbox proxied responses into an opaque origin so a terminal-trusted user
+# cannot serve HTML+JS that reads another user's open-webui session storage.
+PROXY_SANDBOX_HEADERS = {
+    'Content-Security-Policy': "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'",
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'X-Frame-Options': 'DENY',
+}
+
 
 def _sanitize_proxy_path(path: str) -> str | None:
     """Sanitize a proxy path to prevent directory traversal / SSRF.
@@ -151,6 +160,8 @@ async def proxy_terminal(
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
         }
+        # Overlay sandbox headers — drop any same-named upstream values.
+        filtered_headers.update(PROXY_SANDBOX_HEADERS)
 
         # Stream binary responses directly
         if any(t in upstream_content_type for t in STREAMING_CONTENT_TYPES):
