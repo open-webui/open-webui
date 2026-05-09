@@ -2619,6 +2619,9 @@ async def process_files_batch(
 
     collection_name = form_data.collection_name
 
+    if collection_name:
+        await _validate_collection_access([collection_name], user, access_type='write')
+
     file_results: List[BatchProcessFilesResult] = []
     file_errors: List[BatchProcessFilesResult] = []
     file_updates: List[FileUpdateForm] = []
