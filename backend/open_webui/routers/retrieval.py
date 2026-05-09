@@ -1567,6 +1567,8 @@ async def process_file(
 
             if collection_name is None:
                 collection_name = f'file-{file.id}'
+            else:
+                await _validate_collection_access([collection_name], user, access_type='write')
 
             if form_data.content:
                 # Update the content in the file
