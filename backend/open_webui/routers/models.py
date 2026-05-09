@@ -413,9 +413,20 @@ class ModelIdForm(BaseModel):
 async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
-        if (
+        write_access = (
             (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-            or model.user_id == user.id
+            or user.id == model.user_id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='model',
+                resource_id=model.id,
+                permission='write',
+                db=db,
+            )
+        )
+
+        if (
+            write_access
             or await AccessGrants.has_access(
                 user_id=user.id,
                 resource_type='model',
@@ -424,19 +435,18 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
                 db=db,
             )
         ):
+            model_dict = model.model_dump()
+            # Strip params (system prompt and other admin-curated config)
+            # for read-only callers — matches the params strip already
+            # enforced on /api/models in utils/models.py.  Owners, admins
+            # under BYPASS_ADMIN_ACCESS_CONTROL, and write-grant holders
+            # still receive the full object so the workspace edit UI keeps
+            # working for users who legitimately curate the model.
+            if not write_access:
+                model_dict['params'] = {}
             return ModelAccessResponse(
-                **model.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='model',
-                        resource_id=model.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
+                **model_dict,
+                write_access=write_access,
             )
         else:
             raise HTTPException(
