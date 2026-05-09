@@ -140,7 +140,7 @@ class NoteTable:
                 }
             )
 
-            new_note = Note(**note.model_dump(exclude={'access_grants'}))
+            new_note = Note(**note.model_dump(exclude={'access_grants', 'is_pinned'}))
 
             db.add(new_note)
             await db.commit()

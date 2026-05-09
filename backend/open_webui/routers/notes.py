@@ -294,7 +294,10 @@ async def get_note_by_id(
     )
 
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
-    return NoteResponse(**note.model_dump(), write_access=write_access, is_pinned=note.id in pinned_note_ids)
+    return NoteResponse(
+        **{**note.model_dump(), 'is_pinned': note.id in pinned_note_ids},
+        write_access=write_access,
+    )
 
 
 ############################
