@@ -37,6 +37,7 @@ from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupF
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
+    OAUTH_CLIENT_TIMEOUT,
     OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PROVIDERS,
@@ -597,6 +598,7 @@ class OAuthClientManager:
             'client_secret': oauth_client_info.client_secret,
             'client_kwargs': {
                 'follow_redirects': True,
+                **({'timeout': int(OAUTH_CLIENT_TIMEOUT.value)} if OAUTH_CLIENT_TIMEOUT.value else {}),
                 **({'scope': oauth_client_info.scope} if oauth_client_info.scope else {}),
                 **(
                     {'token_endpoint_auth_method': oauth_client_info.token_endpoint_auth_method}

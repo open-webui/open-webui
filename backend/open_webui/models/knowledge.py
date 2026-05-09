@@ -4,7 +4,7 @@ import time
 from typing import Optional
 import uuid
 
-from sqlalchemy import select, delete, update, or_, func
+from sqlalchemy import select, delete, update, or_, func, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 
@@ -313,11 +313,16 @@ class KnowledgeTable:
                     permission='read',
                 )
 
-                # Apply filename search
+                # Apply filename / content search
                 if filter:
                     q = filter.get('query')
                     if q:
-                        stmt = stmt.filter(File.filename.ilike(f'%{q}%'))
+                        stmt = stmt.filter(
+                            or_(
+                                File.filename.ilike(f'%{q}%'),
+                                cast(File.data['content'], Text).ilike(f'%{q}%'),
+                            )
+                        )
 
                 # Order by file changes
                 stmt = stmt.order_by(File.updated_at.desc(), File.id.asc())
@@ -467,7 +472,12 @@ class KnowledgeTable:
                 if filter:
                     query_key = filter.get('query')
                     if query_key:
-                        stmt = stmt.filter(or_(File.filename.ilike(f'%{query_key}%')))
+                        stmt = stmt.filter(
+                            or_(
+                                File.filename.ilike(f'%{query_key}%'),
+                                cast(File.data['content'], Text).ilike(f'%{query_key}%'),
+                            )
+                        )
 
                     view_option = filter.get('view_option')
                     if view_option == 'created':

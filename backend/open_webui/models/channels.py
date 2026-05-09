@@ -4,6 +4,8 @@ import time
 import uuid
 from typing import Optional
 
+from open_webui.utils.validate import validate_profile_image_url
+
 from sqlalchemy import select, delete, update, func, case, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
@@ -13,7 +15,7 @@ from open_webui.models.access_grants import (
     AccessGrants,
 )
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 
 
@@ -243,6 +245,13 @@ class CreateChannelForm(ChannelForm):
 class ChannelWebhookForm(BaseModel):
     name: str
     profile_image_url: Optional[str] = None
+
+    @field_validator('profile_image_url', mode='before')
+    @classmethod
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return validate_profile_image_url(v)
 
 
 class ChannelTable:

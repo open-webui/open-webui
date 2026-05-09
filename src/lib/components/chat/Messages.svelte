@@ -143,6 +143,18 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
+	export const scrollToTop = async () => {
+		messagesCount = null;
+		buildMessages();
+		await tick();
+		if (messages.length > 0) {
+			const firstMessageEl = document.getElementById(`message-${messages[0].id}`);
+			if (firstMessageEl) {
+				firstMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
+	};
+
 	const updateChat = async () => {
 		if (!$temporaryChatEnabled) {
 			history = history;

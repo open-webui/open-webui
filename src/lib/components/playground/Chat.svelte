@@ -23,10 +23,14 @@
 	import DropdownSub from '../common/DropdownSub.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
+	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Pencil from '../icons/Pencil.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
+	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import Modal from '../common/Modal.svelte';
+	import XMark from '../icons/XMark.svelte';
 	import Sidebar from '../common/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Download from '../icons/Download.svelte';
@@ -45,6 +49,9 @@
 
 	let showSystem = false;
 	let showSettings = false;
+	let showControls = false;
+
+	let params: Record<string, any> = {};
 
 	let system = '';
 
@@ -90,6 +97,11 @@
 			return;
 		}
 
+		// Build params object, filtering out null/undefined values
+		const activeParams = Object.fromEntries(
+			Object.entries(params).filter(([_, v]) => v !== null && v !== undefined)
+		);
+
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
@@ -103,7 +115,8 @@
 							}
 						: undefined,
 					...messages
-				].filter((message) => message)
+				].filter((message) => message),
+				...(Object.keys(activeParams).length > 0 ? activeParams : {})
 			},
 			`${WEBUI_BASE_URL}/api`
 		);
@@ -304,6 +317,26 @@
 	});
 </script>
 
+<Modal size="sm" bind:show={showControls}>
+	<div class="text-gray-700 dark:text-gray-100">
+		<div class="flex justify-between px-4.5 pt-4.5 pb-2">
+			<div class="text-lg font-medium self-center">{$i18n.t('Controls')}</div>
+			<button
+				class="self-center"
+				aria-label={$i18n.t('Close')}
+				on:click={() => {
+					showControls = false;
+				}}
+			>
+				<XMark className="size-5" />
+			</button>
+		</div>
+		<div class="px-4.5 pb-5 overflow-y-auto max-h-[70vh]">
+			<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
+		</div>
+	</div>
+</Modal>
+
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
 		<div class=" flex flex-col h-full px-3.5">
@@ -474,6 +507,19 @@
 									{/each}
 								</select>
 							</div>
+
+							<button
+								class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg {showControls
+									? 'text-black dark:text-white'
+									: 'text-gray-500 dark:text-gray-400'}"
+								aria-label={$i18n.t('Controls')}
+								id="playground-controls-toggle"
+								on:click={() => {
+									showControls = !showControls;
+								}}
+							>
+								<AdjustmentsHorizontal className="size-4" />
+							</button>
 
 							<div class="flex gap-2 shrink-0">
 								{#if !loading}

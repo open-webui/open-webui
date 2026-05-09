@@ -366,20 +366,20 @@ class ChatTable:
             await db.commit()
 
             # Dual-write messages to chat_message table
-            try:
-                for form_data, chat_obj in zip(chat_import_forms, chats):
-                    history = form_data.chat.get('history', {})
-                    messages = history.get('messages', {})
-                    for message_id, message in messages.items():
-                        if isinstance(message, dict) and message.get('role'):
+            for form_data, chat_obj in zip(chat_import_forms, chats):
+                history = form_data.chat.get('history', {})
+                messages = history.get('messages', {})
+                for message_id, message in messages.items():
+                    if isinstance(message, dict) and message.get('role'):
+                        try:
                             await ChatMessages.upsert_message(
                                 message_id=message_id,
                                 chat_id=chat_obj.id,
                                 user_id=user_id,
                                 data=message,
                             )
-            except Exception as e:
-                log.warning(f'Failed to write imported messages to chat_message table: {e}')
+                        except Exception as e:
+                            log.warning(f'Failed to write imported message {message_id} for chat {chat_obj.id}: {e}')
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
@@ -460,6 +460,18 @@ class ChatTable:
             return row[0] or 'New Chat'
 
     async def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
+        """Message map for walking history (see ``get_message_list``).
+
+        Prefer ``chat_message`` rows to avoid loading the large ``chat``
+        JSON blob; fall back to embedded history when no rows exist
+        (legacy chats).
+        """
+        # Fast path: build from normalized chat_message rows.
+        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
+        if messages_map is not None:
+            return messages_map
+
+        # No rows — fall back to the embedded JSON blob for legacy chats.
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None

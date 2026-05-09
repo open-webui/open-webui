@@ -1127,7 +1127,7 @@ async def generate_chat_completion(
 
             payload = apply_model_params_to_body_ollama(params, payload)
             if not bypass_system_prompt:
-                payload = apply_system_prompt_to_body(system, payload, metadata, user)
+                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
         await check_model_access(user, model_info, bypass_filter)
     else:
@@ -1282,7 +1282,7 @@ async def generate_openai_chat_completion(
             system = params.pop('system', None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
         await check_model_access(user, model_info)
     else:
