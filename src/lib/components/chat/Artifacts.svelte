@@ -13,6 +13,7 @@
 		showControls,
 		artifactContents
 	} from '$lib/stores';
+	import { applyArtifactContentSecurityPolicy } from '$lib/utils/artifacts';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import XMark from '../icons/XMark.svelte';
@@ -29,33 +30,6 @@
 
 	let copied = false;
 	let iframeElement: HTMLIFrameElement;
-
-	const applyArtifactContentSecurityPolicy = (html: string, policy: string) => {
-		if (!policy || typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
-			return html;
-		}
-
-		try {
-			const document = new window.DOMParser().parseFromString(html, 'text/html');
-			document
-				.querySelectorAll('meta[http-equiv]')
-				.forEach((meta) => {
-					if (meta.getAttribute('http-equiv')?.toLowerCase() === 'content-security-policy') {
-						meta.remove();
-					}
-				});
-
-			const meta = document.createElement('meta');
-			meta.setAttribute('http-equiv', 'Content-Security-Policy');
-			meta.setAttribute('content', policy);
-			document.head.prepend(meta);
-
-			return `<!DOCTYPE html>\n${document.documentElement.outerHTML}`;
-		} catch (error) {
-			console.error('Failed to apply artifact CSP:', error);
-			return html;
-		}
-	};
 
 	$: selectedContent = contents[selectedContentIdx] ?? null;
 	$: artifactContentSecurityPolicy = $config?.ui?.artifacts?.content_security_policy?.trim() ?? '';
