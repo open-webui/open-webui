@@ -236,7 +236,13 @@ async def process_uploaded_file(
                     )
                 )
 
-                if strict_match_mime_type(stt_supported_content_types, content_type):
+                if is_tool_allowed_media_file:
+                    await Files.update_file_data_by_id(
+                        file_item.id,
+                        {'status': 'completed', 'content': ''},
+                        db=db_session,
+                    )
+                elif strict_match_mime_type(stt_supported_content_types, content_type):
                     file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
                     result = await asyncio.to_thread(
                         transcribe,
@@ -250,12 +256,6 @@ async def process_uploaded_file(
                         request,
                         ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
                         user=user,
-                        db=db_session,
-                    )
-                elif is_tool_allowed_media_file:
-                    await Files.update_file_data_by_id(
-                        file_item.id,
-                        {'status': 'completed', 'content': ''},
                         db=db_session,
                     )
                 elif (not content_type.startswith(('image/', 'video/'))) or (
