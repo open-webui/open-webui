@@ -70,7 +70,10 @@
 	let showAccessControlModal = false;
 	let showDeleteConfirmDialog = false;
 
-	const parseCommaSeparatedList = (value: string, normalize: (value: string) => string = (value) => value) =>
+	const parseCommaSeparatedList = (
+		value: string,
+		normalize: (value: string) => string = (value) => value
+	) =>
 		value
 			.split(',')
 			.map((item) => normalize(item.trim()))
