@@ -63,6 +63,7 @@
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import OutputEditView from './OutputEditView.svelte';
 
 	interface MessageType {
 		id: string;
@@ -177,6 +178,7 @@
 
 	let edit = false;
 	let editedContent = '';
+	let editedOutput: any[] | null = null;
 	let editTextAreaElement: HTMLTextAreaElement;
 
 	let messageIndexEdit = false;
@@ -368,39 +370,70 @@
 		return restoredContent;
 	}
 
+	/** Extract plain text from output items for immediate display after edit.
+	 *  NOT a serialize_output port — just grabs text parts. Backend re-serializes
+	 *  the full rich content (with <details> blocks) on save. */
+	function extractTextFromOutput(output: any[]): string {
+		return output
+			.filter((item) => item.type === 'message')
+			.flatMap((item) => (item.content ?? []).map((p: any) => p.text ?? ''))
+			.join('\n')
+			.trim();
+	}
+
 	const editMessageHandler = async () => {
 		edit = true;
 
-		editedContent = preprocessForEditing(message.content);
+		if (message.output?.length) {
+			// Structured edit: use the block editor
+			editedOutput = structuredClone(message.output);
+		} else {
+			// Legacy text edit: use the textarea
+			editedContent = preprocessForEditing(message.content);
+		}
 
 		await tick();
 
-		const messagesContainer = document.getElementById('messages-container');
-		const savedScrollTop = messagesContainer?.scrollTop;
+		if (!editedOutput && editTextAreaElement) {
+			const messagesContainer = document.getElementById('messages-container');
+			const savedScrollTop = messagesContainer?.scrollTop;
 
-		editTextAreaElement.style.height = '';
-		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
+			editTextAreaElement.style.height = '';
+			editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 
-		if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+			if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+		}
 	};
 
 	const editMessageConfirmHandler = async () => {
-		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
-		editMessage(message.id, { content: messageContent }, false);
+		if (editedOutput) {
+			// Structured edit: keep original rich content for immediate display;
+			// backend will re-derive content from output on save.
+			editMessage(message.id, { content: message.content, output: editedOutput }, false);
+		} else {
+			// Legacy text edit
+			const messageContent = postprocessAfterEditing(editedContent ?? '');
+			editMessage(message.id, { content: messageContent }, false);
+		}
 
 		edit = false;
 		editedContent = '';
+		editedOutput = null;
 
 		await tick();
 	};
 
 	const saveAsCopyHandler = async () => {
-		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
-
-		editMessage(message.id, { content: messageContent });
+		if (editedOutput) {
+			editMessage(message.id, { content: message.content, output: editedOutput });
+		} else {
+			const messageContent = postprocessAfterEditing(editedContent ?? '');
+			editMessage(message.id, { content: messageContent });
+		}
 
 		edit = false;
 		editedContent = '';
+		editedOutput = null;
 
 		await tick();
 	};
@@ -408,6 +441,7 @@
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
+		editedOutput = null;
 		await tick();
 	};
 
@@ -665,12 +699,12 @@
 							<StatusHistory statusHistory={message?.statusHistory} />
 						{/if}
 
-						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
+						{#if message?.files && message.files?.filter( (f) => ['image', 'file'].includes(f.type) ).length > 0}
 							<div
 								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
-								{#each message.files as file}
+								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
 									<div>
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<Image src={file.url} alt={message.content} />
@@ -709,34 +743,45 @@
 						{/if}
 
 						{#if edit === true}
-							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
-								<textarea
-									id="message-edit-{message.id}"
-									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-hidden w-full resize-none"
-									bind:value={editedContent}
-									on:input={(e) => {
-										const messagesContainer = document.getElementById('messages-container');
-										const savedScrollTop = messagesContainer?.scrollTop;
+							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-3 py-3 my-2">
+								{#if editedOutput}
+									<!-- Structured output editor (visual + JSON toggle) -->
+									<OutputEditView
+										output={editedOutput}
+										onChange={(updated) => {
+											editedOutput = updated;
+										}}
+									/>
+								{:else}
+									<!-- Legacy textarea for messages without output -->
+									<textarea
+										id="message-edit-{message.id}"
+										bind:this={editTextAreaElement}
+										class=" bg-transparent outline-hidden w-full resize-none"
+										bind:value={editedContent}
+										on:input={(e) => {
+											const messagesContainer = document.getElementById('messages-container');
+											const savedScrollTop = messagesContainer?.scrollTop;
 
-										e.target.style.height = '';
-										e.target.style.height = `${e.target.scrollHeight}px`;
+											e.target.style.height = '';
+											e.target.style.height = `${e.target.scrollHeight}px`;
 
-										if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
-									}}
-									on:keydown={(e) => {
-										if (e.key === 'Escape') {
-											document.getElementById('close-edit-message-button')?.click();
-										}
+											if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+										}}
+										on:keydown={(e) => {
+											if (e.key === 'Escape') {
+												document.getElementById('close-edit-message-button')?.click();
+											}
 
-										const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
-										const isEnterPressed = e.key === 'Enter';
+											const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+											const isEnterPressed = e.key === 'Enter';
 
-										if (isCmdOrCtrlPressed && isEnterPressed) {
-											document.getElementById('confirm-edit-message-button')?.click();
-										}
-									}}
-								/>
+											if (isCmdOrCtrlPressed && isEnterPressed) {
+												document.getElementById('confirm-edit-message-button')?.click();
+											}
+										}}
+									/>
+								{/if}
 
 								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
 									<div>
