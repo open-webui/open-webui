@@ -30,7 +30,7 @@
 	let iframeElement: HTMLIFrameElement;
 
 	$: selectedContent = contents[selectedContentIdx] ?? null;
-	$: artifactContentSecurityPolicy = $config?.ui?.artifacts?.content_security_policy?.trim() ?? '';
+	$: artifactContentSecurityPolicy = $config?.ui?.artifacts?.content_security_policy ?? '';
 	$: artifactSrcdoc =
 		selectedContent?.type === 'iframe'
 			? applyArtifactContentSecurityPolicy(

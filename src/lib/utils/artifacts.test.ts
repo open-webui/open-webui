@@ -25,10 +25,10 @@ describe('applyArtifactContentSecurityPolicy', () => {
 		expect(
 			applyArtifactContentSecurityPolicy(
 				html,
-				`default-src 'self'; report-uri "https://example.com/csp"`
+				`default-src 'self'; report-to "artifact-endpoint"`
 			)
 		).toBe(
-			'<html><head><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; report-uri &quot;https://example.com/csp&quot;"><meta charset="utf-8"></head><body>Body</body></html>'
+			'<html><head><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; report-to &quot;artifact-endpoint&quot;"><meta charset="utf-8"></head><body>Body</body></html>'
 		);
 	});
 });
