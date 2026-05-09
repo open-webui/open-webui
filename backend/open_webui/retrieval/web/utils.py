@@ -100,6 +100,41 @@ def validate_url(url: Union[str, Sequence[str]]):
         return False
 
 
+def safe_requests_get(
+    url: str,
+    *,
+    session: requests.Session | None = None,
+    max_redirects: int = 10,
+    **kwargs,
+) -> requests.Response:
+    """Perform a GET request while validating every redirect target.
+
+    validate_url() blocks non-public destinations, but requests follows redirects by
+    default. A public URL can otherwise redirect to localhost/cloud metadata/private
+    infrastructure after the initial validation step.
+    """
+    kwargs.pop('allow_redirects', None)
+    client = session or requests
+    current_url = url
+
+    for _ in range(max_redirects + 1):
+        validate_url(current_url)
+
+        response = client.get(current_url, allow_redirects=False, **kwargs)
+        if not response.is_redirect and not response.is_permanent_redirect:
+            return response
+
+        location = response.headers.get('Location')
+        response.close()
+
+        if not location:
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        current_url = urllib.parse.urljoin(response.url, location)
+
+    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+
 def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
     valid_urls = []
     for u in url:
@@ -485,6 +520,20 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+
+    def _scrape(self, url: str, parser: str | None = None, bs_kwargs: dict | None = None) -> Any:
+        """Synchronously fetch a URL without following unvalidated redirects."""
+        from bs4 import BeautifulSoup
+
+        if parser is None:
+            parser = self.default_parser
+        self._check_parser(parser)
+
+        response = safe_requests_get(url, session=self.session, **self.requests_kwargs)
+        if self.raise_for_status:
+            response.raise_for_status()
+
+        return BeautifulSoup(response.text, parser, **(bs_kwargs or {}))
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
