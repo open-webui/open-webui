@@ -442,16 +442,7 @@ GenerateImageForm = CreateImageForm  # Alias for backward compatibility
 async def get_image_data(data: str, headers=None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
-            # Defense-in-depth: validate the URL before fetching, mirroring the
-            # check on the sibling load_url_image() path. The URL here normally
-            # comes from the admin-configured image generation API response, so
-            # an exploitable SSRF additionally requires either a misconfigured
-            # / untrusted upstream image API or a custom OpenAI-compatible
-            # server that reflects user-supplied input into response URLs —
-            # both admin-side concerns. This validate_url() call closes the
-            # consistency gap so any future code path that begins to call
-            # get_image_data() with caller-influenced input is gated by the
-            # same private-IP / loopback / metadata-IP filter.
+            # Defense-in-depth: gate before fetch (mirrors load_url_image).
             validate_url(data)
             session = await get_session()
             async with session.get(
