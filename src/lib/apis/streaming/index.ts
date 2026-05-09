@@ -10,6 +10,7 @@ type TextStreamUpdate = {
 	selectedModelId?: any;
 	error?: any;
 	usage?: ResponseUsage;
+	aborted?: boolean;
 };
 
 type ResponseUsage = {
@@ -44,7 +45,25 @@ async function* openAIStreamToIterator(
 	reader: ReadableStreamDefaultReader<ParsedEvent>
 ): AsyncGenerator<TextStreamUpdate> {
 	while (true) {
-		const { value, done } = await reader.read();
+		let readResult: ReadableStreamReadResult<ParsedEvent>;
+		try {
+			readResult = await reader.read();
+		} catch (err: any) {
+			// AbortError (DOMException) and network errors thrown out of reader.read()
+			// would otherwise propagate uncaught into the for-await consumer. Yield
+			// them as in-band updates so the consumer can finalize the message.
+			if (err?.name === 'AbortError') {
+				yield { done: true, value: '', aborted: true };
+			} else {
+				yield {
+					done: true,
+					value: '',
+					error: { message: err?.message ?? String(err), name: err?.name ?? 'StreamError' }
+				};
+			}
+			break;
+		}
+		const { value, done } = readResult;
 		if (done) {
 			yield { done: true, value: '' };
 			break;
@@ -121,7 +140,7 @@ async function* streamLargeDeltasAsRandomChunks(
 			return;
 		}
 
-		if (textStreamUpdate.error) {
+		if (textStreamUpdate.error || textStreamUpdate.aborted) {
 			yield textStreamUpdate;
 			continue;
 		}

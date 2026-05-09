@@ -235,8 +235,43 @@
 	let showCommands = false;
 
 	let generating = false;
-	let generationController = null;
+	// Tagged with the response message id it belongs to so stale event handlers
+	// can avoid clobbering an in-flight request's controller. The pre-tagged
+	// version was a single AbortController shared component-wide; if a delayed
+	// `chat:completion done` for a previous message fired during a follow-up
+	// request, the previous message's cleanup would null this out and the
+	// follow-up's stream would silently break.
+	let generationController: { id: string; controller: AbortController } | null = null;
 	let suppressErrorToast = false;
+	// Set inside stopResponse() so the stream-side aborted handler can tell the
+	// difference between user-clicked-stop (graceful) and a stray abort.
+	let userInitiatedStop = false;
+
+	// Clear `generationController` only if the event/handler claiming the clear
+	// matches the in-flight controller's owner — stale events for prior messages
+	// must not stomp on the current request's controller.
+	const clearGenerationControllerIfOwned = (ownerId: string | null | undefined) => {
+		if (!ownerId) return false;
+		if (generationController?.id === ownerId) {
+			generationController = null;
+			return true;
+		}
+		return false;
+	};
+
+	// Gated debug logger. Flip on in DevTools with `localStorage.chatStreamDebug = '1'`
+	// to surface every controller-state mutation and handleOpenAIError invocation —
+	// useful for tracking down stray "operation was aborted" errors without leaving
+	// noise in production.
+	const chatStreamDebug = (...args: unknown[]) => {
+		try {
+			if (typeof localStorage !== 'undefined' && localStorage.chatStreamDebug === '1') {
+				console.debug(...args);
+			}
+		} catch {
+			// localStorage access can throw in some contexts (e.g. disabled cookies)
+		}
+	};
 
 	const skipRemainingRetriesSet = new Set();
 	const markSkipRemainingRetries = (messageId) => {
@@ -772,6 +807,20 @@
 			return eventMessageId;
 		}
 
+		// If the event explicitly named a message id that we don't have, it's a
+		// stale event from a previous request — DON'T retarget it to the current
+		// pending message. That retargeting was the source of multiple latent
+		// bugs where a delayed cancel/error from the prior turn would stomp on
+		// the in-flight follow-up.
+		if (eventMessageId) {
+			chatStreamDebug('[chat-stream] dropping stale event with unmatched message_id', {
+				eventMessageId
+			});
+			return null;
+		}
+
+		// Event has no message_id (legacy/back-compat behavior); fall back to
+		// the only pending assistant message if there's exactly one.
 		const pendingAssistantMessageIds = getPendingAssistantMessageIds();
 
 		return pendingAssistantMessageIds.length === 1 ? pendingAssistantMessageIds[0] : null;
@@ -931,30 +980,60 @@
 		let message = resolvedMessageId ? history.messages[resolvedMessageId] : null;
 
 		if (!message) {
+			// CRITICAL: with the tightened resolveChatEventMessageId, an event
+			// reaches this "no message" branch only when it (a) had no
+			// message_id, or (b) named a message id we don't have. Case (b) is
+			// almost always a stale event from a previous turn — clearing
+			// generationController/generating here would kill the in-flight
+			// follow-up. So: clear these only if no controller is currently in
+			// flight, OR if the controller's owner matches a non-pending message
+			// (i.e. the in-flight request really is the one this event is about).
+			const hasInFlight = generationController != null;
+
 			if (type === 'chat:tasks:cancel') {
+				chatStreamDebug('[chat-stream] no-message chat:tasks:cancel', {
+					eventMessageId: event.message_id,
+					eventChatId: event.chat_id,
+					hasInFlight
+				});
 				taskIds = null;
-				generating = false;
-				generationController = null;
-				markPendingAssistantMessagesDone();
+				if (!hasInFlight) {
+					generating = false;
+					generationController = null;
+					markPendingAssistantMessagesDone();
+				}
 				return;
 			}
 
 			if (type === 'chat:message:error') {
-				taskIds = null;
-				generating = false;
-				generationController = null;
+				chatStreamDebug('[chat-stream] no-message chat:message:error', {
+					eventMessageId: event.message_id,
+					error: data?.error,
+					hasInFlight
+				});
+				if (!hasInFlight) {
+					taskIds = null;
+					generating = false;
+					generationController = null;
 
-				if (visibleChatId && !$temporaryChatEnabled) {
-					await loadChat();
-					return;
+					if (visibleChatId && !$temporaryChatEnabled) {
+						await loadChat();
+						return;
+					}
 				}
 			}
 
 			if (type === 'chat:completion' && data?.done && visibleChatId && !$temporaryChatEnabled) {
-				taskIds = null;
-				generating = false;
-				generationController = null;
-				await loadChat();
+				chatStreamDebug('[chat-stream] no-message chat:completion done', {
+					eventMessageId: event.message_id,
+					hasInFlight
+				});
+				if (!hasInFlight) {
+					taskIds = null;
+					generating = false;
+					generationController = null;
+					await loadChat();
+				}
 				return;
 			}
 
@@ -986,9 +1065,13 @@
 			// would overwrite the done=true state set inside chatCompletionEventHandler.
 			return;
 		} else if (type === 'chat:tasks:cancel') {
+			chatStreamDebug('[chat-stream] resolved chat:tasks:cancel — clearing controller', {
+				resolvedMessageId,
+				ownedByThisMessage: generationController?.id === resolvedMessageId
+			});
 			taskIds = null;
 			generating = false;
-			generationController = null;
+			clearGenerationControllerIfOwned(resolvedMessageId);
 
 			const responseMessage = history.messages[history.currentId] ?? message;
 			if (responseMessage?.parentId !== null && history.messages[responseMessage?.parentId]) {
@@ -1028,11 +1111,16 @@
 				history = { ...history };
 			}
 		} else if (type === 'chat:message:error') {
+			chatStreamDebug('[chat-stream] resolved chat:message:error — clearing controller', {
+				resolvedMessageId,
+				error: data?.error,
+				ownedByThisMessage: generationController?.id === resolvedMessageId
+			});
 			message.error = data.error;
 			message.done = true;
 			taskIds = null;
 			generating = false;
-			generationController = null;
+			clearGenerationControllerIfOwned(resolvedMessageId);
 		} else if (type === 'chat:message:follow_ups') {
 			message.followUps = data.follow_ups;
 
@@ -1190,6 +1278,7 @@
 								const taskRes = await getTaskIdsByChatId(localStorage.token, visibleChatId);
 								if (!taskRes || !taskRes.task_ids || taskRes.task_ids.length === 0) {
 									console.log('Task finished while disconnected. Reloading chat...');
+									chatStreamDebug('[chat-stream] reconnect: task finished — clearing controller');
 									taskIds = null;
 									generating = false;
 									generationController = null;
@@ -1919,6 +2008,11 @@
 				}
 			}
 		} finally {
+			const owned = generationController?.id === responseMessageId;
+			chatStreamDebug('[chat-stream] chatCompletedHandler finally — clearing controller', {
+				responseMessageId,
+				ownedByThisMessage: owned
+			});
 			// Ensure the response message is definitively marked as done
 			if (history.messages[responseMessageId]) {
 				history.messages[responseMessageId].done = true;
@@ -1926,7 +2020,7 @@
 
 			taskIds = null;
 			generating = false;
-			generationController = null;
+			clearGenerationControllerIfOwned(responseMessageId);
 
 			// Force a reactive history update so Svelte picks up all in-place mutations
 			// that may have occurred during the async HTTP calls above
@@ -1991,9 +2085,16 @@
 				}
 			}
 		} finally {
+			chatStreamDebug('[chat-stream] chatActionHandler finally — clearing taskIds/generating', {
+				responseMessageId
+			});
 			taskIds = null;
 			generating = false;
-			generationController = null;
+			// chatActionHandler doesn't own a chat-stream controller (it's for
+			// rate/feedback-style actions). Only clear if this action's message
+			// id happens to match the in-flight controller — defensive but
+			// shouldn't normally apply.
+			clearGenerationControllerIfOwned(responseMessageId);
 		}
 	};
 
@@ -2146,7 +2247,7 @@
 		} = data;
 
 		if (error) {
-			await handleOpenAIError(error, message);
+			await handleOpenAIError(error, message, 'chatCompletionEventHandler:data.error');
 			// Error takes priority — do NOT fall through to the `done`
 			// handler which would finalize the message as completed and
 			// prevent the automatic retry mechanism from triggering.
@@ -2542,7 +2643,11 @@
 		};
 		syncHistorySnapshot();
 		generating = true;
-		_completedMessageIds.clear();
+		// Note: do NOT clear _completedMessageIds here. The set's purpose is to
+		// dedupe completion-handler invocations per message id; uuids never
+		// collide, so clearing it just creates a window where a delayed
+		// completion event for a previous message can re-trigger
+		// chatCompletedHandler and clobber the in-flight request's state.
 
 		const mirrorHistoryMessage = (messageId) => {
 			const nextMessage = _history.messages[messageId];
@@ -3059,6 +3164,7 @@
 			currentChatPage.set(1);
 			chats.set(await getChatList(localStorage.token, $currentChatPage));
 		} finally {
+			chatStreamDebug('[chat-stream] sendMessage finally — clearing controller');
 			generating = false;
 			generationController = null;
 		}
@@ -3449,6 +3555,12 @@
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
 			console.log(error);
+			chatStreamDebug('[chat-stream] chatCompletion .catch fired', {
+				responseMessageId,
+				name: error?.name,
+				message: error?.message,
+				stack: error?.stack
+			});
 
 			let errorMessage = error;
 			if (error?.error?.message) {
@@ -3474,7 +3586,13 @@
 			return null;
 		});
 
-		generationController = controller ?? null;
+		generationController = controller ? { id: responseMessageId, controller } : null;
+		chatStreamDebug('[chat-stream] generationController assigned', {
+			responseMessageId,
+			hasController: !!controller
+		});
+		// Reset the user-stop flag for this new request lifecycle.
+		userInitiatedStop = false;
 
 		if (res) {
 			if (stream) {
@@ -3485,7 +3603,12 @@
 					} catch {
 						errorPayload = { message: `HTTP ${res.status}` };
 					}
-					await handleOpenAIError(errorPayload, responseMessage);
+					chatStreamDebug('[chat-stream] HTTP non-OK', {
+						responseMessageId,
+						status: res.status,
+						errorPayload
+					});
+					await handleOpenAIError(errorPayload, responseMessage, `http-${res.status}`);
 				} else if (res.body) {
 					responseMessage.done = false;
 					history.messages[responseMessageId] = responseMessage;
@@ -3497,62 +3620,110 @@
 
 					if (shouldUseDirectStream) {
 						const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-						for await (const update of textStream) {
-							if (!generating) {
-								break;
+						try {
+							for await (const update of textStream) {
+								const { value, done, sources, error, usage, selectedModelId, aborted } = update;
+
+								// Handle aborts FIRST (before any early-exit check) so a
+								// user-driven stopResponse() flow — which nulls
+								// generationController — still finalizes the message
+								// instead of silently breaking out.
+								if (aborted) {
+									chatStreamDebug('[chat-stream] direct stream aborted', {
+										responseMessageId,
+										contentLen: responseMessage.content?.length ?? 0,
+										userInitiatedStop
+									});
+									responseMessage.done = true;
+									history.messages[responseMessageId] = responseMessage;
+									history = { ...history };
+									break;
+								}
+
+								// Bail if THIS stream's controller has been swapped out for a
+								// different message's controller (concurrent request).
+								if (
+									generationController != null &&
+									generationController.id !== responseMessageId
+								) {
+									chatStreamDebug('[chat-stream] for-await bailing — controller owner changed', {
+										responseMessageId,
+										currentOwner: generationController?.id
+									});
+									break;
+								}
+
+								if (error) {
+									chatStreamDebug('[chat-stream] direct stream error', { responseMessageId, error });
+									await handleOpenAIError(error, responseMessage, 'direct-stream-error');
+									break;
+								}
+
+								if (sources && !responseMessage?.sources) {
+									responseMessage.sources = sources;
+								}
+
+								if (selectedModelId) {
+									responseMessage.selectedModelId = selectedModelId;
+									responseMessage.arena = true;
+								}
+
+								if (usage) {
+									responseMessage.usage = usage;
+								}
+
+								if (done) {
+									responseMessage.done = true;
+									history.messages[responseMessageId] = responseMessage;
+									history = { ...history };
+
+									// We must save the chat here for direct streams, as there is no backend socket event to do it for us
+									if (!$temporaryChatEnabled && isVisibleChatEvent(_chatId)) {
+										await chatCompletedHandler(
+											_chatId,
+											model.id,
+											responseMessageId,
+											createMessagesList(history, responseMessageId)
+										);
+									}
+									break;
+								}
+
+								if (!(responseMessage.content == '' && value == '\n')) {
+									responseMessage.content += value;
+									history.messages[responseMessageId] = responseMessage;
+									history = { ...history };
+
+									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+										navigator.vibrate(5);
+									}
+								}
+
+								await tick();
+
+								if (autoScroll) {
+									scrollToBottom();
+								}
 							}
-
-							const { value, done, sources, error, usage, selectedModelId } = update;
-
-							if (error) {
-								await handleOpenAIError(error, responseMessage);
-								break;
-							}
-
-							if (sources && !responseMessage?.sources) {
-								responseMessage.sources = sources;
-							}
-
-							if (selectedModelId) {
-								responseMessage.selectedModelId = selectedModelId;
-								responseMessage.arena = true;
-							}
-
-							if (usage) {
-								responseMessage.usage = usage;
-							}
-
-							if (done) {
+						} catch (e: any) {
+							// Defense in depth: openAIStreamToIterator already converts thrown
+							// errors into in-band updates, so this should rarely fire. If it
+							// does, route through the same error path so the message finalizes.
+							chatStreamDebug('[chat-stream] for-await threw', {
+								responseMessageId,
+								name: e?.name,
+								message: e?.message
+							});
+							if (e?.name === 'AbortError') {
 								responseMessage.done = true;
 								history.messages[responseMessageId] = responseMessage;
 								history = { ...history };
-
-								// We must save the chat here for direct streams, as there is no backend socket event to do it for us
-								if (!$temporaryChatEnabled && isVisibleChatEvent(_chatId)) {
-									await chatCompletedHandler(
-										_chatId,
-										model.id,
-										responseMessageId,
-										createMessagesList(history, responseMessageId)
-									);
-								}
-								break;
-							}
-
-							if (!(responseMessage.content == '' && value == '\n')) {
-								responseMessage.content += value;
-								history.messages[responseMessageId] = responseMessage;
-								history = { ...history };
-
-								if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-									navigator.vibrate(5);
-								}
-							}
-
-							await tick();
-
-							if (autoScroll) {
-								scrollToBottom();
+							} else {
+								await handleOpenAIError(
+									{ message: e?.message ?? String(e) },
+									responseMessage,
+									'for-await-throw'
+								);
 							}
 						}
 					} else {
@@ -3564,7 +3735,11 @@
 						}
 
 						if (payload?.error) {
-							await handleOpenAIError(payload.error, responseMessage);
+							chatStreamDebug('[chat-stream] async-task payload.error', {
+								responseMessageId,
+								error: payload.error
+							});
+							await handleOpenAIError(payload.error, responseMessage, 'async-task-payload-error');
 						} else if (payload?.task_id) {
 							const currentMessage = history.messages[responseMessageId];
 							if (currentMessage && !currentMessage.done) {
@@ -3579,13 +3754,18 @@
 				} else {
 					await handleOpenAIError(
 						{ message: 'Streaming response body is missing.' },
-						responseMessage
+						responseMessage,
+						'res-body-missing'
 					);
 				}
 			} else {
 				const data = await res.json();
 				if (data.error) {
-					await handleOpenAIError(data.error, responseMessage);
+					chatStreamDebug('[chat-stream] non-streaming data.error', {
+						responseMessageId,
+						error: data.error
+					});
+					await handleOpenAIError(data.error, responseMessage, 'non-streaming-data-error');
 				} else {
 					const currentMessage = history.messages[responseMessageId];
 					if (currentMessage && !currentMessage.done) {
@@ -3603,7 +3783,7 @@
 		scrollToBottom();
 	};
 
-	const handleOpenAIError = async (error, responseMessage) => {
+	const handleOpenAIError = async (error, responseMessage, source: string = 'unknown') => {
 		let errorMessage = '';
 		let innerError;
 
@@ -3612,6 +3792,13 @@
 		}
 
 		console.error(innerError);
+		chatStreamDebug('[chat-stream] handleOpenAIError', {
+			source,
+			responseMessageId: responseMessage?.id,
+			errorShape: innerError && typeof innerError === 'object' ? Object.keys(innerError) : typeof innerError,
+			error: innerError
+		});
+
 		if ('detail' in innerError) {
 			// FastAPI error
 			if (!suppressErrorToast) toast.error(innerError.detail);
@@ -3631,8 +3818,19 @@
 			errorMessage = innerError.message;
 		}
 
+		// Show the upstream error message directly. Only fall back to the generic
+		// "Uh-oh!" wrapper when there's literally no underlying message — otherwise
+		// the prefix obscures the real cause (e.g. a 504 from OpenRouter or a
+		// provider-side abort) and makes debugging much harder.
+		const fallback = $i18n.t(`Uh-oh! There was an issue with the response.`);
+		const finalContent = errorMessage
+			? typeof errorMessage === 'string'
+				? errorMessage
+				: JSON.stringify(errorMessage)
+			: fallback;
+
 		responseMessage.error = {
-			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
+			content: finalContent
 		};
 		responseMessage.done = true;
 
@@ -3668,8 +3866,10 @@
 			history = { ...history };
 		}
 
+		chatStreamDebug('[chat-stream] stopResponse — user clicked stop, aborting controller');
+		userInitiatedStop = true;
 		generating = false;
-		generationController?.abort();
+		generationController?.controller.abort();
 		generationController = null;
 
 		if (autoScroll) {
@@ -3869,8 +4069,11 @@
 				}
 			}
 		} finally {
+			chatStreamDebug('[chat-stream] retryWithoutProviderRestrictions finally — clearing controller', {
+				messageId: message?.id
+			});
 			generating = false;
-			generationController = null;
+			clearGenerationControllerIfOwned(message?.id);
 		}
 	};
 
@@ -4352,7 +4555,7 @@
 			);
 
 			if (res && res.ok && res.body && generating) {
-				generationController = controller;
+				generationController = { id: messageId, controller: controller as AbortController };
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
@@ -4379,8 +4582,11 @@
 		} catch (e) {
 			console.error(e);
 		} finally {
+			chatStreamDebug('[chat-stream] MoA generation finally — clearing controller', {
+				messageId
+			});
 			generating = false;
-			generationController = null;
+			clearGenerationControllerIfOwned(messageId);
 		}
 	};
 

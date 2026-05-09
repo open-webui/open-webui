@@ -144,6 +144,20 @@
 	let skipRetryClicked = false;
 	$: if (!message?.retrying) skipRetryClicked = false;
 
+	// True when a "done" message actually has something useful to act on. We use
+	// this to hide the post-completion action buttons (edit/copy/speak/continue/
+	// regenerate) when the message has only an error and no content — that state
+	// previously rendered as a fully-completed response, which was misleading.
+	const messageHasContent = (m: any) => {
+		if (!m) return false;
+		if (Array.isArray(m.content_blocks) && m.content_blocks.length > 0) return true;
+		if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) return true;
+		const c = m.content;
+		if (typeof c === 'string') return c.trim().length > 0;
+		if (Array.isArray(c)) return c.length > 0;
+		return c != null;
+	};
+
 	export let addMessages: Function;
 
 	export let isLastMessage = true;
@@ -906,7 +920,7 @@
 								}}
 							/>
 						{/if}
-						{#if message.done || siblings.length > 1}
+						{#if (message.done && !(message?.error && !messageHasContent(message))) || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
 									<button
