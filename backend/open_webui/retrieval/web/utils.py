@@ -485,6 +485,17 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        # Prevent redirect-based SSRF on the synchronous _scrape() path.
+        # validate_url() is called once on the originally-submitted URL, but the
+        # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
+        # which by default follows redirects. Without the override below, an attacker
+        # can submit a public URL that 302-redirects to an internal address (RFC1918,
+        # 127.0.0.1, 169.254.169.254, etc.) and the redirected target is fetched without
+        # re-validation. Matches the policy enforced on the async _fetch() path below.
+        self.requests_kwargs = {
+            **(self.requests_kwargs or {}),
+            'allow_redirects': False,
+        }
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:

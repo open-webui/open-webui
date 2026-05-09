@@ -807,10 +807,14 @@ async def image_edits(
                 return data
 
             if data.startswith('http://') or data.startswith('https://'):
-                # Validate URL to prevent SSRF attacks against local/private networks
+                # Validate URL to prevent SSRF attacks against local/private networks.
+                # allow_redirects=False prevents redirect-based SSRF: validate_url() is
+                # called only on the originally-submitted URL; following 3xx redirects
+                # without re-validation would let an attacker reach private IPs via a
+                # public host that redirects internally (e.g. cloud-metadata exfil).
                 validate_url(data)
                 session = await get_session()
-                async with session.get(data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
+                async with session.get(data, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=False) as r:
                     r.raise_for_status()
 
                     image_data = base64.b64encode(await r.read()).decode('utf-8')

@@ -180,8 +180,12 @@ def get_content_from_url(request, url: str) -> str:
     validate_url(url)
 
     # Streamed GET to check Content-Type without downloading the body.
+    # allow_redirects=False prevents redirect-based SSRF: validate_url() above is
+    # called on the originally-submitted URL only; following 3xx redirects without
+    # re-validation would let an attacker reach private IPs (RFC1918, loopback,
+    # cloud-metadata 169.254.169.254) via a public host that redirects internally.
     try:
-        response = requests.get(url, stream=True, timeout=30)
+        response = requests.get(url, stream=True, timeout=30, allow_redirects=False)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')
     except Exception:
