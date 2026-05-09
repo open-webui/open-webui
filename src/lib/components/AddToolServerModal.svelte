@@ -50,6 +50,8 @@
 	let headers = '';
 
 	let functionNameFilterList = '';
+	let fileExtensionList = '';
+	let mimeTypeList = '';
 	let accessGrants = [];
 
 	let id = '';
@@ -67,6 +69,14 @@
 	let showAdvanced = false;
 	let showAccessControlModal = false;
 	let showDeleteConfirmDialog = false;
+
+	const parseCommaSeparatedList = (value: string, normalize: (value: string) => string = (value) => value) =>
+		value
+			.split(',')
+			.map((item) => normalize(item.trim()))
+			.filter(Boolean);
+
+	const normalizeFileExtension = (value: string) => value.replace(/^\./, '').toLowerCase();
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -172,7 +182,9 @@
 				key,
 				config: {
 					enable: enable,
-					access_grants: accessGrants
+					access_grants: accessGrants,
+					file_extensions: parseCommaSeparatedList(fileExtensionList, normalizeFileExtension),
+					mime_types: parseCommaSeparatedList(mimeTypeList)
 				},
 				info: {
 					id,
@@ -230,6 +242,8 @@
 				if (data.config) {
 					enable = data.config.enable ?? true;
 					accessGrants = data.config.access_grants ?? [];
+					fileExtensionList = (data.config.file_extensions ?? []).join(', ');
+					mimeTypeList = (data.config.mime_types ?? []).join(', ');
 				}
 
 				toast.success($i18n.t('Import successful'));
@@ -259,6 +273,13 @@
 					id: id,
 					name: name,
 					description: description
+				},
+				config: {
+					enable: enable,
+					function_name_filter_list: functionNameFilterList,
+					access_grants: accessGrants,
+					file_extensions: parseCommaSeparatedList(fileExtensionList, normalizeFileExtension),
+					mime_types: parseCommaSeparatedList(mimeTypeList)
 				}
 			}
 		]);
@@ -336,7 +357,9 @@
 			config: {
 				enable: enable,
 				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
+				access_grants: accessGrants,
+				file_extensions: parseCommaSeparatedList(fileExtensionList, normalizeFileExtension),
+				mime_types: parseCommaSeparatedList(mimeTypeList)
 			},
 			info: {
 				id: id,
@@ -380,6 +403,8 @@
 
 		enable = true;
 		functionNameFilterList = '';
+		fileExtensionList = '';
+		mimeTypeList = '';
 		accessGrants = [];
 	};
 
@@ -407,6 +432,8 @@
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
+			fileExtensionList = (connection.config?.file_extensions ?? []).join(', ');
+			mimeTypeList = (connection.config?.mime_types ?? []).join(', ');
 			accessGrants = connection.config?.access_grants ?? [];
 		}
 	};
@@ -921,6 +948,42 @@
 										type="text"
 										bind:value={functionNameFilterList}
 										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1 min-w-0">
+									<label
+										for="file-extension-list"
+										class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+										>{$i18n.t('Allowed File Extensions')}</label
+									>
+
+									<input
+										id="file-extension-list"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										type="text"
+										bind:value={fileExtensionList}
+										placeholder="mp3, wav, m4a"
+										autocomplete="off"
+									/>
+								</div>
+
+								<div class="flex flex-col flex-1 min-w-0">
+									<label
+										for="mime-type-list"
+										class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+										>{$i18n.t('Allowed MIME Types')}</label
+									>
+
+									<input
+										id="mime-type-list"
+										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										type="text"
+										bind:value={mimeTypeList}
+										placeholder="audio/*, video/mp4"
 										autocomplete="off"
 									/>
 								</div>

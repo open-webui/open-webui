@@ -34,7 +34,8 @@
 		showSettings,
 		selectedTerminalId,
 		TTSWorker,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		chatId
 	} from '$lib/stores';
 
 	import {
@@ -632,8 +633,20 @@
 					};
 				}
 
+				const uploadContext = {
+					chat_id: $chatId || undefined,
+					model_ids: selectedModelIds.filter((id) => id),
+					tool_ids: selectedToolIds.filter((id) => id && !id.startsWith('direct_server:'))
+				};
+
 				// During the file upload, file content is automatically extracted.
-				const uploadedFile = await uploadFile(localStorage.token, file, metadata, process);
+				const uploadedFile = await uploadFile(
+					localStorage.token,
+					file,
+					metadata,
+					process,
+					uploadContext
+				);
 
 				if (uploadedFile) {
 					console.log('File upload completed:', {

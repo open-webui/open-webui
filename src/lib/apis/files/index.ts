@@ -5,12 +5,17 @@ export const uploadFile = async (
 	token: string,
 	file: File,
 	metadata?: object | null,
-	process?: boolean | null
+	process?: boolean | null,
+	uploadContext?: object | null
 ) => {
 	const data = new FormData();
 	data.append('file', file);
-	if (metadata) {
-		data.append('metadata', JSON.stringify(metadata));
+	const resolvedMetadata = {
+		...(metadata ?? {}),
+		...(uploadContext ? { upload_context: uploadContext } : {})
+	};
+	if (Object.keys(resolvedMetadata).length > 0) {
+		data.append('metadata', JSON.stringify(resolvedMetadata));
 	}
 
 	const searchParams = new URLSearchParams();

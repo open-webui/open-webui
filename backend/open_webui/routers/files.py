@@ -40,6 +40,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.models import Models
 
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
@@ -50,6 +51,7 @@ from open_webui.storage.provider import Storage
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
@@ -102,6 +104,98 @@ def _cleanup_local_cache(file_path: str) -> None:
         log.warning(f'Failed to clean up local cache for {file_path}: {e}')
 
 
+def _normalize_list(value) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(',') if item.strip()]
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return []
+
+
+def _normalize_extension(value: str) -> str:
+    return value.strip().lower().lstrip('.')
+
+
+def _tool_id_for_connection(connection: dict) -> Optional[str]:
+    info = connection.get('info') or {}
+    server_id = info.get('id')
+    if not server_id:
+        return None
+
+    if connection.get('type', 'openapi') == 'mcp':
+        return f'server:mcp:{server_id}'
+    return f'server:{server_id}'
+
+
+def _get_upload_context(file_metadata: dict) -> dict:
+    context = file_metadata.get('upload_context') if isinstance(file_metadata, dict) else {}
+    return context if isinstance(context, dict) else {}
+
+
+async def _get_model_tool_ids(model_ids: list[str], db: Optional[AsyncSession] = None) -> set[str]:
+    tool_ids = set()
+
+    for model_id in model_ids:
+        if not model_id:
+            continue
+
+        model = await Models.get_model_by_id(model_id, db=db)
+        if not model:
+            continue
+
+        meta = model.meta.model_dump() if hasattr(model.meta, 'model_dump') else (model.meta or {})
+        tool_ids.update(_normalize_list(meta.get('toolIds')))
+
+    return tool_ids
+
+
+async def get_tool_server_file_allowlist_for_upload_context(
+    request: Request,
+    user,
+    file_metadata: dict,
+    db: Optional[AsyncSession] = None,
+) -> tuple[set[str], list[str]]:
+    context = _get_upload_context(file_metadata)
+
+    enabled_tool_ids = set(_normalize_list(context.get('tool_ids')))
+    enabled_tool_ids.update(await _get_model_tool_ids(_normalize_list(context.get('model_ids')), db=db))
+
+    if not enabled_tool_ids:
+        return set(), []
+
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+
+    allowed_extensions = set()
+    allowed_mime_types = []
+
+    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        config = connection.get('config') or {}
+        if not config.get('enable'):
+            continue
+
+        tool_id = _tool_id_for_connection(connection)
+        if not tool_id or tool_id not in enabled_tool_ids:
+            continue
+
+        if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) and not await has_access(
+            user.id,
+            'read',
+            config.get('access_grants', []),
+            user_group_ids,
+            db=db,
+        ):
+            continue
+
+        allowed_extensions.update(
+            _normalize_extension(ext) for ext in _normalize_list(config.get('file_extensions')) if ext
+        )
+        allowed_mime_types.extend(_normalize_list(config.get('mime_types')))
+
+    return allowed_extensions, allowed_mime_types
+
+
 async def process_uploaded_file(
     request,
     file,
@@ -122,6 +216,25 @@ async def process_uploaded_file(
 
             if content_type:
                 stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
+                tool_allowed_extensions, tool_allowed_mime_types = (
+                    await get_tool_server_file_allowlist_for_upload_context(
+                        request,
+                        user,
+                        file_metadata,
+                        db=db_session,
+                    )
+                )
+                file_extension = _normalize_extension(Path(file_path).suffix)
+                is_tool_allowed_media_file = (
+                    content_type.startswith(('audio/', 'video/'))
+                    and (
+                        file_extension in tool_allowed_extensions
+                        or (
+                            len(tool_allowed_mime_types) > 0
+                            and strict_match_mime_type(tool_allowed_mime_types, content_type)
+                        )
+                    )
+                )
 
                 if strict_match_mime_type(stt_supported_content_types, content_type):
                     file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
@@ -137,6 +250,12 @@ async def process_uploaded_file(
                         request,
                         ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
                         user=user,
+                        db=db_session,
+                    )
+                elif is_tool_allowed_media_file:
+                    await Files.update_file_data_by_id(
+                        file_item.id,
+                        {'status': 'completed', 'content': ''},
                         db=db_session,
                     )
                 elif (not content_type.startswith(('image/', 'video/'))) or (
@@ -237,8 +356,17 @@ async def upload_file_handler(
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
+            tool_allowed_extensions, _ = await get_tool_server_file_allowlist_for_upload_context(
+                request,
+                user,
+                file_metadata,
+                db=db,
+            )
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if (
+                file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS
+                and file_extension not in tool_allowed_extensions
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),

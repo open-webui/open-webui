@@ -951,7 +951,11 @@
 
 			// Upload file to server
 			console.log('Uploading file to server...');
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata, null, {
+				chat_id: $chatId || undefined,
+				model_ids: selectedModelIds.filter((id) => id),
+				tool_ids: selectedToolIds.filter((id) => id && !id.startsWith('direct_server:'))
+			});
 
 			if (!uploadedFile) {
 				throw new Error('Server returned null response for file upload');
