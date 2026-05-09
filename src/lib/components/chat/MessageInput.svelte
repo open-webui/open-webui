@@ -215,10 +215,21 @@
 		} catch (e) {}
 	};
 
-	// Update service tier when selected model changes
+	// Update service tier when selected model changes. Force 'default' when the
+	// model has service_tier disabled in its settings — otherwise a tier
+	// previously persisted to localStorage (from when the model still supported
+	// it) leaks through and gets sent in the payload even though the selector
+	// UI is hidden.
 	$: if (selectedModelIds.length === 1 && preferencesLoaded) {
 		const _modelId = selectedModelIds[0];
-		serviceTier = (serviceTierByModel[_modelId] as ServiceTier) ?? 'default';
+		const _m = $models.find((m) => m.id === _modelId);
+		const _supportsServiceTier =
+			_m?.owned_by !== 'ollama' && (_m?.info?.meta as any)?.service_tier?.enabled !== false;
+		if (_supportsServiceTier) {
+			serviceTier = (serviceTierByModel[_modelId] as ServiceTier) ?? 'default';
+		} else {
+			serviceTier = 'default';
+		}
 	}
 
 	// Update reasoning effort when selected model changes
@@ -310,7 +321,10 @@
 		dataVizEnabled,
 		// Only include reasoning when the selected model is configured as a reasoning model.
 		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {}),
-		service_tier: serviceTier
+		// Always ship service_tier — but force 'default' when the model has it
+		// disabled, so a stale 'flex' from localStorage can't leak into the
+		// payload after the user switches models or disables service_tier.
+		service_tier: showServiceTierSelector ? serviceTier : 'default'
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {

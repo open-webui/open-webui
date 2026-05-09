@@ -3547,8 +3547,14 @@
 				// Include reasoning effort parameter
 				reasoning: reasoning,
 
-				// Include service tier for OpenRouter / OpenAI-compatible APIs
-				service_tier: serviceTier,
+				// Include service tier for OpenRouter / OpenAI-compatible APIs.
+				// Skip the field entirely when the selected model has service_tier
+				// disabled in its meta — some providers (e.g. Gemini via OpenRouter)
+				// don't support it and including a stale value from localStorage
+				// can confuse them.
+				...(((model?.info?.meta as any)?.service_tier?.enabled === false)
+					? {}
+					: { service_tier: serviceTier }),
 
 				...(opts.stripProvider ? { strip_provider: true } : {})
 			},
