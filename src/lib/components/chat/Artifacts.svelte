@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -14,13 +13,12 @@
 		artifactContents
 	} from '$lib/stores';
 	import { applyArtifactContentSecurityPolicy } from '$lib/utils/artifacts';
-	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { copyToClipboard } from '$lib/utils';
 
 	import XMark from '../icons/XMark.svelte';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
-	import ArrowLeft from '../icons/ArrowLeft.svelte';
 	import Download from '../icons/Download.svelte';
 
 	export let overlay = false;
@@ -144,6 +142,7 @@
 					<div class="flex items-center space-x-2">
 						<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 							<button
+								aria-label={$i18n.t('Previous artifact')}
 								class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
 								on:click={() => navigateContent('prev')}
 								disabled={contents.length <= 1}
@@ -172,6 +171,7 @@
 							</div>
 
 							<button
+								aria-label={$i18n.t('Next artifact')}
 								class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
 								on:click={() => navigateContent('next')}
 								disabled={contents.length <= 1}
