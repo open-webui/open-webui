@@ -410,6 +410,24 @@
 				{/if}
 			</div>
 		{/if}
+
+		{#if permissions.features.calendar}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Calendars Public Sharing')}
+					</div>
+					<Switch bind:state={permissions.sharing.public_calendars} />
+				</div>
+				{#if defaultPermissions?.sharing?.public_calendars && !permissions.sharing.public_calendars}
+					<div>
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
