@@ -1456,12 +1456,25 @@ class OAuthManager:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(picture_url, **get_kwargs, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
                     if resp.ok:
+                        # Trust the upstream Content-Type rather than
+                        # guessing from the URL extension. Then allowlist
+                        # to the same raster image MIMEs accepted on the
+                        # form path (validate_profile_image_url). Without
+                        # this, a `.svg` URL — or a controlled host
+                        # serving any payload with a Content-Type the URL
+                        # extension doesn't expose — would land in the DB
+                        # as `data:image/svg+xml;base64,...` and execute
+                        # as a top-level document when later served.
+                        upstream_content_type = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+                        if upstream_content_type not in {'image/png', 'image/jpeg', 'image/gif', 'image/webp'}:
+                            log.warning(
+                                f'Rejecting profile picture from {picture_url}: '
+                                f'disallowed Content-Type {upstream_content_type!r}'
+                            )
+                            return '/user.png'
                         picture = await resp.read()
                         base64_encoded_picture = base64.b64encode(picture).decode('utf-8')
-                        guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                        if guessed_mime_type is None:
-                            guessed_mime_type = 'image/jpeg'
-                        return f'data:{guessed_mime_type};base64,{base64_encoded_picture}'
+                        return f'data:{upstream_content_type};base64,{base64_encoded_picture}'
                     else:
                         log.warning(f'Failed to fetch profile picture from {picture_url}')
                         return '/user.png'
