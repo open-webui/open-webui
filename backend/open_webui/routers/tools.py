@@ -480,15 +480,7 @@ async def update_tools_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    # If the tool's executable Python content is being changed, the caller must
-    # additionally hold the same `workspace.tools` (or `workspace.tools_import`)
-    # permission required by the create endpoint. Without this, a write access
-    # grant on a single tool — which is intended as a metadata-collaboration
-    # primitive — would silently extend to code-execution rights, because
-    # `load_tool_module_by_id` below runs `exec(content)` at module-import time.
-    # Metadata-only edits (name, description, valves config, access grants)
-    # remain available to write-grant collaborators without the workspace
-    # permission.
+    # Content edits trigger exec on load — gate them behind workspace.tools (matches /create).
     if form_data.content != tools.content:
         if user.role != 'admin' and not (
             await has_permission(user.id, 'workspace.tools', request.app.state.config.USER_PERMISSIONS, db=db)
