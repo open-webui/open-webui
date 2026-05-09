@@ -1368,11 +1368,7 @@ async def update_message_by_id(
     if channel.type in ['group', 'dm']:
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
-        # Channel membership alone does not authorize editing another member's
-        # message — without this check, any group/DM member could overwrite
-        # another member's message content while the server preserves the
-        # original `user_id`, producing tampered content that renders to other
-        # members as the original author's authentic post.
+        # Membership is not authorship — block cross-member edits.
         if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
@@ -1576,10 +1572,7 @@ async def delete_message_by_id(
     if channel.type in ['group', 'dm']:
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
-        # Channel membership alone does not authorize deleting another member's
-        # message — without this check, any group/DM member could silently
-        # delete another member's messages, removing them from conversation
-        # history without trace.
+        # Membership is not authorship — block cross-member deletes.
         if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
