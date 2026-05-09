@@ -149,6 +149,7 @@
 	"Allowed Endpoints": "許可されたエンドポイント",
 	"Allowed File Extensions": "許可された拡張子",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "アップロード可能なファイル拡張子。複数の拡張子はカンマで区切ってください。空欄ですべてのファイルタイプを許可します。",
+	"Allowed MIME Types": "",
 	"Already have an account?": "すでにアカウントをお持ちですか？",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "top_p の代替手法で、品質と多様性のバランスを確保することを目的としています。パラメータ p は、最も確率の高いトークンの確率に対する、トークンが考慮されるための最小確率を表します。たとえば、p=0.05 で最も可能性の高いトークンの確率が 0.9 の場合、0.045 未満の値を持つロジットはフィルタリングされます。",
 	"Always": "常に",

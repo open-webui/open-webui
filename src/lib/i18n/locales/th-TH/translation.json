@@ -149,6 +149,7 @@
 	"Allowed Endpoints": "Endpoints ที่อนุญาต",
 	"Allowed File Extensions": "นามสกุลไฟล์ที่อนุญาต",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "นามสกุลไฟล์ที่อนุญาตให้อัปโหลด คั่นแต่ละนามสกุลด้วยเครื่องหมายจุลภาค เว้นว่างเพื่ออนุญาตไฟล์ทุกประเภท",
+	"Allowed MIME Types": "",
 	"Already have an account?": "มีบัญชีอยู่แล้ว?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "ทางเลือกแทน top_p และมุ่งเน้นการสร้างสมดุลระหว่างคุณภาพและความหลากหลาย พารามิเตอร์ p แทนค่าความน่าจะเป็นต่ำสุดสำหรับโทเค็นที่จะถูกพิจารณา โดยอ้างอิงกับความน่าจะเป็นของโทเค็นที่มีโอกาสสูงที่สุด ตัวอย่างเช่น เมื่อ p=0.05 และโทเค็นที่มีโอกาสสูงที่สุดมีความน่าจะเป็น 0.9 logits ที่มีค่าน้อยกว่า 0.045 จะถูกกรองออก",
 	"Always": "เสมอ",

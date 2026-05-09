@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Επιτρεπόμενα Endpoints",
 	"Allowed File Extensions": "Επιτρεπόμενες Επεκτάσεις Αρχείων",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Επιτρεπόμενες επεκτάσεις αρχείων για ανέβασμα. Διαχωρίστε πολλαπλές επεκτάσεις με κόμματα. Αφήστε κενό για όλους τους τύπους αρχείων.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Έχετε ήδη λογαριασμό;",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "",
 	"Always": "Πάντα",

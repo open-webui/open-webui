@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Tilladte endpoints",
 	"Allowed File Extensions": "Tilladte filtypenavne",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Filtypenavne tilladte til upload. Adskil flere filtypenavne med komma. Lad den være tom for alle filtypenavne",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Har du allerede en profil?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternativ til top_p, og sigter mod at sikre en balance mellem kvalitet og variation. Parameteren p repræsenterer minimumsandsynligheden for at et token overvejes, relativt til sandsynligheden for det mest sandsynlige token. For eksempel, med p=0.05 og det mest sandsynlige token med en sandsynlighed på 0.9, filtreres logits med en værdi mindre end 0.045 fra.",
 	"Always": "Altid",

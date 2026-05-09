@@ -151,6 +151,7 @@
 	"Allowed Endpoints": "Punts d'accés permesos",
 	"Allowed File Extensions": "Extensions de fitxer permeses",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Extensions de fitxer permeses per a la càrrega. Separa múltiples extensions amb comes. Deixa buit per a tots els tipus de fitxer.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Ja tens un compte?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternativa al top_p, i pretén garantir un equilibri de qualitat i varietat. El paràmetre p representa la probabilitat mínima que es consideri un token, en relació amb la probabilitat del token més probable. Per exemple, amb p=0,05 i el token més probable amb una probabilitat de 0,9, es filtren els logits amb un valor inferior a 0,045.",
 	"Always": "Sempre",

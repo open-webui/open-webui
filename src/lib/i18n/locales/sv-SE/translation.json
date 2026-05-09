@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Tillåtna Endpoints",
 	"Allowed File Extensions": "Tillåtna filändelser",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Tillåtna filändelser för uppladdning. Separera flera filändelser med kommatecken. Lämna tomt för alla filtyper.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Har du redan ett konto?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternativ till top_p, och syftar till att säkerställa en balans mellan kvalitet och variation. Parametern p representerar den minsta sannolikheten för att en token ska beaktas, relativt sannolikheten för den mest sannolika token. Till exempel, med p=0.05 och den mest sannolika token som har en sannolikhet på 0.9, filtreras logits med ett värde mindre än 0.045 bort.",
 	"Always": "Alltid",

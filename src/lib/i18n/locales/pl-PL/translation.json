@@ -152,6 +152,7 @@
 	"Allowed Endpoints": "Dozwolone punkty końcowe",
 	"Allowed File Extensions": "Dozwolone rozszerzenia plików",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Dozwolone rozszerzenia plików. Oddziel przecinkami. Pozostaw puste dla wszystkich typów.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Posiadasz już konto?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternatywa dla top_p, zapewniająca balans między jakością a różnorodnością. Parametr p to minimalne prawdopodobieństwo tokena względem najbardziej prawdopodobnego tokena. Np. przy p=0.05 i max prawdopodobieństwie 0.9, wartości poniżej 0.045 są odrzucane.",
 	"Always": "Zawsze",

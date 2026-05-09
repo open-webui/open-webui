@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "İzin Verilen Uç Noktalar",
 	"Allowed File Extensions": "İzin Verilen Dosya Uzantıları",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Yükleme için izin verilen dosya uzantıları. Birden fazla uzantıyı virgülle ayırın. Tüm dosya türleri için boş bırakın.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Zaten bir hesabınız mı var?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "",
 	"Always": "Daima",

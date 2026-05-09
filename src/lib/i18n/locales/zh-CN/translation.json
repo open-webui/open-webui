@@ -149,6 +149,7 @@
 	"Allowed Endpoints": "允许的接口",
 	"Allowed File Extensions": "允许的文件扩展名",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "文件上传允许的扩展名。多个扩展名用逗号分隔。留空以允许所有文件类型。",
+	"Allowed MIME Types": "",
 	"Already have an account?": "已拥有账号？",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "top_p 的替代方法，旨在平衡生成质量与多样性。参数 p 表示一个 token 被考虑的最低概率，该概率相对于最可能 token 的概率。例如，当 p=0.05 且最可能 token 的概率为 0.9 时，概率值低于 0.045 的 token 将被过滤掉。",
 	"Always": "始终",

@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "İcazə verilən son nöqtələr (Endpoints)",
 	"Allowed File Extensions": "İcazə verilən fayl uzantıları",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Yükləmə üçün icazə verilən fayl uzantıları. Birdən çox uzantını vergüllə ayırın. Bütün fayl növləri üçün boş saxlayın.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Artıq hesabınız var?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Top_p-yə alternativdir və keyfiyyətlə müxtəliflik arasında balans təmin etmək məqsədi daşıyır. p parametri ən yüksək ehtimallı tokenin ehtimalına nisbətən nəzərə alınacaq minimum ehtimalı təmsil edir. Məsələn, p=0.05 olduqda və ən ehtimallı token 0.9 ehtimala malikdirsə, 0.045-dən kiçik dəyəri olan logit-lər kənarlaşdırılır.",
 	"Always": "Həmişə",

@@ -151,6 +151,7 @@
 	"Allowed Endpoints": "Atļautie galapunkti",
 	"Allowed File Extensions": "Atļautie failu paplašinājumi",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Atļautie failu paplašinājumi augšupielādei. Atdaliet vairākus paplašinājumus ar komatiem. Atstājiet tukšu visiem failu tipiem.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Jau ir konts?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternatīva top_p, kuras mērķis ir nodrošināt kvalitātes un dažādības līdzsvaru. Parametrs p apzīmē minimālo varbūtību, lai tokens tiktu ņemts vērā, attiecībā pret visticamākā tokena varbūtību. Piemēram, ar p=0.05 un visticamākā tokena varbūtību 0.9, logiti ar vērtību mazāku par 0.045 tiek izfiltrēti.",
 	"Always": "Vienmēr",

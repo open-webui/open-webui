@@ -149,6 +149,7 @@
 	"Allowed Endpoints": "Titik Akhir yang Dibenarkan",
 	"Allowed File Extensions": "Sambungan Fail yang Dibenarkan",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Sambungan fail yang dibenarkan untuk muat naik. Pisahkan bilangan-bilangan sambungan dengan koma. Biarkan kosong untuk semua jenis fail.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Telah mempunyai aka?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternatif kepada top_p, dan bertujuan untuk memastikan keseimbangan antara kualiti dan kepelbagaian. Parameter p mewakili kebarangkalian minimum untuk token dipertimbangkan, relatif kepada kebarangkalian token yang paling berkemungkinan. Sebagai contoh, dengan p=0.05 dan token yang paling berkemungkinan mempunyai kebarangkalian 0.9, logit dengan nilai kurang daripada 0.045 ditapis keluar.",
 	"Always": "Sentiasa",

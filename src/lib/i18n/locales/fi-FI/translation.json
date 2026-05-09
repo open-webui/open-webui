@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Hyväksytyt päätepisteet",
 	"Allowed File Extensions": "Hyväksytyt tiedostomuodot",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Hyväksyty tiedostomuodot. Erittele tiedostomuodot pilkulla. Jätä tyhjäksi kaikille tiedostomuodoille.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Onko sinulla jo tili?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Vaihtoehto top_p:lle, ja sen tavoitteena on varmistaa laadun ja monimuotoisuuden tasapaino. Parametri p edustaa vähimmäistodennäköisyyttä, jonka on oltava tokenin huomioimiseksi suhteessa todennäköisimmän tokenin todennäköisyyteen. Esimerkiksi, kun p=0.05 ja todennäköisin tokenilla on todennäköisyys 0.9, logitit, joiden arvo on alle 0.045, suodatetaan pois.",
 	"Always": "Aina",

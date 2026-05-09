@@ -152,6 +152,7 @@
 	"Allowed Endpoints": "Povolené koncové body",
 	"Allowed File Extensions": "Povolené přípony souborů",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Povolené přípony souborů pro nahrání. Více přípon oddělte čárkami. Ponechte prázdné pro všechny typy souborů.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Už máte účet?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternativa k top_p, jejímž cílem je zajistit rovnováhu mezi kvalitou a rozmanitostí. Parametr p představuje minimální pravděpodobnost, s jakou je token zvažován, vztaženou k pravděpodobnosti nejpravděpodobnějšího tokenu. Například při p=0,05 a nejpravděpodobnějším tokenu s pravděpodobností 0,9 jsou odfiltrovány logity s hodnotou menší než 0,045.",
 	"Always": "Vždy",

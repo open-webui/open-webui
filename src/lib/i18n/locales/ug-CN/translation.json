@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "ئىجازەتلىك ئۇلانمىلار",
 	"Allowed File Extensions": "ئىجازەتلىك ھۆججەت كېڭەيتىلمىلىرى",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "يۈكلەشكە بولىدىغان ھۆججەت كېڭەيتىلمىسى. بىر نەچچىسى بولسا پەش بىلەن ئايرىڭ. بارلىق تىپقا ئىجازەت بولسا بوش قالدۇرۇڭ.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "ئاللىقاچان ھېسابىڭىز بارمۇ؟",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Top_p نىڭ ئورنىغا ، سۈپەت ۋە كۆپ خىللىقنىڭ تەڭپۇڭلۇقىغا كاپالەتلىك قىلىشنى مەقسەت قىلىدۇ. P پارامېتىرى ئەڭ چوڭ بەلگە ئېھتىماللىقىغا سېلىشتۇرغاندا ، بەلگە ئويلىنىشنىڭ ئەڭ تۆۋەن ئېھتىماللىقىنى كۆرسىتىدۇ. مەسىلەن ، p = 0.05 ۋە ئېھتىماللىقى ئەڭ يۇقىرى بولغان بەلگە 0.9 بولۇش ئېھتىماللىقى بار ، قىممىتى 0.045 دىن تۆۋەن بولغان خاتىرىلەر سۈزۈلىدۇ.",
 	"Always": "ھەمىشە",

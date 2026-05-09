@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Engedélyezett végpontok",
 	"Allowed File Extensions": "",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Már van fiókod?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternatíva a top_p helyett, célja a minőség és változatosság egyensúlyának biztosítása. A p paraméter a token figyelembevételének minimális valószínűségét jelzi a legvalószínűbb token valószínűségéhez képest. Például, ha p=0,05 és a legvalószínűbb token valószínűsége 0,9, a 0,045-nél kisebb értékű logitok kiszűrésre kerülnek.",
 	"Always": "Mindig",

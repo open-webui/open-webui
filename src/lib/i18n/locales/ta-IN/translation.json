@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "அனுமதிக்கப்பட்ட இறுதிப்புள்ளிகள்",
 	"Allowed File Extensions": "அனுமதிக்கப்பட்ட கோப்பு நீட்டிப்புகள்",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "பதிவேற்றம் செய்ய அனுமதிக்கப்பட்ட கோப்பு நீட்டிப்புகள். பல நீட்டிப்புகளை காற்புள்ளிகளால் பிரிக்கவும். அனைத்து கோப்பு வகைகளுக்கும் காலியாக விடவும்.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "ஏற்கனவே கணக்கு உள்ளதா?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "top_p க்கு மாற்றாக, தரம் மற்றும் பல்வேறு சமநிலையை உறுதி செய்வதை நோக்கமாகக் கொண்டது. அளவுரு p என்பது ஒரு டோக்கனின் குறைந்தபட்ச நிகழ்தகவைக் குறிக்கிறது, இது மிகவும் சாத்தியமான டோக்கனின் நிகழ்தகவுடன் தொடர்புடையது. எடுத்துக்காட்டாக, p=0.05 மற்றும் பெரும்பாலும் 0.9 நிகழ்தகவு கொண்ட டோக்கன், 0.045 க்கும் குறைவான மதிப்பு கொண்ட லாஜிட்கள் வடிகட்டப்படும்.",
 	"Always": "எப்போதும்",

@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Рухсат этилган охирги нуқталар",
 	"Allowed File Extensions": "Рухсат этилган файл кенгайтмалари",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Юклаш учун рухсат берилган файл кенгайтмалари. Бир нечта кенгайтмаларни вергул билан ажратинг. Барча файл турлари учун бўш қолдиринг.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Ҳисобингиз борми?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Топ_п га муқобил ва сифат ва хилма-хиллик мувозанатини таъминлашга қаратилган. п параметри токеннинг кўриб чиқилишининг минимал эҳтимолини ифодалайди, бу токеннинг эҳтимолий эҳтимолига нисбатан. Мисол учун, п=0,05 ва энг эҳтимолли токен 0,9 эҳтимолга эга бўлса, қиймати 0,045 дан кам бўлган логитлар филтрланади.",
 	"Always": "Ҳар доим",

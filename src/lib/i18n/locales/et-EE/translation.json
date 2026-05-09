@@ -150,6 +150,7 @@
 	"Allowed Endpoints": "Lubatud lõpp-punktid",
 	"Allowed File Extensions": "Lubatud faililaiendid",
 	"Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.": "Üleslaadimiseks lubatud faililaiendid. Eralda mitu laiendit komadega. Kõigi failitüüpide jaoks jäta tühjaks.",
+	"Allowed MIME Types": "",
 	"Already have an account?": "Kas teil on juba konto?",
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.": "Alternatiiv top_p-le ja eesmärk on tagada kvaliteedi ja mitmekesisuse tasakaal. Parameeter p esindab minimaalset tõenäosust tokeni arvesse võtmiseks, võrreldes kõige tõenäolisema tokeni tõenäosusega. Näiteks p=0.05 korral, kui kõige tõenäolisema tokeni tõenäosus on 0.9, filtreeritakse välja logitid väärtusega alla 0.045.",
 	"Always": "Alati",
