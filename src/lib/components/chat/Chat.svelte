@@ -3818,19 +3818,77 @@
 			errorMessage = innerError.message;
 		}
 
-		// Show the upstream error message directly. Only fall back to the generic
-		// "Uh-oh!" wrapper when there's literally no underlying message — otherwise
-		// the prefix obscures the real cause (e.g. a 504 from OpenRouter or a
-		// provider-side abort) and makes debugging much harder.
+		// OpenRouter docs: errors arrive as either the WRAPPED pre-stream shape
+		// `{error: {code, message, metadata: {error_type, provider_name, raw}}}`
+		// or the UNWRAPPED mid-stream shape where those fields sit at the top of
+		// the chunk alongside `choices`. Read both.
+		// Ref: https://openrouter.ai/docs/api/reference/errors
+		const orError =
+			innerError && typeof innerError === 'object' && 'error' in innerError && innerError.error
+				? innerError.error
+				: innerError;
+		const code = orError?.code ?? innerError?.code;
+		const meta = orError?.metadata ?? innerError?.metadata ?? {};
+		const errorType = meta?.error_type;
+		const providerName = meta?.provider_name;
+		const rawText = meta?.raw;
+
+		// Friendly labels for the documented OpenRouter HTTP codes so users can
+		// tell at a glance whether to retry, switch model, or top up credits.
+		// 408/502/503 are documented; 504 + the timeout error_type also occur in
+		// practice (OpenRouter's own gateway timeout — not in the public table).
+		const codeLabel = (() => {
+			switch (Number(code)) {
+				case 400:
+					return 'Bad request';
+				case 401:
+					return 'Auth failed';
+				case 402:
+					return 'Out of credits';
+				case 403:
+					return 'Moderation block';
+				case 408:
+					return 'Request timeout';
+				case 429:
+					return 'Rate limited';
+				case 502:
+					return 'Provider down / bad response';
+				case 503:
+					return 'No available provider';
+				case 504:
+					return 'Gateway timeout';
+				default:
+					return null;
+			}
+		})();
+
+		let displayMessage =
+			typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+
+		if (code || errorType || providerName) {
+			const parts: string[] = [];
+			if (code) parts.push(codeLabel ? `${codeLabel} (${code})` : `HTTP ${code}`);
+			if (errorType && errorType !== codeLabel?.toLowerCase()) parts.push(String(errorType));
+			if (providerName) parts.push(`via ${providerName}`);
+			displayMessage = `${parts.join(' · ')}: ${displayMessage || '(no message)'}`;
+		}
+		// Append the raw upstream error if present and short — useful for
+		// timeouts where `raw` often holds the actual provider response.
+		if (typeof rawText === 'string' && rawText.length > 0 && rawText.length < 800) {
+			displayMessage += `\n\n${rawText}`;
+		} else if (rawText && typeof rawText === 'object') {
+			try {
+				const j = JSON.stringify(rawText);
+				if (j.length < 800) displayMessage += `\n\n${j}`;
+			} catch {
+				// non-serializable, ignore
+			}
+		}
+
 		const fallback = $i18n.t(`Uh-oh! There was an issue with the response.`);
-		const finalContent = errorMessage
-			? typeof errorMessage === 'string'
-				? errorMessage
-				: JSON.stringify(errorMessage)
-			: fallback;
 
 		responseMessage.error = {
-			content: finalContent
+			content: displayMessage || fallback
 		};
 		responseMessage.done = true;
 
