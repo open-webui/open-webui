@@ -888,6 +888,23 @@
 
 						<Banners bind:banners />
 					</div>
+
+					<div class="mb-2.5">
+						<div class=" self-center text-xs font-medium mb-2">
+							{$i18n.t('Artifacts Content Security Policy')}
+						</div>
+
+						<Textarea
+							placeholder={$i18n.t(
+								'Enter a Content Security Policy for artifact iframes. Leave empty to use the browser default.'
+							)}
+							bind:value={adminConfig.ARTIFACT_CONTENT_SECURITY_POLICY}
+						/>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('This policy is injected into OpenWebUI artifacts only.')}
+						</div>
+					</div>
 				</div>
 			</div>
 		{/if}

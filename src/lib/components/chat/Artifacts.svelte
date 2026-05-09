@@ -7,6 +7,7 @@
 	import {
 		artifactCode,
 		chatId,
+		config,
 		settings,
 		showArtifacts,
 		showControls,
@@ -28,6 +29,43 @@
 
 	let copied = false;
 	let iframeElement: HTMLIFrameElement;
+
+	const applyArtifactContentSecurityPolicy = (html: string, policy: string) => {
+		if (!policy || typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
+			return html;
+		}
+
+		try {
+			const document = new window.DOMParser().parseFromString(html, 'text/html');
+			document
+				.querySelectorAll('meta[http-equiv]')
+				.forEach((meta) => {
+					if (meta.getAttribute('http-equiv')?.toLowerCase() === 'content-security-policy') {
+						meta.remove();
+					}
+				});
+
+			const meta = document.createElement('meta');
+			meta.setAttribute('http-equiv', 'Content-Security-Policy');
+			meta.setAttribute('content', policy);
+			document.head.prepend(meta);
+
+			return `<!DOCTYPE html>\n${document.documentElement.outerHTML}`;
+		} catch (error) {
+			console.error('Failed to apply artifact CSP:', error);
+			return html;
+		}
+	};
+
+	$: selectedContent = contents[selectedContentIdx] ?? null;
+	$: artifactContentSecurityPolicy = $config?.ui?.artifacts?.content_security_policy?.trim() ?? '';
+	$: artifactSrcdoc =
+		selectedContent?.type === 'iframe'
+			? applyArtifactContentSecurityPolicy(
+					selectedContent.content,
+					artifactContentSecurityPolicy
+				)
+			: '';
 
 	function navigateContent(direction: 'prev' | 'next') {
 		selectedContentIdx =
@@ -238,11 +276,11 @@
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
 					<div class="max-w-full w-full h-full">
-						{#if contents[selectedContentIdx].type === 'iframe'}
+						{#if selectedContent?.type === 'iframe'}
 							<iframe
 								bind:this={iframeElement}
 								title="Content"
-								srcdoc={contents[selectedContentIdx].content}
+								srcdoc={artifactSrcdoc}
 								class="w-full border-0 h-full rounded-none"
 								sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 									? ' allow-forms'
@@ -251,10 +289,10 @@
 									: ''}"
 								on:load={iframeLoadHandler}
 							></iframe>
-						{:else if contents[selectedContentIdx].type === 'svg'}
+						{:else if selectedContent?.type === 'svg'}
 							<SvgPanZoom
 								className=" w-full h-full max-h-full overflow-hidden"
-								svg={contents[selectedContentIdx].content}
+								svg={selectedContent.content}
 							/>
 						{/if}
 					</div>
