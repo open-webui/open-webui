@@ -159,8 +159,10 @@ async def get_tool_server_file_allowlist_for_upload_context(
 ) -> tuple[set[str], list[str]]:
     context = _get_upload_context(file_metadata)
 
-    enabled_tool_ids = set(_normalize_list(context.get('tool_ids')))
-    enabled_tool_ids.update(await _get_model_tool_ids(_normalize_list(context.get('model_ids')), db=db))
+    if 'tool_ids' in context:
+        enabled_tool_ids = set(_normalize_list(context.get('tool_ids')))
+    else:
+        enabled_tool_ids = await _get_model_tool_ids(_normalize_list(context.get('model_ids')), db=db)
 
     if not enabled_tool_ids:
         return set(), []
