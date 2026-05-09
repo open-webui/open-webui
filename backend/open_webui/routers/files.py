@@ -214,35 +214,33 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
+            tool_allowed_extensions, tool_allowed_mime_types = (
+                await get_tool_server_file_allowlist_for_upload_context(
+                    request,
+                    user,
+                    file_metadata,
+                    db=db_session,
+                )
+            )
+            file_extension = _normalize_extension(Path(file_path).suffix)
+            is_tool_allowed_file = file_extension in tool_allowed_extensions or (
+                content_type
+                and len(tool_allowed_mime_types) > 0
+                and strict_match_mime_type(tool_allowed_mime_types, content_type)
+            )
+
+            if is_tool_allowed_file:
+                await Files.update_file_data_by_id(
+                    file_item.id,
+                    {'status': 'completed', 'content': ''},
+                    db=db_session,
+                )
+                return
+
             if content_type:
                 stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
-                tool_allowed_extensions, tool_allowed_mime_types = (
-                    await get_tool_server_file_allowlist_for_upload_context(
-                        request,
-                        user,
-                        file_metadata,
-                        db=db_session,
-                    )
-                )
-                file_extension = _normalize_extension(Path(file_path).suffix)
-                is_tool_allowed_media_file = (
-                    content_type.startswith(('audio/', 'video/'))
-                    and (
-                        file_extension in tool_allowed_extensions
-                        or (
-                            len(tool_allowed_mime_types) > 0
-                            and strict_match_mime_type(tool_allowed_mime_types, content_type)
-                        )
-                    )
-                )
 
-                if is_tool_allowed_media_file:
-                    await Files.update_file_data_by_id(
-                        file_item.id,
-                        {'status': 'completed', 'content': ''},
-                        db=db_session,
-                    )
-                elif strict_match_mime_type(stt_supported_content_types, content_type):
+                if strict_match_mime_type(stt_supported_content_types, content_type):
                     file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
                     result = await asyncio.to_thread(
                         transcribe,
