@@ -522,6 +522,18 @@ async def ldap_auth(
                         db=db,
                     )
 
+                    if request.app.state.config.WEBHOOK_URL:
+                        await post_webhook(
+                            request.app.state.WEBUI_NAME,
+                            request.app.state.config.WEBHOOK_URL,
+                            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                            {
+                                'action': 'signup',
+                                'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                                'user': user.model_dump_json(exclude_none=True),
+                            },
+                        )
+
                 except HTTPException:
                     raise
                 except Exception as err:
@@ -773,7 +785,7 @@ async def signup(
         raise HTTPException(500, detail='An internal error occurred during signup.')
 
 
-@router.get('/signout')
+@router.post('/signout')
 async def signout(request: Request, response: Response, db: AsyncSession = Depends(get_async_session)):
     # get auth token from headers or cookies
     token = None

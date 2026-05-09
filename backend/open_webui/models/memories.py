@@ -19,7 +19,7 @@ class Memory(Base):
     __tablename__ = 'memory'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    user_id = Column(String, index=True)
     content = Column(Text)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)

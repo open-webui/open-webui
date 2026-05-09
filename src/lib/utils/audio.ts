@@ -80,7 +80,8 @@ export class AudioQueue {
 	#halt() {
 		this.audio.pause();
 		this.audio.currentTime = 0;
-		this.audio.src = '';
+		this.audio.removeAttribute('src');
+		this.audio.load();
 		this.queue = [];
 		this.current = null;
 	}

@@ -13,6 +13,7 @@
 	import CalendarView from '$lib/components/calendar/CalendarView.svelte';
 	import CalendarSidebar from '$lib/components/calendar/CalendarSidebar.svelte';
 	import CalendarEventModal from '$lib/components/calendar/CalendarEventModal.svelte';
+	import CreateCalendarModal from '$lib/components/calendar/CreateCalendarModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -34,6 +35,7 @@
 	let showEventModal = false;
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
+	let showCreateCalendarModal = false;
 
 	const MONTH_NAMES = [
 		'January',
@@ -159,6 +161,15 @@
 		refresh();
 	}
 
+	function handleCreateCalendar() {
+		showCreateCalendarModal = true;
+	}
+
+	async function handleCalendarCreated() {
+		await loadCalendars();
+		await refresh();
+	}
+
 	function handleNewEvent() {
 		editEvent = null;
 		defaultStartAt = null;
@@ -208,6 +219,8 @@
 	on:save={() => refresh()}
 	on:delete={() => refresh()}
 />
+
+<CreateCalendarModal bind:show={showCreateCalendarModal} on:created={handleCalendarCreated} />
 
 <div
 	class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
@@ -350,6 +363,7 @@
 					{visibleCalendarIds}
 					{currentDate}
 					onToggle={toggleCalendar}
+					onCreateCalendar={handleCreateCalendar}
 					onDeleteCalendar={handleDeleteCalendar}
 					onDateSelect={handleDateSelect}
 				/>

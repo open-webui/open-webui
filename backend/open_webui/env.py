@@ -1,21 +1,21 @@
+import datetime as dt
 import importlib.metadata
 import json
 import logging
 import os
 import pkgutil
-import sys
+import re
 import shutil
+import sys
 import traceback
-from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
-from pathlib import Path
-from cryptography.hazmat.primitives import serialization
-import re
-
 
 import markdown
 from bs4 import BeautifulSoup
+from cryptography.hazmat.primitives import serialization
+
 from open_webui.constants import ERROR_MESSAGES
 
 ####################################
@@ -43,7 +43,8 @@ except ImportError:
 
 DOCKER = os.environ.get('DOCKER', 'False').lower() == 'true'
 
-# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+# device type for embedding models - "cpu" (default), "cuda" (nvidia gpu required), or "mps" (apple silicon)
+# choosing this correctly can lead to better performance
 USE_CUDA = os.environ.get('USE_CUDA_DOCKER', 'false')
 
 if USE_CUDA.lower() == 'true':
@@ -87,7 +88,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict[str, Any] = {
-            'ts': datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(timespec='milliseconds'),
+            'ts': dt.datetime.fromtimestamp(record.created, tz=dt.UTC).isoformat(timespec='milliseconds'),
             'level': _LEVEL_MAP.get(record.levelname, record.levelname.lower()),
             'msg': record.getMessage(),
             'caller': record.name,
@@ -180,7 +181,7 @@ def parse_section(section):
 
 try:
     changelog_path = BASE_DIR / 'CHANGELOG.md'
-    with open(str(changelog_path.absolute()), 'r', encoding='utf8') as file:
+    with open(str(changelog_path.absolute()), encoding='utf8') as file:
         changelog_content = file.read()
 
 except Exception:
@@ -247,6 +248,17 @@ FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get('FORWARD_SESSION_INFO_HEADE
 ENABLE_STAR_SESSIONS_MIDDLEWARE = os.environ.get('ENABLE_STAR_SESSIONS_MIDDLEWARE', 'False').lower() == 'true'
 
 ENABLE_EASTER_EGGS = os.environ.get('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
+
+####################################
+# ENABLE_PROFILE_IMAGE_URL_FORWARDING
+####################################
+
+# When True (default), the user and model profile-image endpoints
+# honour external http(s) URLs stored in profile_image_url by issuing a
+# 302 redirect to the original origin.  Set to False to suppress the
+# redirect (prevents client-side IP/UA/Referer leaks to attacker-
+# controlled origins) and fall through to the default image instead.
+ENABLE_PROFILE_IMAGE_URL_FORWARDING = os.environ.get('ENABLE_PROFILE_IMAGE_URL_FORWARDING', 'True').lower() == 'true'
 
 ####################################
 # WEBUI_BUILD_HASH
@@ -339,7 +351,7 @@ DATABASE_SCHEMA = os.environ.get('DATABASE_SCHEMA', None)
 
 DATABASE_POOL_SIZE = os.environ.get('DATABASE_POOL_SIZE', None)
 
-if DATABASE_POOL_SIZE != None:
+if DATABASE_POOL_SIZE is not None:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
@@ -652,7 +664,7 @@ if LICENSE_PUBLIC_KEY:
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode('utf-8')
+""".encode()
     )
 
 
