@@ -103,13 +103,7 @@ class FeedbackForm(BaseModel):
     data: Optional[RatingData] = None
     meta: Optional[dict] = None
     snapshot: Optional[SnapshotData] = None
-    # extra='ignore' — the form is the public input boundary for
-    # POST /api/v1/evaluations/feedback. Allowing arbitrary extra fields
-    # lets a caller smuggle attributes like `user_id`, `id`, or `version`
-    # into the form payload, which combined with a dict-merge order issue
-    # in insert_new_feedback below could overwrite server-set columns.
-    # Sub-models (RatingData / MetaData / SnapshotData) keep extra='allow'
-    # because their contents are deliberately schema-flexible.
+    # ignore: drop client-supplied id/user_id/version/timestamps at parse time.
     model_config = ConfigDict(extra='ignore')
 
 
@@ -152,10 +146,7 @@ class FeedbackTable:
     ) -> Optional[FeedbackModel]:
         async with get_async_db_context(db) as db:
             id = str(uuid.uuid4())
-            # Spread form_data first, then overlay server-controlled fields so
-            # that any client-supplied id / user_id / version / timestamps
-            # cannot win on duplicate keys. Defense-in-depth alongside the
-            # extra='ignore' on FeedbackForm above.
+            # Spread form_data first so server-controlled fields win on duplicate keys.
             feedback = FeedbackModel(
                 **{
                     **form_data.model_dump(),
