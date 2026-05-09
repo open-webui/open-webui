@@ -1456,15 +1456,7 @@ class OAuthManager:
             async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(picture_url, **get_kwargs, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
                     if resp.ok:
-                        # Trust the upstream Content-Type rather than
-                        # guessing from the URL extension. Then allowlist
-                        # to the same raster image MIMEs accepted on the
-                        # form path (validate_profile_image_url). Without
-                        # this, a `.svg` URL — or a controlled host
-                        # serving any payload with a Content-Type the URL
-                        # extension doesn't expose — would land in the DB
-                        # as `data:image/svg+xml;base64,...` and execute
-                        # as a top-level document when later served.
+                        # Trust upstream Content-Type, allowlist to raster MIMEs (URL extension can lie).
                         upstream_content_type = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
                         if upstream_content_type not in {'image/png', 'image/jpeg', 'image/gif', 'image/webp'}:
                             log.warning(

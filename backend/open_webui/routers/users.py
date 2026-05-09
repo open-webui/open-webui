@@ -496,16 +496,7 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
                     image_buffer = io.BytesIO(image_data)
                     media_type = header.split(';')[0].lstrip('data:').lower()
 
-                    # Allowlist served MIME types. The data URI is stored
-                    # verbatim in the DB and could include `image/svg+xml`
-                    # (or other browser-executable types) if it was written
-                    # via a path that bypasses validate_profile_image_url
-                    # — e.g. the OAuth picture-claim ingestion path. Without
-                    # this gate, the SVG would render as a top-level
-                    # document on this same-origin endpoint and execute
-                    # embedded scripts (account-takeover XSS). Mirrors the
-                    # PNG/JPEG/GIF/WEBP allowlist enforced by
-                    # validate_profile_image_url on the form path.
+                    # Reject scriptable MIME (svg/html) regardless of how it got into the DB.
                     if media_type not in {'image/png', 'image/jpeg', 'image/gif', 'image/webp'}:
                         return FileResponse(f'{STATIC_DIR}/user.png')
 
