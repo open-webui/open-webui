@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -10,16 +10,14 @@
 
 	let _filters = {};
 
-	onMount(() => {
-		_filters = filters.reduce((acc, filter) => {
-			acc[filter.id] = {
-				...filter,
-				selected: selectedFilterIds.includes(filter.id)
-			};
+	$: _filters = filters.reduce((acc, filter) => {
+		acc[filter.id] = {
+			...filter,
+			selected: selectedFilterIds.includes(filter.id)
+		};
 
-			return acc;
-		}, {});
-	});
+		return acc;
+	}, {});
 </script>
 
 {#if filters.length > 0}
@@ -28,7 +26,7 @@
 			<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Filters')}</div>
 		</div>
 
-		<!-- TODO: Filer order matters -->
+		<!-- TODO: Filter order matters -->
 		<div class="flex flex-col">
 			<div class=" flex items-center flex-wrap">
 				{#each Object.keys(_filters) as filter, filterIdx}
@@ -42,10 +40,16 @@
 										: 'unchecked'}
 								disabled={_filters[filter].is_global}
 								on:change={(e) => {
-									if (!_filters[filter].is_global) {
-										_filters[filter].selected = e.detail === 'checked';
-										selectedFilterIds = Object.keys(_filters).filter((t) => _filters[t].selected);
-									}
+									if (_filters[filter].is_global) return;
+
+									const filterId = _filters[filter].id;
+									const isChecked = e.detail === 'checked';
+
+									selectedFilterIds = isChecked
+										? selectedFilterIds.includes(filterId)
+											? selectedFilterIds
+											: [...selectedFilterIds, filterId]
+										: selectedFilterIds.filter((t) => t !== filterId);
 								}}
 							/>
 						</div>
