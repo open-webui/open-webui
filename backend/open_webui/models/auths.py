@@ -3,6 +3,7 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import select, delete, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
@@ -98,25 +99,64 @@ class AuthsTable:
         role: str = 'pending',
         oauth: Optional[dict] = None,
         db: Optional[AsyncSession] = None,
+        id: Optional[str] = None,
     ) -> Optional[UserModel]:
         async with get_async_db_context(db) as db:
             log.info('insert_new_auth')
 
-            id = str(uuid.uuid4())
+            if id is None:
+                id = str(uuid.uuid4())
 
-            auth = AuthModel(**{'id': id, 'email': email, 'password': password, 'active': True})
-            result = Auth(**auth.model_dump())
-            db.add(result)
+            try:
+                auth = AuthModel(**{'id': id, 'email': email, 'password': password, 'active': True})
+                result = Auth(**auth.model_dump())
+                db.add(result)
 
-            user = await Users.insert_new_user(id, name, email, profile_image_url, role, oauth=oauth, db=db)
+                user = await Users.insert_new_user(id, name, email, profile_image_url, role, oauth=oauth, db=db)
 
-            await db.commit()
-            await db.refresh(result)
+                await db.commit()
+                await db.refresh(result)
 
-            if result and user:
-                return user
-            else:
-                return None
+                if result and user:
+                    return user
+                else:
+                    return None
+            except IntegrityError as e:
+                await db.rollback()
+                # Handle case where auth ID already exists (e.g., user deleted from UI
+                # but auth record remained, common with stable AD SID-based IDs)
+                if 'UNIQUE constraint failed' in str(e) or 'duplicate key' in str(e).lower():
+                    log.info(f'Auth ID {id} already exists, reactivating and updating existing records')
+                    try:
+                        result = await db.execute(select(Auth).filter_by(id=id))
+                        existing_auth = result.scalars().first()
+                        if existing_auth:
+                            existing_auth.email = email
+                            existing_auth.password = password
+                            existing_auth.active = True
+                        else:
+                            db.add(Auth(**AuthModel(id=id, email=email, password=password, active=True).model_dump()))
+                        await db.commit()
+
+                        user = await Users.get_user_by_id(id, db=db)
+                        if not user:
+                            user = await Users.insert_new_user(
+                                id, name, email, profile_image_url, role, oauth=oauth, db=db
+                            )
+                        else:
+                            await Users.update_user_by_id(
+                                id,
+                                {'email': email, 'name': name, 'profile_image_url': profile_image_url},
+                                db=db,
+                            )
+
+                        return user
+                    except Exception as recovery_err:
+                        log.error(f'Failed to recover from duplicate auth ID: {str(recovery_err)}')
+                        return None
+                else:
+                    log.error(f'Failed to insert auth: {str(e)}')
+                    return None
 
     async def authenticate_user(
         self, email: str, verify_password: callable, db: Optional[AsyncSession] = None
