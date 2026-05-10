@@ -72,6 +72,7 @@ from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    PROFILE_IMAGE_ALLOWED_MIME_TYPES,
     WEBUI_NAME,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
@@ -1454,17 +1455,30 @@ class OAuthManager:
                     'Authorization': f'Bearer {access_token}',
                 }
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(picture_url, **get_kwargs, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
-                    if resp.ok:
-                        picture = await resp.read()
-                        base64_encoded_picture = base64.b64encode(picture).decode('utf-8')
-                        guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                        if guessed_mime_type is None:
-                            guessed_mime_type = 'image/jpeg'
-                        return f'data:{guessed_mime_type};base64,{base64_encoded_picture}'
-                    else:
+                async with session.get(
+                    picture_url,
+                    **get_kwargs,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                ) as resp:
+                    if not resp.ok:
                         log.warning(f'Failed to fetch profile picture from {picture_url}')
                         return '/user.png'
+
+                    # Use upstream Content-Type (not URL extension) and gate against
+                    # the same allowlist the serving endpoint enforces — keeps SVG
+                    # / unknown MIME types out of profile_image_url at ingestion.
+                    upstream_mime = (resp.headers.get('Content-Type', '') or '').split(';', 1)[0].strip().lower()
+                    if upstream_mime not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                        log.warning(
+                            f"Rejected OAuth profile picture from {picture_url}: "
+                            f"MIME {upstream_mime!r} not in allowlist"
+                        )
+                        return '/user.png'
+
+                    picture = await resp.read()
+                    base64_encoded_picture = base64.b64encode(picture).decode('utf-8')
+                    return f'data:{upstream_mime};base64,{base64_encoded_picture}'
         except Exception as e:
             log.error(f"Error processing profile picture '{picture_url}': {e}")
             return '/user.png'

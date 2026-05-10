@@ -265,6 +265,14 @@ class UsersTable:
         oauth: Optional[dict] = None,
         db: Optional[AsyncSession] = None,
     ) -> Optional[UserModel]:
+        # Storage-layer gate: same allowlist the form validators apply, so any
+        # write path that bypasses Pydantic forms (OAuth signup, LDAP, etc.)
+        # cannot land an SVG / unknown-MIME data URI in the column.
+        try:
+            profile_image_url = validate_profile_image_url(profile_image_url)
+        except Exception:
+            profile_image_url = '/user.png'
+
         async with get_async_db_context(db) as db:
             user = UserModel(
                 **{
@@ -597,6 +605,11 @@ class UsersTable:
         self, id: str, profile_image_url: str, db: Optional[AsyncSession] = None
     ) -> Optional[UserModel]:
         try:
+            # Storage-layer gate: enforce the same allowlist the Pydantic
+            # form validators apply, so any write path that bypasses the
+            # form layer (e.g. OAuth) cannot land an SVG / unknown-MIME
+            # data URI in the column.
+            profile_image_url = validate_profile_image_url(profile_image_url)
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
