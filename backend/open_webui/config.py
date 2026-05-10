@@ -1171,6 +1171,56 @@ OPENAI_API_CONFIGS = PersistentConfig(
     {},
 )
 
+####################################
+# OPENCLAW_GATEWAY
+####################################
+
+ENABLE_OPENCLAW_GATEWAY = PersistentConfig(
+    'ENABLE_OPENCLAW_GATEWAY',
+    'openclaw.enable',
+    os.environ.get('ENABLE_OPENCLAW_GATEWAY', 'False').lower() == 'true',
+)
+
+OPENCLAW_GATEWAY_URL = PersistentConfig(
+    'OPENCLAW_GATEWAY_URL',
+    'openclaw.gateway_url',
+    os.environ.get('OPENCLAW_GATEWAY_URL', 'ws://127.0.0.1:18789'),
+)
+
+OPENCLAW_GATEWAY_TOKEN = PersistentConfig(
+    'OPENCLAW_GATEWAY_TOKEN',
+    'openclaw.gateway_token',
+    os.environ.get('OPENCLAW_GATEWAY_TOKEN', ''),
+)
+
+OPENCLAW_GATEWAY_CLIENT_ID = PersistentConfig(
+    'OPENCLAW_GATEWAY_CLIENT_ID',
+    'openclaw.client_id',
+    os.environ.get('OPENCLAW_GATEWAY_CLIENT_ID', 'gateway-client'),
+)
+
+OPENCLAW_GATEWAY_CLIENT_MODE = PersistentConfig(
+    'OPENCLAW_GATEWAY_CLIENT_MODE',
+    'openclaw.client_mode',
+    os.environ.get('OPENCLAW_GATEWAY_CLIENT_MODE', 'backend'),
+)
+
+OPENCLAW_GATEWAY_DEVICE_PATH = PersistentConfig(
+    'OPENCLAW_GATEWAY_DEVICE_PATH',
+    'openclaw.device_path',
+    os.environ.get('OPENCLAW_GATEWAY_DEVICE_PATH', str(Path(DATA_DIR) / 'openclaw_gateway_device.json')),
+)
+
+OPENCLAW_ALLOWED_AGENT_IDS = PersistentConfig(
+    'OPENCLAW_ALLOWED_AGENT_IDS',
+    'openclaw.allowed_agent_ids',
+    [
+        agent_id.strip()
+        for agent_id in os.environ.get('OPENCLAW_ALLOWED_AGENT_IDS', '').split(',')
+        if agent_id.strip()
+    ],
+)
+
 # Get the actual OpenAI API key based on the base URL
 OPENAI_API_KEY = ''
 try:

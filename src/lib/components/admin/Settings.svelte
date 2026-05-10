@@ -15,6 +15,7 @@
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
 	import Connections from './Settings/Connections.svelte';
+	import OpenClaw from './Settings/OpenClaw.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
 
@@ -38,6 +39,7 @@
 		selectedTab = [
 			'general',
 			'connections',
+			'openclaw',
 			'models',
 			'evaluations',
 			'integrations',
@@ -108,6 +110,12 @@
 				'proxy',
 				'key'
 			]
+		},
+		{
+			id: 'openclaw',
+			title: 'OpenClaw',
+			route: '/admin/settings/openclaw',
+			keywords: ['openclaw', 'agent', 'gateway', 'multi-agent', 'websocket', 'runtime']
 		},
 		{
 			id: 'models',
@@ -309,6 +317,7 @@
 
 		<!-- {$i18n.t('General')} -->
 		<!-- {$i18n.t('Connections')} -->
+		<!-- {$i18n.t('OpenClaw')} -->
 		<!-- {$i18n.t('Models')} -->
 		<!-- {$i18n.t('Evaluations')} -->
 		<!-- {$i18n.t('Integrations')} -->
@@ -353,6 +362,19 @@
 						>
 							<path
 								d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
+							/>
+						</svg>
+					{:else if tab.id === 'openclaw'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8 1.5a.75.75 0 0 1 .75.75v1.04a4.76 4.76 0 0 1 3.96 3.96h1.04a.75.75 0 0 1 0 1.5h-1.04a4.76 4.76 0 0 1-3.96 3.96v1.04a.75.75 0 0 1-1.5 0v-1.04a4.76 4.76 0 0 1-3.96-3.96H2.25a.75.75 0 0 1 0-1.5h1.04a4.76 4.76 0 0 1 3.96-3.96V2.25A.75.75 0 0 1 8 1.5ZM4.75 8a3.25 3.25 0 1 0 6.5 0 3.25 3.25 0 0 0-6.5 0Zm4.5 0a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Z"
+								clip-rule="evenodd"
 							/>
 						</svg>
 					{:else if tab.id === 'models'}
@@ -517,6 +539,12 @@
 			/>
 		{:else if selectedTab === 'connections'}
 			<Connections
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'openclaw'}
+			<OpenClaw
 				on:save={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}

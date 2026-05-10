@@ -8,6 +8,7 @@ node_modules
 .env
 .env.*
 !.env.example
+.openclaw_probe_device.json
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files

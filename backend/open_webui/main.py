@@ -134,6 +134,14 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # OpenClaw
+    ENABLE_OPENCLAW_GATEWAY,
+    OPENCLAW_GATEWAY_URL,
+    OPENCLAW_GATEWAY_TOKEN,
+    OPENCLAW_GATEWAY_CLIENT_ID,
+    OPENCLAW_GATEWAY_CLIENT_MODE,
+    OPENCLAW_GATEWAY_DEVICE_PATH,
+    OPENCLAW_ALLOWED_AGENT_IDS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -823,6 +831,20 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# OPENCLAW
+#
+########################################
+
+app.state.config.ENABLE_OPENCLAW_GATEWAY = ENABLE_OPENCLAW_GATEWAY
+app.state.config.OPENCLAW_GATEWAY_URL = OPENCLAW_GATEWAY_URL
+app.state.config.OPENCLAW_GATEWAY_TOKEN = OPENCLAW_GATEWAY_TOKEN
+app.state.config.OPENCLAW_GATEWAY_CLIENT_ID = OPENCLAW_GATEWAY_CLIENT_ID
+app.state.config.OPENCLAW_GATEWAY_CLIENT_MODE = OPENCLAW_GATEWAY_CLIENT_MODE
+app.state.config.OPENCLAW_GATEWAY_DEVICE_PATH = OPENCLAW_GATEWAY_DEVICE_PATH
+app.state.config.OPENCLAW_ALLOWED_AGENT_IDS = OPENCLAW_ALLOWED_AGENT_IDS
 
 ########################################
 #
@@ -2367,6 +2389,7 @@ async def get_app_config(request: Request):
             **(
                 {
                     'enable_direct_connections': app.state.config.ENABLE_DIRECT_CONNECTIONS,
+                    'enable_openclaw_gateway': app.state.config.ENABLE_OPENCLAW_GATEWAY,
                     'enable_folders': app.state.config.ENABLE_FOLDERS,
                     'folder_max_file_count': app.state.config.FOLDER_MAX_FILE_COUNT,
                     'enable_channels': app.state.config.ENABLE_CHANNELS,

@@ -398,6 +398,25 @@ class ChatTable:
         except Exception:
             return None
 
+    async def update_chat_meta_by_id(
+        self, id: str, meta: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                chat_item = await db.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                chat_item.meta = self._clean_null_bytes(meta or {})
+                chat_item.updated_at = int(time.time())
+
+                await db.commit()
+                await db.refresh(chat_item)
+
+                return ChatModel.model_validate(chat_item)
+        except Exception:
+            return None
+
     async def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:

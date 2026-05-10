@@ -128,13 +128,13 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
-export type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel | OpenClawModel;
 
 type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'arena';
+	owned_by: 'ollama' | 'openai' | 'arena' | 'openclaw';
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -166,6 +166,17 @@ export interface OllamaModel extends BaseModel {
 			quantization_level?: string;
 		};
 		urls?: number[];
+	};
+}
+
+export interface OpenClawModel extends BaseModel {
+	owned_by: 'openclaw';
+	connection_type?: string;
+	openclaw?: {
+		agent_id?: string;
+		workspace?: string;
+		runtime?: Record<string, unknown>;
+		model?: Record<string, unknown>;
 	};
 }
 

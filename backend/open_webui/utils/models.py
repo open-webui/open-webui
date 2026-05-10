@@ -23,6 +23,7 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.openclaw import fetch_openclaw_models
 
 
 from open_webui.config import (
@@ -72,10 +73,17 @@ async def get_all_base_models(request: Request, user: UserModel = None):
         else asyncio.sleep(0, result=[])
     )
     function_task = get_function_models(request)
+    openclaw_task = (
+        fetch_openclaw_models(request)
+        if getattr(request.app.state.config, 'ENABLE_OPENCLAW_GATEWAY', False)
+        else asyncio.sleep(0, result=[])
+    )
 
-    openai_models, ollama_models, function_models = await asyncio.gather(openai_task, ollama_task, function_task)
+    openai_models, ollama_models, function_models, openclaw_models = await asyncio.gather(
+        openai_task, ollama_task, function_task, openclaw_task
+    )
 
-    return function_models + openai_models + ollama_models
+    return function_models + openclaw_models + openai_models + ollama_models
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
@@ -385,6 +393,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
 
 async def check_model_access(user, model, db=None):
+    if model.get('owned_by') == 'openclaw':
+        return
+
     if model.get('arena'):
         meta = model.get('info', {}).get('meta', {})
         access_grants = meta.get('access_grants', [])
@@ -423,6 +434,8 @@ async def get_filtered_models(models, user, db=None):
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         model_infos = {}
         for model in models:
+            if model.get('owned_by') == 'openclaw':
+                continue
             if model.get('arena'):
                 continue
             info = model.get('info')
@@ -443,6 +456,10 @@ async def get_filtered_models(models, user, db=None):
 
         filtered_models = []
         for model in models:
+            if model.get('owned_by') == 'openclaw':
+                filtered_models.append(model)
+                continue
+
             if model.get('arena'):
                 meta = model.get('info', {}).get('meta', {})
                 access_grants = meta.get('access_grants', [])

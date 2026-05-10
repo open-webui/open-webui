@@ -1,7 +1,7 @@
 import logging
 import copy
 from fastapi import APIRouter, Depends, Request, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 import aiohttp
 
 from typing import Optional
@@ -81,6 +81,58 @@ async def get_connections_config(request: Request, user=Depends(get_admin_user))
     return {
         'ENABLE_DIRECT_CONNECTIONS': request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
         'ENABLE_BASE_MODELS_CACHE': request.app.state.config.ENABLE_BASE_MODELS_CACHE,
+    }
+
+
+class OpenClawGatewayConfigForm(BaseModel):
+    ENABLE_OPENCLAW_GATEWAY: bool
+    OPENCLAW_GATEWAY_URL: str
+    OPENCLAW_GATEWAY_TOKEN: Optional[str] = ''
+    OPENCLAW_GATEWAY_CLIENT_ID: Optional[str] = 'gateway-client'
+    OPENCLAW_GATEWAY_CLIENT_MODE: Optional[str] = 'backend'
+    OPENCLAW_GATEWAY_DEVICE_PATH: Optional[str] = ''
+    OPENCLAW_ALLOWED_AGENT_IDS: Optional[list[str]] = Field(default_factory=list)
+
+
+@router.get('/openclaw', response_model=OpenClawGatewayConfigForm)
+async def get_openclaw_gateway_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        'ENABLE_OPENCLAW_GATEWAY': request.app.state.config.ENABLE_OPENCLAW_GATEWAY,
+        'OPENCLAW_GATEWAY_URL': request.app.state.config.OPENCLAW_GATEWAY_URL,
+        'OPENCLAW_GATEWAY_TOKEN': request.app.state.config.OPENCLAW_GATEWAY_TOKEN,
+        'OPENCLAW_GATEWAY_CLIENT_ID': request.app.state.config.OPENCLAW_GATEWAY_CLIENT_ID,
+        'OPENCLAW_GATEWAY_CLIENT_MODE': request.app.state.config.OPENCLAW_GATEWAY_CLIENT_MODE,
+        'OPENCLAW_GATEWAY_DEVICE_PATH': request.app.state.config.OPENCLAW_GATEWAY_DEVICE_PATH,
+        'OPENCLAW_ALLOWED_AGENT_IDS': request.app.state.config.OPENCLAW_ALLOWED_AGENT_IDS,
+    }
+
+
+@router.post('/openclaw', response_model=OpenClawGatewayConfigForm)
+async def set_openclaw_gateway_config(
+    request: Request,
+    form_data: OpenClawGatewayConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.ENABLE_OPENCLAW_GATEWAY = form_data.ENABLE_OPENCLAW_GATEWAY
+    request.app.state.config.OPENCLAW_GATEWAY_URL = form_data.OPENCLAW_GATEWAY_URL.strip()
+    request.app.state.config.OPENCLAW_GATEWAY_TOKEN = form_data.OPENCLAW_GATEWAY_TOKEN or ''
+    request.app.state.config.OPENCLAW_GATEWAY_CLIENT_ID = form_data.OPENCLAW_GATEWAY_CLIENT_ID or 'gateway-client'
+    request.app.state.config.OPENCLAW_GATEWAY_CLIENT_MODE = form_data.OPENCLAW_GATEWAY_CLIENT_MODE or 'backend'
+    request.app.state.config.OPENCLAW_GATEWAY_DEVICE_PATH = form_data.OPENCLAW_GATEWAY_DEVICE_PATH or ''
+    request.app.state.config.OPENCLAW_ALLOWED_AGENT_IDS = [
+        agent_id.strip() for agent_id in (form_data.OPENCLAW_ALLOWED_AGENT_IDS or []) if agent_id.strip()
+    ]
+    request.app.state.BASE_MODELS = {}
+    request.app.state.MODELS = {}
+
+    return {
+        'ENABLE_OPENCLAW_GATEWAY': request.app.state.config.ENABLE_OPENCLAW_GATEWAY,
+        'OPENCLAW_GATEWAY_URL': request.app.state.config.OPENCLAW_GATEWAY_URL,
+        'OPENCLAW_GATEWAY_TOKEN': request.app.state.config.OPENCLAW_GATEWAY_TOKEN,
+        'OPENCLAW_GATEWAY_CLIENT_ID': request.app.state.config.OPENCLAW_GATEWAY_CLIENT_ID,
+        'OPENCLAW_GATEWAY_CLIENT_MODE': request.app.state.config.OPENCLAW_GATEWAY_CLIENT_MODE,
+        'OPENCLAW_GATEWAY_DEVICE_PATH': request.app.state.config.OPENCLAW_GATEWAY_DEVICE_PATH,
+        'OPENCLAW_ALLOWED_AGENT_IDS': request.app.state.config.OPENCLAW_ALLOWED_AGENT_IDS,
     }
 
 

@@ -14,16 +14,26 @@
 
 	export let showSetDefault = true;
 
+	$: useAgentLanguage =
+		Boolean($config?.features?.enable_openclaw_gateway) ||
+		$models.some((model) => model?.owned_by === 'openclaw' || model?.id?.startsWith('openclaw:'));
+
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
 		if (hasEmptyModel.length) {
-			toast.error($i18n.t('Choose a model before saving...'));
+			toast.error(
+				useAgentLanguage
+					? $i18n.t('Choose an agent before saving...')
+					: $i18n.t('Choose a model before saving...')
+			);
 			return;
 		}
 		settings.set({ ...$settings, models: selectedModels });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 
-		toast.success($i18n.t('Default model updated'));
+		toast.success(
+			useAgentLanguage ? $i18n.t('Default agent updated') : $i18n.t('Default model updated')
+		);
 	};
 
 	const pinModelHandler = async (modelId) => {
@@ -38,6 +48,12 @@
 		settings.set({ ...$settings, pinnedModels: pinnedModels });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
+
+	$: selectorLabel = useAgentLanguage ? $i18n.t('Select an agent') : $i18n.t('Select a model');
+	$: addLabel = useAgentLanguage ? $i18n.t('Add Agent') : $i18n.t('Add Model');
+	$: removeLabel = useAgentLanguage ? $i18n.t('Remove Agent') : $i18n.t('Remove Model');
+	$: searchLabel = useAgentLanguage ? $i18n.t('Search an agent') : $i18n.t('Search a model');
+	$: setDefaultLabel = useAgentLanguage ? $i18n.t('Set as default agent') : $i18n.t('Set as default');
 
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		const _selectedModels = selectedModels.map((model) =>
@@ -57,7 +73,8 @@
 				<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
 					<Selector
 						id={`${selectedModelIdx}`}
-						placeholder={$i18n.t('Select a model')}
+						placeholder={selectorLabel}
+						searchPlaceholder={searchLabel}
 						items={$models.map((model) => ({
 							value: model.id,
 							label: model.name,
@@ -74,14 +91,14 @@
 					<div
 						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 					>
-						<Tooltip content={$i18n.t('Add Model')}>
+						<Tooltip content={addLabel}>
 							<button
 								class=" "
 								{disabled}
 								on:click={() => {
 									selectedModels = [...selectedModels, ''];
 								}}
-								aria-label="Add Model"
+								aria-label={addLabel}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -100,14 +117,14 @@
 					<div
 						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 					>
-						<Tooltip content={$i18n.t('Remove Model')}>
+						<Tooltip content={removeLabel}>
 							<button
 								{disabled}
 								on:click={() => {
 									selectedModels.splice(selectedModelIdx, 1);
 									selectedModels = selectedModels;
 								}}
-								aria-label="Remove Model"
+								aria-label={removeLabel}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -132,6 +149,6 @@
 	<div
 		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
 	>
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
+		<button on:click={saveDefaultModel}> {setDefaultLabel}</button>
 	</div>
 {/if}
