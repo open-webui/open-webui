@@ -271,7 +271,7 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
             sum(get_message_content_length(m) for m in history_user_messages) / len(history_user_messages)
             if history_user_messages
             else 0
-        )
+    )
 
         average_assistant_message_content_length = (
             sum(get_message_content_length(m) for m in history_assistant_messages) / len(history_assistant_messages)
@@ -1404,6 +1404,19 @@ class ChatAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
+async def _get_shared_chat_access_target(id: str, db: AsyncSession):
+    chat = await Chats.get_chat_by_id(id, db=db)
+    if chat:
+        return chat, chat.id
+
+    shared = await SharedChats.get_by_id(id, db=db)
+    if not shared:
+        return None, None
+
+    chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
+    return chat, shared.chat_id
+
+
 @router.post('/shared/{id}/access/update', response_model=Optional[ChatResponse])
 async def update_shared_chat_access_by_id(
     request: Request,
@@ -1412,7 +1425,7 @@ async def update_shared_chat_access_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat, access_resource_id = await _get_shared_chat_access_target(id, db=db)
     if not chat:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1431,9 +1444,9 @@ async def update_shared_chat_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_chats',
-    )
+        )
 
-    await AccessGrants.set_access_grants('shared_chat', id, form_data.access_grants, db=db)
+    await AccessGrants.set_access_grants('shared_chat', access_resource_id, form_data.access_grants, db=db)
 
     return ChatResponse(**chat.model_dump())
 
@@ -1449,7 +1462,7 @@ async def get_shared_chat_access_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat, access_resource_id = await _get_shared_chat_access_target(id, db=db)
     if not chat:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1462,7 +1475,7 @@ async def get_shared_chat_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    grants = await AccessGrants.get_grants_by_resource('shared_chat', id, db=db)
+    grants = await AccessGrants.get_grants_by_resource('shared_chat', access_resource_id, db=db)
     return [
         {
             'id': g.id,
