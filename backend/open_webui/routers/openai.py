@@ -493,38 +493,6 @@ async def get_filtered_models(models, user, db=None):
     return filtered_models
 
 
-async def get_openai_loaded_models(request: Request, models: dict, api_base_urls: list):
-    """
-    Fetch loaded-model state from providers that expose it and annotate
-    each model dict with a ``loaded`` boolean.
-
-    Currently supports:
-      - **llama.cpp** – queries ``GET /slots`` and matches slot model IDs.
-    """
-    api_configs = request.app.state.config.OPENAI_API_CONFIGS
-    api_keys = request.app.state.config.OPENAI_API_KEYS
-
-    for idx, url in enumerate(api_base_urls):
-        api_config = api_configs.get(
-            str(idx),
-            api_configs.get(url, {}),
-        )
-        provider = api_config.get('provider', '')
-
-        if provider == 'llama.cpp':
-            try:
-                root_url = url.rstrip('/').removesuffix('/v1')
-                key = api_keys[idx] if idx < len(api_keys) else None
-                slots = await send_get_request(url=f'{root_url}/slots', key=key)
-                loaded_model_ids = (
-                    {s.get('model') for s in slots if s.get('model')} if isinstance(slots, list) else set()
-                )
-                for model_id, model in models.items():
-                    if model.get('urlIdx') == idx:
-                        model['loaded'] = model_id in loaded_model_ids
-            except Exception as e:
-                log.debug(f'Failed to fetch llama.cpp slots for idx {idx}: {e}')
-
 
 @cached(
     ttl=MODELS_CACHE_TTL,
@@ -580,7 +548,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                         continue
 
                     if model_id and model_id not in models:
-                        models[model_id] = {
+                        merged = {
                             **model,
                             'name': model.get('name', model_id),
                             'owned_by': 'openai',
@@ -590,13 +558,19 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             'urlIdx': idx,
                         }
 
+                        # llama.cpp router mode: derive loaded state from
+                        # the status object returned by GET /v1/models.
+                        status = model.get('status')
+                        if isinstance(status, dict) and 'value' in status:
+                            merged['loaded'] = status['value'] in ('loaded', 'sleeping')
+
+                        models[model_id] = merged
+
         return models
 
     models = get_merged_models(map(extract_data, responses))
     log.debug(f'models: {models}')
 
-    # Fetch loaded state for providers that support it (e.g. llama.cpp /slots)
-    await get_openai_loaded_models(request, models, api_base_urls)
 
     request.app.state.OPENAI_MODELS = models
     return {'data': list(models.values())}
