@@ -39,6 +39,79 @@ log = logging.getLogger(__name__)
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
+    models = raw_ollama_models.get('models', [])
+
+    # Initialize capability cache if it doesn't exist
+    if not hasattr(request.app.state, 'supports_slots'):
+        request.app.state.supports_slots = {}
+
+    url_idxs = {
+        url_idx
+        for model in models
+        if not model.get('expires_at')  # Safer check for missing/null expires_at
+        for url_idx in model.get('urls', [])
+    }
+
+    llama_cpp_loaded_model_ids_by_url_idx = {}
+
+    # Helper for async fetching to allow concurrent execution
+    async def fetch_slots_for_url(url_idx):
+        # Skip if we already know this URL doesn't support /slots (e.g., standard Ollama)
+        if request.app.state.supports_slots.get(url_idx) is False:
+            return url_idx, set()
+
+        url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),
+        )
+
+        loaded_model_ids = set()
+        clean_url = url.rstrip('/')
+
+        try:
+            slots = await ollama.send_get_request(
+                f'{clean_url}/slots',
+                api_config.get('key', None),
+                user=user,
+            )
+
+            # If request succeeds, remember that this backend supports /slots
+            request.app.state.supports_slots[url_idx] = True
+
+            prefix_id = api_config.get('prefix_id', None)
+
+            if isinstance(slots, list):
+                for slot in slots:
+                    slot_model_id = slot.get('model')
+                    if slot_model_id:
+                        loaded_model_ids.add(slot_model_id)
+                        if prefix_id:
+                            loaded_model_ids.add(f'{prefix_id}.{slot_model_id}')
+
+        except Exception as e:
+            # 404 means it's likely standard Ollama. Cache the failure to prevent network spam.
+            if "404" in str(e):
+                request.app.state.supports_slots[url_idx] = False
+            else:
+                log.debug(f'Failed to fetch llama.cpp slots for idx {url_idx}: {e}')
+
+        return url_idx, loaded_model_ids
+
+    # Fetch all applicable URLs concurrently
+    if url_idxs:
+        results = await asyncio.gather(*[fetch_slots_for_url(idx) for idx in url_idxs])
+        llama_cpp_loaded_model_ids_by_url_idx = dict(results)
+
+    def is_loaded(model):
+        if model.get('expires_at'):
+            return True
+
+        return any(
+            model['model'] in llama_cpp_loaded_model_ids_by_url_idx.get(url_idx, set())
+            for url_idx in model.get('urls', [])
+        )
+
     return [
         {
             'id': model['model'],
@@ -47,11 +120,11 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
             'created': int(time.time()),
             'owned_by': 'ollama',
             'ollama': model,
-            'loaded': 'expires_at' in model,
+            'loaded': is_loaded(model),
             'connection_type': model.get('connection_type', 'local'),
             'tags': model.get('tags', []),
         }
-        for model in raw_ollama_models['models']
+        for model in models
     ]
 
 
