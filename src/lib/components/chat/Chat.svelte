@@ -2820,7 +2820,7 @@
 	};
 
 	const saveControls = async () => {
-		if (!$chatId || $temporaryChatEnabled) return;
+		if (loading || !$chatId || $temporaryChatEnabled) return;
 		await updateChatById(localStorage.token, $chatId, { params, files: chatFiles }).catch((err) =>
 			console.error('[controls autosave]', err)
 		);
