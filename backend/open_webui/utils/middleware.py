@@ -30,6 +30,8 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
 from open_webui.models.users import Users
+from open_webui.models.files import Files
+from open_webui.models.knowledge import Knowledges
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
@@ -2250,6 +2252,31 @@ def strip_skill_mentions(messages: list[dict]) -> None:
                         part['text'] = strip_re.sub('', text).strip()
 
 
+async def _filter_accessible_folder_files(entries, user) -> list:
+    """Drop folder.data['files'] entries the caller can't read. Admins bypass."""
+    if user.role == 'admin':
+        return list(entries) if entries else []
+
+    allowed = []
+    for entry in entries or []:
+        if not isinstance(entry, dict):
+            continue
+        entry_id = entry.get('id')
+        entry_type = entry.get('type')
+        if not entry_id:
+            allowed.append(entry)
+            continue
+        if entry_type == 'file':
+            if await Files.check_access_by_user_id(entry_id, user.id, 'read'):
+                allowed.append(entry)
+        elif entry_type == 'collection':
+            if await Knowledges.check_access_by_user_id(entry_id, user.id, 'read'):
+                allowed.append(entry)
+        else:
+            allowed.append(entry)
+    return allowed
+
+
 async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
@@ -2407,15 +2434,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if 'system_prompt' in folder.data:
                 form_data = await apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
             if 'files' in folder.data:
+                # Defensive: filter to files the caller still has read access to.
+                allowed_files = await _filter_accessible_folder_files(folder.data['files'], user)
                 if metadata.get('params', {}).get('function_calling') != 'native':
                     form_data['files'] = [
-                        *folder.data['files'],
+                        *allowed_files,
                         *form_data.get('files', []),
                     ]
                 else:
                     # Native FC: skip RAG injection, builtin tools
                     # will read folder knowledge from metadata.
-                    metadata['folder_knowledge'] = folder.data['files']
+                    metadata['folder_knowledge'] = allowed_files
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data['messages'])

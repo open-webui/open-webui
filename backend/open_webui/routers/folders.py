@@ -173,6 +173,29 @@ async def update_folder_name_by_id(
                     detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
                 )
 
+        # Validate read access to every file/collection the caller attaches:
+        # folder.data['files'] is consumed by chat middleware as RAG context.
+        if form_data.data and isinstance(form_data.data.get('files'), list) and user.role != 'admin':
+            for entry in form_data.data['files']:
+                if not isinstance(entry, dict):
+                    continue
+                entry_id = entry.get('id')
+                entry_type = entry.get('type')
+                if not entry_id:
+                    continue
+                if entry_type == 'file':
+                    if not await Files.check_access_by_user_id(entry_id, user.id, 'read', db=db):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                        )
+                elif entry_type == 'collection':
+                    if not await Knowledges.check_access_by_user_id(entry_id, user.id, 'read', db=db):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                        )
+
         try:
             folder = await Folders.update_folder_by_id_and_user_id(id, user.id, form_data, db=db)
             return folder
