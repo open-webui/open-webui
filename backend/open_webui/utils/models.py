@@ -73,6 +73,8 @@ async def get_all_base_models(request: Request, user: UserModel = None):
         else asyncio.sleep(0, result=[])
     )
     function_task = get_function_models(request)
+    # OpenClaw 复用 OpenWebUI 现有的 model catalog 管道，把 Agent 映射成一种特殊 model，
+    # 这样前端的大部分选择器、权限检查和缓存逻辑都不用重写。
     openclaw_task = (
         fetch_openclaw_models(request)
         if getattr(request.app.state.config, 'ENABLE_OPENCLAW_GATEWAY', False)

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { models } from '$lib/stores';
+	import { config, models } from '$lib/stores';
+	import { getOpenClawConfig } from '$lib/apis/configs';
 	import { getModelAnalytics } from '$lib/apis/analytics';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -13,6 +14,15 @@
 	let loading = true;
 	let orderBy = 'count';
 	let direction: 'asc' | 'desc' = 'desc';
+	let openClawEnabled = false;
+
+	$: useAgentLanguage =
+		openClawEnabled ||
+		Boolean($config?.features?.enable_openclaw_gateway) ||
+		$models.some((model) => model?.owned_by === 'openclaw' || model?.id?.startsWith('openclaw:'));
+
+	$: analyticsEntityLabel = useAgentLanguage ? $i18n.t('Agent') : $i18n.t('Model');
+	$: analyticsUsageLabel = useAgentLanguage ? $i18n.t('Agent Usage') : $i18n.t('Model Usage');
 
 	const toggleSort = (key: string) => {
 		if (orderBy === key) {
@@ -48,14 +58,23 @@
 
 	$: totalMessages = modelStats.reduce((sum, m) => sum + m.count, 0);
 
-	onMount(loadAnalytics);
+	onMount(async () => {
+		try {
+			const res = await getOpenClawConfig(localStorage.token);
+			openClawEnabled = Boolean(res?.ENABLE_OPENCLAW_GATEWAY);
+		} catch (err) {
+			console.error('OpenClaw config load failed:', err);
+		}
+
+		loadAnalytics();
+	});
 </script>
 
 <div
 	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 >
 	<div class="flex items-center text-xl font-medium px-0.5 gap-2 shrink-0">
-		{$i18n.t('Model Usage')}
+		{analyticsUsageLabel}
 		<span class="text-lg text-gray-500">{totalMessages} {$i18n.t('messages')}</span>
 	</div>
 </div>
@@ -88,7 +107,7 @@
 						on:click={() => toggleSort('name')}
 					>
 						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Model')}
+							{analyticsEntityLabel}
 							{#if orderBy === 'name'}
 								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
 										className="size-2"

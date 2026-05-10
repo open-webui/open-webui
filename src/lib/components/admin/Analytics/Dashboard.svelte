@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { models } from '$lib/stores';
+	import { config, models } from '$lib/stores';
+	import { getOpenClawConfig } from '$lib/apis/configs';
 	import {
 		getSummary,
 		getModelAnalytics,
@@ -69,6 +70,15 @@
 	// Selected model for drill-down
 	let selectedModel: { id: string; name: string } | null = null;
 	let showModelModal = false;
+	let openClawEnabled = false;
+
+	$: useAgentLanguage =
+		openClawEnabled ||
+		Boolean($config?.features?.enable_openclaw_gateway) ||
+		$models.some((model) => model?.owned_by === 'openclaw' || model?.id?.startsWith('openclaw:'));
+
+	$: analyticsEntityLabel = useAgentLanguage ? $i18n.t('Agent') : $i18n.t('Model');
+	$: analyticsUsageLabel = useAgentLanguage ? $i18n.t('Agent Usage') : $i18n.t('Model Usage');
 
 	// Sorting
 	let modelOrderBy = 'count';
@@ -151,6 +161,13 @@
 			groups = res ?? [];
 		} catch (e) {
 			console.error('Failed to load groups:', e);
+		}
+
+		try {
+			const res = await getOpenClawConfig(localStorage.token);
+			openClawEnabled = Boolean(res?.ENABLE_OPENCLAW_GATEWAY);
+		} catch (e) {
+			console.error('Failed to load OpenClaw config:', e);
 		}
 	});
 
@@ -296,7 +313,7 @@
 		<!-- Model Usage Table -->
 		<div>
 			<div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
-				{$i18n.t('Model Usage')}
+				{analyticsUsageLabel}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 				<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
@@ -309,7 +326,7 @@
 								on:click={() => toggleModelSort('name')}
 							>
 								<div class="flex gap-1.5 items-center">
-									{$i18n.t('Model')}
+									{analyticsEntityLabel}
 									{#if modelOrderBy === 'name'}
 										<span class="font-normal">
 											{#if modelDirection === 'asc'}<ChevronUp

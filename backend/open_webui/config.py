@@ -1175,6 +1175,8 @@ OPENAI_API_CONFIGS = PersistentConfig(
 # OPENCLAW_GATEWAY
 ####################################
 
+# 这一组配置把 OpenClaw Gateway 视为一个外部 Agent 编排后端。
+# OpenWebUI 自己不再决定底层模型，只负责保存接入地址、鉴权信息和可见 Agent 范围。
 ENABLE_OPENCLAW_GATEWAY = PersistentConfig(
     'ENABLE_OPENCLAW_GATEWAY',
     'openclaw.enable',

@@ -83,6 +83,8 @@ def load_or_create_device_identity(path: str) -> DeviceIdentity:
                 private_key_pem=data["private_key_pem"],
             )
 
+    # 探针脚本也要复用稳定 device identity，否则每次运行都会被 Gateway 视为新设备，
+    # 需要重复走 pairing 审批，无法真实验证后续后端接入流程。
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
     raw_public_key = public_key.public_bytes(
@@ -247,6 +249,8 @@ class OpenClawGatewayProbe:
         nonce = str(challenge_payload.get("nonce") or "")
         signed_at_ms = int(time.time() * 1000)
         device = load_or_create_device_identity(self.device_path)
+        # 这里严格按 Gateway v4 的 challenge/签名协议组装 connect 请求，
+        # 目的是先把协议摸清，再把同一套握手逻辑搬进 OpenWebUI 后端。
         signature_payload = build_device_auth_payload_v3(
             device_id=device.device_id,
             client_id=self.client_id,

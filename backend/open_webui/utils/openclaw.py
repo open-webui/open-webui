@@ -70,6 +70,8 @@ def load_or_create_device_identity(path: str) -> OpenClawDeviceIdentity:
             private_key_pem=data['private_key_pem'],
         )
 
+    # Gateway 的设备配对是“设备身份”维度，不是单纯 token 维度。
+    # 这里把本地 backend 伪装成一个稳定设备，后续重启后仍能复用同一份配对授权。
     device_path.parent.mkdir(parents=True, exist_ok=True)
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
@@ -173,6 +175,8 @@ class OpenClawGatewayClient:
             signed_at_ms = int(time.time() * 1000)
             identity = load_or_create_device_identity(self.config['device_path'])
             scopes = OPENCLAW_DEFAULT_SCOPES
+            # OpenClaw Gateway v4 连接不是“带 token 直连”而是 challenge + 设备签名双重校验。
+            # token 负责声明是谁，device signature 负责声明“这台被批准过的设备就是我”。
             signature_payload = build_device_auth_payload_v3(
                 device_id=identity.device_id,
                 client_id=self.config['client_id'],
@@ -309,6 +313,8 @@ async def fetch_openclaw_models(request: Request) -> list[dict[str, Any]]:
         if not agent_id:
             continue
         model = agent.get('model') if isinstance(agent.get('model'), dict) else {}
+        # 把 OpenClaw Agent 包装成 OpenWebUI 可识别的 model 结构，
+        # 这样前端现有“选模型”链路可以最小代价切换成“选 Agent”。
         models.append(
             {
                 'id': model_id_from_agent_id(agent_id),
@@ -373,6 +379,8 @@ async def _get_or_create_openclaw_session_key(
         if chat and chat.user_id == user_id:
             meta = chat.meta or {}
             sessions = meta.get('openclaw_sessions') or {}
+            # 这里把 OpenClaw 返回的 session key 固化到当前 chat 的 meta 中。
+            # 隔离粒度是“当前 OpenWebUI chat + 当前 agent/model”，避免不同会话串用上下文。
             sessions[model_id] = {
                 'agent_id': agent_id,
                 'key': key,
@@ -449,6 +457,8 @@ async def generate_openclaw_chat_completion(request: Request, form_data: dict, u
                 if payload.get('sessionKey') and payload.get('sessionKey') != session_key:
                     continue
 
+                # OpenWebUI 前端消费的是 OpenAI 风格 SSE；
+                # 这里把 OpenClaw 的 agent/chat/session 事件流翻译成兼容 chunk。
                 if event_name == 'agent' and payload.get('stream') == 'assistant':
                     delta = (payload.get('data') or {}).get('delta')
                     if delta:

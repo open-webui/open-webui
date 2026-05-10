@@ -122,6 +122,8 @@ async def set_openclaw_gateway_config(
     request.app.state.config.OPENCLAW_ALLOWED_AGENT_IDS = [
         agent_id.strip() for agent_id in (form_data.OPENCLAW_ALLOWED_AGENT_IDS or []) if agent_id.strip()
     ]
+    # OpenClaw Agent 会以“模型列表”的形式注入到前端，所以配置变更后需要清空缓存，
+    # 避免管理员刚更新 Gateway 或允许列表，前端仍看到旧的 Agent 集合。
     request.app.state.BASE_MODELS = {}
     request.app.state.MODELS = {}
 

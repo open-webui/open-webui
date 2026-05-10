@@ -14,6 +14,8 @@
 
 	export let showSetDefault = true;
 
+	// 这里用“配置开关 + 实际模型池内容”双判定。
+	// 原因是前端初次加载时，配置和模型列表的返回时序可能不同，只靠其中一个条件会导致入口文案闪回到“模型”。
 	$: useAgentLanguage =
 		Boolean($config?.features?.enable_openclaw_gateway) ||
 		$models.some((model) => model?.owned_by === 'openclaw' || model?.id?.startsWith('openclaw:'));
