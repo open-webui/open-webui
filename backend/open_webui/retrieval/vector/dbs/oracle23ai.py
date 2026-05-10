@@ -518,6 +518,7 @@ class Oracle23aiClient(VectorDBBase):
         vectors: List[List[Union[float, int]]],
         filter: Optional[dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         """
         Search for similar vectors in the database.

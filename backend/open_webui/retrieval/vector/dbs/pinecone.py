@@ -354,6 +354,7 @@ class PineconeClient(VectorDBBase):
         vectors: List[List[Union[float, int]]],
         filter: Optional[dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         """Search for similar vectors in a collection."""
         if not vectors or not vectors[0]:

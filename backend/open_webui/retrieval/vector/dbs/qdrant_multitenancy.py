@@ -16,7 +16,14 @@ from open_webui.config import (
     QDRANT_COLLECTION_PREFIX,
     QDRANT_TIMEOUT,
     QDRANT_HNSW_M,
+    QDRANT_HYBRID_SEARCH_ENABLED,
+    QDRANT_SPARSE_EMBEDDING_MODEL,
+    QDRANT_DENSE_VECTOR_NAME,
+    QDRANT_SPARSE_VECTOR_NAME,
+    QDRANT_HYBRID_SEARCH_FUSION_TYPE,
+    QDRANT_SPARSE_ON_DISK,
 )
+
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -25,8 +32,15 @@ from open_webui.retrieval.vector.main import (
 )
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.exceptions import UnexpectedResponse
-from qdrant_client.http.models import PointStruct
+from qdrant_client.http.models import PointStruct, SparseVector
 from qdrant_client.models import models
+
+try:
+    from fastembed.sparse import SparseTextEmbedding
+
+    FASTEMBED_AVAILABLE = True
+except ImportError:
+    FASTEMBED_AVAILABLE = False
 
 NO_LIMIT = 999999999
 TENANT_ID_FIELD = 'tenant_id'
@@ -53,6 +67,12 @@ class QdrantClient(VectorDBBase):
         self.GRPC_PORT = QDRANT_GRPC_PORT
         self.QDRANT_TIMEOUT = QDRANT_TIMEOUT
         self.QDRANT_HNSW_M = QDRANT_HNSW_M
+        self.QDRANT_HYBRID_SEARCH_ENABLED = QDRANT_HYBRID_SEARCH_ENABLED
+        self.QDRANT_SPARSE_EMBEDDING_MODEL = QDRANT_SPARSE_EMBEDDING_MODEL
+        self.QDRANT_DENSE_VECTOR_NAME = QDRANT_DENSE_VECTOR_NAME
+        self.QDRANT_SPARSE_VECTOR_NAME = QDRANT_SPARSE_VECTOR_NAME
+        self.QDRANT_HYBRID_SEARCH_FUSION_TYPE = QDRANT_HYBRID_SEARCH_FUSION_TYPE
+        self.QDRANT_SPARSE_ON_DISK = QDRANT_SPARSE_ON_DISK
 
         if not self.QDRANT_URI:
             raise ValueError('QDRANT_URI is not set. Please configure it in the environment variables.')
@@ -85,6 +105,42 @@ class QdrantClient(VectorDBBase):
         self.FILE_COLLECTION = f'{self.collection_prefix}_files'
         self.WEB_SEARCH_COLLECTION = f'{self.collection_prefix}_web-search'
         self.HASH_BASED_COLLECTION = f'{self.collection_prefix}_hash-based'
+
+        # Initialize sparse encoder if hybrid search is enabled
+        self.sparse_encoder = None
+        if self.QDRANT_HYBRID_SEARCH_ENABLED:
+            if FASTEMBED_AVAILABLE:
+                try:
+                    self.sparse_encoder = SparseTextEmbedding(model_name=self.QDRANT_SPARSE_EMBEDDING_MODEL)
+                    log.info(f'Hybrid search enabled with sparse model: {self.QDRANT_SPARSE_EMBEDDING_MODEL}')
+                except Exception as e:
+                    log.warning(f'Failed to load sparse encoder, hybrid search disabled: {e}')
+            else:
+                log.warning(
+                    "fastembed not installed, hybrid search disabled. Install with: pip install 'fastembed>=0.6.1'"
+                )
+    @property
+    def _hybrid_enabled(self) -> bool:
+        return self.QDRANT_HYBRID_SEARCH_ENABLED and self.sparse_encoder is not None
+
+    def _is_hybrid_collection(self, mt_collection_name: str) -> bool:
+        """Check if an existing collection has sparse vectors (i.e. was created as hybrid)."""
+        try:
+            info = self.client.get_collection(mt_collection_name)
+            return bool(info.config.params.sparse_vectors)
+        except Exception:
+            return False
+
+    def _encode_sparse(self, texts: list[str]) -> list[SparseVector]:
+        """Encode texts into sparse vectors using fastembed."""
+        embeddings = list(self.sparse_encoder.embed(texts))
+        return [SparseVector(indices=e.indices.tolist(), values=e.values.tolist()) for e in embeddings]
+
+    def _encode_sparse_query(self, text: str) -> SparseVector:
+        """Encode a query text into a sparse vector."""
+        embeddings = list(self.sparse_encoder.query_embed(text))
+        e = embeddings[0]
+        return SparseVector(indices=e.indices.tolist(), values=e.values.tolist())
 
     def _result_to_get_result(self, points) -> GetResult:
         ids, documents, metadatas = [], [], []
@@ -134,21 +190,46 @@ class QdrantClient(VectorDBBase):
         """
         Creates a collection with multi-tenancy configuration and payload indexes for tenant_id and metadata fields.
         """
-        self.client.create_collection(
-            collection_name=mt_collection_name,
-            vectors_config=models.VectorParams(
-                size=dimension,
-                distance=models.Distance.COSINE,
-                on_disk=self.QDRANT_ON_DISK,
-            ),
-            # Disable global index building due to multitenancy
-            # For more details https://qdrant.tech/documentation/guides/multiple-partitions/#calibrate-performance
-            hnsw_config=models.HnswConfigDiff(
-                payload_m=self.QDRANT_HNSW_M,
-                m=0,
-            ),
-        )
-        log.info(f'Multi-tenant collection {mt_collection_name} created with dimension {dimension}!')
+        if self._hybrid_enabled:
+            self.client.create_collection(
+                collection_name=mt_collection_name,
+                vectors_config={
+                    self.QDRANT_DENSE_VECTOR_NAME: models.VectorParams(
+                        size=dimension,
+                        distance=models.Distance.COSINE,
+                        on_disk=self.QDRANT_ON_DISK,
+                    )
+                },
+                sparse_vectors_config={
+                    self.QDRANT_SPARSE_VECTOR_NAME: models.SparseVectorParams(
+                        index=models.SparseIndexParams(on_disk=self.QDRANT_SPARSE_ON_DISK)
+                    )
+                },
+                hnsw_config=models.HnswConfigDiff(
+                    payload_m=self.QDRANT_HNSW_M,
+                    m=0,
+                ),
+            )
+            log.info(
+                f'Multi-tenant hybrid collection {mt_collection_name} created with '
+                f'dense ({dimension} dims) + sparse vectors'
+            )
+        else:
+            self.client.create_collection(
+                collection_name=mt_collection_name,
+                vectors_config=models.VectorParams(
+                    size=dimension,
+                    distance=models.Distance.COSINE,
+                    on_disk=self.QDRANT_ON_DISK,
+                ),
+                # Disable global index building due to multitenancy
+                # For more details https://qdrant.tech/documentation/guides/multiple-partitions/#calibrate-performance
+                hnsw_config=models.HnswConfigDiff(
+                    payload_m=self.QDRANT_HNSW_M,
+                    m=0,
+                ),
+            )
+            log.info(f'Multi-tenant collection {mt_collection_name} created with dimension {dimension}')
 
         self.client.create_payload_index(
             collection_name=mt_collection_name,
@@ -170,22 +251,60 @@ class QdrantClient(VectorDBBase):
                 ),
             )
 
-    def _create_points(self, items: List[VectorItem], tenant_id: str) -> List[PointStruct]:
+    def _create_points(
+        self, items: list[VectorItem], tenant_id: str, collection_is_hybrid: bool = False
+    ) -> list[PointStruct]:
         """
         Create point structs from vector items with tenant ID.
+        Uses named vectors when collection_is_hybrid is True.
+        If hybrid is also enabled in config, adds sparse vectors; otherwise dense-only named vector.
         """
-        return [
-            PointStruct(
-                id=item['id'],
-                vector=item['vector'],
-                payload={
-                    'text': item['text'],
-                    'metadata': item['metadata'],
-                    TENANT_ID_FIELD: tenant_id,
-                },
-            )
-            for item in items
-        ]
+        if collection_is_hybrid:
+            if self._hybrid_enabled:
+                texts = [item['text'] for item in items]
+                sparse_vectors = self._encode_sparse(texts)
+                return [
+                    PointStruct(
+                        id=item['id'],
+                        vector={
+                            self.QDRANT_DENSE_VECTOR_NAME: item['vector'],
+                            self.QDRANT_SPARSE_VECTOR_NAME: sparse_vec,
+                        },
+                        payload={
+                            'text': item['text'],
+                            'metadata': item['metadata'],
+                            TENANT_ID_FIELD: tenant_id,
+                        },
+                    )
+                    for item, sparse_vec in zip(items, sparse_vectors)
+                ]
+            else:
+                # Collection is hybrid but encoder unavailable — store only dense named vector
+                return [
+                    PointStruct(
+                        id=item['id'],
+                        vector={self.QDRANT_DENSE_VECTOR_NAME: item['vector']},
+                        payload={
+                            'text': item['text'],
+                            'metadata': item['metadata'],
+                            TENANT_ID_FIELD: tenant_id,
+                        },
+                    )
+                    for item in items
+                ]
+        else:
+            return [
+                PointStruct(
+                    id=item['id'],
+                    vector=item['vector'],
+                    payload={
+                        'text': item['text'],
+                        'metadata': item['metadata'],
+                        TENANT_ID_FIELD: tenant_id,
+                    },
+                )
+                for item in items
+            ]
 
     def _ensure_collection(self, mt_collection_name: str, dimension: int = DEFAULT_DIMENSION):
         """
@@ -245,24 +364,63 @@ class QdrantClient(VectorDBBase):
         vectors: List[List[float | int]],
         filter: Optional[Dict] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         """
         Search for the nearest neighbor items based on the vectors with tenant isolation.
+        Uses hybrid search (dense + sparse RRF) when enabled and query is provided.
         """
         if not self.client or not vectors:
             return None
+        if limit is None:
+            limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
             log.debug(f"Collection {mt_collection} doesn't exist, search returns None")
             return None
 
         tenant_filter = _tenant_filter(tenant_id)
-        query_response = self.client.query_points(
-            collection_name=mt_collection,
-            query=vectors[0],
-            limit=limit,
-            query_filter=models.Filter(must=[tenant_filter]),
-        )
+        combined_filter = models.Filter(must=[tenant_filter])
+
+        collection_is_hybrid = self._is_hybrid_collection(mt_collection)
+
+        # Hybrid search with server-side fusion (RRF or DBSF)
+        if collection_is_hybrid and self._hybrid_enabled and query:
+            sparse_query = self._encode_sparse_query(query)
+            fusion = (
+                models.Fusion.DBSF
+                if self.QDRANT_HYBRID_SEARCH_FUSION_TYPE == 'dbsf'
+                else models.Fusion.RRF
+            )
+            query_response = self.client.query_points(
+                collection_name=mt_collection,
+                query=models.FusionQuery(fusion=fusion),
+                prefetch=[
+                    models.Prefetch(
+                        query=vectors[0],
+                        using=self.QDRANT_DENSE_VECTOR_NAME,
+                        filter=combined_filter,
+                        limit=limit * 2,
+                    ),
+                    models.Prefetch(
+                        query=sparse_query,
+                        using=self.QDRANT_SPARSE_VECTOR_NAME,
+                        filter=combined_filter,
+                        limit=limit * 2,
+                    ),
+                ],
+                limit=limit,
+            )
+        else:
+            # Dense-only search — use named vector if collection schema requires it
+            query_vector = (self.QDRANT_DENSE_VECTOR_NAME, vectors[0]) if collection_is_hybrid else vectors[0]
+            query_response = self.client.query_points(
+                collection_name=mt_collection,
+                query=query_vector,
+                limit=limit,
+                query_filter=combined_filter,
+            )
+
         get_result = self._result_to_get_result(query_response.points)
         return SearchResult(
             ids=get_result.ids,
@@ -320,7 +478,8 @@ class QdrantClient(VectorDBBase):
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         dimension = len(items[0]['vector'])
         self._ensure_collection(mt_collection, dimension)
-        points = self._create_points(items, tenant_id)
+        collection_is_hybrid = self._is_hybrid_collection(mt_collection)
+        points = self._create_points(items, tenant_id, collection_is_hybrid)
         self.client.upload_points(mt_collection, points)
         return None
 

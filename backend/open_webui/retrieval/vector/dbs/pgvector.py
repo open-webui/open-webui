@@ -401,6 +401,7 @@ class PgvectorClient(VectorDBBase):
         vectors: List[List[float]],
         filter: Optional[Dict[str, Any]] = None,
         limit: int = 10,
+        query: Optional[str] = None,
     ) -> Optional[SearchResult]:
         try:
             if not vectors:
