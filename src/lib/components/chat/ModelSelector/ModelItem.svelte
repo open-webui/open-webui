@@ -30,6 +30,12 @@
 
 	export let onClick: () => void = () => {};
 
+	const isOpenClawModel = (model) =>
+		model?.owned_by === 'openclaw' || model?.id?.startsWith('openclaw:');
+
+	const getVisibleTags = (model) =>
+		(model?.tags ?? []).filter((tag) => tag?.name?.toLowerCase() !== 'openclaw');
+
 	const copyLinkHandler = async (model) => {
 		const baseUrl = window.location.origin;
 		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
@@ -147,11 +153,11 @@
 
 				<!-- {JSON.stringify(item.info)} -->
 
-				{#if (item?.model?.tags ?? []).length > 0}
+				{#if getVisibleTags(item?.model).length > 0}
 					{#key item.model.id}
 						<Tooltip elementId="tags-{item.model.id}">
 							<div slot="tooltip" id="tags-{item.model.id}">
-								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
+								{#each getVisibleTags(item?.model).sort((a, b) => a.name.localeCompare(b.name)) as tag}
 									<Tooltip content={tag.name} className="flex-shrink-0">
 										<div class=" text-xs font-medium rounded-sm uppercase text-white">
 											{tag.name}
@@ -184,7 +190,7 @@
 							</svg>
 						</div>
 					</Tooltip>
-				{:else if item.model.connection_type === 'external'}
+				{:else if item.model.connection_type === 'external' && !isOpenClawModel(item.model)}
 					<Tooltip content={`${$i18n.t('External')}`}>
 						<div class="translate-y-[1px]">
 							<svg

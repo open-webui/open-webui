@@ -131,6 +131,14 @@
 	let selectedTag = '';
 	let selectedConnectionType = '';
 
+	const isOpenClawItem = (item) =>
+		item?.model?.owned_by === 'openclaw' || item?.model?.id?.startsWith('openclaw:');
+
+	const getVisibleTagNames = (item) =>
+		(item?.model?.tags ?? [])
+			.map((tag) => tag.name)
+			.filter((name) => name.toLowerCase() !== 'openclaw');
+
 	let ollamaVersion = null;
 	let selectedModelIdx = 0;
 
@@ -139,7 +147,7 @@
 			const _item = {
 				...item,
 				modelName: item.model?.name,
-				tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
+				tags: getVisibleTagNames(item).join(' '),
 				desc: item.model?.info?.meta?.description
 			};
 			return _item;
@@ -157,7 +165,7 @@
 					const _item = {
 						...item,
 						modelName: item.model?.name,
-						tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
+						tags: getVisibleTagNames(item).join(' '),
 						desc: item.model?.info?.meta?.description
 					};
 					return _item;
@@ -182,8 +190,8 @@
 							return true;
 						}
 
-						return (item.model?.tags ?? [])
-							.map((tag) => tag.name.toLowerCase())
+						return getVisibleTagNames(item)
+							.map((tag) => tag.toLowerCase())
 							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
@@ -192,7 +200,7 @@
 						} else if (selectedConnectionType === 'local') {
 							return item.model?.connection_type === 'local';
 						} else if (selectedConnectionType === 'external') {
-							return item.model?.connection_type === 'external';
+							return item.model?.connection_type === 'external' && !isOpenClawItem(item);
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
 						}
@@ -202,8 +210,8 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? [])
-							.map((tag) => tag.name.toLowerCase())
+						return getVisibleTagNames(item)
+							.map((tag) => tag.toLowerCase())
 							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
@@ -212,7 +220,7 @@
 						} else if (selectedConnectionType === 'local') {
 							return item.model?.connection_type === 'local';
 						} else if (selectedConnectionType === 'external') {
-							return item.model?.connection_type === 'external';
+							return item.model?.connection_type === 'external' && !isOpenClawItem(item);
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
 						}
@@ -391,8 +399,8 @@
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
-				.flatMap((item) => item.model?.tags ?? [])
-				.map((tag) => tag.name.toLowerCase());
+				.flatMap((item) => getVisibleTagNames(item))
+				.map((tag) => tag.toLowerCase());
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
@@ -640,7 +648,7 @@
 										</button>
 									{/if}
 
-									{#if items.find((item) => item.model?.connection_type === 'external')}
+									{#if items.find((item) => item.model?.connection_type === 'external' && !isOpenClawItem(item))}
 										<button
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'external'

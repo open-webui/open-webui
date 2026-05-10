@@ -333,8 +333,8 @@ async def fetch_openclaw_models(request: Request) -> list[dict[str, Any]]:
                     'id': model_id_from_agent_id(agent_id),
                     'name': agent.get('name') or agent_id,
                     'meta': {
-                        'description': f'OpenClaw Agent · {agent_id}',
-                        'tags': [{'name': 'OpenClaw'}, {'name': 'Agent'}],
+                        'description': f'Agent · {agent_id}',
+                        'tags': [{'name': 'Agent'}],
                         'capabilities': {
                             'vision': False,
                             'file_upload': False,
@@ -344,7 +344,7 @@ async def fetch_openclaw_models(request: Request) -> list[dict[str, Any]]:
                         },
                     },
                 },
-                'tags': [{'name': 'OpenClaw'}, {'name': 'Agent'}],
+                'tags': [{'name': 'Agent'}],
                 'actions': [],
                 'filters': [],
             }

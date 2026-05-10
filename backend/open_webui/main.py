@@ -2386,10 +2386,12 @@ async def get_app_config(request: Request):
             'enable_version_update_check': ENABLE_VERSION_UPDATE_CHECK,
             'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
             'enable_easter_eggs': ENABLE_EASTER_EGGS,
+            # OpenClaw 入口文案需要在登录前后的首屏阶段都稳定可见。
+            # 这里把开关放到公共 config，避免前端先拿到“未登录版 features”时丢失 Agent 语义。
+            'enable_openclaw_gateway': app.state.config.ENABLE_OPENCLAW_GATEWAY,
             **(
                 {
                     'enable_direct_connections': app.state.config.ENABLE_DIRECT_CONNECTIONS,
-                    'enable_openclaw_gateway': app.state.config.ENABLE_OPENCLAW_GATEWAY,
                     'enable_folders': app.state.config.ENABLE_FOLDERS,
                     'folder_max_file_count': app.state.config.FOLDER_MAX_FILE_COUNT,
                     'enable_channels': app.state.config.ENABLE_CHANNELS,
