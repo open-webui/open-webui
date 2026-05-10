@@ -604,6 +604,17 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
 )
 
 
+# Display name claim — separate from the username so an OIDC provider that
+# distinguishes between e.g. `preferred_username` (login handle) and `name`
+# (full display name) can populate both correctly. Falls back to
+# OAUTH_USERNAME_CLAIM when unset, preserving prior behaviour.
+OAUTH_NAME_CLAIM = PersistentConfig(
+    'OAUTH_NAME_CLAIM',
+    'oauth.oidc.name_claim',
+    os.environ.get('OAUTH_NAME_CLAIM', None),
+)
+
+
 OAUTH_PICTURE_CLAIM = PersistentConfig(
     'OAUTH_PICTURE_CLAIM',
     'oauth.oidc.avatar_claim',

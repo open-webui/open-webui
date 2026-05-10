@@ -53,6 +53,7 @@ from open_webui.config import (
     OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
     OAUTH_EMAIL_CLAIM,
+    OAUTH_NAME_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
     OAUTH_ALLOWED_ROLES,
@@ -133,6 +134,7 @@ auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 auth_manager_config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
+auth_manager_config.OAUTH_NAME_CLAIM = OAUTH_NAME_CLAIM
 auth_manager_config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 auth_manager_config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
 auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
@@ -1642,9 +1644,12 @@ class OAuthManager:
                     user.role = determined_role
 
                 if auth_manager_config.OAUTH_UPDATE_NAME_ON_LOGIN:
-                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
-                    if username_claim:
-                        new_name = user_data.get(username_claim)
+                    name_claim = (
+                        auth_manager_config.OAUTH_NAME_CLAIM
+                        or auth_manager_config.OAUTH_USERNAME_CLAIM
+                    )
+                    if name_claim:
+                        new_name = user_data.get(name_claim)
                         if new_name and new_name != user.name:
                             await Users.update_user_by_id(user.id, {'name': new_name}, db=db)
                             user.name = new_name
@@ -1696,11 +1701,18 @@ class OAuthManager:
                         picture_url = await self._process_picture_url(picture_url, token.get('access_token'))
                     else:
                         picture_url = '/user.png'
-                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    name_claim = (
+                        auth_manager_config.OAUTH_NAME_CLAIM
+                        or auth_manager_config.OAUTH_USERNAME_CLAIM
+                    )
 
-                    name = user_data.get(username_claim)
+                    name = user_data.get(name_claim) if name_claim else None
                     if not name:
-                        log.warning('Username claim is missing, using email as name')
+                        log.warning(
+                            'Name claim is missing (checked OAUTH_NAME_CLAIM '
+                            f'and OAUTH_USERNAME_CLAIM={auth_manager_config.OAUTH_USERNAME_CLAIM!r}), '
+                            'using email as name'
+                        )
                         name = email
 
                     user = await Auths.insert_new_auth(
