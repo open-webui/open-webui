@@ -312,6 +312,14 @@
 		}
 	};
 
+	/** Check whether a terminal ID references an available system or direct terminal. */
+	const isTerminalAvailable = (tid: string): boolean => {
+		return (
+			($terminalServers ?? []).some((t) => t.id && t.id === tid) ||
+			($settings?.terminalServers ?? []).some((s) => s.url === tid)
+		);
+	};
+
 	const setDefaults = async () => {
 		if (!$tools) {
 			tools.set(await getTools(localStorage.token));
@@ -390,9 +398,12 @@
 				}
 			}
 
-			// Set Default Terminal
+			// Set Default Terminal — only if the referenced terminal actually exists
 			if (model?.info?.meta?.terminalId) {
-				selectedTerminalId.set(model.info.meta.terminalId);
+				const tid = model.info.meta.terminalId;
+				if (isTerminalAvailable(tid)) {
+					selectedTerminalId.set(tid);
+				}
 			}
 		}
 	};
@@ -728,6 +739,11 @@
 					enabled: $selectedTerminalId !== null && s.url === $selectedTerminalId
 				}))
 			});
+		}
+
+		// Clear stale selectedTerminalId if the referenced terminal no longer exists
+		if ($selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
+			selectedTerminalId.set(null);
 		}
 
 		const pageSubscribe = page.subscribe(async (p) => {
@@ -1447,6 +1463,29 @@
 				top: messagesContainerElement.scrollHeight,
 				behavior
 			});
+
+			// content-visibility: auto causes the initial scrollHeight to be based on
+			// estimated sizes (contain-intrinsic-size). After we scroll, previously
+			// off-screen messages become visible and the browser resolves their actual
+			// heights, which shifts scrollHeight. Re-layouts can cascade across frames
+			// (new sizes reveal more content, triggering further size resolution), so
+			// we re-scroll across two animation frames to land at the true bottom.
+			requestAnimationFrame(() => {
+				if (messagesContainerElement) {
+					messagesContainerElement.scrollTo({
+						top: messagesContainerElement.scrollHeight,
+						behavior
+					});
+					requestAnimationFrame(() => {
+						if (messagesContainerElement) {
+							messagesContainerElement.scrollTo({
+								top: messagesContainerElement.scrollHeight,
+								behavior
+							});
+						}
+					});
+				}
+			});
 		}
 	};
 
@@ -2128,8 +2167,10 @@
 				_history,
 				primaryResponseMessageId,
 				_chatId,
-				selectedModelIds.length > 1 ? messageIdsMap : undefined,
-				regenerationPrompt
+				{
+					messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
+					regenerationPrompt
+				}
 			);
 
 			if (chatEventEmitter) clearInterval(chatEventEmitter);
@@ -2194,8 +2235,15 @@
 		_history,
 		responseMessageId,
 		_chatId,
-		messageIdsMap?: Record<string, string>,
-		regenerationPrompt?: string | null
+		{
+			messageIdsMap,
+			regenerationPrompt,
+			continueResponse = false
+		}: {
+			messageIdsMap?: Record<string, string>;
+			regenerationPrompt?: string | null;
+			continueResponse?: boolean;
+		} = {}
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
@@ -2396,6 +2444,7 @@
 				parent_id: userMessage?.parentId ?? null,
 				user_message: userMessage,
 				...(regenerationPrompt ? { regeneration_prompt: regenerationPrompt } : {}),
+				...(continueResponse ? { assistant_message_id: responseMessageId } : {}),
 
 				background_tasks: {
 					...(!$temporaryChatEnabled && !_chatId && (userMessage?.parentId ?? null) === null
@@ -2655,7 +2704,8 @@
 					createMessagesList(history, responseMessage.id),
 					history,
 					responseMessage.id,
-					_chatId
+					_chatId,
+					{ continueResponse: true }
 				);
 			}
 		}
@@ -2771,8 +2821,8 @@
 
 	const saveControls = async () => {
 		if (!$chatId || $temporaryChatEnabled) return;
-		await updateChatById(localStorage.token, $chatId, { params, files: chatFiles }).catch(
-			(err) => console.error('[controls autosave]', err)
+		await updateChatById(localStorage.token, $chatId, { params, files: chatFiles }).catch((err) =>
+			console.error('[controls autosave]', err)
 		);
 	};
 

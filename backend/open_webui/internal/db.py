@@ -339,6 +339,7 @@ ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
 # to cover every entry point (workers, reload, direct invocations).
 if sys.platform == 'win32' and _is_postgres_url(DATABASE_URL):
     import asyncio
+
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:

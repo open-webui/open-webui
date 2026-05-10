@@ -107,17 +107,15 @@
 					{/each}
 
 					<label
-						class="size-6 rounded-full overflow-hidden cursor-pointer border-2 transition-all {!PRESET_COLORS.includes(color)
+						class="size-6 rounded-full overflow-hidden cursor-pointer border-2 transition-all {!PRESET_COLORS.includes(
+							color
+						)
 							? 'border-gray-800 dark:border-white scale-110'
 							: 'border-transparent hover:scale-110'}"
 						style="background-color: {color};"
 						title={$i18n.t('Custom color')}
 					>
-						<input
-							type="color"
-							bind:value={color}
-							class="opacity-0 w-0 h-0 absolute"
-						/>
+						<input type="color" bind:value={color} class="opacity-0 w-0 h-0 absolute" />
 					</label>
 				</div>
 			</div>

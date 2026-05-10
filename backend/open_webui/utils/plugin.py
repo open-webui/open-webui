@@ -400,7 +400,7 @@ def install_frontmatter_requirements(requirements: str):
         try:
             req_list = [req.strip() for req in requirements.split(',')]
             new_reqs = [req for req in req_list if req and req not in _installed_requirements]
-            
+
             if not new_reqs:
                 return
 

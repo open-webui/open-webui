@@ -517,9 +517,7 @@ async def get_openai_loaded_models(request: Request, models: dict, api_base_urls
                 key = api_keys[idx] if idx < len(api_keys) else None
                 slots = await send_get_request(url=f'{root_url}/slots', key=key)
                 loaded_model_ids = (
-                    {s.get('model') for s in slots if s.get('model')}
-                    if isinstance(slots, list)
-                    else set()
+                    {s.get('model') for s in slots if s.get('model')} if isinstance(slots, list) else set()
                 )
                 for model_id, model in models.items():
                     if model.get('urlIdx') == idx:

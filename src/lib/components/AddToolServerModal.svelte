@@ -87,10 +87,17 @@
 		// client_id is the tool server ID (used as the internal lookup key for both flows).
 		// For static, client_secret signals the backend to use the static credential path.
 		// The actual OAuth client_id/secret come from the connection info at save time.
-		const formData: { url: string; client_id: string; client_secret?: string; oauth_server_url?: string } = {
+		const formData: {
+			url: string;
+			client_id: string;
+			client_secret?: string;
+			oauth_server_url?: string;
+		} = {
 			url: url,
 			client_id: id,
-			...(auth_type === 'oauth_2.1_static' ? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl } : {})
+			...(auth_type === 'oauth_2.1_static'
+				? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
+				: {})
 		};
 
 		const res = await registerOAuthClient(localStorage.token, formData, 'mcp').catch((err) => {
@@ -337,7 +344,11 @@
 				description: description,
 				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
 				...(auth_type === 'oauth_2.1_static'
-					? { oauth_client_id: oauthClientId, oauth_client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
+					? {
+							oauth_client_id: oauthClientId,
+							oauth_client_secret: oauthClientSecret,
+							oauth_server_url: oauthServerUrl
+						}
 					: {})
 			}
 		};

@@ -3140,8 +3140,6 @@ async def create_calendar_event(
         return json.dumps({'error': str(e)})
 
 
-
-
 async def update_calendar_event(
     event_id: str,
     title: Optional[str] = None,

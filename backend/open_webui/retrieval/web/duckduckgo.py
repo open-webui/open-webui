@@ -37,9 +37,9 @@ def search_duckduckgo(
 
         # Use the ddgs.text() method to perform the search
         try:
-            kwargs = {"safesearch": "moderate", "max_results": count}
-            if backend and backend != "auto":
-                kwargs["backend"] = backend
+            kwargs = {'safesearch': 'moderate', 'max_results': count}
+            if backend and backend != 'auto':
+                kwargs['backend'] = backend
             results = ddgs.text(query, **kwargs)
             search_results = results if results is not None else []
         except RatelimitException as e:

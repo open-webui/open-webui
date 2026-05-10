@@ -22,7 +22,7 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.web.utils import validate_url
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS, ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.utils.session_pool import get_session
 
 from open_webui.models.chats import Chats
@@ -807,10 +807,16 @@ async def image_edits(
                 return data
 
             if data.startswith('http://') or data.startswith('https://'):
-                # Validate URL to prevent SSRF attacks against local/private networks
+                # Validate URL to prevent SSRF attacks against local/private networks.
+                # allow_redirects=False prevents redirect-based SSRF: validate_url() is
+                # called only on the originally-submitted URL; following 3xx redirects
+                # without re-validation would let an attacker reach private IPs via a
+                # public host that redirects internally (e.g. cloud-metadata exfil).
                 validate_url(data)
                 session = await get_session()
-                async with session.get(data, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
+                async with session.get(
+                    data, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                ) as r:
                     r.raise_for_status()
 
                     image_data = base64.b64encode(await r.read()).decode('utf-8')

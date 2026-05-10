@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 
 from open_webui.utils.misc import get_message_list
+from open_webui.utils.middleware import serialize_output
 from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
@@ -967,6 +968,14 @@ async def update_chat_by_id(
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
+
+        # Re-derive content from output for assistant messages so that
+        # frontend edits to output items are always reflected in content.
+        # serialize_output() is the single source of truth for this conversion.
+        for msg in updated_chat.get('history', {}).get('messages', {}).values():
+            if msg.get('role') == 'assistant' and msg.get('output'):
+                msg['content'] = serialize_output(msg['output'])
+
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
         return ChatResponse(**chat.model_dump())
     else:

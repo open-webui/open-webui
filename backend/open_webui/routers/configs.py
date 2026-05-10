@@ -374,7 +374,11 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
     try:
         if form_data.type == 'mcp':
             if form_data.auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-                oauth_server_url = form_data.info.get('oauth_server_url') if form_data.info and form_data.info.get('oauth_server_url') else form_data.url
+                oauth_server_url = (
+                    form_data.info.get('oauth_server_url')
+                    if form_data.info and form_data.info.get('oauth_server_url')
+                    else form_data.url
+                )
                 discovery_urls = await get_discovery_urls(oauth_server_url)
                 for discovery_url in discovery_urls:
                     log.debug(f'Trying to fetch OAuth 2.1 discovery document from {discovery_url}')

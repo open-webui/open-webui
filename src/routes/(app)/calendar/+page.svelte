@@ -220,10 +220,7 @@
 	on:delete={() => refresh()}
 />
 
-<CreateCalendarModal
-	bind:show={showCreateCalendarModal}
-	on:created={handleCalendarCreated}
-/>
+<CreateCalendarModal bind:show={showCreateCalendarModal} on:created={handleCalendarCreated} />
 
 <div
 	class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar

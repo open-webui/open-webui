@@ -260,9 +260,7 @@ class ChatMessageTable:
         embedded JSON blob for legacy chats).
         """
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(ChatMessage).filter_by(chat_id=chat_id)
-            )
+            result = await db.execute(select(ChatMessage).filter_by(chat_id=chat_id))
             rows = result.scalars().all()
 
         if not rows:

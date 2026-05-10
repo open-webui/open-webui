@@ -235,11 +235,7 @@ class PromptsTable:
             user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
             user_group_ids = [group.id for group in user_groups]
 
-            query = (
-                select(Prompt)
-                .filter(Prompt.is_active == True)
-                .order_by(Prompt.updated_at.desc())
-            )
+            query = select(Prompt).filter(Prompt.is_active == True).order_by(Prompt.updated_at.desc())
             query = AccessGrants.has_permission_filter(
                 db=db,
                 query=query,

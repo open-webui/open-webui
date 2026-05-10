@@ -191,11 +191,7 @@
 					stroke-width="2"
 					stroke="currentColor"
 					class="size-3 text-gray-400 dark:text-gray-500"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M12 4.5v15m7.5-7.5h-15"
-					/></svg
+					><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg
 				>
 			</button>
 		</div>

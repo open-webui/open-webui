@@ -17,6 +17,7 @@ def include_user_info_headers(headers, user):
         FORWARD_USER_INFO_HEADER_USER_ROLE: user.role,
     }
 
+
 def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -> dict:
     if not custom_headers or not isinstance(custom_headers, dict):
         return {}
@@ -28,7 +29,7 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         '{{USER_ID}}': (user.id if user else '') or '',
         '{{USER_NAME}}': (user.name if user else '') or '',
     }
-    
+
     parsed_headers = {}
     for key, value in custom_headers.items():
         if not isinstance(value, str):
@@ -36,5 +37,5 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         for token, val in template_vars.items():
             value = value.replace(token, val)
         parsed_headers[key] = value
-        
+
     return parsed_headers

@@ -147,8 +147,7 @@ def transcode_audio_to_mp3(audio_data: bytes, content_type_header: str, output_p
 
     if BYPASS_PYDUB_PREPROCESSING:
         log.warning(
-            f'TTS returned {mime_type} but BYPASS_PYDUB_PREPROCESSING is set; '
-            f'writing raw audio without transcoding'
+            f'TTS returned {mime_type} but BYPASS_PYDUB_PREPROCESSING is set; writing raw audio without transcoding'
         )
         return False
 
@@ -1190,7 +1189,7 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
 
     results = []
     try:
-        if getattr(request.app.state.config, "STT_ENGINE", "") == "":
+        if getattr(request.app.state.config, 'STT_ENGINE', '') == '':
             max_workers = 1
         else:
             max_workers = None

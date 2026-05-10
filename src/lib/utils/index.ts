@@ -1412,7 +1412,16 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 
 // Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
 // and non-operation path-item fields (summary, description, servers, parameters).
-const OPENAPI_HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
 
 // Main conversion function
 export const convertOpenApiToToolPayload = (openApiSpec) => {

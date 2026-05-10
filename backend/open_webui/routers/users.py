@@ -194,6 +194,7 @@ class SharingPermissions(BaseModel):
     notes: bool = False
     public_notes: bool = True
     public_chats: bool = False
+    public_calendars: bool = False
 
 
 class AccessGrantsPermissions(BaseModel):
@@ -235,6 +236,7 @@ class FeaturesPermissions(BaseModel):
     code_interpreter: bool = True
     memories: bool = True
     automations: bool = False
+    calendar: bool = True
 
 
 class SettingsPermissions(BaseModel):

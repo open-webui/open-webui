@@ -7,7 +7,14 @@ const TOOL_SERVER_FETCH_TIMEOUT = 10000;
 // Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
 // and non-operation path-item fields (summary, description, servers, parameters).
 const OPENAPI_HTTP_METHODS = new Set([
-	'get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
 ]);
 
 // Every request sent from here is a petition. May it reach
@@ -570,9 +577,7 @@ export const executeToolServer = async (
 		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
 			? (methods as any).parameters
 			: [];
-		const opParams: any[] = Array.isArray(operation.parameters)
-			? operation.parameters
-			: [];
+		const opParams: any[] = Array.isArray(operation.parameters) ? operation.parameters : [];
 		const mergedParams = new Map();
 		for (const param of pathLevelParams) {
 			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);

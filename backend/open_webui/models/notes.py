@@ -140,7 +140,7 @@ class NoteTable:
                 }
             )
 
-            new_note = Note(**note.model_dump(exclude={'access_grants'}))
+            new_note = Note(**note.model_dump(exclude={'access_grants', 'is_pinned'}))
 
             db.add(new_note)
             await db.commit()
@@ -323,29 +323,28 @@ class NoteTable:
             await db.commit()
             return await self._to_note_model(note, db=db) if note else None
 
-    async def toggle_note_pinned_by_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[NoteModel]:
+    async def toggle_note_pinned_by_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[NoteModel]:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Note).filter(Note.id == id))
                 note = result.scalars().first()
                 if not note:
                     return None
-                    
+
                 # Check if already pinned
                 pin_result = await db.execute(select(PinnedNote).filter_by(user_id=user_id, note_id=id))
                 pinned_note = pin_result.scalars().first()
-                
+
                 if pinned_note:
                     await db.execute(delete(PinnedNote).filter_by(user_id=user_id, note_id=id))
                 else:
                     new_pin = PinnedNote(
-                        id=str(uuid.uuid4()),
-                        user_id=user_id,
-                        note_id=id,
-                        created_at=int(time.time_ns())
+                        id=str(uuid.uuid4()), user_id=user_id, note_id=id, created_at=int(time.time_ns())
                     )
                     db.add(new_pin)
-                    
+
                 await db.commit()
                 return await self._to_note_model(note, db=db)
         except Exception:
@@ -361,7 +360,12 @@ class NoteTable:
             user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
             user_group_ids = [group.id for group in user_groups]
 
-            stmt = select(Note).join(PinnedNote, PinnedNote.note_id == Note.id).filter(PinnedNote.user_id == user_id).order_by(PinnedNote.created_at.desc())
+            stmt = (
+                select(Note)
+                .join(PinnedNote, PinnedNote.note_id == Note.id)
+                .filter(PinnedNote.user_id == user_id)
+                .order_by(PinnedNote.created_at.desc())
+            )
             stmt = self._has_permission(db, stmt, {'user_id': user_id, 'group_ids': user_group_ids}, permission)
 
             result = await db.execute(stmt)
