@@ -1257,12 +1257,12 @@ class DriveSyncResponse(BaseModel):
 async def get_drive_sources(
     id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get all Google Drive sources connected to a Knowledge base.
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1272,7 +1272,7 @@ async def get_drive_sources(
     # Check access
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "read", knowledge.access_control, db=db)
+        and not await has_access(user.id, "read", knowledge.access_control, db=db)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1316,7 +1316,7 @@ async def connect_drive_folder(
     id: str,
     form_data: KnowledgeDriveSourceForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Connect a Google Drive folder to a Knowledge base.
@@ -1324,7 +1324,7 @@ async def connect_drive_folder(
     The folder will be synced automatically based on the configured interval.
     Requires user to have Google OAuth with Drive scope.
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1334,7 +1334,7 @@ async def connect_drive_folder(
     # Check write access
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not await has_access(user.id, "write", knowledge.access_control, db=db)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1429,14 +1429,14 @@ async def disconnect_drive_folder(
     id: str,
     source_id: str,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Disconnect a Google Drive folder from a Knowledge base.
 
     This removes the sync connection but does not delete files already synced.
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1446,7 +1446,7 @@ async def disconnect_drive_folder(
     # Check write access
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not await has_access(user.id, "write", knowledge.access_control, db=db)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1482,7 +1482,7 @@ async def sync_drive_source(
     source_id: str,
     force_full: bool = Query(False, description="Force full sync instead of incremental"),
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Manually trigger a sync for a Drive source.
@@ -1490,7 +1490,7 @@ async def sync_drive_source(
     By default, performs incremental sync (only changed files).
     Set force_full=true to resync all files.
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1500,7 +1500,7 @@ async def sync_drive_source(
     # Check write access
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not await has_access(user.id, "write", knowledge.access_control, db=db)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1566,12 +1566,12 @@ async def sync_all_drive_sources(
     id: str,
     force_full: bool = Query(False, description="Force full sync instead of incremental"),
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Trigger sync for all Drive sources connected to a Knowledge base.
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1581,7 +1581,7 @@ async def sync_all_drive_sources(
     # Check write access
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not await has_access(user.id, "write", knowledge.access_control, db=db)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -1644,12 +1644,12 @@ async def update_drive_source(
     source_id: str,
     form_data: DriveSourceUpdateForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Update settings for a Drive source.
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1659,7 +1659,7 @@ async def update_drive_source(
     # Check write access
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not await has_access(user.id, "write", knowledge.access_control, db=db)
         and user.role != "admin"
     ):
         raise HTTPException(

@@ -412,7 +412,7 @@ async def update_user_info_by_session_user(
 @router.get("/me/spend", response_model=UserSpendSummary)
 async def get_my_spend(
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get current user's spend summary.
@@ -425,14 +425,14 @@ async def get_my_spend(
 @router.get("/me/spend-limits", response_model=dict)
 async def get_my_spend_limits(
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get current user's spend limits and current usage.
 
     Returns whether limits are enabled, the limit values, and current usage.
     """
-    current_user = Users.get_user_by_id(user.id, db=db)
+    current_user = await Users.get_user_by_id(user.id, db=db)
     spend_summary = UserUsages.get_user_spend_summary(user.id, db=db)
 
     return {
@@ -454,7 +454,7 @@ async def get_my_usage_history(
     skip: int = 0,
     limit: int = 30,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get current user's usage history.
@@ -889,7 +889,7 @@ async def force_gmail_sync(user_id: str, request: Request, user=Depends(get_admi
     from open_webui.utils.gmail_auto_sync import trigger_gmail_sync_if_needed
 
     # Validate user exists
-    target_user = Users.get_user_by_id(user_id)
+    target_user = await Users.get_user_by_id(user_id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -898,7 +898,7 @@ async def force_gmail_sync(user_id: str, request: Request, user=Depends(get_admi
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gmail sync is not enabled for this user")
 
     # Check if user has Google OAuth session
-    oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+    oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
     if not oauth_session:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="User has not connected their Google account"
@@ -964,14 +964,14 @@ async def force_gmail_sync(user_id: str, request: Request, user=Depends(get_admi
 async def get_user_spend_limits(
     user_id: str,
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get spend limit configuration for a user (admin only).
 
     Returns the user's spend limits and current usage.
     """
-    target_user = Users.get_user_by_id(user_id, db=db)
+    target_user = await Users.get_user_by_id(user_id, db=db)
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1000,7 +1000,7 @@ async def update_user_spend_limits(
     user_id: str,
     form_data: UserSpendLimitForm,
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Update spend limit configuration for a user (admin only).
@@ -1008,7 +1008,7 @@ async def update_user_spend_limits(
     Set daily and/or monthly spend limits in USD.
     Set limits to null to remove that limit.
     """
-    target_user = Users.get_user_by_id(user_id, db=db)
+    target_user = await Users.get_user_by_id(user_id, db=db)
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1022,7 +1022,7 @@ async def update_user_spend_limits(
         "spend_limit_monthly": form_data.spend_limit_monthly,
     }
 
-    updated_user = Users.update_user_by_id(user_id, update_data, db=db)
+    updated_user = await Users.update_user_by_id(user_id, update_data, db=db)
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1048,14 +1048,14 @@ async def get_user_usage_history(
     skip: int = 0,
     limit: int = 30,
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """
     Get usage history for a user (admin only).
 
     Returns paginated list of usage records with totals.
     """
-    target_user = Users.get_user_by_id(user_id, db=db)
+    target_user = await Users.get_user_by_id(user_id, db=db)
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

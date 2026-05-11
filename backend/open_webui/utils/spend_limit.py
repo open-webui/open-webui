@@ -34,7 +34,7 @@ class SpendLimitExceeded(HTTPException):
         )
 
 
-def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
+async def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
     """
     Check if a user has exceeded their spend limits.
 
@@ -50,7 +50,7 @@ def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
         SpendLimitExceeded: If user has exceeded their limit
     """
     try:
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
         if not user:
             return True, None
 
@@ -117,4 +117,4 @@ async def enforce_spend_limit(user) -> None:
     # if user.role == "admin":
     #     return
 
-    check_user_spend_limit(user.id)
+    await check_user_spend_limit(user.id)

@@ -691,7 +691,7 @@ async def trigger_gmail_sync_if_needed(
         return
 
     # Check if admin has enabled Gmail sync for this user first
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if not user:
         logger.info(f"   ⏭️  SKIP: User {user_id} not found")
         return
@@ -780,7 +780,7 @@ async def _background_gmail_sync(request, user_id: str, oauth_token: dict, force
 
     try:
         # Validate user
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
         if not user:
             logger.error(f"User {user_id} not found")
             return
@@ -806,7 +806,7 @@ async def _background_gmail_sync(request, user_id: str, oauth_token: dict, force
             """Refresh OAuth token using oauth_manager"""
             try:
                 # Get OAuth session for this user
-                oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+                oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
                 if not oauth_session:
                     logger.error(f"No OAuth session found for user {user_id}")
                     return None
@@ -1432,7 +1432,7 @@ async def _sync_user_periodic(user_id: str) -> bool:
         logger.info(f"🔄 Periodic sync starting for user: {user_id}")
 
         # Validation: Check user exists
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
         if not user:
             logger.warning(f"⚠️  User {user_id} not found in database, skipping")
             return False
@@ -1448,7 +1448,7 @@ async def _sync_user_periodic(user_id: str) -> bool:
 
         # Validation: Check OAuth session exists
         # Debug: List all OAuth sessions for this user to see what providers exist
-        all_sessions = OAuthSessions.get_sessions_by_user_id(user_id)
+        all_sessions = await OAuthSessions.get_sessions_by_user_id(user_id)
         if all_sessions:
             logger.info(f"   Found {len(all_sessions)} OAuth session(s) for user:")
             for s in all_sessions:
@@ -1456,7 +1456,7 @@ async def _sync_user_periodic(user_id: str) -> bool:
         else:
             logger.info(f"   No OAuth sessions found for user {user_id}")
 
-        oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+        oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
         if not oauth_session:
             logger.info(f"⏭️  No Google OAuth session for user {user_id}, skipping")
             return False

@@ -484,7 +484,7 @@ class KnowledgeDriveSyncService:
 
             # Create file record
             log.info(f"   📝 Creating file record...")
-            file_record = Files.insert_new_file(
+            file_record = await Files.insert_new_file(
                 user_id,
                 FileForm(
                     id=file_id,
@@ -540,12 +540,12 @@ class KnowledgeDriveSyncService:
             from open_webui.models.users import Users
 
             # Get user for auth
-            user = Users.get_user_by_id(user_id)
+            user = await Users.get_user_by_id(user_id)
             if not user:
                 raise ValueError(f"User {user_id} not found")
 
             # Get file record
-            file_record = Files.get_file_by_id(file_id)
+            file_record = await Files.get_file_by_id(file_id)
             if not file_record:
                 raise ValueError(f"File {file_id} not found")
 
@@ -585,7 +585,7 @@ class KnowledgeDriveSyncService:
                 )
 
                 # Verify content was extracted
-                file_check = Files.get_file_by_id(file_id)
+                file_check = await Files.get_file_by_id(file_id)
                 if not file_check or not file_check.data or not file_check.data.get("content"):
                     # Check if file status indicates failure
                     if file_check and file_check.data and file_check.data.get("status") == "failed":
@@ -618,7 +618,7 @@ class KnowledgeDriveSyncService:
 
                 if not result2 or not result2.get("status"):
                     log.error(f"   ❌ Step 2 failed for {file_id[:8]}: {result2}")
-                    Files.update_file_data_by_id(
+                    await Files.update_file_data_by_id(
                         file_id, {"status": "error", "error": "Failed to add to knowledge base"}
                     )
                     return
@@ -634,7 +634,7 @@ class KnowledgeDriveSyncService:
             log.error(f"   Traceback: {traceback.format_exc()}")
             # Don't raise - file was synced, just RAG failed
             # Mark file with error status
-            Files.update_file_data_by_id(file_id, {"status": "error", "error": str(e)})
+            await Files.update_file_data_by_id(file_id, {"status": "error", "error": str(e)})
 
     def get_sync_status(self, source_id: str) -> Optional[Dict[str, Any]]:
         """Get current sync status for a source"""

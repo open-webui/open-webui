@@ -34,7 +34,7 @@ async def get_gmail_status(
     Returns sync status, last sync time, email counts, etc.
     """
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -45,7 +45,7 @@ async def get_gmail_status(
         gmail_settings = settings_dict.get("gmail", {}) if isinstance(settings_dict, dict) else {}
 
     # Check if user has Google OAuth session
-    oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+    oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
     has_gmail_oauth = oauth_session is not None
 
     # Check if OAuth token has Gmail scopes
@@ -78,12 +78,12 @@ async def enable_gmail_sync(
     Does NOT trigger sync - user must click "Sync Now" separately.
     """
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Check if user has Google OAuth with Gmail scopes
-    oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+    oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
     if not oauth_session:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must log in with Google OAuth first")
 
@@ -109,7 +109,7 @@ async def enable_gmail_sync(
         "total_vectors": existing_gmail.get("total_vectors", 0),
     }
 
-    Users.update_user_by_id(user_id, {"settings": user_settings})
+    await Users.update_user_by_id(user_id, {"settings": user_settings})
 
     logger.info(f"✅ Gmail sync enabled for user {user_id}")
 
@@ -134,7 +134,7 @@ async def trigger_gmail_sync(
     - User has valid Google OAuth session with Gmail scopes
     """
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -149,7 +149,7 @@ async def trigger_gmail_sync(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gmail sync is not enabled for this user")
 
     # Get OAuth session and token (with automatic refresh if expired)
-    oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+    oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
     if not oauth_session:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -186,7 +186,7 @@ async def trigger_gmail_sync(
         **gmail_settings,
         "sync_status": "syncing",
     }
-    Users.update_user_by_id(user_id, {"settings": user_settings})
+    await Users.update_user_by_id(user_id, {"settings": user_settings})
 
     # Trigger background sync task with refreshed token
     try:
@@ -209,7 +209,7 @@ async def trigger_gmail_sync(
 
         # Reset status to ready on error
         user_settings["gmail"]["sync_status"] = "error"
-        Users.update_user_by_id(user_id, {"settings": user_settings})
+        await Users.update_user_by_id(user_id, {"settings": user_settings})
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to start Gmail sync: {str(e)}"
@@ -228,7 +228,7 @@ async def disable_gmail_sync(
     Sets sync_enabled to False. Does not delete existing data.
     """
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -246,7 +246,7 @@ async def disable_gmail_sync(
         "sync_status": "disabled",
     }
 
-    Users.update_user_by_id(user_id, {"settings": user_settings})
+    await Users.update_user_by_id(user_id, {"settings": user_settings})
 
     logger.info(f"🛑 Gmail sync disabled for user {user_id}")
 
@@ -265,7 +265,7 @@ async def delete_gmail_data(
     Removes all vectors and disables sync.
     """
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -291,7 +291,7 @@ async def delete_gmail_data(
             "total_vectors": 0,
         }
 
-        Users.update_user_by_id(user_id, {"settings": user_settings})
+        await Users.update_user_by_id(user_id, {"settings": user_settings})
 
         return {"status": "deleted", "message": "All Gmail data has been deleted from Pinecone"}
 
