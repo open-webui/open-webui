@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -6,18 +5,16 @@ import shutil
 import socket
 import base64
 from concurrent.futures import ThreadPoolExecutor
-import redis
 
 from datetime import datetime
 from pathlib import Path
-from typing import Generic, Union, Optional, TypeVar
+from typing import Union, Optional
 from urllib.parse import urlparse
 
+import redis
 import requests
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
 from authlib.integrations.starlette_client import OAuth
-
 
 from open_webui.env import (
     DATA_DIR,
@@ -36,8 +33,63 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db, get_async_db
-from open_webui.utils.redis import get_redis_connection
+
+# ── Persistent configuration layer ──────────────────────────────────────────
+
+from open_webui.internal.config import (  # noqa: F401
+    ConfigTable as Config,
+    ConfigVar,
+    AppConfig,
+    STATE as _state,
+    initialize as _initialize_config,
+    _all_configs as PERSISTENT_CONFIG_REGISTRY,
+)
+
+
+def get_config():
+    return _state.snapshot
+
+
+def save_to_db(data):
+    _state.persist(data)
+
+
+async def async_save_to_db(data):
+    await _state.persist_async(data)
+
+
+def save_config(config):
+    try:
+        _state.persist(config)
+        for s in PERSISTENT_CONFIG_REGISTRY:
+            s.refresh()
+    except Exception:
+        log.exception('Failed to save config')
+        return False
+    return True
+
+
+async def async_save_config(config):
+    try:
+        await _state.persist_async(config)
+        for s in PERSISTENT_CONFIG_REGISTRY:
+            s.refresh()
+    except Exception:
+        log.exception('Failed to save config')
+        return False
+    return True
+
+
+def reset_config():
+    _state.clear()
+
+
+async def async_reset_config():
+    await _state.clear_async()
+
+
+def get_config_value(config_path: str):
+    return _state.read(config_path)
 
 
 class EndpointFilter(logging.Filter):
@@ -45,7 +97,7 @@ class EndpointFilter(logging.Filter):
         return record.getMessage().find('/health') == -1
 
 
-# Filter out /endpoint
+# Filter out /health endpoint noise
 logging.getLogger('uvicorn.access').addFilter(EndpointFilter())
 
 ####################################
@@ -53,16 +105,14 @@ logging.getLogger('uvicorn.access').addFilter(EndpointFilter())
 ####################################
 
 
-# Function to run the alembic migrations
 def run_migrations():
     log.info('Running migrations')
     try:
         from alembic import command
-        from alembic.config import Config
+        from alembic.config import Config as AlembicConfig
 
-        alembic_cfg = Config(OPEN_WEBUI_DIR / 'alembic.ini')
+        alembic_cfg = AlembicConfig(OPEN_WEBUI_DIR / 'alembic.ini')
 
-        # Set the script location dynamically
         migrations_path = OPEN_WEBUI_DIR / 'migrations'
         alembic_cfg.set_main_option('script_location', str(migrations_path))
 
@@ -75,305 +125,30 @@ if ENABLE_DB_MIGRATIONS:
     run_migrations()
 
 
-class Config(Base):
-    __tablename__ = 'config'
-
-    id = Column(Integer, primary_key=True)
-    data = Column(JSON, nullable=False)
-    version = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=True, onupdate=func.now())
-
-
-def load_json_config():
-    with open(f'{DATA_DIR}/config.json', 'r') as file:
-        return json.load(file)
-
-
-def save_to_db(data):
-    """Sync save — used ONLY at startup/import time."""
-    with get_db() as db:
-        existing_config = db.query(Config).first()
-        if not existing_config:
-            new_config = Config(data=data, version=0)
-            db.add(new_config)
-        else:
-            existing_config.data = data
-            existing_config.updated_at = datetime.now()
-            db.add(existing_config)
-        db.commit()
-
-
-async def async_save_to_db(data):
-    """Async save — used for ALL runtime config persistence."""
-    from sqlalchemy import select
-
-    async with get_async_db() as db:
-        result = await db.execute(select(Config).limit(1))
-        existing_config = result.scalars().first()
-        if not existing_config:
-            new_config = Config(data=data, version=0)
-            db.add(new_config)
-        else:
-            existing_config.data = data
-            existing_config.updated_at = datetime.now()
-            db.add(existing_config)
-        await db.commit()
-
-
-def reset_config():
-    """Sync reset — used ONLY at startup."""
-    with get_db() as db:
-        db.query(Config).delete()
-        db.commit()
-
-
-async def async_reset_config():
-    """Async reset — used at runtime."""
-    from sqlalchemy import delete as sa_delete
-
-    async with get_async_db() as db:
-        await db.execute(sa_delete(Config))
-        await db.commit()
-
-
-# When initializing, check if config.json exists and migrate it to the database
+# Migrate legacy config.json → database on first run
 if os.path.exists(f'{DATA_DIR}/config.json'):
-    data = load_json_config()
-    save_to_db(data)
+    with open(f'{DATA_DIR}/config.json', 'r') as _f:
+        save_to_db(json.load(_f))
     os.rename(f'{DATA_DIR}/config.json', f'{DATA_DIR}/old_config.json')
 
-DEFAULT_CONFIG = {
-    'version': 0,
-    'ui': {},
-}
-
-
-def get_config():
-    with get_db() as db:
-        config_entry = db.query(Config).order_by(Config.id.desc()).first()
-        return config_entry.data if config_entry else DEFAULT_CONFIG
-
-
-CONFIG_DATA = get_config()
-
-
-def get_config_value(config_path: str):
-    path_parts = config_path.split('.')
-    cur_config = CONFIG_DATA
-    for key in path_parts:
-        if key in cur_config:
-            cur_config = cur_config[key]
-        else:
-            return None
-    return cur_config
-
-
-PERSISTENT_CONFIG_REGISTRY = []
-
-
-def save_config(config):
-    """Sync save — used ONLY at startup/import time."""
-    global CONFIG_DATA
-    global PERSISTENT_CONFIG_REGISTRY
-    try:
-        save_to_db(config)
-        CONFIG_DATA = config
-
-        # Trigger updates on all registered PersistentConfig entries
-        for config_item in PERSISTENT_CONFIG_REGISTRY:
-            config_item.update()
-    except Exception as e:
-        log.exception(e)
-        return False
-    return True
-
-
-async def async_save_config(config):
-    """Async save — used for ALL runtime config persistence."""
-    global CONFIG_DATA
-    global PERSISTENT_CONFIG_REGISTRY
-    try:
-        await async_save_to_db(config)
-        CONFIG_DATA = config
-
-        # Trigger updates on all registered PersistentConfig entries
-        for config_item in PERSISTENT_CONFIG_REGISTRY:
-            config_item.update()
-    except Exception as e:
-        log.exception(e)
-        return False
-    return True
-
-
-T = TypeVar('T')
 
 ENABLE_PERSISTENT_CONFIG = os.environ.get('ENABLE_PERSISTENT_CONFIG', 'True').lower() == 'true'
+ENABLE_OAUTH_PERSISTENT_CONFIG = os.environ.get('ENABLE_OAUTH_PERSISTENT_CONFIG', 'False').lower() == 'true'
+
+# Bootstrap the persistent config subsystem
+CONFIG_DATA = _initialize_config(
+    enable_persistent=ENABLE_PERSISTENT_CONFIG,
+    enable_oauth_persistent=ENABLE_OAUTH_PERSISTENT_CONFIG,
+)
 
 
-class PersistentConfig(Generic[T]):
-    def __init__(self, env_name: str, config_path: str, env_value: T):
-        self.env_name = env_name
-        self.config_path = config_path
-        self.env_value = env_value
-        self.config_value = get_config_value(config_path)
-
-        if self.config_value is not None and ENABLE_PERSISTENT_CONFIG:
-            if self.config_path.startswith('oauth.') and not ENABLE_OAUTH_PERSISTENT_CONFIG:
-                log.info(f"Skipping loading of '{env_name}' as OAuth persistent config is disabled")
-                self.value = env_value
-            else:
-                log.info(f"'{env_name}' loaded from the latest database entry")
-                self.value = self.config_value
-        else:
-            self.value = env_value
-
-        PERSISTENT_CONFIG_REGISTRY.append(self)
-
-    def __str__(self):
-        return str(self.value)
-
-    @property
-    def __dict__(self):
-        raise TypeError('PersistentConfig object cannot be converted to dict, use config_get or .value instead.')
-
-    def __getattribute__(self, item):
-        if item == '__dict__':
-            raise TypeError('PersistentConfig object cannot be converted to dict, use config_get or .value instead.')
-        return super().__getattribute__(item)
-
-    def update(self):
-        new_value = get_config_value(self.config_path)
-        if new_value is not None:
-            self.value = new_value
-            log.info(f'Updated {self.env_name} to new value {self.value}')
-
-    def save(self):
-        """Sync save — used ONLY at startup/import time."""
-        log.info(f"Saving '{self.env_name}' to the database")
-        path_parts = self.config_path.split('.')
-        sub_config = CONFIG_DATA
-        for key in path_parts[:-1]:
-            if key not in sub_config:
-                sub_config[key] = {}
-            sub_config = sub_config[key]
-        sub_config[path_parts[-1]] = self.value
-        save_to_db(CONFIG_DATA)
-        self.config_value = self.value
-
-    async def async_save(self):
-        """Async save — used for ALL runtime config persistence."""
-        log.info(f"Saving '{self.env_name}' to the database")
-        path_parts = self.config_path.split('.')
-        sub_config = CONFIG_DATA
-        for key in path_parts[:-1]:
-            if key not in sub_config:
-                sub_config[key] = {}
-            sub_config = sub_config[key]
-        sub_config[path_parts[-1]] = self.value
-        await async_save_to_db(CONFIG_DATA)
-        self.config_value = self.value
-
-
-class AppConfig:
-    _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
-    _redis_key_prefix: str
-
-    _state: dict[str, PersistentConfig]
-
-    def __init__(
-        self,
-        redis_url: Optional[str] = None,
-        redis_sentinels: Optional[list] = [],
-        redis_cluster: Optional[bool] = False,
-        redis_key_prefix: str = 'open-webui',
-    ):
-        if redis_url:
-            super().__setattr__('_redis_key_prefix', redis_key_prefix)
-            super().__setattr__(
-                '_redis',
-                get_redis_connection(
-                    redis_url,
-                    redis_sentinels,
-                    redis_cluster,
-                    decode_responses=True,
-                ),
-            )
-
-        super().__setattr__('_state', {})
-
-    def __setattr__(self, key, value):
-        if isinstance(value, PersistentConfig):
-            self._state[key] = value
-        else:
-            self._state[key].value = value
-
-            # At runtime (inside the event loop) persist via the async engine
-            # to avoid blocking the loop and contending with the async DB pool.
-            # At startup/import time, fall back to sync.
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self._async_persist(key))
-            except RuntimeError:
-                self._state[key].save()
-
-            if self._redis and ENABLE_PERSISTENT_CONFIG:
-                redis_key = f'{self._redis_key_prefix}:config:{key}'
-                self._redis.set(redis_key, json.dumps(self._state[key].value))
-
-    async def _async_persist(self, key):
-        """Persist a single config key via the async engine."""
-        try:
-            await self._state[key].async_save()
-        except Exception as e:
-            log.error(f'Failed to async-persist config key {key}: {e}')
-
-    def _sync_to_redis(self):
-        """Push all in-memory config values to Redis, e.g. after a bulk import."""
-        if not self._redis or not ENABLE_PERSISTENT_CONFIG:
-            return
-        for key, pc in self._state.items():
-            redis_key = f'{self._redis_key_prefix}:config:{key}'
-            try:
-                self._redis.set(redis_key, json.dumps(pc.value))
-            except Exception as e:
-                log.error(f'Failed to sync config key {key} to Redis: {e}')
-
-    def __getattr__(self, key):
-        if key not in self._state:
-            raise AttributeError(f"Config key '{key}' not found")
-
-        # If Redis is available and persistent config is enabled, check for an updated value
-        if self._redis and ENABLE_PERSISTENT_CONFIG:
-            redis_key = f'{self._redis_key_prefix}:config:{key}'
-            redis_value = self._redis.get(redis_key)
-
-            if redis_value is not None:
-                try:
-                    decoded_value = json.loads(redis_value)
-
-                    # Update the in-memory value if different
-                    if self._state[key].value != decoded_value:
-                        self._state[key].value = decoded_value
-                        log.info(f'Updated {key} from Redis: {decoded_value}')
-
-                except json.JSONDecodeError:
-                    log.error(f'Invalid JSON format in Redis for {key}: {redis_value}')
-
-        return self._state[key].value
-
-
-####################################
-# WEBUI_AUTH (Required for security)
-####################################
-
-ENABLE_API_KEYS = PersistentConfig(
+ENABLE_API_KEYS = ConfigVar(
     'ENABLE_API_KEYS',
     'auth.enable_api_keys',
     os.environ.get('ENABLE_API_KEYS', 'False').lower() == 'true',
 )
 
-ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = PersistentConfig(
+ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = ConfigVar(
     'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS',
     'auth.api_key.endpoint_restrictions',
     os.environ.get(
@@ -383,13 +158,13 @@ ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = PersistentConfig(
     == 'true',
 )
 
-API_KEYS_ALLOWED_ENDPOINTS = PersistentConfig(
+API_KEYS_ALLOWED_ENDPOINTS = ConfigVar(
     'API_KEYS_ALLOWED_ENDPOINTS',
     'auth.api_key.allowed_endpoints',
     os.environ.get('API_KEYS_ALLOWED_ENDPOINTS', os.environ.get('API_KEY_ALLOWED_ENDPOINTS', '')),
 )
 
-JWT_EXPIRES_IN = PersistentConfig('JWT_EXPIRES_IN', 'auth.jwt_expiry', os.environ.get('JWT_EXPIRES_IN', '4w'))
+JWT_EXPIRES_IN = ConfigVar('JWT_EXPIRES_IN', 'auth.jwt_expiry', os.environ.get('JWT_EXPIRES_IN', '4w'))
 
 if JWT_EXPIRES_IN.value == '-1':
     log.warning(
@@ -401,22 +176,20 @@ if JWT_EXPIRES_IN.value == '-1':
 # OAuth config
 ####################################
 
-ENABLE_OAUTH_PERSISTENT_CONFIG = os.environ.get('ENABLE_OAUTH_PERSISTENT_CONFIG', 'False').lower() == 'true'
-
-ENABLE_OAUTH_SIGNUP = PersistentConfig(
+ENABLE_OAUTH_SIGNUP = ConfigVar(
     'ENABLE_OAUTH_SIGNUP',
     'oauth.enable_signup',
     os.environ.get('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true',
 )
 
-OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = PersistentConfig(
+OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = ConfigVar(
     'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE',
     'oauth.refresh_token_include_scope',
     os.environ.get('OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE', 'False').lower() == 'true',
 )
 
 
-OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
+OAUTH_MERGE_ACCOUNTS_BY_EMAIL = ConfigVar(
     'OAUTH_MERGE_ACCOUNTS_BY_EMAIL',
     'oauth.merge_accounts_by_email',
     os.environ.get('OAUTH_MERGE_ACCOUNTS_BY_EMAIL', 'False').lower() == 'true',
@@ -424,26 +197,26 @@ OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
 
 OAUTH_PROVIDERS = {}
 
-GOOGLE_CLIENT_ID = PersistentConfig(
+GOOGLE_CLIENT_ID = ConfigVar(
     'GOOGLE_CLIENT_ID',
     'oauth.google.client_id',
     os.environ.get('GOOGLE_CLIENT_ID', ''),
 )
 
-GOOGLE_CLIENT_SECRET = PersistentConfig(
+GOOGLE_CLIENT_SECRET = ConfigVar(
     'GOOGLE_CLIENT_SECRET',
     'oauth.google.client_secret',
     os.environ.get('GOOGLE_CLIENT_SECRET', ''),
 )
 
 
-GOOGLE_OAUTH_SCOPE = PersistentConfig(
+GOOGLE_OAUTH_SCOPE = ConfigVar(
     'GOOGLE_OAUTH_SCOPE',
     'oauth.google.scope',
     os.environ.get('GOOGLE_OAUTH_SCOPE', 'openid email profile'),
 )
 
-GOOGLE_REDIRECT_URI = PersistentConfig(
+GOOGLE_REDIRECT_URI = ConfigVar(
     'GOOGLE_REDIRECT_URI',
     'oauth.google.redirect_uri',
     os.environ.get('GOOGLE_REDIRECT_URI', ''),
@@ -461,31 +234,31 @@ if _google_oauth_authorize_params:
     except (json.JSONDecodeError, TypeError):
         log.warning('GOOGLE_OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
 
-MICROSOFT_CLIENT_ID = PersistentConfig(
+MICROSOFT_CLIENT_ID = ConfigVar(
     'MICROSOFT_CLIENT_ID',
     'oauth.microsoft.client_id',
     os.environ.get('MICROSOFT_CLIENT_ID', ''),
 )
 
-MICROSOFT_CLIENT_SECRET = PersistentConfig(
+MICROSOFT_CLIENT_SECRET = ConfigVar(
     'MICROSOFT_CLIENT_SECRET',
     'oauth.microsoft.client_secret',
     os.environ.get('MICROSOFT_CLIENT_SECRET', ''),
 )
 
-MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(
+MICROSOFT_CLIENT_TENANT_ID = ConfigVar(
     'MICROSOFT_CLIENT_TENANT_ID',
     'oauth.microsoft.tenant_id',
     os.environ.get('MICROSOFT_CLIENT_TENANT_ID', ''),
 )
 
-MICROSOFT_CLIENT_LOGIN_BASE_URL = PersistentConfig(
+MICROSOFT_CLIENT_LOGIN_BASE_URL = ConfigVar(
     'MICROSOFT_CLIENT_LOGIN_BASE_URL',
     'oauth.microsoft.login_base_url',
     os.environ.get('MICROSOFT_CLIENT_LOGIN_BASE_URL', 'https://login.microsoftonline.com'),
 )
 
-MICROSOFT_CLIENT_PICTURE_URL = PersistentConfig(
+MICROSOFT_CLIENT_PICTURE_URL = ConfigVar(
     'MICROSOFT_CLIENT_PICTURE_URL',
     'oauth.microsoft.picture_url',
     os.environ.get(
@@ -495,170 +268,170 @@ MICROSOFT_CLIENT_PICTURE_URL = PersistentConfig(
 )
 
 
-MICROSOFT_OAUTH_SCOPE = PersistentConfig(
+MICROSOFT_OAUTH_SCOPE = ConfigVar(
     'MICROSOFT_OAUTH_SCOPE',
     'oauth.microsoft.scope',
     os.environ.get('MICROSOFT_OAUTH_SCOPE', 'openid email profile'),
 )
 
-MICROSOFT_REDIRECT_URI = PersistentConfig(
+MICROSOFT_REDIRECT_URI = ConfigVar(
     'MICROSOFT_REDIRECT_URI',
     'oauth.microsoft.redirect_uri',
     os.environ.get('MICROSOFT_REDIRECT_URI', ''),
 )
 
-GITHUB_CLIENT_ID = PersistentConfig(
+GITHUB_CLIENT_ID = ConfigVar(
     'GITHUB_CLIENT_ID',
     'oauth.github.client_id',
     os.environ.get('GITHUB_CLIENT_ID', ''),
 )
 
-GITHUB_CLIENT_SECRET = PersistentConfig(
+GITHUB_CLIENT_SECRET = ConfigVar(
     'GITHUB_CLIENT_SECRET',
     'oauth.github.client_secret',
     os.environ.get('GITHUB_CLIENT_SECRET', ''),
 )
 
-GITHUB_CLIENT_SCOPE = PersistentConfig(
+GITHUB_CLIENT_SCOPE = ConfigVar(
     'GITHUB_CLIENT_SCOPE',
     'oauth.github.scope',
     os.environ.get('GITHUB_CLIENT_SCOPE', 'user:email'),
 )
 
-GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
+GITHUB_CLIENT_REDIRECT_URI = ConfigVar(
     'GITHUB_CLIENT_REDIRECT_URI',
     'oauth.github.redirect_uri',
     os.environ.get('GITHUB_CLIENT_REDIRECT_URI', ''),
 )
 
-OAUTH_CLIENT_ID = PersistentConfig(
+OAUTH_CLIENT_ID = ConfigVar(
     'OAUTH_CLIENT_ID',
     'oauth.oidc.client_id',
     os.environ.get('OAUTH_CLIENT_ID', ''),
 )
 
-OAUTH_CLIENT_SECRET = PersistentConfig(
+OAUTH_CLIENT_SECRET = ConfigVar(
     'OAUTH_CLIENT_SECRET',
     'oauth.oidc.client_secret',
     os.environ.get('OAUTH_CLIENT_SECRET', ''),
 )
 
-OPENID_PROVIDER_URL = PersistentConfig(
+OPENID_PROVIDER_URL = ConfigVar(
     'OPENID_PROVIDER_URL',
     'oauth.oidc.provider_url',
     os.environ.get('OPENID_PROVIDER_URL', ''),
 )
 
-OPENID_END_SESSION_ENDPOINT = PersistentConfig(
+OPENID_END_SESSION_ENDPOINT = ConfigVar(
     'OPENID_END_SESSION_ENDPOINT',
     'oauth.oidc.end_session_endpoint',
     os.environ.get('OPENID_END_SESSION_ENDPOINT', ''),
 )
 
-OPENID_REDIRECT_URI = PersistentConfig(
+OPENID_REDIRECT_URI = ConfigVar(
     'OPENID_REDIRECT_URI',
     'oauth.oidc.redirect_uri',
     os.environ.get('OPENID_REDIRECT_URI', ''),
 )
 
-OAUTH_SCOPES = PersistentConfig(
+OAUTH_SCOPES = ConfigVar(
     'OAUTH_SCOPES',
     'oauth.oidc.scopes',
     os.environ.get('OAUTH_SCOPES', 'openid email profile'),
 )
 
-OAUTH_TIMEOUT = PersistentConfig(
+OAUTH_TIMEOUT = ConfigVar(
     'OAUTH_TIMEOUT',
     'oauth.oidc.oauth_timeout',
     os.environ.get('OAUTH_TIMEOUT', ''),
 )
 
-OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = PersistentConfig(
+OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = ConfigVar(
     'OAUTH_TOKEN_ENDPOINT_AUTH_METHOD',
     'oauth.oidc.token_endpoint_auth_method',
     os.environ.get('OAUTH_TOKEN_ENDPOINT_AUTH_METHOD', None),
 )
 
-OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
+OAUTH_CODE_CHALLENGE_METHOD = ConfigVar(
     'OAUTH_CODE_CHALLENGE_METHOD',
     'oauth.oidc.code_challenge_method',
     os.environ.get('OAUTH_CODE_CHALLENGE_METHOD', None),
 )
 
-OAUTH_PROVIDER_NAME = PersistentConfig(
+OAUTH_PROVIDER_NAME = ConfigVar(
     'OAUTH_PROVIDER_NAME',
     'oauth.oidc.provider_name',
     os.environ.get('OAUTH_PROVIDER_NAME', 'SSO'),
 )
 
-OAUTH_SUB_CLAIM = PersistentConfig(
+OAUTH_SUB_CLAIM = ConfigVar(
     'OAUTH_SUB_CLAIM',
     'oauth.oidc.sub_claim',
     os.environ.get('OAUTH_SUB_CLAIM', None),
 )
 
-OAUTH_USERNAME_CLAIM = PersistentConfig(
+OAUTH_USERNAME_CLAIM = ConfigVar(
     'OAUTH_USERNAME_CLAIM',
     'oauth.oidc.username_claim',
     os.environ.get('OAUTH_USERNAME_CLAIM', 'name'),
 )
 
 
-OAUTH_PICTURE_CLAIM = PersistentConfig(
+OAUTH_PICTURE_CLAIM = ConfigVar(
     'OAUTH_PICTURE_CLAIM',
     'oauth.oidc.avatar_claim',
     os.environ.get('OAUTH_PICTURE_CLAIM', 'picture'),
 )
 
-OAUTH_EMAIL_CLAIM = PersistentConfig(
+OAUTH_EMAIL_CLAIM = ConfigVar(
     'OAUTH_EMAIL_CLAIM',
     'oauth.oidc.email_claim',
     os.environ.get('OAUTH_EMAIL_CLAIM', 'email'),
 )
 
-OAUTH_GROUPS_CLAIM = PersistentConfig(
+OAUTH_GROUPS_CLAIM = ConfigVar(
     'OAUTH_GROUPS_CLAIM',
     'oauth.oidc.group_claim',
     os.environ.get('OAUTH_GROUPS_CLAIM', os.environ.get('OAUTH_GROUP_CLAIM', 'groups')),
 )
 
-FEISHU_CLIENT_ID = PersistentConfig(
+FEISHU_CLIENT_ID = ConfigVar(
     'FEISHU_CLIENT_ID',
     'oauth.feishu.client_id',
     os.environ.get('FEISHU_CLIENT_ID', ''),
 )
 
-FEISHU_CLIENT_SECRET = PersistentConfig(
+FEISHU_CLIENT_SECRET = ConfigVar(
     'FEISHU_CLIENT_SECRET',
     'oauth.feishu.client_secret',
     os.environ.get('FEISHU_CLIENT_SECRET', ''),
 )
 
-FEISHU_OAUTH_SCOPE = PersistentConfig(
+FEISHU_OAUTH_SCOPE = ConfigVar(
     'FEISHU_OAUTH_SCOPE',
     'oauth.feishu.scope',
     os.environ.get('FEISHU_OAUTH_SCOPE', 'contact:user.base:readonly'),
 )
 
-FEISHU_REDIRECT_URI = PersistentConfig(
+FEISHU_REDIRECT_URI = ConfigVar(
     'FEISHU_REDIRECT_URI',
     'oauth.feishu.redirect_uri',
     os.environ.get('FEISHU_REDIRECT_URI', ''),
 )
 
-ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
+ENABLE_OAUTH_ROLE_MANAGEMENT = ConfigVar(
     'ENABLE_OAUTH_ROLE_MANAGEMENT',
     'oauth.enable_role_mapping',
     os.environ.get('ENABLE_OAUTH_ROLE_MANAGEMENT', 'False').lower() == 'true',
 )
 
-ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
+ENABLE_OAUTH_GROUP_MANAGEMENT = ConfigVar(
     'ENABLE_OAUTH_GROUP_MANAGEMENT',
     'oauth.enable_group_mapping',
     os.environ.get('ENABLE_OAUTH_GROUP_MANAGEMENT', 'False').lower() == 'true',
 )
 
-ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
+ENABLE_OAUTH_GROUP_CREATION = ConfigVar(
     'ENABLE_OAUTH_GROUP_CREATION',
     'oauth.enable_group_creation',
     os.environ.get('ENABLE_OAUTH_GROUP_CREATION', 'False').lower() == 'true',
@@ -666,14 +439,14 @@ ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
 
 
 oauth_group_default_share = os.environ.get('OAUTH_GROUP_DEFAULT_SHARE', 'true').strip().lower()
-OAUTH_GROUP_DEFAULT_SHARE = PersistentConfig(
+OAUTH_GROUP_DEFAULT_SHARE = ConfigVar(
     'OAUTH_GROUP_DEFAULT_SHARE',
     'oauth.group_default_share',
     ('members' if oauth_group_default_share == 'members' else oauth_group_default_share == 'true'),
 )
 
 
-OAUTH_BLOCKED_GROUPS = PersistentConfig(
+OAUTH_BLOCKED_GROUPS = ConfigVar(
     'OAUTH_BLOCKED_GROUPS',
     'oauth.blocked_groups',
     os.environ.get('OAUTH_BLOCKED_GROUPS', '[]'),
@@ -681,7 +454,7 @@ OAUTH_BLOCKED_GROUPS = PersistentConfig(
 
 OAUTH_GROUPS_SEPARATOR = os.environ.get('OAUTH_GROUPS_SEPARATOR', ';')
 
-OAUTH_ROLES_CLAIM = PersistentConfig(
+OAUTH_ROLES_CLAIM = ConfigVar(
     'OAUTH_ROLES_CLAIM',
     'oauth.roles_claim',
     os.environ.get('OAUTH_ROLES_CLAIM', 'roles'),
@@ -689,7 +462,7 @@ OAUTH_ROLES_CLAIM = PersistentConfig(
 
 OAUTH_ROLES_SEPARATOR = os.environ.get('OAUTH_ROLES_SEPARATOR', ',')
 
-OAUTH_ALLOWED_ROLES = PersistentConfig(
+OAUTH_ALLOWED_ROLES = ConfigVar(
     'OAUTH_ALLOWED_ROLES',
     'oauth.allowed_roles',
     [
@@ -701,31 +474,31 @@ OAUTH_ALLOWED_ROLES = PersistentConfig(
     ],
 )
 
-OAUTH_ADMIN_ROLES = PersistentConfig(
+OAUTH_ADMIN_ROLES = ConfigVar(
     'OAUTH_ADMIN_ROLES',
     'oauth.admin_roles',
     [role.strip() for role in os.environ.get('OAUTH_ADMIN_ROLES', 'admin').split(OAUTH_ROLES_SEPARATOR) if role],
 )
 
-OAUTH_ALLOWED_DOMAINS = PersistentConfig(
+OAUTH_ALLOWED_DOMAINS = ConfigVar(
     'OAUTH_ALLOWED_DOMAINS',
     'oauth.allowed_domains',
     [domain.strip() for domain in os.environ.get('OAUTH_ALLOWED_DOMAINS', '*').split(',')],
 )
 
-OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
+OAUTH_UPDATE_PICTURE_ON_LOGIN = ConfigVar(
     'OAUTH_UPDATE_PICTURE_ON_LOGIN',
     'oauth.update_picture_on_login',
     os.environ.get('OAUTH_UPDATE_PICTURE_ON_LOGIN', 'False').lower() == 'true',
 )
 
-OAUTH_UPDATE_NAME_ON_LOGIN = PersistentConfig(
+OAUTH_UPDATE_NAME_ON_LOGIN = ConfigVar(
     'OAUTH_UPDATE_NAME_ON_LOGIN',
     'oauth.update_name_on_login',
     os.environ.get('OAUTH_UPDATE_NAME_ON_LOGIN', 'False').lower() == 'true',
 )
 
-OAUTH_UPDATE_EMAIL_ON_LOGIN = PersistentConfig(
+OAUTH_UPDATE_EMAIL_ON_LOGIN = ConfigVar(
     'OAUTH_UPDATE_EMAIL_ON_LOGIN',
     'oauth.update_email_on_login',
     os.environ.get('OAUTH_UPDATE_EMAIL_ON_LOGIN', 'False').lower() == 'true',
@@ -735,7 +508,7 @@ OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
     os.environ.get('OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID', 'False').lower() == 'true'
 )
 
-OAUTH_AUDIENCE = PersistentConfig(
+OAUTH_AUDIENCE = ConfigVar(
     'OAUTH_AUDIENCE',
     'oauth.audience',
     os.environ.get('OAUTH_AUDIENCE', ''),
@@ -1041,7 +814,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # DIRECT CONNECTIONS
 ####################################
 
-ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
+ENABLE_DIRECT_CONNECTIONS = ConfigVar(
     'ENABLE_DIRECT_CONNECTIONS',
     'direct.enable',
     os.environ.get('ENABLE_DIRECT_CONNECTIONS', 'False').lower() == 'true',
@@ -1051,7 +824,7 @@ ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
 # OLLAMA_BASE_URL
 ####################################
 
-ENABLE_OLLAMA_API = PersistentConfig(
+ENABLE_OLLAMA_API = ConfigVar(
     'ENABLE_OLLAMA_API',
     'ollama.enable',
     os.environ.get('ENABLE_OLLAMA_API', 'True').lower() == 'true',
@@ -1118,9 +891,9 @@ OLLAMA_BASE_URLS = os.environ.get('OLLAMA_BASE_URLS', '')
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != '' else OLLAMA_BASE_URL
 
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
-OLLAMA_BASE_URLS = PersistentConfig('OLLAMA_BASE_URLS', 'ollama.base_urls', OLLAMA_BASE_URLS)
+OLLAMA_BASE_URLS = ConfigVar('OLLAMA_BASE_URLS', 'ollama.base_urls', OLLAMA_BASE_URLS)
 
-OLLAMA_API_CONFIGS = PersistentConfig(
+OLLAMA_API_CONFIGS = ConfigVar(
     'OLLAMA_API_CONFIGS',
     'ollama.api_configs',
     {},
@@ -1131,7 +904,7 @@ OLLAMA_API_CONFIGS = PersistentConfig(
 ####################################
 
 
-ENABLE_OPENAI_API = PersistentConfig(
+ENABLE_OPENAI_API = ConfigVar(
     'ENABLE_OPENAI_API',
     'openai.enable',
     os.environ.get('ENABLE_OPENAI_API', 'True').lower() == 'true',
@@ -1155,7 +928,7 @@ OPENAI_API_KEYS = os.environ.get('OPENAI_API_KEYS', '')
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != '' else OPENAI_API_KEY
 
 OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(';')]
-OPENAI_API_KEYS = PersistentConfig('OPENAI_API_KEYS', 'openai.api_keys', OPENAI_API_KEYS)
+OPENAI_API_KEYS = ConfigVar('OPENAI_API_KEYS', 'openai.api_keys', OPENAI_API_KEYS)
 
 OPENAI_API_BASE_URLS = os.environ.get('OPENAI_API_BASE_URLS', '')
 OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != '' else OPENAI_API_BASE_URL
@@ -1163,9 +936,9 @@ OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != '' else O
 OPENAI_API_BASE_URLS = [
     url.strip() if url != '' else 'https://api.openai.com/v1' for url in OPENAI_API_BASE_URLS.split(';')
 ]
-OPENAI_API_BASE_URLS = PersistentConfig('OPENAI_API_BASE_URLS', 'openai.api_base_urls', OPENAI_API_BASE_URLS)
+OPENAI_API_BASE_URLS = ConfigVar('OPENAI_API_BASE_URLS', 'openai.api_base_urls', OPENAI_API_BASE_URLS)
 
-OPENAI_API_CONFIGS = PersistentConfig(
+OPENAI_API_CONFIGS = ConfigVar(
     'OPENAI_API_CONFIGS',
     'openai.api_configs',
     {},
@@ -1184,7 +957,7 @@ OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
 # MODELS
 ####################################
 
-ENABLE_BASE_MODELS_CACHE = PersistentConfig(
+ENABLE_BASE_MODELS_CACHE = ConfigVar(
     'ENABLE_BASE_MODELS_CACHE',
     'models.base_models_cache',
     os.environ.get('ENABLE_BASE_MODELS_CACHE', 'False').lower() == 'true',
@@ -1202,13 +975,13 @@ except Exception as e:
     tool_server_connections = []
 
 
-TOOL_SERVER_CONNECTIONS = PersistentConfig(
+TOOL_SERVER_CONNECTIONS = ConfigVar(
     'TOOL_SERVER_CONNECTIONS',
     'tool_server.connections',
     tool_server_connections,
 )
 
-OAUTH_CLIENT_TIMEOUT = PersistentConfig(
+OAUTH_CLIENT_TIMEOUT = ConfigVar(
     'OAUTH_CLIENT_TIMEOUT',
     'oauth.client.timeout',
     os.environ.get('OAUTH_CLIENT_TIMEOUT', ''),
@@ -1220,7 +993,7 @@ OAUTH_CLIENT_TIMEOUT = PersistentConfig(
 
 terminal_server_connections = json.loads(os.environ.get('TERMINAL_SERVER_CONNECTIONS', '[]'))
 
-TERMINAL_SERVER_CONNECTIONS = PersistentConfig(
+TERMINAL_SERVER_CONNECTIONS = ConfigVar(
     'TERMINAL_SERVER_CONNECTIONS',
     'terminal_server.connections',
     terminal_server_connections,
@@ -1236,22 +1009,22 @@ except Exception:
 ####################################
 
 
-WEBUI_URL = PersistentConfig('WEBUI_URL', 'webui.url', os.environ.get('WEBUI_URL', ''))
+WEBUI_URL = ConfigVar('WEBUI_URL', 'webui.url', os.environ.get('WEBUI_URL', ''))
 
 
-ENABLE_SIGNUP = PersistentConfig(
+ENABLE_SIGNUP = ConfigVar(
     'ENABLE_SIGNUP',
     'ui.enable_signup',
     (False if not WEBUI_AUTH else os.environ.get('ENABLE_SIGNUP', 'True').lower() == 'true'),
 )
 
-ENABLE_LOGIN_FORM = PersistentConfig(
+ENABLE_LOGIN_FORM = ConfigVar(
     'ENABLE_LOGIN_FORM',
     'ui.enable_login_form',
     os.environ.get('ENABLE_LOGIN_FORM', 'True').lower() == 'true',
 )
 
-ENABLE_PASSWORD_CHANGE_FORM = PersistentConfig(
+ENABLE_PASSWORD_CHANGE_FORM = ConfigVar(
     'ENABLE_PASSWORD_CHANGE_FORM',
     'ui.enable_password_change_form',
     os.environ.get('ENABLE_PASSWORD_CHANGE_FORM', 'True').lower() == 'true',
@@ -1259,15 +1032,15 @@ ENABLE_PASSWORD_CHANGE_FORM = PersistentConfig(
 
 ENABLE_PASSWORD_AUTH = os.environ.get('ENABLE_PASSWORD_AUTH', 'True').lower() == 'true'
 
-DEFAULT_LOCALE = PersistentConfig(
+DEFAULT_LOCALE = ConfigVar(
     'DEFAULT_LOCALE',
     'ui.default_locale',
     os.environ.get('DEFAULT_LOCALE', ''),
 )
 
-DEFAULT_MODELS = PersistentConfig('DEFAULT_MODELS', 'ui.default_models', os.environ.get('DEFAULT_MODELS', None))
+DEFAULT_MODELS = ConfigVar('DEFAULT_MODELS', 'ui.default_models', os.environ.get('DEFAULT_MODELS', None))
 
-DEFAULT_PINNED_MODELS = PersistentConfig(
+DEFAULT_PINNED_MODELS = ConfigVar(
     'DEFAULT_PINNED_MODELS',
     'ui.default_pinned_models',
     os.environ.get('DEFAULT_PINNED_MODELS', None),
@@ -1309,13 +1082,13 @@ if default_prompt_suggestions == []:
         },
     ]
 
-DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
+DEFAULT_PROMPT_SUGGESTIONS = ConfigVar(
     'DEFAULT_PROMPT_SUGGESTIONS',
     'ui.prompt_suggestions',
     default_prompt_suggestions,
 )
 
-MODEL_ORDER_LIST = PersistentConfig(
+MODEL_ORDER_LIST = ConfigVar(
     'MODEL_ORDER_LIST',
     'ui.model_order_list',
     [],
@@ -1327,7 +1100,7 @@ except Exception as e:
     log.exception(f'Error loading DEFAULT_MODEL_METADATA: {e}')
     default_model_metadata = {}
 
-DEFAULT_MODEL_METADATA = PersistentConfig(
+DEFAULT_MODEL_METADATA = ConfigVar(
     'DEFAULT_MODEL_METADATA',
     'models.default_metadata',
     default_model_metadata,
@@ -1339,38 +1112,38 @@ except Exception as e:
     log.exception(f'Error loading DEFAULT_MODEL_PARAMS: {e}')
     default_model_params = {}
 
-DEFAULT_MODEL_PARAMS = PersistentConfig(
+DEFAULT_MODEL_PARAMS = ConfigVar(
     'DEFAULT_MODEL_PARAMS',
     'models.default_params',
     default_model_params,
 )
 
-DEFAULT_USER_ROLE = PersistentConfig(
+DEFAULT_USER_ROLE = ConfigVar(
     'DEFAULT_USER_ROLE',
     'ui.default_user_role',
     os.getenv('DEFAULT_USER_ROLE', 'pending'),
 )
 
-DEFAULT_GROUP_ID = PersistentConfig(
+DEFAULT_GROUP_ID = ConfigVar(
     'DEFAULT_GROUP_ID',
     'ui.default_group_id',
     os.environ.get('DEFAULT_GROUP_ID', ''),
 )
 
-PENDING_USER_OVERLAY_TITLE = PersistentConfig(
+PENDING_USER_OVERLAY_TITLE = ConfigVar(
     'PENDING_USER_OVERLAY_TITLE',
     'ui.pending_user_overlay_title',
     os.environ.get('PENDING_USER_OVERLAY_TITLE', ''),
 )
 
-PENDING_USER_OVERLAY_CONTENT = PersistentConfig(
+PENDING_USER_OVERLAY_CONTENT = ConfigVar(
     'PENDING_USER_OVERLAY_CONTENT',
     'ui.pending_user_overlay_content',
     os.environ.get('PENDING_USER_OVERLAY_CONTENT', ''),
 )
 
 
-RESPONSE_WATERMARK = PersistentConfig(
+RESPONSE_WATERMARK = ConfigVar(
     'RESPONSE_WATERMARK',
     'ui.watermark',
     os.environ.get('RESPONSE_WATERMARK', ''),
@@ -1642,72 +1415,72 @@ DEFAULT_USER_PERMISSIONS = {
     },
 }
 
-USER_PERMISSIONS = PersistentConfig(
+USER_PERMISSIONS = ConfigVar(
     'USER_PERMISSIONS',
     'user.permissions',
     DEFAULT_USER_PERMISSIONS,
 )
 
-ENABLE_FOLDERS = PersistentConfig(
+ENABLE_FOLDERS = ConfigVar(
     'ENABLE_FOLDERS',
     'folders.enable',
     os.environ.get('ENABLE_FOLDERS', 'True').lower() == 'true',
 )
 
-FOLDER_MAX_FILE_COUNT = PersistentConfig(
+FOLDER_MAX_FILE_COUNT = ConfigVar(
     'FOLDER_MAX_FILE_COUNT',
     'folders.max_file_count',
     os.environ.get('FOLDER_MAX_FILE_COUNT', ''),
 )
 
-ENABLE_CHANNELS = PersistentConfig(
+ENABLE_CHANNELS = ConfigVar(
     'ENABLE_CHANNELS',
     'channels.enable',
     os.environ.get('ENABLE_CHANNELS', 'False').lower() == 'true',
 )
 
-ENABLE_CALENDAR = PersistentConfig(
+ENABLE_CALENDAR = ConfigVar(
     'ENABLE_CALENDAR',
     'calendar.enable',
     os.environ.get('ENABLE_CALENDAR', 'True').lower() == 'true',
 )
 
-ENABLE_AUTOMATIONS = PersistentConfig(
+ENABLE_AUTOMATIONS = ConfigVar(
     'ENABLE_AUTOMATIONS',
     'automations.enable',
     os.environ.get('ENABLE_AUTOMATIONS', 'True').lower() == 'true',
 )
 
-AUTOMATION_MAX_COUNT = PersistentConfig(
+AUTOMATION_MAX_COUNT = ConfigVar(
     'AUTOMATION_MAX_COUNT',
     'automations.max_count',
     os.environ.get('AUTOMATION_MAX_COUNT', ''),
 )
 
-AUTOMATION_MIN_INTERVAL = PersistentConfig(
+AUTOMATION_MIN_INTERVAL = ConfigVar(
     'AUTOMATION_MIN_INTERVAL',
     'automations.min_interval',
     os.environ.get('AUTOMATION_MIN_INTERVAL', ''),
 )
 
-ENABLE_NOTES = PersistentConfig(
+ENABLE_NOTES = ConfigVar(
     'ENABLE_NOTES',
     'notes.enable',
     os.environ.get('ENABLE_NOTES', 'True').lower() == 'true',
 )
 
-ENABLE_USER_STATUS = PersistentConfig(
+ENABLE_USER_STATUS = ConfigVar(
     'ENABLE_USER_STATUS',
     'users.enable_status',
     os.environ.get('ENABLE_USER_STATUS', 'True').lower() == 'true',
 )
 
-ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
+ENABLE_EVALUATION_ARENA_MODELS = ConfigVar(
     'ENABLE_EVALUATION_ARENA_MODELS',
     'evaluation.arena.enable',
     os.environ.get('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true',
 )
-EVALUATION_ARENA_MODELS = PersistentConfig(
+EVALUATION_ARENA_MODELS = ConfigVar(
     'EVALUATION_ARENA_MODELS',
     'evaluation.arena.models',
     [],
@@ -1723,7 +1496,7 @@ DEFAULT_ARENA_MODEL = {
     },
 }
 
-WEBHOOK_URL = PersistentConfig('WEBHOOK_URL', 'webhook_url', os.environ.get('WEBHOOK_URL', ''))
+WEBHOOK_URL = ConfigVar('WEBHOOK_URL', 'webhook_url', os.environ.get('WEBHOOK_URL', ''))
 
 ENABLE_ADMIN_EXPORT = os.environ.get('ENABLE_ADMIN_EXPORT', 'True').lower() == 'true'
 
@@ -1743,19 +1516,19 @@ ENABLE_ADMIN_CHAT_ACCESS = os.environ.get('ENABLE_ADMIN_CHAT_ACCESS', 'True').lo
 
 ENABLE_ADMIN_ANALYTICS = os.environ.get('ENABLE_ADMIN_ANALYTICS', 'True').lower() == 'true'
 
-ENABLE_COMMUNITY_SHARING = PersistentConfig(
+ENABLE_COMMUNITY_SHARING = ConfigVar(
     'ENABLE_COMMUNITY_SHARING',
     'ui.enable_community_sharing',
     os.environ.get('ENABLE_COMMUNITY_SHARING', 'True').lower() == 'true',
 )
 
-ENABLE_MESSAGE_RATING = PersistentConfig(
+ENABLE_MESSAGE_RATING = ConfigVar(
     'ENABLE_MESSAGE_RATING',
     'ui.enable_message_rating',
     os.environ.get('ENABLE_MESSAGE_RATING', 'True').lower() == 'true',
 )
 
-ENABLE_USER_WEBHOOKS = PersistentConfig(
+ENABLE_USER_WEBHOOKS = ConfigVar(
     'ENABLE_USER_WEBHOOKS',
     'ui.enable_user_webhooks',
     os.environ.get('ENABLE_USER_WEBHOOKS', 'False').lower() == 'true',
@@ -1824,16 +1597,16 @@ except Exception as e:
     log.exception(f'Error loading WEBUI_BANNERS: {e}')
     banners = []
 
-WEBUI_BANNERS = PersistentConfig('WEBUI_BANNERS', 'ui.banners', banners)
+WEBUI_BANNERS = ConfigVar('WEBUI_BANNERS', 'ui.banners', banners)
 
 
-SHOW_ADMIN_DETAILS = PersistentConfig(
+SHOW_ADMIN_DETAILS = ConfigVar(
     'SHOW_ADMIN_DETAILS',
     'auth.admin.show',
     os.environ.get('SHOW_ADMIN_DETAILS', 'true').lower() == 'true',
 )
 
-ADMIN_EMAIL = PersistentConfig(
+ADMIN_EMAIL = ConfigVar(
     'ADMIN_EMAIL',
     'auth.admin.email',
     os.environ.get('ADMIN_EMAIL', None),
@@ -1845,19 +1618,19 @@ ADMIN_EMAIL = PersistentConfig(
 ####################################
 
 
-TASK_MODEL = PersistentConfig(
+TASK_MODEL = ConfigVar(
     'TASK_MODEL',
     'task.model.default',
     os.environ.get('TASK_MODEL', ''),
 )
 
-TASK_MODEL_EXTERNAL = PersistentConfig(
+TASK_MODEL_EXTERNAL = ConfigVar(
     'TASK_MODEL_EXTERNAL',
     'task.model.external',
     os.environ.get('TASK_MODEL_EXTERNAL', ''),
 )
 
-TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+TITLE_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'TITLE_GENERATION_PROMPT_TEMPLATE',
     'task.title.prompt_template',
     os.environ.get('TITLE_GENERATION_PROMPT_TEMPLATE', ''),
@@ -1887,7 +1660,7 @@ JSON format: { "title": "your concise title here" }
 {{MESSAGES:END:2}}
 </chat_history>"""
 
-TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+TAGS_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'TAGS_GENERATION_PROMPT_TEMPLATE',
     'task.tags.prompt_template',
     os.environ.get('TAGS_GENERATION_PROMPT_TEMPLATE', ''),
@@ -1911,7 +1684,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 {{MESSAGES:END:6}}
 </chat_history>"""
 
-IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE',
     'task.image.prompt_template',
     os.environ.get('IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE', ''),
@@ -1938,7 +1711,7 @@ Strictly return in JSON format:
 </chat_history>"""
 
 
-FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'FOLLOW_UP_GENERATION_PROMPT_TEMPLATE',
     'task.follow_up.prompt_template',
     os.environ.get('FOLLOW_UP_GENERATION_PROMPT_TEMPLATE', ''),
@@ -1960,39 +1733,39 @@ JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
 {{MESSAGES:END:6}}
 </chat_history>"""
 
-ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
+ENABLE_FOLLOW_UP_GENERATION = ConfigVar(
     'ENABLE_FOLLOW_UP_GENERATION',
     'task.follow_up.enable',
     os.environ.get('ENABLE_FOLLOW_UP_GENERATION', 'True').lower() == 'true',
 )
 
-ENABLE_TAGS_GENERATION = PersistentConfig(
+ENABLE_TAGS_GENERATION = ConfigVar(
     'ENABLE_TAGS_GENERATION',
     'task.tags.enable',
     os.environ.get('ENABLE_TAGS_GENERATION', 'True').lower() == 'true',
 )
 
-ENABLE_TITLE_GENERATION = PersistentConfig(
+ENABLE_TITLE_GENERATION = ConfigVar(
     'ENABLE_TITLE_GENERATION',
     'task.title.enable',
     os.environ.get('ENABLE_TITLE_GENERATION', 'True').lower() == 'true',
 )
 
 
-ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
+ENABLE_SEARCH_QUERY_GENERATION = ConfigVar(
     'ENABLE_SEARCH_QUERY_GENERATION',
     'task.query.search.enable',
     os.environ.get('ENABLE_SEARCH_QUERY_GENERATION', 'True').lower() == 'true',
 )
 
-ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
+ENABLE_RETRIEVAL_QUERY_GENERATION = ConfigVar(
     'ENABLE_RETRIEVAL_QUERY_GENERATION',
     'task.query.retrieval.enable',
     os.environ.get('ENABLE_RETRIEVAL_QUERY_GENERATION', 'True').lower() == 'true',
 )
 
 
-QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+QUERY_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'QUERY_GENERATION_PROMPT_TEMPLATE',
     'task.query.prompt_template',
     os.environ.get('QUERY_GENERATION_PROMPT_TEMPLATE', ''),
@@ -2022,19 +1795,19 @@ Strictly return in JSON format:
 </chat_history>
 """
 
-ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
+ENABLE_AUTOCOMPLETE_GENERATION = ConfigVar(
     'ENABLE_AUTOCOMPLETE_GENERATION',
     'task.autocomplete.enable',
     os.environ.get('ENABLE_AUTOCOMPLETE_GENERATION', 'False').lower() == 'true',
 )
 
-AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
+AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = ConfigVar(
     'AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH',
     'task.autocomplete.input_max_length',
     int(os.environ.get('AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH', '-1')),
 )
 
-AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE',
     'task.autocomplete.prompt_template',
     os.environ.get('AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE', ''),
@@ -2084,13 +1857,13 @@ Output:
 """
 
 
-VOICE_MODE_PROMPT_TEMPLATE = PersistentConfig(
+VOICE_MODE_PROMPT_TEMPLATE = ConfigVar(
     'VOICE_MODE_PROMPT_TEMPLATE',
     'task.voice.prompt_template',
     os.environ.get('VOICE_MODE_PROMPT_TEMPLATE', ''),
 )
 
-ENABLE_VOICE_MODE_PROMPT = PersistentConfig(
+ENABLE_VOICE_MODE_PROMPT = ConfigVar(
     'ENABLE_VOICE_MODE_PROMPT',
     'task.voice.prompt.enable',
     os.environ.get('ENABLE_VOICE_MODE_PROMPT', 'True').lower() == 'true',
@@ -2121,7 +1894,7 @@ ERROR HANDLING:
 
 Stay consistent, helpful, and easy to listen to."""
 
-TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
+TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = ConfigVar(
     'TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE',
     'task.tools.prompt_template',
     os.environ.get('TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE', ''),
@@ -2167,80 +1940,80 @@ Responses from models: {{responses}}"""
 # Code Interpreter
 ####################################
 
-ENABLE_CODE_EXECUTION = PersistentConfig(
+ENABLE_CODE_EXECUTION = ConfigVar(
     'ENABLE_CODE_EXECUTION',
     'code_execution.enable',
     os.environ.get('ENABLE_CODE_EXECUTION', 'True').lower() == 'true',
 )
 
-CODE_EXECUTION_ENGINE = PersistentConfig(
+CODE_EXECUTION_ENGINE = ConfigVar(
     'CODE_EXECUTION_ENGINE',
     'code_execution.engine',
     os.environ.get('CODE_EXECUTION_ENGINE', 'pyodide'),
 )
 
-CODE_EXECUTION_JUPYTER_URL = PersistentConfig(
+CODE_EXECUTION_JUPYTER_URL = ConfigVar(
     'CODE_EXECUTION_JUPYTER_URL',
     'code_execution.jupyter.url',
     os.environ.get('CODE_EXECUTION_JUPYTER_URL', ''),
 )
 
-CODE_EXECUTION_JUPYTER_AUTH = PersistentConfig(
+CODE_EXECUTION_JUPYTER_AUTH = ConfigVar(
     'CODE_EXECUTION_JUPYTER_AUTH',
     'code_execution.jupyter.auth',
     os.environ.get('CODE_EXECUTION_JUPYTER_AUTH', ''),
 )
 
-CODE_EXECUTION_JUPYTER_AUTH_TOKEN = PersistentConfig(
+CODE_EXECUTION_JUPYTER_AUTH_TOKEN = ConfigVar(
     'CODE_EXECUTION_JUPYTER_AUTH_TOKEN',
     'code_execution.jupyter.auth_token',
     os.environ.get('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''),
 )
 
 
-CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = ConfigVar(
     'CODE_EXECUTION_JUPYTER_AUTH_PASSWORD',
     'code_execution.jupyter.auth_password',
     os.environ.get('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
 )
 
-CODE_EXECUTION_JUPYTER_TIMEOUT = PersistentConfig(
+CODE_EXECUTION_JUPYTER_TIMEOUT = ConfigVar(
     'CODE_EXECUTION_JUPYTER_TIMEOUT',
     'code_execution.jupyter.timeout',
     int(os.environ.get('CODE_EXECUTION_JUPYTER_TIMEOUT', '60')),
 )
 
-ENABLE_CODE_INTERPRETER = PersistentConfig(
+ENABLE_CODE_INTERPRETER = ConfigVar(
     'ENABLE_CODE_INTERPRETER',
     'code_interpreter.enable',
     os.environ.get('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true',
 )
 
-ENABLE_MEMORIES = PersistentConfig(
+ENABLE_MEMORIES = ConfigVar(
     'ENABLE_MEMORIES',
     'memories.enable',
     os.environ.get('ENABLE_MEMORIES', 'True').lower() == 'true',
 )
 
-CODE_INTERPRETER_ENGINE = PersistentConfig(
+CODE_INTERPRETER_ENGINE = ConfigVar(
     'CODE_INTERPRETER_ENGINE',
     'code_interpreter.engine',
     os.environ.get('CODE_INTERPRETER_ENGINE', 'pyodide'),
 )
 
-CODE_INTERPRETER_PROMPT_TEMPLATE = PersistentConfig(
+CODE_INTERPRETER_PROMPT_TEMPLATE = ConfigVar(
     'CODE_INTERPRETER_PROMPT_TEMPLATE',
     'code_interpreter.prompt_template',
     os.environ.get('CODE_INTERPRETER_PROMPT_TEMPLATE', ''),
 )
 
-CODE_INTERPRETER_JUPYTER_URL = PersistentConfig(
+CODE_INTERPRETER_JUPYTER_URL = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_URL',
     'code_interpreter.jupyter.url',
     os.environ.get('CODE_INTERPRETER_JUPYTER_URL', os.environ.get('CODE_EXECUTION_JUPYTER_URL', '')),
 )
 
-CODE_INTERPRETER_JUPYTER_AUTH = PersistentConfig(
+CODE_INTERPRETER_JUPYTER_AUTH = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_AUTH',
     'code_interpreter.jupyter.auth',
     os.environ.get(
@@ -2249,7 +2022,7 @@ CODE_INTERPRETER_JUPYTER_AUTH = PersistentConfig(
     ),
 )
 
-CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = PersistentConfig(
+CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN',
     'code_interpreter.jupyter.auth_token',
     os.environ.get(
@@ -2259,7 +2032,7 @@ CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = PersistentConfig(
 )
 
 
-CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD',
     'code_interpreter.jupyter.auth_password',
     os.environ.get(
@@ -2268,7 +2041,7 @@ CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
     ),
 )
 
-CODE_INTERPRETER_JUPYTER_TIMEOUT = PersistentConfig(
+CODE_INTERPRETER_JUPYTER_TIMEOUT = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_TIMEOUT',
     'code_interpreter.jupyter.timeout',
     int(
@@ -2647,25 +2420,25 @@ S3_VECTOR_REGION = os.environ.get('S3_VECTOR_REGION', None)
 
 
 # If configured, Google Drive will be available as an upload option.
-ENABLE_GOOGLE_DRIVE_INTEGRATION = PersistentConfig(
+ENABLE_GOOGLE_DRIVE_INTEGRATION = ConfigVar(
     'ENABLE_GOOGLE_DRIVE_INTEGRATION',
     'google_drive.enable',
     os.getenv('ENABLE_GOOGLE_DRIVE_INTEGRATION', 'False').lower() == 'true',
 )
 
-GOOGLE_DRIVE_CLIENT_ID = PersistentConfig(
+GOOGLE_DRIVE_CLIENT_ID = ConfigVar(
     'GOOGLE_DRIVE_CLIENT_ID',
     'google_drive.client_id',
     os.environ.get('GOOGLE_DRIVE_CLIENT_ID', ''),
 )
 
-GOOGLE_DRIVE_API_KEY = PersistentConfig(
+GOOGLE_DRIVE_API_KEY = ConfigVar(
     'GOOGLE_DRIVE_API_KEY',
     'google_drive.api_key',
     os.environ.get('GOOGLE_DRIVE_API_KEY', ''),
 )
 
-ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
+ENABLE_ONEDRIVE_INTEGRATION = ConfigVar(
     'ENABLE_ONEDRIVE_INTEGRATION',
     'onedrive.enable',
     os.getenv('ENABLE_ONEDRIVE_INTEGRATION', 'False').lower() == 'true',
@@ -2683,110 +2456,110 @@ ENABLE_ONEDRIVE_BUSINESS = os.environ.get('ENABLE_ONEDRIVE_BUSINESS', 'True').lo
     ONEDRIVE_CLIENT_ID_BUSINESS
 )
 
-ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
+ONEDRIVE_SHAREPOINT_URL = ConfigVar(
     'ONEDRIVE_SHAREPOINT_URL',
     'onedrive.sharepoint_url',
     os.environ.get('ONEDRIVE_SHAREPOINT_URL', ''),
 )
 
-ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
+ONEDRIVE_SHAREPOINT_TENANT_ID = ConfigVar(
     'ONEDRIVE_SHAREPOINT_TENANT_ID',
     'onedrive.sharepoint_tenant_id',
     os.environ.get('ONEDRIVE_SHAREPOINT_TENANT_ID', ''),
 )
 
 # RAG Content Extraction
-CONTENT_EXTRACTION_ENGINE = PersistentConfig(
+CONTENT_EXTRACTION_ENGINE = ConfigVar(
     'CONTENT_EXTRACTION_ENGINE',
     'rag.CONTENT_EXTRACTION_ENGINE',
     os.environ.get('CONTENT_EXTRACTION_ENGINE', '').lower(),
 )
 
-DATALAB_MARKER_API_KEY = PersistentConfig(
+DATALAB_MARKER_API_KEY = ConfigVar(
     'DATALAB_MARKER_API_KEY',
     'rag.datalab_marker_api_key',
     os.environ.get('DATALAB_MARKER_API_KEY', ''),
 )
 
-DATALAB_MARKER_API_BASE_URL = PersistentConfig(
+DATALAB_MARKER_API_BASE_URL = ConfigVar(
     'DATALAB_MARKER_API_BASE_URL',
     'rag.datalab_marker_api_base_url',
     os.environ.get('DATALAB_MARKER_API_BASE_URL', ''),
 )
 
-DATALAB_MARKER_ADDITIONAL_CONFIG = PersistentConfig(
+DATALAB_MARKER_ADDITIONAL_CONFIG = ConfigVar(
     'DATALAB_MARKER_ADDITIONAL_CONFIG',
     'rag.datalab_marker_additional_config',
     os.environ.get('DATALAB_MARKER_ADDITIONAL_CONFIG', ''),
 )
 
-DATALAB_MARKER_USE_LLM = PersistentConfig(
+DATALAB_MARKER_USE_LLM = ConfigVar(
     'DATALAB_MARKER_USE_LLM',
     'rag.DATALAB_MARKER_USE_LLM',
     os.environ.get('DATALAB_MARKER_USE_LLM', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_SKIP_CACHE = PersistentConfig(
+DATALAB_MARKER_SKIP_CACHE = ConfigVar(
     'DATALAB_MARKER_SKIP_CACHE',
     'rag.datalab_marker_skip_cache',
     os.environ.get('DATALAB_MARKER_SKIP_CACHE', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_FORCE_OCR = PersistentConfig(
+DATALAB_MARKER_FORCE_OCR = ConfigVar(
     'DATALAB_MARKER_FORCE_OCR',
     'rag.datalab_marker_force_ocr',
     os.environ.get('DATALAB_MARKER_FORCE_OCR', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_PAGINATE = PersistentConfig(
+DATALAB_MARKER_PAGINATE = ConfigVar(
     'DATALAB_MARKER_PAGINATE',
     'rag.datalab_marker_paginate',
     os.environ.get('DATALAB_MARKER_PAGINATE', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_STRIP_EXISTING_OCR = PersistentConfig(
+DATALAB_MARKER_STRIP_EXISTING_OCR = ConfigVar(
     'DATALAB_MARKER_STRIP_EXISTING_OCR',
     'rag.datalab_marker_strip_existing_ocr',
     os.environ.get('DATALAB_MARKER_STRIP_EXISTING_OCR', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = PersistentConfig(
+DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = ConfigVar(
     'DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION',
     'rag.datalab_marker_disable_image_extraction',
     os.environ.get('DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_FORMAT_LINES = PersistentConfig(
+DATALAB_MARKER_FORMAT_LINES = ConfigVar(
     'DATALAB_MARKER_FORMAT_LINES',
     'rag.datalab_marker_format_lines',
     os.environ.get('DATALAB_MARKER_FORMAT_LINES', 'false').lower() == 'true',
 )
 
-DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
+DATALAB_MARKER_OUTPUT_FORMAT = ConfigVar(
     'DATALAB_MARKER_OUTPUT_FORMAT',
     'rag.datalab_marker_output_format',
     os.environ.get('DATALAB_MARKER_OUTPUT_FORMAT', 'markdown'),
 )
 
-MINERU_API_MODE = PersistentConfig(
+MINERU_API_MODE = ConfigVar(
     'MINERU_API_MODE',
     'rag.mineru_api_mode',
     os.environ.get('MINERU_API_MODE', 'local'),  # "local" or "cloud"
 )
 
-MINERU_API_URL = PersistentConfig(
+MINERU_API_URL = ConfigVar(
     'MINERU_API_URL',
     'rag.mineru_api_url',
     os.environ.get('MINERU_API_URL', 'http://localhost:8000'),
 )
 
-MINERU_API_TIMEOUT = PersistentConfig(
+MINERU_API_TIMEOUT = ConfigVar(
     'MINERU_API_TIMEOUT',
     'rag.mineru_api_timeout',
     os.environ.get('MINERU_API_TIMEOUT', '300'),
 )
 
-MINERU_API_KEY = PersistentConfig(
+MINERU_API_KEY = ConfigVar(
     'MINERU_API_KEY',
     'rag.mineru_api_key',
     os.environ.get('MINERU_API_KEY', ''),
@@ -2798,37 +2571,37 @@ try:
 except json.JSONDecodeError:
     mineru_params = {}
 
-MINERU_PARAMS = PersistentConfig(
+MINERU_PARAMS = ConfigVar(
     'MINERU_PARAMS',
     'rag.mineru_params',
     mineru_params,
 )
 
-EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
+EXTERNAL_DOCUMENT_LOADER_URL = ConfigVar(
     'EXTERNAL_DOCUMENT_LOADER_URL',
     'rag.external_document_loader_url',
     os.environ.get('EXTERNAL_DOCUMENT_LOADER_URL', ''),
 )
 
-EXTERNAL_DOCUMENT_LOADER_API_KEY = PersistentConfig(
+EXTERNAL_DOCUMENT_LOADER_API_KEY = ConfigVar(
     'EXTERNAL_DOCUMENT_LOADER_API_KEY',
     'rag.external_document_loader_api_key',
     os.environ.get('EXTERNAL_DOCUMENT_LOADER_API_KEY', ''),
 )
 
-TIKA_SERVER_URL = PersistentConfig(
+TIKA_SERVER_URL = ConfigVar(
     'TIKA_SERVER_URL',
     'rag.tika_server_url',
     os.getenv('TIKA_SERVER_URL', 'http://tika:9998'),  # Default for sidecar deployment
 )
 
-DOCLING_SERVER_URL = PersistentConfig(
+DOCLING_SERVER_URL = ConfigVar(
     'DOCLING_SERVER_URL',
     'rag.docling_server_url',
     os.getenv('DOCLING_SERVER_URL', 'http://docling:5001'),
 )
 
-DOCLING_API_KEY = PersistentConfig(
+DOCLING_API_KEY = ConfigVar(
     'DOCLING_API_KEY',
     'rag.docling_api_key',
     os.getenv('DOCLING_API_KEY', ''),
@@ -2840,146 +2613,146 @@ try:
 except json.JSONDecodeError:
     docling_params = {}
 
-DOCLING_PARAMS = PersistentConfig(
+DOCLING_PARAMS = ConfigVar(
     'DOCLING_PARAMS',
     'rag.docling_params',
     docling_params,
 )
 
-DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
+DOCUMENT_INTELLIGENCE_ENDPOINT = ConfigVar(
     'DOCUMENT_INTELLIGENCE_ENDPOINT',
     'rag.document_intelligence_endpoint',
     os.getenv('DOCUMENT_INTELLIGENCE_ENDPOINT', ''),
 )
 
-DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
+DOCUMENT_INTELLIGENCE_KEY = ConfigVar(
     'DOCUMENT_INTELLIGENCE_KEY',
     'rag.document_intelligence_key',
     os.getenv('DOCUMENT_INTELLIGENCE_KEY', ''),
 )
 
-DOCUMENT_INTELLIGENCE_MODEL = PersistentConfig(
+DOCUMENT_INTELLIGENCE_MODEL = ConfigVar(
     'DOCUMENT_INTELLIGENCE_MODEL',
     'rag.document_intelligence_model',
     os.getenv('DOCUMENT_INTELLIGENCE_MODEL', 'prebuilt-layout'),
 )
 
-MISTRAL_OCR_API_BASE_URL = PersistentConfig(
+MISTRAL_OCR_API_BASE_URL = ConfigVar(
     'MISTRAL_OCR_API_BASE_URL',
     'rag.MISTRAL_OCR_API_BASE_URL',
     os.getenv('MISTRAL_OCR_API_BASE_URL', 'https://api.mistral.ai/v1'),
 )
 
-MISTRAL_OCR_API_KEY = PersistentConfig(
+MISTRAL_OCR_API_KEY = ConfigVar(
     'MISTRAL_OCR_API_KEY',
     'rag.mistral_ocr_api_key',
     os.getenv('MISTRAL_OCR_API_KEY', ''),
 )
 
-PADDLEOCR_VL_BASE_URL = PersistentConfig(
+PADDLEOCR_VL_BASE_URL = ConfigVar(
     'PADDLEOCR_VL_BASE_URL',
     'rag.paddleocr_vl_base_url',
     os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080'),
 )
 
-PADDLEOCR_VL_TOKEN = PersistentConfig(
+PADDLEOCR_VL_TOKEN = ConfigVar(
     'PADDLEOCR_VL_TOKEN',
     'rag.paddleocr_vl_token',
     os.getenv('PADDLEOCR_VL_TOKEN', ''),
 )
 
-BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+BYPASS_EMBEDDING_AND_RETRIEVAL = ConfigVar(
     'BYPASS_EMBEDDING_AND_RETRIEVAL',
     'rag.bypass_embedding_and_retrieval',
     os.environ.get('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true',
 )
 
 
-RAG_TOP_K = PersistentConfig('RAG_TOP_K', 'rag.top_k', int(os.environ.get('RAG_TOP_K', '3')))
-RAG_TOP_K_RERANKER = PersistentConfig(
+RAG_TOP_K = ConfigVar('RAG_TOP_K', 'rag.top_k', int(os.environ.get('RAG_TOP_K', '3')))
+RAG_TOP_K_RERANKER = ConfigVar(
     'RAG_TOP_K_RERANKER',
     'rag.top_k_reranker',
     int(os.environ.get('RAG_TOP_K_RERANKER', '3')),
 )
-RAG_RELEVANCE_THRESHOLD = PersistentConfig(
+RAG_RELEVANCE_THRESHOLD = ConfigVar(
     'RAG_RELEVANCE_THRESHOLD',
     'rag.relevance_threshold',
     float(os.environ.get('RAG_RELEVANCE_THRESHOLD', '0.0')),
 )
-RAG_HYBRID_BM25_WEIGHT = PersistentConfig(
+RAG_HYBRID_BM25_WEIGHT = ConfigVar(
     'RAG_HYBRID_BM25_WEIGHT',
     'rag.hybrid_bm25_weight',
     float(os.environ.get('RAG_HYBRID_BM25_WEIGHT', '0.5')),
 )
 
-ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
+ENABLE_RAG_HYBRID_SEARCH = ConfigVar(
     'ENABLE_RAG_HYBRID_SEARCH',
     'rag.enable_hybrid_search',
     os.environ.get('ENABLE_RAG_HYBRID_SEARCH', '').lower() == 'true',
 )
 
-ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = PersistentConfig(
+ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = ConfigVar(
     'ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS',
     'rag.enable_hybrid_search_enriched_texts',
     os.environ.get('ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS', 'False').lower() == 'true',
 )
 
-RAG_FULL_CONTEXT = PersistentConfig(
+RAG_FULL_CONTEXT = ConfigVar(
     'RAG_FULL_CONTEXT',
     'rag.full_context',
     os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true',
 )
 
-RAG_FILE_MAX_COUNT = PersistentConfig(
+RAG_FILE_MAX_COUNT = ConfigVar(
     'RAG_FILE_MAX_COUNT',
     'rag.file.max_count',
     (int(os.environ.get('RAG_FILE_MAX_COUNT')) if os.environ.get('RAG_FILE_MAX_COUNT') else None),
 )
 
-RAG_FILE_MAX_SIZE = PersistentConfig(
+RAG_FILE_MAX_SIZE = ConfigVar(
     'RAG_FILE_MAX_SIZE',
     'rag.file.max_size',
     (int(os.environ.get('RAG_FILE_MAX_SIZE')) if os.environ.get('RAG_FILE_MAX_SIZE') else None),
 )
 
-FILE_IMAGE_COMPRESSION_WIDTH = PersistentConfig(
+FILE_IMAGE_COMPRESSION_WIDTH = ConfigVar(
     'FILE_IMAGE_COMPRESSION_WIDTH',
     'file.image_compression_width',
     (int(os.environ.get('FILE_IMAGE_COMPRESSION_WIDTH')) if os.environ.get('FILE_IMAGE_COMPRESSION_WIDTH') else None),
 )
 
-FILE_IMAGE_COMPRESSION_HEIGHT = PersistentConfig(
+FILE_IMAGE_COMPRESSION_HEIGHT = ConfigVar(
     'FILE_IMAGE_COMPRESSION_HEIGHT',
     'file.image_compression_height',
     (int(os.environ.get('FILE_IMAGE_COMPRESSION_HEIGHT')) if os.environ.get('FILE_IMAGE_COMPRESSION_HEIGHT') else None),
 )
 
 
-RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
+RAG_ALLOWED_FILE_EXTENSIONS = ConfigVar(
     'RAG_ALLOWED_FILE_EXTENSIONS',
     'rag.file.allowed_extensions',
     [ext.strip() for ext in os.environ.get('RAG_ALLOWED_FILE_EXTENSIONS', '').split(',') if ext.strip()],
 )
 
-RAG_EMBEDDING_ENGINE = PersistentConfig(
+RAG_EMBEDDING_ENGINE = ConfigVar(
     'RAG_EMBEDDING_ENGINE',
     'rag.embedding_engine',
     os.environ.get('RAG_EMBEDDING_ENGINE', ''),
 )
 
-PDF_EXTRACT_IMAGES = PersistentConfig(
+PDF_EXTRACT_IMAGES = ConfigVar(
     'PDF_EXTRACT_IMAGES',
     'rag.pdf_extract_images',
     os.environ.get('PDF_EXTRACT_IMAGES', 'False').lower() == 'true',
 )
 
-PDF_LOADER_MODE = PersistentConfig(
+PDF_LOADER_MODE = ConfigVar(
     'PDF_LOADER_MODE',
     'rag.pdf_loader_mode',
     os.environ.get('PDF_LOADER_MODE', 'page'),
 )
 
-RAG_EMBEDDING_MODEL = PersistentConfig(
+RAG_EMBEDDING_MODEL = ConfigVar(
     'RAG_EMBEDDING_MODEL',
     'rag.embedding_model',
     os.environ.get('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
@@ -2994,19 +2767,19 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 )
 
-RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
+RAG_EMBEDDING_BATCH_SIZE = ConfigVar(
     'RAG_EMBEDDING_BATCH_SIZE',
     'rag.embedding_batch_size',
     int(os.environ.get('RAG_EMBEDDING_BATCH_SIZE') or os.environ.get('RAG_EMBEDDING_OPENAI_BATCH_SIZE', '1')),
 )
 
-ENABLE_ASYNC_EMBEDDING = PersistentConfig(
+ENABLE_ASYNC_EMBEDDING = ConfigVar(
     'ENABLE_ASYNC_EMBEDDING',
     'rag.enable_async_embedding',
     os.environ.get('ENABLE_ASYNC_EMBEDDING', 'True').lower() == 'true',
 )
 
-RAG_EMBEDDING_CONCURRENT_REQUESTS = PersistentConfig(
+RAG_EMBEDDING_CONCURRENT_REQUESTS = ConfigVar(
     'RAG_EMBEDDING_CONCURRENT_REQUESTS',
     'rag.embedding_concurrent_requests',
     int(os.getenv('RAG_EMBEDDING_CONCURRENT_REQUESTS', '0')),
@@ -3018,13 +2791,13 @@ RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get('RAG_EMBEDDING_CONTENT_PREFIX', No
 
 RAG_EMBEDDING_PREFIX_FIELD_NAME = os.environ.get('RAG_EMBEDDING_PREFIX_FIELD_NAME', None)
 
-RAG_RERANKING_ENGINE = PersistentConfig(
+RAG_RERANKING_ENGINE = ConfigVar(
     'RAG_RERANKING_ENGINE',
     'rag.reranking_engine',
     os.environ.get('RAG_RERANKING_ENGINE', ''),
 )
 
-RAG_RERANKING_MODEL = PersistentConfig(
+RAG_RERANKING_MODEL = ConfigVar(
     'RAG_RERANKING_MODEL',
     'rag.reranking_model',
     os.environ.get('RAG_RERANKING_MODEL', ''),
@@ -3041,38 +2814,38 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 )
 
-RAG_RERANKING_BATCH_SIZE = PersistentConfig(
+RAG_RERANKING_BATCH_SIZE = ConfigVar(
     'RAG_RERANKING_BATCH_SIZE',
     'rag.reranking_batch_size',
     int(os.environ.get('RAG_RERANKING_BATCH_SIZE', '32')),
 )
 
-RAG_EXTERNAL_RERANKER_URL = PersistentConfig(
+RAG_EXTERNAL_RERANKER_URL = ConfigVar(
     'RAG_EXTERNAL_RERANKER_URL',
     'rag.external_reranker_url',
     os.environ.get('RAG_EXTERNAL_RERANKER_URL', ''),
 )
 
-RAG_EXTERNAL_RERANKER_API_KEY = PersistentConfig(
+RAG_EXTERNAL_RERANKER_API_KEY = ConfigVar(
     'RAG_EXTERNAL_RERANKER_API_KEY',
     'rag.external_reranker_api_key',
     os.environ.get('RAG_EXTERNAL_RERANKER_API_KEY', ''),
 )
 
-RAG_EXTERNAL_RERANKER_TIMEOUT = PersistentConfig(
+RAG_EXTERNAL_RERANKER_TIMEOUT = ConfigVar(
     'RAG_EXTERNAL_RERANKER_TIMEOUT',
     'rag.external_reranker_timeout',
     os.environ.get('RAG_EXTERNAL_RERANKER_TIMEOUT', ''),
 )
 
 
-RAG_TEXT_SPLITTER = PersistentConfig(
+RAG_TEXT_SPLITTER = ConfigVar(
     'RAG_TEXT_SPLITTER',
     'rag.text_splitter',
     os.environ.get('RAG_TEXT_SPLITTER', ''),
 )
 
-ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = PersistentConfig(
+ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = ConfigVar(
     'ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER',
     'rag.enable_markdown_header_text_splitter',
     os.environ.get('ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER', 'True').lower() == 'true',
@@ -3080,22 +2853,22 @@ ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = PersistentConfig(
 
 
 TIKTOKEN_CACHE_DIR = os.environ.get('TIKTOKEN_CACHE_DIR', f'{CACHE_DIR}/tiktoken')
-TIKTOKEN_ENCODING_NAME = PersistentConfig(
+TIKTOKEN_ENCODING_NAME = ConfigVar(
     'TIKTOKEN_ENCODING_NAME',
     'rag.tiktoken_encoding_name',
     os.environ.get('TIKTOKEN_ENCODING_NAME', 'cl100k_base'),
 )
 
 
-CHUNK_SIZE = PersistentConfig('CHUNK_SIZE', 'rag.chunk_size', int(os.environ.get('CHUNK_SIZE', '1000')))
+CHUNK_SIZE = ConfigVar('CHUNK_SIZE', 'rag.chunk_size', int(os.environ.get('CHUNK_SIZE', '1000')))
 
-CHUNK_MIN_SIZE_TARGET = PersistentConfig(
+CHUNK_MIN_SIZE_TARGET = ConfigVar(
     'CHUNK_MIN_SIZE_TARGET',
     'rag.chunk_min_size_target',
     int(os.environ.get('CHUNK_MIN_SIZE_TARGET', '0')),
 )
 
-CHUNK_OVERLAP = PersistentConfig(
+CHUNK_OVERLAP = ConfigVar(
     'CHUNK_OVERLAP',
     'rag.chunk_overlap',
     int(os.environ.get('CHUNK_OVERLAP', '100')),
@@ -3127,46 +2900,46 @@ Provide a clear and direct response to the user's query, including inline citati
 </context>
 """
 
-RAG_TEMPLATE = PersistentConfig(
+RAG_TEMPLATE = ConfigVar(
     'RAG_TEMPLATE',
     'rag.template',
     os.environ.get('RAG_TEMPLATE', DEFAULT_RAG_TEMPLATE),
 )
 
-RAG_OPENAI_API_BASE_URL = PersistentConfig(
+RAG_OPENAI_API_BASE_URL = ConfigVar(
     'RAG_OPENAI_API_BASE_URL',
     'rag.openai_api_base_url',
     os.getenv('RAG_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL),
 )
-RAG_OPENAI_API_KEY = PersistentConfig(
+RAG_OPENAI_API_KEY = ConfigVar(
     'RAG_OPENAI_API_KEY',
     'rag.openai_api_key',
     os.getenv('RAG_OPENAI_API_KEY', OPENAI_API_KEY),
 )
 
-RAG_AZURE_OPENAI_BASE_URL = PersistentConfig(
+RAG_AZURE_OPENAI_BASE_URL = ConfigVar(
     'RAG_AZURE_OPENAI_BASE_URL',
     'rag.azure_openai.base_url',
     os.getenv('RAG_AZURE_OPENAI_BASE_URL', ''),
 )
-RAG_AZURE_OPENAI_API_KEY = PersistentConfig(
+RAG_AZURE_OPENAI_API_KEY = ConfigVar(
     'RAG_AZURE_OPENAI_API_KEY',
     'rag.azure_openai.api_key',
     os.getenv('RAG_AZURE_OPENAI_API_KEY', ''),
 )
-RAG_AZURE_OPENAI_API_VERSION = PersistentConfig(
+RAG_AZURE_OPENAI_API_VERSION = ConfigVar(
     'RAG_AZURE_OPENAI_API_VERSION',
     'rag.azure_openai.api_version',
     os.getenv('RAG_AZURE_OPENAI_API_VERSION', ''),
 )
 
-RAG_OLLAMA_BASE_URL = PersistentConfig(
+RAG_OLLAMA_BASE_URL = ConfigVar(
     'RAG_OLLAMA_BASE_URL',
     'rag.ollama.url',
     os.getenv('RAG_OLLAMA_BASE_URL', OLLAMA_BASE_URL),
 )
 
-RAG_OLLAMA_API_KEY = PersistentConfig(
+RAG_OLLAMA_API_KEY = ConfigVar(
     'RAG_OLLAMA_API_KEY',
     'rag.ollama.key',
     os.getenv('RAG_OLLAMA_API_KEY', ''),
@@ -3193,13 +2966,13 @@ else:
 WEB_FETCH_FILTER_LIST = list(set(DEFAULT_WEB_FETCH_FILTER_LIST + web_fetch_filter_list))
 
 
-YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
+YOUTUBE_LOADER_LANGUAGE = ConfigVar(
     'YOUTUBE_LOADER_LANGUAGE',
     'rag.youtube_loader_language',
     os.getenv('YOUTUBE_LOADER_LANGUAGE', 'en').split(','),
 )
 
-YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
+YOUTUBE_LOADER_PROXY_URL = ConfigVar(
     'YOUTUBE_LOADER_PROXY_URL',
     'rag.youtube_loader_proxy_url',
     os.getenv('YOUTUBE_LOADER_PROXY_URL', ''),
@@ -3210,32 +2983,32 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
 # Web Search (RAG)
 ####################################
 
-ENABLE_WEB_SEARCH = PersistentConfig(
+ENABLE_WEB_SEARCH = ConfigVar(
     'ENABLE_WEB_SEARCH',
     'rag.web.search.enable',
     os.getenv('ENABLE_WEB_SEARCH', 'False').lower() == 'true',
 )
 
-WEB_SEARCH_ENGINE = PersistentConfig(
+WEB_SEARCH_ENGINE = ConfigVar(
     'WEB_SEARCH_ENGINE',
     'rag.web.search.engine',
     os.getenv('WEB_SEARCH_ENGINE', ''),
 )
 
-BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = ConfigVar(
     'BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL',
     'rag.web.search.bypass_embedding_and_retrieval',
     os.getenv('BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true',
 )
 
 
-BYPASS_WEB_SEARCH_WEB_LOADER = PersistentConfig(
+BYPASS_WEB_SEARCH_WEB_LOADER = ConfigVar(
     'BYPASS_WEB_SEARCH_WEB_LOADER',
     'rag.web.search.bypass_web_loader',
     os.getenv('BYPASS_WEB_SEARCH_WEB_LOADER', 'False').lower() == 'true',
 )
 
-WEB_SEARCH_RESULT_COUNT = PersistentConfig(
+WEB_SEARCH_RESULT_COUNT = ConfigVar(
     'WEB_SEARCH_RESULT_COUNT',
     'rag.web.search.result_count',
     int(os.getenv('WEB_SEARCH_RESULT_COUNT', '3')),
@@ -3254,358 +3027,358 @@ except Exception as e:
 
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
-WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
+WEB_SEARCH_DOMAIN_FILTER_LIST = ConfigVar(
     'WEB_SEARCH_DOMAIN_FILTER_LIST',
     'rag.web.search.domain.filter_list',
     web_search_domain_filter_list,
 )
 
-WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
+WEB_SEARCH_CONCURRENT_REQUESTS = ConfigVar(
     'WEB_SEARCH_CONCURRENT_REQUESTS',
     'rag.web.search.concurrent_requests',
     int(os.getenv('WEB_SEARCH_CONCURRENT_REQUESTS', '0')),
 )
 
-WEB_FETCH_MAX_CONTENT_LENGTH = PersistentConfig(
+WEB_FETCH_MAX_CONTENT_LENGTH = ConfigVar(
     'WEB_FETCH_MAX_CONTENT_LENGTH',
     'rag.web.fetch.max_content_length',
     (int(os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH') else None),
 )
 
-WEB_LOADER_ENGINE = PersistentConfig(
+WEB_LOADER_ENGINE = ConfigVar(
     'WEB_LOADER_ENGINE',
     'rag.web.loader.engine',
     os.environ.get('WEB_LOADER_ENGINE', ''),
 )
 
 
-WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
+WEB_LOADER_CONCURRENT_REQUESTS = ConfigVar(
     'WEB_LOADER_CONCURRENT_REQUESTS',
     'rag.web.loader.concurrent_requests',
     int(os.getenv('WEB_LOADER_CONCURRENT_REQUESTS', '10')),
 )
 
-WEB_LOADER_TIMEOUT = PersistentConfig(
+WEB_LOADER_TIMEOUT = ConfigVar(
     'WEB_LOADER_TIMEOUT',
     'rag.web.loader.timeout',
     os.getenv('WEB_LOADER_TIMEOUT', ''),
 )
 
 
-ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
+ENABLE_WEB_LOADER_SSL_VERIFICATION = ConfigVar(
     'ENABLE_WEB_LOADER_SSL_VERIFICATION',
     'rag.web.loader.ssl_verification',
     os.environ.get('ENABLE_WEB_LOADER_SSL_VERIFICATION', 'True').lower() == 'true',
 )
 
-WEB_SEARCH_TRUST_ENV = PersistentConfig(
+WEB_SEARCH_TRUST_ENV = ConfigVar(
     'WEB_SEARCH_TRUST_ENV',
     'rag.web.search.trust_env',
     os.getenv('WEB_SEARCH_TRUST_ENV', 'True').lower() == 'true',
 )
 
 
-OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
+OLLAMA_CLOUD_WEB_SEARCH_API_KEY = ConfigVar(
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY',
     'rag.web.search.ollama_cloud_api_key',
     os.getenv('OLLAMA_CLOUD_API_KEY', ''),
 )
 
-SEARXNG_QUERY_URL = PersistentConfig(
+SEARXNG_QUERY_URL = ConfigVar(
     'SEARXNG_QUERY_URL',
     'rag.web.search.searxng_query_url',
     os.getenv('SEARXNG_QUERY_URL', ''),
 )
 
-SEARXNG_LANGUAGE = PersistentConfig(
+SEARXNG_LANGUAGE = ConfigVar(
     'SEARXNG_LANGUAGE',
     'rag.web.search.searxng_language',
     os.getenv('SEARXNG_LANGUAGE', 'all'),
 )
 
-YACY_QUERY_URL = PersistentConfig(
+YACY_QUERY_URL = ConfigVar(
     'YACY_QUERY_URL',
     'rag.web.search.yacy_query_url',
     os.getenv('YACY_QUERY_URL', ''),
 )
 
-YACY_USERNAME = PersistentConfig(
+YACY_USERNAME = ConfigVar(
     'YACY_USERNAME',
     'rag.web.search.yacy_username',
     os.getenv('YACY_USERNAME', ''),
 )
 
-YACY_PASSWORD = PersistentConfig(
+YACY_PASSWORD = ConfigVar(
     'YACY_PASSWORD',
     'rag.web.search.yacy_password',
     os.getenv('YACY_PASSWORD', ''),
 )
 
-GOOGLE_PSE_API_KEY = PersistentConfig(
+GOOGLE_PSE_API_KEY = ConfigVar(
     'GOOGLE_PSE_API_KEY',
     'rag.web.search.google_pse_api_key',
     os.getenv('GOOGLE_PSE_API_KEY', ''),
 )
 
-GOOGLE_PSE_ENGINE_ID = PersistentConfig(
+GOOGLE_PSE_ENGINE_ID = ConfigVar(
     'GOOGLE_PSE_ENGINE_ID',
     'rag.web.search.google_pse_engine_id',
     os.getenv('GOOGLE_PSE_ENGINE_ID', ''),
 )
 
-BRAVE_SEARCH_API_KEY = PersistentConfig(
+BRAVE_SEARCH_API_KEY = ConfigVar(
     'BRAVE_SEARCH_API_KEY',
     'rag.web.search.brave_search_api_key',
     os.getenv('BRAVE_SEARCH_API_KEY', ''),
 )
 
-BRAVE_SEARCH_CONTEXT_TOKENS = PersistentConfig(
+BRAVE_SEARCH_CONTEXT_TOKENS = ConfigVar(
     'BRAVE_SEARCH_CONTEXT_TOKENS',
     'rag.web.search.brave_search_context_tokens',
     int(os.getenv('BRAVE_SEARCH_CONTEXT_TOKENS', '8192')),
 )
 
-KAGI_SEARCH_API_KEY = PersistentConfig(
+KAGI_SEARCH_API_KEY = ConfigVar(
     'KAGI_SEARCH_API_KEY',
     'rag.web.search.kagi_search_api_key',
     os.getenv('KAGI_SEARCH_API_KEY', ''),
 )
 
-MOJEEK_SEARCH_API_KEY = PersistentConfig(
+MOJEEK_SEARCH_API_KEY = ConfigVar(
     'MOJEEK_SEARCH_API_KEY',
     'rag.web.search.mojeek_search_api_key',
     os.getenv('MOJEEK_SEARCH_API_KEY', ''),
 )
 
-BOCHA_SEARCH_API_KEY = PersistentConfig(
+BOCHA_SEARCH_API_KEY = ConfigVar(
     'BOCHA_SEARCH_API_KEY',
     'rag.web.search.bocha_search_api_key',
     os.getenv('BOCHA_SEARCH_API_KEY', ''),
 )
 
-SERPSTACK_API_KEY = PersistentConfig(
+SERPSTACK_API_KEY = ConfigVar(
     'SERPSTACK_API_KEY',
     'rag.web.search.serpstack_api_key',
     os.getenv('SERPSTACK_API_KEY', ''),
 )
 
-SERPSTACK_HTTPS = PersistentConfig(
+SERPSTACK_HTTPS = ConfigVar(
     'SERPSTACK_HTTPS',
     'rag.web.search.serpstack_https',
     os.getenv('SERPSTACK_HTTPS', 'True').lower() == 'true',
 )
 
-SERPER_API_KEY = PersistentConfig(
+SERPER_API_KEY = ConfigVar(
     'SERPER_API_KEY',
     'rag.web.search.serper_api_key',
     os.getenv('SERPER_API_KEY', ''),
 )
 
-SERPLY_API_KEY = PersistentConfig(
+SERPLY_API_KEY = ConfigVar(
     'SERPLY_API_KEY',
     'rag.web.search.serply_api_key',
     os.getenv('SERPLY_API_KEY', ''),
 )
 
-DDGS_BACKEND = PersistentConfig(
+DDGS_BACKEND = ConfigVar(
     'DDGS_BACKEND',
     'rag.web.search.ddgs_backend',
     os.getenv('DDGS_BACKEND', 'auto'),
 )
 
-JINA_API_KEY = PersistentConfig(
+JINA_API_KEY = ConfigVar(
     'JINA_API_KEY',
     'rag.web.search.jina_api_key',
     os.getenv('JINA_API_KEY', ''),
 )
 
-JINA_API_BASE_URL = PersistentConfig(
+JINA_API_BASE_URL = ConfigVar(
     'JINA_API_BASE_URL',
     'rag.web.search.jina_api_base_url',
     os.getenv('JINA_API_BASE_URL', ''),
 )
 
-SEARCHAPI_API_KEY = PersistentConfig(
+SEARCHAPI_API_KEY = ConfigVar(
     'SEARCHAPI_API_KEY',
     'rag.web.search.searchapi_api_key',
     os.getenv('SEARCHAPI_API_KEY', ''),
 )
 
-SEARCHAPI_ENGINE = PersistentConfig(
+SEARCHAPI_ENGINE = ConfigVar(
     'SEARCHAPI_ENGINE',
     'rag.web.search.searchapi_engine',
     os.getenv('SEARCHAPI_ENGINE', ''),
 )
 
-SERPAPI_API_KEY = PersistentConfig(
+SERPAPI_API_KEY = ConfigVar(
     'SERPAPI_API_KEY',
     'rag.web.search.serpapi_api_key',
     os.getenv('SERPAPI_API_KEY', ''),
 )
 
-SERPAPI_ENGINE = PersistentConfig(
+SERPAPI_ENGINE = ConfigVar(
     'SERPAPI_ENGINE',
     'rag.web.search.serpapi_engine',
     os.getenv('SERPAPI_ENGINE', ''),
 )
 
-BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+BING_SEARCH_V7_ENDPOINT = ConfigVar(
     'BING_SEARCH_V7_ENDPOINT',
     'rag.web.search.bing_search_v7_endpoint',
     os.environ.get('BING_SEARCH_V7_ENDPOINT', 'https://api.bing.microsoft.com/v7.0/search'),
 )
 
-BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+BING_SEARCH_V7_SUBSCRIPTION_KEY = ConfigVar(
     'BING_SEARCH_V7_SUBSCRIPTION_KEY',
     'rag.web.search.bing_search_v7_subscription_key',
     os.environ.get('BING_SEARCH_V7_SUBSCRIPTION_KEY', ''),
 )
 
-AZURE_AI_SEARCH_API_KEY = PersistentConfig(
+AZURE_AI_SEARCH_API_KEY = ConfigVar(
     'AZURE_AI_SEARCH_API_KEY',
     'rag.web.search.azure_ai_search_api_key',
     os.environ.get('AZURE_AI_SEARCH_API_KEY', ''),
 )
 
-AZURE_AI_SEARCH_ENDPOINT = PersistentConfig(
+AZURE_AI_SEARCH_ENDPOINT = ConfigVar(
     'AZURE_AI_SEARCH_ENDPOINT',
     'rag.web.search.azure_ai_search_endpoint',
     os.environ.get('AZURE_AI_SEARCH_ENDPOINT', ''),
 )
 
-AZURE_AI_SEARCH_INDEX_NAME = PersistentConfig(
+AZURE_AI_SEARCH_INDEX_NAME = ConfigVar(
     'AZURE_AI_SEARCH_INDEX_NAME',
     'rag.web.search.azure_ai_search_index_name',
     os.environ.get('AZURE_AI_SEARCH_INDEX_NAME', ''),
 )
 
-EXA_API_KEY = PersistentConfig(
+EXA_API_KEY = ConfigVar(
     'EXA_API_KEY',
     'rag.web.search.exa_api_key',
     os.getenv('EXA_API_KEY', ''),
 )
 
-PERPLEXITY_API_KEY = PersistentConfig(
+PERPLEXITY_API_KEY = ConfigVar(
     'PERPLEXITY_API_KEY',
     'rag.web.search.perplexity_api_key',
     os.getenv('PERPLEXITY_API_KEY', ''),
 )
 
-PERPLEXITY_MODEL = PersistentConfig(
+PERPLEXITY_MODEL = ConfigVar(
     'PERPLEXITY_MODEL',
     'rag.web.search.perplexity_model',
     os.getenv('PERPLEXITY_MODEL', 'sonar'),
 )
 
-PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
+PERPLEXITY_SEARCH_CONTEXT_USAGE = ConfigVar(
     'PERPLEXITY_SEARCH_CONTEXT_USAGE',
     'rag.web.search.perplexity_search_context_usage',
     os.getenv('PERPLEXITY_SEARCH_CONTEXT_USAGE', 'medium'),
 )
 
-PERPLEXITY_SEARCH_API_URL = PersistentConfig(
+PERPLEXITY_SEARCH_API_URL = ConfigVar(
     'PERPLEXITY_SEARCH_API_URL',
     'rag.web.search.perplexity_search_api_url',
     os.getenv('PERPLEXITY_SEARCH_API_URL', 'https://api.perplexity.ai/search'),
 )
 
-SOUGOU_API_SID = PersistentConfig(
+SOUGOU_API_SID = ConfigVar(
     'SOUGOU_API_SID',
     'rag.web.search.sougou_api_sid',
     os.getenv('SOUGOU_API_SID', ''),
 )
 
-SOUGOU_API_SK = PersistentConfig(
+SOUGOU_API_SK = ConfigVar(
     'SOUGOU_API_SK',
     'rag.web.search.sougou_api_sk',
     os.getenv('SOUGOU_API_SK', ''),
 )
 
-TAVILY_API_KEY = PersistentConfig(
+TAVILY_API_KEY = ConfigVar(
     'TAVILY_API_KEY',
     'rag.web.search.tavily_api_key',
     os.getenv('TAVILY_API_KEY', ''),
 )
 
-TAVILY_EXTRACT_DEPTH = PersistentConfig(
+TAVILY_EXTRACT_DEPTH = ConfigVar(
     'TAVILY_EXTRACT_DEPTH',
     'rag.web.search.tavily_extract_depth',
     os.getenv('TAVILY_EXTRACT_DEPTH', 'basic'),
 )
 
-PLAYWRIGHT_WS_URL = PersistentConfig(
+PLAYWRIGHT_WS_URL = ConfigVar(
     'PLAYWRIGHT_WS_URL',
     'rag.web.loader.playwright_ws_url',
     os.environ.get('PLAYWRIGHT_WS_URL', ''),
 )
 
-PLAYWRIGHT_TIMEOUT = PersistentConfig(
+PLAYWRIGHT_TIMEOUT = ConfigVar(
     'PLAYWRIGHT_TIMEOUT',
     'rag.web.loader.playwright_timeout',
     int(os.environ.get('PLAYWRIGHT_TIMEOUT', '10000')),
 )
 
-FIRECRAWL_API_KEY = PersistentConfig(
+FIRECRAWL_API_KEY = ConfigVar(
     'FIRECRAWL_API_KEY',
     'rag.web.loader.firecrawl_api_key',
     os.environ.get('FIRECRAWL_API_KEY', ''),
 )
 
-FIRECRAWL_API_BASE_URL = PersistentConfig(
+FIRECRAWL_API_BASE_URL = ConfigVar(
     'FIRECRAWL_API_BASE_URL',
     'rag.web.loader.firecrawl_api_url',
     os.environ.get('FIRECRAWL_API_BASE_URL', 'https://api.firecrawl.dev'),
 )
 
-FIRECRAWL_TIMEOUT = PersistentConfig(
+FIRECRAWL_TIMEOUT = ConfigVar(
     'FIRECRAWL_TIMEOUT',
     'rag.web.loader.firecrawl_timeout',
     os.environ.get('FIRECRAWL_TIMEOUT', ''),
 )
 
-EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
+EXTERNAL_WEB_SEARCH_URL = ConfigVar(
     'EXTERNAL_WEB_SEARCH_URL',
     'rag.web.search.external_web_search_url',
     os.environ.get('EXTERNAL_WEB_SEARCH_URL', ''),
 )
 
-EXTERNAL_WEB_SEARCH_API_KEY = PersistentConfig(
+EXTERNAL_WEB_SEARCH_API_KEY = ConfigVar(
     'EXTERNAL_WEB_SEARCH_API_KEY',
     'rag.web.search.external_web_search_api_key',
     os.environ.get('EXTERNAL_WEB_SEARCH_API_KEY', ''),
 )
 
-EXTERNAL_WEB_LOADER_URL = PersistentConfig(
+EXTERNAL_WEB_LOADER_URL = ConfigVar(
     'EXTERNAL_WEB_LOADER_URL',
     'rag.web.loader.external_web_loader_url',
     os.environ.get('EXTERNAL_WEB_LOADER_URL', ''),
 )
 
-EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
+EXTERNAL_WEB_LOADER_API_KEY = ConfigVar(
     'EXTERNAL_WEB_LOADER_API_KEY',
     'rag.web.loader.external_web_loader_api_key',
     os.environ.get('EXTERNAL_WEB_LOADER_API_KEY', ''),
 )
 
-YANDEX_WEB_SEARCH_URL = PersistentConfig(
+YANDEX_WEB_SEARCH_URL = ConfigVar(
     'YANDEX_WEB_SEARCH_URL',
     'rag.web.search.yandex_web_search_url',
     os.environ.get('YANDEX_WEB_SEARCH_URL', ''),
 )
 
-YANDEX_WEB_SEARCH_API_KEY = PersistentConfig(
+YANDEX_WEB_SEARCH_API_KEY = ConfigVar(
     'YANDEX_WEB_SEARCH_API_KEY',
     'rag.web.search.yandex_web_search_api_key',
     os.environ.get('YANDEX_WEB_SEARCH_API_KEY', ''),
 )
 
-YANDEX_WEB_SEARCH_CONFIG = PersistentConfig(
+YANDEX_WEB_SEARCH_CONFIG = ConfigVar(
     'YANDEX_WEB_SEARCH_CONFIG',
     'rag.web.search.yandex_web_search_config',
     os.environ.get('YANDEX_WEB_SEARCH_CONFIG', ''),
 )
 
-YOUCOM_API_KEY = PersistentConfig(
+YOUCOM_API_KEY = ConfigVar(
     'YOUCOM_API_KEY',
     'rag.web.search.youcom_api_key',
     os.environ.get('YOUCOM_API_KEY', ''),
@@ -3615,19 +3388,19 @@ YOUCOM_API_KEY = PersistentConfig(
 # Images
 ####################################
 
-ENABLE_IMAGE_GENERATION = PersistentConfig(
+ENABLE_IMAGE_GENERATION = ConfigVar(
     'ENABLE_IMAGE_GENERATION',
     'image_generation.enable',
     os.environ.get('ENABLE_IMAGE_GENERATION', '').lower() == 'true',
 )
 
-IMAGE_GENERATION_ENGINE = PersistentConfig(
+IMAGE_GENERATION_ENGINE = ConfigVar(
     'IMAGE_GENERATION_ENGINE',
     'image_generation.engine',
     os.getenv('IMAGE_GENERATION_ENGINE', 'openai'),
 )
 
-IMAGE_GENERATION_MODEL = PersistentConfig(
+IMAGE_GENERATION_MODEL = ConfigVar(
     'IMAGE_GENERATION_MODEL',
     'image_generation.model',
     os.getenv('IMAGE_GENERATION_MODEL', ''),
@@ -3639,22 +3412,22 @@ IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv('IMAGE_AUTO_SIZE_MODELS_REGEX_P
 # Regex pattern for models that return URLs instead of base64 data.
 IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN = os.getenv('IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN', '^gpt-image')
 
-IMAGE_SIZE = PersistentConfig('IMAGE_SIZE', 'image_generation.size', os.getenv('IMAGE_SIZE', '512x512'))
+IMAGE_SIZE = ConfigVar('IMAGE_SIZE', 'image_generation.size', os.getenv('IMAGE_SIZE', '512x512'))
 
-IMAGE_STEPS = PersistentConfig('IMAGE_STEPS', 'image_generation.steps', int(os.getenv('IMAGE_STEPS', 50)))
+IMAGE_STEPS = ConfigVar('IMAGE_STEPS', 'image_generation.steps', int(os.getenv('IMAGE_STEPS', 50)))
 
-ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
+ENABLE_IMAGE_PROMPT_GENERATION = ConfigVar(
     'ENABLE_IMAGE_PROMPT_GENERATION',
     'image_generation.prompt.enable',
     os.environ.get('ENABLE_IMAGE_PROMPT_GENERATION', 'true').lower() == 'true',
 )
 
-AUTOMATIC1111_BASE_URL = PersistentConfig(
+AUTOMATIC1111_BASE_URL = ConfigVar(
     'AUTOMATIC1111_BASE_URL',
     'image_generation.automatic1111.base_url',
     os.getenv('AUTOMATIC1111_BASE_URL', ''),
 )
-AUTOMATIC1111_API_AUTH = PersistentConfig(
+AUTOMATIC1111_API_AUTH = ConfigVar(
     'AUTOMATIC1111_API_AUTH',
     'image_generation.automatic1111.api_auth',
     os.getenv('AUTOMATIC1111_API_AUTH', ''),
@@ -3666,19 +3439,19 @@ try:
 except json.JSONDecodeError:
     automatic1111_params = {}
 
-AUTOMATIC1111_PARAMS = PersistentConfig(
+AUTOMATIC1111_PARAMS = ConfigVar(
     'AUTOMATIC1111_PARAMS',
     'image_generation.automatic1111.api_params',
     automatic1111_params,
 )
 
-COMFYUI_BASE_URL = PersistentConfig(
+COMFYUI_BASE_URL = ConfigVar(
     'COMFYUI_BASE_URL',
     'image_generation.comfyui.base_url',
     os.getenv('COMFYUI_BASE_URL', ''),
 )
 
-COMFYUI_API_KEY = PersistentConfig(
+COMFYUI_API_KEY = ConfigVar(
     'COMFYUI_API_KEY',
     'image_generation.comfyui.api_key',
     os.getenv('COMFYUI_API_KEY', ''),
@@ -3795,7 +3568,7 @@ COMFYUI_DEFAULT_WORKFLOW = """
 """
 
 
-COMFYUI_WORKFLOW = PersistentConfig(
+COMFYUI_WORKFLOW = ConfigVar(
     'COMFYUI_WORKFLOW',
     'image_generation.comfyui.workflow',
     os.getenv('COMFYUI_WORKFLOW', COMFYUI_DEFAULT_WORKFLOW),
@@ -3807,24 +3580,24 @@ try:
 except json.JSONDecodeError:
     comfyui_workflow_nodes = []
 
-COMFYUI_WORKFLOW_NODES = PersistentConfig(
+COMFYUI_WORKFLOW_NODES = ConfigVar(
     'COMFYUI_WORKFLOW_NODES',
     'image_generation.comfyui.nodes',
     comfyui_workflow_nodes,
 )
 
-IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
+IMAGES_OPENAI_API_BASE_URL = ConfigVar(
     'IMAGES_OPENAI_API_BASE_URL',
     'image_generation.openai.api_base_url',
     os.getenv('IMAGES_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL),
 )
-IMAGES_OPENAI_API_VERSION = PersistentConfig(
+IMAGES_OPENAI_API_VERSION = ConfigVar(
     'IMAGES_OPENAI_API_VERSION',
     'image_generation.openai.api_version',
     os.getenv('IMAGES_OPENAI_API_VERSION', ''),
 )
 
-IMAGES_OPENAI_API_KEY = PersistentConfig(
+IMAGES_OPENAI_API_KEY = ConfigVar(
     'IMAGES_OPENAI_API_KEY',
     'image_generation.openai.api_key',
     os.getenv('IMAGES_OPENAI_API_KEY', OPENAI_API_KEY),
@@ -3837,89 +3610,89 @@ except json.JSONDecodeError:
     images_openai_params = {}
 
 
-IMAGES_OPENAI_API_PARAMS = PersistentConfig(
+IMAGES_OPENAI_API_PARAMS = ConfigVar(
     'IMAGES_OPENAI_API_PARAMS', 'image_generation.openai.params', images_openai_params
 )
 
 
-IMAGES_GEMINI_API_BASE_URL = PersistentConfig(
+IMAGES_GEMINI_API_BASE_URL = ConfigVar(
     'IMAGES_GEMINI_API_BASE_URL',
     'image_generation.gemini.api_base_url',
     os.getenv('IMAGES_GEMINI_API_BASE_URL', GEMINI_API_BASE_URL),
 )
-IMAGES_GEMINI_API_KEY = PersistentConfig(
+IMAGES_GEMINI_API_KEY = ConfigVar(
     'IMAGES_GEMINI_API_KEY',
     'image_generation.gemini.api_key',
     os.getenv('IMAGES_GEMINI_API_KEY', GEMINI_API_KEY),
 )
 
-IMAGES_GEMINI_ENDPOINT_METHOD = PersistentConfig(
+IMAGES_GEMINI_ENDPOINT_METHOD = ConfigVar(
     'IMAGES_GEMINI_ENDPOINT_METHOD',
     'image_generation.gemini.endpoint_method',
     os.getenv('IMAGES_GEMINI_ENDPOINT_METHOD', ''),
 )
 
-ENABLE_IMAGE_EDIT = PersistentConfig(
+ENABLE_IMAGE_EDIT = ConfigVar(
     'ENABLE_IMAGE_EDIT',
     'images.edit.enable',
     os.environ.get('ENABLE_IMAGE_EDIT', '').lower() == 'true',
 )
 
-IMAGE_EDIT_ENGINE = PersistentConfig(
+IMAGE_EDIT_ENGINE = ConfigVar(
     'IMAGE_EDIT_ENGINE',
     'images.edit.engine',
     os.getenv('IMAGE_EDIT_ENGINE', 'openai'),
 )
 
-IMAGE_EDIT_MODEL = PersistentConfig(
+IMAGE_EDIT_MODEL = ConfigVar(
     'IMAGE_EDIT_MODEL',
     'images.edit.model',
     os.getenv('IMAGE_EDIT_MODEL', ''),
 )
 
-IMAGE_EDIT_SIZE = PersistentConfig('IMAGE_EDIT_SIZE', 'images.edit.size', os.getenv('IMAGE_EDIT_SIZE', ''))
+IMAGE_EDIT_SIZE = ConfigVar('IMAGE_EDIT_SIZE', 'images.edit.size', os.getenv('IMAGE_EDIT_SIZE', ''))
 
-IMAGES_EDIT_OPENAI_API_BASE_URL = PersistentConfig(
+IMAGES_EDIT_OPENAI_API_BASE_URL = ConfigVar(
     'IMAGES_EDIT_OPENAI_API_BASE_URL',
     'images.edit.openai.api_base_url',
     os.getenv('IMAGES_EDIT_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL),
 )
-IMAGES_EDIT_OPENAI_API_VERSION = PersistentConfig(
+IMAGES_EDIT_OPENAI_API_VERSION = ConfigVar(
     'IMAGES_EDIT_OPENAI_API_VERSION',
     'images.edit.openai.api_version',
     os.getenv('IMAGES_EDIT_OPENAI_API_VERSION', ''),
 )
 
-IMAGES_EDIT_OPENAI_API_KEY = PersistentConfig(
+IMAGES_EDIT_OPENAI_API_KEY = ConfigVar(
     'IMAGES_EDIT_OPENAI_API_KEY',
     'images.edit.openai.api_key',
     os.getenv('IMAGES_EDIT_OPENAI_API_KEY', OPENAI_API_KEY),
 )
 
-IMAGES_EDIT_GEMINI_API_BASE_URL = PersistentConfig(
+IMAGES_EDIT_GEMINI_API_BASE_URL = ConfigVar(
     'IMAGES_EDIT_GEMINI_API_BASE_URL',
     'images.edit.gemini.api_base_url',
     os.getenv('IMAGES_EDIT_GEMINI_API_BASE_URL', GEMINI_API_BASE_URL),
 )
-IMAGES_EDIT_GEMINI_API_KEY = PersistentConfig(
+IMAGES_EDIT_GEMINI_API_KEY = ConfigVar(
     'IMAGES_EDIT_GEMINI_API_KEY',
     'images.edit.gemini.api_key',
     os.getenv('IMAGES_EDIT_GEMINI_API_KEY', GEMINI_API_KEY),
 )
 
 
-IMAGES_EDIT_COMFYUI_BASE_URL = PersistentConfig(
+IMAGES_EDIT_COMFYUI_BASE_URL = ConfigVar(
     'IMAGES_EDIT_COMFYUI_BASE_URL',
     'images.edit.comfyui.base_url',
     os.getenv('IMAGES_EDIT_COMFYUI_BASE_URL', ''),
 )
-IMAGES_EDIT_COMFYUI_API_KEY = PersistentConfig(
+IMAGES_EDIT_COMFYUI_API_KEY = ConfigVar(
     'IMAGES_EDIT_COMFYUI_API_KEY',
     'images.edit.comfyui.api_key',
     os.getenv('IMAGES_EDIT_COMFYUI_API_KEY', ''),
 )
 
-IMAGES_EDIT_COMFYUI_WORKFLOW = PersistentConfig(
+IMAGES_EDIT_COMFYUI_WORKFLOW = ConfigVar(
     'IMAGES_EDIT_COMFYUI_WORKFLOW',
     'images.edit.comfyui.workflow',
     os.getenv('IMAGES_EDIT_COMFYUI_WORKFLOW', ''),
@@ -3931,7 +3704,7 @@ try:
 except json.JSONDecodeError:
     images_edit_comfyui_workflow_nodes = []
 
-IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
+IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = ConfigVar(
     'IMAGES_EDIT_COMFYUI_WORKFLOW_NODES',
     'images.edit.comfyui.nodes',
     images_edit_comfyui_workflow_nodes,
@@ -3942,7 +3715,7 @@ IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
 ####################################
 
 # Transcription
-WHISPER_MODEL = PersistentConfig(
+WHISPER_MODEL = ConfigVar(
     'WHISPER_MODEL',
     'audio.stt.whisper_model',
     os.getenv('WHISPER_MODEL', 'base'),
@@ -3959,7 +3732,7 @@ WHISPER_MULTILINGUAL = os.getenv('WHISPER_MULTILINGUAL', 'False').lower() == 'tr
 WHISPER_LANGUAGE = os.getenv('WHISPER_LANGUAGE', '').lower() or None
 
 # Add Deepgram configuration
-DEEPGRAM_API_KEY = PersistentConfig(
+DEEPGRAM_API_KEY = ConfigVar(
     'DEEPGRAM_API_KEY',
     'audio.stt.deepgram.api_key',
     os.getenv('DEEPGRAM_API_KEY', ''),
@@ -3968,31 +3741,31 @@ DEEPGRAM_API_KEY = PersistentConfig(
 # ElevenLabs configuration
 ELEVENLABS_API_BASE_URL = os.getenv('ELEVENLABS_API_BASE_URL', 'https://api.elevenlabs.io')
 
-AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
+AUDIO_STT_OPENAI_API_BASE_URL = ConfigVar(
     'AUDIO_STT_OPENAI_API_BASE_URL',
     'audio.stt.openai.api_base_url',
     os.getenv('AUDIO_STT_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL),
 )
 
-AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
+AUDIO_STT_OPENAI_API_KEY = ConfigVar(
     'AUDIO_STT_OPENAI_API_KEY',
     'audio.stt.openai.api_key',
     os.getenv('AUDIO_STT_OPENAI_API_KEY', OPENAI_API_KEY),
 )
 
-AUDIO_STT_ENGINE = PersistentConfig(
+AUDIO_STT_ENGINE = ConfigVar(
     'AUDIO_STT_ENGINE',
     'audio.stt.engine',
     os.getenv('AUDIO_STT_ENGINE', ''),
 )
 
-AUDIO_STT_MODEL = PersistentConfig(
+AUDIO_STT_MODEL = ConfigVar(
     'AUDIO_STT_MODEL',
     'audio.stt.model',
     os.getenv('AUDIO_STT_MODEL', ''),
 )
 
-AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
+AUDIO_STT_SUPPORTED_CONTENT_TYPES = ConfigVar(
     'AUDIO_STT_SUPPORTED_CONTENT_TYPES',
     'audio.stt.supported_content_types',
     [
@@ -4002,7 +3775,7 @@ AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
     ],
 )
 
-AUDIO_STT_ALLOWED_EXTENSIONS = PersistentConfig(
+AUDIO_STT_ALLOWED_EXTENSIONS = ConfigVar(
     'AUDIO_STT_ALLOWED_EXTENSIONS',
     'audio.stt.allowed_extensions',
     [
@@ -4015,60 +3788,60 @@ AUDIO_STT_ALLOWED_EXTENSIONS = PersistentConfig(
     ],
 )
 
-AUDIO_STT_AZURE_API_KEY = PersistentConfig(
+AUDIO_STT_AZURE_API_KEY = ConfigVar(
     'AUDIO_STT_AZURE_API_KEY',
     'audio.stt.azure.api_key',
     os.getenv('AUDIO_STT_AZURE_API_KEY', ''),
 )
 
-AUDIO_STT_AZURE_REGION = PersistentConfig(
+AUDIO_STT_AZURE_REGION = ConfigVar(
     'AUDIO_STT_AZURE_REGION',
     'audio.stt.azure.region',
     os.getenv('AUDIO_STT_AZURE_REGION', ''),
 )
 
-AUDIO_STT_AZURE_LOCALES = PersistentConfig(
+AUDIO_STT_AZURE_LOCALES = ConfigVar(
     'AUDIO_STT_AZURE_LOCALES',
     'audio.stt.azure.locales',
     os.getenv('AUDIO_STT_AZURE_LOCALES', ''),
 )
 
-AUDIO_STT_AZURE_BASE_URL = PersistentConfig(
+AUDIO_STT_AZURE_BASE_URL = ConfigVar(
     'AUDIO_STT_AZURE_BASE_URL',
     'audio.stt.azure.base_url',
     os.getenv('AUDIO_STT_AZURE_BASE_URL', ''),
 )
 
-AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
+AUDIO_STT_AZURE_MAX_SPEAKERS = ConfigVar(
     'AUDIO_STT_AZURE_MAX_SPEAKERS',
     'audio.stt.azure.max_speakers',
     os.getenv('AUDIO_STT_AZURE_MAX_SPEAKERS', ''),
 )
 
-AUDIO_STT_MISTRAL_API_KEY = PersistentConfig(
+AUDIO_STT_MISTRAL_API_KEY = ConfigVar(
     'AUDIO_STT_MISTRAL_API_KEY',
     'audio.stt.mistral.api_key',
     os.getenv('AUDIO_STT_MISTRAL_API_KEY', ''),
 )
 
-AUDIO_STT_MISTRAL_API_BASE_URL = PersistentConfig(
+AUDIO_STT_MISTRAL_API_BASE_URL = ConfigVar(
     'AUDIO_STT_MISTRAL_API_BASE_URL',
     'audio.stt.mistral.api_base_url',
     os.getenv('AUDIO_STT_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1'),
 )
 
-AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = PersistentConfig(
+AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS = ConfigVar(
     'AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS',
     'audio.stt.mistral.use_chat_completions',
     os.getenv('AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS', 'false').lower() == 'true',
 )
 
-AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
+AUDIO_TTS_OPENAI_API_BASE_URL = ConfigVar(
     'AUDIO_TTS_OPENAI_API_BASE_URL',
     'audio.tts.openai.api_base_url',
     os.getenv('AUDIO_TTS_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL),
 )
-AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
+AUDIO_TTS_OPENAI_API_KEY = ConfigVar(
     'AUDIO_TTS_OPENAI_API_KEY',
     'audio.tts.openai.api_key',
     os.getenv('AUDIO_TTS_OPENAI_API_KEY', OPENAI_API_KEY),
@@ -4080,69 +3853,69 @@ try:
 except json.JSONDecodeError:
     audio_tts_openai_params = {}
 
-AUDIO_TTS_OPENAI_PARAMS = PersistentConfig(
+AUDIO_TTS_OPENAI_PARAMS = ConfigVar(
     'AUDIO_TTS_OPENAI_PARAMS',
     'audio.tts.openai.params',
     audio_tts_openai_params,
 )
 
 
-AUDIO_TTS_API_KEY = PersistentConfig(
+AUDIO_TTS_API_KEY = ConfigVar(
     'AUDIO_TTS_API_KEY',
     'audio.tts.api_key',
     os.getenv('AUDIO_TTS_API_KEY', ''),
 )
 
-AUDIO_TTS_ENGINE = PersistentConfig(
+AUDIO_TTS_ENGINE = ConfigVar(
     'AUDIO_TTS_ENGINE',
     'audio.tts.engine',
     os.getenv('AUDIO_TTS_ENGINE', ''),
 )
 
 
-AUDIO_TTS_MODEL = PersistentConfig(
+AUDIO_TTS_MODEL = ConfigVar(
     'AUDIO_TTS_MODEL',
     'audio.tts.model',
     os.getenv('AUDIO_TTS_MODEL', 'tts-1'),  # OpenAI default model
 )
 
-AUDIO_TTS_VOICE = PersistentConfig(
+AUDIO_TTS_VOICE = ConfigVar(
     'AUDIO_TTS_VOICE',
     'audio.tts.voice',
     os.getenv('AUDIO_TTS_VOICE', 'alloy'),  # OpenAI default voice
 )
 
-AUDIO_TTS_SPLIT_ON = PersistentConfig(
+AUDIO_TTS_SPLIT_ON = ConfigVar(
     'AUDIO_TTS_SPLIT_ON',
     'audio.tts.split_on',
     os.getenv('AUDIO_TTS_SPLIT_ON', 'punctuation'),
 )
 
-AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
+AUDIO_TTS_AZURE_SPEECH_REGION = ConfigVar(
     'AUDIO_TTS_AZURE_SPEECH_REGION',
     'audio.tts.azure.speech_region',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_REGION', ''),
 )
 
-AUDIO_TTS_AZURE_SPEECH_BASE_URL = PersistentConfig(
+AUDIO_TTS_AZURE_SPEECH_BASE_URL = ConfigVar(
     'AUDIO_TTS_AZURE_SPEECH_BASE_URL',
     'audio.tts.azure.speech_base_url',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_BASE_URL', ''),
 )
 
-AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
+AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = ConfigVar(
     'AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT',
     'audio.tts.azure.speech_output_format',
     os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'),
 )
 
-AUDIO_TTS_MISTRAL_API_KEY = PersistentConfig(
+AUDIO_TTS_MISTRAL_API_KEY = ConfigVar(
     'AUDIO_TTS_MISTRAL_API_KEY',
     'audio.tts.mistral.api_key',
     os.getenv('AUDIO_TTS_MISTRAL_API_KEY', ''),
 )
 
-AUDIO_TTS_MISTRAL_API_BASE_URL = PersistentConfig(
+AUDIO_TTS_MISTRAL_API_BASE_URL = ConfigVar(
     'AUDIO_TTS_MISTRAL_API_BASE_URL',
     'audio.tts.mistral.api_base_url',
     os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1'),
@@ -4153,92 +3926,92 @@ AUDIO_TTS_MISTRAL_API_BASE_URL = PersistentConfig(
 # LDAP
 ####################################
 
-ENABLE_LDAP = PersistentConfig(
+ENABLE_LDAP = ConfigVar(
     'ENABLE_LDAP',
     'ldap.enable',
     os.environ.get('ENABLE_LDAP', 'false').lower() == 'true',
 )
 
-LDAP_SERVER_LABEL = PersistentConfig(
+LDAP_SERVER_LABEL = ConfigVar(
     'LDAP_SERVER_LABEL',
     'ldap.server.label',
     os.environ.get('LDAP_SERVER_LABEL', 'LDAP Server'),
 )
 
-LDAP_SERVER_HOST = PersistentConfig(
+LDAP_SERVER_HOST = ConfigVar(
     'LDAP_SERVER_HOST',
     'ldap.server.host',
     os.environ.get('LDAP_SERVER_HOST', 'localhost'),
 )
 
-LDAP_SERVER_PORT = PersistentConfig(
+LDAP_SERVER_PORT = ConfigVar(
     'LDAP_SERVER_PORT',
     'ldap.server.port',
     int(os.environ.get('LDAP_SERVER_PORT', '389')),
 )
 
-LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+LDAP_ATTRIBUTE_FOR_MAIL = ConfigVar(
     'LDAP_ATTRIBUTE_FOR_MAIL',
     'ldap.server.attribute_for_mail',
     os.environ.get('LDAP_ATTRIBUTE_FOR_MAIL', 'mail'),
 )
 
-LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
+LDAP_ATTRIBUTE_FOR_USERNAME = ConfigVar(
     'LDAP_ATTRIBUTE_FOR_USERNAME',
     'ldap.server.attribute_for_username',
     os.environ.get('LDAP_ATTRIBUTE_FOR_USERNAME', 'uid'),
 )
 
-LDAP_APP_DN = PersistentConfig('LDAP_APP_DN', 'ldap.server.app_dn', os.environ.get('LDAP_APP_DN', ''))
+LDAP_APP_DN = ConfigVar('LDAP_APP_DN', 'ldap.server.app_dn', os.environ.get('LDAP_APP_DN', ''))
 
-LDAP_APP_PASSWORD = PersistentConfig(
+LDAP_APP_PASSWORD = ConfigVar(
     'LDAP_APP_PASSWORD',
     'ldap.server.app_password',
     os.environ.get('LDAP_APP_PASSWORD', ''),
 )
 
-LDAP_SEARCH_BASE = PersistentConfig('LDAP_SEARCH_BASE', 'ldap.server.users_dn', os.environ.get('LDAP_SEARCH_BASE', ''))
+LDAP_SEARCH_BASE = ConfigVar('LDAP_SEARCH_BASE', 'ldap.server.users_dn', os.environ.get('LDAP_SEARCH_BASE', ''))
 
-LDAP_SEARCH_FILTERS = PersistentConfig(
+LDAP_SEARCH_FILTERS = ConfigVar(
     'LDAP_SEARCH_FILTER',
     'ldap.server.search_filter',
     os.environ.get('LDAP_SEARCH_FILTER', os.environ.get('LDAP_SEARCH_FILTERS', '')),
 )
 
-LDAP_USE_TLS = PersistentConfig(
+LDAP_USE_TLS = ConfigVar(
     'LDAP_USE_TLS',
     'ldap.server.use_tls',
     os.environ.get('LDAP_USE_TLS', 'True').lower() == 'true',
 )
 
-LDAP_CA_CERT_FILE = PersistentConfig(
+LDAP_CA_CERT_FILE = ConfigVar(
     'LDAP_CA_CERT_FILE',
     'ldap.server.ca_cert_file',
     os.environ.get('LDAP_CA_CERT_FILE', ''),
 )
 
-LDAP_VALIDATE_CERT = PersistentConfig(
+LDAP_VALIDATE_CERT = ConfigVar(
     'LDAP_VALIDATE_CERT',
     'ldap.server.validate_cert',
     os.environ.get('LDAP_VALIDATE_CERT', 'True').lower() == 'true',
 )
 
-LDAP_CIPHERS = PersistentConfig('LDAP_CIPHERS', 'ldap.server.ciphers', os.environ.get('LDAP_CIPHERS', 'ALL'))
+LDAP_CIPHERS = ConfigVar('LDAP_CIPHERS', 'ldap.server.ciphers', os.environ.get('LDAP_CIPHERS', 'ALL'))
 
 # For LDAP Group Management
-ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
+ENABLE_LDAP_GROUP_MANAGEMENT = ConfigVar(
     'ENABLE_LDAP_GROUP_MANAGEMENT',
     'ldap.group.enable_management',
     os.environ.get('ENABLE_LDAP_GROUP_MANAGEMENT', 'False').lower() == 'true',
 )
 
-ENABLE_LDAP_GROUP_CREATION = PersistentConfig(
+ENABLE_LDAP_GROUP_CREATION = ConfigVar(
     'ENABLE_LDAP_GROUP_CREATION',
     'ldap.group.enable_creation',
     os.environ.get('ENABLE_LDAP_GROUP_CREATION', 'False').lower() == 'true',
 )
 
-LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
+LDAP_ATTRIBUTE_FOR_GROUPS = ConfigVar(
     'LDAP_ATTRIBUTE_FOR_GROUPS',
     'ldap.server.attribute_for_groups',
     os.environ.get('LDAP_ATTRIBUTE_FOR_GROUPS', 'memberOf'),
