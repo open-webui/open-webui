@@ -132,6 +132,10 @@ if WEBUI_NAME != 'Open WebUI':
 
 WORKBENCH_URL = os.environ.get('WORKBENCH_URL', '').rstrip('/')
 
+# Sidebar shortcut to the Cloud Lock dashboard (Swept's GCP-isolation
+# control plane). When set, the frontend renders a "Private Cloud" link.
+CLOUD_LOCK_URL = os.environ.get('CLOUD_LOCK_URL', '').rstrip('/')
+
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 
 TRUSTED_SIGNATURE_KEY = os.environ.get('TRUSTED_SIGNATURE_KEY', '')
