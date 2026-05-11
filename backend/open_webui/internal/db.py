@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from open_webui.internal.wrappers import register_connection
+
 from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATABASE_URL,
@@ -25,7 +25,6 @@ from open_webui.env import (
     DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT,
     ENABLE_DB_MIGRATIONS,
 )
-from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -139,39 +138,7 @@ class JSONField(types.TypeDecorator):
             return json.loads(value)
 
 
-# Workaround to handle the peewee migration
-# This is required to ensure the peewee migration is handled before the alembic migration
-def handle_peewee_migration(DATABASE_URL):
-    db = None
-    try:
-        # Normalize SSL params so psycopg2 always sees `sslmode=` (never `ssl=`)
-        # and cert-file params are preserved in the connection string.
-        url_without_ssl, ssl_params = extract_ssl_params_from_url(DATABASE_URL)
-        normalized_url = reattach_ssl_params_to_url(url_without_ssl, ssl_params)
 
-        # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(normalized_url.replace('postgresql://', 'postgres://'))
-        migrate_dir = OPEN_WEBUI_DIR / 'internal' / 'migrations'
-        router = Router(db, logger=log, migrate_dir=migrate_dir)
-        router.run()
-        db.close()
-
-    except Exception as e:
-        log.error(f'Failed to initialize the database connection: {e}')
-        log.warning('Hint: If your database password contains special characters, you may need to URL-encode it.')
-        raise
-    finally:
-        # Properly closing the database connection
-        if db and not db.is_closed():
-            db.close()
-
-        # Assert if db connection has been closed
-        if db is not None:
-            assert db.is_closed(), 'Database connection is still open.'
-
-
-if ENABLE_DB_MIGRATIONS:
-    handle_peewee_migration(DATABASE_URL)
 
 
 # Normalize SSL params from the URL once; the sync engine needs them

@@ -1,118 +1,104 @@
+"""Alembic environment configuration.
+
+Configures the migration context for both offline (SQL script generation)
+and online (live database connection) modes. Handles SQLCipher URLs,
+SSL parameter normalisation, and JSON log formatting.
+"""
+
 import logging
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import create_engine, engine_from_config, pool
+
+from open_webui.env import DATABASE_PASSWORD, DATABASE_URL, LOG_FORMAT
+from open_webui.internal.db import extract_ssl_params_from_url, reattach_ssl_params_to_url
 from open_webui.models.auths import Auth
 from open_webui.models.calendar import Calendar, CalendarEvent, CalendarEventAttendee  # noqa: F401
-from open_webui.env import DATABASE_URL, DATABASE_PASSWORD, LOG_FORMAT
-from open_webui.internal.db import extract_ssl_params_from_url, reattach_ssl_params_to_url
-from sqlalchemy import engine_from_config, pool, create_engine
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# ── Alembic config & logging ─────────────────────────────────────────────────
+
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Re-apply JSON formatter after fileConfig replaces handlers.
-if LOG_FORMAT == 'json':
+if LOG_FORMAT == "json":
     from open_webui.env import JSONFormatter
 
     for handler in logging.root.handlers:
         handler.setFormatter(JSONFormatter())
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = Auth.metadata
+# ── Database URL ─────────────────────────────────────────────────────────────
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+target_metadata = Auth.metadata
 
 DB_URL = DATABASE_URL
 
-# Normalize SSL query params for psycopg2 (Alembic uses psycopg2 for sync migrations).
-url_without_ssl, ssl_params = extract_ssl_params_from_url(DB_URL)
-DB_URL = reattach_ssl_params_to_url(url_without_ssl, ssl_params) if ssl_params else DB_URL
+# Normalise SSL query params for psycopg2 (Alembic uses psycopg2 for sync).
+_url_no_ssl, _ssl_params = extract_ssl_params_from_url(DB_URL)
+if _ssl_params:
+    DB_URL = reattach_ssl_params_to_url(_url_no_ssl, _ssl_params)
 
 if DB_URL:
-    config.set_main_option('sqlalchemy.url', DB_URL.replace('%', '%%'))
+    config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))
+
+
+# ── Migration runners ────────────────────────────────────────────────────────
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = config.get_main_option('sqlalchemy.url')
+    """Generate SQL script without a live database connection."""
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={'paramstyle': 'named'},
+        dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+def _build_connectable():
+    """Create the appropriate SQLAlchemy engine for the configured DB URL."""
+    if DB_URL and DB_URL.startswith("sqlite+sqlcipher://"):
+        if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == "":
+            raise ValueError(
+                "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
+            )
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
+        db_path = DB_URL.replace("sqlite+sqlcipher://", "")
+        if db_path.startswith("/"):
+            db_path = db_path[1:]
 
-    """
-    # Handle SQLCipher URLs
-    if DB_URL and DB_URL.startswith('sqlite+sqlcipher://'):
-        if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == '':
-            raise ValueError('DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs')
-
-        # Extract database path from SQLCipher URL
-        db_path = DB_URL.replace('sqlite+sqlcipher://', '')
-        if db_path.startswith('/'):
-            db_path = db_path[1:]  # Remove leading slash for relative paths
-
-        # Create a custom creator function that uses sqlcipher3
-        def create_sqlcipher_connection():
+        def _sqlcipher_creator():
             import sqlcipher3
 
             conn = sqlcipher3.connect(db_path, check_same_thread=False)
             conn.execute(f"PRAGMA key = '{DATABASE_PASSWORD}'")
             return conn
 
-        connectable = create_engine(
-            'sqlite://',  # Dummy URL since we're using creator
-            creator=create_sqlcipher_connection,
-            echo=False,
-        )
-    else:
-        # Standard database connection (existing logic)
-        connectable = engine_from_config(
-            config.get_section(config.config_ini_section, {}),
-            prefix='sqlalchemy.',
-            poolclass=pool.NullPool,
-        )
+        return create_engine("sqlite://", creator=_sqlcipher_creator, echo=False)
 
+    return engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+
+def run_migrations_online() -> None:
+    """Run migrations against a live database connection."""
+    connectable = _build_connectable()
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
-
         with context.begin_transaction():
             context.run_migrations()
 
+
+# ── Entrypoint ───────────────────────────────────────────────────────────────
 
 if context.is_offline_mode():
     run_migrations_offline()
