@@ -324,6 +324,21 @@ def get_session():
 get_db = contextmanager(get_session)
 
 
+@contextmanager
+def get_db_context(db: Optional[Session] = None):
+    """Sync context manager that reuses an existing session if provided.
+
+    Used by local sync paths (UserUsages, KnowledgeDrive) where rewriting to
+    async would require touching call sites in middleware/routers.  Mirrors
+    the async ``get_async_db_context`` pattern.
+    """
+    if isinstance(db, Session) and DATABASE_ENABLE_SESSION_SHARING:
+        yield db
+    else:
+        with get_db() as session:
+            yield session
+
+
 # ============================================================
 # ASYNC ENGINE (used for ALL runtime database operations)
 # ============================================================
