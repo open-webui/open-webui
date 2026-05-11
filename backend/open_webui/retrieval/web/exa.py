@@ -7,7 +7,7 @@ from open_webui.retrieval.web.main import SearchResult
 
 log = logging.getLogger(__name__)
 
-EXA_API_BASE = "https://api.exa.ai"
+EXA_API_BASE = 'https://api.exa.ai'
 
 
 @dataclass
@@ -31,36 +31,34 @@ def search_exa(
         count (int): Number of results to return
         filter_list (Optional[list[str]]): List of domains to filter results by
     """
-    log.info(f"Searching with Exa for query: {query}")
+    log.info(f'Searching with Exa for query: {query}')
 
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
 
     payload = {
-        "query": query,
-        "numResults": count or 5,
-        "includeDomains": filter_list,
-        "contents": {"text": True, "highlights": True},
-        "type": "auto",  # Use the auto search type (keyword or neural)
+        'query': query,
+        'numResults': count or 5,
+        'includeDomains': filter_list,
+        'contents': {'text': True, 'highlights': True},
+        'type': 'auto',  # Use the auto search type (keyword or neural)
     }
 
     try:
-        response = requests.post(
-            f"{EXA_API_BASE}/search", headers=headers, json=payload
-        )
+        response = requests.post(f'{EXA_API_BASE}/search', headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
 
         results = []
-        for result in data["results"]:
+        for result in data['results']:
             results.append(
                 ExaResult(
-                    url=result["url"],
-                    title=result["title"],
-                    text=result["text"],
+                    url=result['url'],
+                    title=result['title'],
+                    text=result['text'],
                 )
             )
 
-        log.info(f"Found {len(results)} results")
+        log.info(f'Found {len(results)} results')
         return [
             SearchResult(
                 link=result.url,
@@ -70,5 +68,5 @@ def search_exa(
             for result in results
         ]
     except Exception as e:
-        log.error(f"Error searching Exa: {e}")
+        log.error(f'Error searching Exa: {e}')
         return []

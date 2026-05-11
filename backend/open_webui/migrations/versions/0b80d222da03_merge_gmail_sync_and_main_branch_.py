@@ -5,6 +5,7 @@ Revises: 33cc3721a72, 9ff8e65eafda
 Create Date: 2025-10-17 13:30:54.585477
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -25,4 +26,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     pass
-

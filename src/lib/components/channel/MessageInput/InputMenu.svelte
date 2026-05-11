@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import { fly } from 'svelte/transition';
-	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 
 	import { knowledge } from '$lib/stores';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
@@ -57,71 +55,72 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu.Content
-			class="w-full max-w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto scrollbar-thin transition"
-			sideOffset={4}
-			alignOffset={-6}
-			side="bottom"
-			align="start"
-			transition={flyAndScale}
+		<div
+			class="w-full max-w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-999 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto scrollbar-thin transition"
 		>
-		{#if tab === ''}
-			<div in:fly={{ x: -20, duration: 150 }}>
-				<DropdownMenu.Item
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
-					on:click={() => {
-						uploadFilesHandler();
-					}}
-				>
-					<Clip />
-					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
-				</DropdownMenu.Item>
-
-				<DropdownMenu.Item
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
-					on:click={() => {
-						screenCaptureHandler();
-					}}
-				>
-					<Camera />
-					<div class="line-clamp-1">{$i18n.t('Capture')}</div>
-				</DropdownMenu.Item>
-
-				{#if ($knowledge ?? []).length > 0}
+			{#if tab === ''}
+				<div in:fly={{ x: -20, duration: 150 }}>
 					<button
-						class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+						class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+						type="button"
 						on:click={() => {
-							tab = 'knowledge';
+							uploadFilesHandler();
+							show = false;
 						}}
 					>
-						<Database />
+						<Clip />
+						<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+					</button>
 
-						<div class="flex items-center w-full justify-between">
-							<div class="line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
-							<div class="text-gray-500">
-								<ChevronRight />
+					<button
+						class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+						type="button"
+						on:click={() => {
+							screenCaptureHandler();
+							show = false;
+						}}
+					>
+						<Camera />
+						<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+					</button>
+
+					{#if ($knowledge ?? []).length > 0}
+						<button
+							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+							type="button"
+							on:click={() => {
+								tab = 'knowledge';
+							}}
+						>
+							<Database />
+
+							<div class="flex items-center w-full justify-between">
+								<div class="line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
+								<div class="text-gray-500">
+									<ChevronRight />
+								</div>
 							</div>
+						</button>
+					{/if}
+				</div>
+			{:else if tab === 'knowledge'}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						type="button"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div class="flex items-center w-full justify-between">
+							<div>{$i18n.t('Knowledge')}</div>
 						</div>
 					</button>
-				{/if}
-			</div>
-		{:else if tab === 'knowledge'}
-			<div in:fly={{ x: 20, duration: 150 }}>
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-					on:click={() => {
-						tab = '';
-					}}
-				>
-					<ChevronLeft />
-					<div class="flex items-center w-full justify-between">
-						<div>{$i18n.t('Knowledge')}</div>
-					</div>
-				</button>
 
-				<Knowledge {onSelect} />
-			</div>
-		{/if}
-		</DropdownMenu.Content>
+					<Knowledge {onSelect} />
+				</div>
+			{/if}
+		</div>
 	</div>
 </Dropdown>

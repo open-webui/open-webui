@@ -128,7 +128,9 @@
 				user_id: c.user_id,
 				user_name: c.user_name
 			}));
-			chatList = [...chatList, ...newChats];
+			const existingIds = new Set(chatList.map((c) => c.id));
+			const uniqueNewChats = newChats.filter((c) => !existingIds.has(c.id));
+			chatList = [...chatList, ...uniqueNewChats];
 			allChatsLoaded = chats.length < PAGE_SIZE;
 		} catch (err) {
 			console.error('Failed to load more chats:', err);

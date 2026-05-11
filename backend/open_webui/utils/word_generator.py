@@ -79,11 +79,11 @@ class ChatWordGenerator:
     TABLE_BORDER_COLOR = "e5e7eb"  # Light gray border (like chat UI border-gray-100)
     TABLE_HEADER_TEXT = RGBColor(55, 65, 81)  # Gray-700 text
     TABLE_CELL_TEXT = RGBColor(17, 24, 39)  # Gray-900 text
-    
+
     # Font sizes for tables
     FONT_SIZE_TABLE_HEADER = Pt(9)
     FONT_SIZE_TABLE_CELL = Pt(10)
-    
+
     # Table cell padding (in twips - 1/20 of a point)
     TABLE_CELL_PADDING = Twips(80)
 
@@ -93,28 +93,24 @@ class ChatWordGenerator:
     _REGEX_ITALIC = re.compile(r"(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)|(?<!_)_(?!_)([^_]+?)(?<!_)_(?!_)")
     _REGEX_PLACEHOLDER = re.compile(r"(__(?:CODE|BOLD|ITALIC)_\d+__)")
     _REGEX_REASONING_BLOCK = re.compile(
-        r'<details\s+type="reasoning"[^>]*>.*?</details>',
-        flags=re.DOTALL | re.IGNORECASE
+        r'<details\s+type="reasoning"[^>]*>.*?</details>', flags=re.DOTALL | re.IGNORECASE
     )
-    _REGEX_REASONING_SUMMARY = re.compile(
-        r"<summary>Thought for \d+ seconds?</summary>",
-        flags=re.IGNORECASE
-    )
+    _REGEX_REASONING_SUMMARY = re.compile(r"<summary>Thought for \d+ seconds?</summary>", flags=re.IGNORECASE)
     _REGEX_HEADER = re.compile(r"^(#{1,6})\s+(.+)$")
     # List patterns - capture leading whitespace for nesting support
     _REGEX_UNORDERED_LIST_ITEM = re.compile(r"^(\s*)[-*+]\s+(.+)$")
     _REGEX_ORDERED_LIST_ITEM = re.compile(r"^(\s*)(\d+)\.\s+(.+)$")
     _REGEX_EMOJI = re.compile(
         "["
-        "\U0001F300-\U0001F9FF"  # Miscellaneous Symbols and Pictographs
-        "\U0001FA00-\U0001FAFF"  # Symbols and Pictographs Extended-A
-        "\U00002600-\U000027BF"  # Miscellaneous Symbols
-        "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
-        "\U00002700-\U000027BF"  # Dingbats
-        "\U0001F600-\U0001F64F"  # Emoticons
-        "\U0001F680-\U0001F6FF"  # Transport and Map
-        "\U00002600-\U000026FF"  # Miscellaneous symbols
-        "\U0001F1E0-\U0001F1FF"  # Flags
+        "\U0001f300-\U0001f9ff"  # Miscellaneous Symbols and Pictographs
+        "\U0001fa00-\U0001faff"  # Symbols and Pictographs Extended-A
+        "\U00002600-\U000027bf"  # Miscellaneous Symbols
+        "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
+        "\U00002700-\U000027bf"  # Dingbats
+        "\U0001f600-\U0001f64f"  # Emoticons
+        "\U0001f680-\U0001f6ff"  # Transport and Map
+        "\U00002600-\U000026ff"  # Miscellaneous symbols
+        "\U0001f1e0-\U0001f1ff"  # Flags
         "]+",
         flags=re.UNICODE,
     )
@@ -249,16 +245,19 @@ class ChatWordGenerator:
 
         # Step 1: Replace code blocks with placeholders (highest priority)
         code_counter = 0
+
         def code_replacer(match):
             nonlocal code_counter
             placeholder = f"__CODE_{code_counter}__"
             replacements[placeholder] = ("code", match.group(1))
             code_counter += 1
             return placeholder
+
         text = self._REGEX_CODE_BLOCK.sub(code_replacer, text)
 
         # Step 2: Replace bold text with placeholders
         bold_counter = 0
+
         def bold_replacer(match):
             nonlocal bold_counter
             placeholder = f"__BOLD_{bold_counter}__"
@@ -266,10 +265,12 @@ class ChatWordGenerator:
             replacements[placeholder] = ("bold", bold_text)
             bold_counter += 1
             return placeholder
+
         text = self._REGEX_BOLD.sub(bold_replacer, text)
 
         # Step 3: Replace italic text with placeholders (single * or _, not ** or __)
         italic_counter = 0
+
         def italic_replacer(match):
             nonlocal italic_counter
             placeholder = f"__ITALIC_{italic_counter}__"
@@ -277,6 +278,7 @@ class ChatWordGenerator:
             replacements[placeholder] = ("italic", italic_text)
             italic_counter += 1
             return placeholder
+
         text = self._REGEX_ITALIC.sub(italic_replacer, text)
 
         # Step 4: Split text by placeholders and build runs
@@ -344,7 +346,7 @@ class ChatWordGenerator:
     def _set_cell_border(self, cell, **kwargs):
         """
         Set border properties for a table cell.
-        
+
         Args:
             cell: Table cell object
             **kwargs: Border properties (top, bottom, left, right, start, end)
@@ -353,7 +355,7 @@ class ChatWordGenerator:
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcBorders = OxmlElement('w:tcBorders')
-        
+
         for edge in ('top', 'left', 'bottom', 'right', 'start', 'end'):
             edge_data = kwargs.get(edge)
             if edge_data:
@@ -364,13 +366,13 @@ class ChatWordGenerator:
                 element.set(qn('w:color'), edge_data.get('color', self.TABLE_BORDER_COLOR))
                 element.set(qn('w:space'), '0')
                 tcBorders.append(element)
-        
+
         tcPr.append(tcBorders)
 
     def _set_cell_shading(self, cell, fill_color: str):
         """
         Set background shading for a table cell.
-        
+
         Args:
             cell: Table cell object
             fill_color: Hex color string (without #)
@@ -386,7 +388,7 @@ class ChatWordGenerator:
     def _set_cell_margins(self, cell, top=None, bottom=None, left=None, right=None):
         """
         Set cell margins/padding.
-        
+
         Args:
             cell: Table cell object
             top, bottom, left, right: Margin values in twips
@@ -394,26 +396,26 @@ class ChatWordGenerator:
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         tcMar = OxmlElement('w:tcMar')
-        
+
         for margin_name, margin_value in [('top', top), ('bottom', bottom), ('left', left), ('right', right)]:
             if margin_value is not None:
                 margin_elem = OxmlElement(f'w:{margin_name}')
                 margin_elem.set(qn('w:w'), str(margin_value))
                 margin_elem.set(qn('w:type'), 'dxa')
                 tcMar.append(margin_elem)
-        
+
         tcPr.append(tcMar)
 
     def _style_table_like_chat_ui(self, table, num_rows: int, num_cols: int):
         """
         Apply chat UI-like styling to a Word table.
-        
+
         Matches the Open WebUI chat table appearance:
         - Light header background
         - Subtle bottom borders on cells
         - Clean, modern appearance
         - Proper cell padding
-        
+
         Args:
             table: Word table object
             num_rows: Number of rows
@@ -423,86 +425,62 @@ class ChatWordGenerator:
         header_border = {'sz': 4, 'val': 'single', 'color': self.TABLE_BORDER_COLOR}
         cell_border = {'sz': 4, 'val': 'single', 'color': self.TABLE_BORDER_COLOR}
         no_border = {'sz': 0, 'val': 'nil', 'color': 'auto'}
-        
+
         for row_idx, row in enumerate(table.rows):
             for col_idx, cell in enumerate(row.cells):
                 is_header = row_idx == 0
                 is_last_row = row_idx == num_rows - 1
-                
+
                 # Set cell padding
-                self._set_cell_margins(
-                    cell, 
-                    top=60, 
-                    bottom=60, 
-                    left=100, 
-                    right=100
-                )
-                
+                self._set_cell_margins(cell, top=60, bottom=60, left=100, right=100)
+
                 if is_header:
                     # Header row: light background, bottom border only
                     self._set_cell_shading(cell, self.TABLE_HEADER_BG)
-                    self._set_cell_border(
-                        cell,
-                        top=no_border,
-                        left=no_border,
-                        right=no_border,
-                        bottom=header_border
-                    )
+                    self._set_cell_border(cell, top=no_border, left=no_border, right=no_border, bottom=header_border)
                 else:
                     # Data rows: white background, bottom border (except last row)
                     self._set_cell_shading(cell, 'ffffff')
                     if is_last_row:
-                        self._set_cell_border(
-                            cell,
-                            top=no_border,
-                            left=no_border,
-                            right=no_border,
-                            bottom=no_border
-                        )
+                        self._set_cell_border(cell, top=no_border, left=no_border, right=no_border, bottom=no_border)
                     else:
-                        self._set_cell_border(
-                            cell,
-                            top=no_border,
-                            left=no_border,
-                            right=no_border,
-                            bottom=cell_border
-                        )
+                        self._set_cell_border(cell, top=no_border, left=no_border, right=no_border, bottom=cell_border)
 
     def _get_list_nesting_level(self, indent: str) -> int:
         """
         Calculate nesting level from indentation.
-        
+
         Supports both spaces and tabs:
         - 2 spaces = 1 level
         - 4 spaces = 1 level (also common)
         - 1 tab = 1 level
-        
+
         Args:
             indent: The leading whitespace string
-            
+
         Returns:
             Nesting level (0 = top level, 1 = first nested, etc.)
         """
         if not indent:
             return 0
-        
+
         # Count tabs
         tab_count = indent.count('\t')
         # Count spaces (after removing tabs)
         space_count = len(indent.replace('\t', ''))
-        
+
         # Assume 2 spaces per level (common in markdown)
         space_levels = space_count // 2
-        
+
         return tab_count + space_levels
 
     def _is_list_item(self, line: str) -> Tuple[bool, str, int, str]:
         """
         Check if a line is a list item and extract its properties.
-        
+
         Args:
             line: The line to check
-            
+
         Returns:
             Tuple of (is_list_item, list_type, nesting_level, item_text)
             list_type is 'unordered' or 'ordered'
@@ -514,7 +492,7 @@ class ChatWordGenerator:
             item_text = match.group(2)
             level = self._get_list_nesting_level(indent)
             return True, 'unordered', level, item_text
-        
+
         # Check for ordered list (1., 2., etc.)
         match = self._REGEX_ORDERED_LIST_ITEM.match(line)
         if match:
@@ -522,13 +500,13 @@ class ChatWordGenerator:
             item_text = match.group(3)
             level = self._get_list_nesting_level(indent)
             return True, 'ordered', level, item_text
-        
+
         return False, '', 0, ''
 
     def _add_list_item(self, item_text: str, list_type: str, nesting_level: int):
         """
         Add a list item to the document with proper indentation.
-        
+
         Args:
             item_text: The text content of the list item
             list_type: 'unordered' or 'ordered'
@@ -539,11 +517,11 @@ class ChatWordGenerator:
             p = self.doc.add_paragraph(style="List Number")
         else:
             p = self.doc.add_paragraph(style="List Bullet")
-        
+
         # Apply indentation for nested items (0.25 inches per level)
         if nesting_level > 0:
             p.paragraph_format.left_indent = Inches(0.25 * nesting_level)
-        
+
         # Add formatted text
         runs = self._parse_markdown_inline(item_text)
         for run_dict in runs:
@@ -692,11 +670,11 @@ class ChatWordGenerator:
                     is_list, list_type, level, item_text = self._is_list_item(lines[i])
                     if not is_list:
                         break
-                    
+
                     # Add the list item with proper nesting
                     self._add_list_item(item_text, list_type, level)
                     i += 1
-                
+
                 continue
 
             # Block quote: > text
@@ -755,11 +733,11 @@ class ChatWordGenerator:
                         if table_data and len(table_data) > 0:
                             num_rows = len(table_data)
                             num_cols = len(table_data[0])
-                            
+
                             # Create Word table
                             table = self.doc.add_table(rows=num_rows, cols=num_cols)
                             table.alignment = WD_TABLE_ALIGNMENT.LEFT
-                            
+
                             # Apply chat UI-like styling (borders, shading, padding)
                             self._style_table_like_chat_ui(table, num_rows, num_cols)
 
@@ -924,7 +902,7 @@ class ChatWordGenerator:
 
             # Add spacing
             self._add_spacing_paragraph(self.SPACING_MEDIUM)
-            
+
             # Page break after title section to start messages on fresh page
             self._add_page_break()
 
@@ -934,12 +912,12 @@ class ChatWordGenerator:
             for idx, message in enumerate(self.form_data.messages):
                 try:
                     role = message.get("role", "user").lower()
-                    
+
                     # Add page break before each USER message (except the first one)
                     # This keeps each Q&A pair together and makes navigation easier
                     if role == "user" and idx > 0:
                         self._add_page_break()
-                    
+
                     self._build_message_paragraphs(message)
 
                 except Exception as e:

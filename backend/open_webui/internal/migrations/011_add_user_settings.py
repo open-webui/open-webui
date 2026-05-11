@@ -37,11 +37,11 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
     # Adding fields settings to the 'user' table
-    migrator.add_fields("user", settings=pw.TextField(null=True))
+    migrator.add_fields('user', settings=pw.TextField(null=True))
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
     # Remove the settings field
-    migrator.remove_fields("user", "settings")
+    migrator.remove_fields('user', 'settings')

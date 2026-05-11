@@ -91,7 +91,7 @@ def markdown_to_html(md_content: str) -> str:
     # Convert markdown to HTML
     md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br'])
     html_content = md.convert(md_content)
-    
+
     # Wrap in email template
     return EMAIL_HTML_TEMPLATE.format(content=html_content)
 
@@ -112,7 +112,7 @@ def strip_markdown(md_content: str) -> str:
 class GmailSender:
     """
     Sends emails via Gmail API.
-    
+
     Uses OAuth token from user's Google login session.
     """
 
@@ -133,9 +133,7 @@ class GmailSender:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout)
-            )
+            self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout))
         return self._session
 
     async def close(self):
@@ -169,7 +167,7 @@ class GmailSender:
             # Convert markdown to HTML and create multipart email
             html_body = markdown_to_html(body)
             plain_body = strip_markdown(body)
-            
+
             msg = MIMEMultipart("alternative")
             msg.attach(MIMEText(plain_body, "plain"))
             msg.attach(MIMEText(html_body, "html"))

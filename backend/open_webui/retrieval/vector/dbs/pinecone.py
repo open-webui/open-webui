@@ -107,9 +107,7 @@ class PineconeClient(VectorDBBase):
             missing_vars.append("PINECONE_CLOUD")
 
         if missing_vars:
-            raise ValueError(
-                f"Required configuration missing: {', '.join(missing_vars)}"
-            )
+            raise ValueError(f"Required configuration missing: {', '.join(missing_vars)}")
 
     def _initialize_index(self) -> None:
         """Initialize the Pinecone index."""
@@ -175,9 +173,7 @@ class PineconeClient(VectorDBBase):
                 )
                 time.sleep(delay)
 
-    def _create_points(
-        self, items: List[VectorItem], collection_name_with_prefix: str
-    ) -> List[Dict[str, Any]]:
+    def _create_points(self, items: List[VectorItem], collection_name_with_prefix: str) -> List[Dict[str, Any]]:
         """Convert VectorItem objects to Pinecone point format."""
         points = []
         for item in items:
@@ -193,19 +189,12 @@ class PineconeClient(VectorDBBase):
             metadata["collection_name"] = collection_name_with_prefix
 
             # Extract file_id from collection name if it's a file collection
-            if collection_name_with_prefix.startswith(
-                f"{self.collection_prefix}_file-"
-            ):
+            if collection_name_with_prefix.startswith(f"{self.collection_prefix}_file-"):
                 # Extract the file ID from the collection name
-                file_id_from_collection = collection_name_with_prefix.replace(
-                    f"{self.collection_prefix}_file-", ""
-                )
+                file_id_from_collection = collection_name_with_prefix.replace(f"{self.collection_prefix}_file-", "")
 
                 # Verify consistency: if metadata has file_id, it must match
-                if (
-                    "file_id" in metadata
-                    and metadata["file_id"] != file_id_from_collection
-                ):
+                if "file_id" in metadata and metadata["file_id"] != file_id_from_collection:
                     log.error(
                         f"FILE ID MISMATCH! Metadata file_id: {metadata.get('file_id')}, Collection file_id: {file_id_from_collection}"
                     )
@@ -223,9 +212,7 @@ class PineconeClient(VectorDBBase):
             points.append(point)
         return points
 
-    def _batch_points_by_size(
-        self, points: List[Dict[str, Any]]
-    ) -> List[List[Dict[str, Any]]]:
+    def _batch_points_by_size(self, points: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
         """
         Split points into batches respecting both count and size limits.
 
@@ -307,9 +294,7 @@ class PineconeClient(VectorDBBase):
 
     def has_collection(self, collection_name: str, namespace: str = None) -> bool:
         """Check if a collection exists by querying for at least one item with optional namespace."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         try:
             # Note: describe_index_stats with filter doesn't work on serverless indexes
@@ -324,9 +309,7 @@ class PineconeClient(VectorDBBase):
             if namespace:
                 query_kwargs["namespace"] = namespace
 
-            response = self._retry_pinecone_operation(
-                lambda: self.index.query(**query_kwargs)
-            )
+            response = self._retry_pinecone_operation(lambda: self.index.query(**query_kwargs))
             matches = getattr(response, "matches", []) or []
             return len(matches) > 0
 
@@ -340,9 +323,7 @@ class PineconeClient(VectorDBBase):
 
     def delete_collection(self, collection_name: str, namespace: str = None) -> None:
         """Delete a collection by removing all vectors with the collection name in metadata."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         try:
             delete_kwargs = {"filter": {"collection_name": collection_name_with_prefix}}
             if namespace:
@@ -362,9 +343,7 @@ class PineconeClient(VectorDBBase):
             )
             raise
 
-    def insert(
-        self, collection_name: str, items: List[VectorItem], namespace: str = None
-    ) -> None:
+    def insert(self, collection_name: str, items: List[VectorItem], namespace: str = None) -> None:
         """Insert vectors into a collection with optimized batching and optional namespace support."""
         if not items:
             log.warning("No items to insert")
@@ -372,14 +351,10 @@ class PineconeClient(VectorDBBase):
 
         start_time = time.time()
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         # Log detailed information about what's being inserted
-        namespace_info = (
-            f" in namespace '{namespace}'" if namespace else " in default namespace"
-        )
+        namespace_info = f" in namespace '{namespace}'" if namespace else " in default namespace"
         log.info(
             f"Inserting {len(items)} items to Pinecone collection: {collection_name} (with prefix: {collection_name_with_prefix}){namespace_info}"
         )
@@ -403,9 +378,7 @@ class PineconeClient(VectorDBBase):
                 futures.append(
                     executor.submit(
                         self._retry_pinecone_operation,
-                        lambda b=batch, ns=namespace: self.index.upsert(
-                            vectors=b, namespace=ns
-                        ),
+                        lambda b=batch, ns=namespace: self.index.upsert(vectors=b, namespace=ns),
                     )
                 )
             else:
@@ -430,9 +403,7 @@ class PineconeClient(VectorDBBase):
             f"into '{collection_name_with_prefix}'{namespace_info}"
         )
 
-    def upsert(
-        self, collection_name: str, items: List[VectorItem], namespace: str = None
-    ) -> None:
+    def upsert(self, collection_name: str, items: List[VectorItem], namespace: str = None) -> None:
         """Upsert (insert or update) vectors into a collection with optional namespace support."""
         if not items:
             log.warning("No items to upsert")
@@ -440,14 +411,10 @@ class PineconeClient(VectorDBBase):
 
         start_time = time.time()
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         # Log detailed information about what's being upserted
-        namespace_info = (
-            f" in namespace '{namespace}'" if namespace else " in default namespace"
-        )
+        namespace_info = f" in namespace '{namespace}'" if namespace else " in default namespace"
         log.info(
             f"Upserting {len(items)} items to Pinecone collection: {collection_name} (with prefix: {collection_name_with_prefix}){namespace_info}"
         )
@@ -476,9 +443,7 @@ class PineconeClient(VectorDBBase):
                 futures.append(
                     executor.submit(
                         self._retry_pinecone_operation,
-                        lambda b=batch, ns=namespace: self.index.upsert(
-                            vectors=b, namespace=ns
-                        ),
+                        lambda b=batch, ns=namespace: self.index.upsert(vectors=b, namespace=ns),
                     )
                 )
             else:
@@ -509,21 +474,14 @@ class PineconeClient(VectorDBBase):
             log.warning("No items to insert")
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         points = self._create_points(items, collection_name_with_prefix)
 
         # Use dynamic batching to respect both count and size limits
         batches = self._batch_points_by_size(points)
 
         loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(
-                None, functools.partial(self.index.upsert, vectors=batch)
-            )
-            for batch in batches
-        ]
+        tasks = [loop.run_in_executor(None, functools.partial(self.index.upsert, vectors=batch)) for batch in batches]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, Exception):
@@ -540,21 +498,14 @@ class PineconeClient(VectorDBBase):
             log.warning("No items to upsert")
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         points = self._create_points(items, collection_name_with_prefix)
 
         # Use dynamic batching to respect both count and size limits
         batches = self._batch_points_by_size(points)
 
         loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(
-                None, functools.partial(self.index.upsert, vectors=batch)
-            )
-            for batch in batches
-        ]
+        tasks = [loop.run_in_executor(None, functools.partial(self.index.upsert, vectors=batch)) for batch in batches]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, Exception):
@@ -578,9 +529,7 @@ class PineconeClient(VectorDBBase):
             log.warning("No vectors provided for search")
             return None
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         if limit is None or limit <= 0:
             limit = NO_LIMIT
@@ -600,9 +549,7 @@ class PineconeClient(VectorDBBase):
             if namespace:
                 query_kwargs["namespace"] = namespace
 
-            query_response = self._retry_pinecone_operation(
-                lambda: self.index.query(**query_kwargs)
-            )
+            query_response = self._retry_pinecone_operation(lambda: self.index.query(**query_kwargs))
 
             matches = getattr(query_response, "matches", []) or []
             if not matches:
@@ -618,12 +565,7 @@ class PineconeClient(VectorDBBase):
             get_result = self._result_to_get_result(matches)
 
             # Calculate normalized distances based on metric
-            distances = [
-                [
-                    self._normalize_distance(getattr(match, "score", 0.0))
-                    for match in matches
-                ]
-            ]
+            distances = [[self._normalize_distance(getattr(match, "score", 0.0)) for match in matches]]
 
             return SearchResult(
                 ids=get_result.ids,
@@ -643,9 +585,7 @@ class PineconeClient(VectorDBBase):
         namespace: str = None,
     ) -> Optional[GetResult]:
         """Query vectors by metadata filter with optional namespace support."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         if limit is None or limit <= 0:
             limit = NO_LIMIT
@@ -663,9 +603,7 @@ class PineconeClient(VectorDBBase):
                     if key != "collection_name":
                         pinecone_filter[key] = value
                     else:
-                        log.warning(
-                            f"Attempted to override collection_name filter! Ignoring."
-                        )
+                        log.warning(f"Attempted to override collection_name filter! Ignoring.")
 
             # Perform metadata-only query with optional namespace
             query_kwargs = {
@@ -678,9 +616,7 @@ class PineconeClient(VectorDBBase):
             if namespace:
                 query_kwargs["namespace"] = namespace
 
-            query_response = self._retry_pinecone_operation(
-                lambda: self.index.query(**query_kwargs)
-            )
+            query_response = self._retry_pinecone_operation(lambda: self.index.query(**query_kwargs))
 
             matches = getattr(query_response, "matches", []) or []
             return self._result_to_get_result(matches)
@@ -691,9 +627,7 @@ class PineconeClient(VectorDBBase):
 
     def get(self, collection_name: str, namespace: str = None) -> Optional[GetResult]:
         """Get all vectors in a collection with optional namespace support."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         try:
             # Use a zero vector for fetching all entries
@@ -710,9 +644,7 @@ class PineconeClient(VectorDBBase):
             if namespace:
                 query_kwargs["namespace"] = namespace
 
-            query_response = self._retry_pinecone_operation(
-                lambda: self.index.query(**query_kwargs)
-            )
+            query_response = self._retry_pinecone_operation(lambda: self.index.query(**query_kwargs))
 
             matches = getattr(query_response, "matches", []) or []
             return self._result_to_get_result(matches)
@@ -729,9 +661,7 @@ class PineconeClient(VectorDBBase):
         namespace: str = None,
     ) -> None:
         """Delete vectors by IDs or filter with optional namespace support."""
-        collection_name_with_prefix = self._get_collection_name_with_prefix(
-            collection_name
-        )
+        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
 
         try:
             if ids:
@@ -744,19 +674,15 @@ class PineconeClient(VectorDBBase):
                     if namespace:
                         delete_kwargs["namespace"] = namespace
 
-                    self._retry_pinecone_operation(
-                        lambda kwargs=delete_kwargs: self.index.delete(**kwargs)
-                    )
+                    self._retry_pinecone_operation(lambda kwargs=delete_kwargs: self.index.delete(**kwargs))
 
                     log.debug(
                         f"Deleted batch of {len(batch_ids)} vectors by ID "
-                        f"from '{collection_name_with_prefix}'"
-                        + (f" in namespace '{namespace}'" if namespace else "")
+                        f"from '{collection_name_with_prefix}'" + (f" in namespace '{namespace}'" if namespace else "")
                     )
                 log.info(
                     f"Successfully deleted {len(ids)} vectors by ID "
-                    f"from '{collection_name_with_prefix}'"
-                    + (f" in namespace '{namespace}'" if namespace else "")
+                    f"from '{collection_name_with_prefix}'" + (f" in namespace '{namespace}'" if namespace else "")
                 )
 
             elif filter:
@@ -769,9 +695,7 @@ class PineconeClient(VectorDBBase):
                 if namespace:
                     delete_kwargs["namespace"] = namespace
 
-                self._retry_pinecone_operation(
-                    lambda: self.index.delete(**delete_kwargs)
-                )
+                self._retry_pinecone_operation(lambda: self.index.delete(**delete_kwargs))
 
                 log.info(
                     f"Successfully deleted vectors by filter from '{collection_name_with_prefix}'"
@@ -782,10 +706,8 @@ class PineconeClient(VectorDBBase):
                 # Delete ALL vectors in the namespace (for force sync/reset)
                 log.info(f"Deleting ALL vectors in namespace '{namespace}'...")
                 delete_kwargs = {"delete_all": True, "namespace": namespace}
-                
-                self._retry_pinecone_operation(
-                    lambda: self.index.delete(**delete_kwargs)
-                )
+
+                self._retry_pinecone_operation(lambda: self.index.delete(**delete_kwargs))
 
                 log.info(f"Successfully deleted ALL vectors in namespace '{namespace}'")
 

@@ -46,7 +46,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 class KnowledgeDriveSyncService:
     """
     Service for syncing Google Drive folders to Knowledge bases.
-    
+
     Supports:
     - Initial full sync of all files in a folder
     - Incremental sync using Drive change tokens
@@ -57,7 +57,7 @@ class KnowledgeDriveSyncService:
     def __init__(self, app_state=None):
         """
         Initialize sync service.
-        
+
         Args:
             app_state: FastAPI app state for accessing config and services
         """
@@ -73,13 +73,13 @@ class KnowledgeDriveSyncService:
     ) -> Dict[str, Any]:
         """
         Sync a Drive source to its Knowledge base.
-        
+
         Args:
             source: Drive source to sync
             drive_client: Authenticated Drive client
             user_id: User ID for file ownership
             force_full_sync: If True, resync all files regardless of changes
-            
+
         Returns:
             Dict with sync statistics
         """
@@ -121,31 +121,21 @@ class KnowledgeDriveSyncService:
                     if folder_info.drive_id:
                         log.info(f"🔍 Detected Shared Drive ID: {folder_info.drive_id}")
                         # Update source with the drive ID
-                        KnowledgeDriveSources.update_drive_source(
-                            source_id, shared_drive_id=folder_info.drive_id
-                        )
+                        KnowledgeDriveSources.update_drive_source(source_id, shared_drive_id=folder_info.drive_id)
                         # Update local source object
                         source = KnowledgeDriveSources.get_drive_source_by_id(source_id)
                 except Exception as e:
                     log.warning(f"Could not detect Shared Drive ID: {e}")
 
             # Determine sync type
-            is_incremental = (
-                not force_full_sync
-                and source.last_sync_change_token
-                and source.last_sync_timestamp
-            )
+            is_incremental = not force_full_sync and source.last_sync_change_token and source.last_sync_timestamp
 
             if is_incremental:
                 log.info("📊 Performing INCREMENTAL sync using change tracking")
-                result = await self._sync_incremental(
-                    source, drive_client, user_id, knowledge
-                )
+                result = await self._sync_incremental(source, drive_client, user_id, knowledge)
             else:
                 log.info("📊 Performing FULL sync of all files")
-                result = await self._sync_full(
-                    source, drive_client, user_id, knowledge
-                )
+                result = await self._sync_full(source, drive_client, user_id, knowledge)
 
             # Update sync status
             self.active_syncs[source_id]["status"] = "completed"
@@ -204,20 +194,18 @@ class KnowledgeDriveSyncService:
         # Get max files from config, default to 1000
         max_files = 1000
         if self.app_state and hasattr(self.app_state, "config"):
-            max_files = getattr(
-                self.app_state.config, "KNOWLEDGE_DRIVE_MAX_FILES", 1000
-            )
+            max_files = getattr(self.app_state.config, "KNOWLEDGE_DRIVE_MAX_FILES", 1000)
 
         # Detect if folder is in a Shared Drive (need drive_id for API)
         folder_info = await drive_client.get_folder_info(source.drive_folder_id)
         drive_id = folder_info.drive_id or source.shared_drive_id
-        
+
         # Log scan configuration
         scan_mode = "recursive" if source.recursive else "single folder"
         log.info(f"📂 Scanning Drive folder ({scan_mode}, max {max_files} files)...")
         if drive_id:
             log.info(f"   Shared Drive: {drive_id}")
-        
+
         # List files based on recursive setting
         if source.recursive:
             drive_files = await drive_client.list_folder_files_recursive(
@@ -234,17 +222,12 @@ class KnowledgeDriveSyncService:
 
         # Filter to supported file types
         supported_files = [f for f in drive_files if f.is_supported()]
-        log.info(
-            f"   Found {len(drive_files)} files, {len(supported_files)} supported"
-        )
+        log.info(f"   Found {len(drive_files)} files, {len(supported_files)} supported")
 
         self.active_syncs[source.id]["files_found"] = len(supported_files)
 
         # Get existing tracked files
-        existing_tracked = {
-            f.drive_file_id: f
-            for f in KnowledgeDriveFiles.get_drive_files_by_source_id(source.id)
-        }
+        existing_tracked = {f.drive_file_id: f for f in KnowledgeDriveFiles.get_drive_files_by_source_id(source.id)}
 
         # Track current Drive file IDs
         current_drive_ids = set()
@@ -256,19 +239,14 @@ class KnowledgeDriveSyncService:
         # Process each file
         for i, drive_file in enumerate(supported_files):
             try:
-                log.info(
-                    f"📄 [{i+1}/{len(supported_files)}] Processing: {drive_file.name}"
-                )
+                log.info(f"📄 [{i+1}/{len(supported_files)}] Processing: {drive_file.name}")
                 current_drive_ids.add(drive_file.id)
 
                 # Check if file exists and has changed
                 existing = existing_tracked.get(drive_file.id)
                 if existing:
                     # Check if file has changed (by MD5 or modified time)
-                    if (
-                        existing.drive_file_md5 == drive_file.md5_checksum
-                        and existing.sync_status == "synced"
-                    ):
+                    if existing.drive_file_md5 == drive_file.md5_checksum and existing.sync_status == "synced":
                         log.info(f"   ⏭️  Unchanged, skipping")
                         continue
 
@@ -303,9 +281,7 @@ class KnowledgeDriveSyncService:
 
                     # Mark as synced with timestamp
                     if tracked_file:
-                        KnowledgeDriveFiles.mark_file_synced(
-                            tracked_file.id, file_id
-                        )
+                        KnowledgeDriveFiles.mark_file_synced(tracked_file.id, file_id)
 
                     if was_update:
                         files_updated += 1
@@ -378,9 +354,7 @@ class KnowledgeDriveSyncService:
 
                 if removed or file_data.get("trashed"):
                     # File was deleted or trashed
-                    tracked = KnowledgeDriveFiles.get_drive_file_by_drive_id(
-                        source.id, file_id
-                    )
+                    tracked = KnowledgeDriveFiles.get_drive_file_by_drive_id(source.id, file_id)
                     if tracked:
                         log.info(f"🗑️  File deleted: {tracked.drive_file_name}")
                         KnowledgeDriveFiles.mark_file_deleted(tracked.id)
@@ -401,9 +375,7 @@ class KnowledgeDriveSyncService:
                 log.info(f"📄 Change detected: {drive_file.name}")
 
                 # Check if we already have this file
-                existing = KnowledgeDriveFiles.get_drive_file_by_drive_id(
-                    source.id, drive_file.id
-                )
+                existing = KnowledgeDriveFiles.get_drive_file_by_drive_id(source.id, drive_file.id)
 
                 # Download and process
                 new_file_id = await self._download_and_process_file(
@@ -461,7 +433,7 @@ class KnowledgeDriveSyncService:
     ) -> Optional[str]:
         """
         Download a file from Drive and process it through the RAG pipeline.
-        
+
         Returns:
             Open WebUI file ID if successful, None otherwise
         """
@@ -479,8 +451,7 @@ class KnowledgeDriveSyncService:
             if drive_file.is_google_workspace():
                 # Add proper extension for exported files
                 ext = SUPPORTED_MIME_TYPES.get(
-                    GOOGLE_EXPORT_FORMATS.get(drive_file.mime_type, drive_file.mime_type),
-                    ""
+                    GOOGLE_EXPORT_FORMATS.get(drive_file.mime_type, drive_file.mime_type), ""
                 )
                 if ext and not filename.endswith(ext):
                     filename = f"{filename}{ext}"
@@ -509,9 +480,7 @@ class KnowledgeDriveSyncService:
             # Determine content type
             content_type = drive_file.mime_type
             if drive_file.is_google_workspace():
-                content_type = GOOGLE_EXPORT_FORMATS.get(
-                    drive_file.mime_type, drive_file.mime_type
-                )
+                content_type = GOOGLE_EXPORT_FORMATS.get(drive_file.mime_type, drive_file.mime_type)
 
             # Create file record
             log.info(f"   📝 Creating file record...")
@@ -540,9 +509,7 @@ class KnowledgeDriveSyncService:
 
             # Add file to knowledge base
             log.info(f"   📚 Adding to Knowledge base...")
-            Knowledges.add_file_to_knowledge_by_id(
-                knowledge.id, file_id, user_id
-            )
+            Knowledges.add_file_to_knowledge_by_id(knowledge.id, file_id, user_id)
 
             # Process file through RAG pipeline
             log.info(f"   ⚙️  Processing through RAG pipeline...")
@@ -562,7 +529,7 @@ class KnowledgeDriveSyncService:
     ):
         """
         Process a file through the RAG pipeline.
-        
+
         Uses the SAME process_uploaded_file function as regular uploads to ensure
         consistent handling of all file types including audio/video transcription.
         """
@@ -576,7 +543,7 @@ class KnowledgeDriveSyncService:
             user = Users.get_user_by_id(user_id)
             if not user:
                 raise ValueError(f"User {user_id} not found")
-            
+
             # Get file record
             file_record = Files.get_file_by_id(file_id)
             if not file_record:
@@ -591,20 +558,20 @@ class KnowledgeDriveSyncService:
             if self.app_state:
                 request = MockRequest(self.app_state)
                 loop = asyncio.get_running_loop()
-                
+
                 # Create a simple file-like object with content_type for process_uploaded_file
                 # This ensures audio/video files are handled identically to direct uploads
                 class MockFile:
                     def __init__(self, content_type: str):
                         self.content_type = content_type
-                
+
                 mock_file = MockFile(file_record.meta.get("content_type", ""))
                 file_metadata = {"name": file_record.filename}
-                
+
                 # STEP 1: Process file using the SAME function as regular uploads
                 # This handles transcription for audio/video, extraction for documents, etc.
                 log.info(f"   📄 Step 1: Processing file {file_id[:8]} (same as direct upload)...")
-                
+
                 await loop.run_in_executor(
                     None,
                     process_uploaded_file,
@@ -616,7 +583,7 @@ class KnowledgeDriveSyncService:
                     user,
                     None,  # db session
                 )
-                
+
                 # Verify content was extracted
                 file_check = Files.get_file_by_id(file_id)
                 if not file_check or not file_check.data or not file_check.data.get("content"):
@@ -628,12 +595,12 @@ class KnowledgeDriveSyncService:
                     log.warning(f"   ⚠️ No content extracted (may be image-only file)")
                 else:
                     log.info(f"   ✅ Step 1 complete: {len(file_check.data.get('content', ''))} chars")
-                
+
                 # Wait for Pinecone eventual consistency
                 # Vectors in file-{file_id} may not be immediately queryable
                 log.info(f"   ⏳ Waiting 5s for Pinecone indexing...")
                 await asyncio.sleep(5)
-                
+
                 # STEP 2: Add to knowledge base collection
                 # This will query file-{file_id} for vectors, or fall back to file.data.content
                 log.info(f"   📚 Step 2: Adding to knowledge base {knowledge_id[:8]}...")
@@ -648,10 +615,12 @@ class KnowledgeDriveSyncService:
                     user,
                     None,  # db session
                 )
-                
+
                 if not result2 or not result2.get("status"):
                     log.error(f"   ❌ Step 2 failed for {file_id[:8]}: {result2}")
-                    Files.update_file_data_by_id(file_id, {"status": "error", "error": "Failed to add to knowledge base"})
+                    Files.update_file_data_by_id(
+                        file_id, {"status": "error", "error": "Failed to add to knowledge base"}
+                    )
                     return
 
                 log.info(f"   ✅ RAG processing complete for {file_id[:8]} → KB {knowledge_id[:8]}")
@@ -661,6 +630,7 @@ class KnowledgeDriveSyncService:
         except Exception as e:
             log.error(f"   ❌ RAG processing error for {file_id}: {e}")
             import traceback
+
             log.error(f"   Traceback: {traceback.format_exc()}")
             # Don't raise - file was synced, just RAG failed
             # Mark file with error status
@@ -683,7 +653,7 @@ async def sync_knowledge_drive_source(
 ):
     """
     Sync a single Drive source.
-    
+
     Called from API endpoints or background scheduler.
     """
     log.info(f"🔄 Starting Drive sync for source {source_id[:8]}...")
@@ -730,7 +700,7 @@ async def sync_knowledge_drive_source(
 async def periodic_drive_sync_scheduler(app_state):
     """
     Periodic scheduler for Drive syncs.
-    
+
     Runs as a background task, checking for sources that need syncing.
     Similar to Gmail periodic sync scheduler.
     """
@@ -747,9 +717,7 @@ async def periodic_drive_sync_scheduler(app_state):
         try:
             # Get sources needing sync
             # Check sources where last sync was > their configured interval ago
-            sources = KnowledgeDriveSources.get_sources_needing_sync(
-                max_hours_since_sync=1  # Default check hourly
-            )
+            sources = KnowledgeDriveSources.get_sources_needing_sync(max_hours_since_sync=1)  # Default check hourly
 
             if sources:
                 log.info(f"📂 Found {len(sources)} Drive source(s) needing sync")
@@ -757,9 +725,7 @@ async def periodic_drive_sync_scheduler(app_state):
                 for source in sources:
                     # Check if source's specific interval has passed
                     if source.last_sync_timestamp:
-                        hours_since = (
-                            time.time() - source.last_sync_timestamp
-                        ) / 3600
+                        hours_since = (time.time() - source.last_sync_timestamp) / 3600
                         if hours_since < source.auto_sync_interval_hours:
                             continue
 

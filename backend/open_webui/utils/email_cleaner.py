@@ -23,7 +23,7 @@ class EmailCleaner:
         """Basic text cleaning - handles HTML entities, escape sequences"""
         if not text:
             return ""
-        
+
         # Handle escape sequences
         text = text.replace("\\n\\n", "\n\n")
         text = text.replace("\\n", "\n")
@@ -31,11 +31,11 @@ class EmailCleaner:
         text = text.replace("\\r", "")
         text = text.replace('\\"', '"')
         text = text.replace("\\'", "'")
-        
+
         # Normalize whitespace
         text = re.sub(r" {2,}", " ", text)
         text = re.sub(r"\n{3,}", "\n\n", text)
-        
+
         return text.strip()
 
     # Common signature patterns (more comprehensive)
@@ -124,9 +124,7 @@ class EmailCleaner:
             if any(
                 [
                     line_lower.startswith("on ") and " wrote:" in line_lower,
-                    line_lower.startswith("from:")
-                    and i < len(lines) - 1
-                    and lines[i + 1].lower().startswith("sent:"),
+                    line_lower.startswith("from:") and i < len(lines) - 1 and lines[i + 1].lower().startswith("sent:"),
                     line.startswith(">"),
                     line.startswith(">>"),
                     re.match(r"^_{5,}$", line),  # Underscore separators
@@ -243,9 +241,7 @@ class EmailCleaner:
         )
 
         # Remove email addresses (keep privacy)
-        text = re.sub(
-            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[email]", text
-        )
+        text = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[email]", text)
 
         # Clean up result
         text = re.sub(r"\n{3,}", "\n\n", text)
@@ -277,9 +273,7 @@ class EmailCleaner:
             return name, email
 
         # Just an email address
-        email_match = re.search(
-            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", email_str
-        )
+        email_match = re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", email_str)
         if email_match:
             return "", email_match.group(0)
 

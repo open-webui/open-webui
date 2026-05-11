@@ -1,9 +1,12 @@
 import asyncio
+import ipaddress
 import logging
 import socket
 import ssl
 import urllib.parse
 import urllib.request
+
+import requests
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
@@ -27,6 +30,7 @@ from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -44,6 +48,7 @@ from open_webui.config import (
     WEB_FETCH_FILTER_LIST,
 )
 from open_webui.utils.misc import is_string_allowed
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS
 
 log = logging.getLogger(__name__)
 
@@ -64,19 +69,25 @@ def validate_url(url: Union[str, Sequence[str]]):
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
+        # Reject parser-confusing chars: urlparse and requests/aiohttp split
+        # on these differently, e.g. http://127.0.0.1\@1.1.1.1 → urlparse
+        # extracts 1.1.1.1 (public, passes filter) while requests connects
+        # to 127.0.0.1 (internal). Same shape with tab/CR/LF.
+        if any(ch in url for ch in ('\\', '\t', '\n', '\r')):
+            log.warning(f'Blocked URL with parser-confusing char: {url!r}')
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
         parsed_url = urllib.parse.urlparse(url)
 
         # Protocol validation - only allow http/https
-        if parsed_url.scheme not in ["http", "https"]:
-            log.warning(
-                f"Blocked non-HTTP(S) protocol: {parsed_url.scheme} in URL: {url}"
-            )
+        if parsed_url.scheme not in ['http', 'https']:
+            log.warning(f'Blocked non-HTTP(S) protocol: {parsed_url.scheme} in URL: {url}')
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         # Blocklist check using unified filtering logic
         if WEB_FETCH_FILTER_LIST:
             if not is_string_allowed(url, WEB_FETCH_FILTER_LIST):
-                log.warning(f"URL blocked by filter list: {url}")
+                log.warning(f'URL blocked by filter list: {url}')
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
@@ -86,11 +97,9 @@ def validate_url(url: Union[str, Sequence[str]]):
             ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
             # Check if any of the resolved addresses are private
             # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
-            for ip in ipv4_addresses:
-                if validators.ipv4(ip, private=True):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
-            for ip in ipv6_addresses:
-                if validators.ipv6(ip, private=True):
+            for ip in ipv4_addresses + ipv6_addresses:
+                addr = ipaddress.ip_address(ip)
+                if not addr.is_global:
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):
@@ -106,29 +115,29 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
             if validate_url(u):
                 valid_urls.append(u)
         except Exception as e:
-            log.debug(f"Invalid URL {u}: {str(e)}")
+            log.debug(f'Invalid URL {u}: {str(e)}')
             continue
     return valid_urls
 
 
 def extract_metadata(soup, url):
-    metadata = {"source": url}
-    if title := soup.find("title"):
-        metadata["title"] = title.get_text()
-    if description := soup.find("meta", attrs={"name": "description"}):
-        metadata["description"] = description.get("content", "No description found.")
-    if html := soup.find("html"):
-        metadata["language"] = html.get("lang", "No language found.")
+    metadata = {'source': url}
+    if title := soup.find('title'):
+        metadata['title'] = title.get_text()
+    if description := soup.find('meta', attrs={'name': 'description'}):
+        metadata['description'] = description.get('content', 'No description found.')
+    if html := soup.find('html'):
+        metadata['language'] = html.get('lang', 'No language found.')
     return metadata
 
 
 def verify_ssl_cert(url: str) -> bool:
     """Verify SSL certificate for the given URL."""
-    if not url.startswith("https://"):
+    if not url.startswith('https://'):
         return True
 
     try:
-        hostname = url.split("://")[-1].split("/")[0]
+        hostname = url.split('://')[-1].split('/')[0]
         context = ssl.create_default_context(cafile=certifi.where())
         with context.wrap_socket(ssl.socket(), server_hostname=hostname) as s:
             s.connect((hostname, 443))
@@ -136,7 +145,7 @@ def verify_ssl_cert(url: str) -> bool:
     except ssl.SSLError:
         return False
     except Exception as e:
-        log.warning(f"SSL verification failed for {url}: {str(e)}")
+        log.warning(f'SSL verification failed for {url}: {str(e)}')
         return False
 
 
@@ -168,14 +177,14 @@ class URLProcessingMixin:
     async def _safe_process_url(self, url: str) -> bool:
         """Perform safety checks before processing a URL."""
         if self.verify_ssl and not await self._verify_ssl_cert(url):
-            raise ValueError(f"SSL certificate verification failed for {url}")
+            raise ValueError(f'SSL certificate verification failed for {url}')
         await self._wait_for_rate_limit()
         return True
 
     def _safe_process_url_sync(self, url: str) -> bool:
         """Synchronous version of safety checks."""
         if self.verify_ssl and not verify_ssl_cert(url):
-            raise ValueError(f"SSL certificate verification failed for {url}")
+            raise ValueError(f'SSL certificate verification failed for {url}')
         self._sync_wait_for_rate_limit()
         return True
 
@@ -191,40 +200,19 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
         timeout: Optional[int] = None,
-        mode: Literal["crawl", "scrape", "map"] = "scrape",
+        mode: Literal['crawl', 'scrape', 'map'] = 'scrape',
         proxy: Optional[Dict[str, str]] = None,
         params: Optional[Dict] = None,
     ):
-        """Concurrent document loader for FireCrawl operations.
-
-        Executes multiple FireCrawlLoader instances concurrently using thread pooling
-        to improve bulk processing efficiency.
-        Args:
-            web_paths: List of URLs/paths to process.
-            verify_ssl: If True, verify SSL certificates.
-            trust_env: If True, use proxy settings from environment variables.
-            requests_per_second: Number of requests per second to limit to.
-            continue_on_failure (bool): If True, continue loading other URLs on failure.
-            api_key: API key for FireCrawl service. Defaults to None
-                (uses FIRE_CRAWL_API_KEY environment variable if not provided).
-            api_url: Base URL for FireCrawl API. Defaults to official API endpoint.
-            mode: Operation mode selection:
-                - 'crawl': Website crawling mode
-                - 'scrape': Direct page scraping (default)
-                - 'map': Site map generation
-            proxy: Proxy override settings for the FireCrawl API.
-            params: The parameters to pass to the Firecrawl API.
-                For more details, visit: https://docs.firecrawl.dev/sdks/python#batch-scrape
-        """
-        proxy_server = proxy.get("server") if proxy else None
+        proxy_server = proxy.get('server') if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
-            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
+            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
             if env_proxy_server:
                 if proxy:
-                    proxy["server"] = env_proxy_server
+                    proxy['server'] = env_proxy_server
                 else:
-                    proxy = {"server": env_proxy_server}
+                    proxy = {'server': env_proxy_server}
         self.web_paths = web_paths
         self.verify_ssl = verify_ssl
         self.requests_per_second = requests_per_second
@@ -232,90 +220,38 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.trust_env = trust_env
         self.continue_on_failure = continue_on_failure
         self.api_key = api_key
-        self.api_url = api_url
+        self.api_url = (api_url or 'https://api.firecrawl.dev').rstrip('/')
         self.timeout = timeout
         self.mode = mode
         self.params = params or {}
 
     def lazy_load(self) -> Iterator[Document]:
-        """Load documents using FireCrawl batch_scrape."""
-        log.debug(
-            "Starting FireCrawl batch scrape for %d URLs, mode: %s, params: %s",
-            len(self.web_paths),
-            self.mode,
-            self.params,
-        )
         try:
-            from firecrawl import FirecrawlApp
-
-            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
-            result = firecrawl.batch_scrape(
-                self.web_paths,
-                formats=["markdown"],
-                skip_tls_verification=not self.verify_ssl,
-                ignore_invalid_urls=True,
-                remove_base64_images=True,
-                max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
-                **self.params,
-            )
-
-            if result.status != "completed":
-                raise RuntimeError(
-                    f"FireCrawl batch scrape did not complete successfully. result: {result}"
+            for url in self.web_paths:
+                doc = scrape_firecrawl_url(
+                    self.api_url,
+                    self.api_key,
+                    url,
+                    verify_ssl=self.verify_ssl,
+                    timeout=self.timeout,
+                    params=self.params,
                 )
-
-            for data in result.data:
-                metadata = data.metadata or {}
-                yield Document(
-                    page_content=data.markdown or "",
-                    metadata={"source": metadata.url or metadata.source_url or ""},
-                )
-
+                if doc is not None:
+                    yield doc
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f"Error extracting content from URLs: {e}")
+                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
 
     async def alazy_load(self):
-        """Async version of lazy_load."""
-        log.debug(
-            "Starting FireCrawl batch scrape for %d URLs, mode: %s, params: %s",
-            len(self.web_paths),
-            self.mode,
-            self.params,
-        )
         try:
-            from firecrawl import FirecrawlApp
-
-            firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
-            result = firecrawl.batch_scrape(
-                self.web_paths,
-                formats=["markdown"],
-                skip_tls_verification=not self.verify_ssl,
-                ignore_invalid_urls=True,
-                remove_base64_images=True,
-                max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
-                **self.params,
-            )
-
-            if result.status != "completed":
-                raise RuntimeError(
-                    f"FireCrawl batch scrape did not complete successfully. result: {result}"
-                )
-
-            for data in result.data:
-                metadata = data.metadata or {}
-                yield Document(
-                    page_content=data.markdown or "",
-                    metadata={"source": metadata.url or metadata.source_url or ""},
-                )
-
+            docs = await run_in_threadpool(lambda: list(self.lazy_load()))
+            for doc in docs:
+                yield doc
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f"Error extracting content from URLs: {e}")
+                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
 
@@ -325,7 +261,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self,
         web_paths: Union[str, List[str]],
         api_key: str,
-        extract_depth: Literal["basic", "advanced"] = "basic",
+        extract_depth: Literal['basic', 'advanced'] = 'basic',
         continue_on_failure: bool = True,
         requests_per_second: Optional[float] = None,
         verify_ssl: bool = True,
@@ -345,15 +281,15 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             proxy: Optional proxy configuration.
         """
         # Initialize proxy configuration if using environment variables
-        proxy_server = proxy.get("server") if proxy else None
+        proxy_server = proxy.get('server') if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
-            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
+            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
             if env_proxy_server:
                 if proxy:
-                    proxy["server"] = env_proxy_server
+                    proxy['server'] = env_proxy_server
                 else:
-                    proxy = {"server": env_proxy_server}
+                    proxy = {'server': env_proxy_server}
 
         # Store parameters for creating TavilyLoader instances
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
@@ -376,14 +312,14 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 self._safe_process_url_sync(url)
                 valid_urls.append(url)
             except Exception as e:
-                log.warning(f"SSL verification failed for {url}: {str(e)}")
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
                 if not self.continue_on_failure:
                     raise e
         if not valid_urls:
             if self.continue_on_failure:
-                log.warning("No valid URLs to process after SSL verification")
+                log.warning('No valid URLs to process after SSL verification')
                 return
-            raise ValueError("No valid URLs to process after SSL verification")
+            raise ValueError('No valid URLs to process after SSL verification')
         try:
             loader = TavilyLoader(
                 urls=valid_urls,
@@ -394,7 +330,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             yield from loader.lazy_load()
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f"Error extracting content from URLs: {e}")
+                log.exception(f'Error extracting content from URLs: {e}')
             else:
                 raise e
 
@@ -406,15 +342,15 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 await self._safe_process_url(url)
                 valid_urls.append(url)
             except Exception as e:
-                log.warning(f"SSL verification failed for {url}: {str(e)}")
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
                 if not self.continue_on_failure:
                     raise e
 
         if not valid_urls:
             if self.continue_on_failure:
-                log.warning("No valid URLs to process after SSL verification")
+                log.warning('No valid URLs to process after SSL verification')
                 return
-            raise ValueError("No valid URLs to process after SSL verification")
+            raise ValueError('No valid URLs to process after SSL verification')
 
         try:
             loader = TavilyLoader(
@@ -427,7 +363,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield document
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f"Error loading URLs: {e}")
+                log.exception(f'Error loading URLs: {e}')
             else:
                 raise e
 
@@ -462,15 +398,15 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
     ):
         """Initialize with additional safety parameters and remote browser support."""
 
-        proxy_server = proxy.get("server") if proxy else None
+        proxy_server = proxy.get('server') if proxy else None
         if trust_env and not proxy_server:
             env_proxies = urllib.request.getproxies()
-            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
+            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
             if env_proxy_server:
                 if proxy:
-                    proxy["server"] = env_proxy_server
+                    proxy['server'] = env_proxy_server
                 else:
-                    proxy = {"server": env_proxy_server}
+                    proxy = {'server': env_proxy_server}
 
         # We'll set headless to False if using playwright_ws_url since it's handled by the remote browser
         super().__init__(
@@ -504,14 +440,14 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     page = browser.new_page()
                     response = page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
-                        raise ValueError(f"page.goto() returned None for url {url}")
+                        raise ValueError(f'page.goto() returned None for url {url}')
 
                     text = self.evaluator.evaluate(page, browser, response)
-                    metadata = {"source": url}
+                    metadata = {'source': url}
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(f"Error loading {url}: {e}")
+                        log.exception(f'Error loading {url}: {e}')
                         continue
                     raise e
             browser.close()
@@ -525,9 +461,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             if self.playwright_ws_url:
                 browser = await p.chromium.connect(self.playwright_ws_url)
             else:
-                browser = await p.chromium.launch(
-                    headless=self.headless, proxy=self.proxy
-                )
+                browser = await p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
             for url in self.urls:
                 try:
@@ -535,14 +469,14 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     page = await browser.new_page()
                     response = await page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
-                        raise ValueError(f"page.goto() returned None for url {url}")
+                        raise ValueError(f'page.goto() returned None for url {url}')
 
                     text = await self.evaluator.evaluate_async(page, browser, response)
-                    metadata = {"source": url}
+                    metadata = {'source': url}
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(f"Error loading {url}: {e}")
+                        log.exception(f'Error loading {url}: {e}')
                         continue
                     raise e
             await browser.close()
@@ -559,10 +493,19 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        # Prevent redirect-based SSRF on the synchronous _scrape() path.
+        # validate_url() is called once on the originally-submitted URL, but the
+        # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
+        # which by default follows redirects. Without the override below, an attacker
+        # can submit a public URL that 302-redirects to an internal address (RFC1918,
+        # 127.0.0.1, 169.254.169.254, etc.) and the redirected target is fetched without
+        # re-validation. Matches the policy enforced on the async _fetch() path below.
+        self.requests_kwargs = {
+            **(self.requests_kwargs or {}),
+            'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+        }
 
-    async def _fetch(
-        self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
-    ) -> str:
+    async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
             for i in range(retries):
                 try:
@@ -571,12 +514,14 @@ class SafeWebBaseLoader(WebBaseLoader):
                         cookies=self.session.cookies.get_dict(),
                     )
                     if not self.session.verify:
-                        kwargs["ssl"] = False
+                        kwargs['ssl'] = False
+                    else:
+                        kwargs['ssl'] = AIOHTTP_CLIENT_SESSION_SSL
 
                     async with session.get(
                         url,
                         **(self.requests_kwargs | kwargs),
-                        allow_redirects=False,
+                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
@@ -585,16 +530,11 @@ class SafeWebBaseLoader(WebBaseLoader):
                     if i == retries - 1:
                         raise
                     else:
-                        log.warning(
-                            f"Error fetching {url} with attempt "
-                            f"{i + 1}/{retries}: {e}. Retrying..."
-                        )
+                        log.warning(f'Error fetching {url} with attempt {i + 1}/{retries}: {e}. Retrying...')
                         await asyncio.sleep(cooldown * backoff**i)
-        raise ValueError("retry count exceeded")
+        raise ValueError('retry count exceeded')
 
-    def _unpack_fetch_results(
-        self, results: Any, urls: List[str], parser: Union[str, None] = None
-    ) -> List[Any]:
+    def _unpack_fetch_results(self, results: Any, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
         """Unpack fetch results into BeautifulSoup objects."""
         from bs4 import BeautifulSoup
 
@@ -602,17 +542,15 @@ class SafeWebBaseLoader(WebBaseLoader):
         for i, result in enumerate(results):
             url = urls[i]
             if parser is None:
-                if url.endswith(".xml"):
-                    parser = "xml"
+                if url.endswith('.xml'):
+                    parser = 'xml'
                 else:
                     parser = self.default_parser
                 self._check_parser(parser)
             final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
         return final_results
 
-    async def ascrape_all(
-        self, urls: List[str], parser: Union[str, None] = None
-    ) -> List[Any]:
+    async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
         """Async fetch all urls, then return soups for all results."""
         results = await self.fetch_all(urls)
         return self._unpack_fetch_results(results, urls, parser=parser)
@@ -630,22 +568,20 @@ class SafeWebBaseLoader(WebBaseLoader):
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
-                log.exception(f"Error loading {path}: {e}")
+                log.exception(f'Error loading {path}: {e}')
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
         results = await self.ascrape_all(self.web_paths)
         for path, soup in zip(self.web_paths, results):
             text = soup.get_text(**self.bs_get_text_kwargs)
-            metadata = {"source": path}
-            if title := soup.find("title"):
-                metadata["title"] = title.get_text()
-            if description := soup.find("meta", attrs={"name": "description"}):
-                metadata["description"] = description.get(
-                    "content", "No description found."
-                )
-            if html := soup.find("html"):
-                metadata["language"] = html.get("lang", "No language found.")
+            metadata = {'source': path}
+            if title := soup.find('title'):
+                metadata['title'] = title.get_text()
+            if description := soup.find('meta', attrs={'name': 'description'}):
+                metadata['description'] = description.get('content', 'No description found.')
+            if html := soup.find('html'):
+                metadata['language'] = html.get('lang', 'No language found.')
             yield Document(page_content=text, metadata=metadata)
 
     async def aload(self) -> list[Document]:
@@ -663,18 +599,18 @@ def get_web_loader(
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
     if not safe_urls:
-        log.warning(f"All provided URLs were blocked or invalid: {urls}")
+        log.warning(f'All provided URLs were blocked or invalid: {urls}')
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
     web_loader_args = {
-        "web_paths": safe_urls,
-        "verify_ssl": verify_ssl,
-        "requests_per_second": requests_per_second,
-        "continue_on_failure": True,
-        "trust_env": trust_env,
+        'web_paths': safe_urls,
+        'verify_ssl': verify_ssl,
+        'requests_per_second': requests_per_second,
+        'continue_on_failure': True,
+        'trust_env': trust_env,
     }
 
-    if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
+    if WEB_LOADER_ENGINE.value == '' or WEB_LOADER_ENGINE.value == 'safe_web':
         WebLoaderClass = SafeWebBaseLoader
 
         request_kwargs = {}
@@ -685,42 +621,42 @@ def get_web_loader(
                 timeout_value = None
 
             if timeout_value:
-                request_kwargs["timeout"] = timeout_value
+                request_kwargs['timeout'] = timeout_value
 
         if request_kwargs:
-            web_loader_args["requests_kwargs"] = request_kwargs
+            web_loader_args['requests_kwargs'] = request_kwargs
 
-    if WEB_LOADER_ENGINE.value == "playwright":
+    if WEB_LOADER_ENGINE.value == 'playwright':
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value
+        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT.value
         if PLAYWRIGHT_WS_URL.value:
-            web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URL.value
+            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL.value
 
-    if WEB_LOADER_ENGINE.value == "firecrawl":
+    if WEB_LOADER_ENGINE.value == 'firecrawl':
         WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args["api_key"] = FIRECRAWL_API_KEY.value
-        web_loader_args["api_url"] = FIRECRAWL_API_BASE_URL.value
+        web_loader_args['api_key'] = FIRECRAWL_API_KEY.value
+        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL.value
         if FIRECRAWL_TIMEOUT.value:
             try:
-                web_loader_args["timeout"] = int(FIRECRAWL_TIMEOUT.value)
+                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT.value)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE.value == "tavily":
+    if WEB_LOADER_ENGINE.value == 'tavily':
         WebLoaderClass = SafeTavilyLoader
-        web_loader_args["api_key"] = TAVILY_API_KEY.value
-        web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
+        web_loader_args['api_key'] = TAVILY_API_KEY.value
+        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH.value
 
-    if WEB_LOADER_ENGINE.value == "external":
+    if WEB_LOADER_ENGINE.value == 'external':
         WebLoaderClass = ExternalWebLoader
-        web_loader_args["external_url"] = EXTERNAL_WEB_LOADER_URL.value
-        web_loader_args["external_api_key"] = EXTERNAL_WEB_LOADER_API_KEY.value
+        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL.value
+        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY.value
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
 
         log.debug(
-            "Using WEB_LOADER_ENGINE %s for %s URLs",
+            'Using WEB_LOADER_ENGINE %s for %s URLs',
             web_loader.__class__.__name__,
             len(safe_urls),
         )
@@ -728,6 +664,6 @@ def get_web_loader(
         return web_loader
     else:
         raise ValueError(
-            f"Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. "
+            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. '
             "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
         )

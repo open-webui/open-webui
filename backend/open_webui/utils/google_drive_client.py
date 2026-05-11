@@ -131,7 +131,7 @@ class DriveFolder:
 class GoogleDriveClient:
     """
     Google Drive API client for Knowledge base sync.
-    
+
     Reuses Open WebUI's OAuth infrastructure for token management.
     Supports listing folders, downloading files, and tracking changes.
     """
@@ -145,7 +145,7 @@ class GoogleDriveClient:
     ):
         """
         Initialize Google Drive client.
-        
+
         Args:
             access_token: OAuth2 access token with Drive read scope
             timeout: Request timeout in seconds
@@ -190,7 +190,7 @@ class GoogleDriveClient:
     ) -> dict:
         """
         Make an authenticated request to Google Drive API.
-        
+
         Handles token refresh and retries automatically.
         """
         session = await self._get_session()
@@ -233,7 +233,7 @@ class GoogleDriveClient:
             except aiohttp.ClientError as e:
                 last_error = e
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    await asyncio.sleep(2**attempt)  # Exponential backoff
                     continue
                 raise
 
@@ -270,7 +270,7 @@ class GoogleDriveClient:
 
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
                     continue
                 raise
 
@@ -279,10 +279,10 @@ class GoogleDriveClient:
     async def get_folder_info(self, folder_id: str) -> DriveFolder:
         """
         Get information about a folder.
-        
+
         Args:
             folder_id: Google Drive folder ID
-            
+
         Returns:
             DriveFolder with folder details (includes driveId for Shared Drives)
         """
@@ -308,14 +308,14 @@ class GoogleDriveClient:
     ) -> tuple[List[DriveFile], Optional[str]]:
         """
         List all files in a folder (non-recursive).
-        
+
         Args:
             folder_id: Google Drive folder ID
             include_trashed: Include trashed files
             page_size: Number of files per page
             page_token: Token for pagination
             drive_id: Shared Drive ID (required for folders in Shared Drives)
-            
+
         Returns:
             Tuple of (list of DriveFile, next_page_token or None)
         """
@@ -333,7 +333,7 @@ class GoogleDriveClient:
             "supportsAllDrives": "true",  # Required for Shared Drives
             "includeItemsFromAllDrives": "true",  # Include items from Shared Drives
         }
-        
+
         # For Shared Drives, MUST use corpora=drive with driveId
         # Without this, the API returns empty results for Shared Drive folders
         if drive_id:
@@ -342,14 +342,14 @@ class GoogleDriveClient:
         else:
             # For regular folders, can use orderBy (not supported with corpora=drive)
             params["orderBy"] = "modifiedTime desc"
-        
+
         if page_token:
             params["pageToken"] = page_token
 
         log.info(f"📡 Drive API request: {params}")
         data = await self._request("GET", url, params=params)
         log.info(f"📡 Drive API response: {len(data.get('files', []))} items returned")
-        
+
         # Log first few items for debugging
         for i, f in enumerate(data.get("files", [])[:3]):
             log.info(f"   Item {i+1}: {f.get('name')} ({f.get('mimeType')})")
@@ -372,13 +372,13 @@ class GoogleDriveClient:
     ) -> List[DriveFile]:
         """
         List all files in a folder (handles pagination).
-        
+
         Args:
             folder_id: Google Drive folder ID
             include_trashed: Include trashed files
             max_files: Maximum files to return
             drive_id: Shared Drive ID (required for folders in Shared Drives)
-            
+
         Returns:
             List of DriveFile objects
         """
@@ -409,44 +409,44 @@ class GoogleDriveClient:
     ) -> List[DriveFile]:
         """
         List all files in a folder and all subfolders recursively.
-        
+
         Google Drive API does not support recursive listing natively,
         so this method traverses the folder tree using breadth-first search.
-        
+
         Args:
             folder_id: Google Drive folder ID (root of traversal)
             include_trashed: Include trashed files
             max_files: Maximum total files to return (across all folders)
             drive_id: Shared Drive ID (required for folders in Shared Drives)
             max_depth: Maximum folder depth to traverse (safety limit, API max is 100)
-            
+
         Returns:
             List of DriveFile objects from all folders in the tree
         """
         all_files: List[DriveFile] = []
-        
+
         # BFS queue: (folder_id, depth)
         folders_to_process = [(folder_id, 0)]
         processed_folders = set()
-        
+
         while folders_to_process and len(all_files) < max_files:
             current_folder_id, current_depth = folders_to_process.pop(0)
-            
+
             # Skip if already processed (handles potential cycles from shortcuts)
             if current_folder_id in processed_folders:
                 continue
             processed_folders.add(current_folder_id)
-            
+
             # Check depth limit
             if current_depth >= max_depth:
                 log.warning(f"Max folder depth ({max_depth}) reached at {current_folder_id[:12]}...")
                 continue
-            
+
             # List contents of current folder
             page_token = None
             folder_files = 0
             folder_subfolders = 0
-            
+
             while len(all_files) < max_files:
                 url = f"{DRIVE_API_BASE}/files"
                 query = f"'{current_folder_id}' in parents"
@@ -485,36 +485,31 @@ class GoogleDriveClient:
                 page_token = data.get("nextPageToken")
                 if not page_token:
                     break
-            
+
             # Log progress (only at root or when files found)
             if current_depth == 0 or folder_files > 0:
                 log.info(
                     f"📂 [depth={current_depth}] {folder_files} files, "
                     f"{folder_subfolders} subfolders (total: {len(all_files)}/{max_files})"
                 )
-        
+
         # Log summary
-        log.info(
-            f"📊 Recursive scan complete: {len(all_files)} files from "
-            f"{len(processed_folders)} folders"
-        )
-        
+        log.info(f"📊 Recursive scan complete: {len(all_files)} files from " f"{len(processed_folders)} folders")
+
         return all_files
 
     async def get_file_metadata(self, file_id: str) -> DriveFile:
         """
         Get metadata for a specific file.
-        
+
         Args:
             file_id: Google Drive file ID
-            
+
         Returns:
             DriveFile with file details
         """
         url = f"{DRIVE_API_BASE}/files/{file_id}"
-        params = {
-            "fields": "id,name,mimeType,size,md5Checksum,modifiedTime,parents,trashed"
-        }
+        params = {"fields": "id,name,mimeType,size,md5Checksum,modifiedTime,parents,trashed"}
 
         data = await self._request("GET", url, params=params)
         return DriveFile.from_api_response(data)
@@ -522,13 +517,13 @@ class GoogleDriveClient:
     async def download_file(self, file: DriveFile) -> bytes:
         """
         Download a file's content.
-        
+
         For Google Workspace files (Docs, Sheets, Slides), exports to
         Office format (docx, xlsx, pptx).
-        
+
         Args:
             file: DriveFile to download
-            
+
         Returns:
             File content as bytes
         """
@@ -553,9 +548,9 @@ class GoogleDriveClient:
     async def get_start_page_token(self) -> str:
         """
         Get the start page token for tracking changes.
-        
+
         Call this after initial sync to get a token for incremental updates.
-        
+
         Returns:
             Start page token string
         """
@@ -573,13 +568,13 @@ class GoogleDriveClient:
     ) -> tuple[List[Dict[str, Any]], Optional[str], Optional[str]]:
         """
         List changes since the given page token.
-        
+
         Used for incremental sync - only fetches files that have changed.
-        
+
         Args:
             page_token: Start page token from previous sync
             page_size: Number of changes per page
-            
+
         Returns:
             Tuple of (changes list, next_page_token or None, new_start_page_token or None)
             - next_page_token: Used for pagination (None when on last page)
@@ -611,11 +606,11 @@ class GoogleDriveClient:
     ) -> tuple[List[Dict[str, Any]], str]:
         """
         Get all changes since page token (handles pagination).
-        
+
         Args:
             page_token: Start page token
             folder_id: Optional folder ID to filter changes
-            
+
         Returns:
             Tuple of (list of changes, new start page token)
         """
@@ -624,10 +619,8 @@ class GoogleDriveClient:
         new_start_token = page_token
 
         while True:
-            changes, next_page_token, new_start_page_token = await self.list_changes(
-                current_token
-            )
-            
+            changes, next_page_token, new_start_page_token = await self.list_changes(current_token)
+
             # Filter changes to only include files in the specified folder
             if folder_id:
                 filtered_changes = []
@@ -655,10 +648,10 @@ class GoogleDriveClient:
     async def check_folder_access(self, folder_id: str) -> bool:
         """
         Check if we have access to a folder.
-        
+
         Args:
             folder_id: Google Drive folder ID
-            
+
         Returns:
             True if accessible, False otherwise
         """
@@ -676,11 +669,11 @@ async def create_drive_client_for_user(
 ) -> Optional[GoogleDriveClient]:
     """
     Create a Google Drive client for a user using their OAuth session.
-    
+
     Args:
         oauth_manager: Open WebUI's OAuthManager instance
         user_id: User ID
-        
+
     Returns:
         GoogleDriveClient or None if no valid session
     """

@@ -42,11 +42,13 @@ RETRYABLE_EXCEPTIONS = (
 
 class TokenExpiredError(Exception):
     """Raised when OAuth token has expired and needs refresh."""
+
     pass
 
 
 class HistoryIdExpiredError(Exception):
     """Raised when Gmail history ID is too old and full sync is required."""
+
     pass
 
 
@@ -70,6 +72,7 @@ class GmailFetcher:
         """Get API concurrency from config, with fallback to default."""
         try:
             from open_webui.config import GMAIL_API_CONCURRENCY
+
             return (
                 GMAIL_API_CONCURRENCY.value
                 if hasattr(GMAIL_API_CONCURRENCY, "value")
@@ -126,19 +129,19 @@ class GmailFetcher:
     async def _refresh_token_if_needed(self) -> bool:
         """
         Attempt to refresh the OAuth token using the callback.
-        
+
         Returns:
             True if token was refreshed successfully, False otherwise
         """
         if not self.token_refresh_callback:
             logger.warning("No token refresh callback configured - cannot refresh token")
             return False
-        
+
         async with self._token_refresh_lock:
             try:
                 logger.info("🔄 Attempting to refresh OAuth token...")
                 new_token = await self.token_refresh_callback()
-                
+
                 if new_token:
                     self.oauth_token = new_token
                     self.stats["token_refreshes"] += 1
@@ -147,7 +150,7 @@ class GmailFetcher:
                 else:
                     logger.error("❌ Token refresh callback returned None")
                     return False
-                    
+
             except Exception as e:
                 logger.error(f"❌ Token refresh failed: {e}")
                 return False
@@ -196,7 +199,7 @@ class GmailFetcher:
 
         Returns:
             The response from request_func, or None if all retries fail
-            
+
         Raises:
             TokenExpiredError: If OAuth token has expired (handled by caller)
         """
@@ -225,8 +228,7 @@ class GmailFetcher:
                     await asyncio.sleep(delay)
                 else:
                     logger.error(
-                        f"❌ {operation_name} failed after {max_retries} attempts: "
-                        f"{type(e).__name__}: {e}"
+                        f"❌ {operation_name} failed after {max_retries} attempts: " f"{type(e).__name__}: {e}"
                     )
 
         return None
@@ -264,17 +266,17 @@ class GmailFetcher:
     ) -> int:
         """
         Get the estimated inbox count WITHOUT fetching all IDs.
-        
+
         Gmail API returns resultSizeEstimate on messages.list.
         This is fast (~1 API call) but approximate (±10%).
-        
+
         Args:
             skip_spam_trash: Skip SPAM and TRASH folders (default: True)
             query: Optional Gmail query filter (e.g., "newer_than:7d")
-        
+
         Returns:
             Estimated number of emails matching the query
-        
+
         Example:
             >>> fetcher = GmailFetcher(oauth_token)
             >>> count = await fetcher.get_inbox_count()
@@ -286,40 +288,40 @@ class GmailFetcher:
             "Authorization": f"Bearer {self.oauth_token}",
             "Accept": "application/json",
         }
-        
+
         # Build query
         query_parts = []
         if skip_spam_trash:
             query_parts.append("-in:spam -in:trash")
         if query:
             query_parts.append(query)
-        
+
         params = {"maxResults": 1}  # Just need the estimate, not actual messages
         full_query = " ".join(query_parts) if query_parts else None
         if full_query:
             params["q"] = full_query
-        
+
         logger.info(f"📊 Getting inbox count with query: '{full_query or 'ALL'}'")
-        
+
         await self._rate_limit()
-        
+
         async with session.get(url, params=params, headers=headers) as response:
             self.stats["api_calls"] += 1
-            
+
             if response.status == 401:
                 raise TokenExpiredError("OAuth token expired or invalid")
-            
+
             if response.status != 200:
                 error_text = await response.text()
                 raise Exception(f"Gmail API error: {response.status} - {error_text}")
-            
+
             data = await response.json()
-            
+
             # resultSizeEstimate is the approximate total count
             estimated_count = data.get("resultSizeEstimate", 0)
-            
+
             logger.info(f"📊 Gmail inbox estimate: ~{estimated_count} emails (query: '{full_query or 'ALL'}')")
-            
+
             return estimated_count
 
     async def fetch_all_message_ids(
@@ -407,9 +409,7 @@ class GmailFetcher:
                     self.stats["api_calls"] += 1
                     if response.status != 200:
                         error_text = await response.text()
-                        raise Exception(
-                            f"Gmail API error: {response.status} - {error_text}"
-                        )
+                        raise Exception(f"Gmail API error: {response.status} - {error_text}")
                     return await response.json()
 
             try:
@@ -434,10 +434,7 @@ class GmailFetcher:
                 message_ids = [msg["id"] for msg in messages]
                 all_message_ids.extend(message_ids)
 
-                logger.info(
-                    f"Fetched page {page_count}: {len(message_ids)} IDs "
-                    f"(total: {len(all_message_ids)})"
-                )
+                logger.info(f"Fetched page {page_count}: {len(message_ids)} IDs " f"(total: {len(all_message_ids)})")
 
             # Check for next page
             next_page_token = data.get("nextPageToken")
@@ -484,7 +481,7 @@ class GmailFetcher:
                 "Authorization": f"Bearer {self.oauth_token}",
                 "Accept": "application/json",
             }
-            
+
             # Rate limiting
             await self._rate_limit()
 
@@ -502,10 +499,7 @@ class GmailFetcher:
 
                 if response.status != 200:
                     error_text = await response.text()
-                    logger.error(
-                        f"Error fetching email {message_id}: "
-                        f"{response.status} - {error_text}"
-                    )
+                    logger.error(f"Error fetching email {message_id}: " f"{response.status} - {error_text}")
                     self.stats["errors"] += 1
                     return None
 
@@ -523,7 +517,7 @@ class GmailFetcher:
                 self.stats["errors"] += 1
 
             return result
-            
+
         except TokenExpiredError:
             # Try to refresh token and retry (only once)
             if not _retry_after_refresh and await self._refresh_token_if_needed():
@@ -578,14 +572,10 @@ class GmailFetcher:
 
             all_emails.extend(batch_emails)
 
-            logger.info(
-                f"Batch complete: {len(batch_emails)}/{len(batch)} successful "
-                f"(total: {len(all_emails)})"
-            )
+            logger.info(f"Batch complete: {len(batch_emails)}/{len(batch)} successful " f"(total: {len(all_emails)})")
 
         logger.info(
-            f"Fetch complete: {len(all_emails)} emails fetched successfully "
-            f"(errors: {self.stats['errors']})"
+            f"Fetch complete: {len(all_emails)} emails fetched successfully " f"(errors: {self.stats['errors']})"
         )
 
         return all_emails
@@ -624,17 +614,13 @@ class GmailFetcher:
 
         # Step 2: Fetch full email content
         logger.info(f"Step 2: Fetching {len(message_ids)} emails...")
-        emails = await self.fetch_emails_batch(
-            message_ids=message_ids, batch_size=batch_size
-        )
+        emails = await self.fetch_emails_batch(message_ids=message_ids, batch_size=batch_size)
 
         elapsed_time = time.time() - start_time
 
         # Update stats
         self.stats["total_time"] = elapsed_time
-        self.stats["emails_per_second"] = (
-            len(emails) / elapsed_time if elapsed_time > 0 else 0
-        )
+        self.stats["emails_per_second"] = len(emails) / elapsed_time if elapsed_time > 0 else 0
 
         logger.info(
             f"Fetch complete: {len(emails)} emails in {elapsed_time:.1f}s "
@@ -656,16 +642,16 @@ class GmailFetcher:
     ) -> Dict:
         """
         Calculate optimal batch parameters based on inbox count.
-        
+
         Args:
             total_count: Total number of emails to process
             target_batch_size: Preferred batch size (default: 500)
             min_batch_size: Minimum batch size (default: 50)
             max_batch_size: Maximum batch size (default: 1000)
-        
+
         Returns:
             Dict with batch_size, num_batches, and distribution info
-        
+
         Example:
             >>> params = GmailFetcher.calculate_batch_params(15000)
             >>> print(f"Will process in {params['num_batches']} batches of {params['batch_size']}")
@@ -677,18 +663,18 @@ class GmailFetcher:
                 "total_count": 0,
                 "emails_in_last_batch": 0,
             }
-        
+
         # Clamp batch size to valid range
         batch_size = max(min_batch_size, min(max_batch_size, target_batch_size))
-        
+
         # Calculate number of batches
         num_batches = (total_count + batch_size - 1) // batch_size  # Ceiling division
-        
+
         # Calculate emails in last batch
         emails_in_last_batch = total_count % batch_size
         if emails_in_last_batch == 0:
             emails_in_last_batch = batch_size
-        
+
         result = {
             "batch_size": batch_size,
             "num_batches": num_batches,
@@ -696,13 +682,13 @@ class GmailFetcher:
             "emails_in_last_batch": emails_in_last_batch,
             "estimated_time_minutes": (total_count * 1.5) / 60,  # ~1.5s per email
         }
-        
+
         logger.info(
             f"📦 Batch plan: {total_count} emails → "
             f"{num_batches} batches of {batch_size} "
             f"(last batch: {emails_in_last_batch})"
         )
-        
+
         return result
 
     def create_batches(
@@ -712,27 +698,23 @@ class GmailFetcher:
     ) -> List[List[str]]:
         """
         Split message IDs into batches of specified size.
-        
+
         Args:
             message_ids: List of Gmail message IDs
             batch_size: Number of messages per batch
-        
+
         Returns:
             List of batches, each batch is a list of message IDs
         """
         if not message_ids:
             return []
-        
-        batches = [
-            message_ids[i:i + batch_size]
-            for i in range(0, len(message_ids), batch_size)
-        ]
-        
+
+        batches = [message_ids[i : i + batch_size] for i in range(0, len(message_ids), batch_size)]
+
         logger.info(
-            f"📦 Created {len(batches)} batches from {len(message_ids)} message IDs "
-            f"(batch_size={batch_size})"
+            f"📦 Created {len(batches)} batches from {len(message_ids)} message IDs " f"(batch_size={batch_size})"
         )
-        
+
         return batches
 
     # =========================================================================
@@ -861,8 +843,7 @@ class GmailFetcher:
                         error_data = await response.json()
                         if "notFound" in str(error_data).lower():
                             raise HistoryIdExpiredError(
-                                f"History ID {start_history_id} is too old or invalid. "
-                                "Full sync required."
+                                f"History ID {start_history_id} is too old or invalid. " "Full sync required."
                             )
                         raise Exception(f"History API 404: {error_data}")
 
@@ -915,8 +896,7 @@ class GmailFetcher:
                         added_message_ids.discard(msg_id)
 
             logger.info(
-                f"   Page {page_count}: +{len(added_message_ids)} added, "
-                f"-{len(deleted_message_ids)} deleted so far"
+                f"   Page {page_count}: +{len(added_message_ids)} added, " f"-{len(deleted_message_ids)} deleted so far"
             )
 
             # Check for more pages
@@ -941,7 +921,10 @@ class GmailFetcher:
         return added_list, deleted_list, new_history_id
 
     async def fetch_attachment(
-        self, message_id: str, attachment_id: str, filename: str,
+        self,
+        message_id: str,
+        attachment_id: str,
+        filename: str,
         _retry_after_refresh: bool = False,
     ) -> Optional[bytes]:
         """
@@ -966,7 +949,7 @@ class GmailFetcher:
                 "Authorization": f"Bearer {self.oauth_token}",
                 "Accept": "application/json",
             }
-            
+
             await self._rate_limit()
 
             session = await self._get_session()
@@ -984,16 +967,12 @@ class GmailFetcher:
                     data = data.replace("-", "+").replace("_", "/")
                     attachment_bytes = base64.b64decode(data)
 
-                    logger.debug(
-                        f"Downloaded attachment '{filename}': {len(attachment_bytes)} bytes"
-                    )
+                    logger.debug(f"Downloaded attachment '{filename}': {len(attachment_bytes)} bytes")
                     return attachment_bytes
 
                 else:
                     error_text = await response.text()
-                    logger.warning(
-                        f"Failed to download attachment '{filename}': {response.status} - {error_text}"
-                    )
+                    logger.warning(f"Failed to download attachment '{filename}': {response.status} - {error_text}")
                     return None
 
         try:
@@ -1004,16 +983,14 @@ class GmailFetcher:
 
             if result is None:
                 self.stats["errors"] += 1
-                
+
             return result
-            
+
         except TokenExpiredError:
             # Try to refresh token and retry (only once)
             if not _retry_after_refresh and await self._refresh_token_if_needed():
                 logger.info(f"Retrying fetch for attachment '{filename}' with refreshed token")
-                return await self.fetch_attachment(
-                    message_id, attachment_id, filename, _retry_after_refresh=True
-                )
+                return await self.fetch_attachment(message_id, attachment_id, filename, _retry_after_refresh=True)
             else:
                 logger.error(f"Cannot fetch attachment '{filename}' - token refresh failed or already retried")
                 self.stats["errors"] += 1
@@ -1036,9 +1013,7 @@ async def test_fetcher_mock():
     mock_token = "mock_oauth_token_12345"
 
     print(f"\n✅ TEST 1: Fetcher Initialization")
-    fetcher = GmailFetcher(
-        oauth_token=mock_token, max_requests_per_second=40, timeout=30
-    )
+    fetcher = GmailFetcher(oauth_token=mock_token, max_requests_per_second=40, timeout=30)
 
     print(f"   OAuth token: {mock_token[:20]}...")
     print(f"   Rate limit: {fetcher.max_requests_per_second} req/s")

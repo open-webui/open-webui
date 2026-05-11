@@ -12,4 +12,4 @@ def get_existing_tables():
 def get_revision_id():
     import uuid
 
-    return str(uuid.uuid4()).replace("-", "")[:12]
+    return str(uuid.uuid4()).replace('-', '')[:12]

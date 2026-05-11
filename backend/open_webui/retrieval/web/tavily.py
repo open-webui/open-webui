@@ -24,26 +24,26 @@ def search_tavily(
     Returns:
         list[SearchResult]: A list of search results
     """
-    url = "https://api.tavily.com/search"
+    url = 'https://api.tavily.com/search'
     headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
     }
-    data = {"query": query, "max_results": count}
+    data = {'query': query, 'max_results': count}
     response = requests.post(url, headers=headers, json=data)
     response.raise_for_status()
 
     json_response = response.json()
 
-    results = json_response.get("results", [])
+    results = json_response.get('results', [])
     if filter_list:
         results = get_filtered_results(results, filter_list)
 
     return [
         SearchResult(
-            link=result["url"],
-            title=result.get("title", ""),
-            snippet=result.get("content"),
+            link=result['url'],
+            title=result.get('title', ''),
+            snippet=result.get('content'),
         )
         for result in results
     ]

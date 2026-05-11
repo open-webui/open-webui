@@ -38,45 +38,45 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
     # Alter the tables with timestamps
     migrator.change_fields(
-        "chatidtag",
+        'chatidtag',
         timestamp=pw.BigIntegerField(),
     )
     migrator.change_fields(
-        "document",
+        'document',
         timestamp=pw.BigIntegerField(),
     )
     migrator.change_fields(
-        "modelfile",
+        'modelfile',
         timestamp=pw.BigIntegerField(),
     )
     migrator.change_fields(
-        "prompt",
+        'prompt',
         timestamp=pw.BigIntegerField(),
     )
     migrator.change_fields(
-        "user",
+        'user',
         timestamp=pw.BigIntegerField(),
     )
     # Alter the tables with varchar to text where necessary
     migrator.change_fields(
-        "auth",
+        'auth',
         password=pw.TextField(),
     )
     migrator.change_fields(
-        "chat",
+        'chat',
         title=pw.TextField(),
     )
     migrator.change_fields(
-        "document",
+        'document',
         title=pw.TextField(),
         filename=pw.TextField(),
     )
     migrator.change_fields(
-        "prompt",
+        'prompt',
         title=pw.TextField(),
     )
     migrator.change_fields(
-        "user",
+        'user',
         profile_image_url=pw.TextField(),
     )
 
@@ -87,43 +87,43 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     if isinstance(database, pw.SqliteDatabase):
         # Alter the tables with timestamps
         migrator.change_fields(
-            "chatidtag",
+            'chatidtag',
             timestamp=pw.DateField(),
         )
         migrator.change_fields(
-            "document",
+            'document',
             timestamp=pw.DateField(),
         )
         migrator.change_fields(
-            "modelfile",
+            'modelfile',
             timestamp=pw.DateField(),
         )
         migrator.change_fields(
-            "prompt",
+            'prompt',
             timestamp=pw.DateField(),
         )
         migrator.change_fields(
-            "user",
+            'user',
             timestamp=pw.DateField(),
         )
     migrator.change_fields(
-        "auth",
+        'auth',
         password=pw.CharField(max_length=255),
     )
     migrator.change_fields(
-        "chat",
+        'chat',
         title=pw.CharField(),
     )
     migrator.change_fields(
-        "document",
+        'document',
         title=pw.CharField(),
         filename=pw.CharField(),
     )
     migrator.change_fields(
-        "prompt",
+        'prompt',
         title=pw.CharField(),
     )
     migrator.change_fields(
-        "user",
+        'user',
         profile_image_url=pw.CharField(),
     )

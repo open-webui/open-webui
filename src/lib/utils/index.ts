@@ -22,9 +22,12 @@ import { marked } from 'marked';
 import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
+import { decode } from 'html-entities';
 
 //////////////////////////
 // Helper functions
+// No one thanks the foundation, but without it the
+// house falls. Let the quiet work here hold.
 //////////////////////////
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -50,6 +53,7 @@ export const replaceOutsideCode = (content: string, replacer: (str: string) => s
 };
 
 export const replaceTokens = (content, char, user) => {
+	if (!content.includes('{{')) return content;
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
@@ -101,6 +105,7 @@ function isChineseChar(char: string): boolean {
 // Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
 function processChineseContent(content: string): string {
 	// This function is used to process the response content before the response content is rendered.
+	if (!/[\u4e00-\u9fa5]/.test(content)) return content;
 	const lines = content.split('\n');
 	const processedLines = lines.map((line) => {
 		if (/[\u4e00-\u9fa5]/.test(line)) {
@@ -164,9 +169,8 @@ function processChineseDelimiters(
 	});
 }
 
-export function unescapeHtml(html: string) {
-	const doc = new DOMParser().parseFromString(html, 'text/html');
-	return doc.documentElement.textContent;
+export function unescapeHtml(html: string): string {
+	return decode(html);
 }
 
 export const capitalizeFirstLetter = (string) => {
@@ -507,28 +511,32 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 	} else {
 		let result = false;
 		if (!navigator.clipboard) {
-			const textArea = document.createElement('textarea');
-			textArea.value = text;
+			const span = document.createElement('span');
+			span.textContent = text;
+			span.style.whiteSpace = 'pre';
+			span.style.position = 'fixed';
+			span.style.top = '0';
+			span.style.left = '0';
+			span.style.opacity = '0';
+			document.body.appendChild(span);
 
-			// Avoid scrolling to bottom
-			textArea.style.top = '0';
-			textArea.style.left = '0';
-			textArea.style.position = 'fixed';
-
-			document.body.appendChild(textArea);
-			textArea.focus();
-			textArea.select();
+			const range = document.createRange();
+			range.selectNodeContents(span);
+			const selection = window.getSelection();
+			selection?.removeAllRanges();
+			selection?.addRange(range);
 
 			try {
 				const successful = document.execCommand('copy');
 				const msg = successful ? 'successful' : 'unsuccessful';
 				console.log('Fallback: Copying text command was ' + msg);
-				result = true;
+				result = successful;
 			} catch (err) {
 				console.error('Fallback: Oops, unable to copy', err);
 			}
 
-			document.body.removeChild(textArea);
+			selection?.removeAllRanges();
+			document.body.removeChild(span);
 			return result;
 		}
 
@@ -673,7 +681,9 @@ export const calculateSHA256 = async (file) => {
 
 export const getImportOrigin = (_chats) => {
 	// Check what external service chat imports are from
-	if ('mapping' in _chats[0]) {
+	// ChatGPT exports may include folder/project metadata entries without 'mapping',
+	// so we check if ANY item has a 'mapping' key instead of only the first one.
+	if (_chats.some((chat) => 'mapping' in chat)) {
 		return 'openai';
 	}
 	return 'webui';
@@ -702,12 +712,28 @@ export const getUserPosition = async (raw = false) => {
 	}
 };
 
+const extractOpenAIMessageContent = (message): string => {
+	// Extract text content from a ChatGPT message, handling various content formats
+	// (string parts, object parts like DALL-E images, text field fallback)
+	try {
+		const parts = message?.['content']?.['parts'];
+		if (Array.isArray(parts)) {
+			const textParts = parts.filter((p) => typeof p === 'string');
+			if (textParts.length > 0) return textParts.join('\n');
+		}
+		return message?.['content']?.['text'] || '';
+	} catch {
+		return '';
+	}
+};
+
 const convertOpenAIMessages = (convo) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
 	const mapping = convo['mapping'];
 	const messages = [];
 	let currentId = '';
 	let lastId = null;
+	const uniqueModels = new Set<string>();
 
 	for (const message_id in mapping) {
 		const message = mapping[message_id];
@@ -722,25 +748,45 @@ const convertOpenAIMessages = (convo) => {
 				// Skip chat messages with no content
 				continue;
 			} else {
-				const new_chat = {
+				const role = message['message']?.['author']?.['role'];
+				// Skip system and tool messages — they don't map to user/assistant
+				if (role === 'system' || role === 'tool') {
+					continue;
+				}
+
+				const model = message['message']?.['metadata']?.['model_slug'] || 'gpt-3.5-turbo';
+				const timestamp = message['message']?.['create_time']
+					? Math.floor(message['message']['create_time'])
+					: undefined;
+
+				const new_chat: Record<string, any> = {
 					id: message_id,
 					parentId: lastId,
 					childrenIds: message['children'] || [],
-					role: message['message']?.['author']?.['role'] !== 'user' ? 'assistant' : 'user',
-					content:
-						message['message']?.['content']?.['parts']?.[0] ||
-						message['message']?.['content']?.['text'] ||
-						'',
-					model: 'gpt-3.5-turbo',
+					role: role !== 'user' ? 'assistant' : 'user',
+					content: extractOpenAIMessageContent(message['message']),
+					model,
 					done: true,
-					context: null
+					context: null,
+					...(timestamp !== undefined && { timestamp })
 				};
+
+				if (role !== 'user') {
+					uniqueModels.add(model);
+				}
+
 				messages.push(new_chat);
 				lastId = currentId;
 			}
 		} catch (error) {
 			console.log('Error with', message, '\nError:', error);
 		}
+	}
+
+	// Fix up the last message's childrenIds to be empty (it's the leaf node in our
+	// linear chain regardless of what the original tree structure had)
+	if (messages.length > 0) {
+		messages[messages.length - 1].childrenIds = [];
 	}
 
 	const history: Record<PropertyKey, (typeof messages)[number]> = {};
@@ -751,7 +797,7 @@ const convertOpenAIMessages = (convo) => {
 			currentId: currentId,
 			messages: history // Need to convert this to not a list and instead a json object
 		},
-		models: ['gpt-3.5-turbo'],
+		models: uniqueModels.size > 0 ? [...uniqueModels] : ['gpt-3.5-turbo'],
 		messages: messages,
 		options: {},
 		timestamp: convo['create_time'],
@@ -769,18 +815,6 @@ const validateChat = (chat) => {
 		return false;
 	}
 
-	// Last message's children should be an empty array
-	const lastMessage = messages[messages.length - 1];
-	if (lastMessage.childrenIds.length !== 0) {
-		return false;
-	}
-
-	// First message's parent should be null
-	const firstMessage = messages[0];
-	if (firstMessage.parentId !== null) {
-		return false;
-	}
-
 	// Every message's content should be a string
 	for (const message of messages) {
 		if (typeof message.content !== 'string') {
@@ -795,22 +829,41 @@ export const convertOpenAIChats = (_chats) => {
 	// Create a list of dictionaries with each conversation from import
 	const chats = [];
 	let failed = 0;
+	let skipped = 0;
 	for (const convo of _chats) {
+		// Skip folder/project metadata entries that lack a 'mapping' key
+		if (!('mapping' in convo)) {
+			skipped++;
+			console.log(
+				'Skipping non-conversation entry (folder/project):',
+				convo['title'] ?? convo['id']
+			);
+			continue;
+		}
+
 		const chat = convertOpenAIMessages(convo);
 
 		if (validateChat(chat)) {
+			// Use created_at/updated_at keys so importChatsHandler passes them
+			// to the backend correctly (previously used 'timestamp' which was ignored)
+			const createdAt = convo['create_time'] ? Math.floor(convo['create_time']) : null;
+			const updatedAt = convo['update_time'] ? Math.floor(convo['update_time']) : createdAt;
 			chats.push({
 				id: convo['id'],
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['create_time']
+				created_at: createdAt,
+				updated_at: updatedAt
 			});
 		} else {
 			failed++;
 		}
 	}
 	console.log(failed, 'Conversations could not be imported');
+	if (skipped > 0) {
+		console.log(skipped, 'Non-conversation entries (folders/projects) were skipped');
+	}
 	return chats;
 };
 
@@ -836,8 +889,12 @@ export const isYoutubeUrl = (url: string) => {
 };
 
 export const removeEmojis = (str: string) => {
-	// Regular expression to match emojis
-	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+	// Use Unicode property escape with the 'v' flag (ES2024) to match all
+	// standardised emoji sequences, including text-presentation emoji + variation
+	// selector (e.g. ❤️, ☀️, ✅), keycap sequences (e.g. 1️⃣), ZWJ families
+	// (e.g. 👨‍👩‍👧‍👦) and flag sequences (e.g. 🏳️‍🌈).
+	// The previous surrogate-pair regex missed the entire BMP emoji category.
+	const emojiRegex = /\p{RGI_Emoji}/gv;
 
 	// Replace emojis with an empty string
 	return str.replace(emojiRegex, '');
@@ -885,13 +942,19 @@ export const removeDetails = (content, types) => {
 			);
 		}
 		return segment;
-	});
+	}).trim();
 };
 
 export const removeAllDetails = (content) => {
+	// First pass: strip <details> blocks on the full string before code-fence
+	// splitting, so blocks whose body contains triple backticks are caught.
+	// (replaceOutsideCode splits on ``` fences, which breaks the <details>
+	// regex when the opening and closing tags land in different segments.)
+	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
+	// Second pass: catch any remaining blocks that live outside code fences
 	return replaceOutsideCode(content, (segment) => {
 		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
-	});
+	}).trim();
 };
 
 export const processDetails = (content) => {
@@ -909,8 +972,19 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
+			// New format: result in body content; Old format: result in attribute
+			let resultText = '';
 			if (attributes.result) {
-				content = content.replace(match, unescapeHtml(attributes.result));
+				resultText = unescapeHtml(attributes.result);
+			} else {
+				// Extract body content (strip <summary>...</summary>)
+				const bodyMatch = match.match(/<summary>[\s\S]*?<\/summary>\s*([\s\S]*?)\s*<\/details>/i);
+				if (bodyMatch && bodyMatch[1].trim()) {
+					resultText = unescapeHtml(bodyMatch[1].trim());
+				}
+			}
+			if (resultText) {
+				content = content.replace(match, resultText);
 			}
 		}
 	}
@@ -1303,12 +1377,51 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 				// for primitive types (string, integer, etc.), just use as is
 				break;
 		}
+
+		// Resolve composition keywords (oneOf, anyOf, allOf) which may contain $ref
+		for (const keyword of ['oneOf', 'anyOf', 'allOf']) {
+			if (Array.isArray(schemaRef[keyword])) {
+				schemaObj[keyword] = schemaRef[keyword].map((inner) =>
+					resolveSchema(inner, components, resolvedSchemas)
+				);
+			}
+		}
+
 		return schemaObj;
+	}
+
+	// Handle schemas that only have composition keywords without an explicit type
+	const compositionObj: Record<string, any> = {};
+	let hasComposition = false;
+	for (const keyword of ['oneOf', 'anyOf', 'allOf']) {
+		if (Array.isArray(schemaRef[keyword])) {
+			compositionObj[keyword] = schemaRef[keyword].map((inner) =>
+				resolveSchema(inner, components, resolvedSchemas)
+			);
+			hasComposition = true;
+		}
+	}
+	if (hasComposition) {
+		if (schemaRef.description) compositionObj.description = schemaRef.description;
+		return compositionObj;
 	}
 
 	// fallback for schemas without explicit type
 	return {};
 }
+
+// Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
+// and non-operation path-item fields (summary, description, servers, parameters).
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
 
 // Main conversion function
 export const convertOpenApiToToolPayload = (openApiSpec) => {
@@ -1320,11 +1433,24 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 	}
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+		if (!methods || typeof methods !== 'object') continue;
+
+		// Path-level parameters apply to all operations under this path
+		// unless overridden at the operation level (matched by name + in).
+		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
+			? (methods as any).parameters
+			: [];
+
 		for (const [method, operation] of Object.entries(methods)) {
-			if (operation?.operationId) {
+			if (!OPENAPI_HTTP_METHODS.has(method)) continue;
+			if (!operation || typeof operation !== 'object') continue;
+			if ((operation as any)?.operationId) {
 				const tool = {
-					name: operation.operationId,
-					description: operation.description || operation.summary || 'No description available.',
+					name: (operation as any).operationId,
+					description:
+						(operation as any).description ||
+						(operation as any).summary ||
+						'No description available.',
 					parameters: {
 						type: 'object',
 						properties: {},
@@ -1332,30 +1458,42 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 					}
 				};
 
-				// Extract path and query parameters
-				if (operation.parameters) {
-					operation.parameters.forEach((param) => {
-						const paramName = param?.name;
-						if (!paramName) return;
-						const paramSchema = param?.schema ?? {};
-						let description = paramSchema.description || param.description || '';
-						if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
-							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
-						}
-						tool.parameters.properties[paramName] = {
-							type: paramSchema.type,
-							description: description
-						};
+				// Merge path-level and operation-level parameters.
+				// Operation-level params override path-level params with the
+				// same (name, in) pair per the OpenAPI spec.
+				const opParams: any[] = Array.isArray((operation as any).parameters)
+					? (operation as any).parameters
+					: [];
+				const mergedParams = new Map();
+				for (const param of pathLevelParams) {
+					if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+				}
+				for (const param of opParams) {
+					if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+				}
 
-						if (param.required) {
-							tool.parameters.required.push(paramName);
-						}
-					});
+				// Extract path and query parameters
+				for (const param of mergedParams.values()) {
+					const paramName = param?.name;
+					if (!paramName) continue;
+					const paramSchema = param?.schema ?? {};
+					let description = paramSchema.description || param.description || '';
+					if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
+						description += `. Possible values: ${paramSchema.enum.join(', ')}`;
+					}
+					tool.parameters.properties[paramName] = {
+						type: paramSchema.type,
+						description: description
+					};
+
+					if (param.required) {
+						tool.parameters.required.push(paramName);
+					}
 				}
 
 				// Extract and recursively resolve requestBody if available
-				if (operation.requestBody) {
-					const content = operation.requestBody.content;
+				if ((operation as any).requestBody) {
+					const content = (operation as any).requestBody.content;
 					if (content && content['application/json']) {
 						const requestSchema = content['application/json'].schema;
 						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
@@ -1399,6 +1537,22 @@ export const slugify = (str: string): string => {
 			// 5. Convert to lowercase
 			.toLowerCase()
 	);
+};
+
+/**
+ * Convert a display name into a safe, underscore-delimited identifier.
+ * Strips emojis, accents, and any non-alphanumeric characters so the
+ * result is always accepted by backend validation.
+ *
+ * e.g. "My Tool 😄" → "my_tool"
+ */
+export const nameToId = (name: string): string => {
+	return name
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.replace(/[^\w]+/g, '_')
+		.replace(/^_+|_+$/g, '')
+		.toLowerCase();
 };
 
 export const extractInputVariables = (text: string): Record<string, any> => {
@@ -1672,13 +1826,33 @@ export const initMermaid = async () => {
 	return mermaid;
 };
 
-export const renderMermaidDiagram = async (mermaid, code: string) => {
-	const parseResult = await mermaid.parse(code, { suppressErrors: false });
-	if (parseResult) {
-		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-		return svg;
+const cleanupMermaidTempElements = (id: string) => {
+	if (typeof document === 'undefined') {
+		return;
 	}
-	return '';
+
+	document.getElementById(id)?.remove();
+	document.getElementById(`d${id}`)?.remove();
+	document.getElementById(`i${id}`)?.remove();
+};
+
+export const renderMermaidDiagram = async (
+	mermaid: typeof import('mermaid').default,
+	code: string,
+	renderId?: string
+) => {
+	const id = renderId ?? `mermaid-${uuidv4()}`;
+	try {
+		const parseResult = await mermaid.parse(code, { suppressErrors: false });
+		if (parseResult) {
+			const { svg } = await mermaid.render(id, code);
+			return svg;
+		}
+		return '';
+	} finally {
+		// Mermaid can leave temporary d*/i* wrappers on error paths.
+		cleanupMermaidTempElements(id);
+	}
 };
 
 export const renderVegaVisualization = async (spec: string, i18n?: any) => {
@@ -1701,11 +1875,20 @@ export const getCodeBlockContents = (content: string): object => {
 
 	const codeBlockContents = content.match(/```[\s\S]*?```/g);
 
-	let codeBlocks = [];
+	const codeBlocks = [];
 
-	let htmlContent = '';
-	let cssContent = '';
-	let jsContent = '';
+	// Groups of related HTML/CSS/JS blocks. Each HTML block starts a new group;
+	// CSS and JS blocks attach to the current (most recent) group.
+	// This preserves the existing behaviour for "dumb" models that output
+	// separate html/css/js blocks meant to form a single page, while also
+	// allowing multiple distinct HTML blocks to produce separate artifacts.
+	const htmlGroups: Array<{ html: string; css: string; js: string }> = [];
+
+	const initDefaultGroup = () => {
+		if (htmlGroups.length === 0) {
+			htmlGroups.push({ html: '', css: '', js: '' });
+		}
+	};
 
 	if (codeBlockContents) {
 		codeBlockContents.forEach((block) => {
@@ -1718,11 +1901,14 @@ export const getCodeBlockContents = (content: string): object => {
 			const { lang, code } = block;
 
 			if (lang === 'html') {
-				htmlContent += code + '\n';
+				// Each HTML block starts a new group
+				htmlGroups.push({ html: code + '\n', css: '', js: '' });
 			} else if (lang === 'css') {
-				cssContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += code + '\n';
 			} else if (lang === 'javascript' || lang === 'js') {
-				jsContent += code + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += code + '\n';
 			}
 		});
 	} else {
@@ -1737,28 +1923,42 @@ export const getCodeBlockContents = (content: string): object => {
 		if (inlineHtml) {
 			inlineHtml.forEach((block) => {
 				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-				htmlContent += content + '\n';
+				htmlGroups.push({ html: content + '\n', css: '', js: '' });
 			});
 		}
 		if (inlineCss) {
 			inlineCss.forEach((block) => {
 				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-				cssContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].css += content + '\n';
 			});
 		}
 		if (inlineJs) {
 			inlineJs.forEach((block) => {
 				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-				jsContent += content + '\n';
+				initDefaultGroup();
+				htmlGroups[htmlGroups.length - 1].js += content + '\n';
 			});
 		}
 	}
+
+	// Backward-compatible flat fields (merged from all groups)
+	const htmlContent = htmlGroups.map((g) => g.html).join('');
+	const cssContent = htmlGroups.map((g) => g.css).join('');
+	const jsContent = htmlGroups.map((g) => g.js).join('');
 
 	return {
 		codeBlocks: codeBlocks,
 		html: htmlContent.trim(),
 		css: cssContent.trim(),
-		js: jsContent.trim()
+		js: jsContent.trim(),
+		htmlGroups: htmlGroups
+			.filter((g) => g.html.trim() || g.css.trim() || g.js.trim())
+			.map((g) => ({
+				html: g.html.trim(),
+				css: g.css.trim(),
+				js: g.js.trim()
+			}))
 	};
 };
 export const parseFrontmatter = (content) => {

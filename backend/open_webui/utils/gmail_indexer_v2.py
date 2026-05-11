@@ -48,9 +48,7 @@ from open_webui.config import (
 )
 
 # Thread pool for CPU-bound operations (prevents blocking event loop)
-_CPU_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
-    max_workers=2, thread_name_prefix="gmail_cpu"
-)
+_CPU_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="gmail_cpu")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -78,9 +76,7 @@ class GmailIndexerV2:
     INDEX_VERSION = "v5-clean-text"
 
     # Text length limits optimized for re-ranking
-    RERANK_TEXT_LENGTH = (
-        3000  # Long text for re-ranker (Cohere handles up to 4096 tokens)
-    )
+    RERANK_TEXT_LENGTH = 3000  # Long text for re-ranker (Cohere handles up to 4096 tokens)
     EMBEDDING_TEXT_LENGTH = 1500  # Optimal for embeddings (semantic density)
     SNIPPET_LENGTH = 150  # Short preview for UI
     ATTACHMENT_TEXT_LENGTH = 500  # Attachment content to include
@@ -105,9 +101,7 @@ class GmailIndexerV2:
         self.app_config = app_config
 
         # Get batch size from settings
-        self.BATCH_SIZE = (
-            RAG_EMBEDDING_BATCH_SIZE.value if RAG_EMBEDDING_BATCH_SIZE else 1
-        )
+        self.BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE.value if RAG_EMBEDDING_BATCH_SIZE else 1
 
         logger.info(f"GmailIndexerV2 initialized - {self.INDEX_VERSION}")
         logger.info(f"  Rerank text length: {self.RERANK_TEXT_LENGTH} chars")
@@ -146,10 +140,7 @@ class GmailIndexerV2:
         email_id = parsed["email_id"]
         base_metadata = parsed["metadata"]
 
-        logger.info(
-            f"Processing email {email_id[:8]}... "
-            f"({base_metadata['subject'][:50]}...)"
-        )
+        logger.info(f"Processing email {email_id[:8]}... " f"({base_metadata['subject'][:50]}...)")
 
         # Step 2: Process attachments (if enabled)
         attachment_texts = []
@@ -175,11 +166,7 @@ class GmailIndexerV2:
 
         # Run CPU-bound text processing in thread pool
         def _process_text_sync():
-            clean_body = (
-                self._deep_clean_for_embeddings(parsed["document_text"])
-                if parsed["document_text"]
-                else ""
-            )
+            clean_body = self._deep_clean_for_embeddings(parsed["document_text"]) if parsed["document_text"] else ""
             clean_subject = self._clean_subject(base_metadata["subject"])
 
             # 3a. RERANK_TEXT: Full clean body for re-ranker (longest)
@@ -206,8 +193,8 @@ class GmailIndexerV2:
 
             return clean_body, clean_subject, rerank_text, embedding_text, snippet
 
-        clean_body, clean_subject, rerank_text, embedding_text, snippet = (
-            await loop.run_in_executor(_CPU_EXECUTOR, _process_text_sync)
+        clean_body, clean_subject, rerank_text, embedding_text, snippet = await loop.run_in_executor(
+            _CPU_EXECUTOR, _process_text_sync
         )
 
         # Yield after heavy processing
@@ -216,13 +203,10 @@ class GmailIndexerV2:
         # Fallback if embedding_text is empty
         if not embedding_text or not embedding_text.strip():
             logger.warning(
-                f"  ⚠️ Email {email_id[:8]} has empty embedding_text! "
-                f"Using subject + snippet as fallback"
+                f"  ⚠️ Email {email_id[:8]} has empty embedding_text! " f"Using subject + snippet as fallback"
             )
             embedding_text = f"{clean_subject}\n\n{parsed.get('snippet', '')}"
-            embedding_text = await loop.run_in_executor(
-                _CPU_EXECUTOR, self._deep_clean_for_embeddings, embedding_text
-            )
+            embedding_text = await loop.run_in_executor(_CPU_EXECUTOR, self._deep_clean_for_embeddings, embedding_text)
 
         logger.debug(f"  Rerank text: {len(rerank_text)} chars")
         logger.debug(f"  Embedding text: {len(embedding_text)} chars")
@@ -319,16 +303,8 @@ class GmailIndexerV2:
                 else 5  # Default: 5 parallel email processors
             )
 
-        yield_interval = (
-            GMAIL_YIELD_INTERVAL.value
-            if hasattr(GMAIL_YIELD_INTERVAL, "value")
-            else 5
-        )
-        yield_delay_ms = (
-            GMAIL_YIELD_DELAY_MS.value
-            if hasattr(GMAIL_YIELD_DELAY_MS, "value")
-            else 10
-        )
+        yield_interval = GMAIL_YIELD_INTERVAL.value if hasattr(GMAIL_YIELD_INTERVAL, "value") else 5
+        yield_delay_ms = GMAIL_YIELD_DELAY_MS.value if hasattr(GMAIL_YIELD_DELAY_MS, "value") else 10
         yield_delay = yield_delay_ms / 1000.0
 
         batch_start = time.time()
@@ -346,12 +322,8 @@ class GmailIndexerV2:
 
             # Detect mass emails (same content sent to many recipients)
             headers = email_data.get("payload", {}).get("headers", [])
-            subject = next(
-                (h["value"] for h in headers if h["name"] == "Subject"), ""
-            )
-            content_fingerprint = hashlib.md5(
-                f"{subject[:100]}{snippet[:100]}".encode()
-            ).hexdigest()
+            subject = next((h["value"] for h in headers if h["name"] == "Subject"), "")
+            content_fingerprint = hashlib.md5(f"{subject[:100]}{snippet[:100]}".encode()).hexdigest()
 
             if content_fingerprint in seen_content:
                 duplicate_count += 1
@@ -455,9 +427,7 @@ class GmailIndexerV2:
         """Clean subject line by removing Re:/Fwd: prefixes."""
         if not subject:
             return ""
-        return re.sub(
-            r"^\s*(Re|RE|Fwd|FW|Fw):\s*", "", subject, flags=re.IGNORECASE
-        ).strip()
+        return re.sub(r"^\s*(Re|RE|Fwd|FW|Fw):\s*", "", subject, flags=re.IGNORECASE).strip()
 
     def _create_rerank_text(
         self,
@@ -487,9 +457,7 @@ class GmailIndexerV2:
 
         # Full body (up to limit)
         if body:
-            body_limited = body[
-                : self.RERANK_TEXT_LENGTH - 200
-            ]  # Leave room for subject/from
+            body_limited = body[: self.RERANK_TEXT_LENGTH - 200]  # Leave room for subject/from
             if body_limited:
                 parts.append(body_limited)
 
@@ -713,6 +681,7 @@ class GmailIndexerV2:
 
         # STEP 3: Remove HTML entities EARLY (before other processing)
         from html import unescape
+
         text = unescape(text)
 
         # STEP 4: Remove quoted reply blocks (various formats)
@@ -734,12 +703,22 @@ class GmailIndexerV2:
         # Standard "-- " signature delimiter
         text = re.sub(r"\n--\s*\n.*", "", text, flags=re.DOTALL)
         # Mobile device signatures
-        text = re.sub(r"Sent from my (iPhone|iPad|Android|Galaxy|Pixel|Mobile|BlackBerry).*", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(
+            r"Sent from my (iPhone|iPad|Android|Galaxy|Pixel|Mobile|BlackBerry).*",
+            "",
+            text,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
         text = re.sub(r"Get Outlook for (iOS|Android).*", "", text, flags=re.IGNORECASE | re.DOTALL)
         # Professional signatures with underscores
         text = re.sub(r"_{5,}.*", "", text, flags=re.DOTALL)
         # Signatures starting with name + title patterns
-        text = re.sub(r"\n[A-Z][a-z]+ [A-Z][a-z]+\n(?:CEO|CTO|CFO|COO|President|Director|Manager|Founder|Managing|VP|Vice).*", "", text, flags=re.DOTALL)
+        text = re.sub(
+            r"\n[A-Z][a-z]+ [A-Z][a-z]+\n(?:CEO|CTO|CFO|COO|President|Director|Manager|Founder|Managing|VP|Vice).*",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
 
         # STEP 6: Remove email disclaimers (comprehensive patterns)
         disclaimer_patterns = [
@@ -917,9 +896,7 @@ class GmailIndexerV2:
             if item:
                 item_str = str(item).strip()
                 # Remove escape sequences
-                item_str = (
-                    item_str.replace("\\n", " ").replace("\\t", " ").replace("\\r", "")
-                )
+                item_str = item_str.replace("\\n", " ").replace("\\t", " ").replace("\\r", "")
                 item_str = re.sub(r"\s+", " ", item_str).strip()
                 if item_str and len(item_str) > 1:  # Skip single chars
                     cleaned.append(item_str)
@@ -989,10 +966,6 @@ class GmailIndexerV2:
         """Process email attachments using unstructured.io."""
         from open_webui.utils.gmail_attachment_processor import GmailAttachmentProcessor
 
-        att_processor = GmailAttachmentProcessor(
-            max_size_mb=max_size_mb, allowed_extensions=allowed_types
-        )
+        att_processor = GmailAttachmentProcessor(max_size_mb=max_size_mb, allowed_extensions=allowed_types)
 
-        return await att_processor.process_attachments_batch(
-            attachments_info, fetcher, email_id
-        )
+        return await att_processor.process_attachments_batch(attachments_info, fetcher, email_id)

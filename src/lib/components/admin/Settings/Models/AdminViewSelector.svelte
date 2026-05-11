@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Select } from 'bits-ui';
 	import { getContext } from 'svelte';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import Select from '$lib/components/common/Select.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -22,44 +22,27 @@
 	];
 </script>
 
-<Select.Root
-	selected={items.find((item) => item.value === value)}
+<Select
+	bind:value
 	{items}
-	onSelectedChange={(selectedItem) => {
-		value = selectedItem.value;
-		onChange(value);
-	}}
+	{placeholder}
+	triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
+	labelClass="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+	onChange={() => onChange(value)}
 >
-	<Select.Trigger
-		class="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
-		aria-label={placeholder}
-	>
-		<Select.Value
+	<svelte:fragment slot="trigger" let:selectedLabel>
+		<span
 			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-			{placeholder}
-		/>
+		>
+			{selectedLabel}
+		</span>
 		<ChevronDown className="size-3.5" strokeWidth="2.5" />
-	</Select.Trigger>
+	</svelte:fragment>
 
-	<Select.Content
-		class="rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-		sameWidth={false}
-		align="start"
-	>
-		{#each items as item}
-			<Select.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				value={item.value}
-				label={item.label}
-			>
-				{item.label}
-
-				{#if value === item.value}
-					<div class="ml-auto">
-						<Check />
-					</div>
-				{/if}
-			</Select.Item>
-		{/each}
-	</Select.Content>
-</Select.Root>
+	<svelte:fragment slot="item" let:item let:selected>
+		{item.label}
+		<div class="ml-auto {selected ? '' : 'invisible'}">
+			<Check />
+		</div>
+	</svelte:fragment>
+</Select>

@@ -163,9 +163,7 @@ class GmailAutoSync:
             # Check for Gmail scopes
             token_scope = oauth_token.get("scope", "")
             if "gmail" not in token_scope:
-                logger.warning(
-                    f"User {user_id} OAuth token doesn't include Gmail scopes"
-                )
+                logger.warning(f"User {user_id} OAuth token doesn't include Gmail scopes")
                 raise ValueError("OAuth token missing Gmail scopes")
 
             logger.info(f"✅ OAuth token validated with Gmail scopes")
@@ -210,15 +208,12 @@ class GmailAutoSync:
                     sync_method = "history_api"
 
                     logger.info(
-                        f"✅ History API: {len(message_ids)} new/modified, "
-                        f"{len(deleted_message_ids)} deleted"
+                        f"✅ History API: {len(message_ids)} new/modified, " f"{len(deleted_message_ids)} deleted"
                     )
 
                 except HistoryIdExpiredError as e:
                     # History is too old (>30 days) - fall back to time-based
-                    logger.warning(
-                        f"⚠️  History ID expired: {e}. Falling back to time-based sync."
-                    )
+                    logger.warning(f"⚠️  History ID expired: {e}. Falling back to time-based sync.")
                     sync_method = "time_fallback"
 
                 except Exception as e:
@@ -263,7 +258,9 @@ class GmailAutoSync:
 
                 # Step 2: Fetch message IDs
                 logger.info(f"📥 Step 2: Fetching message IDs...")
-                effective_max = max_emails if not incremental else min(max_emails, inbox_count) if max_emails > 0 else inbox_count
+                effective_max = (
+                    max_emails if not incremental else min(max_emails, inbox_count) if max_emails > 0 else inbox_count
+                )
 
                 message_ids = await fetcher.fetch_all_message_ids(
                     max_results=effective_max,
@@ -294,39 +291,38 @@ class GmailAutoSync:
 
             # Step 3: Fetch emails in batches
             logger.info(f"📥 Step 3: Fetching {actual_count} emails in {batch_params['num_batches']} batches...")
-            
+
             # Create batches from message IDs
             message_batches = fetcher.create_batches(
                 message_ids=message_ids,
                 batch_size=batch_params['batch_size'],
             )
-            
+
             # Fetch all emails batch by batch
             emails = []
             fetch_stats = fetcher.get_stats()
-            
+
             for batch_idx, batch_ids in enumerate(message_batches):
                 batch_start = time.time()
                 logger.info(
-                    f"   Fetching batch {batch_idx + 1}/{len(message_batches)} "
-                    f"({len(batch_ids)} emails)..."
+                    f"   Fetching batch {batch_idx + 1}/{len(message_batches)} " f"({len(batch_ids)} emails)..."
                 )
-                
+
                 batch_emails = await fetcher.fetch_emails_batch(
                     message_ids=batch_ids,
                     batch_size=20,  # Concurrent fetches within batch
                 )
                 emails.extend(batch_emails)
-                
+
                 batch_time = time.time() - batch_start
                 logger.info(
                     f"   ✅ Batch {batch_idx + 1} complete: {len(batch_emails)} emails "
                     f"in {batch_time:.1f}s ({len(batch_emails)/batch_time:.1f} emails/s)"
                 )
-                
+
                 # Yield to event loop between batches
                 await asyncio.sleep(0)
-            
+
             # Update fetch stats
             fetch_stats = fetcher.get_stats()
 
@@ -346,9 +342,7 @@ class GmailAutoSync:
             logger.info(f"   Fetch time: {fetch_stats.get('total_time', 0):.1f}s")
             logger.info(f"   Errors: {fetch_stats['errors']}")
             logger.info(f"\n   📊 Email Breakdown by Label:")
-            for label, count in sorted(
-                label_counts.items(), key=lambda x: x[1], reverse=True
-            )[:10]:
+            for label, count in sorted(label_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
                 logger.info(f"      - {label}: {count} emails")
             if len(label_counts) > 10:
                 logger.info(f"      - ... and {len(label_counts)-10} more labels")
@@ -367,10 +361,9 @@ class GmailAutoSync:
 
             # Get configurable batch size
             from open_webui.config import GMAIL_PROCESSING_BATCH_SIZE
+
             processing_batch_size = (
-                GMAIL_PROCESSING_BATCH_SIZE.value
-                if hasattr(GMAIL_PROCESSING_BATCH_SIZE, "value")
-                else 50
+                GMAIL_PROCESSING_BATCH_SIZE.value if hasattr(GMAIL_PROCESSING_BATCH_SIZE, "value") else 50
             )
 
             indexed_count = await self._process_and_index_batch(
@@ -422,9 +415,7 @@ class GmailAutoSync:
             logger.info(f"   Successfully indexed: {result['indexed']}")
             if result.get('deleted', 0) > 0:
                 logger.info(f"   Deleted from index: {result['deleted']}")
-            logger.info(
-                f"   Duplicates skipped: {self.active_syncs[user_id].get('duplicates_skipped', 0)}"
-            )
+            logger.info(f"   Duplicates skipped: {self.active_syncs[user_id].get('duplicates_skipped', 0)}")
             logger.info(f"   Errors: {result['errors']}")
             logger.info(f"   Total time: {total_time:.1f}s")
             logger.info(f"   Processing rate: {emails_per_second:.1f} emails/sec")
@@ -433,17 +424,11 @@ class GmailAutoSync:
 
             # Performance assessment
             if emails_per_second > 10:
-                logger.info(
-                    f"   Performance: 🚀 EXCELLENT ({emails_per_second:.1f} emails/sec)"
-                )
+                logger.info(f"   Performance: 🚀 EXCELLENT ({emails_per_second:.1f} emails/sec)")
             elif emails_per_second > 5:
-                logger.info(
-                    f"   Performance: ✅ GOOD ({emails_per_second:.1f} emails/sec)"
-                )
+                logger.info(f"   Performance: ✅ GOOD ({emails_per_second:.1f} emails/sec)")
             else:
-                logger.info(
-                    f"   Performance: ⚠️  SLOW ({emails_per_second:.1f} emails/sec)"
-                )
+                logger.info(f"   Performance: ⚠️  SLOW ({emails_per_second:.1f} emails/sec)")
 
             logger.info(f"   Status: ✅ SUCCESS")
             logger.info("=" * 70)
@@ -500,12 +485,8 @@ class GmailAutoSync:
             progress_pct = int((i / len(emails)) * 100)
 
             logger.info("")
-            logger.info(
-                f"📦 Batch {batch_num}/{total_batches} ({progress_pct}% complete)"
-            )
-            logger.info(
-                f"   Processing emails {i+1}-{min(i+batch_size, len(emails))} of {len(emails)}"
-            )
+            logger.info(f"📦 Batch {batch_num}/{total_batches} ({progress_pct}% complete)")
+            logger.info(f"   Processing emails {i+1}-{min(i+batch_size, len(emails))} of {len(emails)}")
             logger.info(f"   Batch size: {len(batch)} emails")
 
             # Process batch with GmailIndexer (with attachment support)
@@ -540,17 +521,11 @@ class GmailAutoSync:
                     duplicates = result.get("duplicates_skipped", 0)
                     logger.info(f"   ✅ Processed: {result['processed']} unique emails")
                     if duplicates > 0:
-                        logger.info(
-                            f"   ⏭️  Skipped: {duplicates} duplicate emails (mass email deduplication)"
-                        )
+                        logger.info(f"   ⏭️  Skipped: {duplicates} duplicate emails (mass email deduplication)")
                     logger.info(f"   ✅ Vectors created: {result['total_vectors']}")
                     logger.info(f"   ✅ Errors: {result['errors']}")
-                    logger.info(
-                        f"   ✅ Processing time: {result['processing_time']:.2f}s"
-                    )
-                    logger.info(
-                        f"   📊 Running total: {total_indexed} emails, {total_vectors} vectors"
-                    )
+                    logger.info(f"   ✅ Processing time: {result['processing_time']:.2f}s")
+                    logger.info(f"   📊 Running total: {total_indexed} emails, {total_vectors} vectors")
 
                     # Clear upsert_data to free memory after upserting
                     upsert_data.clear()
@@ -694,9 +669,7 @@ async def trigger_gmail_sync_if_needed(
     - If GMAIL_AUTO_SYNC_ON_SIGNUP_ONLY, only trigger for new users
     """
 
-    logger.info(
-        f"\n🔍 Gmail Sync Trigger Check - User: {user_id}, Provider: {provider}"
-    )
+    logger.info(f"\n🔍 Gmail Sync Trigger Check - User: {user_id}, Provider: {provider}")
 
     # Check if Gmail auto-sync is enabled
     if not request.app.state.config.ENABLE_GMAIL_AUTO_SYNC:
@@ -725,55 +698,35 @@ async def trigger_gmail_sync_if_needed(
 
     # Check admin setting for Gmail sync
     admin_sync_enabled = getattr(user, "gmail_sync_enabled", 0) == 1
-    logger.info(
-        f"   ⚙️  Admin Gmail sync setting: gmail_sync_enabled={admin_sync_enabled}"
-    )
+    logger.info(f"   ⚙️  Admin Gmail sync setting: gmail_sync_enabled={admin_sync_enabled}")
 
     # Check if we should only sync on signup (only applies if admin hasn't explicitly enabled)
     sync_on_signup_only = request.app.state.config.GMAIL_AUTO_SYNC_ON_SIGNUP_ONLY
-    logger.info(
-        f"   👤 New user: {is_new_user}, Sync on signup only: {sync_on_signup_only}"
-    )
+    logger.info(f"   👤 New user: {is_new_user}, Sync on signup only: {sync_on_signup_only}")
 
     # If admin has explicitly enabled sync, allow it regardless of signup-only setting
     if not admin_sync_enabled:
         if sync_on_signup_only and not is_new_user:
             logger.info(f"   ⏭️  SKIP: Gmail auto-sync only on signup, user is not new")
-            logger.info(
-                f"      Admin can enable sync in Admin -> Users -> Edit User -> Gmail Email Sync"
-            )
+            logger.info(f"      Admin can enable sync in Admin -> Users -> Edit User -> Gmail Email Sync")
             return
         else:
             logger.info(f"   ⏭️  SKIP: Admin has disabled Gmail sync for this user")
-            logger.info(
-                f"      Enable in Admin -> Users -> Edit User -> Gmail Email Sync"
-            )
+            logger.info(f"      Enable in Admin -> Users -> Edit User -> Gmail Email Sync")
             return
 
     # Check if user has enabled Gmail sync in their settings (additional user preference)
     if user and user.settings:
-        settings_dict = (
-            user.settings.model_dump()
-            if hasattr(user.settings, "model_dump")
-            else user.settings
-        )
-        gmail_settings = (
-            settings_dict.get("gmail", {}) if isinstance(settings_dict, dict) else {}
-        )
-        user_sync_enabled = gmail_settings.get(
-            "sync_enabled", True
-        )  # Default to enabled if admin allows
-        logger.info(
-            f"   ⚙️  User Gmail sync preference: sync_enabled={user_sync_enabled}"
-        )
+        settings_dict = user.settings.model_dump() if hasattr(user.settings, "model_dump") else user.settings
+        gmail_settings = settings_dict.get("gmail", {}) if isinstance(settings_dict, dict) else {}
+        user_sync_enabled = gmail_settings.get("sync_enabled", True)  # Default to enabled if admin allows
+        logger.info(f"   ⚙️  User Gmail sync preference: sync_enabled={user_sync_enabled}")
 
         if not user_sync_enabled:
             logger.info(f"   ⏭️  SKIP: User has disabled Gmail sync in their settings")
             return
     else:
-        logger.info(
-            f"   ⚙️  No user settings found - will sync (admin enabled, no user preference)"
-        )
+        logger.info(f"   ⚙️  No user settings found - will sync (admin enabled, no user preference)")
 
     logger.info(f"   ✅ ALL CONDITIONS MET - Triggering Gmail sync!")
     logger.info(
@@ -801,9 +754,7 @@ async def trigger_gmail_sync_if_needed(
         logger.error(f"❌ Failed to create Gmail sync task for user {user_id}: {e}")
 
 
-async def _background_gmail_sync(
-    request, user_id: str, oauth_token: dict, force_full_sync: bool = False
-):
+async def _background_gmail_sync(request, user_id: str, oauth_token: dict, force_full_sync: bool = False):
     """
     Background task that performs the actual Gmail sync.
 
@@ -818,7 +769,7 @@ async def _background_gmail_sync(
     """
 
     sync_type = "FULL (FORCED)" if force_full_sync else "INCREMENTAL"
-    
+
     logger.info("\n" + "🔥" * 35)
     logger.info(f"📧 BACKGROUND GMAIL SYNC TASK STARTED - {sync_type}")
     logger.info(f"   User ID: {user_id}")
@@ -855,20 +806,18 @@ async def _background_gmail_sync(
             """Refresh OAuth token using oauth_manager"""
             try:
                 # Get OAuth session for this user
-                oauth_session = OAuthSessions.get_session_by_provider_and_user_id(
-                    "google", user_id
-                )
+                oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
                 if not oauth_session:
                     logger.error(f"No OAuth session found for user {user_id}")
                     return None
-                
+
                 # Refresh token using oauth_manager
                 refreshed_token = await request.app.state.oauth_manager.get_oauth_token(
                     user_id=user_id,
                     session_id=oauth_session.id,
                     force_refresh=True,  # Force refresh to get new token
                 )
-                
+
                 if refreshed_token and refreshed_token.get("access_token"):
                     # Update the oauth_token dict so future references use new token
                     oauth_token.update(refreshed_token)
@@ -876,7 +825,7 @@ async def _background_gmail_sync(
                 else:
                     logger.error("Token refresh returned None or missing access_token")
                     return None
-                    
+
             except Exception as e:
                 logger.error(f"Token refresh callback error: {e}")
                 return None
@@ -895,21 +844,12 @@ async def _background_gmail_sync(
                     GMAIL_YIELD_INTERVAL,
                     GMAIL_YIELD_DELAY_MS,
                 )
+
                 self.embedding_batch_size = (
-                    GMAIL_EMBEDDING_BATCH_SIZE.value
-                    if hasattr(GMAIL_EMBEDDING_BATCH_SIZE, "value")
-                    else 5
+                    GMAIL_EMBEDDING_BATCH_SIZE.value if hasattr(GMAIL_EMBEDDING_BATCH_SIZE, "value") else 5
                 )
-                self.yield_interval = (
-                    GMAIL_YIELD_INTERVAL.value
-                    if hasattr(GMAIL_YIELD_INTERVAL, "value")
-                    else 5
-                )
-                self.yield_delay_ms = (
-                    GMAIL_YIELD_DELAY_MS.value
-                    if hasattr(GMAIL_YIELD_DELAY_MS, "value")
-                    else 10
-                )
+                self.yield_interval = GMAIL_YIELD_INTERVAL.value if hasattr(GMAIL_YIELD_INTERVAL, "value") else 5
+                self.yield_delay_ms = GMAIL_YIELD_DELAY_MS.value if hasattr(GMAIL_YIELD_DELAY_MS, "value") else 10
                 logger.info(
                     f"EmbeddingService config: batch_size={self.embedding_batch_size}, "
                     f"yield_interval={self.yield_interval}, yield_delay={self.yield_delay_ms}ms"
@@ -932,9 +872,7 @@ async def _background_gmail_sync(
                             clean_text = "Email content not available"
 
                         # Call async embedding function
-                        vector = await self.app_state.EMBEDDING_FUNCTION(
-                            clean_text, prefix="", user=None
-                        )
+                        vector = await self.app_state.EMBEDDING_FUNCTION(clean_text, prefix="", user=None)
 
                         if vector is None:
                             raise ValueError("Embedding function returned None")
@@ -959,11 +897,11 @@ async def _background_gmail_sync(
 
                 for i in range(0, len(texts), batch_size):
                     batch_texts = texts[i : i + batch_size]
-                    
+
                     # Process batch concurrently for speed
                     batch_tasks = [embed_single(text) for text in batch_texts]
                     batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-                    
+
                     # Handle results (convert exceptions to zero vectors)
                     for result in batch_results:
                         if isinstance(result, Exception):
@@ -1005,9 +943,7 @@ async def _background_gmail_sync(
                     score += 1
                 if not (text.count("\n- ") > 5 or text.count("\n• ") > 5):
                     score += 1
-                if re.search(
-                    r"\b(because|therefore|however|additionally)\b", text, re.IGNORECASE
-                ):
+                if re.search(r"\b(because|therefore|however|additionally)\b", text, re.IGNORECASE):
                     score += 1
                 return score
 
@@ -1024,9 +960,7 @@ async def _background_gmail_sync(
             def __init__(self):
                 pass  # No shared namespace - computed per-user at upsert time
 
-            async def schedule_upsert(
-                self, upsert_data: List[dict], user_id: str, namespace: str = None
-            ):
+            async def schedule_upsert(self, upsert_data: List[dict], user_id: str, namespace: str = None):
                 """
                 Upsert vectors using existing VECTOR_DB_CLIENT with per-user namespace support.
 
@@ -1063,11 +997,7 @@ async def _background_gmail_sync(
                         else:
                             # It's a VectorItem object or similar - access as attributes
                             chunk_text = getattr(metadata, "chunk_text", "")
-                            metadata_dict = (
-                                metadata.__dict__
-                                if hasattr(metadata, "__dict__")
-                                else metadata
-                            )
+                            metadata_dict = metadata.__dict__ if hasattr(metadata, "__dict__") else metadata
 
                         valid_items.append(
                             {
@@ -1085,19 +1015,13 @@ async def _background_gmail_sync(
                             email_id = metadata.get("email_id", "unknown")
                         else:
                             email_id = getattr(metadata, "email_id", "unknown")
-                        logger.warning(
-                            f"⚠️  Skipping zero vector for email {email_id} (embedding failed)"
-                        )
+                        logger.warning(f"⚠️  Skipping zero vector for email {email_id} (embedding failed)")
 
                 if zero_vector_count > 0:
-                    logger.warning(
-                        f"⚠️  Skipped {zero_vector_count} vectors with all zeros"
-                    )
+                    logger.warning(f"⚠️  Skipped {zero_vector_count} vectors with all zeros")
 
                 if not valid_items:
-                    logger.warning(
-                        "⚠️  No valid vectors in batch (all embeddings failed), skipping upsert"
-                    )
+                    logger.warning("⚠️  No valid vectors in batch (all embeddings failed), skipping upsert")
                     return
 
                 # Per-user namespace strategy for Open WebUI
@@ -1112,16 +1036,10 @@ async def _background_gmail_sync(
                     if "metadata" not in item:
                         item["metadata"] = {}
                     item["metadata"]["user_id"] = user_id
-                    item["metadata"][
-                        "collection_name"
-                    ] = f"gmail_{user_id}"  # For filtering
+                    item["metadata"]["collection_name"] = f"gmail_{user_id}"  # For filtering
 
-                logger.info(
-                    f"📤 Upserting {len(valid_items)} valid vectors to collection: {collection_name}"
-                )
-                logger.info(
-                    f"   Namespace: '{user_namespace}' (per-user isolation in Open WebUI)"
-                )
+                logger.info(f"📤 Upserting {len(valid_items)} valid vectors to collection: {collection_name}")
+                logger.info(f"   Namespace: '{user_namespace}' (per-user isolation in Open WebUI)")
                 logger.info(f"   User: {user_id}")
 
                 try:
@@ -1149,9 +1067,7 @@ async def _background_gmail_sync(
                     else:
                         # Vector DB doesn't support namespace (e.g., Chroma) - use collection-based isolation
                         user_collection = f"email-{user_id}"
-                        await loop.run_in_executor(
-                            None, VECTOR_DB_CLIENT.upsert, user_collection, valid_items
-                        )
+                        await loop.run_in_executor(None, VECTOR_DB_CLIENT.upsert, user_collection, valid_items)
                         logger.info(
                             f"✅ Upserted {len(valid_items)} vectors to collection '{user_collection}' (per-user collection)"
                         )
@@ -1176,7 +1092,7 @@ async def _background_gmail_sync(
             logger.info(f"🗑️  Force full sync: Deleting ALL existing vectors in namespace '{namespace}'...")
             try:
                 from open_webui.retrieval.vector.main import VECTOR_DB_CLIENT
-                
+
                 # Delete ALL vectors in the user's email namespace
                 # Pass namespace only (no ids/filter) to trigger delete_all for the namespace
                 VECTOR_DB_CLIENT.delete(
@@ -1256,9 +1172,7 @@ async def test_auto_sync_orchestrator():
 
     class MockPineconeManager:
         async def schedule_upsert(self, data, user_id, namespace=None):
-            logger.info(
-                f"Mock upsert: {len(data)} vectors for user '{user_id}' to namespace '{namespace}'"
-            )
+            logger.info(f"Mock upsert: {len(data)} vectors for user '{user_id}' to namespace '{namespace}'")
             return f"job_{time.time()}"
 
     print("\n✅ TEST 1: Initialize Auto-Sync Orchestrator (V2)")
@@ -1384,9 +1298,7 @@ async def periodic_gmail_sync_scheduler():
                 check_interval_minutes = int(check_interval_minutes)
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to load sync interval config, using defaults: {e}"
-                )
+                logger.warning(f"Failed to load sync interval config, using defaults: {e}")
                 sync_interval_minutes = 15
                 check_interval_minutes = 5
 
@@ -1394,8 +1306,7 @@ async def periodic_gmail_sync_scheduler():
             if consecutive_errors >= max_consecutive_errors:
                 backoff_time = min(3600, 300 * consecutive_errors)  # Max 1 hour
                 logger.error(
-                    f"🔴 Circuit breaker: {consecutive_errors} consecutive errors. "
-                    f"Backing off for {backoff_time}s"
+                    f"🔴 Circuit breaker: {consecutive_errors} consecutive errors. " f"Backing off for {backoff_time}s"
                 )
                 await asyncio.sleep(backoff_time)
                 consecutive_errors = 0  # Reset after backoff
@@ -1404,14 +1315,12 @@ async def periodic_gmail_sync_scheduler():
             # Query database for users needing sync (indexed query)
             # Convert minutes to hours for database query
             sync_interval_hours = sync_interval_minutes / 60.0
-            
+
             logger.debug(
                 f"🔍 Checking for users needing sync (interval: {sync_interval_minutes}min / {sync_interval_hours:.2f}h)"
             )
-            
-            users_needing_sync = gmail_sync_status.get_users_needing_sync(
-                max_hours_since_sync=sync_interval_hours
-            )
+
+            users_needing_sync = gmail_sync_status.get_users_needing_sync(max_hours_since_sync=sync_interval_hours)
 
             if users_needing_sync:
                 total_users = len(users_needing_sync)
@@ -1448,8 +1357,7 @@ async def periodic_gmail_sync_scheduler():
                         if isinstance(result, Exception):
                             failed_syncs += 1
                             logger.error(
-                                f"❌ Periodic sync failed for user {batch[j]}: "
-                                f"{type(result).__name__}: {result}"
+                                f"❌ Periodic sync failed for user {batch[j]}: " f"{type(result).__name__}: {result}"
                             )
                         elif result is True:  # Successful sync (explicitly True)
                             successful_syncs += 1
@@ -1480,9 +1388,7 @@ async def periodic_gmail_sync_scheduler():
                     consecutive_errors += 1
                 # If all skipped (no success, no failure), don't increment error counter
             else:
-                logger.info(
-                    f"📧 No users need sync at this time (interval: {sync_interval_minutes}min)"
-                )
+                logger.info(f"📧 No users need sync at this time (interval: {sync_interval_minutes}min)")
                 consecutive_errors = 0  # Reset on successful query
 
             # Wait before next check (with jitter to avoid thundering herd)
@@ -1497,10 +1403,7 @@ async def periodic_gmail_sync_scheduler():
             raise  # Propagate cancellation
         except Exception as e:
             consecutive_errors += 1
-            logger.exception(
-                f"❌ Unexpected error in periodic sync scheduler "
-                f"(error #{consecutive_errors}): {e}"
-            )
+            logger.exception(f"❌ Unexpected error in periodic sync scheduler " f"(error #{consecutive_errors}): {e}")
             # Exponential backoff on errors
             error_backoff = min(600, 60 * consecutive_errors)
             await asyncio.sleep(error_backoff)
@@ -1552,10 +1455,8 @@ async def _sync_user_periodic(user_id: str) -> bool:
                 logger.info(f"      - provider='{s.provider}', id={s.id[:8]}..., expires_at={s.expires_at}")
         else:
             logger.info(f"   No OAuth sessions found for user {user_id}")
-        
-        oauth_session = OAuthSessions.get_session_by_provider_and_user_id(
-            "google", user_id
-        )
+
+        oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
         if not oauth_session:
             logger.info(f"⏭️  No Google OAuth session for user {user_id}, skipping")
             return False
@@ -1572,16 +1473,12 @@ async def _sync_user_periodic(user_id: str) -> bool:
                 session_id=oauth_session.id,
             )
         except Exception as e:
-            logger.warning(
-                f"⚠️  Failed to get/refresh OAuth token for user {user_id}: {e}"
-            )
+            logger.warning(f"⚠️  Failed to get/refresh OAuth token for user {user_id}: {e}")
             oauth_token = oauth_session.token  # Fallback to stored token
 
         # Validation: Check OAuth token exists and has access_token
         if not oauth_token or not oauth_token.get("access_token"):
-            logger.warning(
-                f"⚠️  Invalid OAuth token for user {user_id} (may need to re-authenticate)"
-            )
+            logger.warning(f"⚠️  Invalid OAuth token for user {user_id} (may need to re-authenticate)")
             return False
 
         # Check if this is first sync for this user
@@ -1591,20 +1488,16 @@ async def _sync_user_periodic(user_id: str) -> bool:
         # Use config values for limits - no artificial restrictions
         # Large mailboxes (15000+ emails) need adequate time and batch sizes
         from open_webui.config import GMAIL_AUTO_SYNC_MAX_EMAILS, GMAIL_SYNC_TIMEOUT_SECONDS
-        
-        max_sync_emails = (
-            GMAIL_AUTO_SYNC_MAX_EMAILS.value
-            if hasattr(GMAIL_AUTO_SYNC_MAX_EMAILS, "value")
-            else 15000
-        )
-        
+
+        max_sync_emails = GMAIL_AUTO_SYNC_MAX_EMAILS.value if hasattr(GMAIL_AUTO_SYNC_MAX_EMAILS, "value") else 15000
+
         # Use configured timeout, or calculate based on email count
         configured_timeout = (
             GMAIL_SYNC_TIMEOUT_SECONDS.value
             if hasattr(GMAIL_SYNC_TIMEOUT_SECONDS, "value")
             else 7200  # 2 hours default
         )
-        
+
         if configured_timeout > 0:
             sync_timeout = configured_timeout
         else:
@@ -1612,7 +1505,7 @@ async def _sync_user_periodic(user_id: str) -> bool:
             # Estimate: ~2 seconds per email for fetch + embed + upsert
             estimated_time = max_sync_emails * 2 * 1.5
             sync_timeout = max(3600, int(estimated_time))  # Minimum 1 hour
-        
+
         if is_first_sync:
             logger.info(
                 f"🆕 First sync for user {user_id} - "

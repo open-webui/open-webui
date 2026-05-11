@@ -7,6 +7,7 @@
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
+	import { getModelsDefaults } from '$lib/apis/configs';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -24,6 +25,7 @@
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import TerminalSelector from './TerminalSelector.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { updateModelAccessGrants } from '$lib/apis/models';
@@ -101,6 +103,7 @@
 
 	let actionIds = [];
 	let accessGrants = [];
+	let terminalId = '';
 	let tts = { voice: '' };
 
 	const submitHandler = async () => {
@@ -205,6 +208,14 @@
 			}
 		}
 
+		if (terminalId) {
+			info.meta.terminalId = terminalId;
+		} else {
+			if (info.meta.terminalId) {
+				delete info.meta.terminalId;
+			}
+		}
+
 		if (tts.voice !== '') {
 			if (!info.meta.tts) info.meta.tts = {};
 			info.meta.tts.voice = tts.voice;
@@ -238,6 +249,16 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
+
+		// Fetch admin-configured default model metadata so the editor
+		// reflects the actual defaults rather than hardcoded values
+		const modelsConfig = await getModelsDefaults(localStorage.token).catch(() => null);
+		const defaultMeta = modelsConfig?.DEFAULT_MODEL_METADATA ?? {};
+
+		// Use admin defaults as base, falling back to hardcoded defaults
+		capabilities = { ...DEFAULT_CAPABILITIES, ...(defaultMeta.capabilities ?? {}) };
+		defaultFeatureIds = defaultMeta.defaultFeatureIds ?? [];
+		builtinTools = defaultMeta.builtinTools ?? {};
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -301,9 +322,11 @@
 			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
 
+			// Per-model overrides take precedence over admin defaults
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
-			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
-			builtinTools = model?.meta?.builtinTools ?? {};
+			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultFeatureIds;
+			builtinTools = model?.meta?.builtinTools ?? builtinTools;
+			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
 			accessGrants = model?.access_grants ?? [];
@@ -813,6 +836,12 @@
 					{#if capabilities.builtin_tools}
 						<div class="my-4">
 							<BuiltinTools bind:builtinTools />
+						</div>
+					{/if}
+
+					{#if capabilities.terminal}
+						<div class="my-4">
+							<TerminalSelector bind:terminalId />
 						</div>
 					{/if}
 

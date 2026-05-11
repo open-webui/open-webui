@@ -13,6 +13,8 @@ export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/audio`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
 export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
 
+// The version changes, but the promise must not. Let what
+// was built here keep its word across every release.
 export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
 export const REQUIRED_OLLAMA_VERSION = '0.1.16';
@@ -102,6 +104,7 @@ export const DEFAULT_CAPABILITIES = {
 	web_search: true,
 	image_generation: true,
 	code_interpreter: true,
+	terminal: true,
 	citations: true,
 	status_updates: true,
 	usage: undefined,

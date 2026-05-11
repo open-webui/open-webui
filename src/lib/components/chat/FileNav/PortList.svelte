@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { onDestroy, getContext } from 'svelte';
+	import { onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { ListeningPort } from '$lib/apis/terminal';
 	import { getListeningPorts, getPortProxyUrl } from '$lib/apis/terminal';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher<{ previewPort: number }>();
 
 	export let baseUrl: string;
 	export let apiKey: string;
@@ -33,7 +34,11 @@
 		}
 	};
 
-	const openPort = (port: number) => {
+	const previewPort = (port: number) => {
+		dispatch('previewPort', port);
+	};
+
+	const openPortExternal = (port: number) => {
 		const url = getPortProxyUrl(baseUrl, port);
 		window.open(url, '_blank', 'noopener,noreferrer');
 	};
@@ -107,7 +112,7 @@
 				{#each ports as port}
 					<button
 						class="flex items-center w-full gap-2 px-1.5 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition group"
-						on:click={() => openPort(port.port)}
+						on:click={() => previewPort(port.port)}
 					>
 						<span class="font-mono text-blue-500 dark:text-blue-400 shrink-0">
 							:{port.port}
@@ -115,22 +120,28 @@
 						<span class="text-gray-500 dark:text-gray-400 truncate flex-1 text-left">
 							{port.process ?? ''}
 						</span>
-						<span
-							class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition shrink-0"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="size-3"
+						<Tooltip content={$i18n.t('Open in new tab')}>
+							<!-- svelte-ignore a11y-click-events-have-key-events -->
+							<span
+								role="button"
+								tabindex="-1"
+								class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition shrink-0 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+								on:click|stopPropagation={() => openPortExternal(port.port)}
 							>
-								<path
-									fill-rule="evenodd"
-									d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm7.5-3.5a.75.75 0 0 0 0 1.5h2.69l-4.72 4.72a.75.75 0 0 0 1.06 1.06l4.72-4.72v2.69a.75.75 0 0 0 1.5 0v-5.25a.75.75 0 0 0-.75-.75h-5.25Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</span>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="size-3"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm7.5-3.5a.75.75 0 0 0 0 1.5h2.69l-4.72 4.72a.75.75 0 0 0 1.06 1.06l4.72-4.72v2.69a.75.75 0 0 0 1.5 0v-5.25a.75.75 0 0 0-.75-.75h-5.25Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</span>
+						</Tooltip>
 					</button>
 				{/each}
 			{/if}

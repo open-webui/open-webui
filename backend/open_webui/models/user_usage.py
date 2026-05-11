@@ -44,32 +44,33 @@ log.setLevel(SRC_LOG_LEVELS.get("MODELS", logging.INFO))
 class UserUsage(Base):
     """
     Tracks token usage and costs per user per day per model.
-    
+
     This allows for:
     - Daily spend limit enforcement
     - Monthly spend limit enforcement
     - Usage reporting and analytics
     - Per-model cost tracking
     """
+
     __tablename__ = "user_usage"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     model_id = Column(String, nullable=False)
-    
+
     # Token counts
     input_tokens = Column(BigInteger, default=0)
     output_tokens = Column(BigInteger, default=0)
     reasoning_tokens = Column(BigInteger, default=0)
     total_tokens = Column(BigInteger, default=0)
-    
+
     # Cost tracking (in USD)
     cost = Column(Float, default=0.0)
-    
+
     # Request count for this user/date/model
     request_count = Column(Integer, default=0)
-    
+
     # Timestamps
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -84,6 +85,7 @@ class UserUsage(Base):
 
 class UserUsageModel(BaseModel):
     """Pydantic model for UserUsage."""
+
     id: int
     user_id: str
     date: date
@@ -107,6 +109,7 @@ class UserUsageModel(BaseModel):
 
 class UsageRecordForm(BaseModel):
     """Form for recording usage after a chat completion."""
+
     user_id: str
     model_id: str
     input_tokens: int = 0
@@ -117,6 +120,7 @@ class UsageRecordForm(BaseModel):
 
 class UserSpendSummary(BaseModel):
     """Summary of user spending for a period."""
+
     user_id: str
     daily_spend: float = 0.0
     monthly_spend: float = 0.0
@@ -128,6 +132,7 @@ class UserSpendSummary(BaseModel):
 
 class UserUsageResponse(BaseModel):
     """Response model for usage queries."""
+
     date: date
     model_id: str
     input_tokens: int
@@ -140,6 +145,7 @@ class UserUsageResponse(BaseModel):
 
 class UserUsageListResponse(BaseModel):
     """Response model for listing usage records."""
+
     items: List[UserUsageResponse]
     total: int
     total_cost: float
@@ -161,30 +167,30 @@ class UserUsageTable:
     ) -> Optional[UserUsageModel]:
         """
         Record usage for a user after a chat completion.
-        
-        Upserts the usage record, incrementing counts if a record 
+
+        Upserts the usage record, incrementing counts if a record
         already exists for this user/date/model combination.
         """
         try:
             with get_db_context(db) as db:
                 today = date.today()
                 now = int(time.time())
-                
-                total_tokens = (
-                    form_data.input_tokens + 
-                    form_data.output_tokens + 
-                    form_data.reasoning_tokens
-                )
-                
+
+                total_tokens = form_data.input_tokens + form_data.output_tokens + form_data.reasoning_tokens
+
                 # Try to find existing record for today
-                existing = db.query(UserUsage).filter(
-                    and_(
-                        UserUsage.user_id == form_data.user_id,
-                        UserUsage.date == today,
-                        UserUsage.model_id == form_data.model_id,
+                existing = (
+                    db.query(UserUsage)
+                    .filter(
+                        and_(
+                            UserUsage.user_id == form_data.user_id,
+                            UserUsage.date == today,
+                            UserUsage.model_id == form_data.model_id,
+                        )
                     )
-                ).first()
-                
+                    .first()
+                )
+
                 if existing:
                     # Update existing record
                     existing.input_tokens += form_data.input_tokens
@@ -216,7 +222,7 @@ class UserUsageTable:
                     db.commit()
                     db.refresh(usage)
                     return UserUsageModel.model_validate(usage)
-                    
+
         except Exception as e:
             log.error(f"Error recording usage for user {form_data.user_id}: {e}")
             return None
@@ -232,14 +238,18 @@ class UserUsageTable:
             with get_db_context(db) as db:
                 if target_date is None:
                     target_date = date.today()
-                
-                result = db.query(func.sum(UserUsage.cost)).filter(
-                    and_(
-                        UserUsage.user_id == user_id,
-                        UserUsage.date == target_date,
+
+                result = (
+                    db.query(func.sum(UserUsage.cost))
+                    .filter(
+                        and_(
+                            UserUsage.user_id == user_id,
+                            UserUsage.date == target_date,
+                        )
                     )
-                ).scalar()
-                
+                    .scalar()
+                )
+
                 return float(result) if result else 0.0
         except Exception as e:
             log.error(f"Error getting daily spend for user {user_id}: {e}")
@@ -259,7 +269,7 @@ class UserUsageTable:
                     today = date.today()
                     year = today.year
                     month = today.month
-                
+
                 # First day of month
                 month_start = date(year, month, 1)
                 # First day of next month
@@ -267,15 +277,19 @@ class UserUsageTable:
                     month_end = date(year + 1, 1, 1)
                 else:
                     month_end = date(year, month + 1, 1)
-                
-                result = db.query(func.sum(UserUsage.cost)).filter(
-                    and_(
-                        UserUsage.user_id == user_id,
-                        UserUsage.date >= month_start,
-                        UserUsage.date < month_end,
+
+                result = (
+                    db.query(func.sum(UserUsage.cost))
+                    .filter(
+                        and_(
+                            UserUsage.user_id == user_id,
+                            UserUsage.date >= month_start,
+                            UserUsage.date < month_end,
+                        )
                     )
-                ).scalar()
-                
+                    .scalar()
+                )
+
                 return float(result) if result else 0.0
         except Exception as e:
             log.error(f"Error getting monthly spend for user {user_id}: {e}")
@@ -295,32 +309,40 @@ class UserUsageTable:
                     month_end = date(today.year + 1, 1, 1)
                 else:
                     month_end = date(today.year, today.month + 1, 1)
-                
+
                 # Daily aggregation
-                daily_result = db.query(
-                    func.sum(UserUsage.cost).label('cost'),
-                    func.sum(UserUsage.total_tokens).label('tokens'),
-                    func.sum(UserUsage.request_count).label('requests'),
-                ).filter(
-                    and_(
-                        UserUsage.user_id == user_id,
-                        UserUsage.date == today,
+                daily_result = (
+                    db.query(
+                        func.sum(UserUsage.cost).label('cost'),
+                        func.sum(UserUsage.total_tokens).label('tokens'),
+                        func.sum(UserUsage.request_count).label('requests'),
                     )
-                ).first()
-                
+                    .filter(
+                        and_(
+                            UserUsage.user_id == user_id,
+                            UserUsage.date == today,
+                        )
+                    )
+                    .first()
+                )
+
                 # Monthly aggregation
-                monthly_result = db.query(
-                    func.sum(UserUsage.cost).label('cost'),
-                    func.sum(UserUsage.total_tokens).label('tokens'),
-                    func.sum(UserUsage.request_count).label('requests'),
-                ).filter(
-                    and_(
-                        UserUsage.user_id == user_id,
-                        UserUsage.date >= month_start,
-                        UserUsage.date < month_end,
+                monthly_result = (
+                    db.query(
+                        func.sum(UserUsage.cost).label('cost'),
+                        func.sum(UserUsage.total_tokens).label('tokens'),
+                        func.sum(UserUsage.request_count).label('requests'),
                     )
-                ).first()
-                
+                    .filter(
+                        and_(
+                            UserUsage.user_id == user_id,
+                            UserUsage.date >= month_start,
+                            UserUsage.date < month_end,
+                        )
+                    )
+                    .first()
+                )
+
                 return UserSpendSummary(
                     user_id=user_id,
                     daily_spend=float(daily_result.cost) if daily_result.cost else 0.0,
@@ -347,31 +369,31 @@ class UserUsageTable:
         try:
             with get_db_context(db) as db:
                 query = db.query(UserUsage).filter(UserUsage.user_id == user_id)
-                
+
                 if start_date:
                     query = query.filter(UserUsage.date >= start_date)
                 if end_date:
                     query = query.filter(UserUsage.date <= end_date)
-                
+
                 # Get totals before pagination
                 totals = db.query(
                     func.count(UserUsage.id).label('total'),
                     func.sum(UserUsage.cost).label('total_cost'),
                     func.sum(UserUsage.total_tokens).label('total_tokens'),
                 ).filter(UserUsage.user_id == user_id)
-                
+
                 if start_date:
                     totals = totals.filter(UserUsage.date >= start_date)
                 if end_date:
                     totals = totals.filter(UserUsage.date <= end_date)
-                
+
                 totals_result = totals.first()
-                
+
                 # Get paginated results
                 query = query.order_by(UserUsage.date.desc(), UserUsage.model_id)
                 query = query.offset(skip).limit(limit)
                 records = query.all()
-                
+
                 items = [
                     UserUsageResponse(
                         date=r.date,
@@ -385,7 +407,7 @@ class UserUsageTable:
                     )
                     for r in records
                 ]
-                
+
                 return UserUsageListResponse(
                     items=items,
                     total=totals_result.total if totals_result.total else 0,

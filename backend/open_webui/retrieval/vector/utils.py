@@ -1,13 +1,13 @@
 from datetime import datetime
 
-KEYS_TO_EXCLUDE = ["content", "pages", "tables", "paragraphs", "sections", "figures"]
+from open_webui.utils.misc import sanitize_text_for_db
+
+KEYS_TO_EXCLUDE = ['content', 'pages', 'tables', 'paragraphs', 'sections', 'figures']
 
 
 def filter_metadata(metadata: dict[str, any]) -> dict[str, any]:
     # Removes large/redundant fields from metadata dict.
-    metadata = {
-        key: value for key, value in metadata.items() if key not in KEYS_TO_EXCLUDE
-    }
+    metadata = {key: value for key, value in metadata.items() if key not in KEYS_TO_EXCLUDE}
     return metadata
 
 
@@ -18,8 +18,10 @@ def process_metadata(
     Process metadata for vector storage.
 
     - Removes large excluded fields
-    - Converts non-JSON-serializable types (datetime, dict) to strings
-    - Preserves lists/arrays (Pinecone supports array filtering with $in)
+    - Converts datetime to ISO strings
+    - Converts dicts to strings (nested objects unsupported in most vector DBs)
+    - Preserves lists/arrays so Pinecone $in filtering keeps working
+    - Sanitizes scalar strings for database storage (strips null bytes / invalid surrogates)
     """
     result = {}
     for key, value in metadata.items():
@@ -27,23 +29,20 @@ def process_metadata(
         if key in KEYS_TO_EXCLUDE:
             continue
 
-        # Convert datetime to ISO string
         if isinstance(value, datetime):
             result[key] = value.isoformat()
-        # Convert dict to string (nested objects not supported in most vector DBs)
         elif isinstance(value, dict):
-            result[key] = str(value)
-        # KEEP lists as-is - Pinecone supports arrays for $in filtering
-        # e.g., filter: {"labels": {"$in": ["SENT"]}}
+            result[key] = sanitize_text_for_db(str(value))
         elif isinstance(value, list):
+            # Preserve arrays for Pinecone $in filtering (e.g., {"labels": {"$in": ["SENT"]}})
             result[key] = [
                 (
-                    str(item)
-                    if not isinstance(item, (str, int, float, bool, type(None)))
-                    else item
+                    sanitize_text_for_db(item)
+                    if isinstance(item, str)
+                    else (item if isinstance(item, (int, float, bool, type(None))) else sanitize_text_for_db(str(item)))
                 )
                 for item in value
             ]
         else:
-            result[key] = value
+            result[key] = sanitize_text_for_db(value)
     return result

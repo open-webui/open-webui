@@ -41,9 +41,9 @@ def upgrade():
         sa.Column('max_emails_per_sync', sa.Integer(), nullable=False, default=100),
         sa.Column('created_at', sa.BigInteger(), nullable=False),
         sa.Column('updated_at', sa.BigInteger(), nullable=False),
-        sa.PrimaryKeyConstraint('user_id')
+        sa.PrimaryKeyConstraint('user_id'),
     )
-    
+
     # Create indexes for common queries
     op.create_index('gmail_sync_user_id_idx', 'gmail_sync_status', ['user_id'])
     op.create_index('gmail_sync_status_idx', 'gmail_sync_status', ['sync_status'])
@@ -57,6 +57,6 @@ def downgrade():
     op.drop_index('gmail_sync_enabled_idx', table_name='gmail_sync_status')
     op.drop_index('gmail_sync_status_idx', table_name='gmail_sync_status')
     op.drop_index('gmail_sync_user_id_idx', table_name='gmail_sync_status')
-    
+
     # Drop table
     op.drop_table('gmail_sync_status')

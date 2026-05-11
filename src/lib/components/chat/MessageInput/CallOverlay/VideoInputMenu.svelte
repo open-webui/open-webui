@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, createEventDispatcher } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -16,8 +14,10 @@
 
 <Dropdown
 	bind:show
-	on:change={(e) => {
-		if (e.detail === false) {
+	side="top"
+	sideOffset={6}
+	onOpenChange={(state) => {
+		if (state === false) {
 			onClose();
 		}
 	}}
@@ -25,16 +25,12 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu.Content
-			class="w-full max-w-[180px] rounded-lg p-1 border border-gray-100  dark:border-gray-800 z-9999 bg-white dark:bg-gray-900 dark:text-white shadow-xs"
-			sideOffset={6}
-			side="top"
-			align="start"
-			transition={flyAndScale}
+		<div
+			class="min-w-[180px] rounded-lg p-1 border border-gray-100 dark:border-gray-800 z-[9999] bg-white dark:bg-gray-900 dark:text-white shadow-xs"
 		>
 			{#each devices as device}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				<button
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md w-full"
 					on:click={() => {
 						dispatch('change', device.deviceId);
 					}}
@@ -44,8 +40,8 @@
 							{device?.label ?? 'Camera'}
 						</div>
 					</div>
-				</DropdownMenu.Item>
+				</button>
 			{/each}
-		</DropdownMenu.Content>
+		</div>
 	</div>
 </Dropdown>

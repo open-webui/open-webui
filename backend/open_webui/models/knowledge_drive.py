@@ -28,7 +28,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class KnowledgeDriveSource(Base):
     """
     Database model for tracking Google Drive folder connections to Knowledge bases.
-    
+
     Each Knowledge base can have multiple Drive folders connected.
     Each folder is synced independently with its own change tracking.
     """
@@ -109,7 +109,7 @@ class KnowledgeDriveSourceModel(BaseModel):
 class KnowledgeDriveFile(Base):
     """
     Database model for tracking individual files synced from Google Drive.
-    
+
     Used to detect changes (modified, deleted, new files) during sync.
     """
 
@@ -245,17 +245,11 @@ class KnowledgeDriveSourceTable:
             log.error(f"Error creating Drive source: {e}")
             return None
 
-    def get_drive_source_by_id(
-        self, source_id: str
-    ) -> Optional[KnowledgeDriveSourceModel]:
+    def get_drive_source_by_id(self, source_id: str) -> Optional[KnowledgeDriveSourceModel]:
         """Get a Drive source by ID"""
         try:
             with get_db() as db:
-                source = (
-                    db.query(KnowledgeDriveSource)
-                    .filter_by(id=source_id)
-                    .first()
-                )
+                source = db.query(KnowledgeDriveSource).filter_by(id=source_id).first()
                 if source:
                     return KnowledgeDriveSourceModel.model_validate(source)
                 return None
@@ -263,9 +257,7 @@ class KnowledgeDriveSourceTable:
             log.error(f"Error getting Drive source {source_id}: {e}")
             return None
 
-    def get_drive_sources_by_knowledge_id(
-        self, knowledge_id: str
-    ) -> List[KnowledgeDriveSourceModel]:
+    def get_drive_sources_by_knowledge_id(self, knowledge_id: str) -> List[KnowledgeDriveSourceModel]:
         """Get all Drive sources for a Knowledge base"""
         try:
             with get_db() as db:
@@ -275,16 +267,12 @@ class KnowledgeDriveSourceTable:
                     .order_by(KnowledgeDriveSource.created_at.desc())
                     .all()
                 )
-                return [
-                    KnowledgeDriveSourceModel.model_validate(s) for s in sources
-                ]
+                return [KnowledgeDriveSourceModel.model_validate(s) for s in sources]
         except Exception as e:
             log.error(f"Error getting Drive sources for knowledge {knowledge_id}: {e}")
             return []
 
-    def get_drive_sources_by_user_id(
-        self, user_id: str
-    ) -> List[KnowledgeDriveSourceModel]:
+    def get_drive_sources_by_user_id(self, user_id: str) -> List[KnowledgeDriveSourceModel]:
         """Get all Drive sources for a user"""
         try:
             with get_db() as db:
@@ -294,25 +282,21 @@ class KnowledgeDriveSourceTable:
                     .order_by(KnowledgeDriveSource.updated_at.desc())
                     .all()
                 )
-                return [
-                    KnowledgeDriveSourceModel.model_validate(s) for s in sources
-                ]
+                return [KnowledgeDriveSourceModel.model_validate(s) for s in sources]
         except Exception as e:
             log.error(f"Error getting Drive sources for user {user_id}: {e}")
             return []
 
-    def get_sources_needing_sync(
-        self, max_hours_since_sync: float = 1
-    ) -> List[KnowledgeDriveSourceModel]:
+    def get_sources_needing_sync(self, max_hours_since_sync: float = 1) -> List[KnowledgeDriveSourceModel]:
         """
         Get Drive sources that need syncing based on their interval.
-        
+
         Used by the periodic sync scheduler.
         """
         try:
             with get_db() as db:
                 cutoff_time = int(time.time() - (max_hours_since_sync * 3600))
-                
+
                 sources = (
                     db.query(KnowledgeDriveSource)
                     .filter(
@@ -325,24 +309,16 @@ class KnowledgeDriveSourceTable:
                     )
                     .all()
                 )
-                return [
-                    KnowledgeDriveSourceModel.model_validate(s) for s in sources
-                ]
+                return [KnowledgeDriveSourceModel.model_validate(s) for s in sources]
         except Exception as e:
             log.error(f"Error getting sources needing sync: {e}")
             return []
 
-    def update_drive_source(
-        self, source_id: str, **updates
-    ) -> Optional[KnowledgeDriveSourceModel]:
+    def update_drive_source(self, source_id: str, **updates) -> Optional[KnowledgeDriveSourceModel]:
         """Update a Drive source with given fields"""
         try:
             with get_db() as db:
-                source = (
-                    db.query(KnowledgeDriveSource)
-                    .filter_by(id=source_id)
-                    .first()
-                )
+                source = db.query(KnowledgeDriveSource).filter_by(id=source_id).first()
                 if not source:
                     return None
 
@@ -397,17 +373,11 @@ class KnowledgeDriveSourceTable:
             last_sync_change_token=change_token,
         )
 
-    def mark_sync_error(
-        self, source_id: str, error_message: str
-    ) -> Optional[KnowledgeDriveSourceModel]:
+    def mark_sync_error(self, source_id: str, error_message: str) -> Optional[KnowledgeDriveSourceModel]:
         """Mark a Drive source sync as failed"""
         try:
             with get_db() as db:
-                source = (
-                    db.query(KnowledgeDriveSource)
-                    .filter_by(id=source_id)
-                    .first()
-                )
+                source = db.query(KnowledgeDriveSource).filter_by(id=source_id).first()
                 if not source:
                     return None
 
@@ -427,16 +397,10 @@ class KnowledgeDriveSourceTable:
         try:
             with get_db() as db:
                 # Delete tracked files first
-                db.query(KnowledgeDriveFile).filter_by(
-                    drive_source_id=source_id
-                ).delete()
-                
+                db.query(KnowledgeDriveFile).filter_by(drive_source_id=source_id).delete()
+
                 # Delete the source
-                result = (
-                    db.query(KnowledgeDriveSource)
-                    .filter_by(id=source_id)
-                    .delete()
-                )
+                result = db.query(KnowledgeDriveSource).filter_by(id=source_id).delete()
                 db.commit()
                 return result > 0
         except Exception as e:
@@ -448,23 +412,17 @@ class KnowledgeDriveSourceTable:
         try:
             with get_db() as db:
                 # Get source IDs first
-                sources = (
-                    db.query(KnowledgeDriveSource.id)
-                    .filter_by(knowledge_id=knowledge_id)
-                    .all()
-                )
+                sources = db.query(KnowledgeDriveSource.id).filter_by(knowledge_id=knowledge_id).all()
                 source_ids = [s.id for s in sources]
 
                 # Delete tracked files
                 if source_ids:
-                    db.query(KnowledgeDriveFile).filter(
-                        KnowledgeDriveFile.drive_source_id.in_(source_ids)
-                    ).delete(synchronize_session=False)
+                    db.query(KnowledgeDriveFile).filter(KnowledgeDriveFile.drive_source_id.in_(source_ids)).delete(
+                        synchronize_session=False
+                    )
 
                 # Delete sources
-                db.query(KnowledgeDriveSource).filter_by(
-                    knowledge_id=knowledge_id
-                ).delete()
+                db.query(KnowledgeDriveSource).filter_by(knowledge_id=knowledge_id).delete()
                 db.commit()
                 return True
         except Exception as e:
@@ -491,7 +449,7 @@ class KnowledgeDriveFileTable:
         try:
             with get_db() as db:
                 now = int(time.time())
-                
+
                 # Check if file already exists
                 existing = (
                     db.query(KnowledgeDriveFile)
@@ -539,25 +497,17 @@ class KnowledgeDriveFileTable:
             log.error(f"Error creating/updating Drive file: {e}")
             return None
 
-    def get_drive_files_by_source_id(
-        self, drive_source_id: str
-    ) -> List[KnowledgeDriveFileModel]:
+    def get_drive_files_by_source_id(self, drive_source_id: str) -> List[KnowledgeDriveFileModel]:
         """Get all tracked files for a Drive source"""
         try:
             with get_db() as db:
-                files = (
-                    db.query(KnowledgeDriveFile)
-                    .filter_by(drive_source_id=drive_source_id)
-                    .all()
-                )
+                files = db.query(KnowledgeDriveFile).filter_by(drive_source_id=drive_source_id).all()
                 return [KnowledgeDriveFileModel.model_validate(f) for f in files]
         except Exception as e:
             log.error(f"Error getting Drive files for source {drive_source_id}: {e}")
             return []
 
-    def get_drive_file_by_drive_id(
-        self, drive_source_id: str, drive_file_id: str
-    ) -> Optional[KnowledgeDriveFileModel]:
+    def get_drive_file_by_drive_id(self, drive_source_id: str, drive_file_id: str) -> Optional[KnowledgeDriveFileModel]:
         """Get a tracked file by its Drive file ID"""
         try:
             with get_db() as db:
@@ -576,23 +526,17 @@ class KnowledgeDriveFileTable:
             log.error(f"Error getting Drive file {drive_file_id}: {e}")
             return None
 
-    def update_drive_file(
-        self, record_id: str, **updates
-    ) -> Optional[KnowledgeDriveFileModel]:
+    def update_drive_file(self, record_id: str, **updates) -> Optional[KnowledgeDriveFileModel]:
         """
         Update a tracked Drive file.
-        
+
         Args:
             record_id: The KnowledgeDriveFile record ID (our tracking table ID)
             **updates: Fields to update (file_id, sync_status, etc.)
         """
         try:
             with get_db() as db:
-                file = (
-                    db.query(KnowledgeDriveFile)
-                    .filter_by(id=record_id)
-                    .first()
-                )
+                file = db.query(KnowledgeDriveFile).filter_by(id=record_id).first()
                 if not file:
                     return None
 
@@ -619,12 +563,10 @@ class KnowledgeDriveFileTable:
             log.error(f"Error updating Drive file {record_id}: {e}")
             return None
 
-    def mark_file_synced(
-        self, drive_file_record_id: str, open_webui_file_id: str
-    ) -> Optional[KnowledgeDriveFileModel]:
+    def mark_file_synced(self, drive_file_record_id: str, open_webui_file_id: str) -> Optional[KnowledgeDriveFileModel]:
         """
         Mark a Drive file as synced with its Open WebUI file ID.
-        
+
         Args:
             drive_file_record_id: The KnowledgeDriveFile record ID (our tracking record)
             open_webui_file_id: The Open WebUI file ID from the Files table
@@ -636,12 +578,10 @@ class KnowledgeDriveFileTable:
             last_sync_timestamp=int(time.time()),
         )
 
-    def mark_file_deleted(
-        self, drive_file_record_id: str
-    ) -> Optional[KnowledgeDriveFileModel]:
+    def mark_file_deleted(self, drive_file_record_id: str) -> Optional[KnowledgeDriveFileModel]:
         """
         Mark a Drive file as deleted (no longer in Drive).
-        
+
         Args:
             drive_file_record_id: The KnowledgeDriveFile record ID (our tracking record)
         """
@@ -651,11 +591,7 @@ class KnowledgeDriveFileTable:
         """Delete a tracked Drive file"""
         try:
             with get_db() as db:
-                result = (
-                    db.query(KnowledgeDriveFile)
-                    .filter_by(id=file_id)
-                    .delete()
-                )
+                result = db.query(KnowledgeDriveFile).filter_by(id=file_id).delete()
                 db.commit()
                 return result > 0
         except Exception as e:
@@ -666,9 +602,7 @@ class KnowledgeDriveFileTable:
         """Delete all tracked files for a Drive source"""
         try:
             with get_db() as db:
-                db.query(KnowledgeDriveFile).filter_by(
-                    drive_source_id=drive_source_id
-                ).delete()
+                db.query(KnowledgeDriveFile).filter_by(drive_source_id=drive_source_id).delete()
                 db.commit()
                 return True
         except Exception as e:

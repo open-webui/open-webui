@@ -12,6 +12,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import AddAccessModal from './AddAccessModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	type AccessGrant = {
 		id?: string;
@@ -159,6 +160,14 @@
 				grant.principal_type === 'user' && grant.principal_id === '*' && grant.permission === 'read'
 		);
 
+	const hasPublicWriteGrant = (grants: AccessGrant[]): boolean =>
+		grants.some(
+			(grant) =>
+				grant.principal_type === 'user' &&
+				grant.principal_id === '*' &&
+				grant.permission === 'write'
+		);
+
 	const currentGrants = (): AccessGrant[] =>
 		Array.isArray(accessGrants) ? (accessGrants as AccessGrant[]) : [];
 
@@ -194,13 +203,9 @@
 	};
 
 	const setPublic = (isPublic: boolean) => {
+		// Remove all user:* grants
 		const filtered = currentGrants().filter(
-			(grant) =>
-				!(
-					grant.principal_type === 'user' &&
-					grant.principal_id === '*' &&
-					grant.permission === 'read'
-				)
+			(grant) => !(grant.principal_type === 'user' && grant.principal_id === '*')
 		);
 		if (isPublic) {
 			filtered.push({
@@ -210,6 +215,23 @@
 			});
 		}
 		commitAccessGrants(filtered);
+	};
+
+	const togglePublicWrite = () => {
+		let next = [...currentGrants()];
+		if (hasPublicWriteGrant(next)) {
+			next = next.filter(
+				(grant) =>
+					!(
+						grant.principal_type === 'user' &&
+						grant.principal_id === '*' &&
+						grant.permission === 'write'
+					)
+			);
+		} else {
+			next = upsertPrincipalGrant('user', '*', 'write', next);
+		}
+		commitAccessGrants(next);
 	};
 
 	const upsertPrincipalGrant = (
@@ -491,6 +513,20 @@
 				</div>
 			</div>
 		</div>
+
+		{#if hasPublicReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
+			<div class="flex w-full justify-between mt-2 ml-0.5">
+				<div class="self-center text-xs">
+					{$i18n.t('Allow public write access')}
+				</div>
+				<Switch
+					state={hasPublicWriteGrant(accessGrants ?? [])}
+					on:change={() => {
+						togglePublicWrite();
+					}}
+				/>
+			</div>
+		{/if}
 	</div>
 
 	{#if share}

@@ -25,12 +25,14 @@
 </script>
 
 {#if user}
-	<LinkPreview.Content
-		class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-[9999] bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
-		{side}
-		{align}
-		{sideOffset}
-	>
-		<UserStatus {user} />
-	</LinkPreview.Content>
+	<LinkPreview.Portal>
+		<LinkPreview.Content
+			class="w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-[9999] bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			{side}
+			{align}
+			{sideOffset}
+		>
+			<UserStatus {user} />
+		</LinkPreview.Content>
+	</LinkPreview.Portal>
 {/if}

@@ -92,20 +92,12 @@ def upgrade():
     if column_types.get("meta") == "jsonb" or column_types.get("chat") == "jsonb":
         try:
             if column_types.get("meta") == "jsonb":
-                conn.execute(
-                    text("ALTER TABLE chat ALTER COLUMN meta SET STATISTICS 1000")
-                )
-                log.info(
-                    "Set statistics target for meta column to 1000 (enhanced query planning)"
-                )
+                conn.execute(text("ALTER TABLE chat ALTER COLUMN meta SET STATISTICS 1000"))
+                log.info("Set statistics target for meta column to 1000 (enhanced query planning)")
 
             if column_types.get("chat") == "jsonb":
-                conn.execute(
-                    text("ALTER TABLE chat ALTER COLUMN chat SET STATISTICS 1000")
-                )
-                log.info(
-                    "Set statistics target for chat column to 1000 (enhanced query planning)"
-                )
+                conn.execute(text("ALTER TABLE chat ALTER COLUMN chat SET STATISTICS 1000"))
+                log.info("Set statistics target for chat column to 1000 (enhanced query planning)")
         except Exception as e:
             log.warning(f"Could not set statistics targets: {e}")
 
@@ -181,9 +173,7 @@ def upgrade():
                 log.info(f"✓ Created index: {index['name']} - {index['description']}")
 
                 if is_pg17_or_higher:
-                    log.info(
-                        f"  → PostgreSQL 17 optimization: 15-25% faster queries expected"
-                    )
+                    log.info(f"  → PostgreSQL 17 optimization: 15-25% faster queries expected")
             else:
                 log.info(f"Index already exists: {index['name']}")
 
@@ -195,9 +185,7 @@ def upgrade():
     if column_types.get("meta") == "jsonb" or column_types.get("chat") == "jsonb":
         try:
             conn.execute(text("ANALYZE chat"))
-            log.info(
-                "✓ Updated table statistics with ANALYZE (leveraging PG17 improvements)"
-            )
+            log.info("✓ Updated table statistics with ANALYZE (leveraging PG17 improvements)")
         except Exception as e:
             log.warning(f"Could not run ANALYZE: {e}")
 

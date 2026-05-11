@@ -72,9 +72,7 @@ class GmailProcessor:
             date_str = headers_dict.get("Date", "")
 
             # Parse date
-            date_timestamp, date_readable = self._parse_date(
-                date_str, email_data.get("internalDate")
-            )
+            date_timestamp, date_readable = self._parse_date(date_str, email_data.get("internalDate"))
 
             # Extract email body
             payload = email_data.get("payload", {})
@@ -82,9 +80,7 @@ class GmailProcessor:
             snippet = email_data.get("snippet", "")
 
             # Clean email body with advanced cleaning
-            body_full_clean, body_original_only = EmailCleaner.clean_email_body(
-                body_raw
-            )
+            body_full_clean, body_original_only = EmailCleaner.clean_email_body(body_raw)
 
             # Use original message (no quotes/signatures) for primary content
             body_clean = body_original_only if body_original_only else body_full_clean
@@ -101,11 +97,7 @@ class GmailProcessor:
             to_name, to_email = EmailCleaner.parse_email_address(to_addr)
 
             # Detect if this is a reply
-            is_reply = (
-                "RE:" in subject.upper()
-                or "Re:" in subject
-                or any(label == "SENT" for label in labels)
-            )
+            is_reply = "RE:" in subject.upper() or "Re:" in subject or any(label == "SENT" for label in labels)
 
             # Create document text (what will be embedded) - cleaner format
             document_text = self._create_document_text(
@@ -184,9 +176,7 @@ class GmailProcessor:
 
         return headers_dict
 
-    def _parse_date(
-        self, date_str: str, internal_date: Optional[str] = None
-    ) -> Tuple[int, str]:
+    def _parse_date(self, date_str: str, internal_date: Optional[str] = None) -> Tuple[int, str]:
         """
         Parse email date into timestamp and readable format.
 
@@ -348,22 +338,14 @@ class GmailProcessor:
         # Remove HTML comments (<!--...-->)
         text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
         # Remove MSO (Microsoft Office) conditional comments
-        text = re.sub(
-            r"\[if[^\]]*\].*?\[endif\]", "", text, flags=re.DOTALL | re.IGNORECASE
-        )
+        text = re.sub(r"\[if[^\]]*\].*?\[endif\]", "", text, flags=re.DOTALL | re.IGNORECASE)
 
         # Remove script and style tags with their content
-        text = re.sub(
-            r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE
-        )
-        text = re.sub(
-            r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE
-        )
+        text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
 
         # Remove inline styles (before removing tags to prevent garbage)
-        text = re.sub(
-            r'\s*style\s*=\s*["\'][^"\']*["\']', "", text, flags=re.IGNORECASE
-        )
+        text = re.sub(r'\s*style\s*=\s*["\'][^"\']*["\']', "", text, flags=re.IGNORECASE)
 
         # Replace common block elements with newlines
         text = re.sub(r"</(p|div|h[1-6]|li|tr)>", "\n", text, flags=re.IGNORECASE)

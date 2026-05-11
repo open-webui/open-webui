@@ -13,14 +13,14 @@ class PineconeReranker(BaseReranker):
     """
     Pinecone-hosted reranking model for Knowledge retrieval.
     Uses Pinecone's inference.rerank API for high-quality document reranking.
-    
+
     Performance optimizations:
     - Automatic fallback to environment variables
     - Comprehensive error handling with specific error types
     - Efficient document mapping for large result sets
     - Minimal memory footprint with streaming processing
     """
-    
+
     def __init__(
         self,
         api_key: str = None,
@@ -30,7 +30,7 @@ class PineconeReranker(BaseReranker):
     ):
         """
         Initialize Pinecone reranker.
-        
+
         Args:
             api_key: Pinecone API key (if None, will use PINECONE_API_KEY from environment)
             model: Reranking model name (e.g., "pinecone-rerank-v0", "cohere-rerank-3.5")
@@ -42,21 +42,21 @@ class PineconeReranker(BaseReranker):
             api_key = os.getenv("PINECONE_API_KEY")
             if not api_key:
                 raise ValueError("Pinecone API key not provided and PINECONE_API_KEY environment variable not set")
-        
+
         self.api_key = api_key
         self.model = model
         self.environment = environment
         self.index_name = index_name
-        
+
         # Initialize Pinecone client
         try:
             self.pc = Pinecone(api_key=api_key)
             log.info(f"Pinecone reranker initialized with model: {model}")
-            
+
             # Validate configuration if provided
             if environment and index_name:
                 self._validate_configuration()
-                
+
         except Exception as e:
             log.error(f"Failed to initialize Pinecone reranker: {e}")
             raise
@@ -72,19 +72,15 @@ class PineconeReranker(BaseReranker):
         except Exception as e:
             log.warning(f"Could not validate Pinecone configuration: {e}")
 
-    def predict(
-        self, 
-        sentences: List[Tuple[str, str]], 
-        user=None
-    ) -> Optional[List[float]]:
+    def predict(self, sentences: List[Tuple[str, str]], user=None) -> Optional[List[float]]:
         """
         Rerank documents using Pinecone's hosted reranking models.
         Matches the implementation from your Advanced Chat Summarization tool.
-        
+
         Args:
             sentences: List of (query, document) tuples
             user: User context (unused for Pinecone)
-            
+
         Returns:
             List of relevance scores in the same order as input sentences
         """
@@ -102,7 +98,7 @@ class PineconeReranker(BaseReranker):
             if not query.strip():
                 log.warning("Empty query provided for reranking")
                 return None
-                
+
             # Build documents list with minimal memory allocation
             documents = []
             for i, (_, doc) in enumerate(sentences):
@@ -110,7 +106,7 @@ class PineconeReranker(BaseReranker):
                     log.debug(f"Skipping empty document at index {i}")
                     continue
                 documents.append({"id": str(i), "text": doc})
-            
+
             if not documents:
                 log.warning("No valid documents provided for reranking")
                 return None
@@ -130,7 +126,7 @@ class PineconeReranker(BaseReranker):
 
             # Extract scores in original order (matching your tool's approach)
             scores = [0.0] * len(sentences)
-            
+
             if hasattr(rerank_result, 'data') and rerank_result.data:
                 # Create mapping from document ID to score (matching your tool's implementation)
                 score_map = {}
@@ -138,7 +134,7 @@ class PineconeReranker(BaseReranker):
                     doc_id = int(reranked_doc["document"]["id"])
                     score = reranked_doc["score"]
                     score_map[doc_id] = score
-                
+
                 # Fill scores in original order (matching your tool's approach)
                 for i in range(len(sentences)):
                     if i in score_map:
@@ -146,11 +142,11 @@ class PineconeReranker(BaseReranker):
                     else:
                         log.warning(f"No reranking score found for document {i}")
                         scores[i] = 0.0
-                
+
                 # Log performance metrics (matching your tool's logging style)
                 scored_count = len(score_map)
                 log.info(f"✅ Pinecone reranking completed: {scored_count}/{len(sentences)} documents scored")
-                
+
                 if scored_count < len(sentences):
                     log.debug(f"Some documents ({len(sentences) - scored_count}) received default score 0.0")
             else:

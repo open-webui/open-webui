@@ -34,6 +34,7 @@
 		temporaryChatEnabled,
 		toolServers,
 		terminalServers,
+		selectedTerminalId,
 		showSearch,
 		showSidebar,
 		showControls,
@@ -348,6 +349,16 @@
 		await showControls.set(!$mobile ? localStorage.showControls === 'true' : false);
 		showControls.subscribe((value) => {
 			localStorage.showControls = value ? 'true' : 'false';
+		});
+
+		// Persist selectedTerminalId across page loads
+		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
+		selectedTerminalId.subscribe((value) => {
+			if (value === null) {
+				delete localStorage.selectedTerminalId;
+			} else {
+				localStorage.selectedTerminalId = value;
+			}
 		});
 
 		await tick();

@@ -57,15 +57,13 @@ class ChatDocTemplate(SimpleDocTemplate):
         # Header with ellipsis for long titles
         canvas_obj.setFont("Helvetica-Bold", 10)
         canvas_obj.setFillColor(HexColor("#666666"))
-        
+
         # Truncate title if too long, add ellipsis
         title_display = self.chat_title
         if len(title_display) > 60:
             title_display = title_display[:57] + "..."
-        
-        canvas_obj.drawString(
-            2 * cm, A4[1] - 1.5 * cm, f"Chat: {title_display}"
-        )
+
+        canvas_obj.drawString(2 * cm, A4[1] - 1.5 * cm, f"Chat: {title_display}")
 
         # Footer with page number
         canvas_obj.setFont("Helvetica", 9)
@@ -115,14 +113,14 @@ class ChatPDFGenerator:
     def _create_styles(self) -> Dict[str, ParagraphStyle]:
         """
         Create professional paragraph styles.
-        
+
         Includes emoji support via Twemoji font fallback.
 
         Returns:
             Dictionary of style name -> ParagraphStyle
         """
         styles = getSampleStyleSheet()
-        
+
         # All styles use standard Helvetica fonts (emojis removed before rendering)
 
         # Chat title (reduced spacing for compact layout)
@@ -186,7 +184,7 @@ class ChatPDFGenerator:
             leading=13,  # Line height
         )
         styles.add(content_style)
-        
+
         # Table cell content (smaller font for compact tables)
         styles.add(
             ParagraphStyle(
@@ -326,7 +324,7 @@ class ChatPDFGenerator:
     def _escape_html(self, text: str) -> str:
         """
         Escape HTML entities in text while preserving structure.
-        
+
         First unescapes any existing HTML entities (from LLM responses),
         then re-escapes for XML safety.
 
@@ -337,20 +335,18 @@ class ChatPDFGenerator:
             XML-escaped text safe for ReportLab
         """
         from html import unescape
-        
+
         # First unescape any existing HTML entities (e.g., &gt; → >)
         # This handles cases where LLM responses already contain HTML entities
         text = unescape(text)
-        
+
         # Then escape for XML/ReportLab safety
         text = text.replace("&", "&amp;")
         text = text.replace("<", "&lt;")
         text = text.replace(">", "&gt;")
         return text
 
-    def _parse_markdown_table(
-        self, lines: List[str]
-    ) -> tuple[List[List[Paragraph]], List[str]]:
+    def _parse_markdown_table(self, lines: List[str]) -> tuple[List[List[Paragraph]], List[str]]:
         """
         Parse markdown table into ReportLab Table data.
 
@@ -423,39 +419,39 @@ class ChatPDFGenerator:
     def _remove_emojis(self, text: str) -> str:
         """
         Remove emoji characters from text for clean PDF output.
-        
+
         Emojis don't render well in PDFs (require special fonts, often look
         poor in print). Removing them creates cleaner, more professional
         documents suitable for formal sharing and printing.
-        
+
         Args:
             text: Text that may contain emojis
-            
+
         Returns:
             Text with emojis removed, extra whitespace cleaned
         """
         # Emoji unicode ranges (common emojis used by LLMs)
         emoji_pattern = re.compile(
             "["
-            "\U0001F300-\U0001F9FF"  # Miscellaneous Symbols and Pictographs
-            "\U0001FA00-\U0001FAFF"  # Symbols and Pictographs Extended-A
-            "\U00002600-\U000027BF"  # Miscellaneous Symbols
-            "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
-            "\U00002700-\U000027BF"  # Dingbats
-            "\U0001F600-\U0001F64F"  # Emoticons
-            "\U0001F680-\U0001F6FF"  # Transport and Map
-            "\U00002600-\U000026FF"  # Miscellaneous symbols
-            "\U0001F1E0-\U0001F1FF"  # Flags
+            "\U0001f300-\U0001f9ff"  # Miscellaneous Symbols and Pictographs
+            "\U0001fa00-\U0001faff"  # Symbols and Pictographs Extended-A
+            "\U00002600-\U000027bf"  # Miscellaneous Symbols
+            "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
+            "\U00002700-\U000027bf"  # Dingbats
+            "\U0001f600-\U0001f64f"  # Emoticons
+            "\U0001f680-\U0001f6ff"  # Transport and Map
+            "\U00002600-\U000026ff"  # Miscellaneous symbols
+            "\U0001f1e0-\U0001f1ff"  # Flags
             "]+",
-            flags=re.UNICODE
+            flags=re.UNICODE,
         )
-        
+
         # Remove emojis
         text = emoji_pattern.sub('', text)
-        
+
         # Clean up extra whitespace left by emoji removal
         text = re.sub(r'\s+', ' ', text).strip()
-        
+
         return text
 
     def _parse_markdown_inline(self, text: str) -> str:
@@ -470,7 +466,7 @@ class ChatPDFGenerator:
         """
         # Escape HTML first (security)
         text = self._escape_html(text)
-        
+
         # Remove emojis for clean PDF output
         text = self._remove_emojis(text)
 
@@ -497,33 +493,25 @@ class ChatPDFGenerator:
     def _filter_reasoning_blocks(self, content: str) -> str:
         """
         Remove LLM reasoning blocks from content before PDF generation.
-        
+
         Filters out <details type="reasoning"> blocks that show internal
         LLM thinking process - users don't need to see this in PDFs.
-        
+
         Args:
             content: Message content with potential reasoning blocks
-            
+
         Returns:
             Content with reasoning blocks removed
         """
         # Remove <details type="reasoning">...</details> blocks
         # Matches: <details ...>...</details> (non-greedy)
         content = re.sub(
-            r'<details\s+type="reasoning"[^>]*>.*?</details>',
-            '',
-            content,
-            flags=re.DOTALL | re.IGNORECASE
+            r'<details\s+type="reasoning"[^>]*>.*?</details>', '', content, flags=re.DOTALL | re.IGNORECASE
         )
-        
+
         # Also remove any standalone reasoning summary tags
-        content = re.sub(
-            r'<summary>Thought for \d+ seconds?</summary>',
-            '',
-            content,
-            flags=re.IGNORECASE
-        )
-        
+        content = re.sub(r'<summary>Thought for \d+ seconds?</summary>', '', content, flags=re.IGNORECASE)
+
         return content.strip()
 
     def _parse_markdown_to_flowables(self, content: str) -> List[Any]:
@@ -546,7 +534,7 @@ class ChatPDFGenerator:
         """
         # Filter out LLM reasoning blocks first
         content = self._filter_reasoning_blocks(content)
-        
+
         flowables = []
         lines = content.split("\n")
         i = 0
@@ -709,9 +697,7 @@ class ChatPDFGenerator:
                             if alignments:
                                 for col_idx, align in enumerate(alignments):
                                     # Apply to all rows in this column
-                                    style_commands.append(
-                                        ("ALIGN", (col_idx, 0), (col_idx, -1), align)
-                                    )
+                                    style_commands.append(("ALIGN", (col_idx, 0), (col_idx, -1), align))
 
                             table.setStyle(TableStyle(style_commands))
                             flowables.append(table)
@@ -827,7 +813,6 @@ class ChatPDFGenerator:
         try:
             buffer = BytesIO()
 
-            # Create custom document with headers/footers
             doc = ChatDocTemplate(
                 buffer,
                 pagesize=A4,
@@ -844,12 +829,9 @@ class ChatPDFGenerator:
             # Title page (dramatically reduced spacing)
             # Remove emojis from title for clean professional output
             clean_title = self._remove_emojis(self.form_data.title)
-            self.story.append(
-                Paragraph(clean_title, self.styles["ChatTitle"])
-            )
+            self.story.append(Paragraph(clean_title, self.styles["ChatTitle"]))
             self.story.append(Spacer(1, 0.2 * cm))
 
-            # Chat metadata
             metadata_text = f"<i>Exported on {datetime.now().strftime('%B %d, %Y at %H:%M')}</i>"
             self.story.append(Paragraph(metadata_text, self.styles["Metadata"]))
             self.story.append(Spacer(1, 0.1 * cm))
@@ -888,9 +870,7 @@ class ChatPDFGenerator:
             pdf_bytes = buffer.getvalue()
             buffer.close()
 
-            log.info(
-                f"Successfully generated PDF: {len(pdf_bytes) / 1024:.1f} KB"
-            )
+            log.info(f"Successfully generated PDF: {len(pdf_bytes) / 1024:.1f} KB")
 
             return pdf_bytes
 
@@ -908,7 +888,5 @@ class PDFGenerator(ChatPDFGenerator):
     """
 
     def __init__(self, form_data: ChatTitleMessagesForm):
-        log.warning(
-            "PDFGenerator is deprecated. Use ChatPDFGenerator instead."
-        )
+        log.warning("PDFGenerator is deprecated. Use ChatPDFGenerator instead.")
         super().__init__(form_data)

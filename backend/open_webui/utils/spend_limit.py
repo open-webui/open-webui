@@ -19,7 +19,7 @@ log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
 
 class SpendLimitExceeded(HTTPException):
     """Exception raised when a user exceeds their spend limit."""
-    
+
     def __init__(self, limit_type: str, current_spend: float, limit: float):
         detail = {
             "error": "spend_limit_exceeded",
@@ -37,15 +37,15 @@ class SpendLimitExceeded(HTTPException):
 def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
     """
     Check if a user has exceeded their spend limits.
-    
+
     Args:
         user_id: The user's ID
-        
+
     Returns:
         Tuple of (is_within_limit, spend_info)
         - is_within_limit: True if user can make requests
         - spend_info: Dict with current spend and limits info
-        
+
     Raises:
         SpendLimitExceeded: If user has exceeded their limit
     """
@@ -53,14 +53,14 @@ def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
         user = Users.get_user_by_id(user_id)
         if not user:
             return True, None
-            
+
         # Skip if spend limits not enabled for this user
         if not user.spend_limit_enabled:
             return True, None
-            
+
         # Get current spend
         spend_summary = UserUsages.get_user_spend_summary(user_id)
-        
+
         spend_info = {
             "daily_spend": spend_summary.daily_spend,
             "monthly_spend": spend_summary.monthly_spend,
@@ -68,7 +68,7 @@ def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
             "monthly_limit": user.spend_limit_monthly,
             "limits_enabled": True,
         }
-        
+
         # Check daily limit
         if user.spend_limit_daily is not None:
             if spend_summary.daily_spend >= user.spend_limit_daily:
@@ -77,7 +77,7 @@ def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
                     current_spend=spend_summary.daily_spend,
                     limit=user.spend_limit_daily,
                 )
-        
+
         # Check monthly limit
         if user.spend_limit_monthly is not None:
             if spend_summary.monthly_spend >= user.spend_limit_monthly:
@@ -86,9 +86,9 @@ def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
                     current_spend=spend_summary.monthly_spend,
                     limit=user.spend_limit_monthly,
                 )
-        
+
         return True, spend_info
-        
+
     except SpendLimitExceeded:
         raise
     except Exception as e:
@@ -100,21 +100,21 @@ def check_user_spend_limit(user_id: str) -> Tuple[bool, Optional[dict]]:
 async def enforce_spend_limit(user) -> None:
     """
     Enforce spend limits for a user before processing a chat request.
-    
+
     This function should be called at the start of chat completion endpoints.
-    
+
     Args:
         user: The user model
-        
+
     Raises:
         SpendLimitExceeded: If user has exceeded their spend limit
     """
     if not user or not user.id:
         return
-        
+
     # Admins can optionally bypass spend limits
     # Uncomment the following if admins should bypass:
     # if user.role == "admin":
     #     return
-    
+
     check_user_spend_limit(user.id)

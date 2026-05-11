@@ -310,6 +310,7 @@
 					>
 						<div class="flex gap-1.5 items-center">
 							{$i18n.t('Last Active')}
+							<!-- {$i18n.t('Last Modified')} -->
 
 							{#if orderBy === 'last_active_at'}
 								<span class="font-normal"
@@ -377,6 +378,9 @@
 										class="rounded-full w-6 min-w-6 h-6 object-cover mr-0.5 flex-shrink-0"
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
+										on:error={(e) => {
+											e.currentTarget.src = '/favicon.png';
+										}}
 									/>
 								</ProfilePreview>
 

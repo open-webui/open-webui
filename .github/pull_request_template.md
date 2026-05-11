@@ -10,8 +10,15 @@
 
 This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
 
+<!--
+### ⚠️ Important: Your PR is a contribution, not a guarantee of merge.
+
+The most impactful way to contribute to Open WebUI is through well-written bug reports, detailed feature discussions, and thoughtful ideas. These directly shape the project. If you do open a pull request, please know that Open WebUI is held to the highest standard of code quality, consistency, and architectural coherence, and every line merged becomes something the core team must own, maintain, and support indefinitely. Submitted code may be refactored, rewritten, or used as inspiration for a different implementation. This is not a reflection of your work's quality. It is how we ensure that a small team can deeply understand and evolve every part of the codebase.
+-->
+
 **Before submitting, make sure you've checked the following:**
 
+- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. If one does not exist, create one first. PRs without a linked issue or discussion may be closed without review.
 - [ ] **Target branch:** Verify that the pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
 - [ ] **Description:** Provide a concise description of the changes made in this pull request down below.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.

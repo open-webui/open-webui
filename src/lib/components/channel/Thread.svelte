@@ -84,6 +84,10 @@
 					}
 				}
 			} else if (type === 'message:delete') {
+				if (data.id === threadId) {
+					onClose();
+				}
+
 				if (messages) {
 					messages = messages.filter((message) => message.id !== data.id);
 				}

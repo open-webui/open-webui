@@ -38,7 +38,7 @@
 	};
 </script>
 
-<AddTerminalServerModal bind:show={showAddModal} onSubmit={(server) => addServer(server)} />
+<AddTerminalServerModal direct bind:show={showAddModal} onSubmit={(server) => addServer(server)} />
 
 <div>
 	<div class="flex justify-between items-center mb-1">

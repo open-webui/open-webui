@@ -142,11 +142,13 @@ async def process_batch_parallel(
         processed_count += 1
 
         if error:
-            errors.append({
-                "index": index,
-                "item": items[index],
-                "error": error,
-            })
+            errors.append(
+                {
+                    "index": index,
+                    "item": items[index],
+                    "error": error,
+                }
+            )
             logger.debug(f"Item {index} failed: {error}")
         else:
             successful_results.append(result)
@@ -208,13 +210,11 @@ async def retry_async(
 
             if attempt < max_retries - 1:
                 if exponential:
-                    delay = min(max_delay, base_delay * (2 ** attempt) + random.uniform(0, 1))
+                    delay = min(max_delay, base_delay * (2**attempt) + random.uniform(0, 1))
                 else:
                     delay = base_delay
 
-                logger.debug(
-                    f"Retry {attempt + 1}/{max_retries} after {delay:.1f}s: {e}"
-                )
+                logger.debug(f"Retry {attempt + 1}/{max_retries} after {delay:.1f}s: {e}")
                 await asyncio.sleep(delay)
             else:
                 logger.warning(f"All {max_retries} retries failed: {e}")

@@ -40,7 +40,7 @@ def _get_pg_version(conn) -> tuple[int, int]:
 def upgrade():
     """
     Add JSONB optimizations for message table.
-    
+
     Note: GIN indexes created without CONCURRENTLY since Alembic runs in transaction.
     This causes brief table lock but ensures atomic migration.
     """
@@ -57,20 +57,10 @@ def upgrade():
     try:
         # Convert JSON columns to JSONB
         log.info("Converting message.data from JSON to JSONB")
-        conn.execute(
-            text(
-                "ALTER TABLE message "
-                "ALTER COLUMN data TYPE JSONB USING data::jsonb"
-            )
-        )
+        conn.execute(text("ALTER TABLE message " "ALTER COLUMN data TYPE JSONB USING data::jsonb"))
 
         log.info("Converting message.meta from JSON to JSONB")
-        conn.execute(
-            text(
-                "ALTER TABLE message "
-                "ALTER COLUMN meta TYPE JSONB USING meta::jsonb"
-            )
-        )
+        conn.execute(text("ALTER TABLE message " "ALTER COLUMN meta TYPE JSONB USING meta::jsonb"))
 
         # Set statistics targets for better query planning
         conn.execute(text("ALTER TABLE message ALTER COLUMN data SET STATISTICS 1000"))
@@ -139,14 +129,9 @@ def downgrade():
         op.drop_index("idx_message_channel_parent", table_name="message", if_exists=True)
 
         # Convert JSONB back to JSON
-        conn.execute(
-            text("ALTER TABLE message ALTER COLUMN data TYPE JSON USING data::json")
-        )
-        conn.execute(
-            text("ALTER TABLE message ALTER COLUMN meta TYPE JSON USING meta::json")
-        )
+        conn.execute(text("ALTER TABLE message ALTER COLUMN data TYPE JSON USING data::json"))
+        conn.execute(text("ALTER TABLE message ALTER COLUMN meta TYPE JSON USING meta::json"))
 
         log.info("JSONB indexes and types reverted")
     except Exception as e:
         log.error(f"Downgrade error: {e}")
-

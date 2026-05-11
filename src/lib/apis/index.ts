@@ -2,6 +2,23 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+const TOOL_SERVER_FETCH_TIMEOUT = 10000;
+
+// Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
+// and non-operation path-item fields (summary, description, servers, parameters).
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
+
+// Every request sent from here is a petition. May it reach
+// the one for whom it was intended, and return answered.
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
@@ -155,11 +172,47 @@ export const getModels = async (
 	return models;
 };
 
+export const unloadModel = async (token: string, model: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models/unload`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ model })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 type ChatCompletedForm = {
 	model: string;
-	messages: string[];
+	messages: Record<string, unknown>[];
 	chat_id: string;
-	session_id: string;
+	session_id: string | undefined;
+	id: string;
+	filter_ids?: string[];
+	model_item?: unknown;
 };
 
 export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
@@ -266,10 +319,42 @@ export const stopTask = async (token: string, id: string) => {
 	return res;
 };
 
+export const stopTasksByChatId = async (token: string, chat_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}/stop`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${chat_id}`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chat_id)}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -302,6 +387,7 @@ export const getToolServerData = async (token: string, url: string) => {
 	let error = null;
 
 	const res = await fetch(`${url}`, {
+		signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -322,7 +408,9 @@ export const getToolServerData = async (token: string, url: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
+			if (err?.name === 'TimeoutError') {
+				error = `Connection to ${url} timed out`;
+			} else if ('detail' in err) {
 				error = err.detail;
 			} else {
 				error = err;
@@ -392,12 +480,43 @@ export const getToolServersData = async (servers: object[]) => {
 							specs: convertOpenApiToToolPayload(res)
 						};
 
-						return {
+						const result: Record<string, any> = {
 							url: server?.url,
 							openapi: openapi,
 							info: info,
 							specs: specs
 						};
+
+						// Fetch system prompt if the server supports it
+						try {
+							const baseUrl = (server?.url ?? '').replace(/\/$/, '');
+							const configRes = await fetch(`${baseUrl}/api/config`, {
+								signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT)
+							});
+							if (configRes.ok) {
+								const config = await configRes.json();
+								if (config?.features?.system) {
+									const headers: Record<string, string> = {};
+									if (toolServerToken) {
+										headers['Authorization'] = `Bearer ${toolServerToken}`;
+									}
+									const systemRes = await fetch(`${baseUrl}/system`, {
+										signal: AbortSignal.timeout(TOOL_SERVER_FETCH_TIMEOUT),
+										headers
+									});
+									if (systemRes.ok) {
+										const systemData = await systemRes.json();
+										if (systemData?.prompt) {
+											result.system_prompt = systemData.prompt;
+										}
+									}
+								}
+							}
+						} catch (e) {
+							// Server doesn't support /system — that's fine
+						}
+
+						return result;
 					} else if (error) {
 						return {
 							error,
@@ -416,14 +535,21 @@ export const executeToolServer = async (
 	url: string,
 	name: string,
 	params: Record<string, any>,
-	serverData: { openapi: any; info: any; specs: any }
+	serverData: { openapi: any; info: any; specs: any },
+	sessionId?: string
 ) => {
 	let error = null;
 
 	try {
-		// Find the matching operationId in the OpenAPI spec
+		// Find the matching operationId in the OpenAPI spec (only valid HTTP methods)
 		const matchingRoute = Object.entries(serverData.openapi.paths).find(([_, methods]) =>
-			Object.entries(methods as any).some(([__, operation]: any) => operation.operationId === name)
+			Object.entries(methods as any).some(
+				([method, operation]: any) =>
+					OPENAPI_HTTP_METHODS.has(method) &&
+					operation &&
+					typeof operation === 'object' &&
+					operation.operationId === name
+			)
 		);
 
 		if (!matchingRoute) {
@@ -433,7 +559,11 @@ export const executeToolServer = async (
 		const [routePath, methods] = matchingRoute;
 
 		const methodEntry = Object.entries(methods as any).find(
-			([_, operation]: any) => operation.operationId === name
+			([method, operation]: any) =>
+				OPENAPI_HTTP_METHODS.has(method) &&
+				operation &&
+				typeof operation === 'object' &&
+				operation.operationId === name
 		);
 
 		if (!methodEntry) {
@@ -442,24 +572,36 @@ export const executeToolServer = async (
 
 		const [httpMethod, operation]: [string, any] = methodEntry;
 
+		// Merge path-level and operation-level parameters.
+		// Operation-level params override path-level params with the same (name, in).
+		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
+			? (methods as any).parameters
+			: [];
+		const opParams: any[] = Array.isArray(operation.parameters) ? operation.parameters : [];
+		const mergedParams = new Map();
+		for (const param of pathLevelParams) {
+			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+		}
+		for (const param of opParams) {
+			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+		}
+
 		// Split parameters by type
 		const pathParams: Record<string, any> = {};
 		const queryParams: Record<string, any> = {};
 		let bodyParams: any = {};
 
-		if (operation.parameters) {
-			operation.parameters.forEach((param: any) => {
-				const paramName = param?.name;
-				if (!paramName) return;
-				const paramIn = param?.in;
-				if (params.hasOwnProperty(paramName)) {
-					if (paramIn === 'path') {
-						pathParams[paramName] = params[paramName];
-					} else if (paramIn === 'query') {
-						queryParams[paramName] = params[paramName];
-					}
+		for (const param of mergedParams.values()) {
+			const paramName = param?.name;
+			if (!paramName) continue;
+			const paramIn = param?.in;
+			if (params.hasOwnProperty(paramName)) {
+				if (paramIn === 'path') {
+					pathParams[paramName] = params[paramName];
+				} else if (paramIn === 'query') {
+					queryParams[paramName] = params[paramName];
 				}
-			});
+			}
 		}
 
 		let finalUrl = `${url}${routePath}`;
@@ -493,6 +635,7 @@ export const executeToolServer = async (
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		};
+		if (sessionId) headers['X-Session-Id'] = sessionId;
 
 		const requestOptions: RequestInit = {
 			method: httpMethod.toUpperCase(),
@@ -518,13 +661,24 @@ export const executeToolServer = async (
 			responseHeaders[key] = value;
 		});
 
-		const text = await res.text();
 		let responseData;
+		const contentType = res.headers.get('Content-Type')?.split(';')[0]?.trim() ?? '';
 
 		try {
-			responseData = JSON.parse(text);
+			responseData = await res.clone().json();
 		} catch {
-			responseData = text;
+			if (contentType.startsWith('text/') || !contentType) {
+				responseData = await res.text();
+			} else {
+				const buf = await res.arrayBuffer();
+				const bytes = new Uint8Array(buf);
+				let binary = '';
+				for (let i = 0; i < bytes.length; i++) {
+					binary += String.fromCharCode(bytes[i]);
+				}
+				const b64 = btoa(binary);
+				responseData = `data:${contentType};base64,${b64}`;
+			}
 		}
 		return [responseData, responseHeaders];
 	} catch (err: any) {
@@ -1434,6 +1588,32 @@ export const getBackendConfig = async () => {
 		});
 
 	if (error) {
+		// When a forward-auth proxy (e.g. Authentik/Traefik) intercepts the
+		// request and redirects to an external login page, the browser blocks
+		// the cross-origin redirect for fetch() and throws a TypeError.
+		// Detect this by re-fetching with redirect:"manual" — if the server
+		// responded with a redirect, the probe returns an opaque redirect
+		// response instead of throwing, confirming the backend is alive but
+		// an auth proxy is intercepting.
+		if (error instanceof TypeError) {
+			try {
+				const probeRes = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+					method: 'GET',
+					credentials: 'include',
+					redirect: 'manual',
+					headers: { 'Content-Type': 'application/json' }
+				});
+				if (
+					probeRes.type === 'opaqueredirect' ||
+					(probeRes.status >= 300 && probeRes.status < 400)
+				) {
+					throw { authRedirect: true };
+				}
+			} catch (probeErr: any) {
+				if (probeErr?.authRedirect) throw probeErr;
+				// Probe also failed — genuine network/backend issue
+			}
+		}
 		throw error;
 	}
 

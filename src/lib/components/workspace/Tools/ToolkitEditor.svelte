@@ -8,6 +8,7 @@
 	import { user } from '$lib/stores';
 	import { updateToolAccessGrants } from '$lib/apis/tools';
 
+	import { nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
@@ -45,7 +46,7 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = nameToId(name);
 	}
 
 	let codeEditor;
@@ -178,11 +179,11 @@ class Tools:
 			content = _content;
 			await tick();
 
-			if (res) {
-				console.log('Code formatted successfully');
-
-				saveHandler();
+			if (!res) {
+				console.warn('Code formatting failed or was skipped, saving unformatted code');
 			}
+
+			saveHandler();
 		}
 	};
 </script>

@@ -34,12 +34,8 @@ class GmailSyncStatus(Base):
     user_id = Column(String, primary_key=True)
 
     # Sync tracking
-    last_sync_timestamp = Column(
-        BigInteger, nullable=True
-    )  # Unix timestamp of last sync
-    last_sync_history_id = Column(
-        String, nullable=True
-    )  # Gmail history ID for incremental sync
+    last_sync_timestamp = Column(BigInteger, nullable=True)  # Unix timestamp of last sync
+    last_sync_history_id = Column(String, nullable=True)  # Gmail history ID for incremental sync
     last_sync_email_id = Column(String, nullable=True)  # Last processed email ID
 
     # Sync statistics
@@ -48,7 +44,7 @@ class GmailSyncStatus(Base):
     last_sync_duration = Column(Integer, default=0)  # Last sync duration in seconds
 
     # Sync status and configuration
-    # Valid statuses: "never" (initial), "active" (sync in progress), 
+    # Valid statuses: "never" (initial), "active" (sync in progress),
     # "completed" (sync finished successfully), "paused", "error"
     sync_status = Column(String, default="never")
     sync_enabled = Column(Boolean, default=True)  # Whether sync is enabled for user
@@ -130,9 +126,7 @@ class GmailSyncStatusTable:
 
                 # Create new status
                 now = int(time.time())
-                sync_status = GmailSyncStatus(
-                    user_id=user_id, created_at=now, updated_at=now
-                )
+                sync_status = GmailSyncStatus(user_id=user_id, created_at=now, updated_at=now)
 
                 db.add(sync_status)
                 db.commit()
@@ -145,9 +139,7 @@ class GmailSyncStatusTable:
             log.error(f"Error creating sync status for user {user_id}: {e}")
             raise
 
-    def update_sync_status(
-        self, user_id: str, **updates
-    ) -> Optional[GmailSyncStatusModel]:
+    def update_sync_status(self, user_id: str, **updates) -> Optional[GmailSyncStatusModel]:
         """Update sync status for a user with transaction safety"""
         if not user_id or not isinstance(user_id, str):
             log.error(f"Invalid user_id: {user_id}")
@@ -156,9 +148,7 @@ class GmailSyncStatusTable:
         try:
             with get_db() as db:
                 try:
-                    status = (
-                        db.query(GmailSyncStatus).filter_by(user_id=user_id).first()
-                    )
+                    status = db.query(GmailSyncStatus).filter_by(user_id=user_id).first()
                     if not status:
                         log.warning(f"No sync status found for user {user_id}")
                         return None
@@ -197,9 +187,7 @@ class GmailSyncStatusTable:
 
                 except Exception as e:
                     db.rollback()
-                    log.error(
-                        f"Database error updating sync status for user {user_id}: {e}"
-                    )
+                    log.error(f"Database error updating sync status for user {user_id}: {e}")
                     return None
 
         except Exception as e:
@@ -227,9 +215,7 @@ class GmailSyncStatusTable:
         try:
             with get_db() as db:
                 # Get current total first
-                current_status = (
-                    db.query(GmailSyncStatus).filter_by(user_id=user_id).first()
-                )
+                current_status = db.query(GmailSyncStatus).filter_by(user_id=user_id).first()
                 if not current_status:
                     log.error(f"No sync status found for user {user_id}")
                     return None
@@ -253,16 +239,12 @@ class GmailSyncStatusTable:
             log.error(f"Error marking sync complete for user {user_id}: {e}")
             return None
 
-    def mark_sync_error(
-        self, user_id: str, error_message: str
-    ) -> Optional[GmailSyncStatusModel]:
+    def mark_sync_error(self, user_id: str, error_message: str) -> Optional[GmailSyncStatusModel]:
         """Mark sync as failed with error"""
         try:
             with get_db() as db:
                 # Get current error count first
-                current_status = (
-                    db.query(GmailSyncStatus).filter_by(user_id=user_id).first()
-                )
+                current_status = db.query(GmailSyncStatus).filter_by(user_id=user_id).first()
                 if not current_status:
                     log.error(f"No sync status found for user {user_id}")
                     return None
@@ -280,26 +262,26 @@ class GmailSyncStatusTable:
             return None
 
     def get_users_needing_sync(
-        self, 
+        self,
         max_hours_since_sync: float = 24,
         stuck_sync_timeout_hours: float = 2.0,
     ) -> list[str]:
         """
         Get list of user IDs that need syncing (production-optimized).
-        
+
         Performance features:
         - Uses indexed columns (sync_enabled, auto_sync_enabled, sync_status, last_sync_timestamp)
         - Selects only user_id (minimal data transfer)
         - Query benefits from composite index: gmail_sync_enabled_idx
         - Executes as single SELECT with WHERE clause
         - Auto-recovers stuck syncs that have been "active" too long
-        
+
         Args:
-            max_hours_since_sync: Hours since last sync to consider stale (can be fractional, 
+            max_hours_since_sync: Hours since last sync to consider stale (can be fractional,
                                   e.g., 0.25 for 15 minutes)
             stuck_sync_timeout_hours: Hours after which an "active" sync is considered stuck
                                       and should be reset (default: 2 hours)
-            
+
         Returns:
             list[str]: User IDs needing sync
         """
@@ -310,14 +292,17 @@ class GmailSyncStatusTable:
 
                 # First, log total users with sync records for debugging
                 total_sync_records = db.query(GmailSyncStatus).count()
-                enabled_users = db.query(GmailSyncStatus).filter(
-                    GmailSyncStatus.sync_enabled == True,
-                    GmailSyncStatus.auto_sync_enabled == True,
-                ).count()
-                
+                enabled_users = (
+                    db.query(GmailSyncStatus)
+                    .filter(
+                        GmailSyncStatus.sync_enabled == True,
+                        GmailSyncStatus.auto_sync_enabled == True,
+                    )
+                    .count()
+                )
+
                 log.debug(
-                    f"Gmail sync status: {total_sync_records} total records, "
-                    f"{enabled_users} with sync+auto enabled"
+                    f"Gmail sync status: {total_sync_records} total records, " f"{enabled_users} with sync+auto enabled"
                 )
 
                 # Check for stuck syncs first (sync_status == "active" but updated_at is old)
@@ -331,7 +316,7 @@ class GmailSyncStatusTable:
                     )
                     .all()
                 )
-                
+
                 # Auto-reset stuck syncs
                 stuck_user_ids = []
                 for stuck in stuck_syncs:
@@ -344,7 +329,7 @@ class GmailSyncStatusTable:
                     stuck.last_error = f"Sync timed out after {stuck_duration_hours:.1f} hours (auto-reset)"
                     stuck.updated_at = int(time.time())
                     stuck_user_ids.append(stuck.user_id)
-                
+
                 if stuck_syncs:
                     db.commit()
                     log.info(f"🔄 Auto-reset {len(stuck_syncs)} stuck sync(s)")
@@ -368,26 +353,34 @@ class GmailSyncStatusTable:
                 )
 
                 result = [user.user_id for user in users]
-                
+
                 if not result and enabled_users > 0:
                     # Debug: Check why enabled users aren't being picked up
-                    active_users = db.query(GmailSyncStatus).filter(
-                        GmailSyncStatus.sync_enabled == True,
-                        GmailSyncStatus.auto_sync_enabled == True,
-                        GmailSyncStatus.sync_status == "active",
-                    ).count()
-                    
-                    recent_users = db.query(GmailSyncStatus).filter(
-                        GmailSyncStatus.sync_enabled == True,
-                        GmailSyncStatus.auto_sync_enabled == True,
-                        GmailSyncStatus.last_sync_timestamp >= cutoff_time,
-                    ).count()
-                    
+                    active_users = (
+                        db.query(GmailSyncStatus)
+                        .filter(
+                            GmailSyncStatus.sync_enabled == True,
+                            GmailSyncStatus.auto_sync_enabled == True,
+                            GmailSyncStatus.sync_status == "active",
+                        )
+                        .count()
+                    )
+
+                    recent_users = (
+                        db.query(GmailSyncStatus)
+                        .filter(
+                            GmailSyncStatus.sync_enabled == True,
+                            GmailSyncStatus.auto_sync_enabled == True,
+                            GmailSyncStatus.last_sync_timestamp >= cutoff_time,
+                        )
+                        .count()
+                    )
+
                     log.info(
                         f"📊 No users need sync: {active_users} currently syncing, "
                         f"{recent_users} synced recently (within {max_hours_since_sync:.2f}h)"
                     )
-                
+
                 return result
 
         except Exception as e:

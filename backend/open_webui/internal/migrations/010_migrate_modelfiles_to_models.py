@@ -42,12 +42,12 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Fetch data from 'modelfile' table and insert into 'model' table
     migrate_modelfile_to_model(migrator, database)
     # Drop the 'modelfile' table
-    migrator.remove_model("modelfile")
+    migrator.remove_model('modelfile')
 
 
 def migrate_modelfile_to_model(migrator: Migrator, database: pw.Database):
-    ModelFile = migrator.orm["modelfile"]
-    Model = migrator.orm["model"]
+    ModelFile = migrator.orm['modelfile']
+    Model = migrator.orm['model']
 
     modelfiles = ModelFile.select()
 
@@ -57,25 +57,25 @@ def migrate_modelfile_to_model(migrator: Migrator, database: pw.Database):
         modelfile.modelfile = json.loads(modelfile.modelfile)
         meta = json.dumps(
             {
-                "description": modelfile.modelfile.get("desc"),
-                "profile_image_url": modelfile.modelfile.get("imageUrl"),
-                "ollama": {"modelfile": modelfile.modelfile.get("content")},
-                "suggestion_prompts": modelfile.modelfile.get("suggestionPrompts"),
-                "categories": modelfile.modelfile.get("categories"),
-                "user": {**modelfile.modelfile.get("user", {}), "community": True},
+                'description': modelfile.modelfile.get('desc'),
+                'profile_image_url': modelfile.modelfile.get('imageUrl'),
+                'ollama': {'modelfile': modelfile.modelfile.get('content')},
+                'suggestion_prompts': modelfile.modelfile.get('suggestionPrompts'),
+                'categories': modelfile.modelfile.get('categories'),
+                'user': {**modelfile.modelfile.get('user', {}), 'community': True},
             }
         )
 
-        info = parse_ollama_modelfile(modelfile.modelfile.get("content"))
+        info = parse_ollama_modelfile(modelfile.modelfile.get('content'))
 
         # Insert the processed data into the 'model' table
         Model.create(
-            id=f"ollama-{modelfile.tag_name}",
+            id=f'ollama-{modelfile.tag_name}',
             user_id=modelfile.user_id,
-            base_model_id=info.get("base_model_id"),
-            name=modelfile.modelfile.get("title"),
+            base_model_id=info.get('base_model_id'),
+            name=modelfile.modelfile.get('title'),
             meta=meta,
-            params=json.dumps(info.get("params", {})),
+            params=json.dumps(info.get('params', {})),
             created_at=modelfile.timestamp,
             updated_at=modelfile.timestamp,
         )
@@ -86,7 +86,7 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
 
     recreate_modelfile_table(migrator, database)
     move_data_back_to_modelfile(migrator, database)
-    migrator.remove_model("model")
+    migrator.remove_model('model')
 
 
 def recreate_modelfile_table(migrator: Migrator, database: pw.Database):
@@ -102,8 +102,8 @@ def recreate_modelfile_table(migrator: Migrator, database: pw.Database):
 
 
 def move_data_back_to_modelfile(migrator: Migrator, database: pw.Database):
-    Model = migrator.orm["model"]
-    Modelfile = migrator.orm["modelfile"]
+    Model = migrator.orm['model']
+    Modelfile = migrator.orm['modelfile']
 
     models = Model.select()
 
@@ -112,13 +112,13 @@ def move_data_back_to_modelfile(migrator: Migrator, database: pw.Database):
         meta = json.loads(model.meta)
 
         modelfile_data = {
-            "title": model.name,
-            "desc": meta.get("description"),
-            "imageUrl": meta.get("profile_image_url"),
-            "content": meta.get("ollama", {}).get("modelfile"),
-            "suggestionPrompts": meta.get("suggestion_prompts"),
-            "categories": meta.get("categories"),
-            "user": {k: v for k, v in meta.get("user", {}).items() if k != "community"},
+            'title': model.name,
+            'desc': meta.get('description'),
+            'imageUrl': meta.get('profile_image_url'),
+            'content': meta.get('ollama', {}).get('modelfile'),
+            'suggestionPrompts': meta.get('suggestion_prompts'),
+            'categories': meta.get('categories'),
+            'user': {k: v for k, v in meta.get('user', {}).items() if k != 'community'},
         }
 
         # Insert the processed data back into the 'modelfile' table
