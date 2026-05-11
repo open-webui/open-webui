@@ -87,3 +87,38 @@ async def has_access_to_file(
                 return True
 
     return False
+
+
+async def get_accessible_folder_files(
+    entries: list[dict] | None,
+    user: UserModel,
+    db: AsyncSession | None = None,
+) -> list[dict]:
+    """Filter folder.data['files'] entries to those the caller can read.
+
+    Each entry is expected to have 'type' ('file' or 'collection') and 'id'.
+    Admins bypass all checks. Unknown types are kept as-is.
+    """
+    if not entries:
+        return []
+    if user.role == 'admin':
+        return list(entries)
+
+    accessible: list[dict] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        entry_type = entry.get('type')
+        entry_id = entry.get('id')
+        if not entry_id:
+            accessible.append(entry)
+            continue
+        if entry_type == 'file':
+            if await has_access_to_file(entry_id, 'read', user, db=db):
+                accessible.append(entry)
+        elif entry_type == 'collection':
+            if await Knowledges.check_access_by_user_id(entry_id, user.id, 'read', db=db):
+                accessible.append(entry)
+        else:
+            accessible.append(entry)
+    return accessible

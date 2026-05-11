@@ -62,7 +62,7 @@ from open_webui.utils.session_pool import (
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.headers import include_user_info_headers, get_custom_headers
 from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 
 log = logging.getLogger(__name__)
@@ -215,7 +215,8 @@ async def get_headers_and_cookies(
         headers['Authorization'] = f'Bearer {token}'
 
     if config.get('headers') and isinstance(config.get('headers'), dict):
-        headers = {**headers, **config.get('headers')}
+        custom_headers = get_custom_headers(config.get('headers'), user, metadata)
+        headers.update(custom_headers)
 
     return headers, cookies
 
@@ -439,6 +440,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             connection_type = api_config.get('connection_type', 'external')
             prefix_id = api_config.get('prefix_id', None)
             tags = api_config.get('tags', [])
+            provider = api_config.get('provider', '')
 
             model_list = response if isinstance(response, list) else response.get('data', [])
             if not isinstance(model_list, list):
@@ -458,6 +460,9 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
                 if connection_type:
                     model['connection_type'] = connection_type
+
+                if provider:
+                    model['provider'] = provider
 
     log.debug(f'get_all_models:responses() {responses}')
     return responses
@@ -486,6 +491,39 @@ async def get_filtered_models(models, user, db=None):
             if user.id == model_info.user_id or model_info.id in accessible_model_ids:
                 filtered_models.append(model)
     return filtered_models
+
+
+async def get_openai_loaded_models(request: Request, models: dict, api_base_urls: list):
+    """
+    Fetch loaded-model state from providers that expose it and annotate
+    each model dict with a ``loaded`` boolean.
+
+    Currently supports:
+      - **llama.cpp** – queries ``GET /slots`` and matches slot model IDs.
+    """
+    api_configs = request.app.state.config.OPENAI_API_CONFIGS
+    api_keys = request.app.state.config.OPENAI_API_KEYS
+
+    for idx, url in enumerate(api_base_urls):
+        api_config = api_configs.get(
+            str(idx),
+            api_configs.get(url, {}),
+        )
+        provider = api_config.get('provider', '')
+
+        if provider == 'llama.cpp':
+            try:
+                root_url = url.rstrip('/').removesuffix('/v1')
+                key = api_keys[idx] if idx < len(api_keys) else None
+                slots = await send_get_request(url=f'{root_url}/slots', key=key)
+                loaded_model_ids = (
+                    {s.get('model') for s in slots if s.get('model')} if isinstance(slots, list) else set()
+                )
+                for model_id, model in models.items():
+                    if model.get('urlIdx') == idx:
+                        model['loaded'] = model_id in loaded_model_ids
+            except Exception as e:
+                log.debug(f'Failed to fetch llama.cpp slots for idx {idx}: {e}')
 
 
 @cached(
@@ -548,6 +586,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             'owned_by': 'openai',
                             'openai': model,
                             'connection_type': model.get('connection_type', 'external'),
+                            'provider': model.get('provider', ''),
                             'urlIdx': idx,
                         }
 
@@ -555,6 +594,9 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
     models = get_merged_models(map(extract_data, responses))
     log.debug(f'models: {models}')
+
+    # Fetch loaded state for providers that support it (e.g. llama.cpp /slots)
+    await get_openai_loaded_models(request, models, api_base_urls)
 
     request.app.state.OPENAI_MODELS = models
     return {'data': list(models.values())}
@@ -1077,7 +1119,7 @@ async def generate_chat_completion(
 
             payload = apply_model_params_to_body_openai(params, payload)
             if not bypass_system_prompt:
-                payload = apply_system_prompt_to_body(system, payload, metadata, user)
+                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
         await check_model_access(user, model_info, bypass_filter)
     else:

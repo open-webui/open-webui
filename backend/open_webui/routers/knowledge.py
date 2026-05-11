@@ -31,6 +31,7 @@ from open_webui.storage.provider import Storage
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.access_grants import AccessGrants
 
 
@@ -656,6 +657,14 @@ async def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
+    # KB write-access alone is not enough — caller must also be able to read the file.
+    if file.user_id != user.id and user.role != 'admin':
+        if not await has_access_to_file(file.id, 'read', user, db=db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
     # Add content to the vector database
     try:
         await process_file(
@@ -1016,6 +1025,15 @@ async def add_files_to_knowledge_batch(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'File {missing_ids[0]} not found',
         )
+
+    # Per-file read-access check — same gate as the single-file endpoint.
+    if user.role != 'admin':
+        for file in files:
+            if file.user_id != user.id and not await has_access_to_file(file.id, 'read', user, db=db):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
 
     # Process files
     try:

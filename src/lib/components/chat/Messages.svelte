@@ -140,17 +140,48 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		if (element) {
+			element.scrollTop = element.scrollHeight;
+
+			// Follow-up scroll to account for content-visibility: auto re-layouts
+			requestAnimationFrame(() => {
+				if (element) {
+					element.scrollTop = element.scrollHeight;
+				}
+			});
+		}
+	};
+
+	export const scrollToTop = async () => {
+		messagesCount = null;
+		buildMessages();
+		await tick();
+		if (messages.length > 0) {
+			const firstMessageEl = document.getElementById(`message-${messages[0].id}`);
+			if (firstMessageEl) {
+				firstMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
 	};
 
 	const updateChat = async () => {
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			await updateChatById(localStorage.token, chatId, {
+			const res = await updateChatById(localStorage.token, chatId, {
 				history: history,
 				messages: messages
 			});
+
+			// Refresh local message content from backend (e.g. re-derived via serialize_output)
+			if (res?.chat?.history?.messages) {
+				for (const [id, msg] of Object.entries(res.chat.history.messages)) {
+					if (history.messages[id] && (msg as any).content) {
+						history.messages[id].content = (msg as any).content;
+					}
+				}
+				history = history;
+			}
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -305,7 +336,7 @@
 		await updateChat();
 	};
 
-	const editMessage = async (messageId, { content, files }, submit = true) => {
+	const editMessage = async (messageId, { content, files, output = undefined }, submit = true) => {
 		if ((selectedModels ?? []).filter((id) => id).length === 0) {
 			toast.error($i18n.t('Model not selected'));
 			return;
@@ -349,7 +380,7 @@
 			}
 		} else {
 			if (submit) {
-				// New response message
+				// New response message (Save As Copy)
 				const responseMessageId = uuidv4();
 				const message = history.messages[messageId];
 				const parentId = message.parentId;
@@ -361,6 +392,7 @@
 					childrenIds: [],
 					files: undefined,
 					content: content,
+					output: output ?? undefined,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -380,6 +412,9 @@
 				// Edit response message
 				history.messages[messageId].originalContent = history.messages[messageId].content;
 				history.messages[messageId].content = content;
+				if (output !== undefined) {
+					history.messages[messageId].output = output;
+				}
 				await updateChat();
 			}
 		}

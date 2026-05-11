@@ -106,6 +106,7 @@ from open_webui.utils.tools import (
     get_terminal_tools,
 )
 from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -969,7 +970,7 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
     return context_string
 
 
-def apply_source_context_to_messages(
+async def apply_source_context_to_messages(
     request: Request,
     messages: list,
     sources: list,
@@ -995,13 +996,13 @@ def apply_source_context_to_messages(
 
     if RAG_SYSTEM_CONTEXT:
         return add_or_update_system_message(
-            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
+            await rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=True,
         )
     else:
         return add_or_update_user_message(
-            rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
+            await rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=False,
         )
@@ -1707,7 +1708,7 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     """
     Add file URLs to messages for native function calling.
     """
-    if not chat_id or chat_id.startswith('local:'):
+    if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
         return messages
 
     chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -1763,7 +1764,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
 
-    if chat_id.startswith('local:'):
+    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
         message_list = form_data.get('messages', [])
     else:
         chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -2165,7 +2166,27 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     return [{k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files')} for msg in db_messages]
 
 
-def process_messages_with_output(messages: list[dict]) -> list[dict]:
+def get_reasoning_format(model: dict) -> str | None:
+    """
+    Determine how reasoning should be included in reconstructed messages.
+
+    Returns:
+        'think_tags': Ollama expects <think> tags in content.
+        'reasoning_content': llama.cpp supports reasoning_content as a top-level field.
+        None: skip reasoning (safe default for strict providers).
+    """
+    provider = model.get('provider', '')
+    if provider == 'ollama':
+        return 'think_tags'
+    if provider == 'llama.cpp':
+        return 'reasoning_content'
+    return None
+
+
+def process_messages_with_output(
+    messages: list[dict],
+    reasoning_format: str | None = None,
+) -> list[dict]:
     """
     Process messages with OR-aligned output items for LLM consumption.
 
@@ -2177,7 +2198,11 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
             # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(message['output'], raw=True)
+            output_messages = convert_output_to_messages(
+                message['output'],
+                raw=True,
+                reasoning_format=reasoning_format,
+            )
             if output_messages:
                 processed.extend(output_messages)
                 continue
@@ -2263,14 +2288,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f'form_data: {form_data}')
 
+    # Guided regeneration: extract before it reaches the LLM provider
+    regeneration_prompt = form_data.pop('regeneration_prompt', None)
+
     # Load messages from DB when available — DB preserves structured 'output' items
     # which the frontend strips, causing tool calls to be merged into content.
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
 
-    if chat_id and user_message_id and not chat_id.startswith('local:'):
+    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
         db_messages = await load_messages_from_db(chat_id, user_message_id)
         if db_messages:
+            # Continue: frontend sends assistant_message_id when continuing
+            # an existing response. Load its content so the LLM sees prior output.
+            assistant_message_id = metadata.get('assistant_message_id')
+            if assistant_message_id:
+                assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
+                if assistant_message and (assistant_message.get('content') or assistant_message.get('output')):
+                    db_messages.append(
+                        {k: v for k, v in assistant_message.items() if k in ('role', 'content', 'output', 'files')}
+                    )
+
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
@@ -2298,13 +2336,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 # Strip files field — it's been incorporated into content
                 message.pop('files', None)
 
+    if regeneration_prompt:
+        form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
+
     # Process messages with OR-aligned output items for clean LLM messages
-    form_data['messages'] = process_messages_with_output(form_data.get('messages', []))
+    form_data['messages'] = process_messages_with_output(
+        form_data.get('messages', []),
+        reasoning_format=get_reasoning_format(model),
+    )
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings
         try:
-            form_data = apply_system_prompt_to_body(
+            form_data = await apply_system_prompt_to_body(
                 system_message.get('content'), form_data, metadata, user, replace=True
             )  # Required to handle system prompt variables
         except Exception:
@@ -2362,17 +2406,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if folder and folder.data:
             if 'system_prompt' in folder.data:
-                form_data = apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
+                form_data = await apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
             if 'files' in folder.data:
+                # Defensive: filter to entries the caller can still read.
+                allowed_files = await get_accessible_folder_files(folder.data['files'], user)
                 if metadata.get('params', {}).get('function_calling') != 'native':
                     form_data['files'] = [
-                        *folder.data['files'],
+                        *allowed_files,
                         *form_data.get('files', []),
                     ]
                 else:
                     # Native FC: skip RAG injection, builtin tools
                     # will read folder knowledge from metadata.
-                    metadata['folder_knowledge'] = folder.data['files']
+                    metadata['folder_knowledge'] = allowed_files
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data['messages'])
@@ -2417,6 +2463,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         form_data['files'] = files
 
     variables = form_data.pop('variables', None)
+    payload_tools = form_data.get('tools', None)  # snapshot before filters
 
     # Process the form_data through the pipeline
     try:
@@ -2442,8 +2489,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params['__features__'] = features
     if features:
         if 'voice' in features and features['voice']:
-            if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
-                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != '':
+            if getattr(request.app.state.config, 'ENABLE_VOICE_MODE_PROMPT', True):
+                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE:
                     template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
                 else:
                     template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
@@ -2507,9 +2554,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
 
-    # Caller-provided OpenAI-style tools take precedence over server-side
-    # tool resolution (tool_ids, MCP servers, builtin tools).
-    payload_tools = form_data.get('tools', None)
+    # If the original caller provided tools, use them as-is (skip resolution).
+    # Otherwise, save any tools that filter inlets added for merging later.
+    inlet_filter_tools = None if payload_tools else form_data.get('tools', None)
 
     # Skills — extract IDs from message content (<$skillId|label> tags) so
     # persisted chats work without relying on the frontend to send skill_ids.
@@ -2571,7 +2618,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
                     if folder and folder.data and 'files' in folder.data:
                         files = [f for f in files if f.get('id', None) != folder_id]
-                        files = [*files, *folder.data['files']]
+                        files = [*files, *await get_accessible_folder_files(folder.data['files'], user)]
 
         # files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
         # Remove duplicate files based on their content
@@ -2818,6 +2865,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
                 ]
+                if inlet_filter_tools:
+                    form_data['tools'].extend(inlet_filter_tools)
             else:
                 # If the function calling is not native, then call the tools function calling handler
                 try:
@@ -2848,7 +2897,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # If context is not empty, insert it into the messages
     if sources and prompt:
-        form_data['messages'] = apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
+        form_data['messages'] = await apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
 
     # If there are citations, add them to the data_items
     sources = [
@@ -3009,7 +3058,11 @@ async def background_tasks_handler(ctx):
     message = None
     messages = []
 
-    if 'chat_id' in metadata and not metadata['chat_id'].startswith('local:'):
+    if (
+        'chat_id' in metadata
+        and not metadata['chat_id'].startswith('local:')
+        and not metadata['chat_id'].startswith('channel:')
+    ):
         messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
         message = messages_map.get(metadata['message_id']) if messages_map else None
 
@@ -3089,7 +3142,9 @@ async def background_tasks_handler(ctx):
                             }
                         )
 
-                        if not metadata.get('chat_id', '').startswith('local:'):
+                        if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
+                            'chat_id', ''
+                        ).startswith('channel:'):
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
                                 metadata['message_id'],
@@ -3101,7 +3156,9 @@ async def background_tasks_handler(ctx):
                     except Exception as e:
                         pass
 
-            if not metadata.get('chat_id', '').startswith('local:'):  # Only update titles and tags for non-temp chats
+            if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith(
+                'channel:'
+            ):  # Only update titles and tags for non-temp chats
                 if TASKS.TITLE_GENERATION in tasks:
                     user_message = get_last_user_message(messages)
                     if user_message and len(user_message) > 100:
@@ -3225,7 +3282,7 @@ async def outlet_filter_handler(ctx):
     if not chat_id or not message_id:
         return
 
-    is_temp_chat = chat_id.startswith('local:')
+    is_temp_chat = chat_id.startswith('local:') or chat_id.startswith('channel:')
 
     try:
         messages_map = None
@@ -3367,13 +3424,14 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 log.error('Provider returned error (non-streaming): %s', error)
 
-                await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata['chat_id'],
-                    metadata['message_id'],
-                    {
-                        'error': {'content': error},
-                    },
-                )
+                if not metadata['chat_id'].startswith('channel:'):
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {
+                            'error': {'content': error},
+                        },
+                    )
                 if isinstance(error, str) or isinstance(error, dict):
                     await event_emitter(
                         {
@@ -3382,7 +3440,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-            if 'selected_model_id' in response_data:
+            if 'selected_model_id' in response_data and not metadata['chat_id'].startswith('channel:'):
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata['chat_id'],
                     metadata['message_id'],
@@ -3403,7 +3461,11 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-                    title = await Chats.get_chat_title_by_id(metadata['chat_id'])
+                    title = (
+                        await Chats.get_chat_title_by_id(metadata['chat_id'])
+                        if not metadata['chat_id'].startswith('channel:')
+                        else ''
+                    )
 
                     # Use output from backend if provided (OR-compliant backends),
                     # otherwise generate from response content
@@ -3434,17 +3496,18 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
-                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata['chat_id'],
-                        metadata['message_id'],
-                        {
-                            'done': True,
-                            'role': 'assistant',
-                            'content': content,
-                            'output': response_output,
-                            **({'usage': usage} if usage else {}),
-                        },
-                    )
+                    if not metadata['chat_id'].startswith('channel:'):
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {
+                                'done': True,
+                                'role': 'assistant',
+                                'content': content,
+                                'output': response_output,
+                                **({'usage': usage} if usage else {}),
+                            },
+                        )
 
                     # Send a webhook notification if the user is not active
                     if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
@@ -3945,6 +4008,12 @@ async def streaming_chat_response_handler(response, ctx):
                                             response_id = response_metadata.pop('response_id', None)
                                             if response_id:
                                                 last_response_id = response_id
+
+                                        # Normalize and capture usage for DB persistence
+                                        if response_metadata.get('usage'):
+                                            response_metadata['usage'] = normalize_usage(response_metadata['usage'])
+                                            usage = response_metadata['usage']
+
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
 
@@ -4293,7 +4362,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             if end:
                                                 break
 
-                                        if ENABLE_REALTIME_CHAT_SAVE:
+                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata['chat_id'].startswith('channel:'):
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata['chat_id'],
@@ -4664,7 +4733,7 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                             source_context = source_context.strip()
                             if source_context:
-                                rag_content = rag_template(
+                                rag_content = await rag_template(
                                     request.app.state.config.RAG_TEMPLATE,
                                     source_context,
                                     user_message,
@@ -4716,10 +4785,14 @@ async def streaming_chat_response_handler(response, ctx):
                             system_message = get_system_message(form_data['messages'])
                             new_form_data['messages'] = (
                                 [system_message] if system_message else []
-                            ) + convert_output_to_messages(output, raw=True)
+                            ) + convert_output_to_messages(
+                                output, raw=True, reasoning_format=get_reasoning_format(model)
+                            )
                             new_form_data['previous_response_id'] = last_response_id
                         else:
-                            tool_messages = convert_output_to_messages(output, raw=True)
+                            tool_messages = convert_output_to_messages(
+                                output, raw=True, reasoning_format=get_reasoning_format(model)
+                            )
 
                             # Chat Completions providers don't support multimodal
                             # tool messages.  Extract images into a user message.
@@ -4816,8 +4889,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(
-                                        f"""
+                                    blocking_code = textwrap.dedent(f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4833,8 +4905,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """
-                                    )
+                                    """)
                                     code = blocking_code + '\n' + code
 
                                 if request.app.state.config.CODE_INTERPRETER_ENGINE == 'pyodide':
@@ -4869,6 +4940,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     ci_output = {'stdout': 'Code interpreter engine not configured.'}
 
                                 log.debug(f'Code interpreter output: {ci_output}')
+
+                                # Handle error responses from event_caller
+                                # (e.g. session disconnected, timeout)
+                                if isinstance(ci_output, dict) and ci_output.get('error'):
+                                    ci_output = {'stderr': ci_output['error']}
 
                                 if isinstance(ci_output, dict):
                                     stdout = ci_output.get('stdout', '')
@@ -4936,7 +5012,9 @@ async def streaming_chat_response_handler(response, ctx):
                                 'metadata': metadata,
                                 'messages': [
                                     *form_data['messages'],
-                                    *convert_output_to_messages(output, raw=True),
+                                    *convert_output_to_messages(
+                                        output, raw=True, reasoning_format=get_reasoning_format(model)
+                                    ),
                                 ],
                             }
 
@@ -4960,7 +5038,11 @@ async def streaming_chat_response_handler(response, ctx):
                     if item.get('status') == 'in_progress':
                         item['status'] = 'completed'
 
-                title = await Chats.get_chat_title_by_id(metadata['chat_id'])
+                title = (
+                    await Chats.get_chat_title_by_id(metadata['chat_id'])
+                    if not metadata['chat_id'].startswith('channel:')
+                    else ''
+                )
                 data = {
                     'done': True,
                     'content': serialize_output(output),
@@ -4969,30 +5051,31 @@ async def streaming_chat_response_handler(response, ctx):
                     **({'usage': usage} if usage else {}),
                 }
 
-                if not ENABLE_REALTIME_CHAT_SAVE:
-                    # Save message in the database
-                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata['chat_id'],
-                        metadata['message_id'],
-                        {
-                            'done': True,
-                            'content': serialize_output(output),
-                            'output': output,
-                            **({'usage': usage} if usage else {}),
-                        },
-                    )
-                elif usage:
-                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata['chat_id'],
-                        metadata['message_id'],
-                        {'done': True, 'usage': usage},
-                    )
-                else:
-                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata['chat_id'],
-                        metadata['message_id'],
-                        {'done': True},
-                    )
+                if not metadata['chat_id'].startswith('channel:'):
+                    if not ENABLE_REALTIME_CHAT_SAVE:
+                        # Save message in the database
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {
+                                'done': True,
+                                'content': serialize_output(output),
+                                'output': output,
+                                **({'usage': usage} if usage else {}),
+                            },
+                        )
+                    elif usage:
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {'done': True, 'usage': usage},
+                        )
+                    else:
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {'done': True},
+                        )
 
                 # Send a webhook notification if the user is not active
                 if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
@@ -5039,22 +5122,23 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
-                    if not ENABLE_REALTIME_CHAT_SAVE:
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'done': True,
-                                'content': serialize_output(output),
-                                'output': output,
-                            },
-                        )
-                    else:
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {'done': True},
-                        )
+                    if not metadata['chat_id'].startswith('channel:'):
+                        if not ENABLE_REALTIME_CHAT_SAVE:
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata['chat_id'],
+                                metadata['message_id'],
+                                {
+                                    'done': True,
+                                    'content': serialize_output(output),
+                                    'output': output,
+                                },
+                            )
+                        else:
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata['chat_id'],
+                                metadata['message_id'],
+                                {'done': True},
+                            )
 
                 try:
                     await asyncio.shield(save_cancelled_state())

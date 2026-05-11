@@ -120,25 +120,29 @@
 							</Tooltip>
 						</div>
 					{/if}
-					{#if item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
-						<div class="flex items-center translate-y-[0.5px] px-0.5">
-							<Tooltip
-								content={`${$i18n.t('Unloads {{FROM_NOW}}', {
-									FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
-								})}`}
-								className="self-end"
-							>
-								<div class=" flex items-center">
-									<span class="relative flex size-2">
-										<span
-											class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-										/>
-										<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-									</span>
-								</div>
-							</Tooltip>
-						</div>
-					{/if}
+				{/if}
+
+				{#if item.model.loaded}
+					<div class="flex items-center translate-y-[0.5px] px-0.5">
+						<Tooltip
+							content={item.model.ollama?.expires_at &&
+							new Date(item.model.ollama?.expires_at * 1000) > new Date()
+								? `${$i18n.t('Unloads {{FROM_NOW}}', {
+										FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
+									})}`
+								: `${$i18n.t('Loaded')}`}
+							className="self-end"
+						>
+							<div class=" flex items-center">
+								<span class="relative flex size-2">
+									<span
+										class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+									/>
+									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+								</span>
+							</div>
+						</Tooltip>
+					</div>
 				{/if}
 
 				<!-- {JSON.stringify(item.info)} -->
@@ -233,7 +237,7 @@
 	</div>
 
 	<div class="ml-auto pl-2 pr-1 flex items-center gap-1.5 shrink-0">
-		{#if $user?.role === 'admin' && item.model.owned_by === 'ollama' && item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
+		{#if $user?.role === 'admin' && item.model.loaded}
 			<Tooltip
 				content={`${$i18n.t('Eject')}`}
 				className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "

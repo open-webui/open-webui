@@ -832,7 +832,76 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
+async def _make_channel_emitter(request_info):
+    """Event emitter that routes pipeline output to a channel message.
+
+    Translates chat:completion events into channel message:update socket
+    emissions, throttled to avoid flooding with per-token updates.
+    """
+    channel_id = request_info['chat_id'].removeprefix('channel:')
+    message_id = request_info['message_id']
+
+    state = {'last_emit_at': 0.0}
+    THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
+
+    async def _emit_channel_update(content: str, done: bool = False):
+        from open_webui.models.messages import Messages, MessageForm
+
+        update_form = MessageForm(content=content)
+        if done:
+            # Merge done flag into existing meta (preserve model_id etc.)
+            msg = await Messages.get_message_by_id(message_id)
+            existing_meta = (msg.meta or {}) if msg else {}
+            update_form = MessageForm(
+                content=content,
+                meta={**existing_meta, 'done': True},
+            )
+
+        await Messages.update_message_by_id(message_id, update_form)
+        message = await Messages.get_message_by_id(message_id)
+        if message:
+            await sio.emit(
+                'events:channel',
+                {
+                    'channel_id': channel_id,
+                    'message_id': message_id,
+                    'data': {
+                        'type': 'message:update',
+                        'data': message.model_dump(),
+                    },
+                },
+                to=f'channel:{channel_id}',
+            )
+
+    async def __channel_emitter__(event_data):
+        event_type = event_data.get('type')
+
+        if event_type == 'chat:completion':
+            data = event_data.get('data', {})
+            content = data.get('content', '')
+            done = data.get('done', False)
+
+            if not content and not done:
+                return
+
+            now = __import__('time').time()
+            if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+                state['last_emit_at'] = now
+                await _emit_channel_update(content, done)
+
+        elif event_type == 'chat:message:error':
+            error = event_data.get('data', {}).get('error', {})
+            error_content = error.get('content', 'An error occurred') if isinstance(error, dict) else str(error)
+            await _emit_channel_update(f'Error: {error_content}', done=True)
+
+    return __channel_emitter__
+
+
 async def get_event_emitter(request_info, update_db=True):
+    # Channel mode: route pipeline output to channel message updates
+    if request_info.get('chat_id', '').startswith('channel:'):
+        return await _make_channel_emitter(request_info)
+
     async def __event_emitter__(event_data):
         user_id = request_info['user_id']
         chat_id = request_info['chat_id']
@@ -888,13 +957,15 @@ async def get_event_emitter(request_info, update_db=True):
                 )
 
             elif event_type == 'embeds':
-                message = await Chats.get_message_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                )
+                event_payload = event_data.get('data', {})
+                embeds = event_payload.get('embeds', [])
 
-                embeds = event_data.get('data', {}).get('embeds', [])
-                embeds.extend(message.get('embeds', []))
+                if not event_payload.get('replace', False):
+                    message = await Chats.get_message_by_id_and_message_id(
+                        request_info['chat_id'],
+                        request_info['message_id'],
+                    )
+                    embeds.extend(message.get('embeds', []))
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
@@ -948,17 +1019,27 @@ async def get_event_emitter(request_info, update_db=True):
 
 async def get_event_call(request_info):
     async def __event_caller__(event_data):
-        response = await sio.call(
-            'events',
-            {
-                'chat_id': request_info.get('chat_id', None),
-                'message_id': request_info.get('message_id', None),
-                'data': event_data,
-            },
-            to=request_info['session_id'],
-            timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
-        )
-        return response
+        session_id = request_info['session_id']
+
+        # Fast-fail if the client has disconnected.
+        if session_id not in SESSION_POOL:
+            log.warning(f'Event caller: session {session_id} no longer connected')
+            return {'error': 'Client session disconnected.'}
+
+        try:
+            return await sio.call(
+                'events',
+                {
+                    'chat_id': request_info.get('chat_id', None),
+                    'message_id': request_info.get('message_id', None),
+                    'data': event_data,
+                },
+                to=session_id,
+                timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
+            )
+        except TimeoutError:
+            log.warning(f'Event caller timed out for session {session_id}')
+            return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
 
     if 'session_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:
         return __event_caller__

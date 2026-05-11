@@ -57,6 +57,7 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.brave import search_brave
+from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.bocha import search_bocha
@@ -259,22 +260,6 @@ class SearchForm(BaseModel):
     queries: List[str]
 
 
-@router.get('/')
-async def get_status(request: Request):
-    return {
-        'status': True,
-        'CHUNK_SIZE': request.app.state.config.CHUNK_SIZE,
-        'CHUNK_OVERLAP': request.app.state.config.CHUNK_OVERLAP,
-        'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
-        'RAG_EMBEDDING_ENGINE': request.app.state.config.RAG_EMBEDDING_ENGINE,
-        'RAG_EMBEDDING_MODEL': request.app.state.config.RAG_EMBEDDING_MODEL,
-        'RAG_RERANKING_MODEL': request.app.state.config.RAG_RERANKING_MODEL,
-        'RAG_EMBEDDING_BATCH_SIZE': request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-        'ENABLE_ASYNC_EMBEDDING': request.app.state.config.ENABLE_ASYNC_EMBEDDING,
-        'RAG_EMBEDDING_CONCURRENT_REQUESTS': request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
-    }
-
-
 @router.get('/embedding')
 async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
     return {
@@ -350,7 +335,7 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
     unload_embedding_model(request)
     try:
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
-        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL
+        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL.strip()
         request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = form_data.RAG_EMBEDDING_BATCH_SIZE
         request.app.state.config.ENABLE_ASYNC_EMBEDDING = form_data.ENABLE_ASYNC_EMBEDDING
         request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS = form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS
@@ -531,6 +516,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'GOOGLE_PSE_API_KEY': request.app.state.config.GOOGLE_PSE_API_KEY,
             'GOOGLE_PSE_ENGINE_ID': request.app.state.config.GOOGLE_PSE_ENGINE_ID,
             'BRAVE_SEARCH_API_KEY': request.app.state.config.BRAVE_SEARCH_API_KEY,
+            'BRAVE_SEARCH_CONTEXT_TOKENS': request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS,
             'KAGI_SEARCH_API_KEY': request.app.state.config.KAGI_SEARCH_API_KEY,
             'MOJEEK_SEARCH_API_KEY': request.app.state.config.MOJEEK_SEARCH_API_KEY,
             'BOCHA_SEARCH_API_KEY': request.app.state.config.BOCHA_SEARCH_API_KEY,
@@ -599,6 +585,7 @@ class WebConfig(BaseModel):
     GOOGLE_PSE_API_KEY: Optional[str] = None
     GOOGLE_PSE_ENGINE_ID: Optional[str] = None
     BRAVE_SEARCH_API_KEY: Optional[str] = None
+    BRAVE_SEARCH_CONTEXT_TOKENS: Optional[int] = None
     KAGI_SEARCH_API_KEY: Optional[str] = None
     MOJEEK_SEARCH_API_KEY: Optional[str] = None
     BOCHA_SEARCH_API_KEY: Optional[str] = None
@@ -1081,6 +1068,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.GOOGLE_PSE_API_KEY = form_data.web.GOOGLE_PSE_API_KEY
         request.app.state.config.GOOGLE_PSE_ENGINE_ID = form_data.web.GOOGLE_PSE_ENGINE_ID
         request.app.state.config.BRAVE_SEARCH_API_KEY = form_data.web.BRAVE_SEARCH_API_KEY
+        if form_data.web.BRAVE_SEARCH_CONTEXT_TOKENS is not None:
+            request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS = form_data.web.BRAVE_SEARCH_CONTEXT_TOKENS
         request.app.state.config.KAGI_SEARCH_API_KEY = form_data.web.KAGI_SEARCH_API_KEY
         request.app.state.config.MOJEEK_SEARCH_API_KEY = form_data.web.MOJEEK_SEARCH_API_KEY
         request.app.state.config.BOCHA_SEARCH_API_KEY = form_data.web.BOCHA_SEARCH_API_KEY
@@ -1216,6 +1205,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'GOOGLE_PSE_API_KEY': request.app.state.config.GOOGLE_PSE_API_KEY,
             'GOOGLE_PSE_ENGINE_ID': request.app.state.config.GOOGLE_PSE_ENGINE_ID,
             'BRAVE_SEARCH_API_KEY': request.app.state.config.BRAVE_SEARCH_API_KEY,
+            'BRAVE_SEARCH_CONTEXT_TOKENS': request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS,
             'KAGI_SEARCH_API_KEY': request.app.state.config.KAGI_SEARCH_API_KEY,
             'MOJEEK_SEARCH_API_KEY': request.app.state.config.MOJEEK_SEARCH_API_KEY,
             'BOCHA_SEARCH_API_KEY': request.app.state.config.BOCHA_SEARCH_API_KEY,
@@ -1577,6 +1567,8 @@ async def process_file(
 
             if collection_name is None:
                 collection_name = f'file-{file.id}'
+            else:
+                await _validate_collection_access([collection_name], user, access_type='write')
 
             if form_data.content:
                 # Update the content in the file
@@ -1960,6 +1952,17 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
+    elif engine == 'brave_llm_context':
+        if request.app.state.config.BRAVE_SEARCH_API_KEY:
+            return search_brave_llm_context(
+                request.app.state.config.BRAVE_SEARCH_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS,
             )
         else:
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
@@ -2615,6 +2618,9 @@ async def process_files_batch(
     """
 
     collection_name = form_data.collection_name
+
+    if collection_name:
+        await _validate_collection_access([collection_name], user, access_type='write')
 
     file_results: List[BatchProcessFilesResult] = []
     file_errors: List[BatchProcessFilesResult] = []

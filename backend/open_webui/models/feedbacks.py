@@ -103,7 +103,8 @@ class FeedbackForm(BaseModel):
     data: Optional[RatingData] = None
     meta: Optional[dict] = None
     snapshot: Optional[SnapshotData] = None
-    model_config = ConfigDict(extra='allow')
+    # ignore: drop client-supplied id/user_id/version/timestamps at parse time.
+    model_config = ConfigDict(extra='ignore')
 
 
 class UserResponse(BaseModel):
@@ -145,12 +146,13 @@ class FeedbackTable:
     ) -> Optional[FeedbackModel]:
         async with get_async_db_context(db) as db:
             id = str(uuid.uuid4())
+            # Spread form_data first so server-controlled fields win on duplicate keys.
             feedback = FeedbackModel(
                 **{
+                    **form_data.model_dump(),
                     'id': id,
                     'user_id': user_id,
                     'version': 0,
-                    **form_data.model_dump(),
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
                 }

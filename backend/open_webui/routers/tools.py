@@ -480,6 +480,17 @@ async def update_tools_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    # Content edits trigger exec on load — gate them behind workspace.tools (matches /create).
+    if form_data.content != tools.content:
+        if user.role != 'admin' and not (
+            await has_permission(user.id, 'workspace.tools', request.app.state.config.USER_PERMISSIONS, db=db)
+            or await has_permission(user.id, 'workspace.tools_import', request.app.state.config.USER_PERMISSIONS, db=db)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
+
     try:
         form_data.content = replace_imports(form_data.content)
         tool_module, frontmatter = await load_tool_module_by_id(id, content=form_data.content)

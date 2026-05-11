@@ -73,6 +73,11 @@ async def generate_direct_chat_completion(
     request_id = str(uuid.uuid4())  # Generate a unique request ID
 
     event_caller = await get_event_call(metadata)
+    if event_caller is None:
+        raise Exception(
+            'Direct connection requires an active WebSocket session; '
+            'cannot generate completion in this context (e.g. background task).'
+        )
 
     channel = f'{user_id}:{session_id}:{request_id}'
     logging.info(f'WebSocket channel: {channel}')
@@ -180,10 +185,14 @@ async def generate_chat_completion(
             }
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+        # Merge the direct connection model into server models so that
+        # task functions (title, tags, etc.) can resolve a server-side
+        # task model while still having the direct model available.
         models = {
+            **request.app.state.MODELS,
             request.state.model['id']: request.state.model,
         }
-        log.debug(f'direct connection to model: {models}')
+        log.debug(f'direct connection to model: {request.state.model["id"]}')
     else:
         models = request.app.state.MODELS
 
@@ -193,7 +202,7 @@ async def generate_chat_completion(
 
     model = models[model_id]
 
-    if getattr(request.state, 'direct', False):
+    if getattr(request.state, 'direct', False) and model_id == getattr(request.state, 'model', {}).get('id'):
         return await generate_direct_chat_completion(request, form_data, user=user, models=models)
     else:
         # Check if user has access to the model
@@ -310,6 +319,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
+            **request.app.state.MODELS,
             request.state.model['id']: request.state.model,
         }
     else:

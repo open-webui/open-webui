@@ -328,6 +328,17 @@ class AppConfig:
         except Exception as e:
             log.error(f'Failed to async-persist config key {key}: {e}')
 
+    def _sync_to_redis(self):
+        """Push all in-memory config values to Redis, e.g. after a bulk import."""
+        if not self._redis or not ENABLE_PERSISTENT_CONFIG:
+            return
+        for key, pc in self._state.items():
+            redis_key = f'{self._redis_key_prefix}:config:{key}'
+            try:
+                self._redis.set(redis_key, json.dumps(pc.value))
+            except Exception as e:
+                log.error(f'Failed to sync config key {key} to Redis: {e}')
+
     def __getattr__(self, key):
         if key not in self._state:
             raise AttributeError(f"Config key '{key}' not found")
@@ -1197,6 +1208,12 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
     tool_server_connections,
 )
 
+OAUTH_CLIENT_TIMEOUT = PersistentConfig(
+    'OAUTH_CLIENT_TIMEOUT',
+    'oauth.client.timeout',
+    os.environ.get('OAUTH_CLIENT_TIMEOUT', ''),
+)
+
 ####################################
 # TERMINAL_SERVER
 ####################################
@@ -1208,6 +1225,11 @@ TERMINAL_SERVER_CONNECTIONS = PersistentConfig(
     'terminal_server.connections',
     terminal_server_connections,
 )
+
+try:
+    TERMINAL_PROXY_HEADERS = json.loads(os.environ.get('TERMINAL_PROXY_HEADERS', '{}'))
+except Exception:
+    TERMINAL_PROXY_HEADERS = {}
 
 ####################################
 # WEBUI
@@ -1299,10 +1321,16 @@ MODEL_ORDER_LIST = PersistentConfig(
     [],
 )
 
+try:
+    default_model_metadata = json.loads(os.environ.get('DEFAULT_MODEL_METADATA', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_MODEL_METADATA: {e}')
+    default_model_metadata = {}
+
 DEFAULT_MODEL_METADATA = PersistentConfig(
     'DEFAULT_MODEL_METADATA',
     'models.default_metadata',
-    {},
+    default_model_metadata,
 )
 
 try:
@@ -1348,6 +1376,7 @@ RESPONSE_WATERMARK = PersistentConfig(
     os.environ.get('RESPONSE_WATERMARK', ''),
 )
 
+IFRAME_CSP = os.environ.get('IFRAME_CSP', '')
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS', 'False').lower() == 'true'
@@ -1442,6 +1471,10 @@ USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     os.environ.get('USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
+USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING = (
+    os.environ.get('USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+)
+
 USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS = (
     os.environ.get('USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS', 'True').lower() == 'true'
 )
@@ -1476,6 +1509,10 @@ USER_PERMISSIONS_CHAT_RATE_RESPONSE = os.environ.get('USER_PERMISSIONS_CHAT_RATE
 USER_PERMISSIONS_CHAT_EDIT = os.environ.get('USER_PERMISSIONS_CHAT_EDIT', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_SHARE = os.environ.get('USER_PERMISSIONS_CHAT_SHARE', 'True').lower() == 'true'
+
+USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING = (
+    os.environ.get('USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+)
 
 USER_PERMISSIONS_CHAT_EXPORT = os.environ.get('USER_PERMISSIONS_CHAT_EXPORT', 'True').lower() == 'true'
 
@@ -1557,6 +1594,8 @@ DEFAULT_USER_PERMISSIONS = {
         'public_skills': USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING,
         'notes': USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         'public_notes': USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
+        'public_chats': USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING,
+        'public_calendars': USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING,
     },
     'access_grants': {
         'allow_users': USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS,
@@ -2049,6 +2088,12 @@ VOICE_MODE_PROMPT_TEMPLATE = PersistentConfig(
     'VOICE_MODE_PROMPT_TEMPLATE',
     'task.voice.prompt_template',
     os.environ.get('VOICE_MODE_PROMPT_TEMPLATE', ''),
+)
+
+ENABLE_VOICE_MODE_PROMPT = PersistentConfig(
+    'ENABLE_VOICE_MODE_PROMPT',
+    'task.voice.prompt.enable',
+    os.environ.get('ENABLE_VOICE_MODE_PROMPT', 'True').lower() == 'true',
 )
 
 DEFAULT_VOICE_MODE_PROMPT_TEMPLATE = """You are a friendly, concise voice assistant.
@@ -2627,12 +2672,16 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
 )
 
 
-ENABLE_ONEDRIVE_PERSONAL = os.environ.get('ENABLE_ONEDRIVE_PERSONAL', 'True').lower() == 'true'
-ENABLE_ONEDRIVE_BUSINESS = os.environ.get('ENABLE_ONEDRIVE_BUSINESS', 'True').lower() == 'true'
-
 ONEDRIVE_CLIENT_ID = os.environ.get('ONEDRIVE_CLIENT_ID', '')
 ONEDRIVE_CLIENT_ID_PERSONAL = os.environ.get('ONEDRIVE_CLIENT_ID_PERSONAL', ONEDRIVE_CLIENT_ID)
 ONEDRIVE_CLIENT_ID_BUSINESS = os.environ.get('ONEDRIVE_CLIENT_ID_BUSINESS', ONEDRIVE_CLIENT_ID)
+
+ENABLE_ONEDRIVE_PERSONAL = os.environ.get('ENABLE_ONEDRIVE_PERSONAL', 'True').lower() == 'true' and bool(
+    ONEDRIVE_CLIENT_ID_PERSONAL
+)
+ENABLE_ONEDRIVE_BUSINESS = os.environ.get('ENABLE_ONEDRIVE_BUSINESS', 'True').lower() == 'true' and bool(
+    ONEDRIVE_CLIENT_ID_BUSINESS
+)
 
 ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
     'ONEDRIVE_SHAREPOINT_URL',
@@ -3252,7 +3301,7 @@ ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
 WEB_SEARCH_TRUST_ENV = PersistentConfig(
     'WEB_SEARCH_TRUST_ENV',
     'rag.web.search.trust_env',
-    os.getenv('WEB_SEARCH_TRUST_ENV', 'False').lower() == 'true',
+    os.getenv('WEB_SEARCH_TRUST_ENV', 'True').lower() == 'true',
 )
 
 
@@ -3308,6 +3357,12 @@ BRAVE_SEARCH_API_KEY = PersistentConfig(
     'BRAVE_SEARCH_API_KEY',
     'rag.web.search.brave_search_api_key',
     os.getenv('BRAVE_SEARCH_API_KEY', ''),
+)
+
+BRAVE_SEARCH_CONTEXT_TOKENS = PersistentConfig(
+    'BRAVE_SEARCH_CONTEXT_TOKENS',
+    'rag.web.search.brave_search_context_tokens',
+    int(os.getenv('BRAVE_SEARCH_CONTEXT_TOKENS', '8192')),
 )
 
 KAGI_SEARCH_API_KEY = PersistentConfig(
@@ -3944,6 +3999,19 @@ AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
         content_type.strip()
         for content_type in os.environ.get('AUDIO_STT_SUPPORTED_CONTENT_TYPES', '').split(',')
         if content_type.strip()
+    ],
+)
+
+AUDIO_STT_ALLOWED_EXTENSIONS = PersistentConfig(
+    'AUDIO_STT_ALLOWED_EXTENSIONS',
+    'audio.stt.allowed_extensions',
+    [
+        ext.strip()
+        for ext in os.environ.get(
+            'AUDIO_STT_ALLOWED_EXTENSIONS',
+            'mp3,wav,m4a,webm,ogg,flac,mp4,mpga,mpeg',
+        ).split(',')
+        if ext.strip()
     ],
 )
 
