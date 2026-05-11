@@ -1,19 +1,19 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
 
-
 def search_google_pse(
     api_key: str,
     search_engine_id: str,
     query: str,
     count: int,
-    filter_list: Optional[list[str]] = None,
-    referer: Optional[str] = None,
+    filter_list: list[str | None] = None,
+    referer: str | None = None,
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
     Handles pagination for counts greater than 10.
@@ -23,7 +23,7 @@ def search_google_pse(
         search_engine_id (str): A Programmable Search Engine ID
         query (str): The query to search for
         count (int): The number of results to return (max 100, as PSE max results per query is 10 and max page is 10)
-        filter_list (Optional[list[str]], optional): A list of keywords to filter out from results. Defaults to None.
+        filter_list (list[str | None], optional): A list of keywords to filter out from results. Defaults to None.
 
     Returns:
         list[SearchResult]: A list of SearchResult objects.

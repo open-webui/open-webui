@@ -1,14 +1,13 @@
 """Alembic migration utilities."""
 
 from alembic import op
-from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import inspect
 
 
 def get_existing_tables() -> set[str]:
-    """Return the set of table names already present in the database."""
-    bind = op.get_bind()
-    inspector = sa_inspect(bind)
-    return set(inspector.get_table_names())
+    """Return table names already present in the database."""
+    conn = op.get_bind()
+    return set(inspect(conn).get_table_names())
 
 
 def get_revision_id() -> str:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 import requests
@@ -5,7 +7,6 @@ from open_webui.retrieval.web.main import SearchResult
 from yarl import URL
 
 log = logging.getLogger(__name__)
-
 
 def search_jina(api_key: str, query: str, count: int, base_url: str = '') -> list[SearchResult]:
     """
@@ -17,9 +18,9 @@ def search_jina(api_key: str, query: str, count: int, base_url: str = '') -> lis
         base_url (str): Optional custom base URL for the Jina API
 
     Returns:
-        list[SearchResult]: A list of search results
+        A list of SearchResult objects.
     """
-    jina_search_endpoint = base_url if base_url else 'https://s.jina.ai/'
+    jina_search_endpoint = base_url or 'https://s.jina.ai/'
 
     headers = {
         'Accept': 'application/json',

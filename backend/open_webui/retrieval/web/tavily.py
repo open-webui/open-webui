@@ -1,17 +1,17 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
 
-
 def search_tavily(
     api_key: str,
     query: str,
     count: int,
-    filter_list: Optional[list[str]] = None,
+    filter_list: list[str | None] = None,
     # **kwargs,
 ) -> list[SearchResult]:
     """Search using Tavily's Search API and return the results as a list of SearchResult objects.
@@ -22,7 +22,7 @@ def search_tavily(
         count (int): The maximum number of results to return
 
     Returns:
-        list[SearchResult]: A list of search results
+        A list of SearchResult objects.
     """
     url = 'https://api.tavily.com/search'
     headers = {
