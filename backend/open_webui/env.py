@@ -9,7 +9,7 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from uuid import uuid4
 
 import markdown
@@ -43,27 +43,27 @@ except ImportError:
 
 DOCKER = os.environ.get('DOCKER', 'False').lower() == 'true'
 
-# device type for embedding models - "cpu" (default), "cuda" (nvidia gpu required), or "mps" (apple silicon)
-# choosing this correctly can lead to better performance
 USE_CUDA = os.environ.get('USE_CUDA_DOCKER', 'false')
+DEVICE_TYPE = 'cpu'
+_cuda_error: Optional[str] = None
 
 if USE_CUDA.lower() == 'true':
     try:
-        import torch
+        import torch  # noqa: E402
 
-        assert torch.cuda.is_available(), 'CUDA not available'
+        if not torch.cuda.is_available():
+            raise RuntimeError('CUDA not available')
         DEVICE_TYPE = 'cuda'
-    except Exception as e:
-        cuda_error = f'Error when testing CUDA but USE_CUDA_DOCKER is true. Resetting USE_CUDA_DOCKER to false: {e}'
+    except Exception as exc:
+        _cuda_error = (
+            f'CUDA unavailable (USE_CUDA_DOCKER=true), falling back to CPU: {exc}'
+        )
         os.environ['USE_CUDA_DOCKER'] = 'false'
         USE_CUDA = 'false'
-        DEVICE_TYPE = 'cpu'
-else:
-    DEVICE_TYPE = 'cpu'
 
-if sys.platform == 'darwin':
+if sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
     try:
-        import torch
+        import torch  # noqa: E402
 
         if torch.backends.mps.is_available() and torch.backends.mps.is_built():
             DEVICE_TYPE = 'mps'
@@ -109,31 +109,25 @@ LOG_FORMAT = os.environ.get('LOG_FORMAT', '').lower()
 
 GLOBAL_LOG_LEVEL = os.environ.get('GLOBAL_LOG_LEVEL', '').upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
+    _log_cfg: dict[str, Any] = {'level': GLOBAL_LOG_LEVEL, 'force': True}
     if LOG_FORMAT == 'json':
-        _handler = logging.StreamHandler(sys.stdout)
-        _handler.setFormatter(JSONFormatter())
-        logging.basicConfig(handlers=[_handler], level=GLOBAL_LOG_LEVEL, force=True)
+        _json_handler = logging.StreamHandler(sys.stdout)
+        _json_handler.setFormatter(JSONFormatter())
+        _log_cfg['handlers'] = [_json_handler]
     else:
-        logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+        _log_cfg['stream'] = sys.stdout
+    logging.basicConfig(**_log_cfg)
 else:
     GLOBAL_LOG_LEVEL = 'INFO'
 
 log = logging.getLogger(__name__)
-log.info(f'GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}')
+log.info('GLOBAL_LOG_LEVEL: %s', GLOBAL_LOG_LEVEL)
 
-if 'cuda_error' in locals():
-    log.exception(cuda_error)
-    del cuda_error
+if _cuda_error:
+    log.error(_cuda_error)
+    _cuda_error = None
 
 SRC_LOG_LEVELS = {}  # Legacy variable, do not remove
-
-WEBUI_NAME = os.environ.get('WEBUI_NAME', 'Open WebUI')
-if WEBUI_NAME != 'Open WebUI':
-    WEBUI_NAME += ' (Open WebUI)'
-
-WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
-
-TRUSTED_SIGNATURE_KEY = os.environ.get('TRUSTED_SIGNATURE_KEY', '')
 
 ####################################
 # ENV (dev,test,prod)
@@ -220,62 +214,6 @@ for version in soup.find_all('h2'):
 CHANGELOG = changelog_json
 
 ####################################
-# SAFE_MODE
-####################################
-
-SAFE_MODE = os.environ.get('SAFE_MODE', 'false').lower() == 'true'
-
-
-####################################
-# ENABLE_FORWARD_USER_INFO_HEADERS
-####################################
-
-ENABLE_FORWARD_USER_INFO_HEADERS = os.environ.get('ENABLE_FORWARD_USER_INFO_HEADERS', 'False').lower() == 'true'
-
-# Header names for user info forwarding (customizable via environment variables)
-FORWARD_USER_INFO_HEADER_USER_NAME = os.environ.get('FORWARD_USER_INFO_HEADER_USER_NAME', 'X-OpenWebUI-User-Name')
-FORWARD_USER_INFO_HEADER_USER_ID = os.environ.get('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
-FORWARD_USER_INFO_HEADER_USER_EMAIL = os.environ.get('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
-FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get('FORWARD_USER_INFO_HEADER_USER_ROLE', 'X-OpenWebUI-User-Role')
-
-# Header name for chat ID forwarding (customizable via environment variable)
-FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get(
-    'FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id'
-)
-FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
-
-# Experimental feature, may be removed in future
-ENABLE_STAR_SESSIONS_MIDDLEWARE = os.environ.get('ENABLE_STAR_SESSIONS_MIDDLEWARE', 'False').lower() == 'true'
-
-ENABLE_EASTER_EGGS = os.environ.get('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
-
-####################################
-# ENABLE_PROFILE_IMAGE_URL_FORWARDING
-####################################
-
-# When True (default), the user and model profile-image endpoints
-# honour external http(s) URLs stored in profile_image_url by issuing a
-# 302 redirect to the original origin.  Set to False to suppress the
-# redirect (prevents client-side IP/UA/Referer leaks to attacker-
-# controlled origins) and fall through to the default image instead.
-ENABLE_PROFILE_IMAGE_URL_FORWARDING = os.environ.get('ENABLE_PROFILE_IMAGE_URL_FORWARDING', 'True').lower() == 'true'
-
-PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
-    t.strip()
-    for t in os.environ.get(
-        'PROFILE_IMAGE_ALLOWED_MIME_TYPES',
-        'image/png,image/jpeg,image/gif,image/webp',
-    ).split(',')
-    if t.strip()
-)
-
-####################################
-# WEBUI_BUILD_HASH
-####################################
-
-WEBUI_BUILD_HASH = os.environ.get('WEBUI_BUILD_HASH', 'dev-build')
-
-####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
 
@@ -358,43 +296,29 @@ if 'postgres://' in DATABASE_URL:
 
 DATABASE_SCHEMA = os.environ.get('DATABASE_SCHEMA', None)
 
-DATABASE_POOL_SIZE = os.environ.get('DATABASE_POOL_SIZE', None)
+_pool_size_raw = os.environ.get('DATABASE_POOL_SIZE')
+try:
+    DATABASE_POOL_SIZE = int(_pool_size_raw) if _pool_size_raw else None
+except (ValueError, TypeError):
+    DATABASE_POOL_SIZE = None
 
-if DATABASE_POOL_SIZE is not None:
-    try:
-        DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
-    except Exception:
-        DATABASE_POOL_SIZE = None
-
-DATABASE_POOL_MAX_OVERFLOW = os.environ.get('DATABASE_POOL_MAX_OVERFLOW', 0)
-
-if DATABASE_POOL_MAX_OVERFLOW == '':
+_pool_overflow_raw = os.environ.get('DATABASE_POOL_MAX_OVERFLOW', '0')
+try:
+    DATABASE_POOL_MAX_OVERFLOW = int(_pool_overflow_raw) if _pool_overflow_raw else 0
+except (ValueError, TypeError):
     DATABASE_POOL_MAX_OVERFLOW = 0
-else:
-    try:
-        DATABASE_POOL_MAX_OVERFLOW = int(DATABASE_POOL_MAX_OVERFLOW)
-    except Exception:
-        DATABASE_POOL_MAX_OVERFLOW = 0
 
-DATABASE_POOL_TIMEOUT = os.environ.get('DATABASE_POOL_TIMEOUT', 30)
-
-if DATABASE_POOL_TIMEOUT == '':
+_pool_timeout_raw = os.environ.get('DATABASE_POOL_TIMEOUT', '30')
+try:
+    DATABASE_POOL_TIMEOUT = int(_pool_timeout_raw) if _pool_timeout_raw else 30
+except (ValueError, TypeError):
     DATABASE_POOL_TIMEOUT = 30
-else:
-    try:
-        DATABASE_POOL_TIMEOUT = int(DATABASE_POOL_TIMEOUT)
-    except Exception:
-        DATABASE_POOL_TIMEOUT = 30
 
-DATABASE_POOL_RECYCLE = os.environ.get('DATABASE_POOL_RECYCLE', 3600)
-
-if DATABASE_POOL_RECYCLE == '':
+_pool_recycle_raw = os.environ.get('DATABASE_POOL_RECYCLE', '3600')
+try:
+    DATABASE_POOL_RECYCLE = int(_pool_recycle_raw) if _pool_recycle_raw else 3600
+except (ValueError, TypeError):
     DATABASE_POOL_RECYCLE = 3600
-else:
-    try:
-        DATABASE_POOL_RECYCLE = int(DATABASE_POOL_RECYCLE)
-    except Exception:
-        DATABASE_POOL_RECYCLE = 3600
 
 DATABASE_ENABLE_SQLITE_WAL = os.environ.get('DATABASE_ENABLE_SQLITE_WAL', 'True').lower() == 'true'
 
@@ -433,18 +357,11 @@ if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
     except Exception:
         DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
 
-# When enabled, get_db_context reuses existing sessions; set to False to always create new sessions
 DATABASE_ENABLE_SESSION_SHARING = os.environ.get('DATABASE_ENABLE_SESSION_SHARING', 'False').lower() == 'true'
-
-# Enable public visibility of active user count (when disabled, only admins can see it)
 ENABLE_PUBLIC_ACTIVE_USERS_COUNT = os.environ.get('ENABLE_PUBLIC_ACTIVE_USERS_COUNT', 'True').lower() == 'true'
-
 RESET_CONFIG_ON_START = os.environ.get('RESET_CONFIG_ON_START', 'False').lower() == 'true'
-
 ENABLE_REALTIME_CHAT_SAVE = os.environ.get('ENABLE_REALTIME_CHAT_SAVE', 'False').lower() == 'true'
-
 ENABLE_QUERIES_CACHE = os.environ.get('ENABLE_QUERIES_CACHE', 'False').lower() == 'true'
-
 RAG_SYSTEM_CONTEXT = os.environ.get('RAG_SYSTEM_CONTEXT', 'False').lower() == 'true'
 
 ####################################
@@ -509,27 +426,207 @@ else:
         REDIS_RECONNECT_DELAY = None
 
 ####################################
-# UVICORN WORKERS
+# Uvicorn
 ####################################
 
-# Number of uvicorn worker processes for handling requests
-UVICORN_WORKERS = os.environ.get('UVICORN_WORKERS', '1')
 try:
-    UVICORN_WORKERS = int(UVICORN_WORKERS)
-    if UVICORN_WORKERS < 1:
-        UVICORN_WORKERS = 1
-except ValueError:
+    UVICORN_WORKERS = max(int(os.environ.get('UVICORN_WORKERS', '1')), 1)
+except (ValueError, TypeError):
     UVICORN_WORKERS = 1
-    log.info(f'Invalid UVICORN_WORKERS value, defaulting to {UVICORN_WORKERS}')
 
 ####################################
-# WEBUI_AUTH (Required for security)
+# WEBSOCKET SUPPORT
+####################################
+
+ENABLE_WEBSOCKET_SUPPORT = os.environ.get('ENABLE_WEBSOCKET_SUPPORT', 'True').lower() == 'true'
+
+
+WEBSOCKET_MANAGER = os.environ.get('WEBSOCKET_MANAGER', '')
+
+WEBSOCKET_REDIS_OPTIONS = os.environ.get('WEBSOCKET_REDIS_OPTIONS', '')
+
+
+if WEBSOCKET_REDIS_OPTIONS == '':
+    if REDIS_SOCKET_CONNECT_TIMEOUT:
+        WEBSOCKET_REDIS_OPTIONS = {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
+    else:
+        log.debug('No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None')
+        WEBSOCKET_REDIS_OPTIONS = None
+else:
+    try:
+        WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
+    except Exception:
+        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None')
+        WEBSOCKET_REDIS_OPTIONS = None
+
+WEBSOCKET_REDIS_URL = os.environ.get('WEBSOCKET_REDIS_URL', REDIS_URL)
+WEBSOCKET_REDIS_CLUSTER = os.environ.get('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
+
+websocket_redis_lock_timeout = os.environ.get('WEBSOCKET_REDIS_LOCK_TIMEOUT', '60')
+
+try:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
+except ValueError:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
+
+WEBSOCKET_SENTINEL_HOSTS = os.environ.get('WEBSOCKET_SENTINEL_HOSTS', '')
+WEBSOCKET_SENTINEL_PORT = os.environ.get('WEBSOCKET_SENTINEL_PORT', '26379')
+WEBSOCKET_SERVER_LOGGING = os.environ.get('WEBSOCKET_SERVER_LOGGING', 'False').lower() == 'true'
+WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
+    os.environ.get(
+        'WEBSOCKET_SERVER_ENGINEIO_LOGGING',
+        os.environ.get('WEBSOCKET_SERVER_LOGGING', 'False'),
+    ).lower()
+    == 'true'
+)
+WEBSOCKET_SERVER_PING_TIMEOUT = os.environ.get('WEBSOCKET_SERVER_PING_TIMEOUT', '20')
+try:
+    WEBSOCKET_SERVER_PING_TIMEOUT = int(WEBSOCKET_SERVER_PING_TIMEOUT)
+except ValueError:
+    WEBSOCKET_SERVER_PING_TIMEOUT = 20
+
+WEBSOCKET_SERVER_PING_INTERVAL = os.environ.get('WEBSOCKET_SERVER_PING_INTERVAL', '25')
+try:
+    WEBSOCKET_SERVER_PING_INTERVAL = int(WEBSOCKET_SERVER_PING_INTERVAL)
+except ValueError:
+    WEBSOCKET_SERVER_PING_INTERVAL = 25
+
+WEBSOCKET_EVENT_CALLER_TIMEOUT = os.environ.get('WEBSOCKET_EVENT_CALLER_TIMEOUT', '')
+
+if WEBSOCKET_EVENT_CALLER_TIMEOUT == '':
+    WEBSOCKET_EVENT_CALLER_TIMEOUT = None
+else:
+    try:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = int(WEBSOCKET_EVENT_CALLER_TIMEOUT)
+    except ValueError:
+        WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
+
+
+REQUESTS_VERIFY = os.environ.get('REQUESTS_VERIFY', 'True').lower() == 'true'
+
+_aiohttp_timeout_raw = os.environ.get('AIOHTTP_CLIENT_TIMEOUT', '')
+try:
+    AIOHTTP_CLIENT_TIMEOUT = int(_aiohttp_timeout_raw) if _aiohttp_timeout_raw else None
+except (ValueError, TypeError):
+    AIOHTTP_CLIENT_TIMEOUT = 300
+
+
+AIOHTTP_CLIENT_SESSION_SSL = os.environ.get('AIOHTTP_CLIENT_SESSION_SSL', 'True').lower() == 'true'
+
+# When False (default), outbound HTTP requests do not follow 3xx redirects.
+AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.environ.get('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
+
+_model_list_timeout_raw = os.environ.get(
+    'AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST',
+    os.environ.get('AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST', '10'),
+)
+try:
+    AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = int(_model_list_timeout_raw) if _model_list_timeout_raw else None
+except (ValueError, TypeError):
+    AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 10
+
+_tool_data_timeout_raw = os.environ.get('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA', '10')
+try:
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = int(_tool_data_timeout_raw) if _tool_data_timeout_raw else None
+except (ValueError, TypeError):
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
+
+
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
+    os.environ.get('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True').lower() == 'true'
+)
+
+AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = os.environ.get('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER', '')
+
+if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER == '':
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = int(AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
+    except Exception:
+        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
+
+
+####################################
+# AIOHTTP Connection Pool
+####################################
+
+AIOHTTP_POOL_CONNECTIONS = os.environ.get('AIOHTTP_POOL_CONNECTIONS', '')
+if AIOHTTP_POOL_CONNECTIONS == '':
+    AIOHTTP_POOL_CONNECTIONS = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS = int(AIOHTTP_POOL_CONNECTIONS)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS = None
+
+AIOHTTP_POOL_CONNECTIONS_PER_HOST = os.environ.get('AIOHTTP_POOL_CONNECTIONS_PER_HOST', '')
+if AIOHTTP_POOL_CONNECTIONS_PER_HOST == '':
+    AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+else:
+    try:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = int(AIOHTTP_POOL_CONNECTIONS_PER_HOST)
+    except ValueError:
+        AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
+
+AIOHTTP_POOL_DNS_TTL = os.environ.get('AIOHTTP_POOL_DNS_TTL', '300')
+try:
+    AIOHTTP_POOL_DNS_TTL = int(AIOHTTP_POOL_DNS_TTL)
+    if AIOHTTP_POOL_DNS_TTL < 0:
+        AIOHTTP_POOL_DNS_TTL = 300
+except ValueError:
+    AIOHTTP_POOL_DNS_TTL = 300
+
+RAG_EMBEDDING_TIMEOUT = os.environ.get('RAG_EMBEDDING_TIMEOUT', '')
+
+if RAG_EMBEDDING_TIMEOUT == '':
+    RAG_EMBEDDING_TIMEOUT = None
+else:
+    try:
+        RAG_EMBEDDING_TIMEOUT = int(RAG_EMBEDDING_TIMEOUT)
+    except Exception:
+        RAG_EMBEDDING_TIMEOUT = None
+
+
+####################################
+# Auth
 ####################################
 
 WEBUI_AUTH = os.environ.get('WEBUI_AUTH', 'True').lower() == 'true'
 
 ENABLE_INITIAL_ADMIN_SIGNUP = os.environ.get('ENABLE_INITIAL_ADMIN_SIGNUP', 'False').lower() == 'true'
 ENABLE_SIGNUP_PASSWORD_CONFIRMATION = os.environ.get('ENABLE_SIGNUP_PASSWORD_CONFIRMATION', 'False').lower() == 'true'
+
+####################################
+# Secret key & cookies
+####################################
+
+# WEBUI_JWT_SECRET_KEY is deprecated; use WEBUI_SECRET_KEY instead.
+WEBUI_SECRET_KEY = os.environ.get(
+    'WEBUI_SECRET_KEY',
+    os.environ.get('WEBUI_JWT_SECRET_KEY', 't0p-s3cr3t'),
+)
+
+WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
+    'WEBUI_SESSION_COOKIE_SAME_SITE', 'lax'
+)
+WEBUI_SESSION_COOKIE_SECURE = (
+    os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+)
+WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get(
+    'WEBUI_AUTH_COOKIE_SAME_SITE', WEBUI_SESSION_COOKIE_SAME_SITE
+)
+WEBUI_AUTH_COOKIE_SECURE = os.environ.get(
+    'WEBUI_AUTH_COOKIE_SECURE',
+    os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false'),
+).lower() == 'true'
+
+if WEBUI_AUTH and WEBUI_SECRET_KEY == '':
+    raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+
+ENABLE_COMPRESSION_MIDDLEWARE = (
+    os.environ.get('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
+)
 
 ####################################
 # Admin Account Runtime Creation
@@ -583,34 +680,6 @@ BYPASS_PYDUB_PREPROCESSING = os.environ.get('BYPASS_PYDUB_PREPROCESSING', 'False
 ENABLE_OPENAI_API_PASSTHROUGH = os.environ.get('ENABLE_OPENAI_API_PASSTHROUGH', 'False').lower() == 'true'
 
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get('WEBUI_AUTH_SIGNOUT_REDIRECT_URL', None)
-
-####################################
-# WEBUI_SECRET_KEY
-####################################
-
-WEBUI_SECRET_KEY = os.environ.get(
-    'WEBUI_SECRET_KEY',
-    os.environ.get('WEBUI_JWT_SECRET_KEY', 't0p-s3cr3t'),  # DEPRECATED: remove at next major version
-)
-
-WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get('WEBUI_SESSION_COOKIE_SAME_SITE', 'lax')
-
-WEBUI_SESSION_COOKIE_SECURE = os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false').lower() == 'true'
-
-WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get('WEBUI_AUTH_COOKIE_SAME_SITE', WEBUI_SESSION_COOKIE_SAME_SITE)
-
-WEBUI_AUTH_COOKIE_SECURE = (
-    os.environ.get(
-        'WEBUI_AUTH_COOKIE_SECURE',
-        os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false'),
-    ).lower()
-    == 'true'
-)
-
-if WEBUI_AUTH and WEBUI_SECRET_KEY == '':
-    raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
-
-ENABLE_COMPRESSION_MIDDLEWARE = os.environ.get('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
 
 ####################################
 # OAUTH Configuration
@@ -676,6 +745,68 @@ if LICENSE_PUBLIC_KEY:
 """.encode()
     )
 
+
+####################################
+# WEBUI Identity
+####################################
+
+WEBUI_NAME = os.environ.get('WEBUI_NAME', 'Open WebUI')
+if WEBUI_NAME != 'Open WebUI':
+    WEBUI_NAME += ' (Open WebUI)'
+
+WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
+WEBUI_BUILD_HASH = os.environ.get('WEBUI_BUILD_HASH', 'dev-build')
+TRUSTED_SIGNATURE_KEY = os.environ.get('TRUSTED_SIGNATURE_KEY', '')
+
+####################################
+# Feature flags
+####################################
+
+SAFE_MODE = os.environ.get('SAFE_MODE', 'False').lower() == 'true'
+ENABLE_EASTER_EGGS = os.environ.get('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
+ENABLE_STAR_SESSIONS_MIDDLEWARE = os.environ.get(
+    'ENABLE_STAR_SESSIONS_MIDDLEWARE', 'False'
+).lower() == 'true'
+
+ENABLE_PROFILE_IMAGE_URL_FORWARDING = os.environ.get('ENABLE_PROFILE_IMAGE_URL_FORWARDING', 'True').lower() == 'true'
+PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
+    t.strip()
+    for t in os.environ.get(
+        'PROFILE_IMAGE_ALLOWED_MIME_TYPES',
+        'image/png,image/jpeg,image/gif,image/webp',
+    ).split(',')
+    if t.strip()
+)
+
+####################################
+# Forward Headers
+####################################
+
+ENABLE_FORWARD_USER_INFO_HEADERS = os.environ.get('ENABLE_FORWARD_USER_INFO_HEADERS', 'False').lower() == 'true'
+
+FORWARD_USER_INFO_HEADER_USER_NAME = os.environ.get('FORWARD_USER_INFO_HEADER_USER_NAME', 'X-OpenWebUI-User-Name')
+FORWARD_USER_INFO_HEADER_USER_ID = os.environ.get('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
+FORWARD_USER_INFO_HEADER_USER_EMAIL = os.environ.get('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
+FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get('FORWARD_USER_INFO_HEADER_USER_ROLE', 'X-OpenWebUI-User-Role')
+FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get(
+    'FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id'
+)
+FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
+
+####################################
+# Progressive Web App
+####################################
+
+EXTERNAL_PWA_MANIFEST_URL = os.environ.get('EXTERNAL_PWA_MANIFEST_URL', None)
+
+####################################
+# GROUP DEFAULTS
+####################################
+
+# Controls the default "Who can share to this group" setting for new groups.
+# Env var values: "true" (anyone), "false" (no one), "members" (only group members).
+_default_group_share = os.environ.get('DEFAULT_GROUP_SHARE_PERMISSION', 'members').strip().lower()
+DEFAULT_GROUP_SHARE_PERMISSION = 'members' if _default_group_share == 'members' else _default_group_share == 'true'
 
 ####################################
 # MODELS
@@ -751,177 +882,6 @@ else:
 
 
 ####################################
-# WEBSOCKET SUPPORT
-####################################
-
-ENABLE_WEBSOCKET_SUPPORT = os.environ.get('ENABLE_WEBSOCKET_SUPPORT', 'True').lower() == 'true'
-
-
-WEBSOCKET_MANAGER = os.environ.get('WEBSOCKET_MANAGER', '')
-
-WEBSOCKET_REDIS_OPTIONS = os.environ.get('WEBSOCKET_REDIS_OPTIONS', '')
-
-
-if WEBSOCKET_REDIS_OPTIONS == '':
-    if REDIS_SOCKET_CONNECT_TIMEOUT:
-        WEBSOCKET_REDIS_OPTIONS = {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
-    else:
-        log.debug('No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
-else:
-    try:
-        WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
-    except Exception:
-        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
-
-WEBSOCKET_REDIS_URL = os.environ.get('WEBSOCKET_REDIS_URL', REDIS_URL)
-WEBSOCKET_REDIS_CLUSTER = os.environ.get('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
-
-websocket_redis_lock_timeout = os.environ.get('WEBSOCKET_REDIS_LOCK_TIMEOUT', '60')
-
-try:
-    WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
-except ValueError:
-    WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
-
-WEBSOCKET_SENTINEL_HOSTS = os.environ.get('WEBSOCKET_SENTINEL_HOSTS', '')
-WEBSOCKET_SENTINEL_PORT = os.environ.get('WEBSOCKET_SENTINEL_PORT', '26379')
-WEBSOCKET_SERVER_LOGGING = os.environ.get('WEBSOCKET_SERVER_LOGGING', 'False').lower() == 'true'
-WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
-    os.environ.get(
-        'WEBSOCKET_SERVER_ENGINEIO_LOGGING',
-        os.environ.get('WEBSOCKET_SERVER_LOGGING', 'False'),
-    ).lower()
-    == 'true'
-)
-WEBSOCKET_SERVER_PING_TIMEOUT = os.environ.get('WEBSOCKET_SERVER_PING_TIMEOUT', '20')
-try:
-    WEBSOCKET_SERVER_PING_TIMEOUT = int(WEBSOCKET_SERVER_PING_TIMEOUT)
-except ValueError:
-    WEBSOCKET_SERVER_PING_TIMEOUT = 20
-
-WEBSOCKET_SERVER_PING_INTERVAL = os.environ.get('WEBSOCKET_SERVER_PING_INTERVAL', '25')
-try:
-    WEBSOCKET_SERVER_PING_INTERVAL = int(WEBSOCKET_SERVER_PING_INTERVAL)
-except ValueError:
-    WEBSOCKET_SERVER_PING_INTERVAL = 25
-
-WEBSOCKET_EVENT_CALLER_TIMEOUT = os.environ.get('WEBSOCKET_EVENT_CALLER_TIMEOUT', '')
-
-if WEBSOCKET_EVENT_CALLER_TIMEOUT == '':
-    WEBSOCKET_EVENT_CALLER_TIMEOUT = None
-else:
-    try:
-        WEBSOCKET_EVENT_CALLER_TIMEOUT = int(WEBSOCKET_EVENT_CALLER_TIMEOUT)
-    except ValueError:
-        WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
-
-
-REQUESTS_VERIFY = os.environ.get('REQUESTS_VERIFY', 'True').lower() == 'true'
-
-AIOHTTP_CLIENT_TIMEOUT = os.environ.get('AIOHTTP_CLIENT_TIMEOUT', '')
-
-if AIOHTTP_CLIENT_TIMEOUT == '':
-    AIOHTTP_CLIENT_TIMEOUT = None
-else:
-    try:
-        AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
-    except Exception:
-        AIOHTTP_CLIENT_TIMEOUT = 300
-
-
-AIOHTTP_CLIENT_SESSION_SSL = os.environ.get('AIOHTTP_CLIENT_SESSION_SSL', 'True').lower() == 'true'
-
-# When False (default), outbound HTTP requests do not follow 3xx redirects.
-# This prevents redirect-based SSRF where a public URL 302-redirects to an
-# internal address (RFC 1918, loopback, cloud-metadata 169.254.169.254).
-# Set to True only if your deployment requires redirect following and you
-# have other SSRF protections in place (e.g. egress firewall).
-AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.environ.get('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
-
-AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
-    'AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST',
-    os.environ.get('AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST', '10'),
-)
-
-if AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST == '':
-    AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = None
-else:
-    try:
-        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = int(AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
-    except Exception:
-        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 10
-
-
-AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = os.environ.get('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA', '10')
-
-if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA == '':
-    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = None
-else:
-    try:
-        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = int(AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-    except Exception:
-        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
-
-
-AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
-    os.environ.get('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True').lower() == 'true'
-)
-
-AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = os.environ.get('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER', '')
-
-if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER == '':
-    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
-else:
-    try:
-        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = int(AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
-    except Exception:
-        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
-
-
-####################################
-# AIOHTTP Connection Pool
-####################################
-
-AIOHTTP_POOL_CONNECTIONS = os.environ.get('AIOHTTP_POOL_CONNECTIONS', '')
-if AIOHTTP_POOL_CONNECTIONS == '':
-    AIOHTTP_POOL_CONNECTIONS = None
-else:
-    try:
-        AIOHTTP_POOL_CONNECTIONS = int(AIOHTTP_POOL_CONNECTIONS)
-    except ValueError:
-        AIOHTTP_POOL_CONNECTIONS = None
-
-AIOHTTP_POOL_CONNECTIONS_PER_HOST = os.environ.get('AIOHTTP_POOL_CONNECTIONS_PER_HOST', '')
-if AIOHTTP_POOL_CONNECTIONS_PER_HOST == '':
-    AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
-else:
-    try:
-        AIOHTTP_POOL_CONNECTIONS_PER_HOST = int(AIOHTTP_POOL_CONNECTIONS_PER_HOST)
-    except ValueError:
-        AIOHTTP_POOL_CONNECTIONS_PER_HOST = None
-
-AIOHTTP_POOL_DNS_TTL = os.environ.get('AIOHTTP_POOL_DNS_TTL', '300')
-try:
-    AIOHTTP_POOL_DNS_TTL = int(AIOHTTP_POOL_DNS_TTL)
-    if AIOHTTP_POOL_DNS_TTL < 0:
-        AIOHTTP_POOL_DNS_TTL = 300
-except ValueError:
-    AIOHTTP_POOL_DNS_TTL = 300
-
-RAG_EMBEDDING_TIMEOUT = os.environ.get('RAG_EMBEDDING_TIMEOUT', '')
-
-if RAG_EMBEDDING_TIMEOUT == '':
-    RAG_EMBEDDING_TIMEOUT = None
-else:
-    try:
-        RAG_EMBEDDING_TIMEOUT = int(RAG_EMBEDDING_TIMEOUT)
-    except Exception:
-        RAG_EMBEDDING_TIMEOUT = None
-
-
-####################################
 # SENTENCE TRANSFORMERS
 ####################################
 
@@ -965,6 +925,18 @@ SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
 )
 
 ####################################
+# TOOLS/FUNCTIONS PIP OPTIONS
+####################################
+
+ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
+    os.environ.get('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS', 'True').lower() == 'true'
+)
+
+PIP_OPTIONS = os.getenv('PIP_OPTIONS', '').split()
+PIP_PACKAGE_INDEX_OPTIONS = os.getenv('PIP_PACKAGE_INDEX_OPTIONS', '').split()
+
+
+####################################
 # OFFLINE_MODE
 ####################################
 
@@ -976,7 +948,7 @@ if OFFLINE_MODE:
     ENABLE_VERSION_UPDATE_CHECK = False
 
 ####################################
-# AUDIT LOGGING
+# Audit logging
 ####################################
 
 
@@ -1043,10 +1015,18 @@ OTEL_BASIC_AUTH_USERNAME = os.environ.get('OTEL_BASIC_AUTH_USERNAME', '')
 OTEL_BASIC_AUTH_PASSWORD = os.environ.get('OTEL_BASIC_AUTH_PASSWORD', '')
 OTEL_METRICS_EXPORT_INTERVAL_MILLIS = int(os.environ.get('OTEL_METRICS_EXPORT_INTERVAL_MILLIS', '10000'))
 
-OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get('OTEL_METRICS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME)
-OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get('OTEL_METRICS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD)
-OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get('OTEL_LOGS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME)
-OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get('OTEL_LOGS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD)
+OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get(
+    'OTEL_METRICS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get(
+    'OTEL_METRICS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD
+)
+OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get(
+    'OTEL_LOGS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get(
+    'OTEL_LOGS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD
+)
 
 OTEL_OTLP_SPAN_EXPORTER = os.environ.get('OTEL_OTLP_SPAN_EXPORTER', 'grpc').lower()  # grpc or http
 
@@ -1057,30 +1037,3 @@ OTEL_METRICS_OTLP_SPAN_EXPORTER = os.environ.get(
 OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
     'OTEL_LOGS_OTLP_SPAN_EXPORTER', OTEL_OTLP_SPAN_EXPORTER
 ).lower()  # grpc or http
-
-####################################
-# TOOLS/FUNCTIONS PIP OPTIONS
-####################################
-
-ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
-    os.environ.get('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS', 'True').lower() == 'true'
-)
-
-PIP_OPTIONS = os.getenv('PIP_OPTIONS', '').split()
-PIP_PACKAGE_INDEX_OPTIONS = os.getenv('PIP_PACKAGE_INDEX_OPTIONS', '').split()
-
-
-####################################
-# PROGRESSIVE WEB APP OPTIONS
-####################################
-
-EXTERNAL_PWA_MANIFEST_URL = os.environ.get('EXTERNAL_PWA_MANIFEST_URL')
-
-####################################
-# GROUP DEFAULTS
-####################################
-
-# Controls the default "Who can share to this group" setting for new groups.
-# Env var values: "true" (anyone), "false" (no one), "members" (only group members).
-_default_group_share = os.environ.get('DEFAULT_GROUP_SHARE_PERMISSION', 'members').strip().lower()
-DEFAULT_GROUP_SHARE_PERMISSION = 'members' if _default_group_share == 'members' else _default_group_share == 'true'
