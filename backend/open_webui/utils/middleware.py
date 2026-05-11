@@ -3060,7 +3060,7 @@ async def background_tasks_handler(ctx):
     messages = []
 
     if (
-        'chat_id' in metadata
+        metadata.get('chat_id')
         and not metadata['chat_id'].startswith('local:')
         and not metadata['chat_id'].startswith('channel:')
     ):
@@ -3143,8 +3143,8 @@ async def background_tasks_handler(ctx):
                             }
                         )
 
-                        if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
-                            'chat_id', ''
+                        if not (metadata.get('chat_id') or '').startswith('local:') and not (
+                            metadata.get('chat_id') or ''
                         ).startswith('channel:'):
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
@@ -3157,9 +3157,9 @@ async def background_tasks_handler(ctx):
                     except Exception as e:
                         pass
 
-            if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith(
-                'channel:'
-            ):  # Only update titles and tags for non-temp chats
+            if not (metadata.get('chat_id') or '').startswith('local:') and not (
+                metadata.get('chat_id') or ''
+            ).startswith('channel:'):  # Only update titles and tags for non-temp chats
                 if TASKS.TITLE_GENERATION in tasks:
                     user_message = get_last_user_message(messages)
                     if user_message and len(user_message) > 100:

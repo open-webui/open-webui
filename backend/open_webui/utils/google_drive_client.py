@@ -680,7 +680,7 @@ async def create_drive_client_for_user(
     from open_webui.models.oauth_sessions import OAuthSessions
 
     # Get Google OAuth session
-    oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+    oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
     if not oauth_session:
         log.warning(f"No Google OAuth session for user {user_id}")
         return None
