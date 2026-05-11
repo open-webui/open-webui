@@ -55,9 +55,7 @@ if USE_CUDA.lower() == 'true':
             raise RuntimeError('CUDA not available')
         DEVICE_TYPE = 'cuda'
     except Exception as exc:
-        _cuda_error = (
-            f'CUDA unavailable (USE_CUDA_DOCKER=true), falling back to CPU: {exc}'
-        )
+        _cuda_error = f'CUDA unavailable (USE_CUDA_DOCKER=true), falling back to CPU: {exc}'
         os.environ['USE_CUDA_DOCKER'] = 'false'
         USE_CUDA = 'false'
 
@@ -607,26 +605,21 @@ WEBUI_SECRET_KEY = os.environ.get(
     os.environ.get('WEBUI_JWT_SECRET_KEY', 't0p-s3cr3t'),
 )
 
-WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
-    'WEBUI_SESSION_COOKIE_SAME_SITE', 'lax'
+WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get('WEBUI_SESSION_COOKIE_SAME_SITE', 'lax')
+WEBUI_SESSION_COOKIE_SECURE = os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get('WEBUI_AUTH_COOKIE_SAME_SITE', WEBUI_SESSION_COOKIE_SAME_SITE)
+WEBUI_AUTH_COOKIE_SECURE = (
+    os.environ.get(
+        'WEBUI_AUTH_COOKIE_SECURE',
+        os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false'),
+    ).lower()
+    == 'true'
 )
-WEBUI_SESSION_COOKIE_SECURE = (
-    os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false').lower() == 'true'
-)
-WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get(
-    'WEBUI_AUTH_COOKIE_SAME_SITE', WEBUI_SESSION_COOKIE_SAME_SITE
-)
-WEBUI_AUTH_COOKIE_SECURE = os.environ.get(
-    'WEBUI_AUTH_COOKIE_SECURE',
-    os.environ.get('WEBUI_SESSION_COOKIE_SECURE', 'false'),
-).lower() == 'true'
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == '':
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
-ENABLE_COMPRESSION_MIDDLEWARE = (
-    os.environ.get('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
-)
+ENABLE_COMPRESSION_MIDDLEWARE = os.environ.get('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
 
 ####################################
 # Admin Account Runtime Creation
@@ -764,9 +757,7 @@ TRUSTED_SIGNATURE_KEY = os.environ.get('TRUSTED_SIGNATURE_KEY', '')
 
 SAFE_MODE = os.environ.get('SAFE_MODE', 'False').lower() == 'true'
 ENABLE_EASTER_EGGS = os.environ.get('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
-ENABLE_STAR_SESSIONS_MIDDLEWARE = os.environ.get(
-    'ENABLE_STAR_SESSIONS_MIDDLEWARE', 'False'
-).lower() == 'true'
+ENABLE_STAR_SESSIONS_MIDDLEWARE = os.environ.get('ENABLE_STAR_SESSIONS_MIDDLEWARE', 'False').lower() == 'true'
 
 ENABLE_PROFILE_IMAGE_URL_FORWARDING = os.environ.get('ENABLE_PROFILE_IMAGE_URL_FORWARDING', 'True').lower() == 'true'
 PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
@@ -1015,18 +1006,10 @@ OTEL_BASIC_AUTH_USERNAME = os.environ.get('OTEL_BASIC_AUTH_USERNAME', '')
 OTEL_BASIC_AUTH_PASSWORD = os.environ.get('OTEL_BASIC_AUTH_PASSWORD', '')
 OTEL_METRICS_EXPORT_INTERVAL_MILLIS = int(os.environ.get('OTEL_METRICS_EXPORT_INTERVAL_MILLIS', '10000'))
 
-OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get(
-    'OTEL_METRICS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME
-)
-OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get(
-    'OTEL_METRICS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD
-)
-OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get(
-    'OTEL_LOGS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME
-)
-OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get(
-    'OTEL_LOGS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD
-)
+OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get('OTEL_METRICS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME)
+OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get('OTEL_METRICS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD)
+OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get('OTEL_LOGS_BASIC_AUTH_USERNAME', OTEL_BASIC_AUTH_USERNAME)
+OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get('OTEL_LOGS_BASIC_AUTH_PASSWORD', OTEL_BASIC_AUTH_PASSWORD)
 
 OTEL_OTLP_SPAN_EXPORTER = os.environ.get('OTEL_OTLP_SPAN_EXPORTER', 'grpc').lower()  # grpc or http
 

@@ -2135,9 +2135,7 @@ except json.JSONDecodeError:
     images_openai_params = {}
 
 
-IMAGES_OPENAI_API_PARAMS = ConfigVar(
-    'IMAGES_OPENAI_API_PARAMS', 'image_generation.openai.params', images_openai_params
-)
+IMAGES_OPENAI_API_PARAMS = ConfigVar('IMAGES_OPENAI_API_PARAMS', 'image_generation.openai.params', images_openai_params)
 
 
 IMAGES_GEMINI_API_BASE_URL = ConfigVar(
