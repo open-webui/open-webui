@@ -130,8 +130,8 @@ if os.path.exists(f'{DATA_DIR}/config.json'):
     os.rename(f'{DATA_DIR}/config.json', f'{DATA_DIR}/old_config.json')
 
 
-ENABLE_PERSISTENT_CONFIG = os.environ.get('ENABLE_PERSISTENT_CONFIG', 'True').lower() == 'true'
-ENABLE_OAUTH_PERSISTENT_CONFIG = os.environ.get('ENABLE_OAUTH_PERSISTENT_CONFIG', 'False').lower() == 'true'
+ENABLE_PERSISTENT_CONFIG = os.getenv('ENABLE_PERSISTENT_CONFIG', 'True').lower() == 'true'
+ENABLE_OAUTH_PERSISTENT_CONFIG = os.getenv('ENABLE_OAUTH_PERSISTENT_CONFIG', 'False').lower() == 'true'
 
 # Bootstrap the persistent config subsystem
 CONFIG_DATA = _initialize_config(
@@ -194,25 +194,25 @@ if frontend_loader.exists():
 # STORAGE PROVIDER
 ####################################
 
-STORAGE_PROVIDER = os.environ.get('STORAGE_PROVIDER', 'local')  # defaults to local, s3
-STORAGE_LOCAL_CACHE = os.environ.get('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
+STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # defaults to local, s3
+STORAGE_LOCAL_CACHE = os.getenv('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
 
-S3_ACCESS_KEY_ID = os.environ.get('S3_ACCESS_KEY_ID', None)
-S3_SECRET_ACCESS_KEY = os.environ.get('S3_SECRET_ACCESS_KEY', None)
-S3_REGION_NAME = os.environ.get('S3_REGION_NAME', None)
-S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', None)
-S3_KEY_PREFIX = os.environ.get('S3_KEY_PREFIX', None)
-S3_ENDPOINT_URL = os.environ.get('S3_ENDPOINT_URL', None)
-S3_USE_ACCELERATE_ENDPOINT = os.environ.get('S3_USE_ACCELERATE_ENDPOINT', 'false').lower() == 'true'
-S3_ADDRESSING_STYLE = os.environ.get('S3_ADDRESSING_STYLE', None)
+S3_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY_ID', None)
+S3_SECRET_ACCESS_KEY = os.getenv('S3_SECRET_ACCESS_KEY', None)
+S3_REGION_NAME = os.getenv('S3_REGION_NAME', None)
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', None)
+S3_KEY_PREFIX = os.getenv('S3_KEY_PREFIX', None)
+S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL', None)
+S3_USE_ACCELERATE_ENDPOINT = os.getenv('S3_USE_ACCELERATE_ENDPOINT', 'false').lower() == 'true'
+S3_ADDRESSING_STYLE = os.getenv('S3_ADDRESSING_STYLE', None)
 S3_ENABLE_TAGGING = os.getenv('S3_ENABLE_TAGGING', 'false').lower() == 'true'
 
-GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME', None)
-GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS_JSON', None)
+GCS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME', None)
+GOOGLE_APPLICATION_CREDENTIALS_JSON = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON', None)
 
-AZURE_STORAGE_ENDPOINT = os.environ.get('AZURE_STORAGE_ENDPOINT', None)
-AZURE_STORAGE_CONTAINER_NAME = os.environ.get('AZURE_STORAGE_CONTAINER_NAME', None)
-AZURE_STORAGE_KEY = os.environ.get('AZURE_STORAGE_KEY', None)
+AZURE_STORAGE_ENDPOINT = os.getenv('AZURE_STORAGE_ENDPOINT', None)
+AZURE_STORAGE_CONTAINER_NAME = os.getenv('AZURE_STORAGE_CONTAINER_NAME', None)
+AZURE_STORAGE_KEY = os.getenv('AZURE_STORAGE_KEY', None)
 
 ####################################
 # File Upload DIR
@@ -234,7 +234,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # CUSTOM_NAME (Legacy)
 ####################################
 
-CUSTOM_NAME = os.environ.get('CUSTOM_NAME', '')
+CUSTOM_NAME = os.getenv('CUSTOM_NAME', '')
 
 if CUSTOM_NAME:
     try:
@@ -274,7 +274,7 @@ if CUSTOM_NAME:
 ENABLE_DIRECT_CONNECTIONS = ConfigVar(
     'ENABLE_DIRECT_CONNECTIONS',
     'direct.enable',
-    os.environ.get('ENABLE_DIRECT_CONNECTIONS', 'False').lower() == 'true',
+    os.getenv('ENABLE_DIRECT_CONNECTIONS', 'False').lower() == 'true',
 )
 
 ####################################
@@ -284,19 +284,19 @@ ENABLE_DIRECT_CONNECTIONS = ConfigVar(
 ENABLE_OLLAMA_API = ConfigVar(
     'ENABLE_OLLAMA_API',
     'ollama.enable',
-    os.environ.get('ENABLE_OLLAMA_API', 'True').lower() == 'true',
+    os.getenv('ENABLE_OLLAMA_API', 'True').lower() == 'true',
 )
 
-OLLAMA_API_BASE_URL = os.environ.get('OLLAMA_API_BASE_URL', 'http://localhost:11434/api')
+OLLAMA_API_BASE_URL = os.getenv('OLLAMA_API_BASE_URL', 'http://localhost:11434/api')
 
-OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', '')
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', '')
 if OLLAMA_BASE_URL:
     # Remove trailing slash
     OLLAMA_BASE_URL = OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith('/') else OLLAMA_BASE_URL
 
 
-K8S_FLAG = os.environ.get('K8S_FLAG', '')
-USE_OLLAMA_DOCKER = os.environ.get('USE_OLLAMA_DOCKER', 'false')
+K8S_FLAG = os.getenv('K8S_FLAG', '')
+USE_OLLAMA_DOCKER = os.getenv('USE_OLLAMA_DOCKER', 'false')
 
 if OLLAMA_BASE_URL == '' and OLLAMA_API_BASE_URL != '':
     OLLAMA_BASE_URL = OLLAMA_API_BASE_URL[:-4] if OLLAMA_API_BASE_URL.endswith('/api') else OLLAMA_API_BASE_URL
@@ -340,11 +340,11 @@ def _resolve_ollama_base_url(url: str) -> str:
 
 # Auto-resolve Ollama port when no explicit URL was provided by the user.
 # The Dockerfile default is "/ollama" which the block above rewrites to :11434.
-if os.environ.get('OLLAMA_BASE_URL', '') in ('', '/ollama') and not os.environ.get('OLLAMA_BASE_URLS', ''):
+if os.getenv('OLLAMA_BASE_URL', '') in ('', '/ollama') and not os.getenv('OLLAMA_BASE_URLS', ''):
     OLLAMA_BASE_URL = _resolve_ollama_base_url(OLLAMA_BASE_URL)
 
 
-OLLAMA_BASE_URLS = os.environ.get('OLLAMA_BASE_URLS', '')
+OLLAMA_BASE_URLS = os.getenv('OLLAMA_BASE_URLS', '')
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != '' else OLLAMA_BASE_URL
 
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
@@ -364,15 +364,15 @@ OLLAMA_API_CONFIGS = ConfigVar(
 ENABLE_OPENAI_API = ConfigVar(
     'ENABLE_OPENAI_API',
     'openai.enable',
-    os.environ.get('ENABLE_OPENAI_API', 'True').lower() == 'true',
+    os.getenv('ENABLE_OPENAI_API', 'True').lower() == 'true',
 )
 
 
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
-OPENAI_API_BASE_URL = os.environ.get('OPENAI_API_BASE_URL', '')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_API_BASE_URL = os.getenv('OPENAI_API_BASE_URL', '')
 
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_API_BASE_URL = os.environ.get('GEMINI_API_BASE_URL', '')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_API_BASE_URL = os.getenv('GEMINI_API_BASE_URL', '')
 
 
 if OPENAI_API_BASE_URL == '':
@@ -381,13 +381,13 @@ else:
     if OPENAI_API_BASE_URL.endswith('/'):
         OPENAI_API_BASE_URL = OPENAI_API_BASE_URL[:-1]
 
-OPENAI_API_KEYS = os.environ.get('OPENAI_API_KEYS', '')
+OPENAI_API_KEYS = os.getenv('OPENAI_API_KEYS', '')
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != '' else OPENAI_API_KEY
 
 OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(';')]
 OPENAI_API_KEYS = ConfigVar('OPENAI_API_KEYS', 'openai.api_keys', OPENAI_API_KEYS)
 
-OPENAI_API_BASE_URLS = os.environ.get('OPENAI_API_BASE_URLS', '')
+OPENAI_API_BASE_URLS = os.getenv('OPENAI_API_BASE_URLS', '')
 OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != '' else OPENAI_API_BASE_URL
 
 OPENAI_API_BASE_URLS = [
@@ -417,7 +417,7 @@ OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
 ENABLE_BASE_MODELS_CACHE = ConfigVar(
     'ENABLE_BASE_MODELS_CACHE',
     'models.base_models_cache',
-    os.environ.get('ENABLE_BASE_MODELS_CACHE', 'False').lower() == 'true',
+    os.getenv('ENABLE_BASE_MODELS_CACHE', 'False').lower() == 'true',
 )
 
 
@@ -426,7 +426,7 @@ ENABLE_BASE_MODELS_CACHE = ConfigVar(
 ####################################
 
 try:
-    tool_server_connections = json.loads(os.environ.get('TOOL_SERVER_CONNECTIONS', '[]'))
+    tool_server_connections = json.loads(os.getenv('TOOL_SERVER_CONNECTIONS', '[]'))
 except Exception as e:
     log.exception(f'Error loading TOOL_SERVER_CONNECTIONS: {e}')
     tool_server_connections = []
@@ -441,14 +441,14 @@ TOOL_SERVER_CONNECTIONS = ConfigVar(
 OAUTH_CLIENT_TIMEOUT = ConfigVar(
     'OAUTH_CLIENT_TIMEOUT',
     'oauth.client.timeout',
-    os.environ.get('OAUTH_CLIENT_TIMEOUT', ''),
+    os.getenv('OAUTH_CLIENT_TIMEOUT', ''),
 )
 
 ####################################
 # TERMINAL_SERVER
 ####################################
 
-terminal_server_connections = json.loads(os.environ.get('TERMINAL_SERVER_CONNECTIONS', '[]'))
+terminal_server_connections = json.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
 
 TERMINAL_SERVER_CONNECTIONS = ConfigVar(
     'TERMINAL_SERVER_CONNECTIONS',
@@ -457,7 +457,7 @@ TERMINAL_SERVER_CONNECTIONS = ConfigVar(
 )
 
 try:
-    TERMINAL_PROXY_HEADERS = json.loads(os.environ.get('TERMINAL_PROXY_HEADERS', '{}'))
+    TERMINAL_PROXY_HEADERS = json.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
 except Exception:
     TERMINAL_PROXY_HEADERS = {}
 
@@ -468,91 +468,91 @@ except Exception:
 ENABLE_CODE_EXECUTION = ConfigVar(
     'ENABLE_CODE_EXECUTION',
     'code_execution.enable',
-    os.environ.get('ENABLE_CODE_EXECUTION', 'True').lower() == 'true',
+    os.getenv('ENABLE_CODE_EXECUTION', 'True').lower() == 'true',
 )
 
 CODE_EXECUTION_ENGINE = ConfigVar(
     'CODE_EXECUTION_ENGINE',
     'code_execution.engine',
-    os.environ.get('CODE_EXECUTION_ENGINE', 'pyodide'),
+    os.getenv('CODE_EXECUTION_ENGINE', 'pyodide'),
 )
 
 CODE_EXECUTION_JUPYTER_URL = ConfigVar(
     'CODE_EXECUTION_JUPYTER_URL',
     'code_execution.jupyter.url',
-    os.environ.get('CODE_EXECUTION_JUPYTER_URL', ''),
+    os.getenv('CODE_EXECUTION_JUPYTER_URL', ''),
 )
 
 CODE_EXECUTION_JUPYTER_AUTH = ConfigVar(
     'CODE_EXECUTION_JUPYTER_AUTH',
     'code_execution.jupyter.auth',
-    os.environ.get('CODE_EXECUTION_JUPYTER_AUTH', ''),
+    os.getenv('CODE_EXECUTION_JUPYTER_AUTH', ''),
 )
 
 CODE_EXECUTION_JUPYTER_AUTH_TOKEN = ConfigVar(
     'CODE_EXECUTION_JUPYTER_AUTH_TOKEN',
     'code_execution.jupyter.auth_token',
-    os.environ.get('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''),
+    os.getenv('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''),
 )
 
 
 CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = ConfigVar(
     'CODE_EXECUTION_JUPYTER_AUTH_PASSWORD',
     'code_execution.jupyter.auth_password',
-    os.environ.get('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
+    os.getenv('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
 )
 
 CODE_EXECUTION_JUPYTER_TIMEOUT = ConfigVar(
     'CODE_EXECUTION_JUPYTER_TIMEOUT',
     'code_execution.jupyter.timeout',
-    int(os.environ.get('CODE_EXECUTION_JUPYTER_TIMEOUT', '60')),
+    int(os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT', '60')),
 )
 
 ENABLE_CODE_INTERPRETER = ConfigVar(
     'ENABLE_CODE_INTERPRETER',
     'code_interpreter.enable',
-    os.environ.get('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true',
+    os.getenv('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true',
 )
 
 ENABLE_MEMORIES = ConfigVar(
     'ENABLE_MEMORIES',
     'memories.enable',
-    os.environ.get('ENABLE_MEMORIES', 'True').lower() == 'true',
+    os.getenv('ENABLE_MEMORIES', 'True').lower() == 'true',
 )
 
 CODE_INTERPRETER_ENGINE = ConfigVar(
     'CODE_INTERPRETER_ENGINE',
     'code_interpreter.engine',
-    os.environ.get('CODE_INTERPRETER_ENGINE', 'pyodide'),
+    os.getenv('CODE_INTERPRETER_ENGINE', 'pyodide'),
 )
 
 CODE_INTERPRETER_PROMPT_TEMPLATE = ConfigVar(
     'CODE_INTERPRETER_PROMPT_TEMPLATE',
     'code_interpreter.prompt_template',
-    os.environ.get('CODE_INTERPRETER_PROMPT_TEMPLATE', ''),
+    os.getenv('CODE_INTERPRETER_PROMPT_TEMPLATE', ''),
 )
 
 CODE_INTERPRETER_JUPYTER_URL = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_URL',
     'code_interpreter.jupyter.url',
-    os.environ.get('CODE_INTERPRETER_JUPYTER_URL', os.environ.get('CODE_EXECUTION_JUPYTER_URL', '')),
+    os.getenv('CODE_INTERPRETER_JUPYTER_URL', os.getenv('CODE_EXECUTION_JUPYTER_URL', '')),
 )
 
 CODE_INTERPRETER_JUPYTER_AUTH = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_AUTH',
     'code_interpreter.jupyter.auth',
-    os.environ.get(
+    os.getenv(
         'CODE_INTERPRETER_JUPYTER_AUTH',
-        os.environ.get('CODE_EXECUTION_JUPYTER_AUTH', ''),
+        os.getenv('CODE_EXECUTION_JUPYTER_AUTH', ''),
     ),
 )
 
 CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN',
     'code_interpreter.jupyter.auth_token',
-    os.environ.get(
+    os.getenv(
         'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN',
-        os.environ.get('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''),
+        os.getenv('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''),
     ),
 )
 
@@ -560,9 +560,9 @@ CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = ConfigVar(
 CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD',
     'code_interpreter.jupyter.auth_password',
-    os.environ.get(
+    os.getenv(
         'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD',
-        os.environ.get('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
+        os.getenv('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
     ),
 )
 
@@ -570,15 +570,15 @@ CODE_INTERPRETER_JUPYTER_TIMEOUT = ConfigVar(
     'CODE_INTERPRETER_JUPYTER_TIMEOUT',
     'code_interpreter.jupyter.timeout',
     int(
-        os.environ.get(
+        os.getenv(
             'CODE_INTERPRETER_JUPYTER_TIMEOUT',
-            os.environ.get('CODE_EXECUTION_JUPYTER_TIMEOUT', '60'),
+            os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT', '60'),
         )
     ),
 )
 
 CODE_INTERPRETER_BLOCKED_MODULES = [
-    library.strip() for library in os.environ.get('CODE_INTERPRETER_BLOCKED_MODULES', '').split(',') if library.strip()
+    library.strip() for library in os.getenv('CODE_INTERPRETER_BLOCKED_MODULES', '').split(',') if library.strip()
 ]
 
 DEFAULT_CODE_INTERPRETER_PROMPT = """
@@ -618,7 +618,7 @@ CODE_INTERPRETER_PYODIDE_PROMPT = """
 # Vector Database
 ####################################
 
-VECTOR_DB = os.environ.get('VECTOR_DB', 'chroma')
+VECTOR_DB = os.getenv('VECTOR_DB', 'chroma')
 
 # Chroma
 CHROMA_DATA_PATH = f'{DATA_DIR}/vector_db'
@@ -626,39 +626,39 @@ CHROMA_DATA_PATH = f'{DATA_DIR}/vector_db'
 if VECTOR_DB == 'chroma':
     import chromadb
 
-    CHROMA_TENANT = os.environ.get('CHROMA_TENANT', chromadb.DEFAULT_TENANT)
-    CHROMA_DATABASE = os.environ.get('CHROMA_DATABASE', chromadb.DEFAULT_DATABASE)
-    CHROMA_HTTP_HOST = os.environ.get('CHROMA_HTTP_HOST', '')
-    CHROMA_HTTP_PORT = int(os.environ.get('CHROMA_HTTP_PORT', '8000'))
-    CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get('CHROMA_CLIENT_AUTH_PROVIDER', '')
-    CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get('CHROMA_CLIENT_AUTH_CREDENTIALS', '')
+    CHROMA_TENANT = os.getenv('CHROMA_TENANT', chromadb.DEFAULT_TENANT)
+    CHROMA_DATABASE = os.getenv('CHROMA_DATABASE', chromadb.DEFAULT_DATABASE)
+    CHROMA_HTTP_HOST = os.getenv('CHROMA_HTTP_HOST', '')
+    CHROMA_HTTP_PORT = int(os.getenv('CHROMA_HTTP_PORT', '8000'))
+    CHROMA_CLIENT_AUTH_PROVIDER = os.getenv('CHROMA_CLIENT_AUTH_PROVIDER', '')
+    CHROMA_CLIENT_AUTH_CREDENTIALS = os.getenv('CHROMA_CLIENT_AUTH_CREDENTIALS', '')
     # Comma-separated list of header=value pairs
-    CHROMA_HTTP_HEADERS = os.environ.get('CHROMA_HTTP_HEADERS', '')
+    CHROMA_HTTP_HEADERS = os.getenv('CHROMA_HTTP_HEADERS', '')
     if CHROMA_HTTP_HEADERS:
         CHROMA_HTTP_HEADERS = dict([pair.split('=') for pair in CHROMA_HTTP_HEADERS.split(',')])
     else:
         CHROMA_HTTP_HEADERS = None
-    CHROMA_HTTP_SSL = os.environ.get('CHROMA_HTTP_SSL', 'false').lower() == 'true'
+    CHROMA_HTTP_SSL = os.getenv('CHROMA_HTTP_SSL', 'false').lower() == 'true'
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 
 # MariaDB Vector (mariadb-vector)
-MARIADB_VECTOR_DB_URL = os.environ.get('MARIADB_VECTOR_DB_URL', '').strip()
+MARIADB_VECTOR_DB_URL = os.getenv('MARIADB_VECTOR_DB_URL', '').strip()
 
 MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
-    os.environ.get('MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH', '1536').strip() or '1536'
+    os.getenv('MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH', '1536').strip() or '1536'
 )
 
 # Distance strategy:
 #   - cosine     => vec_distance_cosine(...)
 #   - euclidean  => vec_distance_euclidean(...)
-MARIADB_VECTOR_DISTANCE_STRATEGY = os.environ.get('MARIADB_VECTOR_DISTANCE_STRATEGY', 'cosine').strip().lower()
+MARIADB_VECTOR_DISTANCE_STRATEGY = os.getenv('MARIADB_VECTOR_DISTANCE_STRATEGY', 'cosine').strip().lower()
 
 # HNSW M parameter (MariaDB VECTOR INDEX ... M=<int>)
-MARIADB_VECTOR_INDEX_M = int(os.environ.get('MARIADB_VECTOR_INDEX_M', '8').strip() or '8')
+MARIADB_VECTOR_INDEX_M = int(os.getenv('MARIADB_VECTOR_INDEX_M', '8').strip() or '8')
 
 # Pooling (MariaDB-Vector)
-MARIADB_VECTOR_POOL_SIZE = os.environ.get('MARIADB_VECTOR_POOL_SIZE', None)
+MARIADB_VECTOR_POOL_SIZE = os.getenv('MARIADB_VECTOR_POOL_SIZE', None)
 
 if MARIADB_VECTOR_POOL_SIZE != None:
     try:
@@ -666,7 +666,7 @@ if MARIADB_VECTOR_POOL_SIZE != None:
     except Exception:
         MARIADB_VECTOR_POOL_SIZE = None
 
-MARIADB_VECTOR_POOL_MAX_OVERFLOW = os.environ.get('MARIADB_VECTOR_POOL_MAX_OVERFLOW', 0)
+MARIADB_VECTOR_POOL_MAX_OVERFLOW = os.getenv('MARIADB_VECTOR_POOL_MAX_OVERFLOW', 0)
 
 if MARIADB_VECTOR_POOL_MAX_OVERFLOW == '':
     MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
@@ -676,7 +676,7 @@ else:
     except Exception:
         MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
 
-MARIADB_VECTOR_POOL_TIMEOUT = os.environ.get('MARIADB_VECTOR_POOL_TIMEOUT', 30)
+MARIADB_VECTOR_POOL_TIMEOUT = os.getenv('MARIADB_VECTOR_POOL_TIMEOUT', 30)
 
 if MARIADB_VECTOR_POOL_TIMEOUT == '':
     MARIADB_VECTOR_POOL_TIMEOUT = 30
@@ -686,7 +686,7 @@ else:
     except Exception:
         MARIADB_VECTOR_POOL_TIMEOUT = 30
 
-MARIADB_VECTOR_POOL_RECYCLE = os.environ.get('MARIADB_VECTOR_POOL_RECYCLE', 3600)
+MARIADB_VECTOR_POOL_RECYCLE = os.getenv('MARIADB_VECTOR_POOL_RECYCLE', 3600)
 
 if MARIADB_VECTOR_POOL_RECYCLE == '':
     MARIADB_VECTOR_POOL_RECYCLE = 3600
@@ -712,63 +712,63 @@ if VECTOR_DB == 'mariadb-vector':
 
 
 # Milvus
-MILVUS_URI = os.environ.get('MILVUS_URI', f'{DATA_DIR}/vector_db/milvus.db')
-MILVUS_DB = os.environ.get('MILVUS_DB', 'default')
-MILVUS_TOKEN = os.environ.get('MILVUS_TOKEN', None)
-MILVUS_INDEX_TYPE = os.environ.get('MILVUS_INDEX_TYPE', 'HNSW')
-MILVUS_METRIC_TYPE = os.environ.get('MILVUS_METRIC_TYPE', 'COSINE')
-MILVUS_HNSW_M = int(os.environ.get('MILVUS_HNSW_M', '16'))
-MILVUS_HNSW_EFCONSTRUCTION = int(os.environ.get('MILVUS_HNSW_EFCONSTRUCTION', '100'))
-MILVUS_IVF_FLAT_NLIST = int(os.environ.get('MILVUS_IVF_FLAT_NLIST', '128'))
-MILVUS_DISKANN_MAX_DEGREE = int(os.environ.get('MILVUS_DISKANN_MAX_DEGREE', '56'))
-MILVUS_DISKANN_SEARCH_LIST_SIZE = int(os.environ.get('MILVUS_DISKANN_SEARCH_LIST_SIZE', '100'))
-ENABLE_MILVUS_MULTITENANCY_MODE = os.environ.get('ENABLE_MILVUS_MULTITENANCY_MODE', 'false').lower() == 'true'
+MILVUS_URI = os.getenv('MILVUS_URI', f'{DATA_DIR}/vector_db/milvus.db')
+MILVUS_DB = os.getenv('MILVUS_DB', 'default')
+MILVUS_TOKEN = os.getenv('MILVUS_TOKEN', None)
+MILVUS_INDEX_TYPE = os.getenv('MILVUS_INDEX_TYPE', 'HNSW')
+MILVUS_METRIC_TYPE = os.getenv('MILVUS_METRIC_TYPE', 'COSINE')
+MILVUS_HNSW_M = int(os.getenv('MILVUS_HNSW_M', '16'))
+MILVUS_HNSW_EFCONSTRUCTION = int(os.getenv('MILVUS_HNSW_EFCONSTRUCTION', '100'))
+MILVUS_IVF_FLAT_NLIST = int(os.getenv('MILVUS_IVF_FLAT_NLIST', '128'))
+MILVUS_DISKANN_MAX_DEGREE = int(os.getenv('MILVUS_DISKANN_MAX_DEGREE', '56'))
+MILVUS_DISKANN_SEARCH_LIST_SIZE = int(os.getenv('MILVUS_DISKANN_SEARCH_LIST_SIZE', '100'))
+ENABLE_MILVUS_MULTITENANCY_MODE = os.getenv('ENABLE_MILVUS_MULTITENANCY_MODE', 'false').lower() == 'true'
 # Hyphens not allowed, need to use underscores in collection names
-MILVUS_COLLECTION_PREFIX = os.environ.get('MILVUS_COLLECTION_PREFIX', 'open_webui')
+MILVUS_COLLECTION_PREFIX = os.getenv('MILVUS_COLLECTION_PREFIX', 'open_webui')
 
 # Qdrant
-QDRANT_URI = os.environ.get('QDRANT_URI', None)
-QDRANT_API_KEY = os.environ.get('QDRANT_API_KEY', None)
-QDRANT_ON_DISK = os.environ.get('QDRANT_ON_DISK', 'false').lower() == 'true'
-QDRANT_PREFER_GRPC = os.environ.get('QDRANT_PREFER_GRPC', 'false').lower() == 'true'
-QDRANT_GRPC_PORT = int(os.environ.get('QDRANT_GRPC_PORT', '6334'))
-QDRANT_TIMEOUT = int(os.environ.get('QDRANT_TIMEOUT', '5'))
-QDRANT_HNSW_M = int(os.environ.get('QDRANT_HNSW_M', '16'))
-ENABLE_QDRANT_MULTITENANCY_MODE = os.environ.get('ENABLE_QDRANT_MULTITENANCY_MODE', 'true').lower() == 'true'
-QDRANT_COLLECTION_PREFIX = os.environ.get('QDRANT_COLLECTION_PREFIX', 'open-webui')
+QDRANT_URI = os.getenv('QDRANT_URI', None)
+QDRANT_API_KEY = os.getenv('QDRANT_API_KEY', None)
+QDRANT_ON_DISK = os.getenv('QDRANT_ON_DISK', 'false').lower() == 'true'
+QDRANT_PREFER_GRPC = os.getenv('QDRANT_PREFER_GRPC', 'false').lower() == 'true'
+QDRANT_GRPC_PORT = int(os.getenv('QDRANT_GRPC_PORT', '6334'))
+QDRANT_TIMEOUT = int(os.getenv('QDRANT_TIMEOUT', '5'))
+QDRANT_HNSW_M = int(os.getenv('QDRANT_HNSW_M', '16'))
+ENABLE_QDRANT_MULTITENANCY_MODE = os.getenv('ENABLE_QDRANT_MULTITENANCY_MODE', 'true').lower() == 'true'
+QDRANT_COLLECTION_PREFIX = os.getenv('QDRANT_COLLECTION_PREFIX', 'open-webui')
 
-WEAVIATE_HTTP_HOST = os.environ.get('WEAVIATE_HTTP_HOST', '')
-WEAVIATE_GRPC_HOST = os.environ.get('WEAVIATE_GRPC_HOST', '')
-WEAVIATE_HTTP_PORT = int(os.environ.get('WEAVIATE_HTTP_PORT', '8080'))
-WEAVIATE_GRPC_PORT = int(os.environ.get('WEAVIATE_GRPC_PORT', '50051'))
-WEAVIATE_API_KEY = os.environ.get('WEAVIATE_API_KEY')
-WEAVIATE_HTTP_SECURE = os.environ.get('WEAVIATE_HTTP_SECURE', 'false').lower() == 'true'
-WEAVIATE_GRPC_SECURE = os.environ.get('WEAVIATE_GRPC_SECURE', 'false').lower() == 'true'
-WEAVIATE_SKIP_INIT_CHECKS = os.environ.get('WEAVIATE_SKIP_INIT_CHECKS', 'false').lower() == 'true'
+WEAVIATE_HTTP_HOST = os.getenv('WEAVIATE_HTTP_HOST', '')
+WEAVIATE_GRPC_HOST = os.getenv('WEAVIATE_GRPC_HOST', '')
+WEAVIATE_HTTP_PORT = int(os.getenv('WEAVIATE_HTTP_PORT', '8080'))
+WEAVIATE_GRPC_PORT = int(os.getenv('WEAVIATE_GRPC_PORT', '50051'))
+WEAVIATE_API_KEY = os.getenv('WEAVIATE_API_KEY')
+WEAVIATE_HTTP_SECURE = os.getenv('WEAVIATE_HTTP_SECURE', 'false').lower() == 'true'
+WEAVIATE_GRPC_SECURE = os.getenv('WEAVIATE_GRPC_SECURE', 'false').lower() == 'true'
+WEAVIATE_SKIP_INIT_CHECKS = os.getenv('WEAVIATE_SKIP_INIT_CHECKS', 'false').lower() == 'true'
 
 # OpenSearch
-OPENSEARCH_URI = os.environ.get('OPENSEARCH_URI', 'https://localhost:9200')
-OPENSEARCH_SSL = os.environ.get('OPENSEARCH_SSL', 'true').lower() == 'true'
-OPENSEARCH_CERT_VERIFY = os.environ.get('OPENSEARCH_CERT_VERIFY', 'false').lower() == 'true'
-OPENSEARCH_USERNAME = os.environ.get('OPENSEARCH_USERNAME', None)
-OPENSEARCH_PASSWORD = os.environ.get('OPENSEARCH_PASSWORD', None)
+OPENSEARCH_URI = os.getenv('OPENSEARCH_URI', 'https://localhost:9200')
+OPENSEARCH_SSL = os.getenv('OPENSEARCH_SSL', 'true').lower() == 'true'
+OPENSEARCH_CERT_VERIFY = os.getenv('OPENSEARCH_CERT_VERIFY', 'false').lower() == 'true'
+OPENSEARCH_USERNAME = os.getenv('OPENSEARCH_USERNAME', None)
+OPENSEARCH_PASSWORD = os.getenv('OPENSEARCH_PASSWORD', None)
 
 # ElasticSearch
-ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL', 'https://localhost:9200')
-ELASTICSEARCH_CA_CERTS = os.environ.get('ELASTICSEARCH_CA_CERTS', None)
-ELASTICSEARCH_API_KEY = os.environ.get('ELASTICSEARCH_API_KEY', None)
-ELASTICSEARCH_USERNAME = os.environ.get('ELASTICSEARCH_USERNAME', None)
-ELASTICSEARCH_PASSWORD = os.environ.get('ELASTICSEARCH_PASSWORD', None)
-ELASTICSEARCH_CLOUD_ID = os.environ.get('ELASTICSEARCH_CLOUD_ID', None)
-SSL_ASSERT_FINGERPRINT = os.environ.get('SSL_ASSERT_FINGERPRINT', None)
-ELASTICSEARCH_INDEX_PREFIX = os.environ.get('ELASTICSEARCH_INDEX_PREFIX', 'open_webui_collections')
+ELASTICSEARCH_URL = os.getenv('ELASTICSEARCH_URL', 'https://localhost:9200')
+ELASTICSEARCH_CA_CERTS = os.getenv('ELASTICSEARCH_CA_CERTS', None)
+ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY', None)
+ELASTICSEARCH_USERNAME = os.getenv('ELASTICSEARCH_USERNAME', None)
+ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD', None)
+ELASTICSEARCH_CLOUD_ID = os.getenv('ELASTICSEARCH_CLOUD_ID', None)
+SSL_ASSERT_FINGERPRINT = os.getenv('SSL_ASSERT_FINGERPRINT', None)
+ELASTICSEARCH_INDEX_PREFIX = os.getenv('ELASTICSEARCH_INDEX_PREFIX', 'open_webui_collections')
 # Pgvector
-PGVECTOR_DB_URL = os.environ.get('PGVECTOR_DB_URL', DATABASE_URL)
+PGVECTOR_DB_URL = os.getenv('PGVECTOR_DB_URL', DATABASE_URL)
 if VECTOR_DB == 'pgvector' and not PGVECTOR_DB_URL.startswith('postgres'):
     raise ValueError(
         'Pgvector requires setting PGVECTOR_DB_URL or using Postgres with vector extension as the primary database.'
     )
-PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(os.environ.get('PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH', '1536'))
+PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(os.getenv('PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH', '1536'))
 
 PGVECTOR_USE_HALFVEC = os.getenv('PGVECTOR_USE_HALFVEC', 'false').lower() == 'true'
 
@@ -787,7 +787,7 @@ if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
     raise ValueError('PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key.')
 
 
-PGVECTOR_POOL_SIZE = os.environ.get('PGVECTOR_POOL_SIZE', None)
+PGVECTOR_POOL_SIZE = os.getenv('PGVECTOR_POOL_SIZE', None)
 
 if PGVECTOR_POOL_SIZE != None:
     try:
@@ -795,7 +795,7 @@ if PGVECTOR_POOL_SIZE != None:
     except Exception:
         PGVECTOR_POOL_SIZE = None
 
-PGVECTOR_POOL_MAX_OVERFLOW = os.environ.get('PGVECTOR_POOL_MAX_OVERFLOW', 0)
+PGVECTOR_POOL_MAX_OVERFLOW = os.getenv('PGVECTOR_POOL_MAX_OVERFLOW', 0)
 
 if PGVECTOR_POOL_MAX_OVERFLOW == '':
     PGVECTOR_POOL_MAX_OVERFLOW = 0
@@ -805,7 +805,7 @@ else:
     except Exception:
         PGVECTOR_POOL_MAX_OVERFLOW = 0
 
-PGVECTOR_POOL_TIMEOUT = os.environ.get('PGVECTOR_POOL_TIMEOUT', 30)
+PGVECTOR_POOL_TIMEOUT = os.getenv('PGVECTOR_POOL_TIMEOUT', 30)
 
 if PGVECTOR_POOL_TIMEOUT == '':
     PGVECTOR_POOL_TIMEOUT = 30
@@ -815,7 +815,7 @@ else:
     except Exception:
         PGVECTOR_POOL_TIMEOUT = 30
 
-PGVECTOR_POOL_RECYCLE = os.environ.get('PGVECTOR_POOL_RECYCLE', 3600)
+PGVECTOR_POOL_RECYCLE = os.getenv('PGVECTOR_POOL_RECYCLE', 3600)
 
 if PGVECTOR_POOL_RECYCLE == '':
     PGVECTOR_POOL_RECYCLE = 3600
@@ -829,7 +829,7 @@ PGVECTOR_INDEX_METHOD = os.getenv('PGVECTOR_INDEX_METHOD', '').strip().lower()
 if PGVECTOR_INDEX_METHOD not in ('ivfflat', 'hnsw', ''):
     PGVECTOR_INDEX_METHOD = ''
 
-PGVECTOR_HNSW_M = os.environ.get('PGVECTOR_HNSW_M', 16)
+PGVECTOR_HNSW_M = os.getenv('PGVECTOR_HNSW_M', 16)
 
 if PGVECTOR_HNSW_M == '':
     PGVECTOR_HNSW_M = 16
@@ -839,7 +839,7 @@ else:
     except Exception:
         PGVECTOR_HNSW_M = 16
 
-PGVECTOR_HNSW_EF_CONSTRUCTION = os.environ.get('PGVECTOR_HNSW_EF_CONSTRUCTION', 64)
+PGVECTOR_HNSW_EF_CONSTRUCTION = os.getenv('PGVECTOR_HNSW_EF_CONSTRUCTION', 64)
 
 if PGVECTOR_HNSW_EF_CONSTRUCTION == '':
     PGVECTOR_HNSW_EF_CONSTRUCTION = 64
@@ -849,7 +849,7 @@ else:
     except Exception:
         PGVECTOR_HNSW_EF_CONSTRUCTION = 64
 
-PGVECTOR_IVFFLAT_LISTS = os.environ.get('PGVECTOR_IVFFLAT_LISTS', 100)
+PGVECTOR_IVFFLAT_LISTS = os.getenv('PGVECTOR_IVFFLAT_LISTS', 100)
 
 if PGVECTOR_IVFFLAT_LISTS == '':
     PGVECTOR_IVFFLAT_LISTS = 100
@@ -860,11 +860,11 @@ else:
         PGVECTOR_IVFFLAT_LISTS = 100
 
 # openGauss
-OPENGAUSS_DB_URL = os.environ.get('OPENGAUSS_DB_URL', DATABASE_URL)
+OPENGAUSS_DB_URL = os.getenv('OPENGAUSS_DB_URL', DATABASE_URL)
 
-OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH = int(os.environ.get('OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH', '1536'))
+OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH = int(os.getenv('OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH', '1536'))
 
-OPENGAUSS_POOL_SIZE = os.environ.get('OPENGAUSS_POOL_SIZE', None)
+OPENGAUSS_POOL_SIZE = os.getenv('OPENGAUSS_POOL_SIZE', None)
 
 if OPENGAUSS_POOL_SIZE != None:
     try:
@@ -872,7 +872,7 @@ if OPENGAUSS_POOL_SIZE != None:
     except Exception:
         OPENGAUSS_POOL_SIZE = None
 
-OPENGAUSS_POOL_MAX_OVERFLOW = os.environ.get('OPENGAUSS_POOL_MAX_OVERFLOW', 0)
+OPENGAUSS_POOL_MAX_OVERFLOW = os.getenv('OPENGAUSS_POOL_MAX_OVERFLOW', 0)
 
 if OPENGAUSS_POOL_MAX_OVERFLOW == '':
     OPENGAUSS_POOL_MAX_OVERFLOW = 0
@@ -882,7 +882,7 @@ else:
     except Exception:
         OPENGAUSS_POOL_MAX_OVERFLOW = 0
 
-OPENGAUSS_POOL_TIMEOUT = os.environ.get('OPENGAUSS_POOL_TIMEOUT', 30)
+OPENGAUSS_POOL_TIMEOUT = os.getenv('OPENGAUSS_POOL_TIMEOUT', 30)
 
 if OPENGAUSS_POOL_TIMEOUT == '':
     OPENGAUSS_POOL_TIMEOUT = 30
@@ -892,7 +892,7 @@ else:
     except Exception:
         OPENGAUSS_POOL_TIMEOUT = 30
 
-OPENGAUSS_POOL_RECYCLE = os.environ.get('OPENGAUSS_POOL_RECYCLE', 3600)
+OPENGAUSS_POOL_RECYCLE = os.getenv('OPENGAUSS_POOL_RECYCLE', 3600)
 
 if OPENGAUSS_POOL_RECYCLE == '':
     OPENGAUSS_POOL_RECYCLE = 3600
@@ -903,8 +903,8 @@ else:
         OPENGAUSS_POOL_RECYCLE = 3600
 
 # Pinecone
-PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY', None)
-PINECONE_ENVIRONMENT = os.environ.get('PINECONE_ENVIRONMENT', None)
+PINECONE_API_KEY = os.getenv('PINECONE_API_KEY', None)
+PINECONE_ENVIRONMENT = os.getenv('PINECONE_ENVIRONMENT', None)
 PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'open-webui-index')
 PINECONE_DIMENSION = int(os.getenv('PINECONE_DIMENSION', 1536))  # or 3072, 1024, 768
 PINECONE_METRIC = os.getenv('PINECONE_METRIC', 'cosine')
@@ -912,17 +912,17 @@ PINECONE_CLOUD = os.getenv('PINECONE_CLOUD', 'aws')  # or "gcp" or "azure"
 
 # ORACLE23AI (Oracle23ai Vector Search)
 
-ORACLE_DB_USE_WALLET = os.environ.get('ORACLE_DB_USE_WALLET', 'false').lower() == 'true'
-ORACLE_DB_USER = os.environ.get('ORACLE_DB_USER', None)  #
-ORACLE_DB_PASSWORD = os.environ.get('ORACLE_DB_PASSWORD', None)  #
-ORACLE_DB_DSN = os.environ.get('ORACLE_DB_DSN', None)  #
-ORACLE_WALLET_DIR = os.environ.get('ORACLE_WALLET_DIR', None)
-ORACLE_WALLET_PASSWORD = os.environ.get('ORACLE_WALLET_PASSWORD', None)
-ORACLE_VECTOR_LENGTH = os.environ.get('ORACLE_VECTOR_LENGTH', 768)
+ORACLE_DB_USE_WALLET = os.getenv('ORACLE_DB_USE_WALLET', 'false').lower() == 'true'
+ORACLE_DB_USER = os.getenv('ORACLE_DB_USER', None)  #
+ORACLE_DB_PASSWORD = os.getenv('ORACLE_DB_PASSWORD', None)  #
+ORACLE_DB_DSN = os.getenv('ORACLE_DB_DSN', None)  #
+ORACLE_WALLET_DIR = os.getenv('ORACLE_WALLET_DIR', None)
+ORACLE_WALLET_PASSWORD = os.getenv('ORACLE_WALLET_PASSWORD', None)
+ORACLE_VECTOR_LENGTH = os.getenv('ORACLE_VECTOR_LENGTH', 768)
 
-ORACLE_DB_POOL_MIN = int(os.environ.get('ORACLE_DB_POOL_MIN', 2))
-ORACLE_DB_POOL_MAX = int(os.environ.get('ORACLE_DB_POOL_MAX', 10))
-ORACLE_DB_POOL_INCREMENT = int(os.environ.get('ORACLE_DB_POOL_INCREMENT', 1))
+ORACLE_DB_POOL_MIN = int(os.getenv('ORACLE_DB_POOL_MIN', 2))
+ORACLE_DB_POOL_MAX = int(os.getenv('ORACLE_DB_POOL_MAX', 10))
+ORACLE_DB_POOL_INCREMENT = int(os.getenv('ORACLE_DB_POOL_INCREMENT', 1))
 
 
 if VECTOR_DB == 'oracle23ai':
@@ -936,8 +936,8 @@ if VECTOR_DB == 'oracle23ai':
 log.info(f'VECTOR_DB: {VECTOR_DB}')
 
 # S3 Vector
-S3_VECTOR_BUCKET_NAME = os.environ.get('S3_VECTOR_BUCKET_NAME', None)
-S3_VECTOR_REGION = os.environ.get('S3_VECTOR_REGION', None)
+S3_VECTOR_BUCKET_NAME = os.getenv('S3_VECTOR_BUCKET_NAME', None)
+S3_VECTOR_REGION = os.getenv('S3_VECTOR_REGION', None)
 
 ####################################
 # Information Retrieval (RAG)
@@ -954,13 +954,13 @@ ENABLE_GOOGLE_DRIVE_INTEGRATION = ConfigVar(
 GOOGLE_DRIVE_CLIENT_ID = ConfigVar(
     'GOOGLE_DRIVE_CLIENT_ID',
     'google_drive.client_id',
-    os.environ.get('GOOGLE_DRIVE_CLIENT_ID', ''),
+    os.getenv('GOOGLE_DRIVE_CLIENT_ID', ''),
 )
 
 GOOGLE_DRIVE_API_KEY = ConfigVar(
     'GOOGLE_DRIVE_API_KEY',
     'google_drive.api_key',
-    os.environ.get('GOOGLE_DRIVE_API_KEY', ''),
+    os.getenv('GOOGLE_DRIVE_API_KEY', ''),
 )
 
 ENABLE_ONEDRIVE_INTEGRATION = ConfigVar(
@@ -970,124 +970,124 @@ ENABLE_ONEDRIVE_INTEGRATION = ConfigVar(
 )
 
 
-ONEDRIVE_CLIENT_ID = os.environ.get('ONEDRIVE_CLIENT_ID', '')
-ONEDRIVE_CLIENT_ID_PERSONAL = os.environ.get('ONEDRIVE_CLIENT_ID_PERSONAL', ONEDRIVE_CLIENT_ID)
-ONEDRIVE_CLIENT_ID_BUSINESS = os.environ.get('ONEDRIVE_CLIENT_ID_BUSINESS', ONEDRIVE_CLIENT_ID)
+ONEDRIVE_CLIENT_ID = os.getenv('ONEDRIVE_CLIENT_ID', '')
+ONEDRIVE_CLIENT_ID_PERSONAL = os.getenv('ONEDRIVE_CLIENT_ID_PERSONAL', ONEDRIVE_CLIENT_ID)
+ONEDRIVE_CLIENT_ID_BUSINESS = os.getenv('ONEDRIVE_CLIENT_ID_BUSINESS', ONEDRIVE_CLIENT_ID)
 
-ENABLE_ONEDRIVE_PERSONAL = os.environ.get('ENABLE_ONEDRIVE_PERSONAL', 'True').lower() == 'true' and bool(
+ENABLE_ONEDRIVE_PERSONAL = os.getenv('ENABLE_ONEDRIVE_PERSONAL', 'True').lower() == 'true' and bool(
     ONEDRIVE_CLIENT_ID_PERSONAL
 )
-ENABLE_ONEDRIVE_BUSINESS = os.environ.get('ENABLE_ONEDRIVE_BUSINESS', 'True').lower() == 'true' and bool(
+ENABLE_ONEDRIVE_BUSINESS = os.getenv('ENABLE_ONEDRIVE_BUSINESS', 'True').lower() == 'true' and bool(
     ONEDRIVE_CLIENT_ID_BUSINESS
 )
 
 ONEDRIVE_SHAREPOINT_URL = ConfigVar(
     'ONEDRIVE_SHAREPOINT_URL',
     'onedrive.sharepoint_url',
-    os.environ.get('ONEDRIVE_SHAREPOINT_URL', ''),
+    os.getenv('ONEDRIVE_SHAREPOINT_URL', ''),
 )
 
 ONEDRIVE_SHAREPOINT_TENANT_ID = ConfigVar(
     'ONEDRIVE_SHAREPOINT_TENANT_ID',
     'onedrive.sharepoint_tenant_id',
-    os.environ.get('ONEDRIVE_SHAREPOINT_TENANT_ID', ''),
+    os.getenv('ONEDRIVE_SHAREPOINT_TENANT_ID', ''),
 )
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = ConfigVar(
     'CONTENT_EXTRACTION_ENGINE',
     'rag.CONTENT_EXTRACTION_ENGINE',
-    os.environ.get('CONTENT_EXTRACTION_ENGINE', '').lower(),
+    os.getenv('CONTENT_EXTRACTION_ENGINE', '').lower(),
 )
 
 DATALAB_MARKER_API_KEY = ConfigVar(
     'DATALAB_MARKER_API_KEY',
     'rag.datalab_marker_api_key',
-    os.environ.get('DATALAB_MARKER_API_KEY', ''),
+    os.getenv('DATALAB_MARKER_API_KEY', ''),
 )
 
 DATALAB_MARKER_API_BASE_URL = ConfigVar(
     'DATALAB_MARKER_API_BASE_URL',
     'rag.datalab_marker_api_base_url',
-    os.environ.get('DATALAB_MARKER_API_BASE_URL', ''),
+    os.getenv('DATALAB_MARKER_API_BASE_URL', ''),
 )
 
 DATALAB_MARKER_ADDITIONAL_CONFIG = ConfigVar(
     'DATALAB_MARKER_ADDITIONAL_CONFIG',
     'rag.datalab_marker_additional_config',
-    os.environ.get('DATALAB_MARKER_ADDITIONAL_CONFIG', ''),
+    os.getenv('DATALAB_MARKER_ADDITIONAL_CONFIG', ''),
 )
 
 DATALAB_MARKER_USE_LLM = ConfigVar(
     'DATALAB_MARKER_USE_LLM',
     'rag.DATALAB_MARKER_USE_LLM',
-    os.environ.get('DATALAB_MARKER_USE_LLM', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_USE_LLM', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_SKIP_CACHE = ConfigVar(
     'DATALAB_MARKER_SKIP_CACHE',
     'rag.datalab_marker_skip_cache',
-    os.environ.get('DATALAB_MARKER_SKIP_CACHE', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_SKIP_CACHE', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_FORCE_OCR = ConfigVar(
     'DATALAB_MARKER_FORCE_OCR',
     'rag.datalab_marker_force_ocr',
-    os.environ.get('DATALAB_MARKER_FORCE_OCR', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_FORCE_OCR', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_PAGINATE = ConfigVar(
     'DATALAB_MARKER_PAGINATE',
     'rag.datalab_marker_paginate',
-    os.environ.get('DATALAB_MARKER_PAGINATE', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_PAGINATE', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_STRIP_EXISTING_OCR = ConfigVar(
     'DATALAB_MARKER_STRIP_EXISTING_OCR',
     'rag.datalab_marker_strip_existing_ocr',
-    os.environ.get('DATALAB_MARKER_STRIP_EXISTING_OCR', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_STRIP_EXISTING_OCR', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = ConfigVar(
     'DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION',
     'rag.datalab_marker_disable_image_extraction',
-    os.environ.get('DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_FORMAT_LINES = ConfigVar(
     'DATALAB_MARKER_FORMAT_LINES',
     'rag.datalab_marker_format_lines',
-    os.environ.get('DATALAB_MARKER_FORMAT_LINES', 'false').lower() == 'true',
+    os.getenv('DATALAB_MARKER_FORMAT_LINES', 'false').lower() == 'true',
 )
 
 DATALAB_MARKER_OUTPUT_FORMAT = ConfigVar(
     'DATALAB_MARKER_OUTPUT_FORMAT',
     'rag.datalab_marker_output_format',
-    os.environ.get('DATALAB_MARKER_OUTPUT_FORMAT', 'markdown'),
+    os.getenv('DATALAB_MARKER_OUTPUT_FORMAT', 'markdown'),
 )
 
 MINERU_API_MODE = ConfigVar(
     'MINERU_API_MODE',
     'rag.mineru_api_mode',
-    os.environ.get('MINERU_API_MODE', 'local'),  # "local" or "cloud"
+    os.getenv('MINERU_API_MODE', 'local'),  # "local" or "cloud"
 )
 
 MINERU_API_URL = ConfigVar(
     'MINERU_API_URL',
     'rag.mineru_api_url',
-    os.environ.get('MINERU_API_URL', 'http://localhost:8000'),
+    os.getenv('MINERU_API_URL', 'http://localhost:8000'),
 )
 
 MINERU_API_TIMEOUT = ConfigVar(
     'MINERU_API_TIMEOUT',
     'rag.mineru_api_timeout',
-    os.environ.get('MINERU_API_TIMEOUT', '300'),
+    os.getenv('MINERU_API_TIMEOUT', '300'),
 )
 
 MINERU_API_KEY = ConfigVar(
     'MINERU_API_KEY',
     'rag.mineru_api_key',
-    os.environ.get('MINERU_API_KEY', ''),
+    os.getenv('MINERU_API_KEY', ''),
 )
 
 mineru_params = os.getenv('MINERU_PARAMS', '')
@@ -1105,13 +1105,13 @@ MINERU_PARAMS = ConfigVar(
 EXTERNAL_DOCUMENT_LOADER_URL = ConfigVar(
     'EXTERNAL_DOCUMENT_LOADER_URL',
     'rag.external_document_loader_url',
-    os.environ.get('EXTERNAL_DOCUMENT_LOADER_URL', ''),
+    os.getenv('EXTERNAL_DOCUMENT_LOADER_URL', ''),
 )
 
 EXTERNAL_DOCUMENT_LOADER_API_KEY = ConfigVar(
     'EXTERNAL_DOCUMENT_LOADER_API_KEY',
     'rag.external_document_loader_api_key',
-    os.environ.get('EXTERNAL_DOCUMENT_LOADER_API_KEY', ''),
+    os.getenv('EXTERNAL_DOCUMENT_LOADER_API_KEY', ''),
 )
 
 TIKA_SERVER_URL = ConfigVar(
@@ -1189,37 +1189,37 @@ PADDLEOCR_VL_TOKEN = ConfigVar(
 BYPASS_EMBEDDING_AND_RETRIEVAL = ConfigVar(
     'BYPASS_EMBEDDING_AND_RETRIEVAL',
     'rag.bypass_embedding_and_retrieval',
-    os.environ.get('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true',
+    os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true',
 )
 
 
-RAG_TOP_K = ConfigVar('RAG_TOP_K', 'rag.top_k', int(os.environ.get('RAG_TOP_K', '3')))
+RAG_TOP_K = ConfigVar('RAG_TOP_K', 'rag.top_k', int(os.getenv('RAG_TOP_K', '3')))
 RAG_TOP_K_RERANKER = ConfigVar(
     'RAG_TOP_K_RERANKER',
     'rag.top_k_reranker',
-    int(os.environ.get('RAG_TOP_K_RERANKER', '3')),
+    int(os.getenv('RAG_TOP_K_RERANKER', '3')),
 )
 RAG_RELEVANCE_THRESHOLD = ConfigVar(
     'RAG_RELEVANCE_THRESHOLD',
     'rag.relevance_threshold',
-    float(os.environ.get('RAG_RELEVANCE_THRESHOLD', '0.0')),
+    float(os.getenv('RAG_RELEVANCE_THRESHOLD', '0.0')),
 )
 RAG_HYBRID_BM25_WEIGHT = ConfigVar(
     'RAG_HYBRID_BM25_WEIGHT',
     'rag.hybrid_bm25_weight',
-    float(os.environ.get('RAG_HYBRID_BM25_WEIGHT', '0.5')),
+    float(os.getenv('RAG_HYBRID_BM25_WEIGHT', '0.5')),
 )
 
 ENABLE_RAG_HYBRID_SEARCH = ConfigVar(
     'ENABLE_RAG_HYBRID_SEARCH',
     'rag.enable_hybrid_search',
-    os.environ.get('ENABLE_RAG_HYBRID_SEARCH', '').lower() == 'true',
+    os.getenv('ENABLE_RAG_HYBRID_SEARCH', '').lower() == 'true',
 )
 
 ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = ConfigVar(
     'ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS',
     'rag.enable_hybrid_search_enriched_texts',
-    os.environ.get('ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS', 'False').lower() == 'true',
+    os.getenv('ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS', 'False').lower() == 'true',
 )
 
 RAG_FULL_CONTEXT = ConfigVar(
@@ -1231,77 +1231,77 @@ RAG_FULL_CONTEXT = ConfigVar(
 RAG_FILE_MAX_COUNT = ConfigVar(
     'RAG_FILE_MAX_COUNT',
     'rag.file.max_count',
-    (int(os.environ.get('RAG_FILE_MAX_COUNT')) if os.environ.get('RAG_FILE_MAX_COUNT') else None),
+    (int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None),
 )
 
 RAG_FILE_MAX_SIZE = ConfigVar(
     'RAG_FILE_MAX_SIZE',
     'rag.file.max_size',
-    (int(os.environ.get('RAG_FILE_MAX_SIZE')) if os.environ.get('RAG_FILE_MAX_SIZE') else None),
+    (int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None),
 )
 
 FILE_IMAGE_COMPRESSION_WIDTH = ConfigVar(
     'FILE_IMAGE_COMPRESSION_WIDTH',
     'file.image_compression_width',
-    (int(os.environ.get('FILE_IMAGE_COMPRESSION_WIDTH')) if os.environ.get('FILE_IMAGE_COMPRESSION_WIDTH') else None),
+    (int(os.getenv('FILE_IMAGE_COMPRESSION_WIDTH')) if os.getenv('FILE_IMAGE_COMPRESSION_WIDTH') else None),
 )
 
 FILE_IMAGE_COMPRESSION_HEIGHT = ConfigVar(
     'FILE_IMAGE_COMPRESSION_HEIGHT',
     'file.image_compression_height',
-    (int(os.environ.get('FILE_IMAGE_COMPRESSION_HEIGHT')) if os.environ.get('FILE_IMAGE_COMPRESSION_HEIGHT') else None),
+    (int(os.getenv('FILE_IMAGE_COMPRESSION_HEIGHT')) if os.getenv('FILE_IMAGE_COMPRESSION_HEIGHT') else None),
 )
 
 
 RAG_ALLOWED_FILE_EXTENSIONS = ConfigVar(
     'RAG_ALLOWED_FILE_EXTENSIONS',
     'rag.file.allowed_extensions',
-    [ext.strip() for ext in os.environ.get('RAG_ALLOWED_FILE_EXTENSIONS', '').split(',') if ext.strip()],
+    [ext.strip() for ext in os.getenv('RAG_ALLOWED_FILE_EXTENSIONS', '').split(',') if ext.strip()],
 )
 
 RAG_EMBEDDING_ENGINE = ConfigVar(
     'RAG_EMBEDDING_ENGINE',
     'rag.embedding_engine',
-    os.environ.get('RAG_EMBEDDING_ENGINE', ''),
+    os.getenv('RAG_EMBEDDING_ENGINE', ''),
 )
 
 PDF_EXTRACT_IMAGES = ConfigVar(
     'PDF_EXTRACT_IMAGES',
     'rag.pdf_extract_images',
-    os.environ.get('PDF_EXTRACT_IMAGES', 'False').lower() == 'true',
+    os.getenv('PDF_EXTRACT_IMAGES', 'False').lower() == 'true',
 )
 
 PDF_LOADER_MODE = ConfigVar(
     'PDF_LOADER_MODE',
     'rag.pdf_loader_mode',
-    os.environ.get('PDF_LOADER_MODE', 'page'),
+    os.getenv('PDF_LOADER_MODE', 'page'),
 )
 
 RAG_EMBEDDING_MODEL = ConfigVar(
     'RAG_EMBEDDING_MODEL',
     'rag.embedding_model',
-    os.environ.get('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
+    os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
 )
 log.info(f'Embedding model set: {RAG_EMBEDDING_MODEL.value}')
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
-    not OFFLINE_MODE and os.environ.get('RAG_EMBEDDING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
+    not OFFLINE_MODE and os.getenv('RAG_EMBEDDING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
-    os.environ.get('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
+    os.getenv('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 )
 
 RAG_EMBEDDING_BATCH_SIZE = ConfigVar(
     'RAG_EMBEDDING_BATCH_SIZE',
     'rag.embedding_batch_size',
-    int(os.environ.get('RAG_EMBEDDING_BATCH_SIZE') or os.environ.get('RAG_EMBEDDING_OPENAI_BATCH_SIZE', '1')),
+    int(os.getenv('RAG_EMBEDDING_BATCH_SIZE') or os.getenv('RAG_EMBEDDING_OPENAI_BATCH_SIZE', '1')),
 )
 
 ENABLE_ASYNC_EMBEDDING = ConfigVar(
     'ENABLE_ASYNC_EMBEDDING',
     'rag.enable_async_embedding',
-    os.environ.get('ENABLE_ASYNC_EMBEDDING', 'True').lower() == 'true',
+    os.getenv('ENABLE_ASYNC_EMBEDDING', 'True').lower() == 'true',
 )
 
 RAG_EMBEDDING_CONCURRENT_REQUESTS = ConfigVar(
@@ -1310,93 +1310,93 @@ RAG_EMBEDDING_CONCURRENT_REQUESTS = ConfigVar(
     int(os.getenv('RAG_EMBEDDING_CONCURRENT_REQUESTS', '0')),
 )
 
-RAG_EMBEDDING_QUERY_PREFIX = os.environ.get('RAG_EMBEDDING_QUERY_PREFIX', None)
+RAG_EMBEDDING_QUERY_PREFIX = os.getenv('RAG_EMBEDDING_QUERY_PREFIX', None)
 
-RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get('RAG_EMBEDDING_CONTENT_PREFIX', None)
+RAG_EMBEDDING_CONTENT_PREFIX = os.getenv('RAG_EMBEDDING_CONTENT_PREFIX', None)
 
-RAG_EMBEDDING_PREFIX_FIELD_NAME = os.environ.get('RAG_EMBEDDING_PREFIX_FIELD_NAME', None)
+RAG_EMBEDDING_PREFIX_FIELD_NAME = os.getenv('RAG_EMBEDDING_PREFIX_FIELD_NAME', None)
 
 RAG_RERANKING_ENGINE = ConfigVar(
     'RAG_RERANKING_ENGINE',
     'rag.reranking_engine',
-    os.environ.get('RAG_RERANKING_ENGINE', ''),
+    os.getenv('RAG_RERANKING_ENGINE', ''),
 )
 
 RAG_RERANKING_MODEL = ConfigVar(
     'RAG_RERANKING_MODEL',
     'rag.reranking_model',
-    os.environ.get('RAG_RERANKING_MODEL', ''),
+    os.getenv('RAG_RERANKING_MODEL', ''),
 )
 if RAG_RERANKING_MODEL.value != '':
     log.info(f'Reranking model set: {RAG_RERANKING_MODEL.value}')
 
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
-    not OFFLINE_MODE and os.environ.get('RAG_RERANKING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
+    not OFFLINE_MODE and os.getenv('RAG_RERANKING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
-    os.environ.get('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
+    os.getenv('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 )
 
 RAG_RERANKING_BATCH_SIZE = ConfigVar(
     'RAG_RERANKING_BATCH_SIZE',
     'rag.reranking_batch_size',
-    int(os.environ.get('RAG_RERANKING_BATCH_SIZE', '32')),
+    int(os.getenv('RAG_RERANKING_BATCH_SIZE', '32')),
 )
 
 RAG_EXTERNAL_RERANKER_URL = ConfigVar(
     'RAG_EXTERNAL_RERANKER_URL',
     'rag.external_reranker_url',
-    os.environ.get('RAG_EXTERNAL_RERANKER_URL', ''),
+    os.getenv('RAG_EXTERNAL_RERANKER_URL', ''),
 )
 
 RAG_EXTERNAL_RERANKER_API_KEY = ConfigVar(
     'RAG_EXTERNAL_RERANKER_API_KEY',
     'rag.external_reranker_api_key',
-    os.environ.get('RAG_EXTERNAL_RERANKER_API_KEY', ''),
+    os.getenv('RAG_EXTERNAL_RERANKER_API_KEY', ''),
 )
 
 RAG_EXTERNAL_RERANKER_TIMEOUT = ConfigVar(
     'RAG_EXTERNAL_RERANKER_TIMEOUT',
     'rag.external_reranker_timeout',
-    os.environ.get('RAG_EXTERNAL_RERANKER_TIMEOUT', ''),
+    os.getenv('RAG_EXTERNAL_RERANKER_TIMEOUT', ''),
 )
 
 
 RAG_TEXT_SPLITTER = ConfigVar(
     'RAG_TEXT_SPLITTER',
     'rag.text_splitter',
-    os.environ.get('RAG_TEXT_SPLITTER', ''),
+    os.getenv('RAG_TEXT_SPLITTER', ''),
 )
 
 ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = ConfigVar(
     'ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER',
     'rag.enable_markdown_header_text_splitter',
-    os.environ.get('ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER', 'True').lower() == 'true',
+    os.getenv('ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER', 'True').lower() == 'true',
 )
 
 
-TIKTOKEN_CACHE_DIR = os.environ.get('TIKTOKEN_CACHE_DIR', f'{CACHE_DIR}/tiktoken')
+TIKTOKEN_CACHE_DIR = os.getenv('TIKTOKEN_CACHE_DIR', f'{CACHE_DIR}/tiktoken')
 TIKTOKEN_ENCODING_NAME = ConfigVar(
     'TIKTOKEN_ENCODING_NAME',
     'rag.tiktoken_encoding_name',
-    os.environ.get('TIKTOKEN_ENCODING_NAME', 'cl100k_base'),
+    os.getenv('TIKTOKEN_ENCODING_NAME', 'cl100k_base'),
 )
 
 
-CHUNK_SIZE = ConfigVar('CHUNK_SIZE', 'rag.chunk_size', int(os.environ.get('CHUNK_SIZE', '1000')))
+CHUNK_SIZE = ConfigVar('CHUNK_SIZE', 'rag.chunk_size', int(os.getenv('CHUNK_SIZE', '1000')))
 
 CHUNK_MIN_SIZE_TARGET = ConfigVar(
     'CHUNK_MIN_SIZE_TARGET',
     'rag.chunk_min_size_target',
-    int(os.environ.get('CHUNK_MIN_SIZE_TARGET', '0')),
+    int(os.getenv('CHUNK_MIN_SIZE_TARGET', '0')),
 )
 
 CHUNK_OVERLAP = ConfigVar(
     'CHUNK_OVERLAP',
     'rag.chunk_overlap',
-    int(os.environ.get('CHUNK_OVERLAP', '100')),
+    int(os.getenv('CHUNK_OVERLAP', '100')),
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
@@ -1428,7 +1428,7 @@ Provide a clear and direct response to the user's query, including inline citati
 RAG_TEMPLATE = ConfigVar(
     'RAG_TEMPLATE',
     'rag.template',
-    os.environ.get('RAG_TEMPLATE', DEFAULT_RAG_TEMPLATE),
+    os.getenv('RAG_TEMPLATE', DEFAULT_RAG_TEMPLATE),
 )
 
 RAG_OPENAI_API_BASE_URL = ConfigVar(
@@ -1567,13 +1567,13 @@ WEB_SEARCH_CONCURRENT_REQUESTS = ConfigVar(
 WEB_FETCH_MAX_CONTENT_LENGTH = ConfigVar(
     'WEB_FETCH_MAX_CONTENT_LENGTH',
     'rag.web.fetch.max_content_length',
-    (int(os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.environ.get('WEB_FETCH_MAX_CONTENT_LENGTH') else None),
+    (int(os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH') else None),
 )
 
 WEB_LOADER_ENGINE = ConfigVar(
     'WEB_LOADER_ENGINE',
     'rag.web.loader.engine',
-    os.environ.get('WEB_LOADER_ENGINE', ''),
+    os.getenv('WEB_LOADER_ENGINE', ''),
 )
 
 
@@ -1593,7 +1593,7 @@ WEB_LOADER_TIMEOUT = ConfigVar(
 ENABLE_WEB_LOADER_SSL_VERIFICATION = ConfigVar(
     'ENABLE_WEB_LOADER_SSL_VERIFICATION',
     'rag.web.loader.ssl_verification',
-    os.environ.get('ENABLE_WEB_LOADER_SSL_VERIFICATION', 'True').lower() == 'true',
+    os.getenv('ENABLE_WEB_LOADER_SSL_VERIFICATION', 'True').lower() == 'true',
 )
 
 WEB_SEARCH_TRUST_ENV = ConfigVar(
@@ -1750,31 +1750,31 @@ SERPAPI_ENGINE = ConfigVar(
 BING_SEARCH_V7_ENDPOINT = ConfigVar(
     'BING_SEARCH_V7_ENDPOINT',
     'rag.web.search.bing_search_v7_endpoint',
-    os.environ.get('BING_SEARCH_V7_ENDPOINT', 'https://api.bing.microsoft.com/v7.0/search'),
+    os.getenv('BING_SEARCH_V7_ENDPOINT', 'https://api.bing.microsoft.com/v7.0/search'),
 )
 
 BING_SEARCH_V7_SUBSCRIPTION_KEY = ConfigVar(
     'BING_SEARCH_V7_SUBSCRIPTION_KEY',
     'rag.web.search.bing_search_v7_subscription_key',
-    os.environ.get('BING_SEARCH_V7_SUBSCRIPTION_KEY', ''),
+    os.getenv('BING_SEARCH_V7_SUBSCRIPTION_KEY', ''),
 )
 
 AZURE_AI_SEARCH_API_KEY = ConfigVar(
     'AZURE_AI_SEARCH_API_KEY',
     'rag.web.search.azure_ai_search_api_key',
-    os.environ.get('AZURE_AI_SEARCH_API_KEY', ''),
+    os.getenv('AZURE_AI_SEARCH_API_KEY', ''),
 )
 
 AZURE_AI_SEARCH_ENDPOINT = ConfigVar(
     'AZURE_AI_SEARCH_ENDPOINT',
     'rag.web.search.azure_ai_search_endpoint',
-    os.environ.get('AZURE_AI_SEARCH_ENDPOINT', ''),
+    os.getenv('AZURE_AI_SEARCH_ENDPOINT', ''),
 )
 
 AZURE_AI_SEARCH_INDEX_NAME = ConfigVar(
     'AZURE_AI_SEARCH_INDEX_NAME',
     'rag.web.search.azure_ai_search_index_name',
-    os.environ.get('AZURE_AI_SEARCH_INDEX_NAME', ''),
+    os.getenv('AZURE_AI_SEARCH_INDEX_NAME', ''),
 )
 
 EXA_API_KEY = ConfigVar(
@@ -1834,79 +1834,79 @@ TAVILY_EXTRACT_DEPTH = ConfigVar(
 PLAYWRIGHT_WS_URL = ConfigVar(
     'PLAYWRIGHT_WS_URL',
     'rag.web.loader.playwright_ws_url',
-    os.environ.get('PLAYWRIGHT_WS_URL', ''),
+    os.getenv('PLAYWRIGHT_WS_URL', ''),
 )
 
 PLAYWRIGHT_TIMEOUT = ConfigVar(
     'PLAYWRIGHT_TIMEOUT',
     'rag.web.loader.playwright_timeout',
-    int(os.environ.get('PLAYWRIGHT_TIMEOUT', '10000')),
+    int(os.getenv('PLAYWRIGHT_TIMEOUT', '10000')),
 )
 
 FIRECRAWL_API_KEY = ConfigVar(
     'FIRECRAWL_API_KEY',
     'rag.web.loader.firecrawl_api_key',
-    os.environ.get('FIRECRAWL_API_KEY', ''),
+    os.getenv('FIRECRAWL_API_KEY', ''),
 )
 
 FIRECRAWL_API_BASE_URL = ConfigVar(
     'FIRECRAWL_API_BASE_URL',
     'rag.web.loader.firecrawl_api_url',
-    os.environ.get('FIRECRAWL_API_BASE_URL', 'https://api.firecrawl.dev'),
+    os.getenv('FIRECRAWL_API_BASE_URL', 'https://api.firecrawl.dev'),
 )
 
 FIRECRAWL_TIMEOUT = ConfigVar(
     'FIRECRAWL_TIMEOUT',
     'rag.web.loader.firecrawl_timeout',
-    os.environ.get('FIRECRAWL_TIMEOUT', ''),
+    os.getenv('FIRECRAWL_TIMEOUT', ''),
 )
 
 EXTERNAL_WEB_SEARCH_URL = ConfigVar(
     'EXTERNAL_WEB_SEARCH_URL',
     'rag.web.search.external_web_search_url',
-    os.environ.get('EXTERNAL_WEB_SEARCH_URL', ''),
+    os.getenv('EXTERNAL_WEB_SEARCH_URL', ''),
 )
 
 EXTERNAL_WEB_SEARCH_API_KEY = ConfigVar(
     'EXTERNAL_WEB_SEARCH_API_KEY',
     'rag.web.search.external_web_search_api_key',
-    os.environ.get('EXTERNAL_WEB_SEARCH_API_KEY', ''),
+    os.getenv('EXTERNAL_WEB_SEARCH_API_KEY', ''),
 )
 
 EXTERNAL_WEB_LOADER_URL = ConfigVar(
     'EXTERNAL_WEB_LOADER_URL',
     'rag.web.loader.external_web_loader_url',
-    os.environ.get('EXTERNAL_WEB_LOADER_URL', ''),
+    os.getenv('EXTERNAL_WEB_LOADER_URL', ''),
 )
 
 EXTERNAL_WEB_LOADER_API_KEY = ConfigVar(
     'EXTERNAL_WEB_LOADER_API_KEY',
     'rag.web.loader.external_web_loader_api_key',
-    os.environ.get('EXTERNAL_WEB_LOADER_API_KEY', ''),
+    os.getenv('EXTERNAL_WEB_LOADER_API_KEY', ''),
 )
 
 YANDEX_WEB_SEARCH_URL = ConfigVar(
     'YANDEX_WEB_SEARCH_URL',
     'rag.web.search.yandex_web_search_url',
-    os.environ.get('YANDEX_WEB_SEARCH_URL', ''),
+    os.getenv('YANDEX_WEB_SEARCH_URL', ''),
 )
 
 YANDEX_WEB_SEARCH_API_KEY = ConfigVar(
     'YANDEX_WEB_SEARCH_API_KEY',
     'rag.web.search.yandex_web_search_api_key',
-    os.environ.get('YANDEX_WEB_SEARCH_API_KEY', ''),
+    os.getenv('YANDEX_WEB_SEARCH_API_KEY', ''),
 )
 
 YANDEX_WEB_SEARCH_CONFIG = ConfigVar(
     'YANDEX_WEB_SEARCH_CONFIG',
     'rag.web.search.yandex_web_search_config',
-    os.environ.get('YANDEX_WEB_SEARCH_CONFIG', ''),
+    os.getenv('YANDEX_WEB_SEARCH_CONFIG', ''),
 )
 
 YOUCOM_API_KEY = ConfigVar(
     'YOUCOM_API_KEY',
     'rag.web.search.youcom_api_key',
-    os.environ.get('YOUCOM_API_KEY', ''),
+    os.getenv('YOUCOM_API_KEY', ''),
 )
 
 ####################################
@@ -1916,7 +1916,7 @@ YOUCOM_API_KEY = ConfigVar(
 ENABLE_IMAGE_GENERATION = ConfigVar(
     'ENABLE_IMAGE_GENERATION',
     'image_generation.enable',
-    os.environ.get('ENABLE_IMAGE_GENERATION', '').lower() == 'true',
+    os.getenv('ENABLE_IMAGE_GENERATION', '').lower() == 'true',
 )
 
 IMAGE_GENERATION_ENGINE = ConfigVar(
@@ -1944,7 +1944,7 @@ IMAGE_STEPS = ConfigVar('IMAGE_STEPS', 'image_generation.steps', int(os.getenv('
 ENABLE_IMAGE_PROMPT_GENERATION = ConfigVar(
     'ENABLE_IMAGE_PROMPT_GENERATION',
     'image_generation.prompt.enable',
-    os.environ.get('ENABLE_IMAGE_PROMPT_GENERATION', 'true').lower() == 'true',
+    os.getenv('ENABLE_IMAGE_PROMPT_GENERATION', 'true').lower() == 'true',
 )
 
 AUTOMATIC1111_BASE_URL = ConfigVar(
@@ -2158,7 +2158,7 @@ IMAGES_GEMINI_ENDPOINT_METHOD = ConfigVar(
 ENABLE_IMAGE_EDIT = ConfigVar(
     'ENABLE_IMAGE_EDIT',
     'images.edit.enable',
-    os.environ.get('ENABLE_IMAGE_EDIT', '').lower() == 'true',
+    os.getenv('ENABLE_IMAGE_EDIT', '').lower() == 'true',
 )
 
 IMAGE_EDIT_ENGINE = ConfigVar(
@@ -2246,7 +2246,7 @@ WHISPER_MODEL = ConfigVar(
 
 WHISPER_COMPUTE_TYPE = os.getenv('WHISPER_COMPUTE_TYPE', 'int8')
 WHISPER_MODEL_DIR = os.getenv('WHISPER_MODEL_DIR', f'{CACHE_DIR}/whisper/models')
-WHISPER_MODEL_AUTO_UPDATE = not OFFLINE_MODE and os.environ.get('WHISPER_MODEL_AUTO_UPDATE', '').lower() == 'true'
+WHISPER_MODEL_AUTO_UPDATE = not OFFLINE_MODE and os.getenv('WHISPER_MODEL_AUTO_UPDATE', '').lower() == 'true'
 
 WHISPER_VAD_FILTER = os.getenv('WHISPER_VAD_FILTER', 'False').lower() == 'true'
 
@@ -2293,7 +2293,7 @@ AUDIO_STT_SUPPORTED_CONTENT_TYPES = ConfigVar(
     'audio.stt.supported_content_types',
     [
         content_type.strip()
-        for content_type in os.environ.get('AUDIO_STT_SUPPORTED_CONTENT_TYPES', '').split(',')
+        for content_type in os.getenv('AUDIO_STT_SUPPORTED_CONTENT_TYPES', '').split(',')
         if content_type.strip()
     ],
 )
@@ -2303,7 +2303,7 @@ AUDIO_STT_ALLOWED_EXTENSIONS = ConfigVar(
     'audio.stt.allowed_extensions',
     [
         ext.strip()
-        for ext in os.environ.get(
+        for ext in os.getenv(
             'AUDIO_STT_ALLOWED_EXTENSIONS',
             'mp3,wav,m4a,webm,ogg,flac,mp4,mpga,mpeg',
         ).split(',')
@@ -2449,45 +2449,45 @@ AUDIO_TTS_MISTRAL_API_BASE_URL = ConfigVar(
 ####################################
 
 
-WEBUI_URL = ConfigVar('WEBUI_URL', 'webui.url', os.environ.get('WEBUI_URL', ''))
+WEBUI_URL = ConfigVar('WEBUI_URL', 'webui.url', os.getenv('WEBUI_URL', ''))
 
 
 ENABLE_SIGNUP = ConfigVar(
     'ENABLE_SIGNUP',
     'ui.enable_signup',
-    (False if not WEBUI_AUTH else os.environ.get('ENABLE_SIGNUP', 'True').lower() == 'true'),
+    (False if not WEBUI_AUTH else os.getenv('ENABLE_SIGNUP', 'True').lower() == 'true'),
 )
 
 ENABLE_LOGIN_FORM = ConfigVar(
     'ENABLE_LOGIN_FORM',
     'ui.enable_login_form',
-    os.environ.get('ENABLE_LOGIN_FORM', 'True').lower() == 'true',
+    os.getenv('ENABLE_LOGIN_FORM', 'True').lower() == 'true',
 )
 
 ENABLE_PASSWORD_CHANGE_FORM = ConfigVar(
     'ENABLE_PASSWORD_CHANGE_FORM',
     'ui.enable_password_change_form',
-    os.environ.get('ENABLE_PASSWORD_CHANGE_FORM', 'True').lower() == 'true',
+    os.getenv('ENABLE_PASSWORD_CHANGE_FORM', 'True').lower() == 'true',
 )
 
-ENABLE_PASSWORD_AUTH = os.environ.get('ENABLE_PASSWORD_AUTH', 'True').lower() == 'true'
+ENABLE_PASSWORD_AUTH = os.getenv('ENABLE_PASSWORD_AUTH', 'True').lower() == 'true'
 
 DEFAULT_LOCALE = ConfigVar(
     'DEFAULT_LOCALE',
     'ui.default_locale',
-    os.environ.get('DEFAULT_LOCALE', ''),
+    os.getenv('DEFAULT_LOCALE', ''),
 )
 
-DEFAULT_MODELS = ConfigVar('DEFAULT_MODELS', 'ui.default_models', os.environ.get('DEFAULT_MODELS', None))
+DEFAULT_MODELS = ConfigVar('DEFAULT_MODELS', 'ui.default_models', os.getenv('DEFAULT_MODELS', None))
 
 DEFAULT_PINNED_MODELS = ConfigVar(
     'DEFAULT_PINNED_MODELS',
     'ui.default_pinned_models',
-    os.environ.get('DEFAULT_PINNED_MODELS', None),
+    os.getenv('DEFAULT_PINNED_MODELS', None),
 )
 
 try:
-    default_prompt_suggestions = json.loads(os.environ.get('DEFAULT_PROMPT_SUGGESTIONS', '[]'))
+    default_prompt_suggestions = json.loads(os.getenv('DEFAULT_PROMPT_SUGGESTIONS', '[]'))
 except Exception as e:
     log.exception(f'Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}')
     default_prompt_suggestions = []
@@ -2535,7 +2535,7 @@ MODEL_ORDER_LIST = ConfigVar(
 )
 
 try:
-    default_model_metadata = json.loads(os.environ.get('DEFAULT_MODEL_METADATA', '{}'))
+    default_model_metadata = json.loads(os.getenv('DEFAULT_MODEL_METADATA', '{}'))
 except Exception as e:
     log.exception(f'Error loading DEFAULT_MODEL_METADATA: {e}')
     default_model_metadata = {}
@@ -2547,7 +2547,7 @@ DEFAULT_MODEL_METADATA = ConfigVar(
 )
 
 try:
-    default_model_params = json.loads(os.environ.get('DEFAULT_MODEL_PARAMS', '{}'))
+    default_model_params = json.loads(os.getenv('DEFAULT_MODEL_PARAMS', '{}'))
 except Exception as e:
     log.exception(f'Error loading DEFAULT_MODEL_PARAMS: {e}')
     default_model_params = {}
@@ -2567,217 +2567,217 @@ DEFAULT_USER_ROLE = ConfigVar(
 DEFAULT_GROUP_ID = ConfigVar(
     'DEFAULT_GROUP_ID',
     'ui.default_group_id',
-    os.environ.get('DEFAULT_GROUP_ID', ''),
+    os.getenv('DEFAULT_GROUP_ID', ''),
 )
 
 PENDING_USER_OVERLAY_TITLE = ConfigVar(
     'PENDING_USER_OVERLAY_TITLE',
     'ui.pending_user_overlay_title',
-    os.environ.get('PENDING_USER_OVERLAY_TITLE', ''),
+    os.getenv('PENDING_USER_OVERLAY_TITLE', ''),
 )
 
 PENDING_USER_OVERLAY_CONTENT = ConfigVar(
     'PENDING_USER_OVERLAY_CONTENT',
     'ui.pending_user_overlay_content',
-    os.environ.get('PENDING_USER_OVERLAY_CONTENT', ''),
+    os.getenv('PENDING_USER_OVERLAY_CONTENT', ''),
 )
 
 
 RESPONSE_WATERMARK = ConfigVar(
     'RESPONSE_WATERMARK',
     'ui.watermark',
-    os.environ.get('RESPONSE_WATERMARK', ''),
+    os.getenv('RESPONSE_WATERMARK', ''),
 )
 
-IFRAME_CSP = os.environ.get('IFRAME_CSP', '')
+IFRAME_CSP = os.getenv('IFRAME_CSP', '')
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT', 'False').lower() == 'true'
 )
 
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 
-USER_PERMISSIONS_NOTES_ALLOW_SHARING = os.environ.get('USER_PERMISSIONS_NOTES_ALLOW_SHARING', 'False').lower() == 'true'
+USER_PERMISSIONS_NOTES_ALLOW_SHARING = os.getenv('USER_PERMISSIONS_NOTES_ALLOW_SHARING', 'False').lower() == 'true'
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS = (
-    os.environ.get('USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS', 'True').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_ACCESS_GRANTS_ALLOW_USERS', 'True').lower() == 'true'
 )
 
 
-USER_PERMISSIONS_CHAT_CONTROLS = os.environ.get('USER_PERMISSIONS_CHAT_CONTROLS', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_CONTROLS = os.getenv('USER_PERMISSIONS_CHAT_CONTROLS', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_VALVES = os.environ.get('USER_PERMISSIONS_CHAT_VALVES', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_VALVES = os.getenv('USER_PERMISSIONS_CHAT_VALVES', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_SYSTEM_PROMPT = os.environ.get('USER_PERMISSIONS_CHAT_SYSTEM_PROMPT', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_SYSTEM_PROMPT = os.getenv('USER_PERMISSIONS_CHAT_SYSTEM_PROMPT', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_PARAMS = os.environ.get('USER_PERMISSIONS_CHAT_PARAMS', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_PARAMS = os.getenv('USER_PERMISSIONS_CHAT_PARAMS', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_FILE_UPLOAD = os.environ.get('USER_PERMISSIONS_CHAT_FILE_UPLOAD', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_FILE_UPLOAD = os.getenv('USER_PERMISSIONS_CHAT_FILE_UPLOAD', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_WEB_UPLOAD = os.environ.get('USER_PERMISSIONS_CHAT_WEB_UPLOAD', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_WEB_UPLOAD = os.getenv('USER_PERMISSIONS_CHAT_WEB_UPLOAD', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_DELETE = os.environ.get('USER_PERMISSIONS_CHAT_DELETE', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_DELETE = os.getenv('USER_PERMISSIONS_CHAT_DELETE', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_DELETE_MESSAGE = os.environ.get('USER_PERMISSIONS_CHAT_DELETE_MESSAGE', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_DELETE_MESSAGE = os.getenv('USER_PERMISSIONS_CHAT_DELETE_MESSAGE', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE = (
-    os.environ.get('USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE', 'True').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE', 'True').lower() == 'true'
 )
 
 USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE = (
-    os.environ.get('USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE', 'True').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE', 'True').lower() == 'true'
 )
 
-USER_PERMISSIONS_CHAT_RATE_RESPONSE = os.environ.get('USER_PERMISSIONS_CHAT_RATE_RESPONSE', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_RATE_RESPONSE = os.getenv('USER_PERMISSIONS_CHAT_RATE_RESPONSE', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_EDIT = os.environ.get('USER_PERMISSIONS_CHAT_EDIT', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_EDIT = os.getenv('USER_PERMISSIONS_CHAT_EDIT', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_SHARE = os.environ.get('USER_PERMISSIONS_CHAT_SHARE', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_SHARE = os.getenv('USER_PERMISSIONS_CHAT_SHARE', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING = (
-    os.environ.get('USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
-USER_PERMISSIONS_CHAT_EXPORT = os.environ.get('USER_PERMISSIONS_CHAT_EXPORT', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_EXPORT = os.getenv('USER_PERMISSIONS_CHAT_EXPORT', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_STT = os.environ.get('USER_PERMISSIONS_CHAT_STT', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_STT = os.getenv('USER_PERMISSIONS_CHAT_STT', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_TTS = os.environ.get('USER_PERMISSIONS_CHAT_TTS', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_TTS = os.getenv('USER_PERMISSIONS_CHAT_TTS', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_CALL = os.environ.get('USER_PERMISSIONS_CHAT_CALL', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_CALL = os.getenv('USER_PERMISSIONS_CHAT_CALL', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_MULTIPLE_MODELS = (
-    os.environ.get('USER_PERMISSIONS_CHAT_MULTIPLE_MODELS', 'True').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_CHAT_MULTIPLE_MODELS', 'True').lower() == 'true'
 )
 
-USER_PERMISSIONS_CHAT_TEMPORARY = os.environ.get('USER_PERMISSIONS_CHAT_TEMPORARY', 'True').lower() == 'true'
+USER_PERMISSIONS_CHAT_TEMPORARY = os.getenv('USER_PERMISSIONS_CHAT_TEMPORARY', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED = (
-    os.environ.get('USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED', 'False').lower() == 'true'
 )
 
 
 USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS = (
-    os.environ.get('USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS', 'False').lower() == 'true'
 )
 
-USER_PERMISSIONS_FEATURES_WEB_SEARCH = os.environ.get('USER_PERMISSIONS_FEATURES_WEB_SEARCH', 'True').lower() == 'true'
+USER_PERMISSIONS_FEATURES_WEB_SEARCH = os.getenv('USER_PERMISSIONS_FEATURES_WEB_SEARCH', 'True').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
-    os.environ.get('USER_PERMISSIONS_FEATURES_IMAGE_GENERATION', 'True').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_FEATURES_IMAGE_GENERATION', 'True').lower() == 'true'
 )
 
 USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
-    os.environ.get('USER_PERMISSIONS_FEATURES_CODE_INTERPRETER', 'True').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_FEATURES_CODE_INTERPRETER', 'True').lower() == 'true'
 )
 
-USER_PERMISSIONS_FEATURES_FOLDERS = os.environ.get('USER_PERMISSIONS_FEATURES_FOLDERS', 'True').lower() == 'true'
+USER_PERMISSIONS_FEATURES_FOLDERS = os.getenv('USER_PERMISSIONS_FEATURES_FOLDERS', 'True').lower() == 'true'
 
-USER_PERMISSIONS_FEATURES_NOTES = os.environ.get('USER_PERMISSIONS_FEATURES_NOTES', 'True').lower() == 'true'
+USER_PERMISSIONS_FEATURES_NOTES = os.getenv('USER_PERMISSIONS_FEATURES_NOTES', 'True').lower() == 'true'
 
-USER_PERMISSIONS_FEATURES_CHANNELS = os.environ.get('USER_PERMISSIONS_FEATURES_CHANNELS', 'True').lower() == 'true'
+USER_PERMISSIONS_FEATURES_CHANNELS = os.getenv('USER_PERMISSIONS_FEATURES_CHANNELS', 'True').lower() == 'true'
 
-USER_PERMISSIONS_FEATURES_API_KEYS = os.environ.get('USER_PERMISSIONS_FEATURES_API_KEYS', 'False').lower() == 'true'
+USER_PERMISSIONS_FEATURES_API_KEYS = os.getenv('USER_PERMISSIONS_FEATURES_API_KEYS', 'False').lower() == 'true'
 
-USER_PERMISSIONS_FEATURES_MEMORIES = os.environ.get('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
+USER_PERMISSIONS_FEATURES_MEMORIES = os.getenv('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_AUTOMATIONS = (
-    os.environ.get('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
+    os.getenv('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
 )
 
-USER_PERMISSIONS_FEATURES_CALENDAR = os.environ.get('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
+USER_PERMISSIONS_FEATURES_CALENDAR = os.getenv('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
 
 
-USER_PERMISSIONS_SETTINGS_INTERFACE = os.environ.get('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
+USER_PERMISSIONS_SETTINGS_INTERFACE = os.getenv('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
 
 
 DEFAULT_USER_PERMISSIONS = {
@@ -2864,61 +2864,61 @@ USER_PERMISSIONS = ConfigVar(
 ENABLE_FOLDERS = ConfigVar(
     'ENABLE_FOLDERS',
     'folders.enable',
-    os.environ.get('ENABLE_FOLDERS', 'True').lower() == 'true',
+    os.getenv('ENABLE_FOLDERS', 'True').lower() == 'true',
 )
 
 FOLDER_MAX_FILE_COUNT = ConfigVar(
     'FOLDER_MAX_FILE_COUNT',
     'folders.max_file_count',
-    os.environ.get('FOLDER_MAX_FILE_COUNT', ''),
+    os.getenv('FOLDER_MAX_FILE_COUNT', ''),
 )
 
 ENABLE_CHANNELS = ConfigVar(
     'ENABLE_CHANNELS',
     'channels.enable',
-    os.environ.get('ENABLE_CHANNELS', 'False').lower() == 'true',
+    os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true',
 )
 
 ENABLE_CALENDAR = ConfigVar(
     'ENABLE_CALENDAR',
     'calendar.enable',
-    os.environ.get('ENABLE_CALENDAR', 'True').lower() == 'true',
+    os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true',
 )
 
 ENABLE_AUTOMATIONS = ConfigVar(
     'ENABLE_AUTOMATIONS',
     'automations.enable',
-    os.environ.get('ENABLE_AUTOMATIONS', 'True').lower() == 'true',
+    os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true',
 )
 
 AUTOMATION_MAX_COUNT = ConfigVar(
     'AUTOMATION_MAX_COUNT',
     'automations.max_count',
-    os.environ.get('AUTOMATION_MAX_COUNT', ''),
+    os.getenv('AUTOMATION_MAX_COUNT', ''),
 )
 
 AUTOMATION_MIN_INTERVAL = ConfigVar(
     'AUTOMATION_MIN_INTERVAL',
     'automations.min_interval',
-    os.environ.get('AUTOMATION_MIN_INTERVAL', ''),
+    os.getenv('AUTOMATION_MIN_INTERVAL', ''),
 )
 
 ENABLE_NOTES = ConfigVar(
     'ENABLE_NOTES',
     'notes.enable',
-    os.environ.get('ENABLE_NOTES', 'True').lower() == 'true',
+    os.getenv('ENABLE_NOTES', 'True').lower() == 'true',
 )
 
 ENABLE_USER_STATUS = ConfigVar(
     'ENABLE_USER_STATUS',
     'users.enable_status',
-    os.environ.get('ENABLE_USER_STATUS', 'True').lower() == 'true',
+    os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true',
 )
 
 ENABLE_EVALUATION_ARENA_MODELS = ConfigVar(
     'ENABLE_EVALUATION_ARENA_MODELS',
     'evaluation.arena.enable',
-    os.environ.get('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true',
+    os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true',
 )
 EVALUATION_ARENA_MODELS = ConfigVar(
     'EVALUATION_ARENA_MODELS',
@@ -2936,42 +2936,42 @@ DEFAULT_ARENA_MODEL = {
     },
 }
 
-WEBHOOK_URL = ConfigVar('WEBHOOK_URL', 'webhook_url', os.environ.get('WEBHOOK_URL', ''))
+WEBHOOK_URL = ConfigVar('WEBHOOK_URL', 'webhook_url', os.getenv('WEBHOOK_URL', ''))
 
-ENABLE_ADMIN_EXPORT = os.environ.get('ENABLE_ADMIN_EXPORT', 'True').lower() == 'true'
+ENABLE_ADMIN_EXPORT = os.getenv('ENABLE_ADMIN_EXPORT', 'True').lower() == 'true'
 
 ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
-    os.environ.get('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True').lower() == 'true'
+    os.getenv('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True').lower() == 'true'
 )
 
 BYPASS_ADMIN_ACCESS_CONTROL = (
-    os.environ.get(
+    os.getenv(
         'BYPASS_ADMIN_ACCESS_CONTROL',
-        os.environ.get('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True'),
+        os.getenv('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True'),
     ).lower()
     == 'true'
 )
 
-ENABLE_ADMIN_CHAT_ACCESS = os.environ.get('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
+ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
 
-ENABLE_ADMIN_ANALYTICS = os.environ.get('ENABLE_ADMIN_ANALYTICS', 'True').lower() == 'true'
+ENABLE_ADMIN_ANALYTICS = os.getenv('ENABLE_ADMIN_ANALYTICS', 'True').lower() == 'true'
 
 ENABLE_COMMUNITY_SHARING = ConfigVar(
     'ENABLE_COMMUNITY_SHARING',
     'ui.enable_community_sharing',
-    os.environ.get('ENABLE_COMMUNITY_SHARING', 'True').lower() == 'true',
+    os.getenv('ENABLE_COMMUNITY_SHARING', 'True').lower() == 'true',
 )
 
 ENABLE_MESSAGE_RATING = ConfigVar(
     'ENABLE_MESSAGE_RATING',
     'ui.enable_message_rating',
-    os.environ.get('ENABLE_MESSAGE_RATING', 'True').lower() == 'true',
+    os.getenv('ENABLE_MESSAGE_RATING', 'True').lower() == 'true',
 )
 
 ENABLE_USER_WEBHOOKS = ConfigVar(
     'ENABLE_USER_WEBHOOKS',
     'ui.enable_user_webhooks',
-    os.environ.get('ENABLE_USER_WEBHOOKS', 'False').lower() == 'true',
+    os.getenv('ENABLE_USER_WEBHOOKS', 'False').lower() == 'true',
 )
 
 # FastAPI / AnyIO settings
@@ -3005,12 +3005,12 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN', '*').split(';')
+CORS_ALLOW_ORIGIN = os.getenv('CORS_ALLOW_ORIGIN', '*').split(';')
 
 # Allows custom URL schemes (e.g., app://) to be used as origins for CORS.
 # Useful for local development or desktop clients with schemes like app:// or other custom protocols.
 # Provide a semicolon-separated list of allowed schemes in the environment variable CORS_ALLOW_CUSTOM_SCHEMES.
-CORS_ALLOW_CUSTOM_SCHEME = os.environ.get('CORS_ALLOW_CUSTOM_SCHEME', '').split(';')
+CORS_ALLOW_CUSTOM_SCHEME = os.getenv('CORS_ALLOW_CUSTOM_SCHEME', '').split(';')
 
 if CORS_ALLOW_ORIGIN == ['*']:
     log.warning("\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n")
@@ -3031,7 +3031,7 @@ class BannerModel(BaseModel):
 
 
 try:
-    banners = json.loads(os.environ.get('WEBUI_BANNERS', '[]'))
+    banners = json.loads(os.getenv('WEBUI_BANNERS', '[]'))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
     log.exception(f'Error loading WEBUI_BANNERS: {e}')
@@ -3043,13 +3043,13 @@ WEBUI_BANNERS = ConfigVar('WEBUI_BANNERS', 'ui.banners', banners)
 SHOW_ADMIN_DETAILS = ConfigVar(
     'SHOW_ADMIN_DETAILS',
     'auth.admin.show',
-    os.environ.get('SHOW_ADMIN_DETAILS', 'true').lower() == 'true',
+    os.getenv('SHOW_ADMIN_DETAILS', 'true').lower() == 'true',
 )
 
 ADMIN_EMAIL = ConfigVar(
     'ADMIN_EMAIL',
     'auth.admin.email',
-    os.environ.get('ADMIN_EMAIL', None),
+    os.getenv('ADMIN_EMAIL', None),
 )
 
 
@@ -3061,19 +3061,19 @@ ADMIN_EMAIL = ConfigVar(
 TASK_MODEL = ConfigVar(
     'TASK_MODEL',
     'task.model.default',
-    os.environ.get('TASK_MODEL', ''),
+    os.getenv('TASK_MODEL', ''),
 )
 
 TASK_MODEL_EXTERNAL = ConfigVar(
     'TASK_MODEL_EXTERNAL',
     'task.model.external',
-    os.environ.get('TASK_MODEL_EXTERNAL', ''),
+    os.getenv('TASK_MODEL_EXTERNAL', ''),
 )
 
 TITLE_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'TITLE_GENERATION_PROMPT_TEMPLATE',
     'task.title.prompt_template',
-    os.environ.get('TITLE_GENERATION_PROMPT_TEMPLATE', ''),
+    os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', ''),
 )
 
 DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3103,7 +3103,7 @@ JSON format: { "title": "your concise title here" }
 TAGS_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'TAGS_GENERATION_PROMPT_TEMPLATE',
     'task.tags.prompt_template',
-    os.environ.get('TAGS_GENERATION_PROMPT_TEMPLATE', ''),
+    os.getenv('TAGS_GENERATION_PROMPT_TEMPLATE', ''),
 )
 
 DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3127,7 +3127,7 @@ JSON format: { "tags": ["tag1", "tag2", "tag3"] }
 IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE',
     'task.image.prompt_template',
-    os.environ.get('IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE', ''),
+    os.getenv('IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE', ''),
 )
 
 DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3154,7 +3154,7 @@ Strictly return in JSON format:
 FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'FOLLOW_UP_GENERATION_PROMPT_TEMPLATE',
     'task.follow_up.prompt_template',
-    os.environ.get('FOLLOW_UP_GENERATION_PROMPT_TEMPLATE', ''),
+    os.getenv('FOLLOW_UP_GENERATION_PROMPT_TEMPLATE', ''),
 )
 
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3176,39 +3176,39 @@ JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
 ENABLE_FOLLOW_UP_GENERATION = ConfigVar(
     'ENABLE_FOLLOW_UP_GENERATION',
     'task.follow_up.enable',
-    os.environ.get('ENABLE_FOLLOW_UP_GENERATION', 'True').lower() == 'true',
+    os.getenv('ENABLE_FOLLOW_UP_GENERATION', 'True').lower() == 'true',
 )
 
 ENABLE_TAGS_GENERATION = ConfigVar(
     'ENABLE_TAGS_GENERATION',
     'task.tags.enable',
-    os.environ.get('ENABLE_TAGS_GENERATION', 'True').lower() == 'true',
+    os.getenv('ENABLE_TAGS_GENERATION', 'True').lower() == 'true',
 )
 
 ENABLE_TITLE_GENERATION = ConfigVar(
     'ENABLE_TITLE_GENERATION',
     'task.title.enable',
-    os.environ.get('ENABLE_TITLE_GENERATION', 'True').lower() == 'true',
+    os.getenv('ENABLE_TITLE_GENERATION', 'True').lower() == 'true',
 )
 
 
 ENABLE_SEARCH_QUERY_GENERATION = ConfigVar(
     'ENABLE_SEARCH_QUERY_GENERATION',
     'task.query.search.enable',
-    os.environ.get('ENABLE_SEARCH_QUERY_GENERATION', 'True').lower() == 'true',
+    os.getenv('ENABLE_SEARCH_QUERY_GENERATION', 'True').lower() == 'true',
 )
 
 ENABLE_RETRIEVAL_QUERY_GENERATION = ConfigVar(
     'ENABLE_RETRIEVAL_QUERY_GENERATION',
     'task.query.retrieval.enable',
-    os.environ.get('ENABLE_RETRIEVAL_QUERY_GENERATION', 'True').lower() == 'true',
+    os.getenv('ENABLE_RETRIEVAL_QUERY_GENERATION', 'True').lower() == 'true',
 )
 
 
 QUERY_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'QUERY_GENERATION_PROMPT_TEMPLATE',
     'task.query.prompt_template',
-    os.environ.get('QUERY_GENERATION_PROMPT_TEMPLATE', ''),
+    os.getenv('QUERY_GENERATION_PROMPT_TEMPLATE', ''),
 )
 
 DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3238,19 +3238,19 @@ Strictly return in JSON format:
 ENABLE_AUTOCOMPLETE_GENERATION = ConfigVar(
     'ENABLE_AUTOCOMPLETE_GENERATION',
     'task.autocomplete.enable',
-    os.environ.get('ENABLE_AUTOCOMPLETE_GENERATION', 'False').lower() == 'true',
+    os.getenv('ENABLE_AUTOCOMPLETE_GENERATION', 'False').lower() == 'true',
 )
 
 AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = ConfigVar(
     'AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH',
     'task.autocomplete.input_max_length',
-    int(os.environ.get('AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH', '-1')),
+    int(os.getenv('AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH', '-1')),
 )
 
 AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = ConfigVar(
     'AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE',
     'task.autocomplete.prompt_template',
-    os.environ.get('AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE', ''),
+    os.getenv('AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE', ''),
 )
 
 
@@ -3300,13 +3300,13 @@ Output:
 VOICE_MODE_PROMPT_TEMPLATE = ConfigVar(
     'VOICE_MODE_PROMPT_TEMPLATE',
     'task.voice.prompt_template',
-    os.environ.get('VOICE_MODE_PROMPT_TEMPLATE', ''),
+    os.getenv('VOICE_MODE_PROMPT_TEMPLATE', ''),
 )
 
 ENABLE_VOICE_MODE_PROMPT = ConfigVar(
     'ENABLE_VOICE_MODE_PROMPT',
     'task.voice.prompt.enable',
-    os.environ.get('ENABLE_VOICE_MODE_PROMPT', 'True').lower() == 'true',
+    os.getenv('ENABLE_VOICE_MODE_PROMPT', 'True').lower() == 'true',
 )
 
 DEFAULT_VOICE_MODE_PROMPT_TEMPLATE = """You are a friendly, concise voice assistant.
@@ -3337,7 +3337,7 @@ Stay consistent, helpful, and easy to listen to."""
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = ConfigVar(
     'TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE',
     'task.tools.prompt_template',
-    os.environ.get('TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE', ''),
+    os.getenv('TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE', ''),
 )
 
 
@@ -3383,15 +3383,15 @@ Responses from models: {{responses}}"""
 ENABLE_API_KEYS = ConfigVar(
     'ENABLE_API_KEYS',
     'auth.enable_api_keys',
-    os.environ.get('ENABLE_API_KEYS', 'False').lower() == 'true',
+    os.getenv('ENABLE_API_KEYS', 'False').lower() == 'true',
 )
 
 ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = ConfigVar(
     'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS',
     'auth.api_key.endpoint_restrictions',
-    os.environ.get(
+    os.getenv(
         'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS',
-        os.environ.get('ENABLE_API_KEY_ENDPOINT_RESTRICTIONS', 'False'),
+        os.getenv('ENABLE_API_KEY_ENDPOINT_RESTRICTIONS', 'False'),
     ).lower()
     == 'true',
 )
@@ -3399,10 +3399,10 @@ ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = ConfigVar(
 API_KEYS_ALLOWED_ENDPOINTS = ConfigVar(
     'API_KEYS_ALLOWED_ENDPOINTS',
     'auth.api_key.allowed_endpoints',
-    os.environ.get('API_KEYS_ALLOWED_ENDPOINTS', os.environ.get('API_KEY_ALLOWED_ENDPOINTS', '')),
+    os.getenv('API_KEYS_ALLOWED_ENDPOINTS', os.getenv('API_KEY_ALLOWED_ENDPOINTS', '')),
 )
 
-JWT_EXPIRES_IN = ConfigVar('JWT_EXPIRES_IN', 'auth.jwt_expiry', os.environ.get('JWT_EXPIRES_IN', '4w'))
+JWT_EXPIRES_IN = ConfigVar('JWT_EXPIRES_IN', 'auth.jwt_expiry', os.getenv('JWT_EXPIRES_IN', '4w'))
 
 if JWT_EXPIRES_IN.value == '-1':
     log.warning(
@@ -3417,20 +3417,20 @@ if JWT_EXPIRES_IN.value == '-1':
 ENABLE_OAUTH_SIGNUP = ConfigVar(
     'ENABLE_OAUTH_SIGNUP',
     'oauth.enable_signup',
-    os.environ.get('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true',
+    os.getenv('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true',
 )
 
 OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = ConfigVar(
     'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE',
     'oauth.refresh_token_include_scope',
-    os.environ.get('OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE', 'False').lower() == 'true',
+    os.getenv('OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE', 'False').lower() == 'true',
 )
 
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = ConfigVar(
     'OAUTH_MERGE_ACCOUNTS_BY_EMAIL',
     'oauth.merge_accounts_by_email',
-    os.environ.get('OAUTH_MERGE_ACCOUNTS_BY_EMAIL', 'False').lower() == 'true',
+    os.getenv('OAUTH_MERGE_ACCOUNTS_BY_EMAIL', 'False').lower() == 'true',
 )
 
 OAUTH_PROVIDERS = {}
@@ -3438,30 +3438,30 @@ OAUTH_PROVIDERS = {}
 GOOGLE_CLIENT_ID = ConfigVar(
     'GOOGLE_CLIENT_ID',
     'oauth.google.client_id',
-    os.environ.get('GOOGLE_CLIENT_ID', ''),
+    os.getenv('GOOGLE_CLIENT_ID', ''),
 )
 
 GOOGLE_CLIENT_SECRET = ConfigVar(
     'GOOGLE_CLIENT_SECRET',
     'oauth.google.client_secret',
-    os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+    os.getenv('GOOGLE_CLIENT_SECRET', ''),
 )
 
 
 GOOGLE_OAUTH_SCOPE = ConfigVar(
     'GOOGLE_OAUTH_SCOPE',
     'oauth.google.scope',
-    os.environ.get('GOOGLE_OAUTH_SCOPE', 'openid email profile'),
+    os.getenv('GOOGLE_OAUTH_SCOPE', 'openid email profile'),
 )
 
 GOOGLE_REDIRECT_URI = ConfigVar(
     'GOOGLE_REDIRECT_URI',
     'oauth.google.redirect_uri',
-    os.environ.get('GOOGLE_REDIRECT_URI', ''),
+    os.getenv('GOOGLE_REDIRECT_URI', ''),
 )
 
 GOOGLE_OAUTH_AUTHORIZE_PARAMS = {}
-_google_oauth_authorize_params = os.environ.get('GOOGLE_OAUTH_AUTHORIZE_PARAMS', '')
+_google_oauth_authorize_params = os.getenv('GOOGLE_OAUTH_AUTHORIZE_PARAMS', '')
 if _google_oauth_authorize_params:
     try:
         _parsed = json.loads(_google_oauth_authorize_params)
@@ -3475,31 +3475,31 @@ if _google_oauth_authorize_params:
 MICROSOFT_CLIENT_ID = ConfigVar(
     'MICROSOFT_CLIENT_ID',
     'oauth.microsoft.client_id',
-    os.environ.get('MICROSOFT_CLIENT_ID', ''),
+    os.getenv('MICROSOFT_CLIENT_ID', ''),
 )
 
 MICROSOFT_CLIENT_SECRET = ConfigVar(
     'MICROSOFT_CLIENT_SECRET',
     'oauth.microsoft.client_secret',
-    os.environ.get('MICROSOFT_CLIENT_SECRET', ''),
+    os.getenv('MICROSOFT_CLIENT_SECRET', ''),
 )
 
 MICROSOFT_CLIENT_TENANT_ID = ConfigVar(
     'MICROSOFT_CLIENT_TENANT_ID',
     'oauth.microsoft.tenant_id',
-    os.environ.get('MICROSOFT_CLIENT_TENANT_ID', ''),
+    os.getenv('MICROSOFT_CLIENT_TENANT_ID', ''),
 )
 
 MICROSOFT_CLIENT_LOGIN_BASE_URL = ConfigVar(
     'MICROSOFT_CLIENT_LOGIN_BASE_URL',
     'oauth.microsoft.login_base_url',
-    os.environ.get('MICROSOFT_CLIENT_LOGIN_BASE_URL', 'https://login.microsoftonline.com'),
+    os.getenv('MICROSOFT_CLIENT_LOGIN_BASE_URL', 'https://login.microsoftonline.com'),
 )
 
 MICROSOFT_CLIENT_PICTURE_URL = ConfigVar(
     'MICROSOFT_CLIENT_PICTURE_URL',
     'oauth.microsoft.picture_url',
-    os.environ.get(
+    os.getenv(
         'MICROSOFT_CLIENT_PICTURE_URL',
         'https://graph.microsoft.com/v1.0/me/photo/$value',
     ),
@@ -3509,174 +3509,174 @@ MICROSOFT_CLIENT_PICTURE_URL = ConfigVar(
 MICROSOFT_OAUTH_SCOPE = ConfigVar(
     'MICROSOFT_OAUTH_SCOPE',
     'oauth.microsoft.scope',
-    os.environ.get('MICROSOFT_OAUTH_SCOPE', 'openid email profile'),
+    os.getenv('MICROSOFT_OAUTH_SCOPE', 'openid email profile'),
 )
 
 MICROSOFT_REDIRECT_URI = ConfigVar(
     'MICROSOFT_REDIRECT_URI',
     'oauth.microsoft.redirect_uri',
-    os.environ.get('MICROSOFT_REDIRECT_URI', ''),
+    os.getenv('MICROSOFT_REDIRECT_URI', ''),
 )
 
 GITHUB_CLIENT_ID = ConfigVar(
     'GITHUB_CLIENT_ID',
     'oauth.github.client_id',
-    os.environ.get('GITHUB_CLIENT_ID', ''),
+    os.getenv('GITHUB_CLIENT_ID', ''),
 )
 
 GITHUB_CLIENT_SECRET = ConfigVar(
     'GITHUB_CLIENT_SECRET',
     'oauth.github.client_secret',
-    os.environ.get('GITHUB_CLIENT_SECRET', ''),
+    os.getenv('GITHUB_CLIENT_SECRET', ''),
 )
 
 GITHUB_CLIENT_SCOPE = ConfigVar(
     'GITHUB_CLIENT_SCOPE',
     'oauth.github.scope',
-    os.environ.get('GITHUB_CLIENT_SCOPE', 'user:email'),
+    os.getenv('GITHUB_CLIENT_SCOPE', 'user:email'),
 )
 
 GITHUB_CLIENT_REDIRECT_URI = ConfigVar(
     'GITHUB_CLIENT_REDIRECT_URI',
     'oauth.github.redirect_uri',
-    os.environ.get('GITHUB_CLIENT_REDIRECT_URI', ''),
+    os.getenv('GITHUB_CLIENT_REDIRECT_URI', ''),
 )
 
 OAUTH_CLIENT_ID = ConfigVar(
     'OAUTH_CLIENT_ID',
     'oauth.oidc.client_id',
-    os.environ.get('OAUTH_CLIENT_ID', ''),
+    os.getenv('OAUTH_CLIENT_ID', ''),
 )
 
 OAUTH_CLIENT_SECRET = ConfigVar(
     'OAUTH_CLIENT_SECRET',
     'oauth.oidc.client_secret',
-    os.environ.get('OAUTH_CLIENT_SECRET', ''),
+    os.getenv('OAUTH_CLIENT_SECRET', ''),
 )
 
 OPENID_PROVIDER_URL = ConfigVar(
     'OPENID_PROVIDER_URL',
     'oauth.oidc.provider_url',
-    os.environ.get('OPENID_PROVIDER_URL', ''),
+    os.getenv('OPENID_PROVIDER_URL', ''),
 )
 
 OPENID_END_SESSION_ENDPOINT = ConfigVar(
     'OPENID_END_SESSION_ENDPOINT',
     'oauth.oidc.end_session_endpoint',
-    os.environ.get('OPENID_END_SESSION_ENDPOINT', ''),
+    os.getenv('OPENID_END_SESSION_ENDPOINT', ''),
 )
 
 OPENID_REDIRECT_URI = ConfigVar(
     'OPENID_REDIRECT_URI',
     'oauth.oidc.redirect_uri',
-    os.environ.get('OPENID_REDIRECT_URI', ''),
+    os.getenv('OPENID_REDIRECT_URI', ''),
 )
 
 OAUTH_SCOPES = ConfigVar(
     'OAUTH_SCOPES',
     'oauth.oidc.scopes',
-    os.environ.get('OAUTH_SCOPES', 'openid email profile'),
+    os.getenv('OAUTH_SCOPES', 'openid email profile'),
 )
 
 OAUTH_TIMEOUT = ConfigVar(
     'OAUTH_TIMEOUT',
     'oauth.oidc.oauth_timeout',
-    os.environ.get('OAUTH_TIMEOUT', ''),
+    os.getenv('OAUTH_TIMEOUT', ''),
 )
 
 OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = ConfigVar(
     'OAUTH_TOKEN_ENDPOINT_AUTH_METHOD',
     'oauth.oidc.token_endpoint_auth_method',
-    os.environ.get('OAUTH_TOKEN_ENDPOINT_AUTH_METHOD', None),
+    os.getenv('OAUTH_TOKEN_ENDPOINT_AUTH_METHOD', None),
 )
 
 OAUTH_CODE_CHALLENGE_METHOD = ConfigVar(
     'OAUTH_CODE_CHALLENGE_METHOD',
     'oauth.oidc.code_challenge_method',
-    os.environ.get('OAUTH_CODE_CHALLENGE_METHOD', None),
+    os.getenv('OAUTH_CODE_CHALLENGE_METHOD', None),
 )
 
 OAUTH_PROVIDER_NAME = ConfigVar(
     'OAUTH_PROVIDER_NAME',
     'oauth.oidc.provider_name',
-    os.environ.get('OAUTH_PROVIDER_NAME', 'SSO'),
+    os.getenv('OAUTH_PROVIDER_NAME', 'SSO'),
 )
 
 OAUTH_SUB_CLAIM = ConfigVar(
     'OAUTH_SUB_CLAIM',
     'oauth.oidc.sub_claim',
-    os.environ.get('OAUTH_SUB_CLAIM', None),
+    os.getenv('OAUTH_SUB_CLAIM', None),
 )
 
 OAUTH_USERNAME_CLAIM = ConfigVar(
     'OAUTH_USERNAME_CLAIM',
     'oauth.oidc.username_claim',
-    os.environ.get('OAUTH_USERNAME_CLAIM', 'name'),
+    os.getenv('OAUTH_USERNAME_CLAIM', 'name'),
 )
 
 
 OAUTH_PICTURE_CLAIM = ConfigVar(
     'OAUTH_PICTURE_CLAIM',
     'oauth.oidc.avatar_claim',
-    os.environ.get('OAUTH_PICTURE_CLAIM', 'picture'),
+    os.getenv('OAUTH_PICTURE_CLAIM', 'picture'),
 )
 
 OAUTH_EMAIL_CLAIM = ConfigVar(
     'OAUTH_EMAIL_CLAIM',
     'oauth.oidc.email_claim',
-    os.environ.get('OAUTH_EMAIL_CLAIM', 'email'),
+    os.getenv('OAUTH_EMAIL_CLAIM', 'email'),
 )
 
 OAUTH_GROUPS_CLAIM = ConfigVar(
     'OAUTH_GROUPS_CLAIM',
     'oauth.oidc.group_claim',
-    os.environ.get('OAUTH_GROUPS_CLAIM', os.environ.get('OAUTH_GROUP_CLAIM', 'groups')),
+    os.getenv('OAUTH_GROUPS_CLAIM', os.getenv('OAUTH_GROUP_CLAIM', 'groups')),
 )
 
 FEISHU_CLIENT_ID = ConfigVar(
     'FEISHU_CLIENT_ID',
     'oauth.feishu.client_id',
-    os.environ.get('FEISHU_CLIENT_ID', ''),
+    os.getenv('FEISHU_CLIENT_ID', ''),
 )
 
 FEISHU_CLIENT_SECRET = ConfigVar(
     'FEISHU_CLIENT_SECRET',
     'oauth.feishu.client_secret',
-    os.environ.get('FEISHU_CLIENT_SECRET', ''),
+    os.getenv('FEISHU_CLIENT_SECRET', ''),
 )
 
 FEISHU_OAUTH_SCOPE = ConfigVar(
     'FEISHU_OAUTH_SCOPE',
     'oauth.feishu.scope',
-    os.environ.get('FEISHU_OAUTH_SCOPE', 'contact:user.base:readonly'),
+    os.getenv('FEISHU_OAUTH_SCOPE', 'contact:user.base:readonly'),
 )
 
 FEISHU_REDIRECT_URI = ConfigVar(
     'FEISHU_REDIRECT_URI',
     'oauth.feishu.redirect_uri',
-    os.environ.get('FEISHU_REDIRECT_URI', ''),
+    os.getenv('FEISHU_REDIRECT_URI', ''),
 )
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = ConfigVar(
     'ENABLE_OAUTH_ROLE_MANAGEMENT',
     'oauth.enable_role_mapping',
-    os.environ.get('ENABLE_OAUTH_ROLE_MANAGEMENT', 'False').lower() == 'true',
+    os.getenv('ENABLE_OAUTH_ROLE_MANAGEMENT', 'False').lower() == 'true',
 )
 
 ENABLE_OAUTH_GROUP_MANAGEMENT = ConfigVar(
     'ENABLE_OAUTH_GROUP_MANAGEMENT',
     'oauth.enable_group_mapping',
-    os.environ.get('ENABLE_OAUTH_GROUP_MANAGEMENT', 'False').lower() == 'true',
+    os.getenv('ENABLE_OAUTH_GROUP_MANAGEMENT', 'False').lower() == 'true',
 )
 
 ENABLE_OAUTH_GROUP_CREATION = ConfigVar(
     'ENABLE_OAUTH_GROUP_CREATION',
     'oauth.enable_group_creation',
-    os.environ.get('ENABLE_OAUTH_GROUP_CREATION', 'False').lower() == 'true',
+    os.getenv('ENABLE_OAUTH_GROUP_CREATION', 'False').lower() == 'true',
 )
 
 
-oauth_group_default_share = os.environ.get('OAUTH_GROUP_DEFAULT_SHARE', 'true').strip().lower()
+oauth_group_default_share = os.getenv('OAUTH_GROUP_DEFAULT_SHARE', 'true').strip().lower()
 OAUTH_GROUP_DEFAULT_SHARE = ConfigVar(
     'OAUTH_GROUP_DEFAULT_SHARE',
     'oauth.group_default_share',
@@ -3687,25 +3687,25 @@ OAUTH_GROUP_DEFAULT_SHARE = ConfigVar(
 OAUTH_BLOCKED_GROUPS = ConfigVar(
     'OAUTH_BLOCKED_GROUPS',
     'oauth.blocked_groups',
-    os.environ.get('OAUTH_BLOCKED_GROUPS', '[]'),
+    os.getenv('OAUTH_BLOCKED_GROUPS', '[]'),
 )
 
-OAUTH_GROUPS_SEPARATOR = os.environ.get('OAUTH_GROUPS_SEPARATOR', ';')
+OAUTH_GROUPS_SEPARATOR = os.getenv('OAUTH_GROUPS_SEPARATOR', ';')
 
 OAUTH_ROLES_CLAIM = ConfigVar(
     'OAUTH_ROLES_CLAIM',
     'oauth.roles_claim',
-    os.environ.get('OAUTH_ROLES_CLAIM', 'roles'),
+    os.getenv('OAUTH_ROLES_CLAIM', 'roles'),
 )
 
-OAUTH_ROLES_SEPARATOR = os.environ.get('OAUTH_ROLES_SEPARATOR', ',')
+OAUTH_ROLES_SEPARATOR = os.getenv('OAUTH_ROLES_SEPARATOR', ',')
 
 OAUTH_ALLOWED_ROLES = ConfigVar(
     'OAUTH_ALLOWED_ROLES',
     'oauth.allowed_roles',
     [
         role.strip()
-        for role in os.environ.get('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(
+        for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(
             OAUTH_ROLES_SEPARATOR
         )
         if role
@@ -3715,45 +3715,45 @@ OAUTH_ALLOWED_ROLES = ConfigVar(
 OAUTH_ADMIN_ROLES = ConfigVar(
     'OAUTH_ADMIN_ROLES',
     'oauth.admin_roles',
-    [role.strip() for role in os.environ.get('OAUTH_ADMIN_ROLES', 'admin').split(OAUTH_ROLES_SEPARATOR) if role],
+    [role.strip() for role in os.getenv('OAUTH_ADMIN_ROLES', 'admin').split(OAUTH_ROLES_SEPARATOR) if role],
 )
 
 OAUTH_ALLOWED_DOMAINS = ConfigVar(
     'OAUTH_ALLOWED_DOMAINS',
     'oauth.allowed_domains',
-    [domain.strip() for domain in os.environ.get('OAUTH_ALLOWED_DOMAINS', '*').split(',')],
+    [domain.strip() for domain in os.getenv('OAUTH_ALLOWED_DOMAINS', '*').split(',')],
 )
 
 OAUTH_UPDATE_PICTURE_ON_LOGIN = ConfigVar(
     'OAUTH_UPDATE_PICTURE_ON_LOGIN',
     'oauth.update_picture_on_login',
-    os.environ.get('OAUTH_UPDATE_PICTURE_ON_LOGIN', 'False').lower() == 'true',
+    os.getenv('OAUTH_UPDATE_PICTURE_ON_LOGIN', 'False').lower() == 'true',
 )
 
 OAUTH_UPDATE_NAME_ON_LOGIN = ConfigVar(
     'OAUTH_UPDATE_NAME_ON_LOGIN',
     'oauth.update_name_on_login',
-    os.environ.get('OAUTH_UPDATE_NAME_ON_LOGIN', 'False').lower() == 'true',
+    os.getenv('OAUTH_UPDATE_NAME_ON_LOGIN', 'False').lower() == 'true',
 )
 
 OAUTH_UPDATE_EMAIL_ON_LOGIN = ConfigVar(
     'OAUTH_UPDATE_EMAIL_ON_LOGIN',
     'oauth.update_email_on_login',
-    os.environ.get('OAUTH_UPDATE_EMAIL_ON_LOGIN', 'False').lower() == 'true',
+    os.getenv('OAUTH_UPDATE_EMAIL_ON_LOGIN', 'False').lower() == 'true',
 )
 
 OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID = (
-    os.environ.get('OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID', 'False').lower() == 'true'
+    os.getenv('OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID', 'False').lower() == 'true'
 )
 
 OAUTH_AUDIENCE = ConfigVar(
     'OAUTH_AUDIENCE',
     'oauth.audience',
-    os.environ.get('OAUTH_AUDIENCE', ''),
+    os.getenv('OAUTH_AUDIENCE', ''),
 )
 
 OAUTH_AUTHORIZE_PARAMS = {}
-_oauth_authorize_params = os.environ.get('OAUTH_AUTHORIZE_PARAMS', '')
+_oauth_authorize_params = os.getenv('OAUTH_AUTHORIZE_PARAMS', '')
 if _oauth_authorize_params:
     try:
         _parsed = json.loads(_oauth_authorize_params)
@@ -3927,89 +3927,89 @@ load_oauth_providers()
 ENABLE_LDAP = ConfigVar(
     'ENABLE_LDAP',
     'ldap.enable',
-    os.environ.get('ENABLE_LDAP', 'false').lower() == 'true',
+    os.getenv('ENABLE_LDAP', 'false').lower() == 'true',
 )
 
 LDAP_SERVER_LABEL = ConfigVar(
     'LDAP_SERVER_LABEL',
     'ldap.server.label',
-    os.environ.get('LDAP_SERVER_LABEL', 'LDAP Server'),
+    os.getenv('LDAP_SERVER_LABEL', 'LDAP Server'),
 )
 
 LDAP_SERVER_HOST = ConfigVar(
     'LDAP_SERVER_HOST',
     'ldap.server.host',
-    os.environ.get('LDAP_SERVER_HOST', 'localhost'),
+    os.getenv('LDAP_SERVER_HOST', 'localhost'),
 )
 
 LDAP_SERVER_PORT = ConfigVar(
     'LDAP_SERVER_PORT',
     'ldap.server.port',
-    int(os.environ.get('LDAP_SERVER_PORT', '389')),
+    int(os.getenv('LDAP_SERVER_PORT', '389')),
 )
 
 LDAP_ATTRIBUTE_FOR_MAIL = ConfigVar(
     'LDAP_ATTRIBUTE_FOR_MAIL',
     'ldap.server.attribute_for_mail',
-    os.environ.get('LDAP_ATTRIBUTE_FOR_MAIL', 'mail'),
+    os.getenv('LDAP_ATTRIBUTE_FOR_MAIL', 'mail'),
 )
 
 LDAP_ATTRIBUTE_FOR_USERNAME = ConfigVar(
     'LDAP_ATTRIBUTE_FOR_USERNAME',
     'ldap.server.attribute_for_username',
-    os.environ.get('LDAP_ATTRIBUTE_FOR_USERNAME', 'uid'),
+    os.getenv('LDAP_ATTRIBUTE_FOR_USERNAME', 'uid'),
 )
 
-LDAP_APP_DN = ConfigVar('LDAP_APP_DN', 'ldap.server.app_dn', os.environ.get('LDAP_APP_DN', ''))
+LDAP_APP_DN = ConfigVar('LDAP_APP_DN', 'ldap.server.app_dn', os.getenv('LDAP_APP_DN', ''))
 
 LDAP_APP_PASSWORD = ConfigVar(
     'LDAP_APP_PASSWORD',
     'ldap.server.app_password',
-    os.environ.get('LDAP_APP_PASSWORD', ''),
+    os.getenv('LDAP_APP_PASSWORD', ''),
 )
 
-LDAP_SEARCH_BASE = ConfigVar('LDAP_SEARCH_BASE', 'ldap.server.users_dn', os.environ.get('LDAP_SEARCH_BASE', ''))
+LDAP_SEARCH_BASE = ConfigVar('LDAP_SEARCH_BASE', 'ldap.server.users_dn', os.getenv('LDAP_SEARCH_BASE', ''))
 
 LDAP_SEARCH_FILTERS = ConfigVar(
     'LDAP_SEARCH_FILTER',
     'ldap.server.search_filter',
-    os.environ.get('LDAP_SEARCH_FILTER', os.environ.get('LDAP_SEARCH_FILTERS', '')),
+    os.getenv('LDAP_SEARCH_FILTER', os.getenv('LDAP_SEARCH_FILTERS', '')),
 )
 
 LDAP_USE_TLS = ConfigVar(
     'LDAP_USE_TLS',
     'ldap.server.use_tls',
-    os.environ.get('LDAP_USE_TLS', 'True').lower() == 'true',
+    os.getenv('LDAP_USE_TLS', 'True').lower() == 'true',
 )
 
 LDAP_CA_CERT_FILE = ConfigVar(
     'LDAP_CA_CERT_FILE',
     'ldap.server.ca_cert_file',
-    os.environ.get('LDAP_CA_CERT_FILE', ''),
+    os.getenv('LDAP_CA_CERT_FILE', ''),
 )
 
 LDAP_VALIDATE_CERT = ConfigVar(
     'LDAP_VALIDATE_CERT',
     'ldap.server.validate_cert',
-    os.environ.get('LDAP_VALIDATE_CERT', 'True').lower() == 'true',
+    os.getenv('LDAP_VALIDATE_CERT', 'True').lower() == 'true',
 )
 
-LDAP_CIPHERS = ConfigVar('LDAP_CIPHERS', 'ldap.server.ciphers', os.environ.get('LDAP_CIPHERS', 'ALL'))
+LDAP_CIPHERS = ConfigVar('LDAP_CIPHERS', 'ldap.server.ciphers', os.getenv('LDAP_CIPHERS', 'ALL'))
 
 ENABLE_LDAP_GROUP_MANAGEMENT = ConfigVar(
     'ENABLE_LDAP_GROUP_MANAGEMENT',
     'ldap.group.enable_management',
-    os.environ.get('ENABLE_LDAP_GROUP_MANAGEMENT', 'False').lower() == 'true',
+    os.getenv('ENABLE_LDAP_GROUP_MANAGEMENT', 'False').lower() == 'true',
 )
 
 ENABLE_LDAP_GROUP_CREATION = ConfigVar(
     'ENABLE_LDAP_GROUP_CREATION',
     'ldap.group.enable_creation',
-    os.environ.get('ENABLE_LDAP_GROUP_CREATION', 'False').lower() == 'true',
+    os.getenv('ENABLE_LDAP_GROUP_CREATION', 'False').lower() == 'true',
 )
 
 LDAP_ATTRIBUTE_FOR_GROUPS = ConfigVar(
     'LDAP_ATTRIBUTE_FOR_GROUPS',
     'ldap.server.attribute_for_groups',
-    os.environ.get('LDAP_ATTRIBUTE_FOR_GROUPS', 'memberOf'),
+    os.getenv('LDAP_ATTRIBUTE_FOR_GROUPS', 'memberOf'),
 )
