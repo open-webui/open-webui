@@ -138,9 +138,6 @@ class JSONField(types.TypeDecorator):
             return json.loads(value)
 
 
-
-
-
 # Normalize SSL params from the URL once; the sync engine needs them
 # reattached in canonical libpq form for psycopg2.
 _url_without_ssl, _ssl_dict = extract_ssl_params_from_url(DATABASE_URL)
