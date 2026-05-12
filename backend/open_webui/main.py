@@ -63,6 +63,7 @@ from open_webui.utils.asgi_middleware import (
     RedirectMiddleware,
     WebsocketUpgradeGuardMiddleware,
 )
+from open_webui.utils.rate_limit_middleware import RateLimitMiddleware
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
 from open_webui.utils.session_pool import get_session
@@ -388,6 +389,17 @@ from open_webui.config import (
     WEBHOOK_URL,
     ADMIN_EMAIL,
     SHOW_ADMIN_DETAILS,
+    # Rate limiting
+    ENABLE_RATE_LIMITING,
+    RATE_LIMITING_FAIL_OPEN,
+    RATE_LIMITING_CHAT_LIMIT,
+    RATE_LIMITING_CHAT_WINDOW,
+    RATE_LIMITING_EMBEDDINGS_LIMIT,
+    RATE_LIMITING_EMBEDDINGS_WINDOW,
+    RATE_LIMITING_UPLOADS_LIMIT,
+    RATE_LIMITING_UPLOADS_WINDOW,
+    RATE_LIMITING_ADMIN_LIMIT,
+    RATE_LIMITING_ADMIN_WINDOW,
     JWT_EXPIRES_IN,
     ENABLE_SIGNUP,
     ENABLE_LOGIN_FORM,
@@ -888,6 +900,18 @@ app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
 app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
 app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
+
+# Rate limiting — see utils/rate_limit_middleware.py
+app.state.config.ENABLE_RATE_LIMITING = ENABLE_RATE_LIMITING
+app.state.config.RATE_LIMITING_FAIL_OPEN = RATE_LIMITING_FAIL_OPEN
+app.state.config.RATE_LIMITING_CHAT_LIMIT = RATE_LIMITING_CHAT_LIMIT
+app.state.config.RATE_LIMITING_CHAT_WINDOW = RATE_LIMITING_CHAT_WINDOW
+app.state.config.RATE_LIMITING_EMBEDDINGS_LIMIT = RATE_LIMITING_EMBEDDINGS_LIMIT
+app.state.config.RATE_LIMITING_EMBEDDINGS_WINDOW = RATE_LIMITING_EMBEDDINGS_WINDOW
+app.state.config.RATE_LIMITING_UPLOADS_LIMIT = RATE_LIMITING_UPLOADS_LIMIT
+app.state.config.RATE_LIMITING_UPLOADS_WINDOW = RATE_LIMITING_UPLOADS_WINDOW
+app.state.config.RATE_LIMITING_ADMIN_LIMIT = RATE_LIMITING_ADMIN_LIMIT
+app.state.config.RATE_LIMITING_ADMIN_WINDOW = RATE_LIMITING_ADMIN_WINDOW
 
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
@@ -1401,6 +1425,13 @@ app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CommitSessionMiddleware)
 app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
+# RateLimitMiddleware is wrapped inside AuthTokenMiddleware (added after it
+# here, which places it closer to the router in the ASGI stack). This lets
+# the limiter read `request.state.token` without re-parsing the header and
+# short-circuits abusive traffic before it reaches the WebSocket upgrade
+# guard or any router. Feature is gated by app.state.config.ENABLE_RATE_LIMITING
+# and is a no-op when disabled.
+app.add_middleware(RateLimitMiddleware, fastapi_app=app)
 app.add_middleware(WebsocketUpgradeGuardMiddleware)
 
 
