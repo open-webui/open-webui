@@ -569,7 +569,18 @@ class ChatTable:
                 **message,
             }
         else:
-            history['messages'][message_id] = message
+            now = int(time.time())
+            # This upsert is also used for partial streaming/final updates.
+            # If a concurrent whole-chat write dropped the assistant placeholder,
+            # never persist the partial payload as a malformed history node.
+            history['messages'][message_id] = {
+                'id': message_id,
+                'parentId': message.get('parentId'),
+                'childrenIds': message.get('childrenIds', []),
+                'role': message.get('role', 'assistant'),
+                'timestamp': message.get('timestamp', now),
+                **message,
+            }
 
         history['currentId'] = message_id
 
