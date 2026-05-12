@@ -65,6 +65,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage, displayFileHandler, getUserTimezone } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
+	import { readSharedTheme, syncToCookie, isLocalOnlyTheme } from '$lib/utils/theme-cookie';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
@@ -943,6 +944,46 @@
 
 		theme.set(localStorage.theme);
 
+		// Cross-app theme sync. The shared `swept_theme` cookie (set by
+		// swept-workbench / cloud-lock) is the source of truth for light /
+		// dark / system across all three apps. Local-only Open WebUI variants
+		// (oled-dark, her) stay local — we never write them to the cookie and
+		// the visibility/focus handler bails out when the user is on one, so
+		// a sync from another app can't clobber their local pick. Subscriptions
+		// and listeners are captured so the onMount teardown below removes
+		// them on unmount / HMR — no leaks across reloads.
+		const unsubscribeThemeSync = theme.subscribe((value) => {
+			if (typeof value === 'string') syncToCookie(value);
+		});
+
+		const reapplySharedTheme = () => {
+			const current = localStorage.theme;
+			if (isLocalOnlyTheme(current)) return; // don't clobber an active OLED / her user
+			const fromCookie = readSharedTheme(); // 'light' | 'dark' | 'system'
+			if (current === fromCookie) return;
+			localStorage.setItem('theme', fromCookie);
+			theme.set(fromCookie);
+
+			// Apply DOM classes immediately (mirrors the inline logic of the
+			// `theme:update` window-message handler above).
+			const themes = ['dark', 'light', 'oled-dark'];
+			let themeToApply =
+				fromCookie === 'system'
+					? window.matchMedia('(prefers-color-scheme: dark)').matches
+						? 'dark'
+						: 'light'
+					: fromCookie;
+			themes
+				.filter((e) => e !== themeToApply)
+				.forEach((e) => document.documentElement.classList.remove(e));
+			document.documentElement.classList.add(themeToApply);
+		};
+		const onSharedThemeVisibility = () => {
+			if (document.visibilityState === 'visible') reapplySharedTheme();
+		};
+		document.addEventListener('visibilitychange', onSharedThemeVisibility);
+		window.addEventListener('focus', reapplySharedTheme);
+
 		mobile.set(window.innerWidth < BREAKPOINT);
 
 		const onResize = () => {
@@ -1117,6 +1158,9 @@
 			document.removeEventListener('touchmove', touchmoveHandler);
 			document.removeEventListener('touchend', touchendHandler);
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			document.removeEventListener('visibilitychange', onSharedThemeVisibility);
+			window.removeEventListener('focus', reapplySharedTheme);
+			unsubscribeThemeSync();
 		};
 	});
 
