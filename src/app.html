@@ -41,6 +41,27 @@
 		</script>
 
 		<script>
+			// Cross-app theme sync. Reads the shared `swept_theme` cookie set by
+			// swept-workbench / cloud-lock and copies it into localStorage.theme
+			// BEFORE the FOUC script below runs, so Open WebUI picks up the same
+			// theme the other Swept apps are rendering. Mirrors
+			// src/lib/utils/theme-cookie.ts. Locally-set Open WebUI values
+			// (oled-dark, her) are preserved when the cookie is absent.
+			(function () {
+				try {
+					var COOKIE = 'swept_theme';
+					var match = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=([^;]*)'));
+					if (match) {
+						var v = decodeURIComponent(match[1]);
+						if (v === 'light' || v === 'dark') {
+							localStorage.setItem('theme', v);
+						}
+					}
+				} catch (e) {}
+			})();
+		</script>
+
+		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');

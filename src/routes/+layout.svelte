@@ -65,6 +65,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage, displayFileHandler, getUserTimezone } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
+	import { readSharedTheme, syncToCookie, isLocalOnlyTheme } from '$lib/utils/theme-cookie';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
@@ -942,6 +943,42 @@
 		handleVisibilityChange();
 
 		theme.set(localStorage.theme);
+
+		// Cross-app theme sync. The shared `swept_theme` cookie (set by
+		// swept-workbench / cloud-lock) is the source of truth for light/dark
+		// across all three apps. Local-only Open WebUI variants (oled-dark,
+		// her) stay local — we never write them to the cookie and we never
+		// overwrite them via cookie sync.
+		theme.subscribe((value) => {
+			if (typeof value === 'string') syncToCookie(value);
+		});
+
+		const reapplySharedTheme = () => {
+			const current = localStorage.theme;
+			if (isLocalOnlyTheme(current)) return; // don't clobber an active OLED / her user
+			const fromCookie = readSharedTheme(); // 'light' | 'dark' | 'system'
+			if (current === fromCookie) return;
+			localStorage.setItem('theme', fromCookie);
+			theme.set(fromCookie);
+
+			// Apply DOM classes immediately (mirrors the inline logic of the
+			// `theme:update` window-message handler above).
+			const themes = ['dark', 'light', 'oled-dark'];
+			let themeToApply =
+				fromCookie === 'system'
+					? window.matchMedia('(prefers-color-scheme: dark)').matches
+						? 'dark'
+						: 'light'
+					: fromCookie;
+			themes
+				.filter((e) => e !== themeToApply)
+				.forEach((e) => document.documentElement.classList.remove(e));
+			document.documentElement.classList.add(themeToApply);
+		};
+		document.addEventListener('visibilitychange', () => {
+			if (document.visibilityState === 'visible') reapplySharedTheme();
+		});
+		window.addEventListener('focus', reapplySharedTheme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
 
