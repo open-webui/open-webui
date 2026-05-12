@@ -57,7 +57,9 @@
 		'book-open':
 			'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
 		'sliders-horizontal':
-			'<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>'
+			'<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>',
+		'shield-check':
+			'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>'
 	};
 
 	/* Swept wordmark — copied verbatim from
@@ -125,7 +127,7 @@
 		return ul;
 	}
 
-	function buildShell(base) {
+	function buildShell(base, cloudLockUrl) {
 		var nav = [
 			{ label: 'Chat', icon: 'message-square', href: '/', active: true },
 			{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
@@ -133,6 +135,9 @@
 			{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
 			{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
 		];
+		if (cloudLockUrl) {
+			nav.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+		}
 		var bottom = [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
 
 		var aside = document.createElement('aside');
@@ -158,9 +163,9 @@
 		return aside;
 	}
 
-	function ensureMounted(base) {
+	function ensureMounted(base, cloudLockUrl) {
 		if (document.getElementById('swept-shell')) return;
-		document.body.appendChild(buildShell(base));
+		document.body.appendChild(buildShell(base, cloudLockUrl));
 	}
 
 	function preloadShellFonts() {
@@ -185,10 +190,11 @@
 			})
 			.then(function (cfg) {
 				var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
+				var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
 				if (!url) return;
 				return preloadShellFonts().then(function () {
 					document.documentElement.classList.add('swept-shell-active');
-					ensureMounted(url);
+					ensureMounted(url, cloudLockUrl);
 					/* SvelteKit doesn't replace document.body, so the shell
 					 * survives hydration without any observer. We only need
 					 * to react if something explicitly removes #swept-shell;
@@ -199,7 +205,7 @@
 							var removed = mutations[i].removedNodes;
 							for (var j = 0; j < removed.length; j++) {
 								if (removed[j].id === 'swept-shell') {
-									ensureMounted(url);
+									ensureMounted(url, cloudLockUrl);
 									return;
 								}
 							}
