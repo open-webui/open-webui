@@ -107,6 +107,7 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.yacy import search_yacy
 from open_webui.retrieval.web.yandex import search_yandex
 from open_webui.retrieval.web.ydc import search_youcom
+from open_webui.retrieval.web.linkup import search_linkup
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
@@ -553,6 +554,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'YANDEX_WEB_SEARCH_API_KEY': request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             'YANDEX_WEB_SEARCH_CONFIG': request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             'YOUCOM_API_KEY': request.app.state.config.YOUCOM_API_KEY,
+            'LINKUP_API_KEY': request.app.state.config.LINKUP_API_KEY,
+            'LINKUP_SEARCH_URL': request.app.state.config.LINKUP_SEARCH_URL,
+            'LINKUP_SEARCH_DEPTH': request.app.state.config.LINKUP_SEARCH_DEPTH,
+            'LINKUP_OUTPUT_TYPE': request.app.state.config.LINKUP_OUTPUT_TYPE,
         },
     }
 
@@ -622,6 +627,10 @@ class WebConfig(BaseModel):
     YANDEX_WEB_SEARCH_API_KEY: str | None = None
     YANDEX_WEB_SEARCH_CONFIG: str | None = None
     YOUCOM_API_KEY: str | None = None
+    LINKUP_API_KEY: str | None = None
+    LINKUP_SEARCH_URL: str | None = None
+    LINKUP_SEARCH_DEPTH: str | None = None
+    LINKUP_OUTPUT_TYPE: str | None = None
 
 
 class ConfigForm(BaseModel):
@@ -1086,6 +1095,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.PERPLEXITY_SEARCH_API_URL = form_data.web.PERPLEXITY_SEARCH_API_URL
         request.app.state.config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         request.app.state.config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
+        request.app.state.config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
+        request.app.state.config.LINKUP_SEARCH_URL = form_data.web.LINKUP_SEARCH_URL
+        request.app.state.config.LINKUP_SEARCH_DEPTH = form_data.web.LINKUP_SEARCH_DEPTH
+        request.app.state.config.LINKUP_OUTPUT_TYPE = form_data.web.LINKUP_OUTPUT_TYPE
 
         # Web loader settings
         request.app.state.config.WEB_LOADER_ENGINE = form_data.web.WEB_LOADER_ENGINE
@@ -1241,6 +1254,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'YANDEX_WEB_SEARCH_API_KEY': request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             'YANDEX_WEB_SEARCH_CONFIG': request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             'YOUCOM_API_KEY': request.app.state.config.YOUCOM_API_KEY,
+            'LINKUP_API_KEY': request.app.state.config.LINKUP_API_KEY,
+            'LINKUP_SEARCH_URL': request.app.state.config.LINKUP_SEARCH_URL,
+            'LINKUP_SEARCH_DEPTH': request.app.state.config.LINKUP_SEARCH_DEPTH,
+            'LINKUP_OUTPUT_TYPE': request.app.state.config.LINKUP_OUTPUT_TYPE,
         },
     }
 
@@ -1876,6 +1893,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
     - SOUGOU_API_SID + SOUGOU_API_SK
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
     - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
+    - LINKUP_API_KEY
     Args:
         query (str): The query to search for
     """
@@ -2166,6 +2184,19 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == 'linkup':
+        if request.app.state.config.LINKUP_API_KEY:
+            return search_linkup(
+                api_url=request.app.state.config.LINKUP_SEARCH_URL,
+                api_key=request.app.state.config.LINKUP_API_KEY,
+                query=query,
+                count=request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                filter_list=request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                depth=request.app.state.config.LINKUP_SEARCH_DEPTH,
+                output_type=request.app.state.config.LINKUP_OUTPUT_TYPE,
+            )
+        else:
+            raise Exception('No LINKUP_API_KEY found in environment variables')
     else:
         raise Exception('No search engine API key found in environment variables')
 

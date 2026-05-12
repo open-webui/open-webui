@@ -39,7 +39,8 @@
 		'firecrawl',
 		'external',
 		'yandex',
-		'youcom'
+		'youcom',
+		'linkup', 
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -832,6 +833,47 @@
 										placeholder={$i18n.t('Enter You.com API Key')}
 										bind:value={webConfig.YOUCOM_API_KEY}
 									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'linkup'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Linkup API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Linkup API Key')}
+										bind:value={webConfig.LINKUP_API_KEY}
+									/>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Linkup Search Depth')}
+									</div>
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.LINKUP_SEARCH_DEPTH}
+									>
+										<option value="fast">{$i18n.t('Fast')}</option>
+										<option value="standard">{$i18n.t('Standard')}</option>
+										<option value="deep">{$i18n.t('Deep')}</option>
+									</select>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Linkup Output Type')}
+									</div>
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={webConfig.LINKUP_OUTPUT_TYPE}
+									>
+										<option value="searchResults">{$i18n.t('Search Results')}</option>
+										<option value="sourcedAnswer">{$i18n.t('Sourced Answer')}</option>
+										<option value="structured">{$i18n.t('Structured')}</option>
+									</select>
 								</div>
 							</div>
 						{/if}

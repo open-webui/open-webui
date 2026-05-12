@@ -1866,6 +1866,31 @@ FIRECRAWL_TIMEOUT = ConfigVar(
     os.getenv('FIRECRAWL_TIMEOUT', ''),
 )
 
+LINKUP_API_KEY = PersistentConfig(
+    'LINKUP_API_KEY',
+    'rag.web.search.linkup_api_key',
+    os.getenv('LINKUP_API_KEY', ''),
+)
+
+LINKUP_SEARCH_URL = PersistentConfig(
+    'LINKUP_SEARCH_URL',
+    'rag.web.search.linkup_search_url',
+    os.getenv('LINKUP_SEARCH_URL', 'https://api.linkup.so/v1/search'),
+)
+
+LINKUP_SEARCH_DEPTH = PersistentConfig(
+    'LINKUP_SEARCH_DEPTH',
+    'rag.web.search.linkup_search_depth',
+    os.getenv('LINKUP_SEARCH_DEPTH', 'standard'),
+)
+
+LINKUP_OUTPUT_TYPE = PersistentConfig(
+    'LINKUP_OUTPUT_TYPE',
+    'rag.web.search.linkup_output_type',
+    os.getenv('LINKUP_OUTPUT_TYPE', 'sourcedAnswer'),
+)
+
+
 EXTERNAL_WEB_SEARCH_URL = ConfigVar(
     'EXTERNAL_WEB_SEARCH_URL',
     'rag.web.search.external_web_search_url',
