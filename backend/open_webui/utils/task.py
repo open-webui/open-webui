@@ -1,14 +1,12 @@
 import logging
 import math
 import re
-from datetime import datetime
-from typing import Optional, Any
 import uuid
-
-
-from open_webui.utils.misc import get_last_user_message, get_messages_content
+from datetime import datetime
+from typing import Any, Optional
 
 from open_webui.config import DEFAULT_RAG_TEMPLATE
+from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 log = logging.getLogger(__name__)
 

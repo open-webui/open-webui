@@ -1,19 +1,19 @@
-import black
-import logging
-import markdown
+from __future__ import annotations
 
-from open_webui.models.chats import ChatTitleMessagesForm
+import logging
+
+import black
+import markdown
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel
-from starlette.responses import FileResponse
-
-
-from open_webui.utils.misc import get_gravatar_url
-from open_webui.utils.pdf_generator import PDFGenerator
+from open_webui.models.chats import ChatTitleMessagesForm
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
+from open_webui.utils.misc import get_gravatar_url
+from open_webui.utils.pdf_generator import PDFGenerator
+from pydantic import BaseModel
+from starlette.responses import FileResponse
 
 log = logging.getLogger(__name__)
 

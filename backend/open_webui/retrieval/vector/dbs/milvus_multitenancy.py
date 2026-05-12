@@ -3,18 +3,18 @@ NOTE: This vector database integration is community-supported and maintained on 
 """
 
 import logging
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 from open_webui.config import (
-    MILVUS_URI,
-    MILVUS_TOKEN,
-    MILVUS_DB,
     MILVUS_COLLECTION_PREFIX,
-    MILVUS_INDEX_TYPE,
-    MILVUS_METRIC_TYPE,
-    MILVUS_HNSW_M,
+    MILVUS_DB,
     MILVUS_HNSW_EFCONSTRUCTION,
+    MILVUS_HNSW_M,
+    MILVUS_INDEX_TYPE,
     MILVUS_IVF_FLAT_NLIST,
+    MILVUS_METRIC_TYPE,
+    MILVUS_TOKEN,
+    MILVUS_URI,
 )
 from open_webui.retrieval.vector.main import (
     GetResult,
@@ -23,12 +23,12 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from pymilvus import (
-    connections,
-    utility,
     Collection,
     CollectionSchema,
-    FieldSchema,
     DataType,
+    FieldSchema,
+    connections,
+    utility,
 )
 
 log = logging.getLogger(__name__)

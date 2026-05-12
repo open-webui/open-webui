@@ -7,6 +7,7 @@ from open_webui.retrieval.web.utils import resolve_hostname
 from open_webui.utils.misc import is_string_allowed
 from pydantic import BaseModel
 
+
 def get_filtered_results(results, filter_list):
     if not filter_list:
         return results
@@ -36,6 +37,7 @@ def get_filtered_results(results, filter_list):
             continue
 
     return filtered_results
+
 
 class SearchResult(BaseModel):
     link: str

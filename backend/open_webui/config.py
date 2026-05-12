@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import json
 import logging
@@ -20,28 +22,35 @@ from open_webui.env import (
     DATABASE_URL,
     ENABLE_DB_MIGRATIONS,
     ENV,
-    REDIS_URL,
-    REDIS_KEY_PREFIX,
-    REDIS_SENTINEL_HOSTS,
-    REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
+    REDIS_KEY_PREFIX,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
+    REDIS_URL,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
 )
+from open_webui.internal.config import (
+    STATE as _state,
+)
+from open_webui.internal.config import (
+    AppConfig,
+    ConfigVar,
+)
 
 # ── Persistent configuration layer ──────────────────────────────────────────
-
 from open_webui.internal.config import (  # noqa: F401
     ConfigTable as Config,
-    ConfigVar,
-    AppConfig,
-    STATE as _state,
-    initialize as _initialize_config,
+)
+from open_webui.internal.config import (
     _all_configs as PERSISTENT_CONFIG_REGISTRY,
+)
+from open_webui.internal.config import (
+    initialize as _initialize_config,
 )
 
 
@@ -1288,9 +1297,7 @@ RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE and os.getenv('RAG_EMBEDDING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
 
-RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
-    os.getenv('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
-)
+RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = os.getenv('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 
 RAG_EMBEDDING_BATCH_SIZE = ConfigVar(
     'RAG_EMBEDDING_BATCH_SIZE',
@@ -1335,9 +1342,7 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE and os.getenv('RAG_RERANKING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
 
-RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
-    os.getenv('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
-)
+RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = os.getenv('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 
 RAG_RERANKING_BATCH_SIZE = ConfigVar(
     'RAG_RERANKING_BATCH_SIZE',
@@ -2709,9 +2714,7 @@ USER_PERMISSIONS_CHAT_DELETE = os.getenv('USER_PERMISSIONS_CHAT_DELETE', 'True')
 
 USER_PERMISSIONS_CHAT_DELETE_MESSAGE = os.getenv('USER_PERMISSIONS_CHAT_DELETE_MESSAGE', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE = (
-    os.getenv('USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE', 'True').lower() == 'true'
-)
+USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE = os.getenv('USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE = (
     os.getenv('USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE', 'True').lower() == 'true'
@@ -2735,9 +2738,7 @@ USER_PERMISSIONS_CHAT_TTS = os.getenv('USER_PERMISSIONS_CHAT_TTS', 'True').lower
 
 USER_PERMISSIONS_CHAT_CALL = os.getenv('USER_PERMISSIONS_CHAT_CALL', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_MULTIPLE_MODELS = (
-    os.getenv('USER_PERMISSIONS_CHAT_MULTIPLE_MODELS', 'True').lower() == 'true'
-)
+USER_PERMISSIONS_CHAT_MULTIPLE_MODELS = os.getenv('USER_PERMISSIONS_CHAT_MULTIPLE_MODELS', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_TEMPORARY = os.getenv('USER_PERMISSIONS_CHAT_TEMPORARY', 'True').lower() == 'true'
 
@@ -2770,9 +2771,7 @@ USER_PERMISSIONS_FEATURES_API_KEYS = os.getenv('USER_PERMISSIONS_FEATURES_API_KE
 
 USER_PERMISSIONS_FEATURES_MEMORIES = os.getenv('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
 
-USER_PERMISSIONS_FEATURES_AUTOMATIONS = (
-    os.getenv('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
-)
+USER_PERMISSIONS_FEATURES_AUTOMATIONS = os.getenv('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_CALENDAR = os.getenv('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
 
@@ -2940,9 +2939,7 @@ WEBHOOK_URL = ConfigVar('WEBHOOK_URL', 'webhook_url', os.getenv('WEBHOOK_URL', '
 
 ENABLE_ADMIN_EXPORT = os.getenv('ENABLE_ADMIN_EXPORT', 'True').lower() == 'true'
 
-ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
-    os.getenv('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True').lower() == 'true'
-)
+ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = os.getenv('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True').lower() == 'true'
 
 BYPASS_ADMIN_ACCESS_CONTROL = (
     os.getenv(
@@ -3024,7 +3021,7 @@ else:
 class BannerModel(BaseModel):
     id: str
     type: str
-    title: Optional[str] = None
+    title: str | None = None
     content: str
     dismissible: bool
     timestamp: int
@@ -3705,9 +3702,7 @@ OAUTH_ALLOWED_ROLES = ConfigVar(
     'oauth.allowed_roles',
     [
         role.strip()
-        for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(
-            OAUTH_ROLES_SEPARATOR
-        )
+        for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(OAUTH_ROLES_SEPARATOR)
         if role
     ],
 )

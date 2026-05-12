@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import random
 import sys
 import time
-from typing import Dict, Set
+from typing import Dict
 
 import pycrdt as Y
 import socketio

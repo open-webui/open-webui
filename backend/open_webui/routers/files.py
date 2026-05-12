@@ -1,34 +1,31 @@
+import asyncio
+import json
 import logging
 import os
 import uuid
-import json
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-import asyncio
 
 from fastapi import (
-    BackgroundTasks,
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
-    Query,
 )
-
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import get_async_session, get_async_db_context
-
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-
+from open_webui.internal.db import get_async_db_context, get_async_session
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
-from open_webui.models.users import Users
+from open_webui.models.chats import Chats
 from open_webui.models.files import (
     FileForm,
     FileListResponse,
@@ -36,22 +33,17 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.models.chats import Chats
-from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
-from open_webui.models.access_grants import AccessGrants
-
-
-from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import Users
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
-
+from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
-
-
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 

@@ -9,8 +9,8 @@ Create Date: 2026-04-16 23:00:00.000000
 import time
 import uuid
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'c1d2e3f4a5b6'
 down_revision = 'e1f2a3b4c5d6'

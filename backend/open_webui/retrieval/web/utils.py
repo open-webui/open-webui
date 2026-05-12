@@ -5,8 +5,6 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
-
-import requests
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
@@ -14,41 +12,41 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Optional,
     Sequence,
     Union,
-    Literal,
 )
 
-from fastapi.concurrency import run_in_threadpool
 import aiohttp
 import certifi
+import requests
 import validators
+from fastapi.concurrency import run_in_threadpool
 from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
-
-from open_webui.retrieval.loaders.tavily import TavilyLoader
-from open_webui.retrieval.loaders.external_web import ExternalWebLoader
-from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
-from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
-    PLAYWRIGHT_WS_URL,
-    PLAYWRIGHT_TIMEOUT,
-    WEB_LOADER_ENGINE,
-    WEB_LOADER_TIMEOUT,
+    EXTERNAL_WEB_LOADER_API_KEY,
+    EXTERNAL_WEB_LOADER_URL,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     FIRECRAWL_TIMEOUT,
+    PLAYWRIGHT_TIMEOUT,
+    PLAYWRIGHT_WS_URL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
-    EXTERNAL_WEB_LOADER_URL,
-    EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
+    WEB_LOADER_ENGINE,
+    WEB_LOADER_TIMEOUT,
 )
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.loaders.tavily import TavilyLoader
+from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_string_allowed
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS
 
 log = logging.getLogger(__name__)
 

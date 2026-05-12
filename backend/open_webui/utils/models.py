@@ -1,37 +1,29 @@
-import copy
-import time
-import logging
 import asyncio
+import copy
+import logging
 import sys
+import time
 
 from aiocache import cached
 from fastapi import Request
-
-from open_webui.socket.utils import RedisDict
-from open_webui.routers import openai, ollama
-from open_webui.functions import get_function_models
-
-
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
-
-
-from open_webui.utils.plugin import (
-    load_function_module_by_id,
-    get_function_module_from_cache,
-)
-from open_webui.utils.access_control import has_access, has_base_model_access
-
-
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
-
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
+from open_webui.functions import get_function_models
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.functions import Functions
+from open_webui.models.groups import Groups
+from open_webui.models.models import Models
 from open_webui.models.users import UserModel
+from open_webui.routers import ollama, openai
+from open_webui.socket.utils import RedisDict
+from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.plugin import (
+    get_function_module_from_cache,
+    load_function_module_by_id,
+)
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)

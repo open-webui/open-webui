@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Alembic environment configuration.
 
 Configures the migration context for both offline (SQL script generation)
@@ -23,7 +25,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Re-apply JSON formatter after fileConfig replaces handlers.
-if LOG_FORMAT == "json":
+if LOG_FORMAT == 'json':
     from open_webui.env import JSONFormatter
 
     for handler in logging.root.handlers:
@@ -41,7 +43,7 @@ if _ssl_params:
     DB_URL = reattach_ssl_params_to_url(_url_no_ssl, _ssl_params)
 
 if DB_URL:
-    config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))
+    config.set_main_option('sqlalchemy.url', DB_URL.replace('%', '%%'))
 
 
 # ── Migration runners ────────────────────────────────────────────────────────
@@ -49,12 +51,12 @@ if DB_URL:
 
 def run_migrations_offline() -> None:
     """Generate SQL script without a live database connection."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option('sqlalchemy.url')
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={'paramstyle': 'named'},
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -62,14 +64,12 @@ def run_migrations_offline() -> None:
 
 def _build_connectable():
     """Create the appropriate SQLAlchemy engine for the configured DB URL."""
-    if DB_URL and DB_URL.startswith("sqlite+sqlcipher://"):
-        if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == "":
-            raise ValueError(
-                "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
-            )
+    if DB_URL and DB_URL.startswith('sqlite+sqlcipher://'):
+        if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == '':
+            raise ValueError('DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs')
 
-        db_path = DB_URL.replace("sqlite+sqlcipher://", "")
-        if db_path.startswith("/"):
+        db_path = DB_URL.replace('sqlite+sqlcipher://', '')
+        if db_path.startswith('/'):
             db_path = db_path[1:]
 
         def _sqlcipher_creator():
@@ -79,11 +79,11 @@ def _build_connectable():
             conn.execute(f"PRAGMA key = '{DATABASE_PASSWORD}'")
             return conn
 
-        return create_engine("sqlite://", creator=_sqlcipher_creator, echo=False)
+        return create_engine('sqlite://', creator=_sqlcipher_creator, echo=False)
 
     return engine_from_config(
         config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+        prefix='sqlalchemy.',
         poolclass=pool.NullPool,
     )
 

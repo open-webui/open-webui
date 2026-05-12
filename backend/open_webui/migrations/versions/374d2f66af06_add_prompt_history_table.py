@@ -6,11 +6,11 @@ Create Date: 2026-01-23 17:15:00.000000
 
 """
 
-from typing import Sequence, Union
 import uuid
+from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = '374d2f66af06'
 down_revision: Union[str, None] = 'c440947495f3'

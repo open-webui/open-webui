@@ -3,21 +3,24 @@ import time
 import uuid
 from typing import Any, Optional
 
-from sqlalchemy import select, delete, func, cast, Integer
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import normalize_usage
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     Column,
     ForeignKey,
-    Text,
-    JSON,
     Index,
+    Integer,
+    Text,
+    cast,
+    delete,
+    func,
+    select,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # Helpers
@@ -579,6 +582,7 @@ class ChatMessageTable:
         """Get message counts grouped by day and model."""
         async with get_async_db_context(db) as db:
             from datetime import datetime, timedelta
+
             from open_webui.models.groups import GroupMember
 
             stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(

@@ -6,15 +6,13 @@ Create Date: 2025-11-28 04:55:31.737538
 
 """
 
-from typing import Sequence, Union
-
-from alembic import op
-import sqlalchemy as sa
-
-
-import open_webui.internal.db
 import json
 import time
+from typing import Sequence, Union
+
+import open_webui.internal.db
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b10670c03dd5'

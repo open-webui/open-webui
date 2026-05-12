@@ -8,9 +8,9 @@ Create Date: 2025-11-27 03:07:56.200231
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 import open_webui.internal.db
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '2f1211949ecc'

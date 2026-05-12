@@ -1,8 +1,8 @@
 import logging
-from xml.etree.ElementTree import ParseError
-
 from typing import Any, Dict, Generator, List, Optional, Sequence, Union
 from urllib.parse import parse_qs, urlparse
+from xml.etree.ElementTree import ParseError
+
 from langchain_core.documents import Document
 
 log = logging.getLogger(__name__)

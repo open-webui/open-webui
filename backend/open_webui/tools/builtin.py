@@ -6,38 +6,40 @@ These tools are automatically available when native function calling is enabled.
 IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 """
 
+import asyncio
 import json
 import logging
 import time
-import asyncio
 from typing import Optional
 
 from fastapi import Request
 
-from open_webui.models.users import UserModel
-from open_webui.routers.retrieval import search_web as _search_web
-from open_webui.retrieval.utils import get_content_from_url
-from open_webui.routers.images import (
-    image_generations,
-    image_edits,
-    CreateImageForm,
-    EditImageForm,
-)
-from open_webui.routers.memories import (
-    query_memory,
-    add_memory as _add_memory,
-    update_memory_by_id,
-    QueryMemoryForm,
-    AddMemoryForm,
-    MemoryUpdateModel,
-)
-from open_webui.models.notes import Notes
+from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
-from open_webui.models.channels import Channels, ChannelMember, Channel
-from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
+from open_webui.models.messages import Message, Messages
+from open_webui.models.notes import Notes
+from open_webui.models.users import UserModel
+from open_webui.retrieval.utils import get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.routers.images import (
+    CreateImageForm,
+    EditImageForm,
+    image_edits,
+    image_generations,
+)
+from open_webui.routers.memories import (
+    AddMemoryForm,
+    MemoryUpdateModel,
+    QueryMemoryForm,
+    query_memory,
+    update_memory_by_id,
+)
+from open_webui.routers.memories import (
+    add_memory as _add_memory,
+)
+from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
@@ -106,6 +108,7 @@ async def calculate_timestamp(
     """
     try:
         import datetime
+
         from dateutil.relativedelta import relativedelta
 
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -1602,9 +1605,9 @@ async def search_knowledge_files(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.knowledge import Knowledges
-        from open_webui.models.files import Files
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1861,9 +1864,9 @@ async def view_knowledge_file(
     offset = max(offset, 0)
 
     try:
+        from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
-        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1952,10 +1955,10 @@ async def list_knowledge(
         return json.dumps({'knowledge_bases': [], 'files': [], 'notes': []})
 
     try:
-        from open_webui.models.knowledge import Knowledges
-        from open_webui.models.files import Files
-        from open_webui.models.notes import Notes
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.models.notes import Notes
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -2084,11 +2087,11 @@ async def query_knowledge_files(
                 knowledge_ids = [knowledge_ids]
 
     try:
-        from open_webui.models.knowledge import Knowledges
+        from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
         from open_webui.models.notes import Notes
         from open_webui.retrieval.utils import query_collection
-        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -2244,9 +2247,10 @@ async def query_knowledge_bases(
 
     try:
         import heapq
+
         from open_webui.models.knowledge import Knowledges
-        from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
         from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+        from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
@@ -2345,8 +2349,8 @@ async def view_skill(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.skills import Skills
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.skills import Skills
 
         user_id = __user__.get('id')
 
@@ -2385,8 +2389,9 @@ async def view_skill(
 # TASK MANAGEMENT TOOLS
 # =============================================================================
 
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
 
@@ -2569,9 +2574,9 @@ async def create_automation(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations, AutomationForm, AutomationData
+        from open_webui.models.automations import AutomationData, AutomationForm, Automations
         from open_webui.models.users import Users
-        from open_webui.utils.automations import validate_rrule, next_run_ns, next_n_runs_ns
+        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -2647,9 +2652,9 @@ async def update_automation(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations, AutomationForm, AutomationData
+        from open_webui.models.automations import AutomationData, AutomationForm, Automations
         from open_webui.models.users import Users
-        from open_webui.utils.automations import validate_rrule, next_run_ns, next_n_runs_ns
+        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -2833,7 +2838,7 @@ async def delete_automation(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations, AutomationRuns
+        from open_webui.models.automations import AutomationRuns, Automations
 
         user_id = __user__.get('id')
 
@@ -3048,7 +3053,7 @@ async def create_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.calendar import Calendars, CalendarEvents, CalendarEventForm
+        from open_webui.models.calendar import CalendarEventForm, CalendarEvents, Calendars
 
         user_id = __user__.get('id')
 
@@ -3175,8 +3180,8 @@ async def update_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.calendar import Calendars, CalendarEvents, CalendarEventUpdateForm
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.calendar import CalendarEvents, CalendarEventUpdateForm, Calendars
         from open_webui.models.groups import Groups
 
         user_id = __user__.get('id')
@@ -3278,8 +3283,8 @@ async def delete_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.calendar import Calendars, CalendarEvents
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.calendar import CalendarEvents, Calendars
         from open_webui.models.groups import Groups
 
         user_id = __user__.get('id')

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import logging
@@ -516,8 +518,11 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
 
 
 async def query_collection(
-    request, collection_names: list[str], queries: list[str],
-    embedding_function, k: int,
+    request,
+    collection_names: list[str],
+    queries: list[str],
+    embedding_function,
+    k: int,
 ) -> dict:
     # When request is provided, try hybrid search + reranking if enabled
     if request and request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -1109,7 +1114,7 @@ async def get_sources_from_items(
     hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
-    user: Optional[UserModel] = None,
+    user: UserModel | None = None,
 ):
     log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
 
@@ -1421,7 +1426,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Optional[Callbacks] = None,
+        callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
         """Compress retrieved documents given the query context.
 
@@ -1440,7 +1445,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Optional[Callbacks] = None,
+        callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 

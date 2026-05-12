@@ -3,19 +3,19 @@ NOTE: This vector database integration is community-supported and maintained on 
 """
 
 import logging
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import grpc
 from open_webui.config import (
     QDRANT_API_KEY,
+    QDRANT_COLLECTION_PREFIX,
     QDRANT_GRPC_PORT,
+    QDRANT_HNSW_M,
     QDRANT_ON_DISK,
     QDRANT_PREFER_GRPC,
-    QDRANT_URI,
-    QDRANT_COLLECTION_PREFIX,
     QDRANT_TIMEOUT,
-    QDRANT_HNSW_M,
+    QDRANT_URI,
 )
 from open_webui.retrieval.vector.main import (
     GetResult,

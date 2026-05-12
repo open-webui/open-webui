@@ -1,13 +1,13 @@
-from open_webui.utils.task import prompt_template, prompt_variables_template
-from open_webui.utils.misc import (
-    deep_update,
-    add_or_update_system_message,
-    replace_system_message_content,
-)
-
-from typing import Callable, Optional
 import copy
 import json
+from typing import Callable, Optional
+
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    deep_update,
+    replace_system_message_content,
+)
+from open_webui.utils.task import prompt_template, prompt_variables_template
 
 
 # What goes out cannot be taken back. Let it be shaped

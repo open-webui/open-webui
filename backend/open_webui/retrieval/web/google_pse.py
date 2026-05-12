@@ -7,6 +7,7 @@ from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
 
+
 def search_google_pse(
     api_key: str,
     search_engine_id: str,

@@ -1,7 +1,7 @@
 import logging
-from typing import Optional, Literal
-import requests
+from typing import Literal, Optional
 
+import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 MODELS = Literal[

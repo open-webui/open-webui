@@ -7,31 +7,27 @@ NOTE: This is an experimental implementation and may not fully comply with SCIM 
 
 import hmac
 import logging
-import uuid
 import time
-from typing import Optional, List, Dict, Any
+import uuid
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Query, Header, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ConfigDict
-
-from open_webui.models.users import Users, UserModel
-from open_webui.models.groups import Groups, GroupModel
+from open_webui.config import OAUTH_PROVIDERS
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SCIM_AUTH_PROVIDER
+from open_webui.internal.db import get_async_session
+from open_webui.models.groups import GroupModel, Groups
+from open_webui.models.users import UserModel, Users
 from open_webui.utils.auth import (
+    decode_token,
     get_admin_user,
     get_current_user,
-    decode_token,
     get_verified_user,
 )
-from open_webui.constants import ERROR_MESSAGES
-
-from open_webui.config import OAUTH_PROVIDERS
-from open_webui.env import SCIM_AUTH_PROVIDER
-
-
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import get_async_session
 
 log = logging.getLogger(__name__)
 

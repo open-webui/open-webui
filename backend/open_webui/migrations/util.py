@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Alembic migration utilities."""
 
 from alembic import op

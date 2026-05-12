@@ -1,26 +1,23 @@
+import logging
 import os
 from pathlib import Path
 from typing import Optional
-import logging
 
-from open_webui.models.users import Users, UserInfoResponse
-from open_webui.models.groups import (
-    Groups,
-    GroupForm,
-    GroupInfoResponse,
-    GroupUpdateForm,
-    GroupResponse,
-    UserIdsForm,
-)
-
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
 from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from open_webui.models.groups import (
+    GroupForm,
+    GroupInfoResponse,
+    GroupResponse,
+    Groups,
+    GroupUpdateForm,
+    UserIdsForm,
+)
+from open_webui.models.users import UserInfoResponse, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 

@@ -1,10 +1,10 @@
 import base64
-import os
-import requests
 import logging
+import os
 import sys
 from typing import List
 
+import requests
 from langchain_core.documents import Document
 from open_webui.env import GLOBAL_LOG_LEVEL
 

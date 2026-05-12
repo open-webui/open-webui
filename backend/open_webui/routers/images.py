@@ -1,46 +1,45 @@
+from __future__ import annotations
+
 import asyncio
 import base64
-import uuid
 import io
 import json
 import logging
 import mimetypes
 import re
+import uuid
 from pathlib import Path
 from typing import Optional
-
 from urllib.parse import quote
-import aiohttp
 
+import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
-
 from open_webui.config import (
     CACHE_DIR,
     IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN,
     IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.web.utils import validate_url
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS, ENABLE_FORWARD_USER_INFO_HEADERS
-from open_webui.utils.session_pool import get_session
-
-from open_webui.models.chats import Chats
-from open_webui.routers.files import upload_file_handler, get_file_content_by_id
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.models.chats import Chats
+from open_webui.retrieval.web.utils import validate_url
+from open_webui.routers.files import get_file_content_by_id, upload_file_handler
+from open_webui.utils.access_control import has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
     ComfyUIWorkflow,
-    comfyui_upload_image,
     comfyui_create_image,
     comfyui_edit_image,
+    comfyui_upload_image,
 )
+from open_webui.utils.session_pool import get_session
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -121,17 +120,17 @@ class ImagesConfig(BaseModel):
 
     IMAGE_GENERATION_ENGINE: str
     IMAGE_GENERATION_MODEL: str
-    IMAGE_SIZE: Optional[str]
-    IMAGE_STEPS: Optional[int]
+    IMAGE_SIZE: str | None
+    IMAGE_STEPS: int | None
 
     IMAGES_OPENAI_API_BASE_URL: str
     IMAGES_OPENAI_API_KEY: str
     IMAGES_OPENAI_API_VERSION: str
-    IMAGES_OPENAI_API_PARAMS: Optional[dict | str]
+    IMAGES_OPENAI_API_PARAMS: dict | str | None
 
     AUTOMATIC1111_BASE_URL: str
-    AUTOMATIC1111_API_AUTH: Optional[dict | str]
-    AUTOMATIC1111_PARAMS: Optional[dict | str]
+    AUTOMATIC1111_API_AUTH: dict | str | None
+    AUTOMATIC1111_PARAMS: dict | str | None
 
     COMFYUI_BASE_URL: str
     COMFYUI_API_KEY: str
@@ -145,7 +144,7 @@ class ImagesConfig(BaseModel):
     ENABLE_IMAGE_EDIT: bool
     IMAGE_EDIT_ENGINE: str
     IMAGE_EDIT_MODEL: str
-    IMAGE_EDIT_SIZE: Optional[str]
+    IMAGE_EDIT_SIZE: str | None
 
     IMAGES_EDIT_OPENAI_API_BASE_URL: str
     IMAGES_EDIT_OPENAI_API_KEY: str
@@ -428,12 +427,12 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 
 class CreateImageForm(BaseModel):
-    model: Optional[str] = None
+    model: str | None = None
     prompt: str
-    size: Optional[str] = None
+    size: str | None = None
     n: int = 1
-    steps: Optional[int] = None
-    negative_prompt: Optional[str] = None
+    steps: int | None = None
+    negative_prompt: str | None = None
 
 
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
@@ -528,7 +527,7 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
 async def image_generations(
     request: Request,
     form_data: CreateImageForm,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     user=None,
 ):
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
@@ -776,18 +775,18 @@ async def image_generations(
 class EditImageForm(BaseModel):
     image: str | list[str]  # base64-encoded image(s) or URL(s)
     prompt: str
-    model: Optional[str] = None
-    size: Optional[str] = None
-    n: Optional[int] = None
-    negative_prompt: Optional[str] = None
-    background: Optional[str] = None
+    model: str | None = None
+    size: str | None = None
+    n: int | None = None
+    negative_prompt: str | None = None
+    background: str | None = None
 
 
 @router.post('/edit')
 async def image_edits(
     request: Request,
     form_data: EditImageForm,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     user=Depends(get_verified_user),
 ):
     size = None

@@ -6,11 +6,11 @@ Create Date: 2024-10-09 21:02:35.241684
 
 """
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.sql import table, select, update
-
 import json
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.sql import select, table, update
 
 revision = '242a2047eae0'
 down_revision = '6a39f3d8e55c'

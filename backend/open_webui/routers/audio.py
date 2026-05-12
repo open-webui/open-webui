@@ -1,24 +1,22 @@
 import asyncio
-import io
+import base64
 import hashlib
+import html
+import io
 import json
 import logging
+import mimetypes
 import os
 import uuid
-import html
-import base64
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
+from fnmatch import fnmatch
 from typing import Optional
 
-from fnmatch import fnmatch
-import aiohttp
 import aiofiles
+import aiohttp
 import requests
-import mimetypes
-
 from fastapi import (
+    APIRouter,
     Depends,
     FastAPI,
     File,
@@ -27,38 +25,36 @@ from fastapi import (
     Request,
     UploadFile,
     status,
-    APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
-
-
-from open_webui.utils.misc import strict_match_mime_type
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
-from open_webui.utils.headers import include_user_info_headers
 from open_webui.config import (
-    WHISPER_MODEL_AUTO_UPDATE,
-    WHISPER_COMPUTE_TYPE,
-    WHISPER_MODEL_DIR,
-    WHISPER_VAD_FILTER,
     CACHE_DIR,
-    WHISPER_LANGUAGE,
-    WHISPER_MULTILINGUAL,
     ELEVENLABS_API_BASE_URL,
+    WHISPER_COMPUTE_TYPE,
+    WHISPER_LANGUAGE,
+    WHISPER_MODEL_AUTO_UPDATE,
+    WHISPER_MODEL_DIR,
+    WHISPER_MULTILINGUAL,
+    WHISPER_VAD_FILTER,
 )
-
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
-    ENV,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_PYDUB_PREPROCESSING,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    ENV,
 )
+from open_webui.utils.access_control import has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.misc import strict_match_mime_type
+from pydantic import BaseModel
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
 
 router = APIRouter()
 
@@ -364,8 +360,8 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
 
 
 def load_speech_pipeline(request):
-    from transformers import pipeline
     from datasets import load_dataset
+    from transformers import pipeline
 
     if request.app.state.speech_synthesiser is None:
         request.app.state.speech_synthesiser = pipeline('text-to-speech', 'microsoft/speecht5_tts')
@@ -592,8 +588,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail='Invalid JSON payload')
 
-        import torch
         import soundfile as sf
+        import torch
 
         load_speech_pipeline(request)
 
