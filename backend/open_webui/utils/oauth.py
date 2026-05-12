@@ -251,6 +251,33 @@ class OAuthManager:
             log.warning(f"OAuth callback failed, sub is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         provider_sub = f"{provider}@{sub}"
+
+        # Fetch AMD NTID from Microsoft Graph (requires User.Read scope on the
+        # OIDC client). Falls back to empty string on any error so login is
+        # never blocked by Graph being slow/unreachable. The NTID is later
+        # forwarded to the LLM Gateway as the `user` HTTP header per IT mandate.
+        ntid = ""
+        access_token_for_graph = token.get("access_token")
+        if access_token_for_graph and provider == "oidc":
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                        "https://graph.microsoft.com/v1.0/me?$select=onPremisesSamAccountName",
+                        headers={"Authorization": f"Bearer {access_token_for_graph}"},
+                        timeout=aiohttp.ClientTimeout(total=5),
+                    ) as resp:
+                        if resp.ok:
+                            graph_data = await resp.json()
+                            ntid = (graph_data.get("onPremisesSamAccountName") or "").strip()
+                            if ntid:
+                                log.info(f"[NTID] fetched for {sub[:8]}...: {ntid}")
+                            else:
+                                log.warning(f"[NTID] Graph returned null onPremisesSamAccountName for sub={sub[:8]}...")
+                        else:
+                            body = await resp.text()
+                            log.warning(f"[NTID] Graph call failed status={resp.status} body={body[:200]}")
+            except Exception as e:
+                log.warning(f"[NTID] Graph fetch exception: {e}")
         email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
         email = user_data.get(email_claim, "")
         # We currently mandate that email addresses are provided
@@ -317,6 +344,12 @@ class OAuthManager:
             determined_role = self.get_user_role(user, user_data)
             if user.role != determined_role:
                 Users.update_user_role_by_id(user.id, determined_role)
+
+            # Refresh NTID on every login so AD changes (rare but possible:
+            # rename, contractor → FTE conversion) propagate without manual fix.
+            if ntid and user.ntid != ntid:
+                Users.update_user_by_id(user.id, {"ntid": ntid})
+                log.info(f"[NTID] refreshed for user {user.id} ({user.email}): {user.ntid!r} -> {ntid!r}")
 
         if not user:
             user_count = Users.get_num_users()
@@ -389,6 +422,13 @@ class OAuthManager:
                     role=role,
                     oauth_sub=provider_sub,
                 )
+
+                # Persist NTID for the freshly-created user. We do this as a
+                # follow-up update rather than threading `ntid` through
+                # `Auths.insert_new_auth` to keep that signature unchanged.
+                if user and ntid:
+                    Users.update_user_by_id(user.id, {"ntid": ntid})
+                    log.info(f"[NTID] set on new user {user.id} ({user.email}): {ntid!r}")
 
                 if auth_manager_config.WEBHOOK_URL:
                     post_webhook(

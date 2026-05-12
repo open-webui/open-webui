@@ -35,6 +35,11 @@ class User(Base):
 
     oauth_sub = Column(Text, unique=True)
 
+    # AMD NTID (network ID, e.g. "tehsu") — populated from Microsoft Graph during
+    # OIDC login (utils/oauth.py). Forwarded to the LLM Gateway as the `user`
+    # header per IT mandate. NULL for non-OIDC users (bootstrap admin, local auth).
+    ntid = Column(String(64), nullable=True, index=True)
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
@@ -58,6 +63,7 @@ class UserModel(BaseModel):
     info: Optional[dict] = None
 
     oauth_sub: Optional[str] = None
+    ntid: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -103,6 +109,7 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        ntid: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -116,6 +123,7 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
+                    "ntid": ntid,
                 }
             )
             result = User(**user.model_dump())
