@@ -19,6 +19,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.files import Files
 from open_webui.routers.files import upload_file_handler
 from open_webui.retrieval.web.utils import validate_url
+from open_webui.utils.access_control.files import has_access_to_file
 
 import asyncio
 import mimetypes
@@ -54,7 +55,7 @@ _IMAGE_MIME_FALLBACK = {
 }
 
 
-async def get_image_base64_from_url(url: str) -> Optional[str]:
+async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
     try:
         if url.startswith('http'):
             # Validate URL to prevent SSRF attacks against local/private networks.
@@ -77,6 +78,21 @@ async def get_image_base64_from_url(url: str) -> Optional[str]:
             file = await Files.get_file_by_id(url)
 
             if not file:
+                return None
+
+            # Gate file-by-id resolution by ownership. Without this, a caller
+            # can put another user's file_id in an `image_url.url` field, the
+            # server reads the file from disk and inlines it base64 into the
+            # LLM request, and the caller exfiltrates the content via a
+            # describe/OCR prompt. Owner, admin, and explicit read-grant
+            # holders (via shared KBs / channels / shared chats) are allowed.
+            if user is None:
+                return None
+            if (
+                file.user_id != user.id
+                and user.role != 'admin'
+                and not await has_access_to_file(file.id, 'read', user)
+            ):
                 return None
 
             file_path = await asyncio.to_thread(Storage.get_file, file.path)
