@@ -590,6 +590,7 @@ from open_webui.tasks import (
     stop_task,
     stop_item_tasks,
     list_tasks,
+    clear_all_tasks,
 )  # Import from tasks.py
 
 from open_webui.utils.redis import get_sentinels_from_env
@@ -671,6 +672,9 @@ async def lifespan(app: FastAPI):
         redis_cluster=REDIS_CLUSTER,
         async_mode=True,
     )
+
+    # Clear orphaned tasks on startup to prevent UI from being bricked
+    await clear_all_tasks(app.state.redis)
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
