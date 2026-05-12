@@ -115,6 +115,10 @@
 
 	// Service tier selector visibility (per-model)
 	let serviceTierEnabled = true; // default to enabled for non-ollama models
+	// Comma-separated list of tier names this model accepts. Empty == use the
+	// OpenAI default ['default', 'flex', 'priority']. Gemini wants
+	// ['standard', 'flex', 'priority']; other providers may differ.
+	let serviceTierValues = '';
 
 	// OpenRouter provider routing
 	let openrouterProviderOnly: string[] = [];
@@ -180,14 +184,24 @@
 
 		info.meta.cache_control_ephemeral = cacheControlEphemeralEnabled;
 
-		// Persist service tier selector visibility
+		// Persist service tier selector visibility + custom value list
+		const parsedTierValues = serviceTierValues
+			.split(',')
+			.map((s) => s.trim())
+			.filter(Boolean);
+		const isDefaultTierSet =
+			parsedTierValues.length === 3 &&
+			parsedTierValues[0] === 'default' &&
+			parsedTierValues[1] === 'flex' &&
+			parsedTierValues[2] === 'priority';
+		const _meta = info.meta as any;
 		if (!serviceTierEnabled) {
-			info.meta.service_tier = { enabled: false };
-		} else {
-			// Default state (enabled): omit to avoid storing unnecessary data
-			if (info.meta.service_tier) {
-				delete info.meta.service_tier;
-			}
+			_meta.service_tier = { enabled: false };
+		} else if (parsedTierValues.length > 0 && !isDefaultTierSet) {
+			_meta.service_tier = { enabled: true, values: parsedTierValues };
+		} else if (_meta.service_tier) {
+			// Default state (enabled + OpenAI tiers): omit to avoid storing unnecessary data
+			delete _meta.service_tier;
 		}
 
 		if (vision_preprocessor_model_id) {
@@ -323,6 +337,7 @@
 			extraReasoningEfforts = model?.meta?.reasoning?.extra_efforts ?? [];
 			cacheControlEphemeralEnabled = model?.meta?.cache_control_ephemeral ?? true;
 			serviceTierEnabled = model?.meta?.service_tier?.enabled ?? true;
+			serviceTierValues = (model?.meta?.service_tier?.values ?? []).join(', ');
 
 			// Load OpenRouter provider routing config
 			openrouterProviderOnly = model?.params?.custom_params?.provider?.only ?? [];
@@ -883,8 +898,24 @@
 							</div>
 							<div class="mt-1 text-xs text-gray-500 dark:text-gray-500">
 								{$i18n.t(
-									'Controls whether the service tier selector (default/flex/priority) is shown for this model in the chat UI.'
+									'Controls whether the service tier selector is shown for this model in the chat UI.'
 								)}
+							</div>
+
+							<div class="mt-3">
+								<div class="text-xs font-semibold mb-1">{$i18n.t('Allowed tier values')}</div>
+								<div class="text-xs text-gray-500 dark:text-gray-500 mb-2">
+									{$i18n.t(
+										'Comma-separated. OpenAI uses "default, flex, priority"; Gemini uses "standard, flex, priority". Leave blank for the OpenAI default.'
+									)}
+								</div>
+								<input
+									type="text"
+									disabled={!serviceTierEnabled}
+									bind:value={serviceTierValues}
+									placeholder="default, flex, priority"
+									class="text-sm w-full bg-transparent outline-hidden border rounded px-3 py-2"
+								/>
 							</div>
 						</div>
 					</div>

@@ -319,8 +319,11 @@
 	// Reasoning effort tracking
 	let reasoning = { effort: 'medium' };
 
-	// Service tier tracking
-	let serviceTier: 'default' | 'flex' | 'priority' = 'default';
+	// Service tier tracking. Value is provider-specific (OpenAI: default/flex/
+	// priority; Gemini: standard/flex/priority; etc.) so we keep it as `string`
+	// rather than a fixed union — the per-model allowed list lives on
+	// `meta.service_tier.values` and is enforced in MessageInput.svelte.
+	let serviceTier: string = 'default';
 
 	// Baseline so we only push a service-tier change to active task(s) when the
 	// user actually flips it mid-run (and not when it's first set at task start).

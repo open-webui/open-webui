@@ -122,12 +122,22 @@
 	let userModifiedEffortForCurrentModel = false;
 	let preferencesLoaded = false;
 
-	// Service tier functionality
-	const SERVICE_TIERS = ['default', 'flex', 'priority'] as const;
-	type ServiceTier = (typeof SERVICE_TIERS)[number];
+	// Service tier functionality. Tier values are provider-specific (OpenAI uses
+	// `default/flex/priority`, Gemini uses `standard/flex/priority`, etc.) so the
+	// allowed list is computed per-model from `meta.service_tier.values`, falling
+	// back to the OpenAI vocabulary when the model didn't customize it.
+	const DEFAULT_SERVICE_TIERS = ['default', 'flex', 'priority'] as const;
+	type ServiceTier = string;
 	let serviceTier: ServiceTier = 'default';
 	let serviceTierByModel: Record<string, ServiceTier> = {};
 	let showServiceTierSelector = false;
+	let allowedServiceTiers: readonly string[] = DEFAULT_SERVICE_TIERS;
+
+	const getServiceTiersForModel = (modelId: string): readonly string[] => {
+		const m = $models.find((mm) => mm.id === modelId);
+		const vals = (m?.info?.meta as any)?.service_tier?.values;
+		return Array.isArray(vals) && vals.length > 0 ? vals : DEFAULT_SERVICE_TIERS;
+	};
 
 	const getModelReasoningConfig = (modelId: string) => {
 		const model = $models.find((m) => m.id === modelId);
@@ -225,8 +235,19 @@
 		const _m = $models.find((m) => m.id === _modelId);
 		const _supportsServiceTier =
 			_m?.owned_by !== 'ollama' && (_m?.info?.meta as any)?.service_tier?.enabled !== false;
+		allowedServiceTiers = _supportsServiceTier
+			? getServiceTiersForModel(_modelId)
+			: DEFAULT_SERVICE_TIERS;
 		if (_supportsServiceTier) {
-			serviceTier = (serviceTierByModel[_modelId] as ServiceTier) ?? 'default';
+			const stored = serviceTierByModel[_modelId];
+			// Clamp the persisted tier against the model's allowed list. Without
+			// this, a stored value from when the model used different tiers
+			// (e.g. switching from OpenAI's "default" to Gemini's "standard")
+			// leaks into the payload.
+			serviceTier =
+				stored && allowedServiceTiers.includes(stored)
+					? stored
+					: (allowedServiceTiers[0] ?? 'default');
 		} else {
 			serviceTier = 'default';
 		}
@@ -2249,7 +2270,7 @@
 																}}
 																class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
 															>
-																{#each SERVICE_TIERS as tier}
+																{#each allowedServiceTiers as tier}
 																	<option value={tier}>{tier}</option>
 																{/each}
 															</select>
