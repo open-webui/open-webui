@@ -46,14 +46,21 @@
 			// BEFORE the FOUC script below runs, so Open WebUI picks up the same
 			// theme the other Swept apps are rendering. Mirrors
 			// src/lib/utils/theme-cookie.ts. Locally-set Open WebUI values
-			// (oled-dark, her) are preserved when the cookie is absent.
+			// (oled-dark, her) are preserved when the cookie is absent — those
+			// never propagate cross-app. The decode is wrapped in try/catch
+			// so a malformed cookie value can't break first paint.
 			(function () {
 				try {
 					var COOKIE = 'swept_theme';
 					var match = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=([^;]*)'));
 					if (match) {
-						var v = decodeURIComponent(match[1]);
-						if (v === 'light' || v === 'dark') {
+						var v;
+						try {
+							v = decodeURIComponent(match[1]);
+						} catch (decodeErr) {
+							v = null;
+						}
+						if (v === 'light' || v === 'dark' || v === 'system') {
 							localStorage.setItem('theme', v);
 						}
 					}

@@ -945,11 +945,14 @@
 		theme.set(localStorage.theme);
 
 		// Cross-app theme sync. The shared `swept_theme` cookie (set by
-		// swept-workbench / cloud-lock) is the source of truth for light/dark
-		// across all three apps. Local-only Open WebUI variants (oled-dark,
-		// her) stay local — we never write them to the cookie and we never
-		// overwrite them via cookie sync.
-		theme.subscribe((value) => {
+		// swept-workbench / cloud-lock) is the source of truth for light /
+		// dark / system across all three apps. Local-only Open WebUI variants
+		// (oled-dark, her) stay local — we never write them to the cookie and
+		// the visibility/focus handler bails out when the user is on one, so
+		// a sync from another app can't clobber their local pick. Subscriptions
+		// and listeners are captured so the onMount teardown below removes
+		// them on unmount / HMR — no leaks across reloads.
+		const unsubscribeThemeSync = theme.subscribe((value) => {
 			if (typeof value === 'string') syncToCookie(value);
 		});
 
@@ -975,9 +978,10 @@
 				.forEach((e) => document.documentElement.classList.remove(e));
 			document.documentElement.classList.add(themeToApply);
 		};
-		document.addEventListener('visibilitychange', () => {
+		const onSharedThemeVisibility = () => {
 			if (document.visibilityState === 'visible') reapplySharedTheme();
-		});
+		};
+		document.addEventListener('visibilitychange', onSharedThemeVisibility);
 		window.addEventListener('focus', reapplySharedTheme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
@@ -1154,6 +1158,9 @@
 			document.removeEventListener('touchmove', touchmoveHandler);
 			document.removeEventListener('touchend', touchendHandler);
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			document.removeEventListener('visibilitychange', onSharedThemeVisibility);
+			window.removeEventListener('focus', reapplySharedTheme);
+			unsubscribeThemeSync();
 		};
 	});
 
