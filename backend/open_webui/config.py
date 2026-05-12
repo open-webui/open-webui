@@ -1841,6 +1841,92 @@ ADMIN_EMAIL = PersistentConfig(
 
 
 ####################################
+# RATE LIMITING
+####################################
+# Per-user, per-endpoint-class rate limiting backed by Redis.
+# See ``open_webui.utils.rate_limit_middleware`` for the middleware
+# implementation and the RFC at open-webui/open-webui#24631 for design
+# context. All fields below are hot-reloadable via AppConfig.
+#
+# Defaults are intentionally conservative (off by default). Operators
+# who flip ``ENABLE_RATE_LIMITING=true`` should observe no change for
+# normal usage and see ``429`` responses only for abusive patterns.
+
+
+def _rate_limit_int_env(name: str, default: int) -> int:
+    """Read a positive integer from the environment, falling back on anything unparsable."""
+    raw = os.environ.get(name, '').strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+ENABLE_RATE_LIMITING = PersistentConfig(
+    'ENABLE_RATE_LIMITING',
+    'rate_limiting.enable',
+    os.environ.get('ENABLE_RATE_LIMITING', 'False').lower() == 'true',
+)
+
+RATE_LIMITING_FAIL_OPEN = PersistentConfig(
+    'RATE_LIMITING_FAIL_OPEN',
+    'rate_limiting.fail_open',
+    os.environ.get('RATE_LIMITING_FAIL_OPEN', 'True').lower() == 'true',
+)
+
+RATE_LIMITING_CHAT_LIMIT = PersistentConfig(
+    'RATE_LIMITING_CHAT_LIMIT',
+    'rate_limiting.chat.limit',
+    _rate_limit_int_env('RATE_LIMITING_CHAT_LIMIT', 30),
+)
+
+RATE_LIMITING_CHAT_WINDOW = PersistentConfig(
+    'RATE_LIMITING_CHAT_WINDOW',
+    'rate_limiting.chat.window',
+    _rate_limit_int_env('RATE_LIMITING_CHAT_WINDOW', 60),
+)
+
+RATE_LIMITING_EMBEDDINGS_LIMIT = PersistentConfig(
+    'RATE_LIMITING_EMBEDDINGS_LIMIT',
+    'rate_limiting.embeddings.limit',
+    _rate_limit_int_env('RATE_LIMITING_EMBEDDINGS_LIMIT', 20),
+)
+
+RATE_LIMITING_EMBEDDINGS_WINDOW = PersistentConfig(
+    'RATE_LIMITING_EMBEDDINGS_WINDOW',
+    'rate_limiting.embeddings.window',
+    _rate_limit_int_env('RATE_LIMITING_EMBEDDINGS_WINDOW', 60),
+)
+
+RATE_LIMITING_UPLOADS_LIMIT = PersistentConfig(
+    'RATE_LIMITING_UPLOADS_LIMIT',
+    'rate_limiting.uploads.limit',
+    _rate_limit_int_env('RATE_LIMITING_UPLOADS_LIMIT', 10),
+)
+
+RATE_LIMITING_UPLOADS_WINDOW = PersistentConfig(
+    'RATE_LIMITING_UPLOADS_WINDOW',
+    'rate_limiting.uploads.window',
+    _rate_limit_int_env('RATE_LIMITING_UPLOADS_WINDOW', 60),
+)
+
+RATE_LIMITING_ADMIN_LIMIT = PersistentConfig(
+    'RATE_LIMITING_ADMIN_LIMIT',
+    'rate_limiting.admin.limit',
+    _rate_limit_int_env('RATE_LIMITING_ADMIN_LIMIT', 60),
+)
+
+RATE_LIMITING_ADMIN_WINDOW = PersistentConfig(
+    'RATE_LIMITING_ADMIN_WINDOW',
+    'rate_limiting.admin.window',
+    _rate_limit_int_env('RATE_LIMITING_ADMIN_WINDOW', 60),
+)
+
+
+####################################
 # TASKS
 ####################################
 
