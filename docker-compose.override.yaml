@@ -1,0 +1,5 @@
+services:
+  open-webui:
+    container_name: michelle-open-webui
+    ports:
+      - "8081:8080"
