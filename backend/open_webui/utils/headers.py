@@ -1,14 +1,52 @@
+import logging
+import time
+from typing import Any, Optional
 from urllib.parse import quote
 
+import jwt
+
 from open_webui.env import (
-    FORWARD_USER_INFO_HEADER_USER_NAME,
-    FORWARD_USER_INFO_HEADER_USER_ID,
     FORWARD_USER_INFO_HEADER_USER_EMAIL,
+    FORWARD_USER_INFO_HEADER_USER_ID,
+    FORWARD_USER_INFO_HEADER_USER_NAME,
     FORWARD_USER_INFO_HEADER_USER_ROLE,
+    FORWARD_USER_JWT_EXPIRES_SECONDS,
+    FORWARD_USER_JWT_HEADER,
+    FORWARD_USER_JWT_SECRET,
 )
 
+log = logging.getLogger(__name__)
 
-def include_user_info_headers(headers, user):
+
+def _mint_forward_user_jwt(user: Any) -> str:
+    now = int(time.time())
+    payload = {
+        'sub': str(user.id),
+        'email': str(user.email),
+        'name': str(user.name),
+        'role': str(user.role),
+        'iss': 'open-webui',
+        'iat': now,
+        'exp': now + FORWARD_USER_JWT_EXPIRES_SECONDS,
+    }
+    return jwt.encode(payload, FORWARD_USER_JWT_SECRET, algorithm='HS256')
+
+
+def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict:
+    """
+    Forward user identity to external backends: signed JWT in FORWARD_USER_JWT_HEADER if
+    FORWARD_USER_JWT_SECRET is set; otherwise the legacy X-OpenWebUI-User-* headers.
+    """
+    if user is None:
+        return headers
+
+    if FORWARD_USER_JWT_SECRET:
+        try:
+            token = _mint_forward_user_jwt(user)
+            return {**headers, FORWARD_USER_JWT_HEADER: token}
+        except Exception:
+            log.exception('Failed to mint %s; using plain user info headers.', FORWARD_USER_JWT_HEADER)
+
     return {
         **headers,
         FORWARD_USER_INFO_HEADER_USER_NAME: quote(user.name, safe=' '),
