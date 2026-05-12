@@ -749,6 +749,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         files={'file': (filename, audio_file)},
                         data=payload,
                         timeout=AIOHTTP_CLIENT_TIMEOUT,
+                        verify=AIOHTTP_CLIENT_SESSION_SSL,
                     )
 
                 if r.status_code == 200:
