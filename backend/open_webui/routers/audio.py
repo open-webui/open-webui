@@ -1741,16 +1741,13 @@ async def get_audio_segment(
                 detail="Invalid timestamp range. End must be greater than start, and both must be non-negative.",
             )
 
-        # Get file and verify access
-        file = Files.get_file_by_id(file_id)
+        file = await Files.get_file_by_id(file_id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
 
-        # Check user has access to this file
         if file.user_id != user.id and user.role != "admin":
             raise HTTPException(status_code=403, detail="Access denied")
 
-        # Get original file path
         file_path = Storage.get_file(file.path)
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="Original file not found on storage")
@@ -1889,16 +1886,13 @@ async def get_video_segment(
                 detail="Invalid timestamp range. End must be greater than start, and both must be non-negative.",
             )
 
-        # Get file and verify access
-        file = Files.get_file_by_id(file_id)
+        file = await Files.get_file_by_id(file_id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
 
-        # Check user has access to this file
         if file.user_id != user.id and user.role != "admin":
             raise HTTPException(status_code=403, detail="Access denied")
 
-        # Get original file path
         file_path = Storage.get_file(file.path)
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="Original file not found on storage")

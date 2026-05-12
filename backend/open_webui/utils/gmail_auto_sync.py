@@ -1086,23 +1086,37 @@ async def _background_gmail_sync(request, user_id: str, oauth_token: dict, force
         doc_processor = SimpleDocProcessor()
         pinecone_manager = SimplePineconeManager()
 
-        # If force full sync, delete all existing vectors first
+        # If force full sync, delete all existing vectors first.
+        # Must match the layout SimplePineconeManager.schedule_upsert writes:
+        #   - Pinecone: collection_name="gmail", namespace=f"email-{user_id}"
+        #   - Other DBs: collection_name=f"email-{user_id}" (no namespace)
+        # The previous form (collection_name=namespace, namespace=namespace) was
+        # a confused mix that almost certainly didn't target the real index.
         if force_full_sync:
-            namespace = f"email-{user_id}"
-            logger.info(f"🗑️  Force full sync: Deleting ALL existing vectors in namespace '{namespace}'...")
             try:
-                from open_webui.retrieval.vector.main import VECTOR_DB_CLIENT
+                from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+                import inspect
 
-                # Delete ALL vectors in the user's email namespace
-                # Pass namespace only (no ids/filter) to trigger delete_all for the namespace
-                VECTOR_DB_CLIENT.delete(
-                    collection_name=namespace,
-                    namespace=namespace,
-                    # No ids or filter = delete all in namespace
-                )
-                logger.info(f"✅ Deleted ALL vectors in namespace '{namespace}' - starting fresh")
+                user_namespace = f"email-{user_id}"
+                delete_signature = inspect.signature(VECTOR_DB_CLIENT.delete)
+                supports_namespace = "namespace" in delete_signature.parameters
+
+                if supports_namespace:
+                    logger.info(
+                        f"🗑️  Force full sync: Deleting ALL existing vectors "
+                        f"(collection='gmail', namespace='{user_namespace}')..."
+                    )
+                    VECTOR_DB_CLIENT.delete(collection_name="gmail", namespace=user_namespace)
+                    logger.info(f"✅ Deleted vectors in namespace '{user_namespace}' - starting fresh")
+                else:
+                    logger.info(
+                        f"🗑️  Force full sync: Deleting collection '{user_namespace}'..."
+                    )
+                    if VECTOR_DB_CLIENT.has_collection(collection_name=user_namespace):
+                        VECTOR_DB_CLIENT.delete_collection(collection_name=user_namespace)
+                    logger.info(f"✅ Deleted collection '{user_namespace}' - starting fresh")
             except Exception as e:
-                logger.warning(f"⚠️  Could not delete existing vectors (namespace may not exist yet): {e}")
+                logger.warning(f"⚠️  Could not delete existing vectors (may not exist yet): {e}")
                 # Continue anyway - namespace may not exist for new users
 
         # Initialize GmailAutoSync orchestrator (uses per-user namespaces)

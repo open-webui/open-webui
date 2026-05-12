@@ -538,13 +538,24 @@ class PineconeClient(VectorDBBase):
             # Search using the first vector (assuming this is the intended behavior)
             query_vector = vectors[0]
 
-            # Perform the search with optional namespace
+            # Build filter: enforce collection_name, then merge caller filter on top.
+            # Mirrors the safe-merge pattern in `query()` so that a caller-supplied
+            # `collection_name` cannot override the prefix and read another logical
+            # collection's vectors. Without this merge the `filter` parameter was
+            # silently ignored, so any code passing e.g. `{"file_id": ...}` to scope
+            # a search would actually search the entire collection.
+            pinecone_filter = {"collection_name": collection_name_with_prefix}
+            if filter:
+                for key, value in filter.items():
+                    if key != "collection_name":
+                        pinecone_filter[key] = value
+
             query_kwargs = {
                 "vector": query_vector,
                 "top_k": limit,
                 "include_metadata": True,
                 "include_values": False,  # Don't return vector values - saves bandwidth
-                "filter": {"collection_name": collection_name_with_prefix},
+                "filter": pinecone_filter,
             }
             if namespace:
                 query_kwargs["namespace"] = namespace
@@ -686,10 +697,15 @@ class PineconeClient(VectorDBBase):
                 )
 
             elif filter:
-                # Combine user filter with collection_name
+                # Enforce collection_name, then merge caller filter on top.
+                # Using `dict.update(filter)` would let a caller-supplied
+                # `collection_name` overwrite the enforced prefix and delete
+                # vectors belonging to another logical collection in the same
+                # namespace; mirror the safe-merge in `query()` instead.
                 pinecone_filter = {"collection_name": collection_name_with_prefix}
-                if filter:
-                    pinecone_filter.update(filter)
+                for key, value in filter.items():
+                    if key != "collection_name":
+                        pinecone_filter[key] = value
                 # Delete by metadata filter with optional namespace
                 delete_kwargs = {"filter": pinecone_filter}
                 if namespace:

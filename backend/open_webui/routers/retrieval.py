@@ -144,78 +144,41 @@ log = logging.getLogger(__name__)
 ##########################################
 
 
-def get_namespace_for_collection(collection_name: str) -> Optional[str]:
+def get_namespace_for_collection(
+    collection_name: str,
+    parent_collection_name: Optional[str] = None,  # noqa: ARG001 - kept for backward compat
+) -> Optional[str]:
     """
-    Get the appropriate namespace for a collection based on vector DB type.
+    Return the Pinecone namespace for the given collection.
 
-    Pinecone Best Practice: Use human-readable namespace with collection name prefix.
-    Format: "{sanitized-name}-{collection-id}" for easier identification.
+    Pinecone uses one namespace per logical collection within a fixed index.
+    For all other vector DBs we return None (their drivers ignore the
+    parameter and use their native collection abstraction).
 
-    This provides better performance by limiting query scope to specific collections
-    and prevents cross-collection interference.
+    Earlier versions of this helper attempted to look up a human-readable
+    knowledge-base name and prepend it to the namespace, but
+    ``Knowledges.get_knowledge_by_id`` is async as of v0.9.5, so the
+    sync call here returned a coroutine, the surrounding ``except``
+    silently swallowed the resulting ``AttributeError`` and the function
+    fell back to the bare collection id. To match what's actually been
+    written to Pinecone since the merge, we now return the bare collection
+    name and skip the lookup entirely. Restoring the prefixed form is a
+    larger change (async propagation through every call site) and is
+    tracked separately.
 
-    For other vector databases (Chroma, Qdrant, etc.), namespaces aren't used;
-    instead, they rely on collection-based isolation.
-
-    Args:
-        collection_name: Name of the collection (e.g., "file-abc123", "494b175b-3672...")
-
-    Returns:
-        - For Pinecone: "{name}-{id}" (e.g., "fosd-494b175b-3672..." for knowledge bases)
-        - For other DBs: None (use default behavior)
-
-    Performance Impact:
-        - Pinecone queries only scan the specific namespace
-        - Reduces query latency for large deployments with many collections
-        - Better scalability as collections grow
-        - Human-readable namespaces easier to debug
-
-    Example:
-        namespace = get_namespace_for_collection("494b175b-3672-45a2-bb2a-ea21f3328818")
-        # Returns: "my-knowledge-494b175b-3672-45a2-bb2a-ea21f3328818"
-
-        VECTOR_DB_CLIENT.insert(
-            collection_name="494b175b-3672-45a2-bb2a-ea21f3328818",
-            items=vectors,
-            namespace="my-knowledge-494b175b-3672-45a2-bb2a-ea21f3328818"
-        )
+    The ``parent_collection_name`` argument is accepted but currently
+    unused: per-file collections (``file-{id}``) live in their own
+    namespace rather than being nested under a parent KB's namespace.
+    Insertion and deletion both pass the same bare collection name, which
+    keeps the two paths in sync. The argument is preserved so existing
+    call sites in routers/knowledge.py do not need to change (previously
+    they raised ``TypeError`` that was swallowed, leaving file-level
+    namespaces orphaned on knowledge-base delete/reset).
     """
-    # Extract actual value if VECTOR_DB is a PersistentConfig object
     vector_db_type = VECTOR_DB.value if hasattr(VECTOR_DB, "value") else VECTOR_DB
 
     if vector_db_type == "pinecone":
-        # Try to get a human-readable name for the collection
-        prefix = None
-
-        # Check if this is a knowledge base (UUID format without prefix)
-        if not collection_name.startswith(("file-", "user-memory-", "email-")):
-            try:
-                # Import here to avoid circular dependency
-                from open_webui.models.knowledge import Knowledges
-
-                knowledge = Knowledges.get_knowledge_by_id(collection_name)
-                if knowledge and knowledge.name:
-                    # Sanitize knowledge name for namespace
-                    # Convert to lowercase, replace spaces/special chars with dashes
-                    import re
-
-                    sanitized = re.sub(r"[^a-z0-9]+", "-", knowledge.name.lower())
-                    # Remove leading/trailing dashes
-                    sanitized = sanitized.strip("-")
-                    # Limit length to avoid overly long namespaces
-                    if sanitized:
-                        prefix = sanitized[:50]  # Max 50 chars for prefix
-            except Exception as e:
-                # If lookup fails, just use collection ID
-                pass
-
-        # Build namespace: "{prefix}-{collection_id}" or just "{collection_id}"
-        if prefix:
-            return f"{prefix}-{collection_name}"
-        else:
-            # For files, memories, or if name lookup failed, use collection name as-is
-            # This maintains compatibility with email-{user_id} pattern
-            return collection_name
+        return collection_name
 
     # Other vector DBs (Chroma, Qdrant, Milvus, etc.) use collections directly
     return None
@@ -3996,6 +3959,7 @@ class QueryDocForm(BaseModel):
     k_reranker: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    hybrid_bm25_weight: Optional[float] = None
 
 
 @router.post('/query/doc')
@@ -4035,7 +3999,6 @@ async def query_doc_handler(
                     if form_data.hybrid_bm25_weight
                     else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
-                user=user,
             )
         else:
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(

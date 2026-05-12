@@ -82,16 +82,33 @@ class AsyncVectorDBClient:
         (e.g. already inside a worker thread)."""
         return self._sync
 
-    async def has_collection(self, collection_name: str) -> bool:
+    # All methods accept an optional `namespace` for backends that support
+    # multi-tenant namespacing (Pinecone). Other backends ignore it. Passing
+    # the kwarg to a backend that doesn't accept it would raise TypeError, so
+    # we only forward it when set — this keeps the facade compatible with
+    # both Pinecone-aware and namespace-agnostic backends.
+    async def has_collection(self, collection_name: str, namespace: Optional[str] = None) -> bool:
+        if namespace is not None:
+            return await asyncio.to_thread(self._sync.has_collection, collection_name, namespace=namespace)
         return await asyncio.to_thread(self._sync.has_collection, collection_name)
 
-    async def delete_collection(self, collection_name: str) -> None:
+    async def delete_collection(self, collection_name: str, namespace: Optional[str] = None) -> None:
+        if namespace is not None:
+            return await asyncio.to_thread(self._sync.delete_collection, collection_name, namespace=namespace)
         return await asyncio.to_thread(self._sync.delete_collection, collection_name)
 
-    async def insert(self, collection_name: str, items: List[VectorItem]) -> None:
+    async def insert(
+        self, collection_name: str, items: List[VectorItem], namespace: Optional[str] = None
+    ) -> None:
+        if namespace is not None:
+            return await asyncio.to_thread(self._sync.insert, collection_name, items, namespace=namespace)
         return await asyncio.to_thread(self._sync.insert, collection_name, items)
 
-    async def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
+    async def upsert(
+        self, collection_name: str, items: List[VectorItem], namespace: Optional[str] = None
+    ) -> None:
+        if namespace is not None:
+            return await asyncio.to_thread(self._sync.upsert, collection_name, items, namespace=namespace)
         return await asyncio.to_thread(self._sync.upsert, collection_name, items)
 
     async def search(
@@ -100,7 +117,12 @@ class AsyncVectorDBClient:
         vectors: List[List[Union[float, int]]],
         filter: Optional[Dict] = None,
         limit: int = 10,
+        namespace: Optional[str] = None,
     ) -> Optional[SearchResult]:
+        if namespace is not None:
+            return await asyncio.to_thread(
+                self._sync.search, collection_name, vectors, filter, limit, namespace=namespace
+            )
         return await asyncio.to_thread(self._sync.search, collection_name, vectors, filter, limit)
 
     async def query(
@@ -108,10 +130,17 @@ class AsyncVectorDBClient:
         collection_name: str,
         filter: Dict,
         limit: Optional[int] = None,
+        namespace: Optional[str] = None,
     ) -> Optional[GetResult]:
+        if namespace is not None:
+            return await asyncio.to_thread(
+                self._sync.query, collection_name, filter, limit, namespace=namespace
+            )
         return await asyncio.to_thread(self._sync.query, collection_name, filter, limit)
 
-    async def get(self, collection_name: str) -> Optional[GetResult]:
+    async def get(self, collection_name: str, namespace: Optional[str] = None) -> Optional[GetResult]:
+        if namespace is not None:
+            return await asyncio.to_thread(self._sync.get, collection_name, namespace=namespace)
         return await asyncio.to_thread(self._sync.get, collection_name)
 
     async def delete(
@@ -119,7 +148,12 @@ class AsyncVectorDBClient:
         collection_name: str,
         ids: Optional[List[str]] = None,
         filter: Optional[Dict] = None,
+        namespace: Optional[str] = None,
     ) -> None:
+        if namespace is not None:
+            return await asyncio.to_thread(
+                self._sync.delete, collection_name, ids, filter, namespace=namespace
+            )
         return await asyncio.to_thread(self._sync.delete, collection_name, ids, filter)
 
     async def reset(self) -> None:

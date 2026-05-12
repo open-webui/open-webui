@@ -252,8 +252,9 @@ async def create_gmail_sender_for_user(
     """
     from open_webui.models.oauth_sessions import OAuthSessions
 
-    # Get Google OAuth session
-    oauth_session = OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
+    # OAuthSessions.get_session_by_provider_and_user_id became async in v0.9.5;
+    # without `await` we'd get a coroutine that's truthy and crash on .id below.
+    oauth_session = await OAuthSessions.get_session_by_provider_and_user_id("google", user_id)
     if not oauth_session:
         logger.warning(f"No Google OAuth session for user {user_id}")
         return None

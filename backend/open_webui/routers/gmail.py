@@ -269,13 +269,31 @@ async def delete_gmail_data(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    collection_name = f"gmail_{user_id}"
+    # Mirror the indexer's storage layout exactly (see
+    # SimplePineconeManager.schedule_upsert in utils/gmail_auto_sync.py):
+    #   - Pinecone: collection_name="gmail", namespace=f"email-{user_id}"
+    #   - Other DBs: collection_name=f"email-{user_id}" (no namespace param)
+    # The previous form ("gmail_{user_id}" + metadata filter, no namespace) did
+    # not match either layout, so "Delete my Gmail data" silently no-op'd.
+    import inspect
+
+    delete_signature = inspect.signature(VECTOR_DB_CLIENT.delete)
+    supports_namespace = "namespace" in delete_signature.parameters
 
     try:
-        # Delete all email vectors for this user
-        VECTOR_DB_CLIENT.delete(collection_name=collection_name, filter={"type": "email", "user_id": user_id})
-
-        logger.info(f"🗑️ Deleted all Gmail data for user {user_id} from collection {collection_name}")
+        if supports_namespace:
+            collection_name = "gmail"
+            user_namespace = f"email-{user_id}"
+            VECTOR_DB_CLIENT.delete(collection_name=collection_name, namespace=user_namespace)
+            logger.info(
+                f"🗑️ Deleted all Gmail data for user {user_id} "
+                f"(collection='{collection_name}', namespace='{user_namespace}')"
+            )
+        else:
+            collection_name = f"email-{user_id}"
+            if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+            logger.info(f"🗑️ Deleted all Gmail data for user {user_id} (collection='{collection_name}')")
 
         # Update user settings
         user_settings = (

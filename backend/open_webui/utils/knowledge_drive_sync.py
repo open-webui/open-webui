@@ -109,8 +109,7 @@ class KnowledgeDriveSyncService:
         KnowledgeDriveSources.mark_sync_start(source_id)
 
         try:
-            # Get Knowledge base
-            knowledge = Knowledges.get_knowledge_by_id(knowledge_id)
+            knowledge = await Knowledges.get_knowledge_by_id(knowledge_id)
             if not knowledge:
                 raise ValueError(f"Knowledge base {knowledge_id} not found")
 
@@ -507,9 +506,10 @@ class KnowledgeDriveSyncService:
                 log.error(f"   ❌ Failed to create file record")
                 return None
 
-            # Add file to knowledge base
+            # Knowledges.add_file_to_knowledge_by_id became async in v0.9.5; without
+            # `await` the file would never be linked to the knowledge base.
             log.info(f"   📚 Adding to Knowledge base...")
-            Knowledges.add_file_to_knowledge_by_id(knowledge.id, file_id, user_id)
+            await Knowledges.add_file_to_knowledge_by_id(knowledge.id, file_id, user_id)
 
             # Process file through RAG pipeline
             log.info(f"   ⚙️  Processing through RAG pipeline...")

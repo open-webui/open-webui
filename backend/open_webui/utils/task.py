@@ -418,7 +418,9 @@ def tools_function_calling_generation_template(template: str, tools_specs: str) 
     return template
 
 
-def chapter_generation_template(template: str, transcript: str, duration: float, user: Optional[Any] = None) -> str:
+async def chapter_generation_template(
+    template: str, transcript: str, duration: float, user: Optional[Any] = None
+) -> str:
     """
     Generate a prompt for chapter extraction from video/audio transcript.
 
@@ -431,13 +433,11 @@ def chapter_generation_template(template: str, transcript: str, duration: float,
     Returns:
         Formatted prompt string
     """
-    # Replace transcript placeholder
     template = template.replace("{{transcript}}", transcript)
-
-    # Replace duration placeholder
     template = template.replace("{{duration}}", str(round(duration, 2)))
 
-    # Apply user-specific variables if available
-    template = prompt_template(template, user)
+    # prompt_template is async (it may await Groups lookups for {{USER_GROUPS}});
+    # awaiting it produces a string instead of the coroutine repr.
+    template = await prompt_template(template, user)
 
     return template

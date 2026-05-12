@@ -810,15 +810,13 @@ async def generate_chapters(request: Request, form_data: ChapterGenerationForm, 
             content={"detail": "Chapter generation is disabled"},
         )
 
-    # Get the file
-    file = Files.get_file_by_id(form_data.file_id)
+    file = await Files.get_file_by_id(form_data.file_id)
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found",
         )
 
-    # Check permissions
     if file.user_id != user.id and user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -878,8 +876,7 @@ async def generate_chapters(request: Request, form_data: ChapterGenerationForm, 
     else:
         template = DEFAULT_CHAPTER_GENERATION_PROMPT_TEMPLATE
 
-    # Build prompt
-    content = chapter_generation_template(template, transcript_text, transcript_duration, user)
+    content = await chapter_generation_template(template, transcript_text, transcript_duration, user)
 
     payload = {
         "model": task_model_id,
