@@ -9,7 +9,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, cast, delete, func, or_, select, update
+from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
@@ -180,7 +180,7 @@ class NoteTable:
                             or_(
                                 func.replace(func.replace(Note.title, '-', ''), ' ', '').ilike(f'%{word}%'),
                                 func.replace(
-                                    func.replace(cast(Note.data['content']['md'], Text), '-', ''),
+                                    func.replace(Note.data['content']['md'].as_string(), '-', ''),
                                     ' ',
                                     '',
                                 ).ilike(f'%{word}%'),

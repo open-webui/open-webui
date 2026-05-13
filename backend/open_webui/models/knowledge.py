@@ -24,7 +24,6 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
-    cast,
     delete,
     func,
     or_,
@@ -361,21 +360,41 @@ class KnowledgeTable:
                 )
 
                 # Apply filename / content search
+                # Use ->> (as_string) instead of CAST(-> AS TEXT) to avoid
+                # PostgreSQL "invalid memory alloc request size" on large
+                # extracted-content rows (#24670).
+                content_text = File.data['content'].as_string()
+                search_filter = None
                 if filter:
                     q = filter.get('query')
                     if q:
-                        stmt = stmt.filter(
-                            or_(
-                                File.filename.ilike(f'%{q}%'),
-                                cast(File.data['content'], Text).ilike(f'%{q}%'),
-                            )
+                        search_filter = or_(
+                            File.filename.ilike(f'%{q}%'),
+                            content_text.ilike(f'%{q}%'),
                         )
+                        stmt = stmt.filter(search_filter)
 
                 # Order by file changes
                 stmt = stmt.order_by(File.updated_at.desc(), File.id.asc())
 
-                # Count before pagination
-                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+                # Lightweight count: avoid selecting File.data and ORDER BY
+                count_stmt = (
+                    select(func.count(File.id))
+                    .select_from(File)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .join(Knowledge, KnowledgeFile.knowledge_id == Knowledge.id)
+                )
+                count_stmt = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=count_stmt,
+                    DocumentModel=Knowledge,
+                    filter=filter,
+                    resource_type='knowledge',
+                    permission='read',
+                )
+                if search_filter is not None:
+                    count_stmt = count_stmt.filter(search_filter)
+                count_result = await db.execute(count_stmt)
                 total = count_result.scalar()
 
                 if skip:
@@ -527,10 +546,14 @@ class KnowledgeTable:
                 if filter:
                     query_key = filter.get('query')
                     if query_key:
+                        # Use ->> (as_string) instead of CAST(-> AS TEXT) to
+                        # avoid PostgreSQL memory allocation failures on large
+                        # content (#24670).
+                        content_text = File.data['content'].as_string()
                         stmt = stmt.filter(
                             or_(
                                 File.filename.ilike(f'%{query_key}%'),
-                                cast(File.data['content'], Text).ilike(f'%{query_key}%'),
+                                content_text.ilike(f'%{query_key}%'),
                             )
                         )
 
