@@ -238,8 +238,8 @@ def _get_files_under_dir(tree: dict, dir_id: str) -> list[dict]:
 
 
 async def _get_accessible_kb_ids(user: dict, model_knowledge: list[dict] | None,
-                                  knowledge_id: str | None = None) -> list[tuple[str, str]]:
-    """Get list of (kb_id, kb_name) the user can access."""
+                                  knowledge_id: str | None = None) -> list[tuple[str, str, str]]:
+    """Get list of (kb_id, kb_name, kb_description) the user can access."""
     from open_webui.models.access_grants import AccessGrants
     from open_webui.models.groups import Groups
     from open_webui.models.knowledge import Knowledges
@@ -269,18 +269,18 @@ async def _get_accessible_kb_ids(user: dict, model_knowledge: list[dict] | None,
         for kb_id in attached_kb_ids:
             kb = await Knowledges.get_knowledge_by_id(kb_id)
             if kb and await _has_access(kb):
-                result.append((kb.id, kb.name))
+                result.append((kb.id, kb.name, kb.description or ''))
     elif knowledge_id:
         kb = await Knowledges.get_knowledge_by_id(knowledge_id)
         if kb and await _has_access(kb):
-            result.append((kb.id, kb.name))
+            result.append((kb.id, kb.name, kb.description or ''))
     else:
         search = await Knowledges.search_knowledge_bases(
             user_id, filter={'query': '', 'user_id': user_id, 'group_ids': user_group_ids},
             skip=0, limit=50,
         )
         for kb in search.items:
-            result.append((kb.id, kb.name))
+            result.append((kb.id, kb.name, kb.description or ''))
 
     return result
 
@@ -294,7 +294,7 @@ async def _get_accessible_files(user: dict, model_knowledge: list[dict] | None,
     kb_ids = await _get_accessible_kb_ids(user, model_knowledge, knowledge_id)
     files = []
 
-    for kb_id, kb_name in kb_ids:
+    for kb_id, kb_name, _ in kb_ids:
         kb_files = await Knowledges.get_files_with_directory_ids(kb_id)
         for file_model, dir_id in kb_files:
             files.append({
@@ -443,7 +443,7 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict,
     target_kb_id = None
     dir_path = None
     if path_arg:
-        for kb_id, kb_name in kb_ids:
+        for kb_id, kb_name, _ in kb_ids:
             if kb_id == path_arg:
                 target_kb_id = kb_id
                 break
@@ -451,14 +451,17 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict,
             dir_path = path_arg.strip('/')
 
     if target_kb_id:
-        kb_ids = [(kid, kn) for kid, kn in kb_ids if kid == target_kb_id]
+        kb_ids = [(kid, kn, kd) for kid, kn, kd in kb_ids if kid == target_kb_id]
 
     if not kb_ids:
         return 'No knowledge bases found.'
 
     lines = []
-    for kb_id, kb_name in kb_ids:
-        lines.append(f'Knowledge Base: {kb_name} ({kb_id})')
+    for kb_id, kb_name, kb_desc in kb_ids:
+        header = f'Knowledge Base: {kb_name} ({kb_id})'
+        if kb_desc:
+            header += f'\n  {kb_desc}'
+        lines.append(header)
 
         if flat_mode:
             # Flat mode: build full tree (legitimate use)
@@ -921,9 +924,12 @@ async def _kb_tree(args: list[str], flags: set[str], user: dict,
     dir_scope = args[0].strip('/') if args else None
     output = []
 
-    for kb_id, kb_name in kb_ids:
+    for kb_id, kb_name, kb_desc in kb_ids:
         tree = await _build_directory_tree(kb_id)
-        output.append(f'Knowledge Base: {kb_name} ({kb_id})')
+        header = f'Knowledge Base: {kb_name} ({kb_id})'
+        if kb_desc:
+            header += f'\n  {kb_desc}'
+        output.append(header)
 
         # Find root to start from
         root_dir_id = None
