@@ -913,7 +913,7 @@ app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
 
 # Migrate legacy access_control → access_grants on boot
-from open_webui.utils.access_control import migrate_access_control
+from open_webui.utils.access_control import has_permission, migrate_access_control
 
 connections = app.state.config.TOOL_SERVER_CONNECTIONS
 if any('access_control' in c.get('config', {}) for c in connections):
@@ -1746,6 +1746,28 @@ async def chat_completion(
             form_data.pop('id', None)
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
+
+        # Enforce features.direct_tool_servers on the inference path. The
+        # storage path (routers/users.py user/settings/update) already strips
+        # toolServers from saved settings when the caller lacks the
+        # permission; without the same gate here, a user without the grant
+        # could still register inline tool_servers via the request body and
+        # have the chat-completion middleware inject system_prompt + register
+        # tool specs from those servers (utils/middleware.py:2799). Mirror the
+        # storage-side behaviour: silently drop tool_servers if the caller
+        # lacks the permission. Admins always pass.
+        tool_servers = form_data.pop('tool_servers', None)
+        if (
+            tool_servers
+            and user.role != 'admin'
+            and not await has_permission(
+                user.id,
+                'features.direct_tool_servers',
+                request.app.state.config.USER_PERMISSIONS,
+            )
+        ):
+            tool_servers = None
+
         metadata = {
             'user_id': user.id,
             'chat_id': form_data.pop('chat_id', None),
@@ -1756,7 +1778,7 @@ async def chat_completion(
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
-            'tool_servers': form_data.pop('tool_servers', None),
+            'tool_servers': tool_servers,
             'files': form_data.get('files', None),
             'features': form_data.get('features', {}),
             'variables': form_data.get('variables', {}),
