@@ -33,6 +33,7 @@
 	export let onRenameDirectory = (id: string, name: string) => {};
 	export let onDeleteDirectory = (id: string) => {};
 	export let onMoveFileToDirectory = (fileId: string, directoryId: string) => {};
+	export let onMoveDirectoryToDirectory = (dirId: string, targetDirectoryId: string) => {};
 </script>
 
 <div class=" max-h-full flex flex-col w-full gap-[0.5px]">
@@ -45,6 +46,7 @@
 			onRename={(id, name) => onRenameDirectory(id, name)}
 			onDelete={(id) => onDeleteDirectory(id)}
 			onFileDrop={(fileId, directoryId) => onMoveFileToDirectory(fileId, directoryId)}
+			onDirDrop={(dirId, targetId) => onMoveDirectoryToDirectory(dirId, targetId)}
 		/>
 	{/each}
 

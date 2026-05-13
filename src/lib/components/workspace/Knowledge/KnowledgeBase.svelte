@@ -653,6 +653,21 @@
 		}
 	};
 
+	const moveDirectoryHandler = async (dirId: string, targetParentId: string | null) => {
+		if (dirId === targetParentId) return;
+		const res = await updateKnowledgeDirectory(localStorage.token, knowledge.id, dirId, {
+			parent_id: targetParentId
+		}).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Directory moved.'));
+			getItemsPage();
+		}
+	};
+
 	const deleteFileHandler = async (fileId) => {
 		try {
 			console.log('Starting file deletion process for:', fileId);
@@ -1092,7 +1107,7 @@
 
 			{#if currentDirectoryId !== null}
 				<div class="px-5 -mt-1 pb-2">
-					<KnowledgeBreadcrumbs rootLabel={knowledge.name} {breadcrumbs} onNavigate={(dirId) => navigateToDirectory(dirId)} />
+					<KnowledgeBreadcrumbs rootLabel={knowledge.name} {breadcrumbs} onNavigate={(dirId) => navigateToDirectory(dirId)} onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)} onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)} />
 				</div>
 			{/if}
 
@@ -1187,7 +1202,9 @@
 											onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
 											onMoveFileToDirectory={(fileId, dirId) =>
 												moveFileToDirectoryHandler(fileId, dirId)}
-										/>
+											onMoveDirectoryToDirectory={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
+								/>
+
 									</div>
 
 									{#if fileItemsTotal > 30}

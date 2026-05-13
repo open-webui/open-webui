@@ -28,7 +28,7 @@
 	export let onRename: (id: string, name: string) => void = () => {};
 	export let onDelete: (id: string) => void = () => {};
 	export let onFileDrop: (fileId: string, directoryId: string) => void = () => {};
-
+	export let onDirDrop: (dirId: string, targetDirectoryId: string) => void = () => {};
 	let editing = false;
 	let editName = '';
 	let editInput: HTMLInputElement;
@@ -62,11 +62,20 @@
 		{dragOver
 		? 'bg-gray-100 dark:bg-gray-800 ring-1 ring-gray-300 dark:ring-gray-600'
 		: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
+	draggable="true"
+	on:dragstart={(e) => {
+		e.dataTransfer?.setData(
+			'application/x-kb-dir-move',
+			JSON.stringify({ dirId: directory.id })
+		);
+	}}
 	on:dblclick={() => {
 		if (writeAccess) startRename();
 	}}
 	on:dragover={(e) => {
-		if (!e.dataTransfer?.types.includes('application/x-kb-file-move')) return;
+		const hasFile = e.dataTransfer?.types.includes('application/x-kb-file-move');
+		const hasDir = e.dataTransfer?.types.includes('application/x-kb-dir-move');
+		if (!hasFile && !hasDir) return;
 		e.preventDefault();
 		e.stopPropagation();
 		dragOver = true;
@@ -75,15 +84,26 @@
 		dragOver = false;
 	}}
 	on:drop={(e) => {
-		const raw = e.dataTransfer?.getData('application/x-kb-file-move');
-		if (!raw) return;
 		e.preventDefault();
 		e.stopPropagation();
 		dragOver = false;
-		try {
-			const data = JSON.parse(raw);
-			onFileDrop(data.fileId, directory.id);
-		} catch {}
+		const fileRaw = e.dataTransfer?.getData('application/x-kb-file-move');
+		if (fileRaw) {
+			try {
+				const data = JSON.parse(fileRaw);
+				onFileDrop(data.fileId, directory.id);
+			} catch {}
+			return;
+		}
+		const dirRaw = e.dataTransfer?.getData('application/x-kb-dir-move');
+		if (dirRaw) {
+			try {
+				const data = JSON.parse(dirRaw);
+				if (data.dirId !== directory.id) {
+					onDirDrop(data.dirId, directory.id);
+				}
+			} catch {}
+		}
 	}}
 >
 	<div class="flex items-center">
