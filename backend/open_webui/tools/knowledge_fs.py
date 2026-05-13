@@ -253,14 +253,19 @@ async def _resolve_file(ref: str, user: dict, model_knowledge: list[dict] | None
     """Resolve a file reference (ID or filename) to a file info dict with content."""
     from open_webui.models.files import Files
 
-    # Try direct ID lookup first
+    # Get the set of files this user can access
+    accessible = await _get_accessible_files(user, model_knowledge)
+    accessible_ids = {fi['id'] for fi in accessible}
+
+    # Try direct ID lookup first — but verify access
     f = await Files.get_file_by_id(ref)
     if f and f.data:
+        if f.id not in accessible_ids:
+            return None  # User cannot access this file
         return {'id': f.id, 'filename': f.filename, 'content': f.data.get('content', ''),
                 'meta': f.meta, 'updated_at': f.updated_at, 'created_at': f.created_at}
 
     # Try filename match within accessible files
-    accessible = await _get_accessible_files(user, model_knowledge)
     matches = [fi for fi in accessible if fi['filename'] == ref]
 
     if len(matches) == 1:
