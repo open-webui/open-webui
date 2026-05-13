@@ -2827,7 +2827,23 @@ async def get_opensearch_xml():
 
 
 def _sync_db_ping() -> None:
-    ScopedSession.execute(text('SELECT 1;')).all()
+    """Verify the database is reachable with a simple SELECT 1.
+
+    Uses a raw connection from the engine pool instead of the thread-local
+    ScopedSession.  This is necessary because CommitSessionMiddleware
+    deliberately skips healthcheck paths (/health, /ready, /health/db),
+    so any ScopedSession opened on a healthcheck worker thread is never
+    rolled back or removed.  If the session ever enters an invalid state
+    (e.g. after a transient connection error), it stays broken on that
+    thread permanently, causing PendingRollbackError on every subsequent
+    probe — exactly the failure reported in #24605.
+
+    A raw ``engine.connect()`` context manager obtains a fresh connection
+    from the pool, executes the ping, and deterministically returns the
+    connection regardless of success or failure.
+    """
+    with engine.connect() as conn:
+        conn.execute(text('SELECT 1'))
 
 
 async def async_db_ping() -> None:
