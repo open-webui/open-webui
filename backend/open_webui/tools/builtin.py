@@ -48,6 +48,25 @@ log = logging.getLogger(__name__)
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
 
+
+async def _has_read_access_to_file(
+    file, user_id: str, user_role: str,
+    model_knowledge: Optional[list[dict]] = None,
+) -> bool:
+    """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
+    if file.user_id == user_id or user_role == 'admin':
+        return True
+    if model_knowledge and any(
+        item.get('type') == 'file' and item.get('id') == file.id
+        for item in model_knowledge
+    ):
+        return True
+    from open_webui.utils.access_control.files import has_access_to_file
+    return await has_access_to_file(
+        file_id=file.id, access_type='read',
+        user=UserModel(**{'id': user_id, 'role': user_role}),
+    )
+
 # =============================================================================
 # TIME UTILITIES
 # =============================================================================
@@ -1785,21 +1804,7 @@ async def grep_knowledge_files(
             # Single file mode — verify access
             file = await Files.get_file_by_id(file_id)
             if file:
-                from open_webui.utils.access_control.files import has_access_to_file
-
-                if (
-                    file.user_id != user_id
-                    and user_role != 'admin'
-                    and not any(
-                        item.get('type') == 'file' and item.get('id') == file_id
-                        for item in (__model_knowledge__ or [])
-                    )
-                    and not await has_access_to_file(
-                        file_id=file_id,
-                        access_type='read',
-                        user=UserModel(**__user__),
-                    )
-                ):
+                if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
                     return json.dumps({'error': 'File not found'})
                 files_to_search.append(file)
         elif __model_knowledge__:
@@ -1941,7 +1946,6 @@ async def view_file(
 
     try:
         from open_webui.models.files import Files
-        from open_webui.utils.access_control.files import has_access_to_file
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1950,18 +1954,7 @@ async def view_file(
         if not file:
             return json.dumps({'error': 'File not found'})
 
-        if (
-            file.user_id != user_id
-            and user_role != 'admin'
-            and not any(
-                item.get('type') == 'file' and item.get('id') == file_id for item in (__model_knowledge__ or [])
-            )
-            and not await has_access_to_file(
-                file_id=file_id,
-                access_type='read',
-                user=UserModel(**__user__),
-            )
-        ):
+        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
             return json.dumps({'error': 'File not found'})
 
         content = ''
