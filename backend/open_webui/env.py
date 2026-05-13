@@ -514,6 +514,11 @@ AIOHTTP_CLIENT_SESSION_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True').low
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
 
+# Optional User-Agent override for outbound web-loader fetches.  When set,
+# SafeWebBaseLoader sends this value instead of the default python-requests UA
+# which is aggressively blocked by Cloudflare, Wikipedia, and similar services.
+USER_AGENT = os.getenv('USER_AGENT', '')
+
 _model_list_timeout_raw = os.getenv(
     'AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST',
     os.getenv('AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST', '10'),

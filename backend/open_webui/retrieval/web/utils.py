@@ -42,7 +42,7 @@ from open_webui.config import (
     WEB_LOADER_TIMEOUT,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, USER_AGENT
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
@@ -491,6 +491,15 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+
+        # Propagate USER_AGENT env var so that both the sync _scrape() and
+        # async _fetch() paths present a real UA instead of python-requests/2.x
+        # which gets blocked by Cloudflare, Wikipedia, and similar bot-detection.
+        # _fetch() forwards self.session.headers to the aiohttp session, so
+        # setting it here covers both code-paths.
+        if USER_AGENT:
+            self.session.headers['User-Agent'] = USER_AGENT
+
         # Prevent redirect-based SSRF on the synchronous _scrape() path.
         # validate_url() is called once on the originally-submitted URL, but the
         # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
@@ -519,7 +528,6 @@ class SafeWebBaseLoader(WebBaseLoader):
                     async with session.get(
                         url,
                         **(self.requests_kwargs | kwargs),
-                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
