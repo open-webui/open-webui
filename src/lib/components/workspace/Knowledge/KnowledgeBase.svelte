@@ -1029,6 +1029,7 @@
 							}}
 						/>
 
+						<div class="hidden md:block">
 						<Tooltip content={$i18n.t('Click to copy ID')}>
 							<button
 								class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
@@ -1040,6 +1041,7 @@
 								{id}
 							</button>
 						</Tooltip>
+						</div>
 					</div>
 				</div>
 			</div>
