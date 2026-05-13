@@ -1262,10 +1262,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'YANDEX_WEB_SEARCH_API_KEY': request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             'YANDEX_WEB_SEARCH_CONFIG': request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             'YOUCOM_API_KEY': request.app.state.config.YOUCOM_API_KEY,
-            'LINKUP_API_KEY' : request.app.state.config.LINKUP_API_KEY,
-            'LINKUP_SEARCH_URL' : request.app.state.config.LINKUP_SEARCH_URL,
-            'LINKUP_SEARCH_DEPTH' : request.app.state.config.LINKUP_SEARCH_DEPTH,
-            'LINKUP_OUTPUT_TYPE' : request.app.state.config.LINKUP_OUTPUT_TYPE,
+            'LINKUP_API_KEY': request.app.state.config.LINKUP_API_KEY,
+            'LINKUP_SEARCH_URL': request.app.state.config.LINKUP_SEARCH_URL,
+            'LINKUP_SEARCH_DEPTH': request.app.state.config.LINKUP_SEARCH_DEPTH,
+            'LINKUP_OUTPUT_TYPE': request.app.state.config.LINKUP_OUTPUT_TYPE,
         },
     }
 
