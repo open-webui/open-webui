@@ -17,21 +17,50 @@
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import DirectoryRow from './DirectoryRow.svelte';
 
 	export let knowledge = null;
 	export let selectedFileId = null;
 	export let files = [];
+	export let directories = [];
 
 	export let onClick = (fileId) => {};
 	export let onDelete = (fileId) => {};
+	export let onNavigateDirectory = (directoryId: string) => {};
+	export let onRenameDirectory = (id: string, name: string) => {};
+	export let onDeleteDirectory = (id: string) => {};
+	export let onMoveFileToDirectory = (fileId: string, directoryId: string) => {};
 </script>
 
 <div class=" max-h-full flex flex-col w-full gap-[0.5px]">
+	<!-- Directories first -->
+	{#each directories as dir (dir.id)}
+		<DirectoryRow
+			directory={dir}
+			writeAccess={knowledge?.write_access}
+			onNavigate={(id) => onNavigateDirectory(id)}
+			onRename={(id, name) => onRenameDirectory(id, name)}
+			onDelete={(id) => onDeleteDirectory(id)}
+			onFileDrop={(fileId, directoryId) => onMoveFileToDirectory(fileId, directoryId)}
+		/>
+	{/each}
+
+	<!-- Files -->
 	{#each files as file (file?.id ?? file?.itemId ?? file?.tempId)}
 		<div
-			class=" flex cursor-pointer w-full px-1.5 py-0.5 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
+			class=" flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
 				: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
+			draggable="true"
+			on:dragstart={(e) => {
+				const fileId = file?.id ?? file?.tempId;
+				if (fileId) {
+					e.dataTransfer?.setData(
+						'application/x-kb-file-move',
+						JSON.stringify({ fileId })
+					);
+				}
+			}}
 		>
 			<div class="flex items-center">
 				{#if file?.status !== 'uploading'}
