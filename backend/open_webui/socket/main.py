@@ -894,7 +894,7 @@ async def _make_channel_emitter(request_info):
 
 async def get_event_emitter(request_info, update_db=True):
     # Channel mode: route pipeline output to channel message updates
-    if request_info.get('chat_id', '').startswith('channel:'):
+    if (request_info.get('chat_id') or '').startswith('channel:'):
         return await _make_channel_emitter(request_info)
 
     async def __event_emitter__(event_data):
@@ -912,7 +912,7 @@ async def get_event_emitter(request_info, update_db=True):
             room=f'user:{user_id}',
         )
 
-        if update_db and message_id and not request_info.get('chat_id', '').startswith('local:'):
+        if update_db and message_id and not (request_info.get('chat_id') or '').startswith('local:'):
             event_type = event_data.get('type')
 
             if event_type == 'status':
