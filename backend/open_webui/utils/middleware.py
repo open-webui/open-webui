@@ -591,7 +591,7 @@ def serialize_output(output: list) -> str:
                     f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>'
                 )
 
-    return '\n'.join(parts).strip()
+    return '\n\n'.join(parts).strip()
 
 
 def deep_merge(target, source):
