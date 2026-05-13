@@ -112,38 +112,56 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            if content_type:
-                stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
+            stt_supported = getattr(
+                request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', []
+            )
 
-                if strict_match_mime_type(stt_supported_content_types, content_type):
-                    file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
-                    result = await asyncio.to_thread(
-                        transcribe,
-                        request,
-                        file_path_processed,
-                        file_metadata,
-                        user,
-                    )
+            if content_type and strict_match_mime_type(stt_supported, content_type):
+                # Audio / STT-supported files → transcribe then index
+                file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
+                result = await asyncio.to_thread(
+                    transcribe,
+                    request,
+                    file_path_processed,
+                    file_metadata,
+                    user,
+                )
+                await process_file(
+                    request,
+                    ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
+                    user=user,
+                    db=db_session,
+                )
 
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
-                        user=user,
-                        db=db_session,
-                    )
-                elif (not content_type.startswith(('image/', 'video/'))) or (
-                    request.app.state.config.CONTENT_EXTRACTION_ENGINE == 'external'
-                ):
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id),
-                        user=user,
+            elif (
+                content_type
+                and content_type.startswith(('image/', 'video/'))
+                and request.app.state.config.CONTENT_EXTRACTION_ENGINE != 'external'
+            ):
+                # Media files without an external extraction engine
+                if content_type.startswith('video/'):
+                    # Videos are stored as-is for downstream multimodal
+                    # processing (Tools, vision models). Attempting text
+                    # extraction causes "Timeout reached while detecting
+                    # encoding" errors.
+                    log.info(f'Video file detected ({content_type}), skipping text extraction')
+                    await Files.update_file_data_by_id(
+                        file_item.id,
+                        {'status': 'completed'},
                         db=db_session,
                     )
                 else:
-                    raise Exception(f'File type {content_type} is not supported for processing')
+                    raise Exception(
+                        f'File type {content_type} is not supported for processing'
+                    )
+
             else:
-                log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
+                # Documents, or any file when an external engine is configured
+                if not content_type:
+                    log.info(
+                        f'File type {file.content_type} is not provided, '
+                        'but trying to process anyway'
+                    )
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),
