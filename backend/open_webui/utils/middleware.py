@@ -1774,6 +1774,12 @@ async def process_chat_response(
                         )
                         if reasoning_details:
                             update_data["reasoning_details"] = reasoning_details
+                            # Write per_round too so the on-disk shape is
+                            # symmetric with streaming. See
+                            # utils/REASONING_DETAILS.md §6 Bug C.
+                            update_data["reasoning_details_per_round"] = [
+                                reasoning_details
+                            ]
 
                         Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata["chat_id"],
@@ -2427,16 +2433,14 @@ async def process_chat_response(
                                     )
 
                                     if delta_reasoning_details:
-                                        # Merge streaming reasoning_details deltas. Prefer matching
-                                        # by `id` (stable across deltas for one OpenAI Responses
-                                        # reasoning item) and fall back to `index` for providers
-                                        # that don't emit ids in early chunks. A naive .extend()
-                                        # produces duplicate-id items that OpenAI's Responses API
-                                        # rejects on tool-call follow-ups; matching only by `index`
-                                        # would collapse distinct items if a provider sends them
-                                        # at the same array position in different deltas.
+                                        # Merge streaming reasoning_details deltas. Match by
+                                        # (id, type) with a (type, index) fallback for id-less
+                                        # chunks; concat text/data/summary across fragments.
+                                        # See utils/REASONING_DETAILS.md §2 (the wire protocol)
+                                        # and §6 Bug A (why this isn't matched on id alone).
                                         for detail in delta_reasoning_details:
                                             detail_id = detail.get("id")
+                                            detail_type = detail.get("type")
                                             detail_idx = detail.get("index", 0)
 
                                             existing = None
@@ -2446,17 +2450,20 @@ async def process_chat_response(
                                                         d
                                                         for d in reasoning_details
                                                         if d.get("id") == detail_id
+                                                        and d.get("type") == detail_type
                                                     ),
                                                     None,
                                                 )
-                                                # Adopt an id-less entry that matches by index
-                                                # (covers providers that emit `id` only later).
+                                                # Adopt an id-less entry only when the type also
+                                                # matches (covers providers that emit `id` only
+                                                # on a later chunk of the same logical item).
                                                 if existing is None:
                                                     existing = next(
                                                         (
                                                             d
                                                             for d in reasoning_details
                                                             if d.get("id") is None
+                                                            and d.get("type") == detail_type
                                                             and d.get("index") == detail_idx
                                                         ),
                                                         None,
@@ -2466,7 +2473,8 @@ async def process_chat_response(
                                                     (
                                                         d
                                                         for d in reasoning_details
-                                                        if d.get("index") == detail_idx
+                                                        if d.get("type") == detail_type
+                                                        and d.get("index") == detail_idx
                                                     ),
                                                     None,
                                                 )
@@ -2480,10 +2488,14 @@ async def process_chat_response(
                                                     existing["data"] = (
                                                         existing.get("data") or ""
                                                     ) + detail["data"]
+                                                if detail.get("summary"):
+                                                    existing["summary"] = (
+                                                        existing.get("summary") or ""
+                                                    ) + detail["summary"]
+                                                # `type` is part of the match key and never
+                                                # needs overwriting; `summary` is concat'd above.
                                                 for k in (
-                                                    "type",
                                                     "id",
-                                                    "summary",
                                                     "signature",
                                                     "format",
                                                     "index",
@@ -2794,12 +2806,10 @@ async def process_chat_response(
                         )
 
                     # Track this round's reasoning regardless of whether it
-                    # produced tool_calls. The trailing (final, non-tool-call)
-                    # round's reasoning is otherwise lost when stream_body_handler
-                    # returns, so multi-turn replays would miss it on the final
-                    # assistant message.
-                    if reasoning_details:
-                        round_reasoning_details.append(reasoning_details)
+                    # produced tool_calls — append even when empty so per_round
+                    # length stays equal to emission count. See
+                    # utils/REASONING_DETAILS.md §6 Bug B.
+                    round_reasoning_details.append(reasoning_details or [])
 
                     if response.background:
                         await response.background()
@@ -3129,11 +3139,12 @@ async def process_chat_response(
                                     "reasoning_details": message.get("reasoning_details")
                                 })
 
-                            # Track per-round reasoning_details for the
-                            # non-streaming branch (mirrors stream_body_handler).
-                            msg_reasoning = message.get("reasoning_details")
-                            if msg_reasoning:
-                                round_reasoning_details.append(msg_reasoning)
+                            # Per-round bookkeeping for the non-streaming branch
+                            # (mirrors stream_body_handler). Append even when
+                            # empty — see utils/REASONING_DETAILS.md §6 Bug B.
+                            round_reasoning_details.append(
+                                message.get("reasoning_details") or []
+                            )
 
                             usage = res.get("usage", {})
                             if usage:
@@ -3408,11 +3419,13 @@ async def process_chat_response(
                                         "reasoning_details": message.get("reasoning_details")
                                     })
 
-                                # Track per-round reasoning_details for the
-                                # non-streaming branch (mirrors stream_body_handler).
-                                msg_reasoning = message.get("reasoning_details")
-                                if msg_reasoning:
-                                    round_reasoning_details.append(msg_reasoning)
+                                # Per-round bookkeeping for the non-streaming
+                                # branch (mirrors stream_body_handler). Append
+                                # even when empty — see
+                                # utils/REASONING_DETAILS.md §6 Bug B.
+                                round_reasoning_details.append(
+                                    message.get("reasoning_details") or []
+                                )
 
                                 usage = res.get("usage", {})
                                 if usage:

@@ -2285,34 +2285,45 @@
 						message.reasoning_details = [];
 					}
 
-					// Prefer matching by `id` (stable across deltas for one OpenAI
-					// Responses reasoning item) and fall back to `index` for providers
-					// that don't emit ids in early chunks. Matching only by index can
-					// collapse distinct reasoning items if a provider emits multiple
-					// items at the same array position in different deltas.
+					// Merge streaming reasoning_details deltas. Match by (id, type)
+					// with a (type, index) fallback for id-less chunks; concat
+					// text/data/summary across fragments. Mirrors the backend
+					// merger in middleware.py — the two MUST stay in lockstep
+					// because the frontend's locally captured copy gets POSTed
+					// back to the server via chatCompleted and overwrites the
+					// backend's clean copy if they diverge.
+					//
+					// See backend/open_webui/utils/REASONING_DETAILS.md §2 (the
+					// wire protocol) and §9 (why frontend + backend must match).
 					for (const detail of choices[0].delta.reasoning_details) {
 						const detailId = detail.id ?? null;
+						const detailType = detail.type ?? null;
 						const detailIdx = detail.index ?? 0;
 
 						let existing = null;
 						if (detailId !== null) {
-							existing = message.reasoning_details.find((d) => d.id === detailId);
+							existing = message.reasoning_details.find(
+								(d) => d.id === detailId && d.type === detailType
+							);
 							if (!existing) {
 								existing = message.reasoning_details.find(
-									(d) => d.id == null && d.index === detailIdx
+									(d) => d.id == null && d.type === detailType && d.index === detailIdx
 								);
 							}
 						} else {
-							existing = message.reasoning_details.find((d) => d.index === detailIdx);
+							existing = message.reasoning_details.find(
+								(d) => d.type === detailType && d.index === detailIdx
+							);
 						}
 
 						if (existing) {
 							if (detail.text) existing.text = (existing.text || '') + detail.text;
-							if (detail.type) existing.type = detail.type;
-							if (detail.id) existing.id = detail.id;
-							if (detail.summary) existing.summary = detail.summary;
-							if (detail.signature) existing.signature = detail.signature;
 							if (detail.data) existing.data = (existing.data || '') + detail.data;
+							if (detail.summary) existing.summary = (existing.summary || '') + detail.summary;
+							// `type` is matched on, so it can't have changed; never overwrite.
+							if (detail.id) existing.id = detail.id;
+							if (detail.signature) existing.signature = detail.signature;
+							if (detail.format) existing.format = detail.format;
 							if (detail.index != null) existing.index = detail.index;
 						} else {
 							message.reasoning_details.push({ ...detail });
