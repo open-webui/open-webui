@@ -14,8 +14,11 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
 
@@ -64,32 +67,29 @@
 		>
 			<div class="flex items-center">
 				{#if file?.status !== 'uploading'}
-					<Tooltip content={$i18n.t('Open file')}>
-						<button
-							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-							type="button"
-							on:click={() => {
-								let fileId = file?.id ?? file?.tempId;
-								window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
-							}}
-						>
-							<DocumentPage className="size-3.5" />
-						</button>
-					</Tooltip>
+					<button
+						class="p-1 rounded-full transition"
+						type="button"
+						on:click={() => {
+							let fileId = file?.id ?? file?.tempId;
+							onClick(fileId);
+						}}
+					>
+						<DocumentPage className="size-3.5" />
+					</button>
 				{:else}
 					<Spinner className="size-3.5" />
 				{/if}
 			</div>
 
 			<button
-				class="relative group flex items-center gap-1 rounded-xl p-2 text-left flex-1 justify-between"
+				class="relative flex items-center gap-1 rounded-xl p-2 text-left flex-1 justify-between"
 				type="button"
-				on:click={async () => {
-					console.log(file);
+				on:click={() => {
 					onClick(file?.id ?? file?.tempId);
 				}}
 			>
-				<div class="">
+				<div>
 					<div class="flex gap-2 items-center line-clamp-1">
 						<div class="line-clamp-1 text-sm">
 							{file?.name ?? file?.meta?.name}
@@ -103,7 +103,7 @@
 				<div class="flex items-center gap-2 shrink-0">
 					{#if file?.updated_at}
 						<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
-							<div>
+							<div class="text-xs text-gray-400">
 								{dayjs(file.updated_at * 1000).fromNow()}
 							</div>
 						</Tooltip>
@@ -129,17 +129,42 @@
 
 			{#if knowledge?.write_access}
 				<div class="flex items-center">
-					<Tooltip content={$i18n.t('Delete')}>
+					<Dropdown align="end" sideOffset={4}>
 						<button
 							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							type="button"
-							on:click={() => {
-								onDelete(file?.id ?? file?.tempId);
-							}}
 						>
-							<XMark />
+							<EllipsisHorizontal className="size-3.5" />
 						</button>
-					</Tooltip>
+
+						<div slot="content">
+							<div
+								class="min-w-[140px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+							>
+								<button
+									type="button"
+									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									on:click={() => {
+										let fileId = file?.id ?? file?.tempId;
+										window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+									}}
+								>
+									<Download className="size-3.5" />
+									{$i18n.t('Download')}
+								</button>
+								<button
+									type="button"
+									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									on:click={() => {
+										onDelete(file?.id ?? file?.tempId);
+									}}
+								>
+									<GarbageBin className="size-3.5" />
+									{$i18n.t('Delete')}
+								</button>
+							</div>
+						</div>
+					</Dropdown>
 				</div>
 			{/if}
 		</div>
