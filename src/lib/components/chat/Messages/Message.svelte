@@ -43,13 +43,21 @@
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+
+	const FENCED_CODE_BLOCK_REGEX = /(^|\n)(```|~~~)/;
+
+	$: currentMessage = history.messages?.[messageId];
+	// Fenced code blocks can be much taller than the off-screen intrinsic estimate.
+	$: hasFencedCodeBlock = FENCED_CODE_BLOCK_REGEX.test(currentMessage?.content ?? '');
 </script>
 
 <div
 	role="listitem"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
-		: 'max-w-5xl'} mx-auto rounded-lg group message-listitem"
+		: 'max-w-5xl'} mx-auto rounded-lg group message-listitem {hasFencedCodeBlock
+		? 'message-listitem-eager'
+		: ''}"
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
@@ -136,5 +144,10 @@
 	.message-listitem {
 		content-visibility: auto;
 		contain-intrinsic-size: auto 150px;
+	}
+
+	.message-listitem-eager {
+		content-visibility: visible;
+		contain-intrinsic-size: none;
 	}
 </style>
