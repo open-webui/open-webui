@@ -6,6 +6,7 @@ import copy
 import inspect
 import json
 import logging
+import os
 import re
 from functools import partial, update_wrapper
 from typing import (
@@ -58,6 +59,7 @@ from open_webui.tools.builtin import (
     fetch_url,
     generate_image,
     get_current_timestamp,
+    kb_exec,
     list_automations,
     list_knowledge,
     list_knowledge_bases,
@@ -431,30 +433,26 @@ async def get_builtin_tools(
     if folder_knowledge:
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
     if is_builtin_tool_enabled('knowledge'):
-        if model_knowledge:
-            # Model has attached knowledge - provide discovery, search and semantic tools
-            builtin_functions.append(list_knowledge)
-            builtin_functions.append(search_knowledge_files)
+        from open_webui.env import ENABLE_KB_EXEC
+
+        if ENABLE_KB_EXEC:
+            builtin_functions.append(kb_exec)
             builtin_functions.append(query_knowledge_files)
+            if not model_knowledge:
+                builtin_functions.append(query_knowledge_bases)
+        elif model_knowledge:
+            builtin_functions.extend([list_knowledge, search_knowledge_files, query_knowledge_files])
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
-                builtin_functions.append(view_file)
-                builtin_functions.append(view_knowledge_file)
+                builtin_functions.extend([view_file, view_knowledge_file])
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
-            # No model knowledge - allow full KB browsing
-            builtin_functions.extend(
-                [
-                    list_knowledge_bases,
-                    search_knowledge_bases,
-                    query_knowledge_bases,
-                    search_knowledge_files,
-                    query_knowledge_files,
-                    view_knowledge_file,
-                ]
-            )
+            builtin_functions.extend([
+                list_knowledge_bases, search_knowledge_bases, query_knowledge_bases,
+                search_knowledge_files, query_knowledge_files, view_knowledge_file,
+            ])
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):

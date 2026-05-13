@@ -756,6 +756,7 @@ TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
 SAFE_MODE = os.getenv('SAFE_MODE', 'False').lower() == 'true'
 ENABLE_EASTER_EGGS = os.getenv('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
 ENABLE_STAR_SESSIONS_MIDDLEWARE = os.getenv('ENABLE_STAR_SESSIONS_MIDDLEWARE', 'False').lower() == 'true'
+ENABLE_KB_EXEC = os.getenv('ENABLE_KB_EXEC', 'False').lower() == 'true'
 
 ENABLE_PROFILE_IMAGE_URL_FORWARDING = os.getenv('ENABLE_PROFILE_IMAGE_URL_FORWARDING', 'True').lower() == 'true'
 PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
