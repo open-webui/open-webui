@@ -15,8 +15,9 @@
   font-display: swap;
 }
 
-/* VITRIX demo sticker */
+/* VITRIX demo sticker — only shown on the chat screen at lg+ breakpoint */
 #vitrix-sticker {
+  display: none;
   position: fixed;
   bottom: 1rem;
   right: 1rem;
@@ -32,6 +33,12 @@
   text-decoration: none;
   letter-spacing: 0.05em;
   transition: background 0.2s;
+}
+
+@media (min-width: 1024px) {
+  body:has(#chat-container) #vitrix-sticker {
+    display: inline-block;
+  }
 }
 
 #vitrix-sticker:hover {
