@@ -1809,6 +1809,8 @@ async def grep_knowledge_files(
                 files_to_search.append(file)
         elif __model_knowledge__:
             # Scoped to model's attached knowledge
+            from open_webui.models.access_grants import AccessGrants
+
             seen_ids = set()
             for item in __model_knowledge__:
                 item_type = item.get('type')
@@ -1822,12 +1824,25 @@ async def grep_knowledge_files(
                     knowledge = await Knowledges.get_knowledge_by_id(item_id)
                     if not knowledge:
                         continue
-                    for fid in (knowledge.data or {}).get('file_ids', []):
-                        if fid not in seen_ids:
-                            file = await Files.get_file_by_id(fid)
-                            if file:
-                                files_to_search.append(file)
-                                seen_ids.add(fid)
+                    # Verify user can access this KB
+                    if not (
+                        user_role == 'admin'
+                        or knowledge.user_id == user_id
+                        or await AccessGrants.has_access(
+                            user_id=user_id,
+                            resource_type='knowledge',
+                            resource_id=knowledge.id,
+                            permission='read',
+                            user_group_ids=set(user_group_ids),
+                        )
+                    ):
+                        continue
+                    kb_files = await Knowledges.get_files_by_id(item_id)
+                    if kb_files:
+                        for f in kb_files:
+                            if f.id not in seen_ids:
+                                files_to_search.append(f)
+                                seen_ids.add(f.id)
         else:
             # All accessible knowledge bases — use the same search pattern as list_knowledge_bases
             result = await Knowledges.search_knowledge_bases(
