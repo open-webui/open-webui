@@ -28,8 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
-- 🚨 **"/api/version" now requires authentication.** External tools that previously polled "/api/version" without credentials (uptime monitors, readiness probes, CI scripts, version-check integrations) will now receive a 401 response and must be updated to authenticate. [Commit](https://github.com/open-webui/open-webui/commit/245e0ee029e9e10617f62953a9e6f67dd00ecf81)
-- 🔐 **Reduced public "/api/config" exposure.** The "/api/config" response no longer includes the version number or several feature flags ("enable_api_keys", "enable_password_change_form", "enable_version_update_check", "enable_public_active_users_count", "enable_easter_eggs") for unauthenticated callers, reducing information disclosure to anonymous visitors. [Commit](https://github.com/open-webui/open-webui/commit/245e0ee029e9e10617f62953a9e6f67dd00ecf81)
+- 🔐 **Reduced public "/api/config" exposure.** The "/api/config" response no longer includes several feature flags ("enable_api_keys", "enable_password_change_form", "enable_version_update_check", "enable_public_active_users_count", "enable_easter_eggs") for unauthenticated callers, reducing information disclosure to anonymous visitors. [Commit](https://github.com/open-webui/open-webui/commit/245e0ee029e9e10617f62953a9e6f67dd00ecf81), [Commit](https://github.com/open-webui/open-webui/commit/ae06e199d5d3f65296a978cc35079bdacba596d2)
 
 ## [0.9.5] - 2026-05-09
 
