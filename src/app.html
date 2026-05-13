@@ -235,6 +235,17 @@
 			background: #983724;
 		}
 
+		/* Inset the splash so the Swept shell rail (loader.js, .swept-shell at
+		   left:0/width:16rem) is visible during boot. Mirrors the existing
+		   1024px breakpoint and html.swept-shell-active selector used by
+		   custom.css to shift the rest of the app right by 16rem. */
+		@media (min-width: 1024px) {
+			html.swept-shell-active #splash-screen {
+				left: 16rem;
+				width: calc(100% - 16rem);
+			}
+		}
+
 		#logo-her {
 			display: none;
 		}
