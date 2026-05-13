@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.6] - 2026-05-13
+
+### Added
+
+- 🗂️ **Knowledge base folders.** Files inside a knowledge base can now be organized into nested folders, with breadcrumb navigation that makes it much easier to manage and find content in large collections. [Commit](https://github.com/open-webui/open-webui/commit/c2cbc47ca76ebfa21e1d36279dbd859283cbbfb1), [Commit](https://github.com/open-webui/open-webui/commit/ab0ee858b73738c5b77d1d455e66e66bc61df1c4), [Commit](https://github.com/open-webui/open-webui/commit/2ad327a4dce64a8eedf5eb41c73b8520344fdd82), [Commit](https://github.com/open-webui/open-webui/commit/171150c1e12b5713f77a5ea0dd19c6581c7bef2e), [Commit](https://github.com/open-webui/open-webui/commit/e7d2ddbb1d14c03a52797751d24a98132aac0cd8), [Commit](https://github.com/open-webui/open-webui/commit/32a417bbf66ed28a5ca8a759ad3a87b2a2aa358a)
+- 🧰 **Filesystem tool for knowledge bases.** A new built-in tool, enabled via the "ENABLE_KB_EXEC" environment variable, lets AI models browse and search knowledge base contents using familiar filesystem commands such as 'ls', 'cat', 'grep', 'find', 'head', 'tail', and 'sed', including pipes between them. [Commit](https://github.com/open-webui/open-webui/commit/5b125c24d4eae925d3287efa626595bab29d5c33), [Commit](https://github.com/open-webui/open-webui/commit/ecec86dd32aa396dd5a383e9be5b0f16c4346c48), [Commit](https://github.com/open-webui/open-webui/commit/9ef579ce4be5b82f9281b085a621fed5b04e0d26), [Commit](https://github.com/open-webui/open-webui/commit/2f642754ac6b8c430228a7fc289357a6c6652235), [Commit](https://github.com/open-webui/open-webui/commit/3b00e5721a60518ea317c4fd61a6d0d182961a2f), [Commit](https://github.com/open-webui/open-webui/commit/4e78b355efe0611f27fddef591c69f7c1259a9f6), [Commit](https://github.com/open-webui/open-webui/commit/74f95a9b0d6b89b241701422170d54e21e701baa)
+- ✏️ **File renaming in knowledge bases.** Files inside a knowledge base can now be renamed directly from the workspace, with the new name reflected wherever the file is referenced. [Commit](https://github.com/open-webui/open-webui/commit/3127f1b46255626ea92eb0b598e45078287303f1)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Spanish (Spain) were enhanced and expanded.
+
+### Fixed
+
+- 🔌 **API chat completions reliability.** Direct calls to the chat completions API no longer fail with an internal error when no chat session identifier is supplied. [#24553](https://github.com/open-webui/open-webui/issues/24553), [Commit](https://github.com/open-webui/open-webui/commit/bc244fdc90504824b76654880898bf3f6649c299)
+- 🐘 **Knowledge search on large documents.** Searching knowledge bases on PostgreSQL no longer fails when scanning across documents with very large extracted text content. [#24670](https://github.com/open-webui/open-webui/issues/24670), [Commit](https://github.com/open-webui/open-webui/commit/d74ee34d9128295faa116c919bd1dcca77744975)
+- 🩺 **Database health check recovery.** After a transient database connection error, the health check endpoint now recovers automatically instead of staying permanently broken on the affected worker. [Commit](https://github.com/open-webui/open-webui/commit/0b81520e072bb4ed15532b8e153b43dd3243feaf)
+
+### Changed
+
+- ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
+
 ## [0.9.5] - 2026-05-09
 
 ### Added
