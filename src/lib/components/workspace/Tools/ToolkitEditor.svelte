@@ -1,4 +1,5 @@
 <script>
+	import { extractFrontmatter, nameToId } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
@@ -8,7 +9,7 @@
 	import { user } from '$lib/stores';
 	import { updateToolAccessGrants } from '$lib/apis/tools';
 
-	import { nameToId } from '$lib/utils';
+
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
@@ -35,6 +36,11 @@
 	export let content = '';
 	export let accessGrants = [];
 
+	let hasManualName = false;
+	let hasManualId = false;
+	let hasManualDescription = false;
+	let isFrontmatterDetected = false;
+
 	let _content = '';
 
 	$: if (content) {
@@ -45,7 +51,27 @@
 		_content = content;
 	};
 
-	$: if (name && !edit && !clone) {
+	// Auto-detect frontmatter and fill name/description in create mode
+	const handleContentChange = (newContent) => {
+		if (edit) return;
+		const fm = extractFrontmatter(newContent);
+		if (fm.title) {
+			isFrontmatterDetected = true;
+			if (!hasManualName) {
+				name = fm.title.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+			}
+			if (!hasManualId) {
+				id = nameToId(fm.title);
+			}
+		} else {
+			isFrontmatterDetected = false;
+		}
+		if (fm.description && !hasManualDescription) {
+			meta = { ...meta, description: fm.description };
+		}
+	};
+
+	$: if (name && !edit && !clone && !isFrontmatterDetected) {
 		id = nameToId(name);
 	}
 
@@ -246,6 +272,7 @@ class Tools:
 									placeholder={$i18n.t('Tool Name')}
 									aria-label={$i18n.t('Tool Name')}
 									bind:value={name}
+									on:input={() => { hasManualName = true; }}
 									required
 								/>
 							</Tooltip>
@@ -281,6 +308,7 @@ class Tools:
 									placeholder={$i18n.t('Tool ID')}
 									aria-label={$i18n.t('Tool ID')}
 									bind:value={id}
+									on:input={() => { hasManualId = true; }}
 									required
 									disabled={edit}
 								/>
@@ -298,6 +326,7 @@ class Tools:
 								placeholder={$i18n.t('Tool Description')}
 								aria-label={$i18n.t('Tool Description')}
 								bind:value={meta.description}
+								on:input={() => { hasManualDescription = true; }}
 								required
 							/>
 						</Tooltip>
@@ -312,6 +341,7 @@ class Tools:
 						{boilerplate}
 						onChange={(e) => {
 							_content = e;
+							handleContentChange(e);
 						}}
 						onSave={async () => {
 							if (formElement) {

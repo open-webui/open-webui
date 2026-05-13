@@ -4,7 +4,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { nameToId } from '$lib/utils';
+	import { extractFrontmatter, nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -28,6 +28,11 @@
 	export let content = '';
 	let _content = '';
 
+	let hasManualName = false;
+	let hasManualId = false;
+	let hasManualDescription = false;
+	let isFrontmatterDetected = false;
+
 	$: if (content) {
 		updateContent();
 	}
@@ -36,7 +41,27 @@
 		_content = content;
 	};
 
-	$: if (name && !edit && !clone) {
+	// Auto-detect frontmatter and fill name/description in create mode
+	const handleContentChange = (newContent) => {
+		if (edit) return;
+		const fm = extractFrontmatter(newContent);
+		if (fm.title) {
+			isFrontmatterDetected = true;
+			if (!hasManualName) {
+				name = fm.title.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+			}
+			if (!hasManualId) {
+				id = nameToId(fm.title);
+			}
+		} else {
+			isFrontmatterDetected = false;
+		}
+		if (fm.description && !hasManualDescription) {
+			meta = { ...meta, description: fm.description };
+		}
+	};
+
+	$: if (name && !edit && !clone && !isFrontmatterDetected) {
 		id = nameToId(name);
 	}
 
@@ -323,6 +348,7 @@ class Pipe:
 									type="text"
 									placeholder={$i18n.t('Function Name')}
 									bind:value={name}
+									on:input={() => { hasManualName = true; }}
 									required
 								/>
 							</Tooltip>
@@ -345,6 +371,7 @@ class Pipe:
 									type="text"
 									placeholder={$i18n.t('Function ID')}
 									bind:value={id}
+									on:input={() => { hasManualId = true; }}
 									required
 									disabled={edit}
 								/>
@@ -361,6 +388,7 @@ class Pipe:
 								type="text"
 								placeholder={$i18n.t('Function Description')}
 								bind:value={meta.description}
+								on:input={() => { hasManualDescription = true; }}
 								required
 							/>
 						</Tooltip>
@@ -375,6 +403,7 @@ class Pipe:
 						{boilerplate}
 						onChange={(e) => {
 							_content = e;
+							handleContentChange(e);
 						}}
 						onSave={async () => {
 							if (formElement) {
