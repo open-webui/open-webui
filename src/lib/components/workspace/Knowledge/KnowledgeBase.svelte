@@ -40,9 +40,10 @@
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl } from '$lib/utils';
+	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
@@ -1029,6 +1030,20 @@
 						/>
 					</div>
 				</div>
+			</div>
+
+			<div class="flex items-center gap-2 mt-0.5">
+				<Tooltip content={$i18n.t('Click to copy ID')}>
+					<button
+						class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
+						on:click={() => {
+							copyToClipboard(id);
+							toast.success($i18n.t('ID copied to clipboard'));
+						}}
+					>
+						{id}
+					</button>
+				</Tooltip>
 			</div>
 		</div>
 
