@@ -233,6 +233,12 @@
 				await processNextInQueue(chatIdProp);
 			}
 
+			// Always apply the model's defaults (tools, filters, features) on chat open
+			// so per-model configuration is consistently reflected regardless of any
+			// stale draft state in sessionStorage. The draft only restores user-typed
+			// state (prompt and files) below.
+			await setDefaults();
+
 			if (storageChatInput) {
 				try {
 					const input = JSON.parse(storageChatInput);
@@ -240,15 +246,8 @@
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						selectedFilterIds = input.selectedFilterIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
 				} catch (e) {}
-			} else {
-				await setDefaults();
 			}
 
 			const chatInput = document.getElementById('chat-input');
@@ -807,11 +806,6 @@
 				messageInput?.setText('');
 
 				files = [];
-				selectedToolIds = [];
-				selectedFilterIds = [];
-				webSearchEnabled = false;
-				imageGenerationEnabled = false;
-				codeInterpreterEnabled = false;
 
 				try {
 					const input = JSON.parse(storageChatInput);
@@ -819,11 +813,6 @@
 					if (!$temporaryChatEnabled) {
 						messageInput?.setText(input.prompt);
 						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						selectedFilterIds = input.selectedFilterIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
 				} catch (e) {}
 			}
