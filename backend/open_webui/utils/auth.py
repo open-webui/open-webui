@@ -19,8 +19,6 @@ import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
 
-from opentelemetry import trace
-
 
 from open_webui.utils.access_control import has_permission
 from open_webui.models.users import Users
@@ -30,6 +28,7 @@ from open_webui.models.auths import Auths
 from open_webui.constants import ERROR_MESSAGES
 
 from open_webui.env import (
+    ENABLE_OTEL,
     ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
@@ -206,7 +205,7 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
         payload.update({'exp': expire})
 
     jti = str(uuid.uuid4())
-    payload.update({'jti': jti})
+    payload.update({'jti': jti, 'iat': datetime.now(UTC)})
 
     encoded_jwt = jwt.encode(payload, SESSION_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
@@ -221,14 +220,33 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 async def is_valid_token(request, decoded) -> bool:
-    # Require Redis to check revoked tokens
+    """
+    Check whether a JWT has been revoked. Two mechanisms:
+    1. Per-token (jti) — used by user-initiated sign-out (known jti).
+    2. Per-user (revoked_at) — used by OIDC back-channel logout when
+       individual jti values are unknown; rejects tokens with iat <= revoked_at.
+    """
     if request.app.state.redis:
+        # Per-token revocation
         jti = decoded.get('jti')
-
         if jti:
             revoked = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
             if revoked:
                 return False
+
+        # Per-user revocation (OIDC back-channel logout)
+        user_id = decoded.get('id')
+        if user_id:
+            revoked_at = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
+            if revoked_at:
+                try:
+                    revoked_at_ts = int(revoked_at)
+                    token_iat = decoded.get('iat')
+                    # No iat means legacy token — reject since we can't verify issue time
+                    if token_iat is None or token_iat <= revoked_at_ts:
+                        return False
+                except (ValueError, TypeError):
+                    pass
 
     return True
 
@@ -303,15 +321,18 @@ async def get_current_user(
 
     # auth by api key
     if token.startswith('sk-'):
-        user = get_current_user_by_api_key(request, token)
+        user = await get_current_user_by_api_key(request, token)
 
         # Add user info to current span
-        current_span = trace.get_current_span()
-        if current_span:
-            current_span.set_attribute('client.user.id', user.id)
-            current_span.set_attribute('client.user.email', user.email)
-            current_span.set_attribute('client.user.role', user.role)
-            current_span.set_attribute('client.auth.type', 'api_key')
+        if ENABLE_OTEL:
+            from opentelemetry import trace
+
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute('client.user.id', user.id)
+                current_span.set_attribute('client.user.email', user.email)
+                current_span.set_attribute('client.user.role', user.role)
+                current_span.set_attribute('client.auth.type', 'api_key')
 
         return user
 
@@ -332,7 +353,7 @@ async def get_current_user(
                     detail='Invalid token',
                 )
 
-            user = Users.get_user_by_id(data['id'])
+            user = await Users.get_user_by_id(data['id'])
             if user is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -348,17 +369,21 @@ async def get_current_user(
                         )
 
                 # Add user info to current span
-                current_span = trace.get_current_span()
-                if current_span:
-                    current_span.set_attribute('client.user.id', user.id)
-                    current_span.set_attribute('client.user.email', user.email)
-                    current_span.set_attribute('client.user.role', user.role)
-                    current_span.set_attribute('client.auth.type', 'jwt')
+                if ENABLE_OTEL:
+                    from opentelemetry import trace
 
-                # Refresh the user's last active timestamp asynchronously
-                # to prevent blocking the request
-                if background_tasks:
-                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
+                    current_span = trace.get_current_span()
+                    if current_span:
+                        current_span.set_attribute('client.user.id', user.id)
+                        current_span.set_attribute('client.user.email', user.email)
+                        current_span.set_attribute('client.user.role', user.role)
+                        current_span.set_attribute('client.auth.type', 'jwt')
+
+                # Refresh the user's last active timestamp
+                # Fire-and-forget via asyncio.create_task to avoid blocking
+                import asyncio
+
+                asyncio.create_task(Users.update_last_active_by_id(user.id))
             return user
         else:
             raise HTTPException(
@@ -380,9 +405,9 @@ async def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(request, api_key: str):
+async def get_current_user_by_api_key(request, api_key: str):
     # Each function call manages its own short-lived session internally
-    user = Users.get_user_by_api_key(api_key)
+    user = await Users.get_user_by_api_key(api_key)
 
     if user is None:
         raise HTTPException(
@@ -392,7 +417,7 @@ def get_current_user_by_api_key(request, api_key: str):
 
     if not request.state.enable_api_keys or (
         user.role != 'admin'
-        and not has_permission(
+        and not await has_permission(
             user.id,
             'features.api_keys',
             request.app.state.config.USER_PERMISSIONS,
@@ -400,15 +425,33 @@ def get_current_user_by_api_key(request, api_key: str):
     ):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
 
-    # Add user info to current span
-    current_span = trace.get_current_span()
-    if current_span:
-        current_span.set_attribute('client.user.id', user.id)
-        current_span.set_attribute('client.user.email', user.email)
-        current_span.set_attribute('client.user.role', user.role)
-        current_span.set_attribute('client.auth.type', 'api_key')
+    # Enforce endpoint restrictions — checked here (not in middleware)
+    # so it applies regardless of how the API key was transported
+    # (Authorization header, cookie, x-api-key header, etc.).
+    if request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
+        allowed_paths = [
+            path.strip() for path in str(request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',') if path.strip()
+        ]
+        request_path = request.url.path
+        is_allowed = any(request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths)
+        if not is_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
-    Users.update_last_active_by_id(user.id)
+    # Add user info to current span
+    if ENABLE_OTEL:
+        from opentelemetry import trace
+
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute('client.user.id', user.id)
+            current_span.set_attribute('client.user.email', user.email)
+            current_span.set_attribute('client.user.role', user.role)
+            current_span.set_attribute('client.auth.type', 'api_key')
+
+    await Users.update_last_active_by_id(user.id)
     return user
 
 
@@ -430,7 +473,7 @@ def get_admin_user(user=Depends(get_current_user)):
     return user
 
 
-def create_admin_user(email: str, password: str, name: str = 'Admin'):
+async def create_admin_user(email: str, password: str, name: str = 'Admin'):
     """
     Create an admin user from environment variables.
     Used for headless/automated deployments.
@@ -440,14 +483,14 @@ def create_admin_user(email: str, password: str, name: str = 'Admin'):
     if not email or not password:
         return None
 
-    if Users.has_users():
+    if await Users.has_users():
         log.debug('Users already exist, skipping admin creation')
         return None
 
     log.info(f'Creating admin account from environment variables: {email}')
     try:
         hashed = get_password_hash(password)
-        user = Auths.insert_new_auth(
+        user = await Auths.insert_new_auth(
             email=email.lower(),
             password=hashed,
             name=name,

@@ -13,7 +13,10 @@
 	} from '$lib/stores';
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
+
+	import { toast } from 'svelte-sonner';
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -27,6 +30,7 @@
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -374,6 +378,39 @@
 									</Tooltip>
 								</div>
 							</div>
+
+							{#if (tools[toolId]?.authenticated ?? true) && toolId.startsWith('server:mcp:')}
+								<div class="shrink-0">
+									<Tooltip content={$i18n.t('Disconnect OAuth')}>
+										<button
+											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+											type="button"
+											on:click={async (e) => {
+												e.stopPropagation();
+												e.preventDefault();
+
+												const parts = toolId.split(':');
+												const serverId = parts.at(-1) ?? toolId;
+												const provider = `mcp:${serverId}`;
+
+												try {
+													await deleteOAuthSession(localStorage.token, provider);
+													toast.success($i18n.t('OAuth session disconnected'));
+
+													// Refresh tools to update authenticated state
+													_tools.set(await getTools(localStorage.token));
+													selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+													await init();
+												} catch (err) {
+													toast.error(err ?? $i18n.t('Failed to disconnect'));
+												}
+											}}
+										>
+											<LinkSlash className="size-3.5" />
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
 
 							{#if tools[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
 								<div class=" shrink-0">

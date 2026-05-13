@@ -51,6 +51,7 @@
 				type="button"
 				on:click={() => {
 					uploadFilesHandler();
+					show = false;
 				}}
 			>
 				<Clip />
@@ -62,6 +63,7 @@
 				type="button"
 				on:click={() => {
 					screenCaptureHandler();
+					show = false;
 				}}
 			>
 				<Camera />

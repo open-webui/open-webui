@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { getContext, tick, onDestroy } from 'svelte';
 	import { formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
@@ -8,6 +9,7 @@
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
 	import Pencil from '../../icons/Pencil.svelte';
+	import Clipboard from '../../icons/Clipboard.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +30,17 @@
 	export let selectedPaths: Set<string> = new Set();
 	export let onSelect: (entry: FileEntry, event: MouseEvent) => void = () => {};
 	export let onLongPress: () => void = () => {};
+	export let showDate: boolean = false;
+
+	const formatRelativeTime = (epoch: number): string => {
+		const diff = Math.floor(Date.now() / 1000) - epoch;
+		if (diff < 60) return 'just now';
+		if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+		if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+		if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+		if (diff < 31536000) return `${Math.floor(diff / 2592000)}mo ago`;
+		return `${Math.floor(diff / 31536000)}y ago`;
+	};
 
 	let dragOverFolder = false;
 
@@ -269,7 +282,14 @@
 				</span>
 			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
+				{#if showDate && entry.modified}
+					<span class="text-[10px] text-gray-400 shrink-0"
+						>{formatRelativeTime(entry.modified)}</span
+					>
+				{/if}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
+			{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}
+				<span class="text-[10px] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
 			{/if}
 		</button>
 
@@ -313,6 +333,24 @@
 							/>
 						</svg>
 						<div class="flex items-center">{$i18n.t('Download')}</div>
+					</button>
+
+					<button
+						type="button"
+						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						on:click={(e) => {
+							e.stopPropagation();
+							const path =
+								entry.type === 'directory'
+									? `${currentPath}${entry.name}/`
+									: `${currentPath}${entry.name}`;
+							navigator.clipboard.writeText(path).then(() => {
+								toast.success($i18n.t('Path copied'));
+							});
+						}}
+					>
+						<Clipboard className="size-4" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Copy Path')}</div>
 					</button>
 
 					<button

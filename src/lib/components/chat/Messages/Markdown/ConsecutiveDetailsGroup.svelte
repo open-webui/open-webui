@@ -30,8 +30,9 @@
 	}> = [];
 
 	export let messageDone = true;
+	export let allowEmbeds = true;
 
-	let open = false;
+	let open = $settings?.expandDetails ?? false;
 
 	function parseJSONString(str: string) {
 		try {
@@ -51,6 +52,8 @@
 
 	// Collect all embeds from tool_calls tokens
 	$: allEmbeds = (() => {
+		if (!allowEmbeds) return [];
+
 		const result: Array<{ name: string; embed: string; args: string }> = [];
 		for (const t of tokens) {
 			if (t?.attributes?.type !== 'tool_calls') continue;

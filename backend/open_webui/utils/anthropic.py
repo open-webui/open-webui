@@ -181,17 +181,99 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     )
                 elif block_type == 'tool_result':
                     # Tool results become separate tool messages in OpenAI format
-                    tool_content = block.get('content', '')
-                    if isinstance(tool_content, list):
-                        tool_text_parts = []
-                        for tc in tool_content:
-                            if isinstance(tc, dict) and tc.get('type') == 'text':
-                                tool_text_parts.append(tc.get('text', ''))
-                        tool_content = '\n'.join(tool_text_parts)
+                    tool_result_content = block.get('content', '')
+                    tool_content: str | list = ''
+
+                    if isinstance(tool_result_content, str):
+                        tool_content = tool_result_content
+                    elif isinstance(tool_result_content, list):
+                        # Build a multimodal content array to preserve
+                        # images and other non-text content types.
+                        converted_parts = []
+                        for content_block in tool_result_content:
+                            if not isinstance(content_block, dict):
+                                continue
+                            content_type = content_block.get('type', 'text')
+
+                            if content_type == 'text':
+                                converted_parts.append(
+                                    {
+                                        'type': 'text',
+                                        'text': content_block.get('text', ''),
+                                    }
+                                )
+                            elif content_type == 'image':
+                                source = content_block.get('source', {})
+                                if source.get('type') == 'base64':
+                                    media_type = source.get('media_type', 'image/png')
+                                    data = source.get('data', '')
+                                    converted_parts.append(
+                                        {
+                                            'type': 'image_url',
+                                            'image_url': {
+                                                'url': f'data:{media_type};base64,{data}',
+                                            },
+                                        }
+                                    )
+                                elif source.get('type') == 'url':
+                                    converted_parts.append(
+                                        {
+                                            'type': 'image_url',
+                                            'image_url': {
+                                                'url': source.get('url', ''),
+                                            },
+                                        }
+                                    )
+                            elif content_type == 'document':
+                                # Documents have no direct OpenAI equivalent;
+                                # convert to a text representation.
+                                document_source = content_block.get('source', {})
+                                document_title = content_block.get('title', 'Document')
+                                document_context = content_block.get('context', '')
+                                document_text = f'[Document: {document_title}]'
+                                if document_context:
+                                    document_text += f'\n{document_context}'
+                                if document_source.get('type') == 'text' and document_source.get('data'):
+                                    document_text += f'\n{document_source["data"]}'
+                                converted_parts.append({'type': 'text', 'text': document_text})
+                            elif content_type == 'search_result':
+                                # Convert search results to a text
+                                # representation with source attribution.
+                                search_title = content_block.get('title', '')
+                                search_url = content_block.get('source', '')
+                                search_content_blocks = content_block.get('content', [])
+                                search_texts = []
+                                for search_block in search_content_blocks:
+                                    if isinstance(search_block, dict) and search_block.get('type') == 'text':
+                                        search_texts.append(search_block.get('text', ''))
+                                search_body = '\n'.join(search_texts)
+                                search_text = f'[Search Result: {search_title}]'
+                                if search_url:
+                                    search_text += f'\nSource: {search_url}'
+                                if search_body:
+                                    search_text += f'\n{search_body}'
+                                converted_parts.append({'type': 'text', 'text': search_text})
+
+                        # Flatten to string when only text parts are present
+                        if all(part.get('type') == 'text' for part in converted_parts):
+                            tool_content = '\n'.join(part.get('text', '') for part in converted_parts)
+                        elif converted_parts:
+                            tool_content = converted_parts
+                        else:
+                            tool_content = ''
 
                     # Propagate error status if present
                     if block.get('is_error'):
-                        tool_content = f'Error: {tool_content}'
+                        if isinstance(tool_content, str):
+                            tool_content = f'Error: {tool_content}'
+                        elif isinstance(tool_content, list):
+                            tool_content.insert(
+                                0,
+                                {
+                                    'type': 'text',
+                                    'text': 'Error: ',
+                                },
+                            )
 
                     messages.append(
                         {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -7,19 +7,6 @@
 
 	export let filters = [];
 	export let selectedFilterIds = [];
-
-	let _filters = {};
-
-	onMount(() => {
-		_filters = filters.reduce((acc, filter) => {
-			acc[filter.id] = {
-				...filter,
-				selected: selectedFilterIds.includes(filter.id)
-			};
-
-			return acc;
-		}, {});
-	});
 </script>
 
 <div>
@@ -30,21 +17,27 @@
 	<div class="flex flex-col">
 		{#if filters.length > 0}
 			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_filters) as filter, filterIdx}
+				{#each filters as filter}
+					{@const isSelected = selectedFilterIds.includes(filter.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_filters[filter].selected ? 'checked' : 'unchecked'}
+								state={isSelected ? 'checked' : 'unchecked'}
 								on:change={(e) => {
-									_filters[filter].selected = e.detail === 'checked';
-									selectedFilterIds = Object.keys(_filters).filter((t) => _filters[t].selected);
+									if (e.detail === 'checked') {
+										if (!selectedFilterIds.includes(filter.id)) {
+											selectedFilterIds = [...selectedFilterIds, filter.id];
+										}
+									} else {
+										selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
+									}
 								}}
 							/>
 						</div>
 
 						<div class=" py-0.5 text-sm w-full capitalize font-medium">
-							<Tooltip content={_filters[filter].meta.description}>
-								{_filters[filter].name}
+							<Tooltip content={filter.meta.description}>
+								{filter.name}
 							</Tooltip>
 						</div>
 					</div>

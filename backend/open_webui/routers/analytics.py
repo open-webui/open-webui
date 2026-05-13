@@ -11,8 +11,8 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.models.feedbacks import Feedbacks
 from open_webui.utils.auth import get_admin_user
-from open_webui.internal.db import get_session
-from sqlalchemy.orm import Session
+from open_webui.internal.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +59,12 @@ async def get_model_analytics(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts per model."""
-    counts = ChatMessages.get_message_count_by_model(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
+    counts = await ChatMessages.get_message_count_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
     models = [
         ModelAnalyticsEntry(model_id=model_id, count=count)
         for model_id, count in sorted(counts.items(), key=lambda x: -x[1])
@@ -77,17 +79,19 @@ async def get_user_analytics(
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     limit: int = Query(50, description='Max users to return'),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts and token usage per user with user info."""
-    counts = ChatMessages.get_message_count_by_user(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
-    token_usage = ChatMessages.get_token_usage_by_user(
+    counts = await ChatMessages.get_message_count_by_user(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    token_usage = await ChatMessages.get_token_usage_by_user(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
     # Get user info for top users
     top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
-    user_info = {u.id: u for u in Users.get_users_by_user_ids(top_user_ids, db=db)}
+    user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
 
     users = []
     for user_id in top_user_ids:
@@ -118,13 +122,13 @@ async def get_messages(
     skip: int = Query(0),
     limit: int = Query(50, le=100),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Query messages with filters."""
     if chat_id:
-        return ChatMessages.get_messages_by_chat_id(chat_id=chat_id, db=db)
+        return await ChatMessages.get_messages_by_chat_id(chat_id=chat_id, db=db)
     elif model_id:
-        return ChatMessages.get_messages_by_model_id(
+        return await ChatMessages.get_messages_by_model_id(
             model_id=model_id,
             start_date=start_date,
             end_date=end_date,
@@ -133,7 +137,7 @@ async def get_messages(
             db=db,
         )
     elif user_id:
-        return ChatMessages.get_messages_by_user_id(user_id=user_id, skip=skip, limit=limit, db=db)
+        return await ChatMessages.get_messages_by_user_id(user_id=user_id, skip=skip, limit=limit, db=db)
     else:
         # Return empty if no filter specified
         return []
@@ -152,16 +156,16 @@ async def get_summary(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get summary statistics for the dashboard."""
-    model_counts = ChatMessages.get_message_count_by_model(
+    model_counts = await ChatMessages.get_message_count_by_model(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
-    user_counts = ChatMessages.get_message_count_by_user(
+    user_counts = await ChatMessages.get_message_count_by_user(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
-    chat_counts = ChatMessages.get_message_count_by_chat(
+    chat_counts = await ChatMessages.get_message_count_by_chat(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
@@ -189,13 +193,13 @@ async def get_daily_stats(
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     granularity: str = Query('daily', description="Granularity: 'hourly' or 'daily'"),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts grouped by model for time-series chart."""
     if granularity == 'hourly':
-        counts = ChatMessages.get_hourly_message_counts_by_model(start_date=start_date, end_date=end_date, db=db)
+        counts = await ChatMessages.get_hourly_message_counts_by_model(start_date=start_date, end_date=end_date, db=db)
     else:
-        counts = ChatMessages.get_daily_message_counts_by_model(
+        counts = await ChatMessages.get_daily_message_counts_by_model(
             start_date=start_date, end_date=end_date, group_id=group_id, db=db
         )
     return DailyStatsResponse(
@@ -224,10 +228,12 @@ async def get_token_usage(
     end_date: Optional[int] = Query(None),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get token usage aggregated by model."""
-    usage = ChatMessages.get_token_usage_by_model(start_date=start_date, end_date=end_date, group_id=group_id, db=db)
+    usage = await ChatMessages.get_token_usage_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
 
     models = [
         TokenUsageEntry(model_id=model_id, **data)
@@ -271,12 +277,12 @@ async def get_model_chats(
     skip: int = Query(0),
     limit: int = Query(50, le=100),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get chats that used a specific model, with preview and feedback info."""
 
     # Get chat IDs that used this model
-    chat_ids = ChatMessages.get_chat_ids_by_model_id(
+    chat_ids = await ChatMessages.get_chat_ids_by_model_id(
         model_id=model_id,
         start_date=start_date,
         end_date=end_date,
@@ -291,7 +297,7 @@ async def get_model_chats(
     # Get chat details from messages only
     chats_data = []
     for chat_id in chat_ids:
-        messages = ChatMessages.get_messages_by_chat_id(chat_id, db=db)
+        messages = await ChatMessages.get_messages_by_chat_id(chat_id, db=db)
         if not messages:
             continue
 
@@ -312,7 +318,7 @@ async def get_model_chats(
         # Get user info
         user_name = None
         if user_id:
-            user_info = Users.get_user_by_id(user_id, db=db)
+            user_info = await Users.get_user_by_id(user_id, db=db)
             user_name = user_info.name if user_info else None
 
         # Timestamps from messages
@@ -357,12 +363,12 @@ async def get_model_overview(
     model_id: str,
     days: int = Query(30, description='Number of days of history (0 for all)'),
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Get model overview with feedback history and chat tags."""
 
     # Get chat IDs that used this model
-    chat_ids = ChatMessages.get_chat_ids_by_model_id(
+    chat_ids = await ChatMessages.get_chat_ids_by_model_id(
         model_id=model_id,
         start_date=None,
         end_date=None,
@@ -381,7 +387,7 @@ async def get_model_overview(
         start_dt = now - timedelta(days=days)
 
     for chat_id in chat_ids:
-        feedbacks = Feedbacks.get_feedbacks_by_chat_id(chat_id, db=db)
+        feedbacks = await Feedbacks.get_feedbacks_by_chat_id(chat_id, db=db)
         for fb in feedbacks:
             if fb.data and 'rating' in fb.data:
                 rating = fb.data['rating']
@@ -425,7 +431,7 @@ async def get_model_overview(
     # Get chat tags
     tag_counts: dict[str, int] = defaultdict(int)
     for chat_id in chat_ids:
-        chat = Chats.get_chat_by_id(chat_id, db=db)
+        chat = await Chats.get_chat_by_id(chat_id, db=db)
         if chat and chat.meta:
             for tag in chat.meta.get('tags', []):
                 tag_counts[tag] += 1

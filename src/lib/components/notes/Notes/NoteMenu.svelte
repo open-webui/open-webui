@@ -8,6 +8,8 @@
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -16,6 +18,8 @@
 
 	export let onDownload = (type) => {};
 	export let onDelete = () => {};
+	export let onPin = null;
+	export let isPinned = false;
 
 	export let onCopyLink = null;
 	export let onCopyToClipboard = null;
@@ -108,6 +112,24 @@
 						</button>
 					{/if}
 				</DropdownSub>
+			{/if}
+
+			{#if onPin}
+				<button
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					on:click={() => {
+						onPin();
+						show = false;
+					}}
+				>
+					{#if isPinned}
+						<PinSlash />
+						<div class="flex items-center">{$i18n.t('Unpin')}</div>
+					{:else}
+						<Pin />
+						<div class="flex items-center">{$i18n.t('Pin to Sidebar')}</div>
+					{/if}
+				</button>
 			{/if}
 
 			<button

@@ -622,6 +622,25 @@
 						}
 					}
 				})
+			},
+			{
+				char: ':',
+				allowSpaces: false,
+				command: ({ editor, range, props }) => {
+					// Convert the Unicode hex codepoint (e.g. "1F44B") to the actual emoji character (👋)
+					const codepoint = props.id;
+					const emoji = String.fromCodePoint(parseInt(codepoint, 16));
+					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
+				},
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: () => {}
+				})
 			}
 		];
 		loaded = true;

@@ -102,9 +102,7 @@
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px] capitalize"
-						>{selectedLabel}</span
-					>
+					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px]">{selectedLabel}</span>
 				{/if}
 			</button>
 		</Tooltip>
@@ -127,7 +125,7 @@
 								class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
 								on:click|stopPropagation={() => {
 									show = false;
-									showSettings.set(true);
+									showSettings.set('tools');
 								}}
 							>
 								<svg

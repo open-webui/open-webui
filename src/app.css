@@ -243,8 +243,32 @@ select {
 	animation: smoothFadeIn 0.2s forwards;
 }
 
+@keyframes fade-in-token {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.fade-in-token {
+	animation: fade-in-token 100ms ease-out;
+}
+
 .katex-mathml {
 	display: none;
+}
+
+/* Hide leaked Mermaid temp containers if render cleanup misses.
+   Use visibility:hidden (not display:none) so mermaid can still
+   measure the SVG layout before extracting its HTML. */
+body > div[id^='dmermaid-'],
+body > iframe[id^='imermaid-'] {
+	position: fixed !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	overflow: hidden !important;
 }
 
 .scrollbar-hidden:active::-webkit-scrollbar-thumb,

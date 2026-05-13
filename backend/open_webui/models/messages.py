@@ -3,8 +3,9 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+from sqlalchemy import select, delete, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.users import Users, User, UserNameResponse
 from open_webui.models.channels import Channels, ChannelMember
@@ -12,7 +13,7 @@ from open_webui.models.channels import Channels, ChannelMember
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
-from sqlalchemy import or_, func, select, and_, text
+from sqlalchemy import or_, func, and_, text
 from sqlalchemy.sql import exists
 
 ####################
@@ -137,15 +138,15 @@ class MessageResponse(MessageReplyToResponse):
 
 
 class MessageTable:
-    def insert_new_message(
+    async def insert_new_message(
         self,
         form_data: MessageForm,
         channel_id: str,
         user_id: str,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[MessageModel]:
-        with get_db_context(db) as db:
-            channel_member = Channels.join_channel(channel_id, user_id)
+        async with get_async_db_context(db) as db:
+            channel_member = await Channels.join_channel(channel_id, user_id)
 
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
@@ -170,38 +171,38 @@ class MessageTable:
             result = Message(**message.model_dump())
 
             db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
             return MessageModel.model_validate(result) if result else None
 
-    def get_message_by_id(
+    async def get_message_by_id(
         self,
         id: str,
         include_thread_replies: Optional[bool] = True,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[MessageResponse]:
-        with get_db_context(db) as db:
-            message = db.get(Message, id)
+        async with get_async_db_context(db) as db:
+            message = await db.get(Message, id)
             if not message:
                 return None
 
             reply_to_message = (
-                self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
+                await self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                 if message.reply_to_id
                 else None
             )
 
-            reactions = self.get_reactions_by_message_id(id, db=db)
+            reactions = await self.get_reactions_by_message_id(id, db=db)
 
             thread_replies = []
             if include_thread_replies:
-                thread_replies = self.get_thread_replies_by_message_id(id, db=db)
+                thread_replies = await self.get_thread_replies_by_message_id(id, db=db)
 
             # Check if message was sent by webhook (webhook info in meta takes precedence)
             webhook_info = message.meta.get('webhook') if message.meta else None
             if webhook_info and webhook_info.get('id'):
                 # Look up webhook by ID to get current name
-                webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
+                webhook = await Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
                 if webhook:
                     user_info = {
                         'id': webhook.id,
@@ -216,7 +217,7 @@ class MessageTable:
                         'role': 'webhook',
                     }
             else:
-                user = Users.get_user_by_id(message.user_id, db=db)
+                user = await Users.get_user_by_id(message.user_id, db=db)
                 user_info = user.model_dump() if user else None
 
             return MessageResponse.model_validate(
@@ -230,34 +231,41 @@ class MessageTable:
                 }
             )
 
-    def get_thread_replies_by_message_id(self, id: str, db: Optional[Session] = None) -> list[MessageReplyToResponse]:
-        with get_db_context(db) as db:
-            all_messages = db.query(Message).filter_by(parent_id=id).order_by(Message.created_at.desc()).all()
+    async def _resolve_user_info(self, message: Message, db: AsyncSession) -> Optional[dict]:
+        """Resolve user info from message, handling webhook messages."""
+        webhook_info = message.meta.get('webhook') if message.meta else None
+        if webhook_info and webhook_info.get('id'):
+            webhook = await Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
+            if webhook:
+                return {
+                    'id': webhook.id,
+                    'name': webhook.name,
+                    'role': 'webhook',
+                }
+            else:
+                return {
+                    'id': webhook_info.get('id'),
+                    'name': 'Deleted Webhook',
+                    'role': 'webhook',
+                }
+        return None
+
+    async def get_thread_replies_by_message_id(
+        self, id: str, db: Optional[AsyncSession] = None
+    ) -> list[MessageReplyToResponse]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Message).filter_by(parent_id=id).order_by(Message.created_at.desc()))
+            all_messages = result.scalars().all()
 
             messages = []
             for message in all_messages:
                 reply_to_message = (
-                    self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
+                    await self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                     if message.reply_to_id
                     else None
                 )
 
-                webhook_info = message.meta.get('webhook') if message.meta else None
-                user_info = None
-                if webhook_info and webhook_info.get('id'):
-                    webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
-                    if webhook:
-                        user_info = {
-                            'id': webhook.id,
-                            'name': webhook.name,
-                            'role': 'webhook',
-                        }
-                    else:
-                        user_info = {
-                            'id': webhook_info.get('id'),
-                            'name': 'Deleted Webhook',
-                            'role': 'webhook',
-                        }
+                user_info = await self._resolve_user_info(message, db)
 
                 messages.append(
                     MessageReplyToResponse.model_validate(
@@ -270,51 +278,37 @@ class MessageTable:
                 )
             return messages
 
-    def get_reply_user_ids_by_message_id(self, id: str, db: Optional[Session] = None) -> list[str]:
-        with get_db_context(db) as db:
-            return [message.user_id for message in db.query(Message).filter_by(parent_id=id).all()]
+    async def get_reply_user_ids_by_message_id(self, id: str, db: Optional[AsyncSession] = None) -> list[str]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Message.user_id).filter_by(parent_id=id))
+            return [row[0] for row in result.all()]
 
-    def get_messages_by_channel_id(
+    async def get_messages_by_channel_id(
         self,
         channel_id: str,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[MessageReplyToResponse]:
-        with get_db_context(db) as db:
-            all_messages = (
-                db.query(Message)
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Message)
                 .filter_by(channel_id=channel_id, parent_id=None)
                 .order_by(Message.created_at.desc())
                 .offset(skip)
                 .limit(limit)
-                .all()
             )
+            all_messages = result.scalars().all()
 
             messages = []
             for message in all_messages:
                 reply_to_message = (
-                    self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
+                    await self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                     if message.reply_to_id
                     else None
                 )
 
-                webhook_info = message.meta.get('webhook') if message.meta else None
-                user_info = None
-                if webhook_info and webhook_info.get('id'):
-                    webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
-                    if webhook:
-                        user_info = {
-                            'id': webhook.id,
-                            'name': webhook.name,
-                            'role': 'webhook',
-                        }
-                    else:
-                        user_info = {
-                            'id': webhook_info.get('id'),
-                            'name': 'Deleted Webhook',
-                            'role': 'webhook',
-                        }
+                user_info = await self._resolve_user_info(message, db)
 
                 messages.append(
                     MessageReplyToResponse.model_validate(
@@ -327,28 +321,28 @@ class MessageTable:
                 )
             return messages
 
-    def get_messages_by_parent_id(
+    async def get_messages_by_parent_id(
         self,
         channel_id: str,
         parent_id: str,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[MessageReplyToResponse]:
-        with get_db_context(db) as db:
-            message = db.get(Message, parent_id)
+        async with get_async_db_context(db) as db:
+            message = await db.get(Message, parent_id)
 
             if not message:
                 return []
 
-            all_messages = (
-                db.query(Message)
+            result = await db.execute(
+                select(Message)
                 .filter_by(channel_id=channel_id, parent_id=parent_id)
                 .order_by(Message.created_at.desc())
                 .offset(skip)
                 .limit(limit)
-                .all()
             )
+            all_messages = list(result.scalars().all())
 
             # If length of all_messages is less than limit, then add the parent message
             if len(all_messages) < limit:
@@ -357,27 +351,12 @@ class MessageTable:
             messages = []
             for message in all_messages:
                 reply_to_message = (
-                    self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
+                    await self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
                     if message.reply_to_id
                     else None
                 )
 
-                webhook_info = message.meta.get('webhook') if message.meta else None
-                user_info = None
-                if webhook_info and webhook_info.get('id'):
-                    webhook = Channels.get_webhook_by_id(webhook_info.get('id'), db=db)
-                    if webhook:
-                        user_info = {
-                            'id': webhook.id,
-                            'name': webhook.name,
-                            'role': 'webhook',
-                        }
-                    else:
-                        user_info = {
-                            'id': webhook_info.get('id'),
-                            'name': 'Deleted Webhook',
-                            'role': 'webhook',
-                        }
+                user_info = await self._resolve_user_info(message, db)
 
                 messages.append(
                     MessageReplyToResponse.model_validate(
@@ -390,34 +369,39 @@ class MessageTable:
                 )
             return messages
 
-    def get_last_message_by_channel_id(self, channel_id: str, db: Optional[Session] = None) -> Optional[MessageModel]:
-        with get_db_context(db) as db:
-            message = db.query(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).first()
+    async def get_last_message_by_channel_id(
+        self, channel_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[MessageModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).limit(1)
+            )
+            message = result.scalars().first()
             return MessageModel.model_validate(message) if message else None
 
-    def get_pinned_messages_by_channel_id(
+    async def get_pinned_messages_by_channel_id(
         self,
         channel_id: str,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[MessageModel]:
-        with get_db_context(db) as db:
-            all_messages = (
-                db.query(Message)
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Message)
                 .filter_by(channel_id=channel_id, is_pinned=True)
                 .order_by(Message.pinned_at.desc())
                 .offset(skip)
                 .limit(limit)
-                .all()
             )
+            all_messages = result.scalars().all()
             return [MessageModel.model_validate(message) for message in all_messages]
 
-    def update_message_by_id(
-        self, id: str, form_data: MessageForm, db: Optional[Session] = None
+    async def update_message_by_id(
+        self, id: str, form_data: MessageForm, db: Optional[AsyncSession] = None
     ) -> Optional[MessageModel]:
-        with get_db_context(db) as db:
-            message = db.get(Message, id)
+        async with get_async_db_context(db) as db:
+            message = await db.get(Message, id)
             message.content = form_data.content
             message.data = {
                 **(message.data if message.data else {}),
@@ -428,49 +412,51 @@ class MessageTable:
                 **(form_data.meta if form_data.meta else {}),
             }
             message.updated_at = int(time.time_ns())
-            db.commit()
-            db.refresh(message)
+            await db.commit()
+            await db.refresh(message)
             return MessageModel.model_validate(message) if message else None
 
-    def update_is_pinned_by_id(
+    async def update_is_pinned_by_id(
         self,
         id: str,
         is_pinned: bool,
         pinned_by: Optional[str] = None,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> Optional[MessageModel]:
-        with get_db_context(db) as db:
-            message = db.get(Message, id)
+        async with get_async_db_context(db) as db:
+            message = await db.get(Message, id)
             message.is_pinned = is_pinned
             message.pinned_at = int(time.time_ns()) if is_pinned else None
             message.pinned_by = pinned_by if is_pinned else None
-            db.commit()
-            db.refresh(message)
+            await db.commit()
+            await db.refresh(message)
             return MessageModel.model_validate(message) if message else None
 
-    def get_unread_message_count(
+    async def get_unread_message_count(
         self,
         channel_id: str,
         user_id: str,
         last_read_at: Optional[int] = None,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> int:
-        with get_db_context(db) as db:
-            query = db.query(Message).filter(
+        async with get_async_db_context(db) as db:
+            stmt = select(func.count(Message.id)).filter(
                 Message.channel_id == channel_id,
                 Message.parent_id == None,  # only count top-level messages
                 Message.created_at > (last_read_at if last_read_at else 0),
             )
             if user_id:
-                query = query.filter(Message.user_id != user_id)
-            return query.count()
+                stmt = stmt.filter(Message.user_id != user_id)
+            result = await db.execute(stmt)
+            return result.scalar()
 
-    def add_reaction_to_message(
-        self, id: str, user_id: str, name: str, db: Optional[Session] = None
+    async def add_reaction_to_message(
+        self, id: str, user_id: str, name: str, db: Optional[AsyncSession] = None
     ) -> Optional[MessageReactionModel]:
-        with get_db_context(db) as db:
+        async with get_async_db_context(db) as db:
             # check for existing reaction
-            existing_reaction = db.query(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name).first()
+            result = await db.execute(select(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name))
+            existing_reaction = result.scalars().first()
             if existing_reaction:
                 return MessageReactionModel.model_validate(existing_reaction)
 
@@ -484,19 +470,19 @@ class MessageTable:
             )
             result = MessageReaction(**reaction.model_dump())
             db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
             return MessageReactionModel.model_validate(result) if result else None
 
-    def get_reactions_by_message_id(self, id: str, db: Optional[Session] = None) -> list[Reactions]:
-        with get_db_context(db) as db:
+    async def get_reactions_by_message_id(self, id: str, db: Optional[AsyncSession] = None) -> list[Reactions]:
+        async with get_async_db_context(db) as db:
             # JOIN User so all user info is fetched in one query
-            results = (
-                db.query(MessageReaction, User)
+            result = await db.execute(
+                select(MessageReaction, User)
                 .join(User, MessageReaction.user_id == User.id)
                 .filter(MessageReaction.message_id == id)
-                .all()
             )
+            results = result.all()
 
             reactions = {}
 
@@ -518,58 +504,60 @@ class MessageTable:
 
             return [Reactions(**reaction) for reaction in reactions.values()]
 
-    def remove_reaction_by_id_and_user_id_and_name(
-        self, id: str, user_id: str, name: str, db: Optional[Session] = None
+    async def remove_reaction_by_id_and_user_id_and_name(
+        self, id: str, user_id: str, name: str, db: Optional[AsyncSession] = None
     ) -> bool:
-        with get_db_context(db) as db:
-            db.query(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name).delete()
-            db.commit()
+        async with get_async_db_context(db) as db:
+            await db.execute(delete(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name))
+            await db.commit()
             return True
 
-    def delete_reactions_by_id(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
-            db.query(MessageReaction).filter_by(message_id=id).delete()
-            db.commit()
+    async def delete_reactions_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
+            await db.execute(delete(MessageReaction).filter_by(message_id=id))
+            await db.commit()
             return True
 
-    def delete_replies_by_id(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
-            db.query(Message).filter_by(parent_id=id).delete()
-            db.commit()
+    async def delete_replies_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
+            await db.execute(delete(Message).filter_by(parent_id=id))
+            await db.commit()
             return True
 
-    def delete_message_by_id(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
-            db.query(Message).filter_by(id=id).delete()
+    async def delete_message_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+        async with get_async_db_context(db) as db:
+            await db.execute(delete(Message).filter_by(id=id))
 
             # Delete all reactions to this message
-            db.query(MessageReaction).filter_by(message_id=id).delete()
+            await db.execute(delete(MessageReaction).filter_by(message_id=id))
 
-            db.commit()
+            await db.commit()
             return True
 
-    def search_messages_by_channel_ids(
+    async def search_messages_by_channel_ids(
         self,
         channel_ids: list[str],
         query: str,
         start_timestamp: Optional[int] = None,
         end_timestamp: Optional[int] = None,
         limit: int = 10,
-        db: Optional[Session] = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[MessageModel]:
         """Search messages in specified channels by content."""
-        with get_db_context(db) as db:
-            query_builder = db.query(Message).filter(
+        async with get_async_db_context(db) as db:
+            stmt = select(Message).filter(
                 Message.channel_id.in_(channel_ids),
                 Message.content.ilike(f'%{query}%'),
             )
 
             if start_timestamp:
-                query_builder = query_builder.filter(Message.created_at >= start_timestamp)
+                stmt = stmt.filter(Message.created_at >= start_timestamp)
             if end_timestamp:
-                query_builder = query_builder.filter(Message.created_at <= end_timestamp)
+                stmt = stmt.filter(Message.created_at <= end_timestamp)
 
-            messages = query_builder.order_by(Message.created_at.desc()).limit(limit).all()
+            stmt = stmt.order_by(Message.created_at.desc()).limit(limit)
+            result = await db.execute(stmt)
+            messages = result.scalars().all()
             return [MessageModel.model_validate(msg) for msg in messages]
 
 

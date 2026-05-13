@@ -301,34 +301,53 @@ export const getSharedChatList = async (token: string = '', page: number = 1, fi
 };
 
 export const getAllChats = async (token: string) => {
-	let error = null;
-
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all`, {
 		method: 'GET',
 		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
+			Accept: 'application/x-ndjson',
 			...(token && { authorization: `Bearer ${token}` })
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
+	if (!res.ok) {
+		const err = await res.json();
+		console.error(err);
+		throw err;
 	}
 
-	return res;
+	const reader = res.body?.getReader();
+	if (!reader) {
+		throw new Error('Response body is not readable');
+	}
+
+	const decoder = new TextDecoder();
+	const chats: object[] = [];
+	let buffer = '';
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+
+		buffer += decoder.decode(value, { stream: true });
+		const lines = buffer.split('\n');
+		// Keep the last potentially incomplete line in the buffer
+		buffer = lines.pop() ?? '';
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (trimmed) {
+				chats.push(JSON.parse(trimmed));
+			}
+		}
+	}
+
+	// Process any remaining data in the buffer
+	const remaining = buffer.trim();
+	if (remaining) {
+		chats.push(JSON.parse(remaining));
+	}
+
+	return chats;
 };
 
 export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
@@ -926,6 +945,73 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
 		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateChatAccessGrants = async (token: string, id: string, accessGrants: object[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/${id}/access/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			access_grants: accessGrants
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChatAccessGrants = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/${id}/access`, {
+		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',

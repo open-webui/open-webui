@@ -30,13 +30,15 @@
 	$: loadLocale($i18n.languages);
 
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user, pinnedNotes } from '$lib/stores';
 	import {
 		createNewNote,
 		deleteNoteById,
 		getNoteById,
 		getNoteList,
-		searchNotes
+		searchNotes,
+		toggleNotePinnedStatusById,
+		getPinnedNoteList
 	} from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { downloadPdf, createNoteHandler } from './utils';
@@ -540,6 +542,14 @@
 																			selectedNote = note;
 																			showDeleteConfirm = true;
 																		}}
+																		isPinned={note.is_pinned ?? false}
+																		onPin={async () => {
+																			await toggleNotePinnedStatusById(localStorage.token, note.id);
+																			pinnedNotes.set(
+																				await getPinnedNoteList(localStorage.token).catch(() => [])
+																			);
+																			init();
+																		}}
 																	>
 																		<button
 																			class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -601,6 +611,14 @@
 																		onDelete={() => {
 																			selectedNote = note;
 																			showDeleteConfirm = true;
+																		}}
+																		isPinned={note.is_pinned ?? false}
+																		onPin={async () => {
+																			await toggleNotePinnedStatusById(localStorage.token, note.id);
+																			pinnedNotes.set(
+																				await getPinnedNoteList(localStorage.token).catch(() => [])
+																			);
+																			init();
 																		}}
 																	>
 																		<button

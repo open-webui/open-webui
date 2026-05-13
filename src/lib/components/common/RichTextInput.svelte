@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import equal from 'fast-deep-equal';
 
 	marked.use({
 		breaks: true,
@@ -35,6 +36,18 @@
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
+	// Produce single newlines between paragraphs instead of double.
+	// TipTap wraps every line in <p> tags; the default Turndown rule emits
+	// \n\n around each paragraph which then required a destructive
+	// replaceAll('\n\n','\n') that also wiped blank lines inside code blocks.
+	// This rule eliminates that hack so <pre><code> content is untouched.
+	turndownService.addRule('singleNewlineParagraphs', {
+		filter: 'p',
+		replacement: function (content) {
+			return '\n' + content + '\n';
+		}
+	});
 
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
@@ -289,6 +302,8 @@
 	let bubbleMenuElement: Element | null = null;
 	let element: Element | null = null;
 
+	let pendingUpdate = null;
+
 	const options = {
 		throwOnError: false
 	};
@@ -435,7 +450,6 @@
 
 	export const setText = (text: string) => {
 		if (!editor || !editor.view) return;
-		text = text.replaceAll('\n\n', '\n');
 
 		if (text === '') {
 			editor.commands.clearContent();
@@ -725,6 +739,17 @@
 				StarterKit.configure({
 					link: link,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
+					// When rich text is on, ListKit + CodeBlockLowlight provide these.
+					// Disable StarterKit's equivalents to avoid duplicate extension names.
+					...(richText
+						? {
+								codeBlock: false,
+								bulletList: false,
+								orderedList: false,
+								listItem: false,
+								listKeymap: false
+							}
+						: {}),
 					// When rich text is off, disable Strike from StarterKit so we can
 					// re-add it below without its Mod-Shift-s shortcut (which conflicts
 					// with the Toggle Sidebar shortcut). When rich text is on, the user
@@ -843,9 +868,18 @@
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
 			onTransaction: () => {
-				// force re-render so `editor.isActive` works as expected
-				editor = editor;
 				if (!editor) return;
+
+				// Defer Svelte reactivity trigger to rAF so we don't interleave
+				// DOM reads/writes with ProseMirror's updateStateInner.
+				if (!pendingUpdate) {
+					pendingUpdate = requestAnimationFrame(() => {
+						pendingUpdate = null;
+						if (editor && !editor.isDestroyed) {
+							editor = editor;
+						}
+					});
+				}
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
@@ -1211,6 +1245,10 @@
 	});
 
 	onDestroy(() => {
+		if (pendingUpdate) {
+			cancelAnimationFrame(pendingUpdate);
+		}
+
 		if (provider) {
 			provider.destroy();
 		}
@@ -1246,7 +1284,7 @@
 		}
 
 		if (json) {
-			if (JSON.stringify(value) !== JSON.stringify(jsonValue)) {
+			if (!equal(value, jsonValue)) {
 				editor.commands.setContent(value);
 				selectTemplate();
 			}

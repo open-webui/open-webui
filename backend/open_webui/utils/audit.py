@@ -24,7 +24,7 @@ from asgiref.typing import (
 from loguru import logger
 from starlette.requests import Request
 
-from open_webui.env import AUDIT_LOG_LEVEL, AUDIT_INCLUDED_PATHS, MAX_BODY_LOG_SIZE
+from open_webui.env import AUDIT_LOG_LEVEL, ENABLE_AUDIT_GET_REQUESTS, AUDIT_INCLUDED_PATHS, MAX_BODY_LOG_SIZE
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
 from open_webui.models.users import UserModel
 
@@ -117,7 +117,7 @@ class AuditLoggingMiddleware:
     ASGI middleware that intercepts HTTP requests and responses to perform audit logging. It captures request/response bodies (depending on audit level), headers, HTTP methods, and user information, then logs a structured audit entry at the end of the request cycle.
     """
 
-    AUDITED_METHODS = {'PUT', 'PATCH', 'DELETE', 'POST'}
+    DEFAULT_AUDITED_METHODS = {'PUT', 'PATCH', 'DELETE', 'POST'}
 
     def __init__(
         self,
@@ -127,12 +127,16 @@ class AuditLoggingMiddleware:
         included_paths: Optional[list[str]] = None,
         max_body_size: int = MAX_BODY_LOG_SIZE,
         audit_level: AuditLevel = AuditLevel.NONE,
+        audit_get_requests: bool = False,
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
         self.excluded_paths = excluded_paths or []
         self.included_paths = included_paths or []
         self.max_body_size = max_body_size
+        self.audited_methods = set(self.DEFAULT_AUDITED_METHODS)
+        if audit_get_requests:
+            self.audited_methods.add('GET')
         self.audit_level = audit_level
 
         if self.included_paths and self.excluded_paths:
@@ -202,7 +206,10 @@ class AuditLoggingMiddleware:
         return None
 
     def _should_skip_auditing(self, request: Request) -> bool:
-        if request.method not in {'POST', 'PUT', 'PATCH', 'DELETE'} or AUDIT_LOG_LEVEL == 'NONE':
+        if AUDIT_LOG_LEVEL == 'NONE':
+            return True
+
+        if request.method not in self.audited_methods:
             return True
 
         ALWAYS_LOG_ENDPOINTS = {
