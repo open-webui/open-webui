@@ -28,6 +28,42 @@ MAX_GREP_MATCHES = 50
 
 
 # =============================================================================
+# SHARED REGEX UTILITIES — also used by builtin.py grep_knowledge_files
+# =============================================================================
+
+
+def is_regex_pattern(pattern: str) -> bool:
+    """Detect if a pattern looks like regex (\|, .*, .+, \d, \w, \s, [...])."""
+    return ('\|' in pattern or '.*' in pattern or '.+' in pattern
+            or '.?' in pattern or '\d' in pattern or '\w' in pattern
+            or '\s' in pattern or bool(re.search(r'\[.+\]', pattern)))
+
+
+def normalize_regex(pattern: str) -> str:
+    """Normalize POSIX BRE patterns to Python regex (\| → |)."""
+    return pattern.replace('\\|', '|').replace('\|', '|')
+
+
+def build_matcher(pattern: str, case_insensitive: bool = False,
+                  use_regex: bool = False) -> tuple:
+    """Build a matcher function. Returns (match_fn, error_str_or_None)."""
+    if not use_regex and is_regex_pattern(pattern):
+        use_regex = True
+
+    if use_regex:
+        normalized = normalize_regex(pattern)
+        try:
+            re_flags = re.IGNORECASE if case_insensitive else 0
+            compiled = re.compile(normalized, re_flags)
+        except re.error as e:
+            return None, f'Invalid regex: {e}'
+        return (lambda line: bool(compiled.search(line))), None
+    else:
+        sp = pattern.lower() if case_insensitive else pattern
+        return (lambda line: sp in (line.lower() if case_insensitive else line)), None
+
+
+# =============================================================================
 # COMMAND PARSING
 # =============================================================================
 
@@ -404,30 +440,9 @@ async def _kb_grep(args: list[str], flags: set[str], user: dict,
     count_only = 'c' in flags
     use_regex = 'E' in flags
 
-    # Auto-detect regex: models commonly use \| for alternation (POSIX BRE style),
-    # .* / .+ for wildcards, \d \w \s for character classes, or [...] brackets.
-    # If any of these are present, auto-promote to regex mode.
-    if not use_regex and ('\\|' in pattern or '.*' in pattern or '.+' in pattern
-                          or '.?' in pattern or '\\d' in pattern or '\\w' in pattern
-                          or '\\s' in pattern or re.search(r'\[.+\]', pattern)):
-        use_regex = True
-
-    # Build matcher
-    if use_regex:
-        # Normalize \| to | (models trained on POSIX grep use \| for alternation)
-        normalized = pattern.replace('\\|', '|').replace('\|', '|')
-        try:
-            re_flags = re.IGNORECASE if case_insensitive else 0
-            compiled = re.compile(normalized, re_flags)
-        except re.error as e:
-            return f'Invalid regex: {e}'
-        def _matches(line: str) -> bool:
-            return bool(compiled.search(line))
-    else:
-        search_pattern = pattern.lower() if case_insensitive else pattern
-        def _matches(line: str) -> bool:
-            s = line.lower() if case_insensitive else line
-            return search_pattern in s
+    _matches, err = build_matcher(pattern, case_insensitive, use_regex)
+    if err:
+        return err
 
     # Grep on piped input
     if piped_input is not None:

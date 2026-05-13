@@ -59,6 +59,7 @@ from open_webui.tools.builtin import (
     fetch_url,
     generate_image,
     get_current_timestamp,
+    grep_knowledge_files,
     kb_exec,
     list_automations,
     list_knowledge,
@@ -441,7 +442,7 @@ async def get_builtin_tools(
             if not model_knowledge:
                 builtin_functions.append(query_knowledge_bases)
         elif model_knowledge:
-            builtin_functions.extend([list_knowledge, search_knowledge_files, query_knowledge_files])
+            builtin_functions.extend([list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files])
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
@@ -451,7 +452,8 @@ async def get_builtin_tools(
         else:
             builtin_functions.extend([
                 list_knowledge_bases, search_knowledge_bases, query_knowledge_bases,
-                search_knowledge_files, query_knowledge_files, view_knowledge_file,
+                grep_knowledge_files, search_knowledge_files, query_knowledge_files,
+                view_knowledge_file,
             ])
 
     # Chats tools - search and fetch user's chat history

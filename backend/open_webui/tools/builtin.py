@@ -1733,12 +1733,175 @@ async def search_knowledge_files(
 # Hard cap for view_file / view_knowledge_file output
 MAX_VIEW_FILE_CHARS = 100_000
 DEFAULT_VIEW_FILE_MAX_CHARS = 10_000
+MAX_GREP_RESULTS = 50
+
+
+async def grep_knowledge_files(
+    pattern: str,
+    file_id: Optional[str] = None,
+    case_insensitive: bool = False,
+    count_only: bool = False,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Search for exact text across knowledge files. Returns matching lines with line numbers.
+    Unlike query_knowledge_files (semantic/vector search), this performs exact string matching.
+    Automatically detects regex patterns (e.g. "error|warn", "version \\d+").
+
+    :param pattern: The text pattern to search for (regex auto-detected)
+    :param file_id: Optional file ID to search within a single file only
+    :param case_insensitive: If true, ignore case when matching (default: false)
+    :param count_only: If true, return only match counts per file (default: false)
+    :return: Matching lines with file IDs, filenames, and line numbers
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if not pattern or not pattern.strip():
+        return json.dumps({'error': 'Pattern is required'})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.tools.knowledge_fs import build_matcher
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
+
+        _matches, err = build_matcher(pattern, case_insensitive)
+        if err:
+            return json.dumps({'error': err})
+
+        # Collect files to search
+        files_to_search = []
+
+        if file_id:
+            # Single file mode — verify access
+            file = await Files.get_file_by_id(file_id)
+            if file:
+                from open_webui.utils.access_control.files import has_access_to_file
+
+                if (
+                    file.user_id != user_id
+                    and user_role != 'admin'
+                    and not any(
+                        item.get('type') == 'file' and item.get('id') == file_id
+                        for item in (__model_knowledge__ or [])
+                    )
+                    and not await has_access_to_file(
+                        file_id=file_id,
+                        access_type='read',
+                        user=UserModel(**__user__),
+                    )
+                ):
+                    return json.dumps({'error': 'File not found'})
+                files_to_search.append(file)
+        elif __model_knowledge__:
+            # Scoped to model's attached knowledge
+            seen_ids = set()
+            for item in __model_knowledge__:
+                item_type = item.get('type')
+                item_id = item.get('id')
+                if item_type == 'file' and item_id not in seen_ids:
+                    file = await Files.get_file_by_id(item_id)
+                    if file:
+                        files_to_search.append(file)
+                        seen_ids.add(item_id)
+                elif item_type == 'collection':
+                    knowledge = await Knowledges.get_knowledge_by_id(item_id)
+                    if not knowledge:
+                        continue
+                    for fid in (knowledge.data or {}).get('file_ids', []):
+                        if fid not in seen_ids:
+                            file = await Files.get_file_by_id(fid)
+                            if file:
+                                files_to_search.append(file)
+                                seen_ids.add(fid)
+        else:
+            # All accessible knowledge bases — use the same search pattern as list_knowledge_bases
+            result = await Knowledges.search_knowledge_bases(
+                user_id,
+                filter={
+                    'query': '',
+                    'user_id': user_id,
+                    'group_ids': user_group_ids,
+                },
+                skip=0,
+                limit=200,
+            )
+            seen_ids = set()
+            for kb in result.items:
+                file_ids = []
+                # Get files attached to this KB
+                files_from_kb = await Knowledges.get_files_by_id(kb.id)
+                if files_from_kb:
+                    file_ids = [f.id for f in files_from_kb]
+                for fid in file_ids:
+                    if fid not in seen_ids:
+                        file = await Files.get_file_by_id(fid)
+                        if file:
+                            files_to_search.append(file)
+                            seen_ids.add(fid)
+
+        if not files_to_search:
+            return json.dumps({'error': 'No accessible files found'})
+
+        # Search
+        results = []
+        total_matches = 0
+        counts = []
+
+        for file in files_to_search:
+            content = ''
+            if file.data:
+                content = file.data.get('content', '')
+            if not content:
+                continue
+
+            lines = content.split('\n')
+            file_matches = 0
+
+            for i, line in enumerate(lines, 1):
+                if _matches(line):
+                    file_matches += 1
+                    total_matches += 1
+                    if not count_only and len(results) < MAX_GREP_RESULTS:
+                        results.append(f'{file.id}  {file.filename}:{i}: {line}')
+
+            if file_matches > 0 and count_only:
+                counts.append(f'{file.id}  {file.filename}: {file_matches}')
+
+        if count_only:
+            if not counts:
+                return f'No matches for "{pattern}"'
+            return '\n'.join(counts) + f'\n[{total_matches} total matches]'
+
+        if not results:
+            return f'No matches for "{pattern}"'
+
+        output = '\n'.join(results)
+        if total_matches > MAX_GREP_RESULTS:
+            output += f'\n[{MAX_GREP_RESULTS} of {total_matches} matches shown — use file_id to narrow]'
+        return output
+
+    except Exception as e:
+        log.exception(f'grep_knowledge_files error: {e}')
+        return json.dumps({'error': str(e)})
 
 
 async def view_file(
     file_id: str,
     offset: int = 0,
     max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
+    line_numbers: bool = False,
+    start_line: Optional[int] = None,
+    end_line: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
@@ -1749,6 +1912,9 @@ async def view_file(
     :param file_id: The ID of the file to retrieve
     :param offset: Character offset to start reading from (default: 0)
     :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :param line_numbers: If true, prefix each line with its 1-indexed line number
+    :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
+    :param end_line: Optional 1-indexed end line (inclusive)
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
@@ -1803,8 +1969,37 @@ async def view_file(
             content = file.data.get('content', '')
 
         total_chars = len(content)
+
+        # Line-based addressing (overrides char-based offset/max_chars)
+        if start_line is not None:
+            all_lines = content.split('\n')
+            total_lines = len(all_lines)
+            s = max(1, int(start_line)) - 1  # 1-indexed to 0-indexed
+            e = min(total_lines, int(end_line) if end_line else s + 100)
+            selected = all_lines[s:e]
+            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
+            is_truncated = e < total_lines
+            result = {
+                'id': file.id,
+                'filename': file.filename,
+                'content': sliced,
+                'updated_at': file.updated_at,
+                'created_at': file.created_at,
+                'total_lines': total_lines,
+                'showing_lines': f'{s + 1}-{e}',
+            }
+            if is_truncated:
+                result['truncated'] = True
+                result['next_start_line'] = e + 1
+            return json.dumps(result, ensure_ascii=False)
+
         sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
+
+        if line_numbers:
+            start_ln = content[:offset].count('\n') + 1
+            lines = sliced.split('\n')
+            sliced = '\n'.join(f'{start_ln + i}: {line}' for i, line in enumerate(lines))
 
         result = {
             'id': file.id,
@@ -1832,6 +2027,9 @@ async def view_knowledge_file(
     file_id: str,
     offset: int = 0,
     max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
+    line_numbers: bool = False,
+    start_line: Optional[int] = None,
+    end_line: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -1841,6 +2039,9 @@ async def view_knowledge_file(
     :param file_id: The ID of the file to retrieve
     :param offset: Character offset to start reading from (default: 0)
     :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :param line_numbers: If true, prefix each line with its 1-indexed line number
+    :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
+    :param end_line: Optional 1-indexed end line (inclusive)
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
@@ -1908,8 +2109,40 @@ async def view_knowledge_file(
             content = file.data.get('content', '')
 
         total_chars = len(content)
+
+        # Line-based addressing (overrides char-based offset/max_chars)
+        if start_line is not None:
+            all_lines = content.split('\n')
+            total_lines = len(all_lines)
+            s = max(1, int(start_line)) - 1
+            e = min(total_lines, int(end_line) if end_line else s + 100)
+            selected = all_lines[s:e]
+            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
+            is_truncated = e < total_lines
+            result = {
+                'id': file.id,
+                'filename': file.filename,
+                'content': sliced,
+                'updated_at': file.updated_at,
+                'created_at': file.created_at,
+                'total_lines': total_lines,
+                'showing_lines': f'{s + 1}-{e}',
+            }
+            if knowledge_info:
+                result['knowledge_id'] = knowledge_info['id']
+                result['knowledge_name'] = knowledge_info['name']
+            if is_truncated:
+                result['truncated'] = True
+                result['next_start_line'] = e + 1
+            return json.dumps(result, ensure_ascii=False)
+
         sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
+
+        if line_numbers:
+            start_ln = content[:offset].count('\n') + 1
+            lines = sliced.split('\n')
+            sliced = '\n'.join(f'{start_ln + i}: {line}' for i, line in enumerate(lines))
 
         result = {
             'id': file.id,
