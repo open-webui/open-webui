@@ -44,10 +44,6 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint('id'),
         )
 
-    if 'calendar' in inspector.get_table_names():
-        if not _index_exists(inspector, 'ix_calendar_user', 'calendar'):
-            op.create_index('ix_calendar_user', 'calendar', ['user_id'], unique=False)
-
     if 'calendar_event' not in tables:
         op.create_table(
             'calendar_event',
@@ -70,12 +66,6 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint('id'),
         )
 
-    if 'calendar_event' in inspector.get_table_names():
-        if not _index_exists(inspector, 'ix_calendar_event_calendar', 'calendar_event'):
-            op.create_index('ix_calendar_event_calendar', 'calendar_event', ['calendar_id', 'start_at'], unique=False)
-        if not _index_exists(inspector, 'ix_calendar_event_user_date', 'calendar_event'):
-            op.create_index('ix_calendar_event_user_date', 'calendar_event', ['user_id', 'start_at'], unique=False)
-
     if 'calendar_event_attendee' not in tables:
         op.create_table(
             'calendar_event_attendee',
@@ -90,9 +80,29 @@ def upgrade() -> None:
             sa.UniqueConstraint('event_id', 'user_id', name='uq_event_attendee'),
         )
 
-    if 'calendar_event_attendee' in inspector.get_table_names():
-        if not _index_exists(inspector, 'ix_calendar_event_attendee_user', 'calendar_event_attendee'):
-            op.create_index('ix_calendar_event_attendee_user', 'calendar_event_attendee', ['user_id', 'status'], unique=False)
+    # Refresh the inspector — the one above is cached from before the
+    # create_table calls above, so its index/table info doesn't see the
+    # tables we just created and the conditional index creates get
+    # silently skipped. That left downgrade trying to drop indexes
+    # that were never created.
+    inspector = sa.inspect(conn)
+    if not _index_exists(inspector, 'ix_calendar_user', 'calendar'):
+        op.create_index('ix_calendar_user', 'calendar', ['user_id'], unique=False)
+    if not _index_exists(inspector, 'ix_calendar_event_calendar', 'calendar_event'):
+        op.create_index(
+            'ix_calendar_event_calendar', 'calendar_event',
+            ['calendar_id', 'start_at'], unique=False,
+        )
+    if not _index_exists(inspector, 'ix_calendar_event_user_date', 'calendar_event'):
+        op.create_index(
+            'ix_calendar_event_user_date', 'calendar_event',
+            ['user_id', 'start_at'], unique=False,
+        )
+    if not _index_exists(inspector, 'ix_calendar_event_attendee_user', 'calendar_event_attendee'):
+        op.create_index(
+            'ix_calendar_event_attendee_user', 'calendar_event_attendee',
+            ['user_id', 'status'], unique=False,
+        )
 
 
 def downgrade() -> None:

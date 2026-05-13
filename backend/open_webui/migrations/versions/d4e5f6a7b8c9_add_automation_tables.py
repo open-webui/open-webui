@@ -42,11 +42,6 @@ def upgrade():
             sa.Column('updated_at', sa.BigInteger(), nullable=False),
         )
 
-    # Re-check tables in case we just created it
-    if 'automation' in inspector.get_table_names():
-        if not _index_exists(inspector, 'ix_automation_next_run', 'automation'):
-            op.create_index('ix_automation_next_run', 'automation', ['next_run_at'])
-
     if 'automation_run' not in tables:
         op.create_table(
             'automation_run',
@@ -58,13 +53,18 @@ def upgrade():
             sa.Column('created_at', sa.BigInteger(), nullable=False),
         )
 
-    if 'automation_run' in inspector.get_table_names():
-        if not _index_exists(inspector, 'ix_automation_run_automation_id', 'automation_run'):
-            op.create_index(
-                'ix_automation_run_automation_id',
-                'automation_run',
-                ['automation_id'],
-            )
+    # Refresh the inspector — the one above is cached from before the
+    # create_table calls, so the conditional index creates get silently
+    # skipped and downgrade then tries to drop indexes that don't exist.
+    inspector = sa.inspect(conn)
+    if not _index_exists(inspector, 'ix_automation_next_run', 'automation'):
+        op.create_index('ix_automation_next_run', 'automation', ['next_run_at'])
+    if not _index_exists(inspector, 'ix_automation_run_automation_id', 'automation_run'):
+        op.create_index(
+            'ix_automation_run_automation_id',
+            'automation_run',
+            ['automation_id'],
+        )
 
 
 def downgrade():
