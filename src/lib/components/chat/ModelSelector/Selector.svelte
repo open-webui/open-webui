@@ -732,7 +732,7 @@
 								}}
 							>
 								<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
-								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
+								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.model?.id ?? item.value ?? `${item.label}-${visibleStart + i}`)}
 									{@const index = visibleStart + i}
 									<ModelItem
 										{selectedModelIdx}
