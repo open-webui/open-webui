@@ -438,11 +438,19 @@ class CreateImageForm(BaseModel):
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
 
 
-async def get_image_data(data: str, headers=None):
+async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
             # Defense-in-depth: gate before fetch (mirrors load_url_image).
-            validate_url(data)
+            # For URLs originating from an admin-configured backend (e.g.
+            # ComfyUI on a private network), skip SSRF validation only when
+            # the URL is origin-pinned to the configured base.  This avoids
+            # both the global ENABLE_RAG_LOCAL_WEB_FETCH hammer and a blanket
+            # trust flag that would follow arbitrary redirects.
+            if trusted_base_url and data.startswith(trusted_base_url):
+                log.debug(f'Skipping URL validation for trusted backend: {data}')
+            else:
+                validate_url(data)
             session = await get_session()
             async with session.get(
                 data,
@@ -471,6 +479,8 @@ async def get_image_data(data: str, headers=None):
 
 
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
+    if image_data is None or content_type is None:
+        raise ValueError('Failed to retrieve image data from the generation backend')
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
@@ -709,7 +719,10 @@ async def image_generations(
                 if request.app.state.config.COMFYUI_API_KEY:
                     headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
 
-                image_data, content_type = await get_image_data(image['url'], headers)
+                image_data, content_type = await get_image_data(
+                    image['url'], headers,
+                    trusted_base_url=request.app.state.config.COMFYUI_BASE_URL,
+                )
                 _, url = await upload_image(
                     request,
                     image_data,
@@ -1065,7 +1078,10 @@ async def image_edits(
                 if request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY:
                     headers = {'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY}'}
 
-                image_data, content_type = await get_image_data(image_url, headers)
+                image_data, content_type = await get_image_data(
+                    image_url, headers,
+                    trusted_base_url=request.app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL,
+                )
                 _, url = await upload_image(
                     request,
                     image_data,
