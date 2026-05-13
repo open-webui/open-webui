@@ -22,18 +22,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def _drop_sqlite_indexes_for_column(table_name, column_name, conn):
-    """
-    SQLite requires manual removal of any indexes referencing a column
-    before ALTER TABLE ... DROP COLUMN can succeed.
+    """Drop user-created indexes on a column so DROP COLUMN succeeds.
+
+    Skips sqlite_autoindex_* — SQLite refuses to drop the indexes that
+    back UNIQUE / PRIMARY KEY constraints; batch_alter_table.drop_column
+    handles those via its rebuild path.
     """
     indexes = conn.execute(sa.text(f"PRAGMA index_list('{table_name}')")).fetchall()
 
     for idx in indexes:
-        index_name = idx[1]  # index name
-        # Get indexed columns
+        index_name = idx[1]
+        if index_name.startswith('sqlite_autoindex_'):
+            continue
         idx_info = conn.execute(sa.text(f"PRAGMA index_info('{index_name}')")).fetchall()
-
-        indexed_cols = [row[2] for row in idx_info]  # col names
+        indexed_cols = [row[2] for row in idx_info]
         if column_name in indexed_cols:
             conn.execute(sa.text(f'DROP INDEX IF EXISTS {index_name}'))
 
