@@ -128,7 +128,7 @@
 					<input
 						bind:this={editInput}
 						bind:value={editName}
-						class="text-sm bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1 py-0 outline-none focus:ring-1 focus:ring-gray-400"
+						class="text-sm w-full bg-transparent border-none outline-hidden"
 						on:keydown={(e) => {
 							if (e.key === 'Enter') submitRename();
 							if (e.key === 'Escape') cancelRename();

@@ -22,7 +22,8 @@
 		updateFileDataContentById,
 		uploadFile,
 		deleteFileById,
-		getFileById
+		getFileById,
+		renameFileById
 	} from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
@@ -686,6 +687,18 @@
 		}
 	};
 
+	const renameFileHandler = async (fileId: string, name: string) => {
+		try {
+			const res = await renameFileById(localStorage.token, fileId, name);
+			if (res) {
+				toast.success($i18n.t('File renamed.'));
+				getItemsPage();
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		}
+	};
+
 	let debounceTimeout = null;
 	let mediaQuery;
 
@@ -1197,7 +1210,8 @@
 
 												deleteFileHandler(fileId);
 											}}
-											onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
+											onRename={(fileId, name) => renameFileHandler(fileId, name)}
+									onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
 											onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
 											onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
 											onMoveFileToDirectory={(fileId, dirId) =>

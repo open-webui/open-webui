@@ -384,6 +384,19 @@ class FilesTable:
             except Exception:
                 return None
 
+    async def update_file_name_by_id(self, id: str, name: str, db: AsyncSession | None = None) -> FileModel | None:
+        async with get_async_db_context(db) as db:
+            try:
+                result = await db.execute(select(File).filter_by(id=id))
+                file = result.scalars().first()
+                file.filename = name
+                file.meta = {**(file.meta if file.meta else {}), 'name': name}
+                file.updated_at = int(time.time())
+                await db.commit()
+                return FileModel.model_validate(file)
+            except Exception:
+                return None
+
     async def delete_file_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
             try:

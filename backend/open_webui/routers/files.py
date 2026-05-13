@@ -766,6 +766,46 @@ async def get_file_content_by_id(
 
 
 ############################
+# Rename File By Id
+############################
+
+
+class FileRenameForm(BaseModel):
+    filename: str
+
+
+@router.post('/{id}/rename')
+async def rename_file_by_id(
+    id: str,
+    form_data: FileRenameForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    file = await Files.get_file_by_id(id, db=db)
+
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
+        result = await Files.update_file_name_by_id(id, form_data.filename, db=db)
+        if result:
+            return result
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Error renaming file'),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # Delete File By Id
 ############################
 

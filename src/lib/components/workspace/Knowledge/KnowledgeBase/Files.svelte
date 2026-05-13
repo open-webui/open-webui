@@ -19,6 +19,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
 
@@ -29,11 +30,33 @@
 
 	export let onClick = (fileId) => {};
 	export let onDelete = (fileId) => {};
+	export let onRename = (fileId: string, name: string) => {};
 	export let onNavigateDirectory = (directoryId: string) => {};
 	export let onRenameDirectory = (id: string, name: string) => {};
 	export let onDeleteDirectory = (id: string) => {};
 	export let onMoveFileToDirectory = (fileId: string, directoryId: string) => {};
 	export let onMoveDirectoryToDirectory = (dirId: string, targetDirectoryId: string) => {};
+
+	let editingFileId: string | null = null;
+	let editName = '';
+	let editInput: HTMLInputElement;
+
+	const startRename = (file: any) => {
+		editingFileId = file?.id ?? file?.tempId;
+		editName = file?.name ?? file?.meta?.name ?? '';
+		setTimeout(() => editInput?.select(), 0);
+	};
+
+	const submitRename = () => {
+		if (editingFileId && editName.trim()) {
+			onRename(editingFileId, editName.trim());
+		}
+		editingFileId = null;
+	};
+
+	const cancelRename = () => {
+		editingFileId = null;
+	};
 </script>
 
 <div class=" max-h-full flex flex-col w-full gap-[0.5px]">
@@ -90,15 +113,34 @@
 				on:click={() => {
 					onClick(file?.id ?? file?.tempId);
 				}}
+				on:dblclick={() => {
+					if (knowledge?.write_access) startRename(file);
+				}}
 			>
 				<div>
 					<div class="flex gap-2 items-center line-clamp-1">
-						<div class="line-clamp-1 text-sm">
-							{file?.name ?? file?.meta?.name}
-							{#if file?.meta?.size}
-								<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
-							{/if}
-						</div>
+						{#if editingFileId === (file?.id ?? file?.tempId)}
+							<!-- svelte-ignore a11y-autofocus -->
+							<input
+								bind:this={editInput}
+								bind:value={editName}
+								class="text-sm w-full bg-transparent border-none outline-hidden"
+								on:keydown={(e) => {
+									if (e.key === 'Enter') submitRename();
+									if (e.key === 'Escape') cancelRename();
+								}}
+								on:blur={submitRename}
+								on:click={(e) => e.stopPropagation()}
+								autofocus
+							/>
+						{:else}
+							<div class="line-clamp-1 text-sm">
+								{file?.name ?? file?.meta?.name}
+								{#if file?.meta?.size}
+									<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 
@@ -143,6 +185,16 @@
 							<div
 								class="min-w-[140px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
 							>
+								<button
+									type="button"
+									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									on:click={() => {
+										startRename(file);
+									}}
+								>
+									<Pencil className="size-3.5" />
+									{$i18n.t('Rename')}
+								</button>
 								<button
 									type="button"
 									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
