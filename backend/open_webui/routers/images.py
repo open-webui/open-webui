@@ -10,7 +10,7 @@ import re
 import uuid
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
@@ -438,16 +438,39 @@ class CreateImageForm(BaseModel):
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
 
 
+def _is_same_origin(url: str, base_url: str) -> bool:
+    """Compare scheme + hostname + port of two URLs.
+
+    Pure string-prefix matching (``startswith``) is vulnerable to
+    userinfo injection (``http://host:port@evil.com/``) and suffix
+    confusion (``http://host:portevil.com/``).  Parsing both URLs
+    and comparing the three origin components eliminates those
+    attack vectors.
+    """
+    def _default_port(scheme: str) -> int:
+        return 443 if scheme == 'https' else 80
+
+    parsed = urlparse(url)
+    trusted = urlparse(base_url)
+    return (
+        parsed.scheme == trusted.scheme
+        and parsed.hostname == trusted.hostname
+        and (parsed.port or _default_port(parsed.scheme))
+        == (trusted.port or _default_port(trusted.scheme))
+    )
+
+
 async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
             # Defense-in-depth: gate before fetch (mirrors load_url_image).
             # For URLs originating from an admin-configured backend (e.g.
             # ComfyUI on a private network), skip SSRF validation only when
-            # the URL is origin-pinned to the configured base.  This avoids
-            # both the global ENABLE_RAG_LOCAL_WEB_FETCH hammer and a blanket
-            # trust flag that would follow arbitrary redirects.
-            if trusted_base_url and data.startswith(trusted_base_url):
+            # the URL shares the exact same origin (scheme + host + port)
+            # as the admin-configured base.  This avoids both the global
+            # ENABLE_RAG_LOCAL_WEB_FETCH hammer and a blanket trust flag
+            # that would follow arbitrary redirects.
+            if trusted_base_url and _is_same_origin(data, trusted_base_url):
                 log.debug(f'Skipping URL validation for trusted backend: {data}')
             else:
                 validate_url(data)
