@@ -1747,15 +1747,8 @@ async def chat_completion(
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
 
-        # Enforce features.direct_tool_servers on the inference path. The
-        # storage path (routers/users.py user/settings/update) already strips
-        # toolServers from saved settings when the caller lacks the
-        # permission; without the same gate here, a user without the grant
-        # could still register inline tool_servers via the request body and
-        # have the chat-completion middleware inject system_prompt + register
-        # tool specs from those servers (utils/middleware.py:2799). Mirror the
-        # storage-side behaviour: silently drop tool_servers if the caller
-        # lacks the permission. Admins always pass.
+        # Drop tool_servers if caller lacks features.direct_tool_servers —
+        # mirrors the storage-side strip in user/settings/update.
         tool_servers = form_data.pop('tool_servers', None)
         if (
             tool_servers
