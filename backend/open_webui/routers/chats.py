@@ -557,6 +557,18 @@ async def create_new_chat(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    # Reject a folder_id that doesn't belong to the caller. Without this the
+    # row is persisted with a dangling foreign reference — no read path
+    # surfaces it across users (all chat reads are user_id-filtered), but
+    # the row state is meaningless and downstream consumers shouldn't have
+    # to assume the column is clean. Also catches non-UUID / nonexistent IDs.
+    if form_data.folder_id is not None:
+        if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())
@@ -1484,6 +1496,15 @@ async def update_chat_folder_id_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        # Same ownership check as the create path — reject foreign / dangling
+        # folder_id values. None is allowed (moves the chat out of any folder).
+        if form_data.folder_id is not None:
+            if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
