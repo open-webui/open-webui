@@ -472,6 +472,16 @@ async def get_image_data(data: str, headers=None):
 
 
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
+    if image_data is None or content_type is None:
+        log.error(
+            f"upload_image called with invalid data: image_data={'present' if image_data is not None else 'None'}, "
+            f"content_type={content_type!r}. This may indicate an SSRF block or network issue."
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to fetch image data. If using a local ComfyUI instance, "
+            "ensure ENABLE_RAG_LOCAL_WEB_FETCH=true in your environment.",
+        )
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
