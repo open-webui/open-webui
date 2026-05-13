@@ -826,6 +826,41 @@ class KnowledgeTable:
             result = await db.execute(stmt)
             return [KnowledgeDirectoryModel.model_validate(d) for d in result.scalars().all()]
 
+    async def get_all_directories(
+        self,
+        knowledge_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[KnowledgeDirectoryModel]:
+        """Get ALL directories for a KB (no parent filter). Used for tree building."""
+        async with get_async_db_context(db) as db:
+            stmt = (
+                select(KnowledgeDirectory)
+                .filter(KnowledgeDirectory.knowledge_id == knowledge_id)
+                .order_by(KnowledgeDirectory.name.asc())
+            )
+            result = await db.execute(stmt)
+            return [KnowledgeDirectoryModel.model_validate(d) for d in result.scalars().all()]
+
+    async def get_files_with_directory_ids(
+        self,
+        knowledge_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[tuple[FileModel, Optional[str]]]:
+        """Get all files in a KB with their directory_id from KnowledgeFile."""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(
+                    select(File, KnowledgeFile.directory_id)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+                return [
+                    (FileModel.model_validate(file), dir_id)
+                    for file, dir_id in result.all()
+                ]
+        except Exception:
+            return []
+
     async def get_directory_by_id(
         self, directory_id: str, db: Optional[AsyncSession] = None
     ) -> Optional[KnowledgeDirectoryModel]:
