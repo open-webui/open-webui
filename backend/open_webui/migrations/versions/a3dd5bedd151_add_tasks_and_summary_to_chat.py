@@ -19,8 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('chat', sa.Column('tasks', sa.JSON(), nullable=True))
-    op.add_column('chat', sa.Column('summary', sa.Text(), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('chat')]
+
+    if 'tasks' not in columns:
+        op.add_column('chat', sa.Column('tasks', sa.JSON(), nullable=True))
+    if 'summary' not in columns:
+        op.add_column('chat', sa.Column('summary', sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
