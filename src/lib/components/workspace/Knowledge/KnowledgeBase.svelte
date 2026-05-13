@@ -1016,10 +1016,10 @@
 						{/if}
 					</div>
 
-					<div class="flex w-full">
+					<div class="flex w-full items-center">
 						<input
 							type="text"
-							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
+							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden flex-1"
 							bind:value={knowledge.description}
 							aria-label={$i18n.t('Knowledge Description')}
 							placeholder={$i18n.t('Knowledge Description')}
@@ -1028,22 +1028,20 @@
 								changeDebounceHandler();
 							}}
 						/>
+
+						<Tooltip content={$i18n.t('Click to copy ID')}>
+							<button
+								class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
+								on:click={() => {
+									copyToClipboard(id);
+									toast.success($i18n.t('ID copied to clipboard'));
+								}}
+							>
+								{id}
+							</button>
+						</Tooltip>
 					</div>
 				</div>
-			</div>
-
-			<div class="flex items-center gap-2 mt-0.5">
-				<Tooltip content={$i18n.t('Click to copy ID')}>
-					<button
-						class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
-						on:click={() => {
-							copyToClipboard(id);
-							toast.success($i18n.t('ID copied to clipboard'));
-						}}
-					>
-						{id}
-					</button>
-				</Tooltip>
 			</div>
 		</div>
 
