@@ -2336,24 +2336,25 @@ async def get_app_config(request: Request):
         **({'onboarding': True} if onboarding else {}),
         'status': True,
         'name': app.state.WEBUI_NAME,
-        'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
         'oauth': {'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()}},
         'features': {
+            # --- Public: required by login/signup page pre-auth ---
             'auth': WEBUI_AUTH,
             'auth_trusted_header': bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
             'enable_signup_password_confirmation': ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
             'enable_ldap': app.state.config.ENABLE_LDAP,
-            'enable_api_keys': app.state.config.ENABLE_API_KEYS,
             'enable_signup': app.state.config.ENABLE_SIGNUP,
             'enable_login_form': app.state.config.ENABLE_LOGIN_FORM,
-            'enable_password_change_form': app.state.config.ENABLE_PASSWORD_CHANGE_FORM,
             'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
-            'enable_version_update_check': ENABLE_VERSION_UPDATE_CHECK,
-            'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
-            'enable_easter_eggs': ENABLE_EASTER_EGGS,
+            # --- Authenticated: only consumed by logged-in frontend ---
             **(
                 {
+                    'enable_api_keys': app.state.config.ENABLE_API_KEYS,
+                    'enable_password_change_form': app.state.config.ENABLE_PASSWORD_CHANGE_FORM,
+                    'enable_version_update_check': ENABLE_VERSION_UPDATE_CHECK,
+                    'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+                    'enable_easter_eggs': ENABLE_EASTER_EGGS,
                     'enable_direct_connections': app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     'enable_folders': app.state.config.ENABLE_FOLDERS,
                     'folder_max_file_count': app.state.config.FOLDER_MAX_FILE_COUNT,
@@ -2391,6 +2392,7 @@ async def get_app_config(request: Request):
         },
         **(
             {
+                'version': VERSION,
                 'default_models': app.state.config.DEFAULT_MODELS,
                 'default_pinned_models': app.state.config.DEFAULT_PINNED_MODELS,
                 'default_prompt_suggestions': app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
@@ -2489,7 +2491,7 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 
 
 @app.get('/api/version')
-async def get_app_version():
+async def get_app_version(user=Depends(get_verified_user)):
     return {
         'version': VERSION,
         'deployment_id': DEPLOYMENT_ID,
