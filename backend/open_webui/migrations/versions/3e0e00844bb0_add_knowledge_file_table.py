@@ -24,6 +24,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'knowledge_file' in existing_tables:
+        return  # Already created — skip everything
+
     op.create_table(
         'knowledge_file',
         sa.Column('id', sa.Text(), primary_key=True),

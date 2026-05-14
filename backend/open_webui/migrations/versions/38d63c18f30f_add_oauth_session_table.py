@@ -22,30 +22,6 @@ def upgrade() -> None:
     inspector = sa.inspect(op.get_bind())
     existing_tables = set(inspector.get_table_names())
 
-    # ── Fix user.id PK only when it is genuinely wrong ────────────────
-    # On databases migrated from the old Peewee layer the PK may have
-    # drifted.  Fresh installs (init migration 7e5b5dc7342b) already
-    # have a correct PK on 'id', so we must NOT attempt to re-create it
-    # — PostgreSQL will reject a duplicate PRIMARY KEY constraint.
-    pk_columns = inspector.get_pk_constraint('user')['constrained_columns']
-
-    if pk_columns != ['id']:
-        columns = inspector.get_columns('user')
-        id_column = next((col for col in columns if col['name'] == 'id'), None)
-        unique_constraints = inspector.get_unique_constraints('user')
-        unique_columns = {tuple(u['column_names']) for u in unique_constraints}
-
-        if id_column:
-            with op.batch_alter_table('user') as batch_op:
-                if pk_columns:
-                    batch_op.drop_constraint(
-                        inspector.get_pk_constraint('user')['name'],
-                        type_='primary',
-                    )
-                if ('id',) not in unique_columns:
-                    batch_op.create_unique_constraint('uq_user_id', ['id'])
-                batch_op.create_primary_key('pk_user_id', ['id'])
-
     # ── Create oauth_session table (idempotent) ───────────────────────
     if 'oauth_session' not in existing_tables:
         op.create_table(
