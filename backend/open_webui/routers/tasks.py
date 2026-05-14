@@ -166,6 +166,11 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
         models = request.app.state.MODELS
 
     model_id = form_data['model']
+    if not model_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='No model specified for title generation. Please ensure a model is selected for this chat.',
+        )
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
