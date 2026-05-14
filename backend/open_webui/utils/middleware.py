@@ -75,7 +75,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -3836,7 +3836,26 @@ async def streaming_chat_response_handler(response, ctx):
 
             reasoning_tags_param = metadata.get('params', {}).get('reasoning_tags')
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
-            DETECT_CODE_INTERPRETER = metadata.get('features', {}).get('code_interpreter', False)
+
+            # Mirror the five gates from utils/tools.py get_builtin_tools so the
+            # legacy XML-tag path enforces the same authz as native FC.
+            features = metadata.get('features', {}) or {}
+            model_capabilities = (model.get('info', {}).get('meta', {}).get('capabilities') or {})
+            builtin_tools_meta = model.get('info', {}).get('meta', {}).get('builtinTools', {})
+            DETECT_CODE_INTERPRETER = (
+                bool(features.get('code_interpreter'))
+                and builtin_tools_meta.get('code_interpreter', True)
+                and getattr(request.app.state.config, 'ENABLE_CODE_INTERPRETER', True)
+                and model_capabilities.get('code_interpreter', True)
+                and (
+                    getattr(user, 'role', None) == 'admin'
+                    or await has_permission(
+                        getattr(user, 'id', ''),
+                        'features.code_interpreter',
+                        request.app.state.config.USER_PERMISSIONS,
+                    )
+                )
+            )
 
             reasoning_tags = []
             if DETECT_REASONING_TAGS:
