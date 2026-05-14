@@ -3511,13 +3511,13 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 },
                             )
 
-                    await background_tasks_handler(ctx)
                     ctx['assistant_message'] = {
                         'content': content,
                         'output': response_output,
                         **({'usage': usage} if usage else {}),
                     }
                     await outlet_filter_handler(ctx)
+                    await background_tasks_handler(ctx)
 
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
@@ -5086,13 +5086,13 @@ async def streaming_chat_response_handler(response, ctx):
                     }
                 )
 
-                await background_tasks_handler(ctx)
                 ctx['assistant_message'] = {
                     'content': serialize_output(output),
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
                 await outlet_filter_handler(ctx)
+                await background_tasks_handler(ctx)
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
 
