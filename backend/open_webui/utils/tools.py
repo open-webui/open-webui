@@ -439,8 +439,14 @@ async def get_builtin_tools(
         if ENABLE_KB_EXEC:
             builtin_functions.append(kb_exec)
             builtin_functions.append(query_knowledge_files)
+            # Notes attached to the model need view_note since kb_exec is file-only
+            if model_knowledge:
+                knowledge_types = {item.get('type') for item in model_knowledge}
+                if 'note' in knowledge_types:
+                    builtin_functions.append(view_note)
             if not model_knowledge:
                 builtin_functions.append(query_knowledge_bases)
+                builtin_functions.append(search_knowledge_bases)
         elif model_knowledge:
             builtin_functions.extend([list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files])
 
