@@ -42,6 +42,7 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
 from open_webui.models.functions import Functions
@@ -2138,14 +2139,38 @@ async def convert_url_images_to_base64(form_data):
 
 async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
-    Load the message chain from DB up to message_id,
-    keeping only LLM-relevant fields (role, content, output).
+    Load the message chain, keeping only LLM-relevant fields.
+    Falls back to embedded history when the chain is incomplete.
     """
     messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
     if not messages_map:
         return None
 
     db_messages = get_message_list(messages_map, message_id)
+
+    # Target unreachable or chain truncated before root.
+    if not db_messages or db_messages[0].get('parentId') is not None:
+        chat = await Chats.get_chat_by_id(chat_id)
+        if chat:
+            history = (chat.chat or {}).get('history', {}).get('messages', {}) or {}
+            history_messages = get_message_list(history, message_id)
+            if history_messages:
+                db_messages = history_messages
+                # Backfill missing rows so the next request uses the fast path.
+                # Mirrors the gap-healing in get_messages_map_by_chat_id (chats.py).
+                for msg in history_messages:
+                    msg_id = msg.get('id')
+                    if msg_id and msg_id not in messages_map:
+                        try:
+                            await ChatMessages.upsert_message(
+                                message_id=msg_id,
+                                chat_id=chat_id,
+                                user_id=chat.user_id,
+                                data=msg,
+                            )
+                        except Exception:
+                            pass
+
     if not db_messages:
         return None
 
