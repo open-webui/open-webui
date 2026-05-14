@@ -54,7 +54,7 @@ class Filter:
             description='Bearer token minted via /admin/api_tokens. Format: stw_<public>.<secret>',
         )
         agent_name: str = Field(
-            default_factory=lambda: os.getenv('WORKBENCH_AGENT_NAME', 'chat_phoenix'),
+            default_factory=lambda: os.getenv('WORKBENCH_AGENT_NAME', 'openwebui_chat'),
             description=(
                 'Identifies this product in Workbench. Must match the AgentConfig.agent_name '
                 'used for the egress callback registration.'
