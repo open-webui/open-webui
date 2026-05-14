@@ -18,35 +18,42 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create knowledge_directory table
-    op.create_table(
-        'knowledge_directory',
-        sa.Column('id', sa.Text(), nullable=False),
-        sa.Column('knowledge_id', sa.Text(), nullable=False),
-        sa.Column('parent_id', sa.Text(), nullable=True),
-        sa.Column('name', sa.Text(), nullable=False),
-        sa.Column('user_id', sa.Text(), nullable=False),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-        sa.Column('updated_at', sa.BigInteger(), nullable=False),
-        sa.ForeignKeyConstraint(['knowledge_id'], ['knowledge.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['parent_id'], ['knowledge_directory.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('knowledge_id', 'parent_id', 'name', name='uq_knowledge_directory_knowledge_parent_name'),
-    )
-    op.create_index('ix_knowledge_directory_knowledge_id', 'knowledge_directory', ['knowledge_id'])
-    op.create_index('ix_knowledge_directory_parent_id', 'knowledge_directory', ['parent_id'])
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'knowledge_directory' not in existing_tables:
+        # Create knowledge_directory table
+        op.create_table(
+            'knowledge_directory',
+            sa.Column('id', sa.Text(), nullable=False),
+            sa.Column('knowledge_id', sa.Text(), nullable=False),
+            sa.Column('parent_id', sa.Text(), nullable=True),
+            sa.Column('name', sa.Text(), nullable=False),
+            sa.Column('user_id', sa.Text(), nullable=False),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+            sa.Column('updated_at', sa.BigInteger(), nullable=False),
+            sa.ForeignKeyConstraint(['knowledge_id'], ['knowledge.id'], ondelete='CASCADE'),
+            sa.ForeignKeyConstraint(['parent_id'], ['knowledge_directory.id'], ondelete='CASCADE'),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('knowledge_id', 'parent_id', 'name', name='uq_knowledge_directory_knowledge_parent_name'),
+        )
+        op.create_index('ix_knowledge_directory_knowledge_id', 'knowledge_directory', ['knowledge_id'])
+        op.create_index('ix_knowledge_directory_parent_id', 'knowledge_directory', ['parent_id'])
 
     # Add directory_id column to knowledge_file
-    with op.batch_alter_table('knowledge_file') as batch:
-        batch.add_column(sa.Column('directory_id', sa.Text(), nullable=True))
-        batch.create_foreign_key(
-            'fk_knowledge_file_directory_id',
-            'knowledge_directory',
-            ['directory_id'],
-            ['id'],
-            ondelete='SET NULL',
-        )
-        batch.create_index('ix_knowledge_file_directory_id', ['directory_id'])
+    kf_cols = {c['name'] for c in inspector.get_columns('knowledge_file')}
+    if 'directory_id' not in kf_cols:
+        with op.batch_alter_table('knowledge_file') as batch:
+            batch.add_column(sa.Column('directory_id', sa.Text(), nullable=True))
+            batch.create_foreign_key(
+                'fk_knowledge_file_directory_id',
+                'knowledge_directory',
+                ['directory_id'],
+                ['id'],
+                ondelete='SET NULL',
+            )
+            batch.create_index('ix_knowledge_file_directory_id', ['directory_id'])
 
 
 def downgrade() -> None:
