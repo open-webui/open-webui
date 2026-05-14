@@ -19,61 +19,66 @@ depends_on = None
 
 
 def upgrade():
-    # Creating the 'knowledge' table
-    print('Creating knowledge table')
-    knowledge_table = op.create_table(
-        'knowledge',
-        sa.Column('id', sa.Text(), primary_key=True),
-        sa.Column('user_id', sa.Text(), nullable=False),
-        sa.Column('name', sa.Text(), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('data', sa.JSON(), nullable=True),
-        sa.Column('meta', sa.JSON(), nullable=True),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-        sa.Column('updated_at', sa.BigInteger(), nullable=True),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
 
-    print('Migrating data from document table to knowledge table')
-    # Representation of the existing 'document' table
-    document_table = table(
-        'document',
-        column('collection_name', sa.String()),
-        column('user_id', sa.String()),
-        column('name', sa.String()),
-        column('title', sa.Text()),
-        column('content', sa.Text()),
-        column('timestamp', sa.BigInteger()),
-    )
-
-    # Select all from existing document table
-    documents = op.get_bind().execute(
-        select(
-            document_table.c.collection_name,
-            document_table.c.user_id,
-            document_table.c.name,
-            document_table.c.title,
-            document_table.c.content,
-            document_table.c.timestamp,
+    if 'knowledge' not in existing_tables:
+        # Creating the 'knowledge' table
+        print('Creating knowledge table')
+        knowledge_table = op.create_table(
+            'knowledge',
+            sa.Column('id', sa.Text(), primary_key=True),
+            sa.Column('user_id', sa.Text(), nullable=False),
+            sa.Column('name', sa.Text(), nullable=False),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('data', sa.JSON(), nullable=True),
+            sa.Column('meta', sa.JSON(), nullable=True),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+            sa.Column('updated_at', sa.BigInteger(), nullable=True),
         )
-    )
 
-    # Insert data into knowledge table from document table
-    for doc in documents:
-        op.get_bind().execute(
-            knowledge_table.insert().values(
-                id=doc.collection_name,
-                user_id=doc.user_id,
-                description=doc.name,
-                meta={
-                    'legacy': True,
-                    'document': True,
-                    'tags': json.loads(doc.content or '{}').get('tags', []),
-                },
-                name=doc.title,
-                created_at=doc.timestamp,
-                updated_at=doc.timestamp,  # using created_at for both created_at and updated_at in project
+        print('Migrating data from document table to knowledge table')
+        # Representation of the existing 'document' table
+        document_table = table(
+            'document',
+            column('collection_name', sa.String()),
+            column('user_id', sa.String()),
+            column('name', sa.String()),
+            column('title', sa.Text()),
+            column('content', sa.Text()),
+            column('timestamp', sa.BigInteger()),
+        )
+
+        # Select all from existing document table
+        documents = conn.execute(
+            select(
+                document_table.c.collection_name,
+                document_table.c.user_id,
+                document_table.c.name,
+                document_table.c.title,
+                document_table.c.content,
+                document_table.c.timestamp,
             )
         )
+
+        # Insert data into knowledge table from document table
+        for doc in documents:
+            conn.execute(
+                knowledge_table.insert().values(
+                    id=doc.collection_name,
+                    user_id=doc.user_id,
+                    description=doc.name,
+                    meta={
+                        'legacy': True,
+                        'document': True,
+                        'tags': json.loads(doc.content or '{}').get('tags', []),
+                    },
+                    name=doc.title,
+                    created_at=doc.timestamp,
+                    updated_at=doc.timestamp,
+                )
+            )
 
 
 def downgrade():

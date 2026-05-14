@@ -16,6 +16,18 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = {c['name']: c for c in inspector.get_columns('folder')}
+
+    created_at_col = columns.get('created_at')
+    if not created_at_col:
+        return
+
+    # Only convert if still DateTime — skip if already BigInteger
+    if isinstance(created_at_col['type'], sa.BigInteger):
+        return
+
     # Perform safe alterations using batch operation
     with op.batch_alter_table('folder', schema=None) as batch_op:
         # Step 1: Remove server defaults for created_at and updated_at
