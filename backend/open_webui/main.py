@@ -1800,14 +1800,8 @@ async def chat_completion(
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
 
-            # channel: chat_ids skip the chat ownership / storage block below,
-            # but the channel-emitter ultimately writes to a Messages row by
-            # the caller-supplied message_id. Without a gate here, any auth
-            # user could supply chat_id="channel:<any>" + id="<any>" and
-            # overwrite arbitrary messages in arbitrary channels (private,
-            # DM, channels they don't belong to). Enforce: caller must be
-            # able to write in the target channel, AND the supplied message
-            # must belong to that channel.
+            # Gate channel: branch — caller needs write access on the channel
+            # and the supplied message_id must belong to that channel.
             if chat_id.startswith('channel:'):
                 channel_id = chat_id.removeprefix('channel:')
                 channel = await Channels.get_channel_by_id(channel_id)
