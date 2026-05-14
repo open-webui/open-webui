@@ -44,6 +44,7 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint('id'),
         )
 
+    inspector.clear_cache()
     if 'calendar' in inspector.get_table_names():
         if not _index_exists(inspector, 'ix_calendar_user', 'calendar'):
             op.create_index('ix_calendar_user', 'calendar', ['user_id'], unique=False)
@@ -70,6 +71,7 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint('id'),
         )
 
+    inspector.clear_cache()
     if 'calendar_event' in inspector.get_table_names():
         if not _index_exists(inspector, 'ix_calendar_event_calendar', 'calendar_event'):
             op.create_index('ix_calendar_event_calendar', 'calendar_event', ['calendar_id', 'start_at'], unique=False)
@@ -90,6 +92,7 @@ def upgrade() -> None:
             sa.UniqueConstraint('event_id', 'user_id', name='uq_event_attendee'),
         )
 
+    inspector.clear_cache()
     if 'calendar_event_attendee' in inspector.get_table_names():
         if not _index_exists(inspector, 'ix_calendar_event_attendee_user', 'calendar_event_attendee'):
             op.create_index('ix_calendar_event_attendee_user', 'calendar_event_attendee', ['user_id', 'status'], unique=False)

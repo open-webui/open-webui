@@ -60,20 +60,24 @@ def upgrade():
 
 
 def downgrade():
-    # Downgrade: Convert columns back to DateTime and restore defaults
+    # Convert columns back to DateTime and restore defaults. Mirrors the
+    # upgrade's postgresql_using cast — without it, Postgres can't
+    # auto-cast BigInteger → timestamp and aborts with DatatypeMismatch.
     with op.batch_alter_table('folder', schema=None) as batch_op:
         batch_op.alter_column(
             'created_at',
             type_=sa.DateTime(),
             existing_type=sa.BigInteger(),
             existing_nullable=False,
-            server_default=sa.func.now(),  # Restoring server default on downgrade
+            server_default=sa.func.now(),
+            postgresql_using='to_timestamp(created_at)::timestamp without time zone',
         )
         batch_op.alter_column(
             'updated_at',
             type_=sa.DateTime(),
             existing_type=sa.BigInteger(),
             existing_nullable=False,
-            server_default=sa.func.now(),  # Restoring server default on downgrade
-            onupdate=sa.func.now(),  # Restoring onupdate behavior if it was there
+            server_default=sa.func.now(),
+            onupdate=sa.func.now(),
+            postgresql_using='to_timestamp(updated_at)::timestamp without time zone',
         )
