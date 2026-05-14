@@ -64,16 +64,41 @@
 		}
 	};
 
-	const getTextFragmentUrl = (doc: any): string | null => {
-		const { metadata, source, document: content } = doc ?? {};
-		const { file_id, page } = metadata ?? {};
-		const sourceUrl = source?.url;
+	const getHttpUrl = (url: string | null | undefined) => {
+		if (typeof url !== 'string') {
+			return null;
+		}
 
-		const baseUrl = file_id
-			? `${WEBUI_API_BASE_URL}/files/${file_id}/content${page !== undefined ? `#page=${page + 1}` : ''}`
-			: sourceUrl?.includes('http')
-				? sourceUrl
+		const value = url.trim();
+		try {
+			const parsedUrl = new URL(value);
+			return (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && parsedUrl.hostname
+				? value
 				: null;
+		} catch {
+			return null;
+		}
+	};
+
+	const isHttpUrl = (url: string | null | undefined) => getHttpUrl(url) !== null;
+
+	const getDocumentUrl = (doc: any): string | null => {
+		const { metadata, source } = doc ?? {};
+		const { file_id, page } = metadata ?? {};
+		const sourceUrl = getHttpUrl(metadata?.source_url ?? source?.url);
+
+		if (sourceUrl) {
+			return sourceUrl;
+		}
+
+		return file_id
+			? `${WEBUI_API_BASE_URL}/files/${file_id}/content${page !== undefined ? `#page=${page + 1}` : ''}`
+			: null;
+	};
+
+	const getTextFragmentUrl = (doc: any): string | null => {
+		const { document: content } = doc ?? {};
+		const baseUrl = getDocumentUrl(doc);
 
 		if (!baseUrl || !content) return baseUrl;
 
@@ -101,23 +126,19 @@
 			<div class=" text-lg font-medium self-center flex items-center">
 				{#if citation?.source?.name}
 					{@const document = mergedDocuments?.[0]}
-					{#if document?.metadata?.file_id || document.source?.url?.includes('http')}
+					{@const documentUrl = getDocumentUrl(document)}
+					{#if documentUrl}
 						<Tooltip
 							className="w-fit"
-							content={document.source?.url?.includes('http')
-								? $i18n.t('Open link')
-								: $i18n.t('Open file')}
+							content={isHttpUrl(documentUrl) ? $i18n.t('Open link') : $i18n.t('Open file')}
 							placement="top-start"
 							tippyOptions={{ duration: [500, 0] }}
 						>
 							<a
 								class="hover:text-gray-500 dark:hover:text-gray-100 underline grow line-clamp-1"
-								href={document?.metadata?.file_id
-									? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
-									: document.source?.url?.includes('http')
-										? document.source.url
-										: `#`}
+								href={documentUrl}
 								target="_blank"
+								rel="noopener noreferrer"
 							>
 								{decodeString(citation?.source?.name)}
 							</a>
@@ -161,12 +182,13 @@
 							<div
 								class=" text-sm font-medium dark:text-gray-300 flex items-center gap-2 w-fit mb-1"
 							>
-								{#if document.source?.url?.includes('http')}
+								{#if isHttpUrl(getDocumentUrl(document))}
 									{@const snippetUrl = getTextFragmentUrl(document)}
 									{#if snippetUrl}
 										<a
 											href={snippetUrl}
 											target="_blank"
+											rel="noopener noreferrer"
 											class="underline hover:text-gray-500 dark:hover:text-gray-100"
 											>{$i18n.t('Content')}</a
 										>

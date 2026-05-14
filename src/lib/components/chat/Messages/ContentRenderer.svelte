@@ -108,7 +108,7 @@
 				const id = metadata?.source ?? 'N/A';
 				if (metadata?.name) {
 					result.push(metadata.name);
-				} else if (id.startsWith('http://') || id.startsWith('https://')) {
+				} else if (typeof id === 'string' && (id.startsWith('http://') || id.startsWith('https://'))) {
 					result.push(id);
 				} else {
 					result.push(source?.source?.name ?? id);

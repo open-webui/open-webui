@@ -39,6 +39,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.source import get_file_source_url_metadata, get_first_source_url_metadata
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.main import GetResult
@@ -1208,6 +1209,14 @@ async def get_sources_from_items(
                 if item.get('file', {}).get('data', {}).get('content', ''):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
+                    file_metadata = item.get('file', {}).get('meta', {}) or {}
+                    content_metadata = item.get('file', {}).get('data', {}).get('metadata', {}) or {}
+                    file_metadata = file_metadata if isinstance(file_metadata, dict) else {}
+                    content_metadata = content_metadata if isinstance(content_metadata, dict) else {}
+                    source_url_metadata = get_first_source_url_metadata(
+                        file_metadata,
+                        content_metadata,
+                    )
                     query_result = {
                         'documents': [[item.get('file', {}).get('data', {}).get('content', '')]],
                         'metadatas': [
@@ -1215,7 +1224,8 @@ async def get_sources_from_items(
                                 {
                                     'file_id': item.get('id'),
                                     'name': item.get('name'),
-                                    **item.get('file').get('data', {}).get('metadata', {}),
+                                    **content_metadata,
+                                    **source_url_metadata,
                                 }
                             ]
                         ],
@@ -1235,6 +1245,7 @@ async def get_sources_from_items(
                                         'file_id': item.get('id'),
                                         'name': file_object.filename,
                                         'source': file_object.filename,
+                                        **get_file_source_url_metadata(file_object),
                                     }
                                 ]
                             ],
@@ -1282,6 +1293,7 @@ async def get_sources_from_items(
                                     'file_id': file.id,
                                     'name': file.filename,
                                     'source': file.filename,
+                                    **get_file_source_url_metadata(file),
                                 }
                             )
 

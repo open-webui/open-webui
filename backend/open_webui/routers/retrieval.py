@@ -73,6 +73,7 @@ from open_webui.retrieval.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.retrieval.source import get_file_source_url_metadata, merge_source_url_metadata
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.utils import filter_metadata
@@ -119,6 +120,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
 
 ##########################################
 #
@@ -1556,6 +1558,7 @@ async def process_file(
     if file:
         try:
             collection_name = form_data.collection_name
+            file_source_url_metadata = get_file_source_url_metadata(file)
 
             if collection_name is None:
                 collection_name = f'file-{file.id}'
@@ -1582,6 +1585,7 @@ async def process_file(
                             'created_by': file.user_id,
                             'file_id': file.id,
                             'source': file.filename,
+                            **file_source_url_metadata,
                         },
                     )
                 ]
@@ -1599,7 +1603,10 @@ async def process_file(
                     docs = [
                         Document(
                             page_content=result.documents[0][idx],
-                            metadata=result.metadatas[0][idx],
+                            metadata=merge_source_url_metadata(
+                                result.metadatas[0][idx],
+                                file.meta,
+                            ),
                         )
                         for idx, id in enumerate(result.ids[0])
                     ]
@@ -1613,6 +1620,7 @@ async def process_file(
                                 'created_by': file.user_id,
                                 'file_id': file.id,
                                 'source': file.filename,
+                                **file_source_url_metadata,
                             },
                         )
                     ]
@@ -1637,6 +1645,7 @@ async def process_file(
                                 'created_by': file.user_id,
                                 'file_id': file.id,
                                 'source': file.filename,
+                                **file_source_url_metadata,
                             },
                         )
                         for doc in docs
@@ -1651,6 +1660,7 @@ async def process_file(
                                 'created_by': file.user_id,
                                 'file_id': file.id,
                                 'source': file.filename,
+                                **file_source_url_metadata,
                             },
                         )
                     ]
@@ -2645,6 +2655,7 @@ async def process_files_batch(
                 continue
 
             text_content = file.data.get('content', '')
+            file_source_url_metadata = get_file_source_url_metadata(file)
             docs: list[Document] = [
                 Document(
                     page_content=text_content.replace('<br/>', '\n'),
@@ -2654,6 +2665,7 @@ async def process_files_batch(
                         'created_by': file.user_id,
                         'file_id': file.id,
                         'source': file.filename,
+                        **file_source_url_metadata,
                     },
                 )
             ]
