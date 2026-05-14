@@ -1326,9 +1326,11 @@
 											/>
 
 											<RegenerateMenu
-												onRegenerate={(prompt = null) => {
+												showWebSearch={$config?.features?.enable_web_search &&
+													($user?.role === 'admin' || ($user?.permissions?.features?.web_search ?? true))}
+												onRegenerate={(prompt = null, options = {}) => {
 													showRateComment = false;
-													regenerateResponse(message, prompt);
+													regenerateResponse(message, prompt, options);
 
 													(model?.actions ?? []).forEach((action) => {
 														dispatch('action', {

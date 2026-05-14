@@ -2050,12 +2050,14 @@
 			messages = null,
 			modelId = null,
 			modelIdx = null,
-			regenerationPrompt = null
+			regenerationPrompt = null,
+			webSearch = null
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
 			regenerationPrompt?: string | null;
+			webSearch?: boolean | null;
 		} = {}
 	) => {
 		if (autoScroll) {
@@ -2169,7 +2171,8 @@
 				_chatId,
 				{
 					messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
-					regenerationPrompt
+					regenerationPrompt,
+					webSearch
 				}
 			);
 
@@ -2177,7 +2180,7 @@
 		}
 	};
 
-	const getFeatures = () => {
+	const getFeatures = (overrides = {}) => {
 		let features = {};
 
 		if ($config?.features)
@@ -2196,7 +2199,7 @@
 				web_search:
 					$config?.features?.enable_web_search &&
 					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-						? webSearchEnabled
+						? (overrides?.webSearch ?? webSearchEnabled)
 						: false
 			};
 
@@ -2238,11 +2241,13 @@
 		{
 			messageIdsMap,
 			regenerationPrompt,
-			continueResponse = false
+			continueResponse = false,
+			webSearch = null
 		}: {
 			messageIdsMap?: Record<string, string>;
 			regenerationPrompt?: string | null;
 			continueResponse?: boolean;
+			webSearch?: boolean | null;
 		} = {}
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
@@ -2425,7 +2430,7 @@
 					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
 					...($terminalServers ?? []).filter((t) => !t.id)
 				],
-				features: getFeatures(),
+				features: getFeatures({ webSearch }),
 				variables: {
 					...getPromptVariables(
 						$user?.name,
@@ -2652,7 +2657,7 @@
 		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message, suggestionPrompt = null) => {
+	const regenerateResponse = async (message, suggestionPrompt = null, options = {}) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
@@ -2680,7 +2685,8 @@
 							modelId: message.model,
 							modelIdx: message.modelIdx
 						}
-					: {})
+					: {}),
+				...options
 			});
 		}
 	};

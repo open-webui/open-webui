@@ -4,11 +4,13 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import LineSpace from '$lib/components/icons/LineSpace.svelte';
 	import LineSpaceSmaller from '$lib/components/icons/LineSpaceSmaller.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let onRegenerate: Function = (prompt = null) => {};
+	export let onRegenerate: Function = (prompt = null, options = {}) => {};
 	export let onClose: Function = () => {};
+	export let showWebSearch = false;
 
 	let show = false;
 	let inputValue = '';
@@ -117,6 +119,18 @@
 				<LineSpaceSmaller strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('More Concise')}</div>
 			</button>
+			{#if showWebSearch}
+				<button
+					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					on:click={() => {
+						onRegenerate(null, { webSearch: true });
+						show = false;
+					}}
+				>
+					<GlobeAlt className="size-4" strokeWidth="2" />
+					<div class="flex items-center">{$i18n.t('Search the Web')}</div>
+				</button>
+			{/if}
 		</div>
 	</div>
 </Dropdown>
