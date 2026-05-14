@@ -12,6 +12,7 @@ cd "$SCRIPT_DIR" || exit 1
 
 # ── Playwright browser installation (if configured) ──────────────────────────
 
+WEB_LOADER_ENGINE="${WEB_LOADER_ENGINE:-}"
 if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
   if [[ -z "${PLAYWRIGHT_WS_URL:-}" ]]; then
     echo "Installing Playwright Chromium browser..."
@@ -41,6 +42,7 @@ fi
 
 # ── Ollama (bundled Docker image) ────────────────────────────────────────────
 
+USE_OLLAMA_DOCKER="${USE_OLLAMA_DOCKER:-}"
 if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
   echo "Starting bundled ollama serve..."
   ollama serve &
@@ -48,6 +50,7 @@ fi
 
 # ── CUDA library paths ──────────────────────────────────────────────────────
 
+USE_CUDA_DOCKER="${USE_CUDA_DOCKER:-}"
 if [[ "${USE_CUDA_DOCKER,,}" == "true" ]]; then
   echo "CUDA enabled — extending LD_LIBRARY_PATH for torch/cudnn libraries."
   export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib"
