@@ -203,7 +203,7 @@ async def get_session_user(
 
     user_permissions = await get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
 
-    return {
+    response_data = {
         'token': token,
         'token_type': 'Bearer',
         'expires_at': expires_at,
@@ -220,6 +220,8 @@ async def get_session_user(
         'status_expires_at': user.status_expires_at,
         'permissions': user_permissions,
     }
+
+    return response_data
 
 
 ############################
