@@ -16,17 +16,22 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        'note',
-        sa.Column('id', sa.Text(), nullable=False, primary_key=True, unique=True),
-        sa.Column('user_id', sa.Text(), nullable=True),
-        sa.Column('title', sa.Text(), nullable=True),
-        sa.Column('data', sa.JSON(), nullable=True),
-        sa.Column('meta', sa.JSON(), nullable=True),
-        sa.Column('access_control', sa.JSON(), nullable=True),
-        sa.Column('created_at', sa.BigInteger(), nullable=True),
-        sa.Column('updated_at', sa.BigInteger(), nullable=True),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'note' not in existing_tables:
+        op.create_table(
+            'note',
+            sa.Column('id', sa.Text(), nullable=False, primary_key=True, unique=True),
+            sa.Column('user_id', sa.Text(), nullable=True),
+            sa.Column('title', sa.Text(), nullable=True),
+            sa.Column('data', sa.JSON(), nullable=True),
+            sa.Column('meta', sa.JSON(), nullable=True),
+            sa.Column('access_control', sa.JSON(), nullable=True),
+            sa.Column('created_at', sa.BigInteger(), nullable=True),
+            sa.Column('updated_at', sa.BigInteger(), nullable=True),
+        )
 
 
 def downgrade():
