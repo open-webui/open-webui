@@ -158,10 +158,13 @@ def upgrade() -> None:
         if col_name not in user_columns:
             op.add_column('user', sa.Column(col_name, col_type, nullable=True))
 
-    # Convert info (TEXT/JSONField) → JSON
-    _convert_column_to_json('user', 'info')
-    # Convert settings (TEXT/JSONField) → JSON
-    _convert_column_to_json('user', 'settings')
+    # Convert info (TEXT/JSONField) → JSON (skip if already JSON)
+    user_col_types = {c['name']: c['type'] for c in inspector.get_columns('user')}
+    if isinstance(user_col_types.get('info'), sa.Text):
+        _convert_column_to_json('user', 'info')
+    # Convert settings (TEXT/JSONField) → JSON (skip if already JSON)
+    if isinstance(user_col_types.get('settings'), sa.Text):
+        _convert_column_to_json('user', 'settings')
 
     # ── Create api_key table (idempotent) ─────────────────────────────
     if 'api_key' not in existing_tables:
