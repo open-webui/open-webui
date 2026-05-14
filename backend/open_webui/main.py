@@ -212,6 +212,7 @@ from open_webui.config import (
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     # Retrieval (Web Search)
     ENABLE_WEB_SEARCH,
+    ENABLE_WEB_SEARCH_WARNING,
     # Misc
     ENV,
     EVALUATION_ARENA_MODELS,
@@ -1071,6 +1072,7 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 
 app.state.config.ENABLE_WEB_SEARCH = ENABLE_WEB_SEARCH
+app.state.config.ENABLE_WEB_SEARCH_WARNING = ENABLE_WEB_SEARCH_WARNING
 app.state.config.WEB_SEARCH_ENGINE = WEB_SEARCH_ENGINE
 app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = WEB_SEARCH_DOMAIN_FILTER_LIST
 app.state.config.WEB_SEARCH_RESULT_COUNT = WEB_SEARCH_RESULT_COUNT
@@ -2379,6 +2381,7 @@ async def get_app_config(request: Request):
                     'enable_automations': app.state.config.ENABLE_AUTOMATIONS,
                     'enable_notes': app.state.config.ENABLE_NOTES,
                     'enable_web_search': app.state.config.ENABLE_WEB_SEARCH,
+                    'enable_web_search_warning': app.state.config.ENABLE_WEB_SEARCH_WARNING,
                     'enable_code_execution': app.state.config.ENABLE_CODE_EXECUTION,
                     'enable_code_interpreter': app.state.config.ENABLE_CODE_INTERPRETER,
                     'enable_image_generation': app.state.config.ENABLE_IMAGE_GENERATION,

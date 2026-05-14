@@ -515,6 +515,12 @@
 		$config?.features?.enable_web_search &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
 
+	let showWebSearchWarning = false;
+	$: showWebSearchWarning =
+		$config?.features?.enable_web_search_warning &&
+		showWebSearchButton &&
+		(webSearchEnabled || ($settings?.webSearch ?? false) === 'always');
+
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
@@ -1311,6 +1317,21 @@
 												<XMark />
 											</button>
 										</div>
+									</div>
+								</div>
+							{/if}
+
+							{#if showWebSearchWarning}
+								<div
+									class="mx-2 mt-2 flex items-start gap-2 rounded-lg border border-yellow-200/70 bg-yellow-50/80 px-3 py-2 text-xs text-yellow-800 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-100"
+									role="status"
+									aria-live="polite"
+								>
+									<GlobeAlt className="mt-0.5 size-4 shrink-0" strokeWidth="1.75" />
+									<div class="min-w-0">
+										{$i18n.t(
+											'Web search is enabled. Queries may be sent to the configured search provider.'
+										)}
 									</div>
 								</div>
 							{/if}

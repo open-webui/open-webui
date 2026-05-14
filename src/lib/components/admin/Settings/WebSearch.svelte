@@ -96,6 +96,7 @@
 
 		if (res) {
 			webConfig = res.web;
+			webConfig.ENABLE_WEB_SEARCH_WARNING = webConfig.ENABLE_WEB_SEARCH_WARNING ?? false;
 
 			// Convert array back to comma-separated string for display
 			if (Array.isArray(webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
@@ -148,6 +149,15 @@
 						</div>
 						<div class="flex items-center relative">
 							<Switch bind:state={webConfig.ENABLE_WEB_SEARCH} />
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Show Web Search Warning')}
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={webConfig.ENABLE_WEB_SEARCH_WARNING} />
 						</div>
 					</div>
 

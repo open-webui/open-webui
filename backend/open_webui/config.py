@@ -1519,6 +1519,12 @@ ENABLE_WEB_SEARCH = ConfigVar(
     os.getenv('ENABLE_WEB_SEARCH', 'False').lower() == 'true',
 )
 
+ENABLE_WEB_SEARCH_WARNING = ConfigVar(
+    'ENABLE_WEB_SEARCH_WARNING',
+    'rag.web.search.warning.enable',
+    os.getenv('ENABLE_WEB_SEARCH_WARNING', 'False').lower() == 'true',
+)
+
 WEB_SEARCH_ENGINE = ConfigVar(
     'WEB_SEARCH_ENGINE',
     'rag.web.search.engine',

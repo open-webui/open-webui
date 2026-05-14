@@ -490,6 +490,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Web search settings
         'web': {
             'ENABLE_WEB_SEARCH': request.app.state.config.ENABLE_WEB_SEARCH,
+            'ENABLE_WEB_SEARCH_WARNING': request.app.state.config.ENABLE_WEB_SEARCH_WARNING,
             'WEB_SEARCH_ENGINE': request.app.state.config.WEB_SEARCH_ENGINE,
             'WEB_SEARCH_TRUST_ENV': request.app.state.config.WEB_SEARCH_TRUST_ENV,
             'WEB_SEARCH_RESULT_COUNT': request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -559,6 +560,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
 
 class WebConfig(BaseModel):
     ENABLE_WEB_SEARCH: bool | None = None
+    ENABLE_WEB_SEARCH_WARNING: bool | None = None
     WEB_SEARCH_ENGINE: str | None = None
     WEB_SEARCH_TRUST_ENV: bool | None = None
     WEB_SEARCH_RESULT_COUNT: int | None = None
@@ -1040,6 +1042,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     if form_data.web is not None:
         # Web search settings
         request.app.state.config.ENABLE_WEB_SEARCH = form_data.web.ENABLE_WEB_SEARCH
+        if form_data.web.ENABLE_WEB_SEARCH_WARNING is not None:
+            request.app.state.config.ENABLE_WEB_SEARCH_WARNING = form_data.web.ENABLE_WEB_SEARCH_WARNING
         request.app.state.config.WEB_SEARCH_ENGINE = form_data.web.WEB_SEARCH_ENGINE
         request.app.state.config.WEB_SEARCH_TRUST_ENV = form_data.web.WEB_SEARCH_TRUST_ENV
         request.app.state.config.WEB_SEARCH_RESULT_COUNT = form_data.web.WEB_SEARCH_RESULT_COUNT
@@ -1179,6 +1183,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         # Web search settings
         'web': {
             'ENABLE_WEB_SEARCH': request.app.state.config.ENABLE_WEB_SEARCH,
+            'ENABLE_WEB_SEARCH_WARNING': request.app.state.config.ENABLE_WEB_SEARCH_WARNING,
             'WEB_SEARCH_ENGINE': request.app.state.config.WEB_SEARCH_ENGINE,
             'WEB_SEARCH_TRUST_ENV': request.app.state.config.WEB_SEARCH_TRUST_ENV,
             'WEB_SEARCH_RESULT_COUNT': request.app.state.config.WEB_SEARCH_RESULT_COUNT,
