@@ -584,13 +584,15 @@ class ChatTable:
             return node
 
         existing = messages.get(message_id)
-        if existing is not None:
+        if isinstance(existing, dict):
             # {**existing, **message}: omitted keys keep existing, explicit
             # values (incl. parentId=None, childrenIds=[]) win.
             messages[message_id] = enforce_node_invariants({**existing, **message})
         else:
-            # Node missing: a concurrent whole-chat write likely dropped the
-            # placeholder. Warn only when the payload is itself partial.
+            if existing is not None:
+                log.warning(f'upsert: discarding malformed existing node {message_id}')
+            # Node missing/unusable: a concurrent whole-chat write likely
+            # dropped the placeholder. Warn only when the payload is partial.
             is_partial = not all(k in message for k in ('id', 'parentId', 'childrenIds', 'role'))
             if is_partial:
                 log.warning(
@@ -623,16 +625,18 @@ class ChatTable:
 
         chat['history'] = history
 
-        # Dual-write to chat_message table. Alias camelCase parentId to
-        # snake_case so the normalized row's parent link is repaired too
-        # (callee gates its update on 'parent_id').
+        # Send parent_id only when known; parent_id=None would clear a real
+        # link on the normalized row from a possibly-stale snapshot.
         node = history['messages'][message_id]
+        cm_data = {**node}
+        if node.get('parentId') is not None:
+            cm_data['parent_id'] = node['parentId']
         try:
             await ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
                 user_id=user_id,
-                data={**node, 'parent_id': node.get('parentId')},
+                data=cm_data,
             )
         except Exception as e:
             log.warning(f'Failed to write to chat_message table: {e}')

@@ -3583,13 +3583,12 @@ async def streaming_chat_response_handler(response, ctx):
         model_id = form_data.get('model', '')
 
         def build_assistant_message_update(**fields):
-            # Only placeholder-repair fields, and each only when authoritative,
-            # so the upsert merge can't clobber an existing node (chats.py
-            # synthesizes what's missing).
+            # Placeholder-repair fields only, each when authoritative;
+            # structural keys last so callers can't override them.
             update = {
+                **fields,
                 'id': metadata['message_id'],
                 'role': 'assistant',
-                **fields,
             }
             if model_id:
                 update['model'] = model_id
