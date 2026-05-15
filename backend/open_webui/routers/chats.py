@@ -1583,23 +1583,3 @@ async def delete_tag_by_id_and_tag_name(
         return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
-
-
-############################
-# DeleteAllTagsById
-############################
-
-
-@router.delete('/{id}/tags/all', response_model=bool | None)
-async def delete_all_tags_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
-):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-    if chat:
-        old_tags = chat.meta.get('tags', [])
-        await Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
-        await Chats.delete_orphan_tags_for_user(old_tags, user.id, db=db)
-
-        return True
-    else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)

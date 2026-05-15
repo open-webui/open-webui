@@ -1491,20 +1491,6 @@ class ChatTable:
         except Exception:
             return False
 
-    async def delete_all_tags_by_id_and_user_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> bool:
-        try:
-            async with get_async_db_context(db) as db:
-                chat = await db.get(Chat, id)
-                chat.meta = {
-                    **chat.meta,
-                    'tags': [],
-                }
-                await db.commit()
-
-                return True
-        except Exception:
-            return False
-
     async def delete_chat_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
