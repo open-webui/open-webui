@@ -442,6 +442,7 @@ html.dark .swept-shell__link.is-active {
 	justify-content: center;
 	padding: 0.625rem;
 	gap: 0;
+	border-radius: 0;
 }
 .swept-shell[data-sidebar-collapsed='true'] .swept-shell__label {
 	display: none;
