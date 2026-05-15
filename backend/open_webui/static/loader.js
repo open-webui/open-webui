@@ -58,8 +58,7 @@
 			'<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
 		'sliders-horizontal':
 			'<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>',
-		'panel-left':
-			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+		'panel-left': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
 		'panel-left-close':
 			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
 		'panel-left-open':
@@ -83,7 +82,10 @@
 		var matched = null;
 		for (var i = 0; i < KNOWN_PARENTS.length; i++) {
 			var p = KNOWN_PARENTS[i];
-			if ((host === p || host.indexOf('.' + p, host.length - p.length - 1) !== -1) && (!matched || p.length > matched.length)) {
+			if (
+				(host === p || host.indexOf('.' + p, host.length - p.length - 1) !== -1) &&
+				(!matched || p.length > matched.length)
+			) {
 				matched = p;
 			}
 		}
