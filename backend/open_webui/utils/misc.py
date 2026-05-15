@@ -130,6 +130,63 @@ def get_content_from_message(message: dict) -> str | None:
     return None
 
 
+def _reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
+    """
+    Drop unpaired tool_use / tool_result entries from a reconstructed
+    conversation.
+
+    Stored output can be incomplete: a ``function_call_output`` may be missing
+    (e.g. lost when a knowledge base is updated mid-chat, or a tool call
+    interrupted before its result was written), or a ``function_call`` may be
+    missing while its output survived. Strict providers (Anthropic, AWS Bedrock
+    Converse) reject any assistant ``tool_calls`` entry without a matching tool
+    result, and any ``tool`` message without a matching tool call. Removing the
+    unpaired side keeps the reconstructed conversation valid.
+
+    Well-formed output is unaffected: every id pairs, so nothing is stripped.
+    """
+    answered_ids = {m.get('tool_call_id') for m in messages if m.get('role') == 'tool' and m.get('tool_call_id')}
+    called_ids = {
+        tc.get('id')
+        for m in messages
+        if m.get('role') == 'assistant'
+        for tc in (m.get('tool_calls') or [])
+        if tc.get('id')
+    }
+
+    reconciled = []
+    for m in messages:
+        role = m.get('role')
+
+        if role == 'assistant' and m.get('tool_calls'):
+            kept = [tc for tc in m['tool_calls'] if tc.get('id') in answered_ids]
+            if len(kept) == len(m['tool_calls']):
+                reconciled.append(m)
+                continue
+
+            m = {**m}
+            if kept:
+                m['tool_calls'] = kept
+            else:
+                m.pop('tool_calls', None)
+
+            content = m.get('content')
+            has_content = bool(content.strip()) if isinstance(content, str) else bool(content)
+            if not m.get('tool_calls') and not has_content and not m.get('reasoning_content'):
+                # Assistant turn was only the now-orphaned tool call(s); drop it.
+                continue
+            reconciled.append(m)
+
+        elif role == 'tool' and m.get('tool_call_id') not in called_ids:
+            # Tool result with no surviving tool call; strict providers reject it.
+            continue
+
+        else:
+            reconciled.append(m)
+
+    return reconciled
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -296,7 +353,9 @@ def convert_output_to_messages(
     # Flush remaining content/tool_calls
     flush_pending()
 
-    return messages
+    # Stored output can be incomplete; never hand a strict provider a
+    # tool_use without its tool_result (or vice versa).
+    return _reconcile_tool_pairs(messages)
 
 
 def get_last_user_message(messages: list[dict]) -> str | None:
