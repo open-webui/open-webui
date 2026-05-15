@@ -137,16 +137,6 @@ async def search_users(
 
 
 ############################
-# User Groups
-############################
-
-
-@router.get('/groups')
-async def get_user_groups(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    return await Groups.get_groups_by_member_id(user.id, db=db)
-
-
-############################
 # User Permissions
 ############################
 
