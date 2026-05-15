@@ -77,6 +77,11 @@
 			// of expanded-then-collapsed sidebar. Mirrors
 			// src/lib/utils/sidebar-cookie.ts. Cookie absent ⇒ leave the global
 			// undefined and let the Sidebar fall back to legacy localStorage.
+			//
+			// Also sets html.swept-shell-collapsed at FOUC time when the cookie
+			// is true, so the @media block below renders the splash with the
+			// 4rem inset on first paint (loader.js takes over once /api/config
+			// resolves, but we don't want the splash to flicker between widths).
 			(function () {
 				try {
 					var COOKIE = 'swept_sidebar_collapsed';
@@ -88,8 +93,12 @@
 						} catch (decodeErr) {
 							v = null;
 						}
-						if (v === 'true') window.__sweptSidebarCollapsed = true;
-						else if (v === 'false') window.__sweptSidebarCollapsed = false;
+						if (v === 'true') {
+							window.__sweptSidebarCollapsed = true;
+							document.documentElement.classList.add('swept-shell-collapsed');
+						} else if (v === 'false') {
+							window.__sweptSidebarCollapsed = false;
+						}
 					}
 				} catch (e) {}
 			})();
@@ -267,11 +276,18 @@
 		   1024px breakpoint and html.swept-shell-active selector used by
 		   custom.css to shift the rest of the app right by 16rem. !important
 		   is required to override the inline `left:0; width:100%` on
-		   #splash-screen below — same trick custom.css uses for #sidebar. */
+		   #splash-screen below — same trick custom.css uses for #sidebar.
+		   When the shell is collapsed (swept_sidebar_collapsed cookie =
+		   true → loader.js adds .swept-shell-collapsed) the inset narrows
+		   to 4rem to match. */
 		@media (min-width: 1024px) {
 			html.swept-shell-active #splash-screen {
 				left: 16rem !important;
 				width: calc(100% - 16rem) !important;
+			}
+			html.swept-shell-active.swept-shell-collapsed #splash-screen {
+				left: 4rem !important;
+				width: calc(100% - 4rem) !important;
 			}
 		}
 
