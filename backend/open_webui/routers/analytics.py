@@ -112,37 +112,6 @@ async def get_user_analytics(
     return UserAnalyticsResponse(users=users)
 
 
-@router.get('/messages', response_model=list[ChatMessageModel])
-async def get_messages(
-    model_id: Optional[str] = Query(None, description='Filter by model ID'),
-    user_id: Optional[str] = Query(None, description='Filter by user ID'),
-    chat_id: Optional[str] = Query(None, description='Filter by chat ID'),
-    start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
-    end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
-    skip: int = Query(0),
-    limit: int = Query(50, le=100),
-    user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    """Query messages with filters."""
-    if chat_id:
-        return await ChatMessages.get_messages_by_chat_id(chat_id=chat_id, db=db)
-    elif model_id:
-        return await ChatMessages.get_messages_by_model_id(
-            model_id=model_id,
-            start_date=start_date,
-            end_date=end_date,
-            skip=skip,
-            limit=limit,
-            db=db,
-        )
-    elif user_id:
-        return await ChatMessages.get_messages_by_user_id(user_id=user_id, skip=skip, limit=limit, db=db)
-    else:
-        # Return empty if no filter specified
-        return []
-
-
 class SummaryResponse(BaseModel):
     total_messages: int
     total_chats: int
