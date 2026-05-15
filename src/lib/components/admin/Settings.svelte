@@ -21,6 +21,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Integrations from './Settings/Integrations.svelte';
+	import UserPermissions from './Settings/UserPermissions.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -48,7 +49,8 @@
 			'audio',
 			'images',
 			'pipelines',
-			'db'
+			'db',
+			'user-permissions'
 		].includes(tabFromPath)
 			? tabFromPath
 			: 'general';
@@ -243,6 +245,33 @@
 			title: 'Database',
 			route: '/admin/settings/db',
 			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
+		},
+		{
+			id: 'user-permissions',
+			title: 'User Permissions',
+			route: '/admin/settings/user-permissions',
+			keywords: [
+				'user permissions',
+				'permissions',
+				'features',
+				'toggle',
+				'workspace',
+				'knowledge',
+				'prompts',
+				'skills',
+				'tools',
+				'controls',
+				'calendar',
+				'notes',
+				'channels',
+				'web search',
+				'image generation',
+				'code interpreter',
+				'memories',
+				'automations',
+				'sharing',
+				'access'
+			]
 		}
 	];
 
@@ -320,6 +349,7 @@
 		<!-- {$i18n.t('Images')} -->
 		<!-- {$i18n.t('Pipelines')} -->
 		<!-- {$i18n.t('Database')} -->
+		<!-- {$i18n.t('User Permissions')} -->
 		{#each filteredSettings as tab (tab.id)}
 			<a
 				id={tab.id}
@@ -496,6 +526,19 @@
 								d="M8 12.5c1.84 0 3.579-.37 4.914-1.037.366-.183.74-.41 1.086-.684V12c0 1.657-2.686 3-6 3s-6-1.343-6-3v-1.22c.346.273.72.5 1.087.683C4.42 12.131 6.16 12.5 8 12.5Z"
 							/>
 						</svg>
+					{:else if tab.id === 'user-permissions'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
 					{/if}
 				</div>
 				<div class=" self-center">{$i18n.t(tab.title)}</div>
@@ -580,6 +623,12 @@
 			/>
 		{:else if selectedTab === 'pipelines'}
 			<Pipelines
+				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-permissions'}
+			<UserPermissions
 				saveHandler={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
