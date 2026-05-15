@@ -564,12 +564,17 @@ class ChatTable:
         history = chat.get('history', {})
 
         now = int(time.time())
-        messages = history.setdefault('messages', {})
+        # tolerate an absent or malformed messages container
+        messages = history.get('messages')
+        if not isinstance(messages, dict):
+            messages = {}
+            history['messages'] = messages
 
         def enforce_node_invariants(node: dict) -> dict:
             # Structural graph fields a partial update must never drop.
             node['id'] = message_id
-            node.setdefault('parentId', None)  # explicit null, never undefined
+            if not isinstance(node.get('parentId'), str):
+                node['parentId'] = None  # explicit null; never undefined/non-scalar
             if not isinstance(node.get('childrenIds'), list):
                 node['childrenIds'] = []
             if not node.get('role'):
@@ -580,13 +585,9 @@ class ChatTable:
 
         existing = messages.get(message_id)
         if existing is not None:
-            merged = {**existing, **message}
-            # Omitted -> keep existing; explicit value (incl. parentId=None,
-            # childrenIds=[]) wins. Empty role / 0 ts still normalized above.
-            for key in ('parentId', 'role', 'timestamp', 'childrenIds'):
-                if key not in message and key in existing:
-                    merged[key] = existing[key]
-            messages[message_id] = enforce_node_invariants(merged)
+            # {**existing, **message}: omitted keys keep existing, explicit
+            # values (incl. parentId=None, childrenIds=[]) win.
+            messages[message_id] = enforce_node_invariants({**existing, **message})
         else:
             # Node missing: a concurrent whole-chat write likely dropped the
             # placeholder. Warn only when the payload is itself partial.
@@ -594,7 +595,8 @@ class ChatTable:
             if is_partial:
                 log.warning(
                     f'upsert: synthesizing lost message node {message_id} '
-                    f'from partial payload (role={message.get("role")!r})'
+                    f'from partial payload '
+                    f'(role={message.get("role") or "assistant (defaulted)"!r})'
                 )
             else:
                 log.debug(f'upsert: creating message node {message_id}')
@@ -613,24 +615,24 @@ class ChatTable:
                 if message_id not in children_ids:
                     children_ids.append(message_id)
             else:
-                # Dangling parentId re-bricks the frontend walk; detach.
-                log.warning(
-                    f'upsert: message {message_id} references missing parent '
-                    f'{parent_id}; detaching to keep history loadable'
-                )
-                messages[message_id]['parentId'] = None
+                # Parent absent from this possibly-stale snapshot: log only.
+                # It may still exist in chat_message; don't sever a real link.
+                log.warning(f'upsert: message {message_id} parent {parent_id} absent from embedded history')
 
         history['currentId'] = message_id
 
         chat['history'] = history
 
-        # Dual-write to chat_message table
+        # Dual-write to chat_message table. Alias camelCase parentId to
+        # snake_case so the normalized row's parent link is repaired too
+        # (callee gates its update on 'parent_id').
+        node = history['messages'][message_id]
         try:
             await ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
                 user_id=user_id,
-                data=history['messages'][message_id],
+                data={**node, 'parent_id': node.get('parentId')},
             )
         except Exception as e:
             log.warning(f'Failed to write to chat_message table: {e}')
