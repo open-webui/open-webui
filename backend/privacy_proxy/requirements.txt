@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+httpx
+presidio-analyzer
+presidio-anonymizer
+spacy
+langdetect
+spacy[de]
+https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.7.0/de_core_news_lg-3.7.0-py3-none-any.whl
+redis
+jaraco.context>=6.1.0
+orjson==3.11.6
