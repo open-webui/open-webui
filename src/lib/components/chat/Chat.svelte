@@ -640,13 +640,22 @@
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
 
-		// Prompt-related message types only submit text to the chat input —
-		// functionally equivalent to the user typing.  When same-origin is
-		// enabled they go through immediately.  When it is disabled (opaque
-		// origin) we show a confirmation dialog so the user stays in control.
+		// Prompt-related message types let an embedding page drive the chat
+		// input / submission. They are only honored from a trusted context:
+		// genuinely same-origin, or the user has explicitly opted in via the
+		// "iframe Sandbox Allow Same Origin" interface setting (same setting
+		// that controls whether rendered iframes get allow-same-origin). A
+		// cross-origin page (e.g. an external site that window.open()s this app
+		// and postMessages it) must not be able to set or submit prompts in the
+		// victim's authenticated session without that opt-in.
 		const iframePromptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+		const allowEmbedPrompts = isSameOrigin || ($settings?.iframeSandboxAllowSameOrigin ?? false);
 
 		if (!isSameOrigin && !iframePromptTypes.includes(type)) {
+			return;
+		}
+
+		if (iframePromptTypes.includes(type) && !allowEmbedPrompts) {
 			return;
 		}
 
