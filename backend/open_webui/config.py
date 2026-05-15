@@ -948,6 +948,15 @@ log.info(f'VECTOR_DB: {VECTOR_DB}')
 S3_VECTOR_BUCKET_NAME = os.getenv('S3_VECTOR_BUCKET_NAME', None)
 S3_VECTOR_REGION = os.getenv('S3_VECTOR_REGION', None)
 
+# Valkey Vector Store
+VALKEY_URL = os.getenv('VALKEY_URL', '')
+VALKEY_COLLECTION_PREFIX = os.getenv('VALKEY_COLLECTION_PREFIX', 'open_webui')
+VALKEY_INDEX_TYPE = os.getenv('VALKEY_INDEX_TYPE', 'HNSW').upper()
+VALKEY_DISTANCE_METRIC = os.getenv('VALKEY_DISTANCE_METRIC', 'COSINE').upper()
+VALKEY_HNSW_M = int(os.getenv('VALKEY_HNSW_M', '16'))
+VALKEY_HNSW_EF_CONSTRUCTION = int(os.getenv('VALKEY_HNSW_EF_CONSTRUCTION', '200'))
+VALKEY_HNSW_EF_RUNTIME = int(os.getenv('VALKEY_HNSW_EF_RUNTIME', '10'))
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
