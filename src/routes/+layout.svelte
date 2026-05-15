@@ -18,6 +18,7 @@
 		WEBUI_VERSION,
 		WEBUI_DEPLOYMENT_ID,
 		mobile,
+		showSidebar,
 		socket,
 		socketConnected,
 		chatId,
@@ -66,6 +67,7 @@
 	import { bestMatchingLanguage, displayFileHandler, getUserTimezone } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 	import { readSharedTheme, syncToCookie, isLocalOnlyTheme } from '$lib/utils/theme-cookie';
+	import { readSidebarCollapsedCookie } from '$lib/utils/sidebar-cookie';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
@@ -983,6 +985,24 @@
 		};
 		document.addEventListener('visibilitychange', onSharedThemeVisibility);
 		window.addEventListener('focus', reapplySharedTheme);
+
+		// Cross-app sidebar sync. Same protocol as theme: when this tab regains
+		// focus / visibility, re-read the shared `swept_sidebar_collapsed` cookie
+		// (set by swept-workbench or by another open-webui tab) and apply it
+		// here. Mobile keeps its overlay behavior — never let the cookie drive
+		// the mobile sheet.
+		const reapplySharedSidebar = () => {
+			if ($mobile) return;
+			const collapsed = readSidebarCollapsedCookie();
+			if (collapsed === null) return;
+			const desired = !collapsed;
+			if (desired !== $showSidebar) showSidebar.set(desired);
+		};
+		const onSharedSidebarVisibility = () => {
+			if (document.visibilityState === 'visible') reapplySharedSidebar();
+		};
+		document.addEventListener('visibilitychange', onSharedSidebarVisibility);
+		window.addEventListener('focus', reapplySharedSidebar);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
 
