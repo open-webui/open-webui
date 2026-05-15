@@ -563,24 +563,54 @@ class ChatTable:
         chat = chat.chat
         history = chat.get('history', {})
 
-        if message_id in history.get('messages', {}):
-            history['messages'][message_id] = {
-                **history['messages'][message_id],
-                **message,
-            }
+        now = int(time.time())
+        messages = history.setdefault('messages', {})
+
+        def enforce_node_invariants(node: dict) -> dict:
+            # Structural fields are graph invariants, not free-form payload.
+            # A partial streaming/final update must never be able to leave a
+            # node without them, regardless of caller or merge order.
+            node['id'] = message_id
+            # The key must always exist (explicit null), otherwise the
+            # frontend's parent walk treats the node as having an unknown
+            # parent and the conversation gets stuck loading.
+            node.setdefault('parentId', None)
+            if not isinstance(node.get('childrenIds'), list):
+                node['childrenIds'] = []
+            if not node.get('role'):
+                node['role'] = 'assistant'
+            if not node.get('timestamp'):
+                node['timestamp'] = now
+            return node
+
+        existing = messages.get(message_id)
+        if existing is not None:
+            merged = {**existing, **message}
+            # A partial update (done/content/output/usage) must not degrade
+            # structural fields the node already has: an empty or null
+            # incoming value never wins over a valid existing one.
+            for key in ('parentId', 'role', 'timestamp'):
+                if not merged.get(key) and existing.get(key):
+                    merged[key] = existing[key]
+            # Only let childrenIds change when the caller actually sends one;
+            # an absent/empty incoming list must not wipe real children.
+            if not message.get('childrenIds') and existing.get('childrenIds'):
+                merged['childrenIds'] = existing['childrenIds']
+            messages[message_id] = enforce_node_invariants(merged)
         else:
-            now = int(time.time())
-            # This upsert is also used for partial streaming/final updates.
-            # If a concurrent whole-chat write dropped the assistant placeholder,
-            # never persist the partial payload as a malformed history node.
-            history['messages'][message_id] = {
-                'id': message_id,
-                'parentId': message.get('parentId'),
-                'childrenIds': message.get('childrenIds', []),
-                'role': message.get('role', 'assistant'),
-                'timestamp': message.get('timestamp', now),
-                **message,
-            }
+            # The target node does not exist. This upsert is also used for
+            # partial streaming/final updates that assume an assistant
+            # placeholder already exists; if a concurrent whole-chat write
+            # dropped it, synthesize a structurally valid node instead of
+            # persisting the partial payload as a malformed history node.
+            incoming_role = message.get('role')
+            log.warning(
+                'upsert_message_to_chat_by_id_and_message_id: creating missing '
+                f'message node {message_id} from a partial payload '
+                f'(role={incoming_role!r}); an assistant placeholder was '
+                'likely lost by a concurrent chat write'
+            )
+            messages[message_id] = enforce_node_invariants({**message})
 
         history['currentId'] = message_id
 
