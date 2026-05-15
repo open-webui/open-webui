@@ -68,12 +68,19 @@
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
-	import Sidebar from '../icons/Sidebar.svelte';
+	import PanelLeft from '../icons/PanelLeft.svelte';
+	import PanelLeftClose from '../icons/PanelLeftClose.svelte';
+	import PanelLeftOpen from '../icons/PanelLeftOpen.svelte';
+	import SweptSymbol from '../icons/SweptSymbol.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import Note from '../icons/Note.svelte';
 	import Code from '../icons/Code.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import {
+		readSidebarCollapsedCookie,
+		writeSidebarCollapsedCookie
+	} from '$lib/utils/sidebar-cookie';
 
 	const BREAKPOINT = 768;
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
@@ -482,7 +489,7 @@
 		isResizing = true;
 
 		startClientX = e.clientX;
-		startWidth = $sidebarWidth ?? 260;
+		startWidth = $sidebarWidth ?? 256;
 
 		document.body.style.userSelect = 'none';
 	};
@@ -516,7 +523,30 @@
 			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
 		});
 
-		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		// Cross-app sidebar state: shared `swept_sidebar_collapsed` cookie is the
+		// source of truth (mirrors swept-workbench). Cookie absent ⇒ migrate
+		// from the legacy `localStorage.sidebar` once, then write the cookie so
+		// future loads use the shared value. The FOUC script in src/app.html
+		// stashes the same value on window.__sweptSidebarCollapsed for first
+		// paint — prefer that to avoid a re-read.
+		let initialCollapsed: boolean | null;
+		const fouc = (window as any).__sweptSidebarCollapsed;
+		if (fouc === true || fouc === false) {
+			initialCollapsed = fouc;
+		} else {
+			initialCollapsed = readSidebarCollapsedCookie();
+		}
+		if (initialCollapsed === null) {
+			// One-shot migration from legacy localStorage.sidebar ('true' = expanded).
+			initialCollapsed = !(localStorage.sidebar === 'true');
+			if (!$mobile) {
+				try {
+					writeSidebarCollapsedCookie(initialCollapsed);
+					localStorage.removeItem('sidebar');
+				} catch {}
+			}
+		}
+		showSidebar.set(!$mobile ? !initialCollapsed : false);
 
 		const unsubscribers = [
 			mobile.subscribe((value) => {
@@ -532,7 +562,14 @@
 				}
 			}),
 			showSidebar.subscribe(async (value) => {
-				localStorage.sidebar = value;
+				// Persist to the shared `swept_sidebar_collapsed` cookie on
+				// desktop only — mobile auto-closes the overlay and shouldn't
+				// pollute the cross-app collapse state.
+				if (!$mobile) {
+					try {
+						writeSidebarCollapsedCookie(!value);
+					} catch {}
+				}
 
 				// nav element is not available on the first render
 				const navElement = document.getElementsByTagName('nav')[0];
@@ -780,7 +817,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+		class=" w-16 pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
 	>
 		<button
@@ -789,28 +826,19 @@
 				showSidebar.set(!$showSidebar);
 			}}
 		>
-			<div class="pb-1.5">
-				<Tooltip
-					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-					placement="right"
+			<div class="pb-1.5 relative group/logobar">
+				<div
+					class="flex items-center justify-center size-9 mx-auto transition-opacity group-hover/logobar:opacity-0"
+					aria-label={$i18n.t('Open Sidebar')}
 				>
-					<button
-						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
-							? 'cursor-pointer'
-							: 'cursor-[e-resize]'}"
-						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-					>
-						<div class=" self-center flex items-center justify-center size-9">
-							<img
-								src="{WEBUI_BASE_URL}/static/favicon.png"
-								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
-								alt=""
-							/>
-
-							<Sidebar className="size-5 hidden group-hover:flex" />
-						</div>
-					</button>
-				</Tooltip>
+					<SweptSymbol className="size-7 shrink-0" />
+				</div>
+				<div
+					class="absolute inset-0 flex items-center justify-center rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-850 opacity-0 group-hover/logobar:opacity-100 transition-opacity pointer-events-none"
+					aria-hidden="true"
+				>
+					<PanelLeftOpen className="size-5" />
+				</div>
 			</div>
 
 			<div class="-mt-[0.5px]">
@@ -1030,7 +1058,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+						class="group/toggle flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
@@ -1039,7 +1067,12 @@
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div class=" self-center p-1.5">
-							<Sidebar />
+							<span class="block group-hover/toggle:hidden">
+								<PanelLeft className="size-5" />
+							</span>
+							<span class="hidden group-hover/toggle:block">
+								<PanelLeftClose className="size-5" />
+							</span>
 						</div>
 					</button>
 				</Tooltip>

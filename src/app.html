@@ -69,6 +69,33 @@
 		</script>
 
 		<script>
+			// Cross-app sidebar-collapse sync. Reads the shared
+			// `swept_sidebar_collapsed` cookie set by swept-workbench (see
+			// app/javascript/controllers/sidebar_collapse_controller.js there)
+			// and stashes the boolean on window.__sweptSidebarCollapsed so the
+			// Sidebar component can pick it up on first render — avoids a flash
+			// of expanded-then-collapsed sidebar. Mirrors
+			// src/lib/utils/sidebar-cookie.ts. Cookie absent ⇒ leave the global
+			// undefined and let the Sidebar fall back to legacy localStorage.
+			(function () {
+				try {
+					var COOKIE = 'swept_sidebar_collapsed';
+					var match = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=([^;]*)'));
+					if (match) {
+						var v;
+						try {
+							v = decodeURIComponent(match[1]);
+						} catch (decodeErr) {
+							v = null;
+						}
+						if (v === 'true') window.__sweptSidebarCollapsed = true;
+						else if (v === 'false') window.__sweptSidebarCollapsed = false;
+					}
+				} catch (e) {}
+			})();
+		</script>
+
+		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
