@@ -7,6 +7,12 @@ set -euo pipefail
 # HuggingFace Space deployment, and launches the uvicorn server.
 # ---------------------------------------------------------------------------
 
+# Default optional env vars that we test below with bash's `,,` lowercase
+# expansion. The two can't be combined inline (`${VAR:-default,,}` makes
+# the default literal `,,`), so we normalise once up front and the simple
+# `${VAR,,}` form stays safe under `set -u` everywhere else.
+: "${WEB_LOADER_ENGINE:=}" "${USE_OLLAMA_DOCKER:=}" "${USE_CUDA_DOCKER:=}"
+
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 cd "$SCRIPT_DIR" || exit 1
 
