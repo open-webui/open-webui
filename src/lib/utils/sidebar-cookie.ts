@@ -29,7 +29,10 @@ export function readSidebarCollapsedCookie(): boolean | null {
 
 export function writeSidebarCollapsedCookie(collapsed: boolean): void {
 	const value = collapsed ? 'true' : 'false';
-	document.cookie = buildCookie(`${COOKIE_NAME}=${encodeURIComponent(value)}`, DEFAULT_COOKIE_MAX_AGE);
+	document.cookie = buildCookie(
+		`${COOKIE_NAME}=${encodeURIComponent(value)}`,
+		DEFAULT_COOKIE_MAX_AGE
+	);
 }
 
 export function clearSidebarCollapsedCookie(): void {

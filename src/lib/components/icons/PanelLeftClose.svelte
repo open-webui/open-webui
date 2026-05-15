@@ -12,7 +12,16 @@
 	stroke="currentColor"
 	class={className}
 >
-	<rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round" />
+	<rect
+		x="3"
+		y="3"
+		width="18"
+		height="18"
+		rx="2"
+		ry="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	/>
 	<path d="M9 3v18" stroke-linecap="round" stroke-linejoin="round" />
 	<path d="m16 15-3-3 3-3" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
