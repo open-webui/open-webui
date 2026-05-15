@@ -1811,9 +1811,11 @@
 											{/if}
 										{/each}
 
-										{#if webSearchEnabled}
+										{#if showWebSearchButton}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
+													aria-label={$i18n.t('Web Search')}
+													aria-pressed={webSearchEnabled}
 													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 													type="button"
 													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
@@ -1822,9 +1824,11 @@
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
 													<GlobeAlt className="size-4" strokeWidth="1.75" />
-													<div class="hidden group-hover:block">
-														<XMark className="size-4" strokeWidth="1.75" />
-													</div>
+													{#if webSearchEnabled}
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													{/if}
 												</button>
 											</Tooltip>
 										{/if}
