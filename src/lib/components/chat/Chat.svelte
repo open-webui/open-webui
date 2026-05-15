@@ -48,7 +48,8 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-		desktopEvent
+		desktopEvent,
+		selectedChatModels
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -275,6 +276,10 @@
 	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
 	}
+
+	// Expose the active chat's live dropdown selection so the sidebar can
+	// target it for "Current Model" title regeneration (#24745).
+	$: selectedChatModels.set(selectedModels);
 
 	const saveSessionSelectedModels = () => {
 		const selectedModelsString = JSON.stringify(selectedModels);

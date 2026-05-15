@@ -35,7 +35,8 @@
 		currentChatPage,
 		tags,
 		selectedFolder,
-		activeChatIds
+		activeChatIds,
+		selectedChatModels
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -340,9 +341,10 @@
 
 	const generateTitleHandler = async () => {
 		generating = true;
-		if (!chat) {
-			chat = await getChatById(localStorage.token, id);
-		}
+		// Always refetch: a cached `chat` from an earlier regeneration holds a
+		// stale `history.currentId`/`models`, which made repeated regenerations
+		// reuse a model from an old revision instead of the current one (#24745).
+		chat = await getChatById(localStorage.token, id);
 
 		const chatContent = chat.chat;
 
@@ -363,11 +365,20 @@
 			}));
 		}
 
-		// Resolve the model from the most recent assistant message in the
-		// active branch. This avoids using the stale top-level `models`
-		// array which may reference a model from an older edit.
+		// When this is the active chat, the "Current Model" task model means
+		// the model currently selected in the chat's dropdown, even if it was
+		// changed without sending a new message (#24745). Prefer that live
+		// selection over anything derived from the persisted history.
 		let model = '';
-		if (history?.messages && history?.currentId) {
+		if (id === $chatId) {
+			model = ($selectedChatModels ?? []).find((modelId) => modelId) ?? '';
+		}
+
+		// Otherwise (or for chats that aren't open) resolve the model from the
+		// most recent assistant message in the active branch. This avoids using
+		// the stale top-level `models` array which may reference a model from an
+		// older edit.
+		if (!model && history?.messages && history?.currentId) {
 			let currentId = history.currentId;
 			while (currentId) {
 				const msg = history.messages[currentId];

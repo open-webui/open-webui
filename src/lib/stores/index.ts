@@ -55,6 +55,11 @@ export const TTSWorker = writable(null);
 export const chatId = writable('');
 export const chatTitle = writable('');
 
+// Models currently selected in the active chat's model dropdown.
+// Mirrored from Chat.svelte so sidebar actions (e.g. title regeneration
+// with the "Current Model" task model) can target the live selection.
+export const selectedChatModels = writable<string[]>(['']);
+
 export const channels = writable([]);
 export const channelId = writable(null);
 
