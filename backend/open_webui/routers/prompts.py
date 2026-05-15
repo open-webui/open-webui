@@ -189,50 +189,6 @@ async def create_new_prompt(
 
 
 ############################
-# GetPromptByCommand
-############################
-
-
-@router.get('/command/{command}', response_model=PromptAccessResponse | None)
-async def get_prompt_by_command(
-    command: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
-):
-    prompt = await Prompts.get_prompt_by_command(command, db=db)
-
-    if prompt:
-        if (
-            user.role == 'admin'
-            or prompt.user_id == user.id
-            or await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='prompt',
-                resource_id=prompt.id,
-                permission='read',
-                db=db,
-            )
-        ):
-            return PromptAccessResponse(
-                **prompt.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == prompt.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='prompt',
-                        resource_id=prompt.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
-            )
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=ERROR_MESSAGES.NOT_FOUND,
-    )
-
-
-############################
 # GetPromptById
 ############################
 
