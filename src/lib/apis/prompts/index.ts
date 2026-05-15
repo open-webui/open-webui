@@ -35,16 +35,6 @@ type PromptHistoryItem = {
 	};
 };
 
-type PromptDiff = {
-	from_id: string;
-	to_id: string;
-	from_snapshot: object;
-	to_snapshot: object;
-	content_diff: string[];
-	name_changed: boolean;
-	access_grants_changed: boolean;
-};
-
 export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
@@ -608,42 +598,6 @@ export const restorePromptFromHistory = async (
 			body: JSON.stringify({
 				commit_message: commitMessage
 			})
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getPromptDiff = async (
-	token: string,
-	promptId: string,
-	fromId: string,
-	toId: string
-): Promise<PromptDiff> => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/diff?from_id=${fromId}&to_id=${toId}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
 		}
 	)
 		.then(async (res) => {
