@@ -1258,12 +1258,6 @@ async def generate_api_key(
         raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
 
 
-# delete api key
-@router.delete('/api_key', response_model=bool)
-async def delete_api_key(user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)):
-    return await Users.delete_user_api_key_by_id(user.id, db=db)
-
-
 # get api key
 @router.get('/api_key', response_model=ApiKey)
 async def get_api_key(user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)):
