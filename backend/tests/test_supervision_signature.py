@@ -121,3 +121,15 @@ class TestVerifySignature:
         body = b'{}'
         ts, _ = _sign(body)
         assert supervision._verify_signature(SECRET, ts, body, 'no-equals-sign') is False
+
+    def test_handles_non_utf8_body_without_raising(self):
+        # A bit-flipped or malformed body that isn't valid UTF-8 should NOT
+        # raise UnicodeDecodeError out of the verifier — it should just fail
+        # signature comparison and return False.
+        body = b'\xc3\x28'  # invalid UTF-8 byte sequence
+        ts = str(int(time.time()))
+        # Construct a signature over the bytes the sender would have used
+        # (we just need any signature; the goal is to confirm no exception).
+        digest = hmac.new(SECRET.encode(), f'{ts}.'.encode() + body, hashlib.sha256).hexdigest()
+        assert supervision._verify_signature(SECRET, ts, body, f'v1={digest}') is True
+        assert supervision._verify_signature(SECRET, ts, body, 'v1=deadbeef') is False

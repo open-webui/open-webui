@@ -60,7 +60,10 @@ def _verify_signature(secret: str, timestamp: str, body: bytes, signature_header
     skew = int(os.environ.get('WORKBENCH_CALLBACK_SKEW_SEC', DEFAULT_SKEW_SECONDS))
     if abs(int(time.time()) - ts_int) > skew:
         return False
-    signed_payload = f'{timestamp}.{body.decode("utf-8")}'.encode('utf-8')
+    # Concatenate as bytes directly — avoids a decode round-trip that could
+    # raise UnicodeDecodeError on a malformed body. Workbench signs the exact
+    # bytes it puts on the wire, so this matches its calculation precisely.
+    signed_payload = timestamp.encode('utf-8') + b'.' + body
     expected = hmac.new(secret.encode('utf-8'), signed_payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, sig)
 

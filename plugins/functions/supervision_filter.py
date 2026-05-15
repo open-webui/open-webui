@@ -20,7 +20,7 @@ Install
 3. Click the gear icon and fill in the four Valves:
      workbench_base_url    https://workbench.example.com
      workbench_token       stw_<public>.<secret>   (mint via /admin/api_tokens)
-     agent_name            chat_phoenix             (must match AgentConfig.agent_name)
+     agent_name            openwebui_chat           (must match AgentConfig.agent_name)
      enabled               true
 4. Toggle the function ON.
 
