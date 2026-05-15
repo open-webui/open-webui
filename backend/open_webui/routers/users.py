@@ -367,17 +367,6 @@ async def update_user_status_by_session_user(
 
 
 ############################
-# GetUserInfoBySessionUser
-############################
-
-
-@router.get('/user/info', response_model=dict | None)
-async def get_user_info_by_session_user(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    # user already fetched by get_verified_user — no need to refetch
-    return user.info
-
-
-############################
 # UpdateUserInfoBySessionUser
 ############################
 
