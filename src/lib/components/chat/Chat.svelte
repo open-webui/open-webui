@@ -1380,6 +1380,47 @@
 						: convertMessagesToHistory(chatContent.messages);
 
 				// Sanitize history: repair orphaned references from failed regenerations (#24424)
+				// and structurally-malformed nodes. A lost assistant placeholder can be persisted
+				// with only its completion fields (content/done/output/usage), missing
+				// id/role/parentId. Such a node still exists under its map key, so the
+				// missing-currentId check below never fires and the chat gets stuck loading.
+				// Reconstruct the graph fields in place from the surrounding message tree so
+				// already-corrupted chats recover the moment they are opened.
+				const parentByChildId = {};
+				for (const [mid, m] of Object.entries(history.messages)) {
+					for (const cid of Array.isArray(m?.childrenIds) ? m.childrenIds : []) {
+						parentByChildId[cid] = mid;
+					}
+				}
+				for (const [mid, message] of Object.entries(history.messages)) {
+					if (!message || typeof message !== 'object') {
+						delete history.messages[mid];
+						continue;
+					}
+					// Well-formed node: id matches its map key, has a role, and an explicit
+					// parentId (null is valid for the root). Leave it untouched.
+					if (message.id === mid && message.role && message.parentId !== undefined) {
+						continue;
+					}
+					message.id = mid;
+					if (message.parentId === undefined) {
+						message.parentId = parentByChildId[mid] ?? null;
+					}
+					if (!Array.isArray(message.childrenIds)) {
+						message.childrenIds = [];
+					}
+					if (!message.role) {
+						const parent = message.parentId ? history.messages[message.parentId] : null;
+						message.role =
+							parent?.role === 'user'
+								? 'assistant'
+								: parent?.role === 'assistant'
+									? 'user'
+									: message.model || message.usage || message.done
+										? 'assistant'
+										: 'user';
+					}
+				}
 				for (const message of Object.values(history.messages)) {
 					if (message.childrenIds) {
 						message.childrenIds = message.childrenIds.filter(
@@ -1387,7 +1428,8 @@
 						);
 					}
 				}
-				if (history.currentId && !history.messages[history.currentId]) {
+				const isUsableNode = (m) => m && m.id && m.role;
+				if (history.currentId && !isUsableNode(history.messages[history.currentId])) {
 					const messageIds = Object.keys(history.messages);
 					let lastMessageId = null;
 					for (const messageId of messageIds) {
