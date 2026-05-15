@@ -264,6 +264,79 @@ class ChatStatsExport(BaseModel):
     chat: ChatBody
 
 
+def apply_message_upsert(history: dict, message_id: str, message: dict, now: int) -> dict:
+    """Apply ``message`` into ``history['messages'][message_id]`` with
+    graph-invariant repair. Mutates ``history``; returns the final node.
+    Pure (no DB) so it can be unit-tested directly."""
+    messages = history.get('messages')
+    if not isinstance(messages, dict):  # tolerate absent/malformed container
+        messages = {}
+        history['messages'] = messages
+
+    def enforce_node_invariants(node: dict) -> dict:
+        # Structural graph fields a partial update must never drop.
+        node['id'] = message_id
+        if not isinstance(node.get('parentId'), str):
+            node['parentId'] = None  # explicit null; never undefined/non-scalar
+        if not isinstance(node.get('childrenIds'), list):
+            node['childrenIds'] = []
+        if not node.get('role'):
+            node['role'] = 'assistant'
+        if not node.get('timestamp'):
+            node['timestamp'] = now
+        return node
+
+    existing = messages.get(message_id)
+    if isinstance(existing, dict):
+        # {**existing, **message}: omitted keys keep existing, explicit
+        # values (incl. parentId=None, childrenIds=[]) win.
+        messages[message_id] = enforce_node_invariants({**existing, **message})
+    else:
+        if existing is not None:
+            log.warning(f'upsert: discarding malformed existing node {message_id}')
+        # Node missing/unusable: a concurrent whole-chat write likely
+        # dropped the placeholder. Warn only when the payload is partial.
+        is_partial = not all(k in message for k in ('id', 'parentId', 'childrenIds', 'role'))
+        if is_partial:
+            log.warning(
+                f'upsert: synthesizing lost message node {message_id} '
+                f'from partial payload '
+                f'(role={message.get("role") or "assistant (defaulted)"!r})'
+            )
+        else:
+            log.debug(f'upsert: creating message node {message_id}')
+        messages[message_id] = enforce_node_invariants({**message})
+
+    # Keep the graph bidirectional; the same stale-write class can drop
+    # the parent's child link or the parent node itself.
+    parent_id = messages[message_id].get('parentId')
+    if parent_id:
+        parent = messages.get(parent_id)
+        if isinstance(parent, dict):
+            children_ids = parent.get('childrenIds')
+            if not isinstance(children_ids, list):
+                children_ids = []
+                parent['childrenIds'] = children_ids
+            if message_id not in children_ids:
+                children_ids.append(message_id)
+        else:
+            # Parent absent from this possibly-stale snapshot: log only; it
+            # may still exist in chat_message, so don't sever a real link.
+            log.warning(f'upsert: message {message_id} parent {parent_id} absent from embedded history')
+
+    history['currentId'] = message_id
+    return messages[message_id]
+
+
+def build_chat_message_payload(node: dict) -> dict:
+    """Normalized chat_message data; send parent_id only when known so a
+    None can't clear a real link from a possibly-stale snapshot."""
+    data = {**node}
+    if node.get('parentId') is not None:
+        data['parent_id'] = node['parentId']
+    return data
+
+
 class ChatTable:
     def _clean_null_bytes(self, obj):
         """Recursively remove null bytes from strings in dict/list structures."""
@@ -563,80 +636,15 @@ class ChatTable:
         chat = chat.chat
         history = chat.get('history', {})
 
-        now = int(time.time())
-        # tolerate an absent or malformed messages container
-        messages = history.get('messages')
-        if not isinstance(messages, dict):
-            messages = {}
-            history['messages'] = messages
-
-        def enforce_node_invariants(node: dict) -> dict:
-            # Structural graph fields a partial update must never drop.
-            node['id'] = message_id
-            if not isinstance(node.get('parentId'), str):
-                node['parentId'] = None  # explicit null; never undefined/non-scalar
-            if not isinstance(node.get('childrenIds'), list):
-                node['childrenIds'] = []
-            if not node.get('role'):
-                node['role'] = 'assistant'
-            if not node.get('timestamp'):
-                node['timestamp'] = now
-            return node
-
-        existing = messages.get(message_id)
-        if isinstance(existing, dict):
-            # {**existing, **message}: omitted keys keep existing, explicit
-            # values (incl. parentId=None, childrenIds=[]) win.
-            messages[message_id] = enforce_node_invariants({**existing, **message})
-        else:
-            if existing is not None:
-                log.warning(f'upsert: discarding malformed existing node {message_id}')
-            # Node missing/unusable: a concurrent whole-chat write likely
-            # dropped the placeholder. Warn only when the payload is partial.
-            is_partial = not all(k in message for k in ('id', 'parentId', 'childrenIds', 'role'))
-            if is_partial:
-                log.warning(
-                    f'upsert: synthesizing lost message node {message_id} '
-                    f'from partial payload '
-                    f'(role={message.get("role") or "assistant (defaulted)"!r})'
-                )
-            else:
-                log.debug(f'upsert: creating message node {message_id}')
-            messages[message_id] = enforce_node_invariants({**message})
-
-        # Keep the graph bidirectional; the same stale-write class can drop
-        # the parent's child link or the parent node itself.
-        parent_id = messages[message_id].get('parentId')
-        if parent_id:
-            parent = messages.get(parent_id)
-            if isinstance(parent, dict):
-                children_ids = parent.get('childrenIds')
-                if not isinstance(children_ids, list):
-                    children_ids = []
-                    parent['childrenIds'] = children_ids
-                if message_id not in children_ids:
-                    children_ids.append(message_id)
-            else:
-                # Parent absent from this possibly-stale snapshot: log only.
-                # It may still exist in chat_message; don't sever a real link.
-                log.warning(f'upsert: message {message_id} parent {parent_id} absent from embedded history')
-
-        history['currentId'] = message_id
-
+        node = apply_message_upsert(history, message_id, message, int(time.time()))
         chat['history'] = history
 
-        # Send parent_id only when known; parent_id=None would clear a real
-        # link on the normalized row from a possibly-stale snapshot.
-        node = history['messages'][message_id]
-        cm_data = {**node}
-        if node.get('parentId') is not None:
-            cm_data['parent_id'] = node['parentId']
         try:
             await ChatMessages.upsert_message(
                 message_id=message_id,
                 chat_id=id,
                 user_id=user_id,
-                data=cm_data,
+                data=build_chat_message_payload(node),
             )
         except Exception as e:
             log.warning(f'Failed to write to chat_message table: {e}')
