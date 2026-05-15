@@ -616,49 +616,6 @@ async def get_prompt_history(
     return history
 
 
-@router.get('/id/{prompt_id}/history/{history_id}', response_model=PromptHistoryModel)
-async def get_prompt_history_entry(
-    prompt_id: str,
-    history_id: str,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    """Get a specific version from history."""
-    prompt = await Prompts.get_prompt_by_id(prompt_id, db=db)
-
-    if not prompt:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # Check read access
-    if not (
-        user.role == 'admin'
-        or prompt.user_id == user.id
-        or await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='prompt',
-            resource_id=prompt.id,
-            permission='read',
-            db=db,
-        )
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    history_entry = await PromptHistories.get_history_entry_by_id(history_id, db=db)
-    if not history_entry or history_entry.prompt_id != prompt.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    return history_entry
-
-
 @router.delete('/id/{prompt_id}/history/{history_id}', response_model=bool)
 async def delete_prompt_history_entry(
     prompt_id: str,
