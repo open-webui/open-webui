@@ -14,7 +14,7 @@
 	import { goto } from '$app/navigation';
 
 	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
-	import { unloadModel } from '$lib/apis';
+	import { unloadModel, loadModel } from '$lib/apis';
 
 	import {
 		user,
@@ -434,6 +434,23 @@
 		}
 	};
 
+	const loadModelHandler = async (model: string) => {
+		toast.info($i18n.t('Loading model...'));
+		const res = await loadModel(localStorage.token, model).catch((error) => {
+			toast.error($i18n.t('Error loading model: {{error}}', { error }));
+		});
+
+		if (res) {
+			toast.success($i18n.t('Model loaded successfully'));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+		}
+	};
+
 	let showDeleteConfirm = false;
 	let deleteModelTarget: any = null;
 
@@ -741,6 +758,7 @@
 										{value}
 										{pinModelHandler}
 										{unloadModelHandler}
+										{loadModelHandler}
 										{deleteModelHandler}
 										onClick={() => {
 											value = item.value;

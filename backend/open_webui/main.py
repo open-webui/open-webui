@@ -1624,6 +1624,70 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
     raise HTTPException(status_code=404, detail=f'Model "{model_id}" not found')
 
 
+class ModelLoadForm(BaseModel):
+    model: str
+
+
+@app.post('/api/models/load')
+async def load_model(request: Request, form_data: ModelLoadForm, user=Depends(get_admin_user)):
+    """
+    Preload/warm a model into memory.
+    Resolves the provider that owns the model and calls its native load mechanism.
+    Currently supports Ollama only (keep_alive with empty prompt).
+    """
+    model_id = form_data.model
+
+    # --- Ollama provider ---
+    ollama_models = getattr(request.app.state, 'OLLAMA_MODELS', None) or {}
+    if model_id in ollama_models:
+        url_indices = ollama_models[model_id].get('urls', [])
+        errors = []
+        for idx in url_indices:
+            url = request.app.state.config.OLLAMA_BASE_URLS[idx]
+            api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                str(idx),
+                request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),
+            )
+            key = api_config.get('key', None)
+
+            prefix_id = api_config.get('prefix_id', None)
+            actual_model = model_id
+            if prefix_id and actual_model.startswith(f'{prefix_id}.'):
+                actual_model = actual_model[len(f'{prefix_id}.') :]
+
+            payload = json.dumps({'model': actual_model, 'keep_alive': '5m', 'prompt': '', 'stream': False})
+
+            try:
+                timeout = aiohttp.ClientTimeout(total=300)
+                async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                    headers = {
+                        'Content-Type': 'application/json',
+                        **({'Authorization': f'Bearer {key}'} if key else {}),
+                    }
+                    async with session.post(
+                        f'{url}/api/generate',
+                        data=payload,
+                        headers=headers,
+                    ) as r:
+                        if not r.ok:
+                            errors.append({'url_idx': idx, 'error': await r.text()})
+            except Exception as e:
+                log.exception(f'Failed to load model on Ollama node {idx}: {e}')
+                errors.append({'url_idx': idx, 'error': str(e)})
+
+        if errors:
+            raise HTTPException(
+                status_code=500,
+                detail=f'Failed to load model on {len(errors)} node(s): {errors}',
+            )
+        return {'status': True}
+
+    raise HTTPException(
+        status_code=400,
+        detail=f'Model preloading is only supported for Ollama models. Model "{model_id}" not found in Ollama.',
+    )
+
+
 ##################################
 # Embeddings
 ##################################
