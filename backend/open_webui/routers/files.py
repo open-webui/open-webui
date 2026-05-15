@@ -28,7 +28,6 @@ from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.models.files import (
     FileForm,
-    FileListResponse,
     FileModel,
     FileModelResponse,
     Files,
@@ -336,34 +335,6 @@ async def upload_file_handler(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT('Error uploading file'),
         )
-
-
-############################
-# List Files
-############################
-
-
-PAGE_SIZE = 50
-
-
-@router.get('/', response_model=FileListResponse)
-async def list_files(
-    user=Depends(get_verified_user),
-    page: int = Query(1, ge=1, description='Page number (1-indexed)'),
-    content: bool = Query(True),
-    db: AsyncSession = Depends(get_async_session),
-):
-    skip = (page - 1) * PAGE_SIZE
-    user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
-
-    result = await Files.get_file_list(user_id=user_id, skip=skip, limit=PAGE_SIZE, db=db)
-
-    if not content:
-        for file in result.items:
-            if file.data and 'content' in file.data:
-                del file.data['content']
-
-    return result
 
 
 ############################
