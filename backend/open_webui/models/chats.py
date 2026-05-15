@@ -567,14 +567,9 @@ class ChatTable:
         messages = history.setdefault('messages', {})
 
         def enforce_node_invariants(node: dict) -> dict:
-            # Structural fields are graph invariants, not free-form payload.
-            # A partial streaming/final update must never be able to leave a
-            # node without them, regardless of caller or merge order.
+            # Structural graph fields a partial update must never drop.
             node['id'] = message_id
-            # The key must always exist (explicit null), otherwise the
-            # frontend's parent walk treats the node as having an unknown
-            # parent and the conversation gets stuck loading.
-            node.setdefault('parentId', None)
+            node.setdefault('parentId', None)  # explicit null, never undefined
             if not isinstance(node.get('childrenIds'), list):
                 node['childrenIds'] = []
             if not node.get('role'):
@@ -586,47 +581,44 @@ class ChatTable:
         existing = messages.get(message_id)
         if existing is not None:
             merged = {**existing, **message}
-            # A partial update must not drop structural fields it simply
-            # omitted, but an explicitly provided value (including a falsy
-            # one such as parentId=None or childrenIds=[]) is intentional
-            # and must win.
+            # Omitted -> keep existing; explicit value (incl. parentId=None,
+            # childrenIds=[]) wins. Empty role / 0 ts still normalized above.
             for key in ('parentId', 'role', 'timestamp', 'childrenIds'):
                 if key not in message and key in existing:
                     merged[key] = existing[key]
             messages[message_id] = enforce_node_invariants(merged)
         else:
-            # The target node does not exist. This upsert is also used for
-            # partial streaming/final updates that assume an assistant
-            # placeholder already exists; if a concurrent whole-chat write
-            # dropped it, synthesize a structurally valid node instead of
-            # persisting the partial payload as a malformed history node.
-            # Creating a node through an upsert is only anomalous when the
-            # payload is itself partial (the lost-placeholder race); a
-            # complete create-through-upsert is legitimate and must not spam
-            # warning-level telemetry.
+            # Node missing: a concurrent whole-chat write likely dropped the
+            # placeholder. Warn only when the payload is itself partial.
             is_partial = not all(k in message for k in ('id', 'parentId', 'childrenIds', 'role'))
             if is_partial:
                 log.warning(
-                    'upsert_message_to_chat_by_id_and_message_id: creating '
-                    f'missing message node {message_id} from a partial '
-                    f'payload (role={message.get("role")!r}); an assistant '
-                    'placeholder was likely lost by a concurrent chat write'
+                    f'upsert: synthesizing lost message node {message_id} '
+                    f'from partial payload (role={message.get("role")!r})'
                 )
             else:
-                log.debug(
-                    'upsert_message_to_chat_by_id_and_message_id: creating '
-                    f'missing message node {message_id} from a complete payload'
-                )
+                log.debug(f'upsert: creating message node {message_id}')
             messages[message_id] = enforce_node_invariants({**message})
 
-        # Keep the parent's forward edge consistent with the child's
-        # parentId: the same stale-write class that drops a node can also
-        # drop its entry from the parent's childrenIds.
+        # Keep the graph bidirectional; the same stale-write class can drop
+        # the parent's child link or the parent node itself.
         parent_id = messages[message_id].get('parentId')
-        if parent_id and isinstance(messages.get(parent_id), dict):
-            siblings = messages[parent_id].setdefault('childrenIds', [])
-            if message_id not in siblings:
-                siblings.append(message_id)
+        if parent_id:
+            parent = messages.get(parent_id)
+            if isinstance(parent, dict):
+                children_ids = parent.get('childrenIds')
+                if not isinstance(children_ids, list):
+                    children_ids = []
+                    parent['childrenIds'] = children_ids
+                if message_id not in children_ids:
+                    children_ids.append(message_id)
+            else:
+                # Dangling parentId re-bricks the frontend walk; detach.
+                log.warning(
+                    f'upsert: message {message_id} references missing parent '
+                    f'{parent_id}; detaching to keep history loadable'
+                )
+                messages[message_id]['parentId'] = None
 
         history['currentId'] = message_id
 
