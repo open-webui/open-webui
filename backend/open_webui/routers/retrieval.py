@@ -2547,29 +2547,6 @@ async def reset_vector_db(user=Depends(get_admin_user), db: AsyncSession = Depen
     await Knowledges.delete_all_knowledge(db=db)
 
 
-@router.post('/reset/uploads')
-async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
-    folder = f'{UPLOAD_DIR}'
-    try:
-        # Check if the directory exists
-        if os.path.exists(folder):
-            # Iterate over all the files and directories in the specified directory
-            for filename in os.listdir(folder):
-                file_path = os.path.join(folder, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)  # Remove the file or link
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)  # Remove the directory
-                except Exception as e:
-                    log.exception(f'Failed to delete {file_path}. Reason: {e}')
-        else:
-            log.warning(f'The directory {folder} does not exist')
-    except Exception as e:
-        log.exception(f'Failed to process the directory {folder}. Reason: {e}')
-    return True
-
-
 if ENV == 'dev':
 
     @router.get('/ef/{text}')
