@@ -586,16 +586,13 @@ class ChatTable:
         existing = messages.get(message_id)
         if existing is not None:
             merged = {**existing, **message}
-            # A partial update (done/content/output/usage) must not degrade
-            # structural fields the node already has: an empty or null
-            # incoming value never wins over a valid existing one.
-            for key in ('parentId', 'role', 'timestamp'):
-                if not merged.get(key) and existing.get(key):
+            # A partial update must not drop structural fields it simply
+            # omitted, but an explicitly provided value (including a falsy
+            # one such as parentId=None or childrenIds=[]) is intentional
+            # and must win.
+            for key in ('parentId', 'role', 'timestamp', 'childrenIds'):
+                if key not in message and key in existing:
                     merged[key] = existing[key]
-            # Only let childrenIds change when the caller actually sends one;
-            # an absent/empty incoming list must not wipe real children.
-            if not message.get('childrenIds') and existing.get('childrenIds'):
-                merged['childrenIds'] = existing['childrenIds']
             messages[message_id] = enforce_node_invariants(merged)
         else:
             # The target node does not exist. This upsert is also used for
@@ -603,14 +600,33 @@ class ChatTable:
             # placeholder already exists; if a concurrent whole-chat write
             # dropped it, synthesize a structurally valid node instead of
             # persisting the partial payload as a malformed history node.
-            incoming_role = message.get('role')
-            log.warning(
-                'upsert_message_to_chat_by_id_and_message_id: creating missing '
-                f'message node {message_id} from a partial payload '
-                f'(role={incoming_role!r}); an assistant placeholder was '
-                'likely lost by a concurrent chat write'
-            )
+            # Creating a node through an upsert is only anomalous when the
+            # payload is itself partial (the lost-placeholder race); a
+            # complete create-through-upsert is legitimate and must not spam
+            # warning-level telemetry.
+            is_partial = not all(k in message for k in ('id', 'parentId', 'childrenIds', 'role'))
+            if is_partial:
+                log.warning(
+                    'upsert_message_to_chat_by_id_and_message_id: creating '
+                    f'missing message node {message_id} from a partial '
+                    f'payload (role={message.get("role")!r}); an assistant '
+                    'placeholder was likely lost by a concurrent chat write'
+                )
+            else:
+                log.debug(
+                    'upsert_message_to_chat_by_id_and_message_id: creating '
+                    f'missing message node {message_id} from a complete payload'
+                )
             messages[message_id] = enforce_node_invariants({**message})
+
+        # Keep the parent's forward edge consistent with the child's
+        # parentId: the same stale-write class that drops a node can also
+        # drop its entry from the parent's childrenIds.
+        parent_id = messages[message_id].get('parentId')
+        if parent_id and isinstance(messages.get(parent_id), dict):
+            siblings = messages[parent_id].setdefault('childrenIds', [])
+            if message_id not in siblings:
+                siblings.append(message_id)
 
         history['currentId'] = message_id
 
