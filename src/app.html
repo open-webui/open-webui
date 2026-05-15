@@ -238,11 +238,13 @@
 		/* Inset the splash so the Swept shell rail (loader.js, .swept-shell at
 		   left:0/width:16rem) is visible during boot. Mirrors the existing
 		   1024px breakpoint and html.swept-shell-active selector used by
-		   custom.css to shift the rest of the app right by 16rem. */
+		   custom.css to shift the rest of the app right by 16rem. !important
+		   is required to override the inline `left:0; width:100%` on
+		   #splash-screen below — same trick custom.css uses for #sidebar. */
 		@media (min-width: 1024px) {
 			html.swept-shell-active #splash-screen {
-				left: 16rem;
-				width: calc(100% - 16rem);
+				left: 16rem !important;
+				width: calc(100% - 16rem) !important;
 			}
 		}
 
