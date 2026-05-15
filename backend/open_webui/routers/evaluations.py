@@ -12,7 +12,6 @@ from open_webui.models.feedbacks import (
     FeedbackModel,
     FeedbackResponse,
     Feedbacks,
-    FeedbackUserResponse,
     LeaderboardFeedbackData,
     ModelHistoryEntry,
     ModelHistoryResponse,
@@ -321,12 +320,6 @@ async def export_all_feedbacks(
     feedbacks = await Feedbacks.get_all_feedbacks(db=db)
     if model_id:
         feedbacks = [f for f in feedbacks if f.data and f.data.get('model_id') == model_id]
-    return feedbacks
-
-
-@router.get('/feedbacks/user', response_model=list[FeedbackUserResponse])
-async def get_feedbacks(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    feedbacks = await Feedbacks.get_feedbacks_by_user_id(user.id, db=db)
     return feedbacks
 
 

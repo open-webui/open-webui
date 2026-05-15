@@ -380,11 +380,6 @@ class FeedbackTable:
             result = await db.execute(select(Feedback).filter_by(type=type).order_by(Feedback.updated_at.desc()))
             return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
 
-    async def get_feedbacks_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[FeedbackModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(Feedback).filter_by(user_id=user_id).order_by(Feedback.updated_at.desc()))
-            return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
-
     async def update_feedback_by_id(
         self, id: str, form_data: FeedbackForm, db: Optional[AsyncSession] = None
     ) -> Optional[FeedbackModel]:
