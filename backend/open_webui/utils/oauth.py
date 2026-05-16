@@ -293,6 +293,7 @@ class ProtectedResourceMetadata:
 
     resource: str | None = None
     authorization_servers: list[str] = field(default_factory=list)
+    scopes_supported: list[str] = field(default_factory=list)
 
     def get_discovery_urls(self, server_url: str) -> list[str]:
         """Build all candidate OAuth discovery URLs from this metadata and the server URL."""
@@ -315,6 +316,7 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
     """
     authorization_servers = []
     resource = None
+    scopes_supported = []
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
@@ -358,6 +360,15 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
                                     if resource:
                                         log.debug(f'Discovered resource indicator: {resource}')
 
+                                    # RFC 9728: scopes_supported here is the per-resource
+                                    # scope list — what the client should request to access
+                                    # THIS resource server. Safe to use directly, unlike the
+                                    # IdP-wide catalog from RFC 8414 oauth-authorization-server.
+                                    discovered_scopes = resource_metadata.get('scopes_supported') or []
+                                    if discovered_scopes:
+                                        scopes_supported = discovered_scopes
+                                        log.debug(f'Discovered resource scopes: {scopes_supported}')
+
                                     servers = resource_metadata.get('authorization_servers', [])
                                     if servers:
                                         authorization_servers = servers
@@ -369,7 +380,11 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
-    return ProtectedResourceMetadata(resource=resource, authorization_servers=authorization_servers)
+    return ProtectedResourceMetadata(
+        resource=resource,
+        authorization_servers=authorization_servers,
+        scopes_supported=scopes_supported,
+    )
 
 
 def _build_well_known_urls(server_url: str) -> list[str]:
@@ -553,12 +568,16 @@ async def get_oauth_client_info_with_static_credentials(
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
 
-        # Let the OAuth provider apply its default scopes.
-        # We intentionally do NOT join all scopes_supported here — that list
-        # represents every scope the server *can* grant, not what the client
-        # should request.  Requesting all of them is almost always wrong and
-        # can break providers like Entra ID that require resource-specific scopes.
-        scope = None
+        # Use scopes from the Protected Resource Metadata (RFC 9728) when available.
+        # Unlike the auth-server's scopes_supported (an IdP-wide catalog of every
+        # scope the server *can* grant), the protected-resource document advertises
+        # the scopes specifically required to access THIS resource server, so it is
+        # safe — and required by providers like Entra v2 — to request them.
+        scope = (
+            ' '.join(resource_metadata.scopes_supported)
+            if resource_metadata.scopes_supported
+            else None
+        )
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'
