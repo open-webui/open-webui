@@ -2351,23 +2351,21 @@ async def get_app_config(request: Request):
         **({'onboarding': True} if onboarding else {}),
         'status': True,
         'name': app.state.WEBUI_NAME,
-        'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
         'oauth': {'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()}},
-        'features': {
-            # --- Public: required by login/signup page pre-auth ---
-            'auth': WEBUI_AUTH,
-            'auth_trusted_header': bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
-            'enable_signup_password_confirmation': ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
-            'enable_ldap': app.state.config.ENABLE_LDAP,
-            'enable_signup': app.state.config.ENABLE_SIGNUP,
-            'enable_login_form': app.state.config.ENABLE_LOGIN_FORM,
-            'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
-            # --- Authenticated: only consumed by logged-in frontend ---
-            **(
-                {
+        **(
+            {
+                'version': VERSION,
+                'features': {
+                    'auth': WEBUI_AUTH,
+                    'auth_trusted_header': bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+                    'enable_signup_password_confirmation': ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
+                    'enable_ldap': app.state.config.ENABLE_LDAP,
                     'enable_api_keys': app.state.config.ENABLE_API_KEYS,
+                    'enable_signup': app.state.config.ENABLE_SIGNUP,
+                    'enable_login_form': app.state.config.ENABLE_LOGIN_FORM,
                     'enable_password_change_form': app.state.config.ENABLE_PASSWORD_CHANGE_FORM,
+                    'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
                     'enable_version_update_check': ENABLE_VERSION_UPDATE_CHECK,
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
@@ -2402,10 +2400,17 @@ async def get_app_config(request: Request):
                         else {}
                     ),
                 }
-                if user is not None
-                else {}
-            ),
-        },
+            }
+            if user is not None
+            else {
+                'version': '0.0.0',
+                'features': {
+                    'auth': WEBUI_AUTH,
+                    'enable_signup': app.state.config.ENABLE_SIGNUP,
+                    'enable_login_form': app.state.config.ENABLE_LOGIN_FORM,
+                }
+            }
+        ),
         **(
             {
                 'default_models': app.state.config.DEFAULT_MODELS,
