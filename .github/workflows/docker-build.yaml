@@ -60,3 +60,12 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_HASH=${{ github.sha }}
+
+      - name: Make package public
+        run: |
+          # Make the container package public so hosts can pull without special auth
+          curl -s -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/user/packages/container/${{ env.IMAGE_NAME }}/visibility" \
+            -d '{"visibility":"public"}' || true
