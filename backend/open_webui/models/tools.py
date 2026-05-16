@@ -151,6 +151,19 @@ class ToolsTable:
         except Exception:
             return None
 
+    async def get_tools_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> dict[str, ToolModel]:
+        if not ids:
+            return {}
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Tool).where(Tool.id.in_(ids)))
+            tools = result.scalars().all()
+            tool_ids = [t.id for t in tools]
+            grants_map = await AccessGrants.get_grants_by_resources('tool', tool_ids, db=db)
+            return {
+                t.id: await self._to_tool_model(t, access_grants=grants_map.get(t.id, []), db=db)
+                for t in tools
+            }
+
     async def get_tools(self, defer_content: bool = False, db: AsyncSession | None = None) -> list[ToolUserModel]:
         async with get_async_db_context(db) as db:
             stmt = select(Tool).order_by(Tool.updated_at.desc())

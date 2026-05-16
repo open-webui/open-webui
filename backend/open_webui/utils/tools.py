@@ -166,8 +166,12 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     # Get user's group memberships for access control checks
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
+    # Single query for all local tools instead of one per tool_id
+    local_tool_ids = [tid for tid in tool_ids if not tid.startswith('server:')]
+    tools_by_id = await Tools.get_tools_by_ids(local_tool_ids)
+
     for tool_id in tool_ids:
-        tool = await Tools.get_tool_by_id(tool_id)
+        tool = tools_by_id.get(tool_id)
         if tool:
             # Check access control for local tools
             if (
