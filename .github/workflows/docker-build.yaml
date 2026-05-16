@@ -66,12 +66,15 @@ jobs:
           echo "Tags: ${{ steps.meta.outputs.tags }}"
           echo "Version: ${{ steps.meta.outputs.version }}"
 
-      - name: Make package public
+      - name: Save image as tar.gz
         run: |
-          OWNER="$(echo '${{ env.IMAGE_NAME }}' | cut -d/ -f1)"
-          REPO="$(echo '${{ env.IMAGE_NAME }}' | cut -d/ -f2)"
-          curl -s -X PATCH \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/${OWNER}/packages/container/${REPO}/visibility" \
-            -d '{"visibility":"public"}' || echo "Visibility change skipped (may not be supported for this token)"
+          docker pull ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          docker save ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }} | gzip > /tmp/open-webui-amd64.tar.gz
+          ls -lh /tmp/open-webui-amd64.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-webui-amd64
+          path: /tmp/open-webui-amd64.tar.gz
+          retention-days: 1
