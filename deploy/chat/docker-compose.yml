@@ -13,6 +13,19 @@
 # Note: The uv:bookworm-slim image does not include git.
 # The entrypoint installs git before running uvx (which needs git for
 # git+https:// dependencies).
+#
+# Log persistence:
+#   A named volume (chat_logs) is mounted at /var/log/jawafdehi-mcp so logs
+#   survive container restarts. Set LOG_FILE in mcp.env to enable file logging.
+#
+#   For OpenWebUI itself, add these snippets to the OpenWebUI docker-compose:
+#     services:
+#       open-webui:
+#         volumes:
+#           - openwebui_logs:/app/backend/data/logs
+#     volumes:
+#       openwebui_logs:
+#         driver: local
 
 version: "3.8"
 
@@ -47,6 +60,10 @@ services:
       - HTTP_HOST=0.0.0.0
       - HTTP_PORT=8000
       - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - chat_logs:/var/log/jawafdehi-mcp
 
 volumes:
   open-webui:
+  chat_logs:
+    driver: local
