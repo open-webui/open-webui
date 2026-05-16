@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/open-webui/open-webui/main/backend/open_webui/models/tools.py",
+  "mcpServers": {
+    "jawafdehi": {
+      "type": "mcp",
+      "name": "Jawafdehi",
+      "description": "Jawafdehi accountability tools — search corruption cases, Nepal entities, judicial data, and more.",
+      "transport": "streamable_http",
+      "url": "http://jawafdehi-mcp:8000",
+      "headers": {
+        "X-Jawafdehi-User-Id": "{{USER_ID}}",
+        "X-Jawafdehi-User-Name": "{{USER_NAME}}"
+      },
+      "timeout": 60,
+      "disabled": false
+    }
+  }
+}

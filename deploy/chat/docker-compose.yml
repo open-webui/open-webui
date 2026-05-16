@@ -1,0 +1,52 @@
+# chat.jawafdehi.org — Full stack deployment
+#
+# Builds OpenWebUI from the jawafdehi-custom branch and runs jawafdehi-mcp
+# on an internal Docker network.
+#
+# Prerequisites:
+#   cp mcp.env.example mcp.env  # then edit with real values
+#
+# Architecture:
+#   OpenWebUI (jawafdehi-custom) → http://jawafdehi-mcp:8000 (Docker network)
+#                                  → jawafdehi-api (identity resolution)
+#
+# Note: The uv:bookworm-slim image does not include git.
+# The entrypoint installs git before running uvx (which needs git for
+# git+https:// dependencies).
+
+version: "3.8"
+
+services:
+  open-webui:
+    build:
+      context: https://github.com/Jawafdehi/open-webui.git#jawafdehi-custom
+      dockerfile: Dockerfile
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_FORWARD_USER_INFO_HEADERS=true
+      - ENABLE_MCP=true
+
+  jawafdehi-mcp:
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "apt-get update -qq && apt-get install -y -qq git && uvx --from git+https://github.com/Jawafdehi/jawafdehi-mcp.git jawafdehi-mcp-http"
+    container_name: jawafdehi-mcp
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - mcp.env
+    environment:
+      - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+volumes:
+  open-webui:
