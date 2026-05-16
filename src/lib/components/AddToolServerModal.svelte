@@ -50,6 +50,8 @@
 	let headers = '';
 
 	let functionNameFilterList = '';
+	/** MCP: append InitializeResult.instructions to the system prompt (backend). */
+	let forwardMcpInstructions = true;
 	let accessGrants = [];
 
 	let id = '';
@@ -228,8 +230,13 @@
 				}
 
 				if (data.config) {
-					enable = data.config.enable ?? true;
-					accessGrants = data.config.access_grants ?? [];
+					const c = data.config;
+					if ('enable' in c) enable = c.enable;
+					if ('access_grants' in c) accessGrants = c.access_grants ?? [];
+					if ('forward_mcp_instructions' in c) forwardMcpInstructions = c.forward_mcp_instructions;
+					if ('function_name_filter_list' in c) {
+						functionNameFilterList = c.function_name_filter_list ?? '';
+					}
 				}
 
 				toast.success($i18n.t('Import successful'));
@@ -259,7 +266,17 @@
 					id: id,
 					name: name,
 					description: description
-				}
+				},
+				...(type === 'mcp'
+					? {
+							config: {
+								enable,
+								function_name_filter_list: functionNameFilterList,
+								access_grants: accessGrants,
+								forward_mcp_instructions: forwardMcpInstructions
+							}
+						}
+					: {})
 			}
 		]);
 
@@ -336,7 +353,8 @@
 			config: {
 				enable: enable,
 				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
+				access_grants: accessGrants,
+				...(type === 'mcp' ? { forward_mcp_instructions: forwardMcpInstructions } : {})
 			},
 			info: {
 				id: id,
@@ -380,6 +398,7 @@
 
 		enable = true;
 		functionNameFilterList = '';
+		forwardMcpInstructions = true;
 		accessGrants = [];
 	};
 
@@ -407,6 +426,7 @@
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
+			forwardMcpInstructions = connection.config?.forward_mcp_instructions ?? true;
 			accessGrants = connection.config?.access_grants ?? [];
 		}
 	};
@@ -901,6 +921,22 @@
 										</div>
 									</div>
 								</div>
+							{/if}
+
+							{#if type === 'mcp'}
+								<Tooltip
+									className="flex w-full items-center justify-between gap-3 mt-2"
+									content={$i18n.t(
+										'When enabled, instructions returned in the MCP initialize response are appended to the system prompt for chats that use this server.'
+									)}
+								>
+									<span
+										class={`text-xs font-medium ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-700 dark:text-gray-200'}`}
+									>
+										{$i18n.t('Include MCP server instructions')}
+									</span>
+									<Switch bind:state={forwardMcpInstructions} />
+								</Tooltip>
 							{/if}
 						{/if}
 

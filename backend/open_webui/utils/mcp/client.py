@@ -51,6 +51,8 @@ class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
+        # From InitializeResult.instructions (MCP protocol); forwarded to the model when using this server.
+        self.server_instructions: Optional[str] = None
 
     async def connect(self, url: str, headers: Optional[dict] = None):
         async with AsyncExitStack() as exit_stack:
@@ -70,7 +72,11 @@ class MCPClient:
 
                 self.session = await exit_stack.enter_async_context(self._session_context)
                 with anyio.fail_after(10):
-                    await self.session.initialize()
+                    init_result = await self.session.initialize()
+                instr = getattr(init_result, 'instructions', None)
+                if isinstance(instr, str):
+                    instr = instr.strip()
+                self.server_instructions = instr or None
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
                 await asyncio.shield(self.disconnect())
@@ -152,6 +158,7 @@ class MCPClient:
         # Prevent double-close from concurrent callers
         self.exit_stack = None
         self.session = None
+        self.server_instructions = None
 
         try:
             # IMPORTANT: Do NOT use asyncio.shield() or asyncio.wait_for()
