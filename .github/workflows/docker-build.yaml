@@ -61,11 +61,17 @@ jobs:
           build-args: |
             BUILD_HASH=${{ github.sha }}
 
+      - name: Show pushed tags
+        run: |
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
+          echo "Version: ${{ steps.meta.outputs.version }}"
+
       - name: Make package public
         run: |
-          # Make the container package public so hosts can pull without special auth
+          OWNER="$(echo '${{ env.IMAGE_NAME }}' | cut -d/ -f1)"
+          REPO="$(echo '${{ env.IMAGE_NAME }}' | cut -d/ -f2)"
           curl -s -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/user/packages/container/${{ env.IMAGE_NAME }}/visibility" \
-            -d '{"visibility":"public"}' || true
+            "https://api.github.com/orgs/${OWNER}/packages/container/${REPO}/visibility" \
+            -d '{"visibility":"public"}' || echo "Visibility change skipped (may not be supported for this token)"
