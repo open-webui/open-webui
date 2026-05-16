@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - dev
+      - jawafdehi-custom
     tags:
       - v*
 
