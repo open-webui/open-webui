@@ -8,7 +8,7 @@
 
 @font-face {
 	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
+	src: url('/static/assets/fonts/Archivo-Variable.ttf');
 	font-display: swap;
 }
 
