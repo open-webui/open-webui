@@ -405,7 +405,7 @@
 					? ' allow-forms'
 					: ''}"
 				class="w-full h-full border-none bg-white"
-				title="HTML Preview"
+				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isHtml && !showRaw}
 			{#if overlay}
@@ -417,7 +417,7 @@
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
-				title="HTML Preview"
+				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isHtml && showRaw}
 			<div class="absolute inset-0">
@@ -478,7 +478,9 @@
 			</div>
 		{:else if isJson && !showRaw && jsonError}
 			<div class="p-3 text-xs">
-				<div class="text-red-500 mb-2">JSON parse error: {jsonError}</div>
+				<div class="text-red-500 mb-2">
+					{$i18n.t('JSON parse error: {{ERROR}}', { ERROR: jsonError })}
+				</div>
 				<pre
 					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
 			</div>

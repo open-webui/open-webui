@@ -243,7 +243,7 @@
 						{#if contents[selectedContentIdx].type === 'iframe'}
 							<iframe
 								bind:this={iframeElement}
-								title="Content"
+								title={$i18n.t('Content')}
 								srcdoc={injectCsp(
 									contents[selectedContentIdx].content,
 									$config?.ui?.iframe_csp ?? ''

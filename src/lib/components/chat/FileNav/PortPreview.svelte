@@ -266,7 +266,7 @@
 			<iframe
 				bind:this={iframeEl}
 				src={proxyUrl}
-				title="Port {port} preview"
+				title={$i18n.t('Port {{PORT}} preview', { PORT: port })}
 				class="w-full h-full border-0 bg-white"
 				sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
 				on:load={onIframeLoad}

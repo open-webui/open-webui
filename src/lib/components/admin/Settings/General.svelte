@@ -328,7 +328,7 @@
 								bind:value={adminConfig.DEFAULT_GROUP_ID}
 								placeholder={$i18n.t('Select a group')}
 							>
-								<option value={''}>None</option>
+								<option value={''}>{$i18n.t('None')}</option>
 								{#each groups as group}
 									<option value={group.id}>{group.name}</option>
 								{/each}

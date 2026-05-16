@@ -18,11 +18,11 @@
 				{#if codeExecution?.result}
 					<div>
 						{#if codeExecution.result?.error}
-							<Badge type="error" content="error" />
+							<Badge type="error" content={$i18n.t('error')} />
 						{:else if codeExecution.result?.output}
-							<Badge type="success" content="success" />
+							<Badge type="success" content={$i18n.t('success')} />
 						{:else}
-							<Badge type="warning" content="incomplete" />
+							<Badge type="warning" content={$i18n.t('incomplete')} />
 						{/if}
 					</div>
 				{/if}

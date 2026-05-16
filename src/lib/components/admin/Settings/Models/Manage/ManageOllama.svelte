@@ -614,7 +614,7 @@
 						</div>
 
 						<div>
-							<Tooltip content="Update All Models" placement="top">
+							<Tooltip content={$i18n.t('Update All Models')} placement="top">
 								<button
 									class="flex gap-2 items-center bg-transparent rounded-lg transition"
 									on:click={() => {
@@ -716,7 +716,12 @@
 
 					{#if updateModelId}
 						<div class="text-xs flex justify-between items-center">
-							<div>Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}</div>
+							<div>
+								{$i18n.t('Updating "{{MODEL}}" {{PROGRESS}}', {
+									MODEL: updateModelId,
+									PROGRESS: updateProgress ? `(${updateProgress}%)` : ''
+								})}
+							</div>
 
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button

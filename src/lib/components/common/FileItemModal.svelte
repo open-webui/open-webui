@@ -547,7 +547,7 @@
 									{@html excelHtml}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-sm p-4">No content available</div>
+								<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
 							{/if}
 						{/if}
 					{:else if isCode}
@@ -577,7 +577,7 @@
 								{@html docxHtml}
 							</div>
 						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
+							<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
 						{/if}
 					{:else if isPptx}
 						{#if pptxError}
@@ -636,7 +636,7 @@
 								{/if}
 							</div>
 						{:else}
-							<div class="text-gray-500 text-sm p-4">No content available</div>
+							<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
 						{/if}
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">

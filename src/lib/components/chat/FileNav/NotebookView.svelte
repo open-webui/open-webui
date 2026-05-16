@@ -309,7 +309,7 @@
 								class="nb-run-btn"
 								on:click={() => runCell(i)}
 								disabled={runningCell !== null}
-								title="Run cell (⌘+Enter)"
+								title={$i18n.t('Run cell (⌘+Enter)')}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
