@@ -140,7 +140,7 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     ENABLE_RESPONSES_API_STATEFUL,
 )
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.headers import include_user_info_headers, get_custom_headers
 from open_webui.constants import TASKS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -2704,8 +2704,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         connection_headers = mcp_server_connection.get('headers', None)
                         if connection_headers and isinstance(connection_headers, dict):
-                            for key, value in connection_headers.items():
-                                headers[key] = value
+                            custom_headers = get_custom_headers(connection_headers, user, metadata)
+                            headers.update(custom_headers)
 
                         # Add user info headers if enabled
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
