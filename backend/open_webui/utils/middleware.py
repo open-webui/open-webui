@@ -2096,7 +2096,7 @@ def apply_params_to_form_data(form_data, model):
     return form_data
 
 
-async def convert_url_images_to_base64(form_data):
+async def convert_url_images_to_base64(form_data, user):
     messages = form_data.get('messages', [])
 
     for message in messages:
@@ -2117,7 +2117,7 @@ async def convert_url_images_to_base64(form_data):
                 continue
 
             try:
-                base64_data = await get_image_base64_from_url(image_url)
+                base64_data = await get_image_base64_from_url(image_url, user)
                 if base64_data:
                     new_content.append(
                         {
@@ -2340,7 +2340,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception:
             pass
 
-    form_data = await convert_url_images_to_base64(form_data)
+    form_data = await convert_url_images_to_base64(form_data, user)
 
     event_emitter = await get_event_emitter(metadata)
     event_caller = await get_event_call(metadata)

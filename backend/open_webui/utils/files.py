@@ -27,6 +27,7 @@ from open_webui.routers.images import (
     upload_image,
 )
 from open_webui.storage.provider import Storage
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.session_pool import get_session
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
@@ -50,7 +51,7 @@ _IMAGE_MIME_FALLBACK = {
 }
 
 
-async def get_image_base64_from_url(url: str) -> Optional[str]:
+async def get_image_base64_from_url(url: str, user) -> Optional[str]:
     try:
         if url.startswith('http'):
             # Validate URL to prevent SSRF attacks against local/private networks.
@@ -73,6 +74,14 @@ async def get_image_base64_from_url(url: str) -> Optional[str]:
             file = await Files.get_file_by_id(url)
 
             if not file:
+                return None
+
+            # url here is a user-supplied file id; enforce the same ownership/access check the file routes use, else any user can read another user's file.
+            if not (
+                file.user_id == user.id
+                or user.role == 'admin'
+                or await has_access_to_file(url, 'read', user)
+            ):
                 return None
 
             file_path = await asyncio.to_thread(Storage.get_file, file.path)
