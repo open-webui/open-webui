@@ -45,6 +45,9 @@ def search_duckduckgo(
         except RatelimitException as e:
             log.error(f'RatelimitException: {e}')
             search_results = []
+        except Exception as e:
+            log.error(f'DuckDuckGo search error: {e}')
+            search_results = []
     if filter_list:
         search_results = get_filtered_results(search_results, filter_list)
 
