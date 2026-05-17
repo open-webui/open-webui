@@ -126,6 +126,7 @@ from open_webui.utils.tools import (
     get_tools,
     get_updated_tool_function,
 )
+from open_webui.utils.oauth_session_utils import select_sso_session
 from open_webui.utils.webhook import post_webhook
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
@@ -3022,13 +3023,8 @@ async def get_system_oauth_token(request, user):
             from open_webui.models.oauth_sessions import OAuthSessions
 
             sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
-            # Skip MCP-provider sessions in the SSO fallback — MCP token refresh is
-            # handled separately by oauth_client_manager.get_oauth_token() in
-            # process_chat_payload. Passing an mcp:* session to the SSO oauth_manager
-            # causes it to fail the refresh and delete the session (#24618).
-            sessions = [s for s in sessions if not (s.provider or '').startswith('mcp:')]
-            if sessions:
-                best = max(sessions, key=lambda s: s.updated_at)
+            best = select_sso_session(sessions)
+            if best:
                 oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                     user.id,
                     best.id,
