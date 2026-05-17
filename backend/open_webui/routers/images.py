@@ -594,7 +594,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
 
@@ -644,7 +644,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
 
@@ -750,7 +750,7 @@ async def image_generations(
                 headers={'authorization': get_automatic1111_api_auth(request)},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                res = await r.json()
+                res = await r.json(content_type=None)
             log.debug(f'res: {res}')
 
             images = []
@@ -925,7 +925,7 @@ async def image_edits(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
             for image in res['data']:
@@ -980,7 +980,7 @@ async def image_edits(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
             for image in res['candidates']:
