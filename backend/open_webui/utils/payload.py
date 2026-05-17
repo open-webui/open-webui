@@ -200,6 +200,13 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
 def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
     ollama_messages = []
 
+    def parse_tool_call_arguments(arguments):
+        if arguments is None or arguments == '':
+            return {}
+        if isinstance(arguments, str):
+            return json.loads(arguments)
+        return arguments
+
     for message in messages:
         # Initialize the new message structure with the role
         new_message = {'role': message['role']}
@@ -226,12 +233,13 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
             # If tool calls are present, add them to the message
             ollama_tool_calls = []
             for tool_call in tool_calls:
+                function = tool_call.get('function') or {}
                 ollama_tool_call = {
                     'index': tool_call.get('index', 0),
                     'id': tool_call.get('id', None),
                     'function': {
-                        'name': tool_call.get('function', {}).get('name', ''),
-                        'arguments': json.loads(tool_call.get('function', {}).get('arguments', {})),
+                        'name': function.get('name', ''),
+                        'arguments': parse_tool_call_arguments(function.get('arguments')),
                     },
                 }
                 ollama_tool_calls.append(ollama_tool_call)
