@@ -68,6 +68,11 @@ class QdrantClient(VectorDBBase):
                 timeout=QDRANT_TIMEOUT,
             )
 
+    def _prefixed_name(self, collection_name: str) -> str:
+        if collection_name.startswith('gitlab_') or collection_name.startswith('gitlab-'):
+            return collection_name
+        return f'{self.collection_prefix}_{collection_name}'
+
     def _result_to_get_result(self, points) -> GetResult:
         ids = []
         documents = []
@@ -88,7 +93,7 @@ class QdrantClient(VectorDBBase):
         )
 
     def _create_collection(self, collection_name: str, dimension: int):
-        collection_name_with_prefix = f'{self.collection_prefix}_{collection_name}'
+        collection_name_with_prefix = self._prefixed_name(collection_name)
         self.client.create_collection(
             collection_name=collection_name_with_prefix,
             vectors_config=models.VectorParams(
@@ -137,10 +142,10 @@ class QdrantClient(VectorDBBase):
         ]
 
     def has_collection(self, collection_name: str) -> bool:
-        return self.client.collection_exists(f'{self.collection_prefix}_{collection_name}')
+        return self.client.collection_exists(self._prefixed_name(collection_name))
 
     def delete_collection(self, collection_name: str):
-        return self.client.delete_collection(collection_name=f'{self.collection_prefix}_{collection_name}')
+        return self.client.delete_collection(collection_name=self._prefixed_name(collection_name))
 
     def search(
         self,
@@ -154,7 +159,7 @@ class QdrantClient(VectorDBBase):
             limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
 
         query_response = self.client.query_points(
-            collection_name=f'{self.collection_prefix}_{collection_name}',
+            collection_name=self._prefixed_name(collection_name),
             query=vectors[0],
             limit=limit,
         )
@@ -182,7 +187,7 @@ class QdrantClient(VectorDBBase):
                 )
 
             points = self.client.scroll(
-                collection_name=f'{self.collection_prefix}_{collection_name}',
+                collection_name=self._prefixed_name(collection_name),
                 scroll_filter=models.Filter(should=field_conditions),
                 limit=limit,
             )
@@ -194,7 +199,7 @@ class QdrantClient(VectorDBBase):
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.
         points = self.client.scroll(
-            collection_name=f'{self.collection_prefix}_{collection_name}',
+            collection_name=self._prefixed_name(collection_name),
             limit=NO_LIMIT,  # otherwise qdrant would set limit to 10!
         )
         return self._result_to_get_result(points[0])
@@ -203,13 +208,13 @@ class QdrantClient(VectorDBBase):
         # Insert the items into the collection, if the collection does not exist, it will be created.
         self._create_collection_if_not_exists(collection_name, len(items[0]['vector']))
         points = self._create_points(items)
-        self.client.upload_points(f'{self.collection_prefix}_{collection_name}', points)
+        self.client.upload_points(self._prefixed_name(collection_name), points)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
         self._create_collection_if_not_exists(collection_name, len(items[0]['vector']))
         points = self._create_points(items)
-        return self.client.upsert(f'{self.collection_prefix}_{collection_name}', points)
+        return self.client.upsert(self._prefixed_name(collection_name), points)
 
     def delete(
         self,
@@ -242,7 +247,7 @@ class QdrantClient(VectorDBBase):
                 )
 
         return self.client.delete(
-            collection_name=f'{self.collection_prefix}_{collection_name}',
+            collection_name=self._prefixed_name(collection_name),
             points_selector=models.FilterSelector(filter=models.Filter(must=field_conditions)),
         )
 

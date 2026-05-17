@@ -245,10 +245,13 @@ class GitLabConnection(BaseModel):
     owner: Optional[str] = None
     repo: Optional[str] = None
     branch: Optional[str] = None
+    wiki_only: Optional[bool] = False
+    file_types: Optional[str] = None
     include_wiki: Optional[bool] = False
     exclude_patterns: Optional[str] = None
     enabled: Optional[bool] = True
     auto_sync: Optional[bool] = False
+    selected_projects: Optional[list[str]] = None
     created_at: Optional[str] = None
 
     model_config = ConfigDict(extra='allow')
@@ -271,6 +274,9 @@ async def set_gitlab_config(
     form_data: GitLabConfigForm,
     user=Depends(get_admin_user),
 ):
+    old_connections = request.app.state.config.GITLAB_CONNECTIONS
+    old_by_id = {c.get('id'): c for c in old_connections if c.get('id')}
+
     connections = []
     for connection in form_data.GITLAB_CONNECTIONS:
         conn_dict = connection.model_dump()
@@ -296,21 +302,82 @@ async def set_gitlab_config(
 
     request.app.state.config.GITLAB_CONNECTIONS = connections
 
+    # Clean up orphaned vector DB collections for removed connections
+    new_ids = {c.get('id') for c in connections if c.get('id')}
+    for old_id, old_conn in old_by_id.items():
+        if old_id not in new_ids:
+            try:
+                await _cleanup_gitlab_connection_collections(old_conn)
+            except Exception as e:
+                log.warning(f'Failed to clean up collections for removed GitLab connection {old_id}: {e}')
+
     return {
         'GITLAB_CONNECTIONS': request.app.state.config.GITLAB_CONNECTIONS,
     }
 
 
-class VerifyGitLabConnectionForm(BaseModel):
-    url: str
-    token: str
+async def _cleanup_gitlab_connection_collections(connection: dict):
+    """Delete vector DB collections associated with a removed GitLab connection."""
+    collection_names = set()
+
+    # If a specific repo is configured, derive the collection name directly
+    owner = connection.get('owner', '')
+    repo = connection.get('repo', '')
+    if owner and repo:
+        collection_names.add(f'gitlab_{owner}_{repo}')
+
+    # Also try to fetch projects via GitLab API to get all synced collections
+    token = connection.get('token', '')
+    if token:
+        try:
+            token = decrypt_data(token)
+        except Exception:
+            token = connection.get('token', '')
+
+    gitlab_id = connection.get('id', '')
+    if gitlab_id and token and connection.get('url'):
+        try:
+            client = create_gitlab_client(connection.get('url', ''), token)
+            projects = await client.list_projects(per_page=100)
+            for project in projects:
+                project_path = project.get('path_with_namespace', str(project.get('id', '')))
+                collection_names.add(f'gitlab_{project_path.replace("/", "_")}')
+        except Exception as e:
+            log.debug(f'Could not fetch projects for removed connection {gitlab_id}: {e}')
+
+    for cname in collection_names:
+        try:
+            if await ASYNC_VECTOR_DB_CLIENT.has_collection(cname):
+                log.info(f'Deleting orphaned GitLab collection: {cname}')
+                await ASYNC_VECTOR_DB_CLIENT.delete_collection(cname)
+        except Exception as e:
+            log.warning(f'Failed to delete collection {cname}: {e}')
 
 
-@router.post('/gitlab/verify')
-async def verify_gitlab_connection(
+@router.post('/gitlab/browse-projects')
+async def browse_gitlab_projects(
     request: Request,
     user=Depends(get_admin_user),
 ):
+    """Browse projects on a GitLab instance using a temporary URL/token.
+    Used when adding a new connection before it is saved."""
+    try:
+        body = await request.json()
+        url = body.get('url', '').rstrip('/')
+        token = body.get('token', '')
+
+        if not url or not token:
+            raise HTTPException(status_code=400, detail='URL and token are required')
+
+        client = create_gitlab_client(url, token)
+        projects = await client.list_projects(per_page=100)
+        return {'projects': projects}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f'Failed to browse GitLab projects: {e}')
+        raise HTTPException(status_code=400, detail=f'Failed to fetch projects: {str(e)}')
+
     try:
         body = await request.json()
         url = body.get('url', '').rstrip('/')
@@ -364,9 +431,11 @@ async def get_gitlab_projects(
     request: Request,
     gitlab_id: str,
     page: int = 1,
-    per_page: int = 20,
+    per_page: int = 50,
+    search: str = '',
     user=Depends(get_admin_user),
 ):
+    """Get all projects the authenticated user has access to on this GitLab connection."""
     connections = request.app.state.config.GITLAB_CONNECTIONS
     connection = next((c for c in connections if c.get('id') == gitlab_id), None)
 
@@ -378,8 +447,11 @@ async def get_gitlab_projects(
         token = decrypt_data(token)
 
     client = create_gitlab_client(connection.get('url', ''), token)
-    projects = await client.list_projects(per_page=per_page, page=page)
-    return {'projects': projects}
+    projects = await client.list_projects(per_page=per_page, page=page, search=search)
+    
+    selected = set(connection.get('selected_projects', []) or [])
+    return {'projects': projects, 'selected': selected}
+
 
 
 @router.post('/gitlab/{gitlab_id}/sync')
@@ -400,6 +472,12 @@ async def trigger_gitlab_sync(
         project_ids = body.get('project_ids', []) or []
     except Exception:
         pass
+
+    # If no explicit project_ids and connection has selected_projects, use those
+    if not project_ids:
+        selected = connection.get('selected_projects', [])
+        if selected:
+            project_ids = selected
 
     job_id = str(uuid.uuid4())
 
@@ -422,6 +500,8 @@ async def trigger_gitlab_sync(
                 'owner': connection.get('owner', ''),
                 'repo': connection.get('repo', ''),
                 'branch': connection.get('branch', ''),
+                'wiki_only': connection.get('wiki_only', False),
+                'file_types': connection.get('file_types', ''),
                 'include_wiki': connection.get('include_wiki', False),
                 'exclude_patterns': connection.get('exclude_patterns', ''),
             },
@@ -495,14 +575,22 @@ async def search_gitlab_knowledge(
         
         all_results = []
         search_collections = []
-        
+
         if form_data.project_ids:
-            search_collections = [f'gitlab_{pid}' for pid in form_data.project_ids]
+            pid_set = set(form_data.project_ids)
+            for conn in connections:
+                projects = await get_gitlab_connection_projects(request, conn.get('id', ''))
+                for project in projects:
+                    pid = str(project.get('id', ''))
+                    if pid in pid_set:
+                        project_path = project.get('path_with_namespace', pid)
+                        search_collections.append(f'gitlab_{project_path.replace("/", "_")}')
         else:
             for conn in connections:
                 projects = await get_gitlab_connection_projects(request, conn.get('id', ''))
                 for project in projects:
-                    search_collections.append(f'gitlab_{project.get("id")}')
+                    project_path = project.get('path_with_namespace', str(project.get('id', '')))
+                    search_collections.append(f'gitlab_{project_path.replace("/", "_")}')
         
         for collection_name in search_collections:
             try:
@@ -533,21 +621,33 @@ async def search_gitlab_knowledge(
 @router.get('/gitlab/collections')
 async def get_gitlab_collections(
     request: Request,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
-    """Get all synced GitLab collections with metadata."""
+    """Get all synced GitLab collections with metadata.
+    Accessible to all verified users; GitLab collections are admin-managed
+    but visible to everyone (consistent with filter_accessible_collections)."""
     connections = request.app.state.config.GITLAB_CONNECTIONS
     collections = []
     
     for conn in connections:
+        if not conn.get('enabled', True):
+            continue
         gitlab_id = conn.get('id', '')
         if not gitlab_id:
             continue
         
+        selected = set(conn.get('selected_projects', []) or [])
         projects = await get_gitlab_connection_projects(request, gitlab_id)
+        
         for project in projects:
             project_id = str(project.get('id', ''))
-            collection_name = f'gitlab_{project_id}'
+            
+            # If user has selected specific projects, skip unselected ones
+            if selected and project_id not in selected:
+                continue
+            
+            project_path = project.get('path_with_namespace', project_id)
+            collection_name = f'gitlab_{project_path.replace("/", "_")}'
             
             try:
                 exists = await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name)
@@ -559,9 +659,10 @@ async def get_gitlab_collections(
                 'gitlab_id': gitlab_id,
                 'project_id': project_id,
                 'name': project.get('name', 'Unknown'),
-                'path': project.get('path_with_namespace', ''),
+                'path': project_path,
                 'collection_name': collection_name,
                 'synced': exists,
+                'selected': project_id in selected,
                 'web_url': project.get('web_url', ''),
             })
     

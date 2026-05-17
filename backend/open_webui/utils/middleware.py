@@ -2438,7 +2438,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         knowledge_files = []
         for item in model_knowledge:
-            if item.get('collection_name'):
+            if item.get('type') == 'gitlab' or (item.get('collection_name', '') or item.get('id', '')).startswith('gitlab_'):
+                collection_name = item.get('collection_name') or item.get('id')
+                knowledge_files.append(
+                    {
+                        'id': collection_name,
+                        'name': item.get('name'),
+                        'type': 'gitlab',
+                        'collection_name': collection_name,
+                        'legacy': True,
+                    }
+                )
+            elif item.get('collection_name'):
                 knowledge_files.append(
                     {
                         'id': item.get('collection_name'),

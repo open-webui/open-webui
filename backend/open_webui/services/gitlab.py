@@ -59,21 +59,40 @@ class GitLabClient:
             response.raise_for_status()
             return response.json()
 
-    async def list_projects(self, per_page: int = 20, page: int = 1) -> List[Dict[str, Any]]:
+    async def list_projects(self, per_page: int = 20, page: int = 1, search: str = '') -> List[Dict[str, Any]]:
+        """List projects the authenticated user has access to."""
+        params = {
+            'membership': True,
+            'per_page': per_page,
+            'page': page,
+            'order_by': 'last_activity_at',
+            'sort': 'desc',
+        }
+        if search:
+            params['search'] = search
+
         async with self._get_client() as client:
             response = await client.get(
                 f'{self.url}/api/v4/projects',
-                params={
-                    'membership': True,
-                    'per_page': per_page,
-                    'page': page,
-                    'order_by': 'last_activity_at',
-                    'sort': 'desc',
-                },
+                params=params,
                 headers=self.headers,
             )
             response.raise_for_status()
             return response.json()
+
+    async def list_all_user_projects(self) -> List[Dict[str, Any]]:
+        """Fetch all accessible projects across all pages."""
+        all_projects = []
+        page = 1
+        while True:
+            projects = await self.list_projects(per_page=100, page=page)
+            if not projects:
+                break
+            all_projects.extend(projects)
+            if len(projects) < 100:
+                break
+            page += 1
+        return all_projects
 
     async def list_repository_tree(
         self,

@@ -2,6 +2,8 @@ import logging
 import os
 from typing import Awaitable, Optional, Union
 
+from fastapi import Request
+
 import requests
 import aiohttp
 import asyncio
@@ -1062,6 +1064,7 @@ async def filter_accessible_collections(
     collection_names: set[str],
     user: UserModel,
     access_type: str = 'read',
+    request: Optional[Request] = None,
 ) -> set[str]:
     """
     Return only the collection names the user is allowed to access.
@@ -1070,7 +1073,10 @@ async def filter_accessible_collections(
       - file-*          → validated via has_access_to_file
       - user-memory-*   → must match user's own memory collection
       - web-search-*    → ephemeral per-query collections, always allowed
-      - gitlab-*        → always allowed (admin-managed GitLab repos)
+      - gitlab-*        → allowed only if they belong to an active,
+                          enabled GitLab connection (when request is
+                          available); without request, always allowed
+                          (backward-compatible fallback)
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
                           via Knowledges.check_access_by_user_id; if no
@@ -1079,6 +1085,20 @@ async def filter_accessible_collections(
     """
     if user.role == 'admin':
         return collection_names
+
+    # Determine whether any active GitLab connections exist.  When none
+    # exist, reject all gitlab-* collections (orphaned data from previously
+    # deleted connections).  When the request is unavailable we fall back
+    # to the old permissive behaviour.
+    has_active_gitlab: Optional[bool] = None
+    if request is not None:
+        try:
+            connections = request.app.state.config.GITLAB_CONNECTIONS
+            has_active_gitlab = bool(connections and any(
+                c.get('enabled', True) for c in connections
+            ))
+        except Exception:
+            has_active_gitlab = None
 
     validated = set()
     for name in collection_names:
@@ -1098,7 +1118,12 @@ async def filter_accessible_collections(
             # results scoped to the requesting user's session.
             validated.add(name)
         elif name.startswith('gitlab-') or name.startswith('gitlab_'):
-            # GitLab collections (both legacy hyphen and underscore naming)
+            # GitLab collections — only allow if at least one active,
+            # enabled GitLab connection exists.  When we can't determine
+            # the connection state (request not available) we allow them
+            # for backward compatibility.
+            if has_active_gitlab is False:
+                continue
             validated.add(name)
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.
@@ -1313,12 +1338,20 @@ async def get_sources_from_items(
                 'documents': [[doc.get('content') for doc in item.get('docs')]],
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
+        elif item.get('type') == 'gitlab':
+            # GitLab collection
+            collection_name = item.get('collection_name') or item.get('id')
+            if collection_name:
+                collection_names.append(collection_name)
         elif item.get('collection_name'):
             # Direct Collection Name
             collection_names.append(item['collection_name'])
         elif item.get('collection_names'):
             # Collection Names List
             collection_names.extend(item['collection_names'])
+        elif item.get('legacy') and item.get('id', '').startswith('gitlab_'):
+            # Legacy GitLab item from model knowledge (pre-fix stored data)
+            collection_names.append(item['id'])
 
         # If query_result is None
         # Fallback to collection names and vector search the collections
@@ -1330,7 +1363,7 @@ async def get_sources_from_items(
 
             # Filter out collections the user cannot read
             if user:
-                collection_names = await filter_accessible_collections(collection_names, user)
+                collection_names = await filter_accessible_collections(collection_names, user, request=request)
                 if not collection_names:
                     log.debug(f'access denied for all collections in item {item}')
                     continue

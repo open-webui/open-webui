@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import { getModels as _getModels } from '$lib/apis';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { models, settings, user, terminalServers } from '$lib/stores';
+	import { models, settings, user, terminalServers, gitlabSyncJobs } from '$lib/stores';
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -159,7 +159,8 @@
 			const res = await triggerGitLabSync(localStorage.token, id);
 			if (res?.job_id) {
 				toast.success($i18n.t('Sync job queued'));
-				pollJobStatus(res.job_id);
+				gitlabSyncJobs.update((jobs) => ({ ...jobs, [id]: { jobId: res.job_id, status: null } }));
+				pollJobStatus(res.job_id, id);
 			}
 		} catch (error) {
 			toast.error($i18n.t('Failed to trigger sync'));
@@ -167,16 +168,29 @@
 		}
 	};
 
-	const pollJobStatus = async (jobId: string) => {
+	const pollJobStatus = async (jobId: string, connectionId?: string) => {
 		clearInterval(gitlabSyncInterval);
 		gitlabSyncInterval = setInterval(async () => {
 			try {
 				const statusRes = await getGitLabJobStatus(localStorage.token, jobId);
 				if (statusRes) {
 					gitlabSyncStatus = statusRes;
+					if (connectionId && $gitlabSyncJobs[connectionId]) {
+						gitlabSyncJobs.update((jobs) => ({
+							...jobs,
+							[connectionId]: { jobId, status: statusRes },
+						}));
+					}
 					if (statusRes.status === 'completed' || statusRes.status === 'failed') {
 						clearInterval(gitlabSyncInterval);
 						syncingGitLabId = null;
+						if (connectionId) {
+							gitlabSyncJobs.update((jobs) => {
+								const updated = { ...jobs };
+								delete updated[connectionId];
+								return updated;
+							});
+						}
 					}
 				}
 			} catch {
@@ -228,6 +242,48 @@
 		} catch {
 			// Not configured yet
 		}
+
+		// Resume polling for any pending sync jobs from previous visits
+		for (const [connId, job] of Object.entries($gitlabSyncJobs)) {
+			if (
+				job?.jobId &&
+				(!job?.status ||
+					(job.status.status !== 'completed' && job.status.status !== 'failed'))
+			) {
+				// Fetch fresh status in case it changed while we were away
+				try {
+					const freshStatus = await getGitLabJobStatus(localStorage.token, job.jobId);
+					if (freshStatus && freshStatus.status !== 'completed' && freshStatus.status !== 'failed') {
+						syncingGitLabId = connId;
+						gitlabSyncStatus = freshStatus;
+						gitlabSyncJobs.update((jobs) => ({
+							...jobs,
+							[connId]: { jobId: job.jobId, status: freshStatus },
+						}));
+						pollJobStatus(job.jobId, connId);
+						break;
+					} else {
+						// Job already finished, clean up
+						gitlabSyncJobs.update((jobs) => {
+							const updated = { ...jobs };
+							delete updated[connId];
+							return updated;
+						});
+					}
+				} catch {
+					// Can't reach backend, just clear
+					gitlabSyncJobs.update((jobs) => {
+						const updated = { ...jobs };
+						delete updated[connId];
+						return updated;
+					});
+				}
+			}
+		}
+	});
+
+	onDestroy(() => {
+		clearInterval(gitlabSyncInterval);
 	});
 </script>
 
@@ -481,8 +537,15 @@
 											</svg>
 										</Tooltip>
 
-										<div class="outline-hidden w-full bg-transparent text-sm">
-											{connection.name || connection.url || $i18n.t('New GitLab')}
+										<div class="flex flex-col min-w-0">
+											<div class="outline-hidden w-full bg-transparent text-sm truncate">
+												{connection.name || connection.url || $i18n.t('New GitLab')}
+											</div>
+											{#if connection.selected_projects?.length !== undefined}
+												<div class="text-xs text-gray-400">
+													{$i18n.t('{{count}} projects selected', { count: connection.selected_projects.length })}
+												</div>
+											{/if}
 										</div>
 									</div>
 

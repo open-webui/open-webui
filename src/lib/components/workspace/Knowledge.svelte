@@ -57,7 +57,7 @@
 		clearTimeout(searchDebounceTimer);
 	});
 
-	$: if (viewOption !== undefined) {
+	$: if (loaded && viewOption !== undefined) {
 		init();
 	}
 

@@ -737,12 +737,51 @@ export const verifyGitLabConnection = async (token: string, url: string, tokenVa
 	return res;
 };
 
-export const getGitLabProjects = async (token: string, gitlabId: string, page?: number, perPage?: number) => {
+export const browseGitLabProjects = async (
+	token: string,
+	url: string,
+	tokenValue: string
+): Promise<{ projects: any[] } | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/gitlab/browse-projects`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ url, token: tokenValue })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getGitLabProjects = async (
+	token: string,
+	gitlabId: string,
+	page?: number,
+	search?: string,
+	perPage?: number
+) => {
 	let error = null;
 
 	const params = new URLSearchParams();
 	if (page) params.append('page', page.toString());
 	if (perPage) params.append('per_page', perPage.toString());
+	if (search) params.append('search', search);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/gitlab/${gitlabId}/projects?${params}`, {
 		method: 'GET',

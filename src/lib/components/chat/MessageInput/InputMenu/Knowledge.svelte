@@ -92,9 +92,10 @@
 	};
 
 	let page = 1;
-	let items = null;
+	let items = [];
 	let gitlabItems = [];
 	let total = null;
+	let gitlabLoaded = false;
 
 	let itemsLoading = false;
 	let allItemsLoaded = false;
@@ -112,7 +113,10 @@
 	};
 
 	const getGitLabItems = async () => {
-		const res = await getGitLabCollections(localStorage.token).catch(() => null);
+		const res = await getGitLabCollections(localStorage.token).catch((e) => {
+			console.warn('getGitLabCollections error:', e);
+			return null;
+		});
 		if (res?.collections) {
 			gitlabItems = res.collections.map((c) => ({
 				id: c.collection_name,
@@ -122,17 +126,21 @@
 				collection_name: c.collection_name,
 				web_url: c.web_url,
 				project_id: c.project_id,
-				gitlab_id: c.gitlab_id
+				gitlab_id: c.gitlab_id,
+				synced: c.synced
 			}));
 		}
+		gitlabLoaded = true;
 	};
 
 	const reset = () => {
 		page = 1;
 		items = null;
+		gitlabItems = [];
 		total = null;
 		allItemsLoaded = false;
 		itemsLoading = false;
+		gitlabLoaded = false;
 	};
 
 	const loadMoreItems = async () => {
@@ -147,28 +155,31 @@
 			return null;
 		});
 
-		if (res) {
-			console.log(res);
-			total = res.total;
-			const pageItems = res.items;
+			if (res) {
+				console.log(res);
+				total = res.total;
+				const pageItems = res.items;
 
-			if ((pageItems ?? []).length === 0) {
+				if ((pageItems ?? []).length === 0) {
+					allItemsLoaded = true;
+				} else {
+					allItemsLoaded = false;
+				}
+
+				if (items) {
+					const existingIds = new Set(items.map((item) => item.id));
+					const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+					items = [...items, ...newItems];
+				} else {
+					items = pageItems ?? [];
+				}
+			} else {
+				// API call failed - stop trying to load more
 				allItemsLoaded = true;
-			} else {
-				allItemsLoaded = false;
 			}
 
-			if (items) {
-				const existingIds = new Set(items.map((item) => item.id));
-				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
-				items = [...items, ...newItems];
-			} else {
-				items = pageItems;
-			}
-		}
-
-		itemsLoading = false;
-		return res;
+			itemsLoading = false;
+			return res;
 	};
 
 	onMount(async () => {
@@ -177,84 +188,84 @@
 	});
 </script>
 
-{#if loaded && items !== null}
-	<div class="flex flex-col gap-0.5">
-	{#if combinedItems.length === 0}
-			<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-				{$i18n.t('No knowledge bases found.')}
-			</div>
-		{:else}
-			{#each combinedItems as item, idx (item.id)}
-				<div
-					class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
-					selectedIdx
-						? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
-						: ''}"
-				>
-					<button
-						class="w-full flex-1"
-						type="button"
-						on:click={() => {
-							onSelect({
-								type: item.type === 'gitlab' ? 'gitlab' : 'collection',
-								...item
-							});
-						}}
-						on:mousemove={() => {
-							selectedIdx = idx;
-						}}
-						on:mouseleave={() => {
-							if (idx === 0) {
-								selectedIdx = -1;
-							}
-						}}
-						data-selected={idx === selectedIdx}
+	{#if loaded && gitlabLoaded}
+		<div class="flex flex-col gap-0.5">
+		{#if combinedItems.length === 0}
+				<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+					{$i18n.t('No knowledge bases found.')}
+				</div>
+			{:else}
+				{#each combinedItems as item, idx (item.id)}
+					<div
+						class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
+						selectedIdx
+							? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
+							: ''}"
 					>
-						<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
-							<Tooltip content={item.type === 'gitlab' ? 'GitLab' : $i18n.t('Collection')} placement="top">
-								{#if item.type === 'gitlab'}
-									<svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
-										<path d="M22.65 10.785l-1.423-4.39L17.257 2.5 8.938 8.068 3.743 6.395l-1.423 4.39L0 12.227l8.928 6.868 4.035 1.424 1.424-4.39 8.283-5.344z"/>
-									</svg>
-								{:else}
-									<Database className="size-4" />
-								{/if}
-							</Tooltip>
-
-							<Tooltip
-								content={item.description || decodeString(item?.name)}
-								placement="top-start"
-								className="flex flex-1 min-w-0"
-							>
-								<div class="line-clamp-1 flex-1 text-sm">
-									{decodeString(item?.name)}
-								</div>
-							</Tooltip>
-						</div>
-					</button>
-
-					{#if item.type !== 'gitlab'}
-					<Tooltip content={$i18n.t('Show Files')} placement="top">
 						<button
+							class="w-full flex-1"
 							type="button"
-							class=" ml-2 opacity-50 hover:opacity-100 transition"
 							on:click={() => {
-								if (selectedItem && selectedItem.id === item.id) {
-									selectedItem = null;
-								} else {
-									selectedItem = item;
+								onSelect({
+									type: item.type === 'gitlab' ? 'gitlab' : 'collection',
+									...item
+								});
+							}}
+							on:mousemove={() => {
+								selectedIdx = idx;
+							}}
+							on:mouseleave={() => {
+								if (idx === 0) {
+									selectedIdx = -1;
 								}
 							}}
+							data-selected={idx === selectedIdx}
 						>
-							{#if selectedItem && selectedItem.id === item.id}
-								<ChevronDown className="size-3" />
-							{:else}
-								<ChevronRight className="size-3" />
-							{/if}
+							<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
+								<Tooltip content={item.type === 'gitlab' ? 'GitLab' : $i18n.t('Collection')} placement="top">
+									{#if item.type === 'gitlab'}
+										<svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
+											<path d="M22.65 10.785l-1.423-4.39L17.257 2.5 8.938 8.068 3.743 6.395l-1.423 4.39L0 12.227l8.928 6.868 4.035 1.424 1.424-4.39 8.283-5.344z"/>
+										</svg>
+									{:else}
+										<Database className="size-4" />
+									{/if}
+								</Tooltip>
+
+								<Tooltip
+									content={item.description || decodeString(item?.name)}
+									placement="top-start"
+									className="flex flex-1 min-w-0"
+								>
+									<div class="line-clamp-1 flex-1 text-sm">
+										{decodeString(item?.name)}
+									</div>
+								</Tooltip>
+							</div>
 						</button>
-					</Tooltip>
-					{/if}
-			</div>
+
+						{#if item.type !== 'gitlab'}
+						<Tooltip content={$i18n.t('Show Files')} placement="top">
+							<button
+								type="button"
+								class=" ml-2 opacity-50 hover:opacity-100 transition"
+								on:click={() => {
+									if (selectedItem && selectedItem.id === item.id) {
+										selectedItem = null;
+									} else {
+										selectedItem = item;
+									}
+								}}
+							>
+								{#if selectedItem && selectedItem.id === item.id}
+									<ChevronDown className="size-3" />
+								{:else}
+									<ChevronRight className="size-3" />
+								{/if}
+							</button>
+						</Tooltip>
+						{/if}
+				</div>
 
 			{#if selectedItem && selectedItem.id === item.id}
 					<div class="pl-3 mb-1 flex flex-col gap-0.5">

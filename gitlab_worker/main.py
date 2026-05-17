@@ -3,17 +3,21 @@ import logging
 import signal
 import sys
 import os
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import structlog
 
-from .config import GITLAB_WORKER_ENABLED, GITLAB_WORKER_LOG_LEVEL, CHUNK_SIZE, CHUNK_OVERLAP, LOCAL_STORAGE_ENABLED, VECTOR_DB_PROVIDER
+from .config import (
+    GITLAB_WORKER_ENABLED,
+    GITLAB_WORKER_LOG_LEVEL,
+    CHUNK_SIZE,
+    CHUNK_OVERLAP,
+)
 from .job_queue import job_queue
 from .gitlab_fetcher import create_gitlab_fetcher
 from .chunker import chunker
 from .embedder import embedder
 from .vector_store import vector_store
-from .local_storage import local_storage
 
 logging.basicConfig(
     level=getattr(logging, GITLAB_WORKER_LOG_LEVEL),
@@ -51,10 +55,18 @@ async def process_sync_job(job_data: dict) -> None:
     ]
     include_wiki = connection.get('include_wiki', False)
     configured_branch = connection.get('branch', '').strip() or None
+    wiki_only = connection.get('wiki_only', False)
+    file_types_text = connection.get('file_types', '').strip()
+    file_types = [
+        ext.strip().lower() if ext.strip().startswith('.') else f'.{ext.strip().lower()}'
+        for ext in file_types_text.split(',')
+        if ext.strip()
+    ] if file_types_text else None
 
     log.info(f'Processing sync job {job_id}')
     job_queue.set_job_status(job_id, 'connecting', 5, 'Connecting to GitLab...')
 
+    gitlab = None
     try:
         gitlab = create_gitlab_fetcher(
             url=connection.get('url', ''),
@@ -89,7 +101,7 @@ async def process_sync_job(job_data: dict) -> None:
 
         total_projects = len(project_ids)
         for idx, project_id in enumerate(project_ids):
-            project_progress = int((idx / total_projects) * 80) + 20  # 20-100 range for project sync
+            project_progress = int((idx / total_projects) * 80) + 20
             job_queue.set_job_status(
                 job_id,
                 'syncing',
@@ -101,7 +113,7 @@ async def process_sync_job(job_data: dict) -> None:
             try:
                 await sync_project(
                     gitlab, project_id, job_id, exclude_patterns, include_wiki,
-                    configured_branch, idx, total_projects
+                    configured_branch, wiki_only, file_types, idx, total_projects
                 )
             except Exception as e:
                 log.error(f'Error syncing project {project_id}: {e}')
@@ -113,34 +125,36 @@ async def process_sync_job(job_data: dict) -> None:
     except Exception as e:
         error_str = str(e)
         if '401' in error_str or 'Unauthorized' in error_str:
-            error_str = 'GitLab authentication failed. Your Personal Access Token may be invalid or expired. Generate a new token with api scope in GitLab settings.'
+            error_str = 'GitLab authentication failed. Your Personal Access Token may be invalid or expired.'
         elif '403' in error_str or 'Forbidden' in error_str:
             error_str = 'GitLab access forbidden. Your token may lack the required permissions (api scope).'
         log.error(f'Error processing job {job_id}: {e}')
         job_queue.set_job_status(job_id, 'failed', 0, error_str)
+    finally:
+        if gitlab:
+            await gitlab.close()
 
 
-async def sync_project(gitlab, project_id: str, job_id: str, exclude_patterns: list = None, include_wiki: bool = False, configured_branch: str = None, project_idx: int = 0, total_projects: int = 1) -> None:
+async def sync_project(gitlab, project_id: str, job_id: str, exclude_patterns: list = None, include_wiki: bool = False, configured_branch: str = None, wiki_only: bool = False, file_types: list = None, project_idx: int = 0, total_projects: int = 1) -> None:
     log.info(f'Syncing project {project_id}')
 
-    collection_name = f'gitlab_{project_id}'
+    try:
+        project = await gitlab.get_project(project_id)
+        project_name = project.get('name', project_id)
+        project_path = project.get('path_with_namespace', project_id)
+        branch = configured_branch or project.get('default_branch', 'main')
+        web_url = project.get('web_url', '')
+    except Exception as e:
+        log.error(f'Failed to fetch project info for {project_id}: {e}')
+        project_name = project_id
+        project_path = project_id
+        branch = configured_branch or 'main'
+        web_url = ''
+
+    collection_name = f'gitlab_{project_path.replace("/", "_")}'
+    log.info(f'Project {project_name} -> collection: {collection_name}')
 
     vector_store.delete_collection(collection_name)
-
-    project_name = project_id
-    project_path = project_id
-    branch = configured_branch
-
-    if not branch:
-        try:
-            project = await gitlab.get_project(project_id)
-            project_name = project.get('name', project_id)
-            project_path = project.get('path_with_namespace', project_id)
-            branch = project.get('default_branch', 'main')
-        except Exception:
-            branch = 'main'
-
-    log.info(f'Project {project_name}: using branch "{branch}"')
 
     job_queue.update_progress(
         job_id,
@@ -149,207 +163,130 @@ async def sync_project(gitlab, project_id: str, job_id: str, exclude_patterns: l
         {'stage': 'fetching', 'project_name': project_name, 'project_id': project_id, 'branch': branch}
     )
 
-    try:
-        tree = await gitlab.list_repository_tree(project_id, ref=branch, recursive=True)
-    except Exception as e:
-        log.error(f'Failed to list repository tree for {project_name} on branch "{branch}": {e}')
-        job_queue.update_progress(
-            job_id,
-            int(((project_idx + 1) / total_projects) * 80) + 20,
-            f'Failed to fetch files from {project_name}: {str(e)}',
-            {'stage': 'error', 'project_name': project_name, 'error': str(e)}
-        )
-        return
+    file_items = []
+    if not wiki_only:
+        try:
+            tree = await gitlab.list_repository_tree(project_id, ref=branch, recursive=True)
+            file_items = [item for item in tree if item['type'] == 'blob']
+            
+            if file_types:
+                file_items = [
+                    item for item in file_items
+                    if any(item['path'].lower().endswith(ft) for ft in file_types)
+                ]
+            log.info(f'Found {len(file_items)} files in {project_name}')
+        except Exception as e:
+            log.error(f'Failed to list repository tree for {project_name}: {e}')
+            return
 
-    file_items = [item for item in tree if item['type'] == 'blob']
-    all_file_paths = [item['path'] for item in file_items]
-    log.info(f'Found {len(all_file_paths)} files in project {project_id}')
-
-    job_queue.update_progress(
-        job_id,
-        int((project_idx / total_projects) * 80) + 20,
-        f'Found {len(all_file_paths)} files to process',
-        {
-            'stage': 'listing',
-            'project_name': project_name,
-            'files': all_file_paths,
-            'total_files': len(all_file_paths)
-        }
-    )
-
-    log.info(f'Files to process in {project_name}:')
-    for fp in all_file_paths:
-        log.info(f'  {fp}')
-
-    total_files = len(file_items)
-    processed = 0
-    skipped_binary = 0
-    skipped_excluded = 0
-    skipped_empty = 0
+    semaphore = asyncio.Semaphore(10)
+    processed_count = 0
     error_count = 0
-
-    for idx, item in enumerate(file_items):
+    
+    async def process_file(item):
+        nonlocal processed_count, error_count
         file_path = item['path']
+        if is_binary_file(file_path) or is_excluded_path(file_path, exclude_patterns):
+            return
 
-        if is_binary_file(file_path):
-            skipped_binary += 1
-            continue
-
-        try:
-            content = await gitlab.get_file_content(project_id, file_path, ref=branch)
-
-            if is_excluded_path(file_path, exclude_patterns):
-                skipped_excluded += 1
-                continue
-
-            if not content or not content.strip():
-                skipped_empty += 1
-                continue
-
-            local_storage.save_file(project_id, file_path, content)
-
-            chunks = chunker.chunk_text(content, file_path)
-
-            texts = [chunk['text'] for chunk in chunks]
-            if not texts:
-                continue
-
-            # Update progress for embedding stage
-            embedding_progress = int(((idx + 1) / total_files) * 50)  # 0-50% for embedding
-            job_queue.update_progress(
-                job_id,
-                int((project_idx / total_projects) * 80) + 20 + embedding_progress // total_projects,
-                f'Embedding {file_path} ({idx + 1}/{total_files})',
-                {
-                    'stage': 'embedding',
-                    'file_path': file_path,
-                    'file_index': idx + 1,
-                    'total_files': total_files,
-                    'chunks': len(chunks)
-                }
-            )
-
-            embeddings = await embedder.embed(texts)
-
-            items = [
-                {
-                    'id': f'{project_id}_{file_path}_chunk_{i}',
-                    'text': chunk['text'],
-                    'vector': emb,
-                    'metadata': {
-                        'project_id': project_id,
-                        'project_name': project_name,
-                        'project_path': project_path,
-                        'file_path': file_path,
-                        'chunk_index': i,
-                        'job_id': job_id,
-                        'source': 'repository',
-                    },
-                }
-                for i, emb in enumerate(embeddings)
-                if i < len(chunks)
-            ]
-
-            if items:
-                vector_store.insert(collection_name, items)
-
-            processed += 1
-
-        except Exception as e:
-            error_count += 1
-            log.warning(f'Error processing file {file_path}: {e}')
-            continue
-
-    local_size = local_storage.get_project_size(project_id) if LOCAL_STORAGE_ENABLED else 0
-
-    job_queue.update_progress(
-        job_id,
-        int(((project_idx + 1) / total_projects) * 80) + 20,
-        f'Completed {project_name}: {processed} files processed ({local_size / 1024:.1f} KB stored locally, embedded into {VECTOR_DB_PROVIDER})',
-        {
-            'stage': 'completed',
-            'project_name': project_name,
-            'processed_files': all_file_paths,
-            'processed': processed,
-            'skipped_binary': skipped_binary,
-            'skipped_excluded': skipped_excluded,
-            'skipped_empty': skipped_empty,
-            'errors': error_count,
-            'local_storage': f'{local_size / 1024:.1f} KB' if LOCAL_STORAGE_ENABLED else 'disabled',
-            'vector_db': VECTOR_DB_PROVIDER,
-        }
-    )
-
-    if include_wiki:
-        try:
-            await sync_wiki(gitlab, project_id, job_id, collection_name, exclude_patterns)
-        except Exception as e:
-            log.debug(f'Error syncing wiki: {e}')
-
-    log.info(f'Completed syncing project {project_id}: {processed} files processed, {error_count} errors')
-
-
-async def sync_wiki(gitlab, project_id: str, job_id: str, collection_name: str, exclude_patterns: list = None) -> None:
-    log.info(f'Syncing wiki for project {project_id}')
-    job_queue.update_progress(job_id, 90, f'Syncing wiki for project {project_id}...', {'stage': 'wiki', 'project_id': project_id})
-
-    try:
-        wiki_tree = await gitlab.list_repository_tree(project_id, ref='wiki', recursive=True)
-        wiki_items = [item for item in wiki_tree if item['type'] == 'blob' and item['path'].endswith('.md')]
-
-        log.info(f'Found {len(wiki_items)} wiki files')
-
-        for idx, item in enumerate(wiki_items):
-            file_path = item['path']
-
-            if is_excluded_path(file_path, exclude_patterns):
-                continue
-
+        async with semaphore:
             try:
-                content = await gitlab.get_file_content(project_id, file_path, ref='wiki')
+                content = await gitlab.get_file_content(project_id, file_path, ref=branch)
+                if not content or not content.strip():
+                    return
 
-                chunks = chunker.chunk_text(content, file_path)
+                chunks = chunker.chunk_code(content, file_path)
+                if not chunks:
+                    return
 
-                texts = [chunk['text'] for chunk in chunks]
-                if not texts:
-                    continue
-
-                job_queue.update_progress(
-                    job_id, 90,
-                    f'Processing wiki: {file_path} ({idx + 1}/{len(wiki_items)})',
-                    {'stage': 'wiki', 'file_path': file_path, 'file_index': idx + 1, 'total_files': len(wiki_items)}
-                )
-
+                texts = [c['text'] for c in chunks]
                 embeddings = await embedder.embed(texts)
 
-                items = [
-                    {
-                        'id': f'{project_id}_wiki_{file_path}_chunk_{i}',
+                vector_items = []
+                for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+                    vector_items.append({
+                        'id': f'{project_id}_{file_path}_chunk_{i}',
                         'text': chunk['text'],
                         'vector': emb,
                         'metadata': {
-                            'project_id': project_id,
+                            'project_id': str(project_id),
+                            'project_name': project_name,
+                            'project_path': project_path,
                             'file_path': file_path,
                             'chunk_index': i,
                             'job_id': job_id,
-                            'source': 'wiki',
+                            'source': 'repository',
+                            'web_url': f"{web_url}/-/blob/{branch}/{file_path}" if web_url else '',
                         },
-                    }
-                    for i, emb in enumerate(embeddings)
-                    if i < len(chunks)
-                ]
+                    })
+                
+                if vector_items:
+                    vector_store.insert(collection_name, vector_items)
+                processed_count += 1
+                
+                if processed_count % 10 == 0:
+                    job_queue.update_progress(
+                        job_id,
+                        int((project_idx / total_projects) * 80) + 20,
+                        f'Processing {project_name}: {processed_count}/{len(file_items)} files',
+                        {'stage': 'processing', 'processed': processed_count, 'total': len(file_items)}
+                    )
+            except Exception as e:
+                log.error(f'Error processing {file_path}: {e}')
+                error_count += 1
 
-                if items:
-                    vector_store.insert(collection_name, items)
+    if file_items:
+        await asyncio.gather(*(process_file(item) for item in file_items))
 
+    if include_wiki or wiki_only:
+        try:
+            await sync_wiki(gitlab, project_id, job_id, collection_name, exclude_patterns, file_types, web_url)
+        except Exception as e:
+            log.warning(f'Error syncing wiki: {e}')
+
+    log.info(f'Completed {project_name}: {processed_count} files, {error_count} errors')
+
+
+async def sync_wiki(gitlab, project_id: str, job_id: str, collection_name: str, exclude_patterns: list = None, file_types: list = None, web_url: str = '') -> None:
+    log.info(f'Syncing wiki for project {project_id}')
+    try:
+        wiki_tree = await gitlab.list_repository_tree(project_id, ref='wiki', recursive=True)
+        wiki_items = [item for item in wiki_tree if item['type'] == 'blob']
+        
+        async def process_wiki_item(item):
+            file_path = item['path']
+            if is_excluded_path(file_path, exclude_patterns):
+                return
+            try:
+                content = await gitlab.get_file_content(project_id, file_path, ref='wiki')
+                chunks = chunker.chunk_code(content, file_path)
+                if not chunks:
+                    return
+                
+                embeddings = await embedder.embed([c['text'] for c in chunks])
+                vector_items = [{
+                    'id': f'{project_id}_wiki_{file_path}_chunk_{i}',
+                    'text': chunk['text'],
+                    'vector': emb,
+                    'metadata': {
+                        'project_id': str(project_id),
+                        'file_path': file_path,
+                        'chunk_index': i,
+                        'job_id': job_id,
+                        'source': 'wiki',
+                        'web_url': f"{web_url}/-/wikis/{file_path.replace('.md', '')}" if web_url else '',
+                    },
+                } for i, (chunk, emb) in enumerate(zip(chunks, embeddings))]
+                
+                if vector_items:
+                    vector_store.insert(collection_name, vector_items)
             except Exception as e:
                 log.debug(f'Error processing wiki file {file_path}: {e}')
-                continue
 
-        log.info(f'Completed syncing wiki for project {project_id}')
-
+        if wiki_items:
+            await asyncio.gather(*(process_wiki_item(item) for item in wiki_items))
     except Exception as e:
-        log.debug(f'Wiki sync failed for project {project_id}: {e}')
+        log.debug(f'Wiki sync failed: {e}')
 
 
 def is_binary_file(file_path: str) -> bool:
@@ -371,9 +308,7 @@ def is_excluded_path(file_path: str, exclude_patterns: list = None) -> bool:
         'dist', 'build', '.cache', '.egg-info',
         '.DS_Store', 'Thumbs.db',
     ]
-
     patterns = exclude_patterns if exclude_patterns else default_patterns
-
     return any(pattern in file_path for pattern in patterns)
 
 
@@ -383,10 +318,8 @@ async def run_worker():
     while not SHUTDOWN_EVENT.is_set():
         try:
             job_data = job_queue.dequeue(timeout=5)
-
             if job_data:
                 await process_sync_job(job_data)
-
         except Exception as e:
             log.error(f'Error in worker loop: {e}')
             await asyncio.sleep(1)

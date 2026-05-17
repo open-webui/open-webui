@@ -16,36 +16,47 @@ class TextChunker:
         if not text or not text.strip():
             return []
 
+        # Simple but effective line-based chunking with overlap
         chunks = []
         lines = text.split('\n')
-        current_chunk = []
+        
+        current_chunk_lines = []
         current_size = 0
-
-        for i, line in enumerate(lines):
-            line_length = len(line)
-            if current_size + line_length > self.chunk_size and current_chunk:
-                chunk_text = '\n'.join(current_chunk)
+        
+        for line_idx, line in enumerate(lines):
+            line_len = len(line) + 1 # +1 for newline
+            
+            if current_size + line_len > self.chunk_size and current_chunk_lines:
+                # Store current chunk
+                chunk_text = '\n'.join(current_chunk_lines)
                 chunks.append({
                     'text': chunk_text,
                     'file_path': file_path,
-                    'line_start': len('\n'.join(current_chunk[:len(current_chunk) - 1])) + 1 if len(current_chunk) > 1 else 1,
-                    'line_end': len('\n'.join(current_chunk)),
+                    'line_start': line_idx - len(current_chunk_lines) + 1,
+                    'line_end': line_idx,
                 })
+                
+                # Handle overlap - keep last few lines
+                overlap_size = 0
+                overlap_lines = []
+                for l in reversed(current_chunk_lines):
+                    if overlap_size + len(l) + 1 > self.chunk_overlap:
+                        break
+                    overlap_lines.insert(0, l)
+                    overlap_size += len(l) + 1
+                
+                current_chunk_lines = overlap_lines
+                current_size = overlap_size
 
-                overlap_lines = current_chunk[-self.chunk_overlap // 50:] if self.chunk_overlap > 0 else []
-                current_chunk = overlap_lines + [line]
-                current_size = sum(len(l) for l in current_chunk)
-            else:
-                current_chunk.append(line)
-                current_size += line_length + 1
+            current_chunk_lines.append(line)
+            current_size += line_len
 
-        if current_chunk:
-            chunk_text = '\n'.join(current_chunk)
+        if current_chunk_lines:
             chunks.append({
-                'text': chunk_text,
+                'text': '\n'.join(current_chunk_lines),
                 'file_path': file_path,
-                'line_start': 1,
-                'line_end': len(current_chunk),
+                'line_start': len(lines) - len(current_chunk_lines) + 1,
+                'line_end': len(lines),
             })
 
         return chunks
@@ -55,8 +66,14 @@ class TextChunker:
             return []
 
         language = self._detect_language(file_path)
-        if language:
-            return self._chunk_by_language(content, file_path, language)
+        
+        # If it's a known code language, try specialized chunking
+        if language in ('python', 'javascript', 'typescript', 'java', 'go', 'rust'):
+            try:
+                return self._chunk_by_language(content, file_path, language)
+            except Exception as e:
+                log.warning(f"Specialized chunking failed for {file_path}: {e}")
+        
         return self._chunk_generically(content, file_path)
 
     def _detect_language(self, file_path: str) -> Optional[str]:
@@ -93,7 +110,7 @@ class TextChunker:
             '.rst': 'rst',
         }
         for ext, lang in ext_map.items():
-            if file_path.endswith(ext):
+            if file_path.lower().endswith(ext):
                 return lang
         return None
 
@@ -102,68 +119,57 @@ class TextChunker:
             return self._chunk_python(content, file_path)
         elif language in ('javascript', 'typescript'):
             return self._chunk_js_ts(content, file_path)
-        return self._chunk_generically(content, file_path)
+        # Default for other code: split by common code block patterns
+        return self._chunk_code_generically(content, file_path)
 
     def _chunk_python(self, content: str, file_path: str) -> List[Dict[str, Any]]:
-        chunks = []
-        pattern = r'(^class\s+|^def\s+|^async def\s+|^import\s+|^from\s+)'
-
-        sections = []
-        lines = content.split('\n')
-        current_section = []
-
-        for line in lines:
-            if re.match(pattern, line.strip()):
-                if current_section:
-                    sections.append('\n'.join(current_section))
-                current_section = [line]
-            else:
-                current_section.append(line)
-
-        if current_section:
-            sections.append('\n'.join(current_section))
-
-        for section in sections:
-            if len(section) > self.chunk_size:
-                chunks.extend(self._chunk_generically(section, file_path))
-            elif section.strip():
-                chunks.append({
-                    'text': section,
-                    'file_path': file_path,
-                    'type': 'python_section',
-                })
-
-        return chunks
+        # Split by class and function definitions
+        pattern = r'(^class\s+|^def\s+|^async def\s+)'
+        return self._split_by_pattern(content, file_path, pattern, 'python_section')
 
     def _chunk_js_ts(self, content: str, file_path: str) -> List[Dict[str, Any]]:
+        # Split by export, function, class definitions
+        pattern = r'(^export\s+|^function\s+|^class\s+|^const\s+\w+\s*=\s*\(|^(var|let)\s+\w+\s*=\s*function)'
+        return self._split_by_pattern(content, file_path, pattern, 'js_ts_section')
+
+    def _chunk_code_generically(self, content: str, file_path: str) -> List[Dict[str, Any]]:
+        # Split by what looks like a block start at the beginning of a line
+        pattern = r'(^func\s+|^type\s+|^package\s+|^import\s+|^struct\s+|^trait\s+|^impl\s+|^enum\s+|^public\s+|^private\s+|^protected\s+)'
+        return self._split_by_pattern(content, file_path, pattern, 'code_section')
+
+    def _split_by_pattern(self, content: str, file_path: str, pattern: str, section_type: str) -> List[Dict[str, Any]]:
         chunks = []
-        pattern = r'(^export\s+(function|class|const|let|var)|^(function|class|const|let|var)\s+\w+)'
-
-        sections = []
         lines = content.split('\n')
+        
         current_section = []
-
+        
         for line in lines:
-            if re.match(pattern, line.strip()):
+            if re.match(pattern, line):
                 if current_section:
-                    sections.append('\n'.join(current_section))
+                    section_text = '\n'.join(current_section)
+                    if len(section_text) > self.chunk_size:
+                        chunks.extend(self._chunk_generically(section_text, file_path))
+                    else:
+                        chunks.append({
+                            'text': section_text,
+                            'file_path': file_path,
+                            'type': section_type
+                        })
                 current_section = [line]
             else:
                 current_section.append(line)
-
+        
         if current_section:
-            sections.append('\n'.join(current_section))
-
-        for section in sections:
-            if len(section) > self.chunk_size:
-                chunks.extend(self._chunk_generically(section, file_path))
-            elif section.strip():
+            section_text = '\n'.join(current_section)
+            if len(section_text) > self.chunk_size:
+                chunks.extend(self._chunk_generically(section_text, file_path))
+            else:
                 chunks.append({
-                    'text': section,
+                    'text': section_text,
                     'file_path': file_path,
-                    'type': 'js_ts_section',
+                    'type': section_type
                 })
-
+        
         return chunks
 
     def _chunk_generically(self, content: str, file_path: str) -> List[Dict[str, Any]]:

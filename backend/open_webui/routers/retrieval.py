@@ -1568,7 +1568,7 @@ async def process_file(
             if collection_name is None:
                 collection_name = f'file-{file.id}'
             else:
-                await _validate_collection_access([collection_name], user, access_type='write')
+                await _validate_collection_access([collection_name], user, access_type='write', request=request)
 
             if form_data.content:
                 # Update the content in the file
@@ -1780,7 +1780,7 @@ async def process_text(
     if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
     else:
-        await _validate_collection_access([collection_name], user, access_type='write')
+        await _validate_collection_access([collection_name], user, access_type='write', request=request)
 
     docs = [
         Document(
@@ -1823,7 +1823,7 @@ async def process_web(
             if not collection_name:
                 collection_name = calculate_sha256_string(form_data.url)[:63]
             else:
-                await _validate_collection_access([collection_name], user, access_type='write')
+                await _validate_collection_access([collection_name], user, access_type='write', request=request)
 
             if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
                 await run_in_threadpool(
@@ -2338,14 +2338,14 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         )
 
 
-async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read') -> None:
+async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read', request: Optional[Request] = None) -> None:
     """
     Raise 403 if the user lacks access to any of the requested collections.
     Delegates to the shared filter_accessible_collections utility so the
     access rules stay in one place.
     """
     requested = set(collection_names)
-    allowed = await filter_accessible_collections(requested, user, access_type=access_type)
+    allowed = await filter_accessible_collections(requested, user, access_type=access_type, request=request)
     denied = requested - allowed
     if denied:
         raise HTTPException(
@@ -2369,7 +2369,7 @@ async def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
-    await _validate_collection_access([form_data.collection_name], user)
+    await _validate_collection_access([form_data.collection_name], user, request=request)
 
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
@@ -2437,7 +2437,7 @@ async def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
 ):
-    await _validate_collection_access(form_data.collection_names, user)
+    await _validate_collection_access(form_data.collection_names, user, request=request)
 
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
@@ -2620,7 +2620,7 @@ async def process_files_batch(
     collection_name = form_data.collection_name
 
     if collection_name:
-        await _validate_collection_access([collection_name], user, access_type='write')
+        await _validate_collection_access([collection_name], user, access_type='write', request=request)
 
     file_results: List[BatchProcessFilesResult] = []
     file_errors: List[BatchProcessFilesResult] = []

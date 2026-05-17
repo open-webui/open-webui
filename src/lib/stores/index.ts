@@ -76,6 +76,8 @@ export const functions = writable(null);
 export const toolServers = writable([]);
 export const terminalServers = writable([]);
 
+export const gitlabSyncJobs = writable<Record<string, { jobId: string; status: object | null }>>({});
+
 // Persistent Pyodide worker for code interpreter FS
 export const pyodideWorker: Writable<Worker | null> = writable(null);
 
