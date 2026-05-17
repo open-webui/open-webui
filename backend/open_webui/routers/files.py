@@ -169,6 +169,21 @@ async def process_uploaded_file(
                     db=db_session,
                 )
 
+            # Auto-link to Knowledge Collection if knowledge_id was provided at upload time
+            if 'knowledge_id' in file_metadata:
+                try:
+                    await Knowledges.add_file_to_knowledge_by_id(
+                        knowledge_id=file_metadata['knowledge_id'],
+                        file_id=file_item.id,
+                        user_id=user.id,
+                        db=db_session,
+                    )
+                except Exception as e:
+                    log.warning(
+                        f'Failed to auto-link file {file_item.id} to knowledge '
+                        f'{file_metadata["knowledge_id"]}: {e}'
+                    )
+
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')
             await Files.update_file_data_by_id(
