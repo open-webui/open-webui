@@ -299,6 +299,44 @@ class ChatTable:
 
         return changed
 
+    def _normalize_assistant_content_from_output(self, chat: dict, prior_chat: dict) -> dict:
+        """Rewrite assistant 'content' from 'output' when 'output' has changed.
+
+        Skips messages where the caller also changed 'content', or where the prior
+        'content' differs from 'serialize_output(prior_output)'. Preserves filter
+        outlet rewrites and direct user content edits across saves.
+        """
+        from open_webui.utils.middleware import serialize_output
+
+        history = (chat or {}).get('history') or {}
+        messages = history.get('messages')
+        if not isinstance(messages, dict):
+            return chat
+
+        prior_messages = ((prior_chat or {}).get('history') or {}).get('messages') or {}
+
+        for message_id, message in messages.items():
+            if not (isinstance(message, dict) and message.get('role') == 'assistant'):
+                continue
+            new_output = message.get('output')
+            if not isinstance(new_output, list):
+                continue
+            prior = prior_messages.get(message_id) or {}
+            old_output = prior.get('output')
+            if new_output == old_output:
+                continue
+            prior_content = prior.get('content')
+            if message.get('content') != prior_content:
+                continue
+            try:
+                canonical = serialize_output(old_output) if isinstance(old_output, list) else None
+            except Exception:
+                canonical = None
+            if prior_content != canonical:
+                continue
+            message['content'] = serialize_output(new_output)
+        return chat
+
     async def insert_new_chat(
         self, id: str, user_id: str, form_data: ChatForm, db: AsyncSession | None = None
     ) -> ChatModel | None:
@@ -394,6 +432,7 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as db:
                 chat_item = await db.get(Chat, id)
+                chat = self._normalize_assistant_content_from_output(chat, chat_item.chat)
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
 
