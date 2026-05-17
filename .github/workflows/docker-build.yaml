@@ -1,48 +1,37 @@
-name: Build and publish amd64 Docker image
+name: Build and publish amd64 Docker image to Docker Hub
 
 on:
   workflow_dispatch:
   push:
     branches:
       - jawafdehi-custom
-      - simplify-docker-build-amd64
     tags:
       - v*
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  DOCKERHUB_IMAGE: jawafdehi/open-webui
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - name: Set image name to lowercase
-        run: |
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
-
       - name: Checkout repository
         uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: ${{ env.DOCKERHUB_IMAGE }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -60,21 +49,3 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_HASH=${{ github.sha }}
-
-      - name: Show pushed tags
-        run: |
-          echo "Tags: ${{ steps.meta.outputs.tags }}"
-          echo "Version: ${{ steps.meta.outputs.version }}"
-
-      - name: Save image as tar.gz
-        run: |
-          docker pull ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-          docker save ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }} | gzip > /tmp/open-webui-amd64.tar.gz
-          ls -lh /tmp/open-webui-amd64.tar.gz
-
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: open-webui-amd64
-          path: /tmp/open-webui-amd64.tar.gz
-          retention-days: 1
