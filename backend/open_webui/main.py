@@ -76,6 +76,7 @@ from open_webui.socket.main import (
     get_user_id_from_session_pool,
 )
 from open_webui.routers import (
+    agent_jobs,
     analytics,
     audio,
     images,
@@ -1448,6 +1449,7 @@ app.include_router(memories.router, prefix='/api/v1/memories', tags=['memories']
 app.include_router(folders.router, prefix='/api/v1/folders', tags=['folders'])
 app.include_router(groups.router, prefix='/api/v1/groups', tags=['groups'])
 app.include_router(files.router, prefix='/api/v1/files', tags=['files'])
+app.include_router(agent_jobs.router, prefix='/api/v1/agent', tags=['agent_jobs'])
 app.include_router(functions.router, prefix='/api/v1/functions', tags=['functions'])
 app.include_router(evaluations.router, prefix='/api/v1/evaluations', tags=['evaluations'])
 if ENABLE_ADMIN_ANALYTICS:
