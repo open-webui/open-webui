@@ -93,7 +93,7 @@ def load_json_config():
 def save_to_db(data):
     """Sync save — used ONLY at startup/import time."""
     with get_db() as db:
-        existing_config = db.query(Config).first()
+        existing_config = db.query(Config).order_by(Config.id.asc()).first()
         if not existing_config:
             new_config = Config(data=data, version=0)
             db.add(new_config)
@@ -109,7 +109,7 @@ async def async_save_to_db(data):
     from sqlalchemy import select
 
     async with get_async_db() as db:
-        result = await db.execute(select(Config).limit(1))
+        result = await db.execute(select(Config).order_by(Config.id.asc()).limit(1))
         existing_config = result.scalars().first()
         if not existing_config:
             new_config = Config(data=data, version=0)
@@ -151,7 +151,7 @@ DEFAULT_CONFIG = {
 
 def get_config():
     with get_db() as db:
-        config_entry = db.query(Config).order_by(Config.id.desc()).first()
+        config_entry = db.query(Config).order_by(Config.id.asc()).first()
         return config_entry.data if config_entry else DEFAULT_CONFIG
 
 
