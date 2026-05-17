@@ -5,6 +5,8 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -14,7 +16,8 @@
 		getSessionUser,
 		userSignIn,
 		userSignUp,
-		updateUserTimezone
+		updateUserTimezone,
+		verifyTOTPLogin
 	} from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -25,9 +28,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
-	import { redirect } from '@sveltejs/kit';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let loaded = false;
 
@@ -41,6 +43,31 @@
 	let confirmPassword = '';
 
 	let ldapUsername = '';
+	let mfaRequired = false;
+	let mfaToken = '';
+	let mfaCode = '';
+	let mfaBackupCode = '';
+	let useBackupCode = false;
+	let pendingMfaEmail = '';
+
+	const setTOTPChallenge = (challenge: { mfa_token: string; email?: string }) => {
+		mfaRequired = true;
+		mfaToken = challenge.mfa_token;
+		pendingMfaEmail = challenge.email ?? email;
+		mfaCode = '';
+		mfaBackupCode = '';
+		useBackupCode = false;
+		password = '';
+	};
+
+	const clearTOTPChallenge = () => {
+		mfaRequired = false;
+		mfaToken = '';
+		pendingMfaEmail = '';
+		mfaCode = '';
+		mfaBackupCode = '';
+		useBackupCode = false;
+	};
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
@@ -74,6 +101,11 @@
 			return null;
 		});
 
+		if (sessionUser?.mfa_required) {
+			setTOTPChallenge(sessionUser);
+			return;
+		}
+
 		await setSessionUser(sessionUser);
 	};
 
@@ -100,11 +132,31 @@
 			toast.error(`${error}`);
 			return null;
 		});
+		if (sessionUser?.mfa_required) {
+			setTOTPChallenge(sessionUser);
+			return;
+		}
+
+		await setSessionUser(sessionUser);
+	};
+
+	const verifyTOTPHandler = async () => {
+		const sessionUser = await verifyTOTPLogin(
+			mfaToken,
+			useBackupCode ? null : mfaCode,
+			useBackupCode ? mfaBackupCode : null
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
 		await setSessionUser(sessionUser);
 	};
 
 	const submitHandler = async () => {
-		if (mode === 'ldap') {
+		if (mfaRequired) {
+			await verifyTOTPHandler();
+		} else if (mode === 'ldap') {
 			await ldapSignInHandler();
 		} else if (mode === 'signin') {
 			await signInHandler();
@@ -138,6 +190,22 @@
 
 		localStorage.token = token;
 		await setSessionUser(sessionUser, localStorage.getItem('redirectPath') || null);
+	};
+
+	const oauthTOTPChallengeHandler = () => {
+		const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+		const oauthMfaToken = params.get('mfa_token');
+
+		if (!oauthMfaToken) {
+			return false;
+		}
+
+		setTOTPChallenge({
+			mfa_token: oauthMfaToken,
+			email: params.get('mfa_email') ?? undefined
+		});
+		window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+		return true;
 	};
 
 	let onboarding = false;
@@ -180,7 +248,10 @@
 			toast.error(error);
 		}
 
-		await oauthCallbackHandler();
+		const hasOAuthTOTPChallenge = oauthTOTPChallengeHandler();
+		if (!hasOAuthTOTPChallenge) {
+			await oauthCallbackHandler();
+		}
 		form = $page.url.searchParams.get('form');
 
 		loaded = true;
@@ -219,7 +290,7 @@
 			id="auth-container"
 		>
 			<div class="w-full px-10 min-h-screen flex flex-col text-center">
-				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
+				{#if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) && !mfaRequired}
 					<div class=" my-auto pb-10 w-full sm:max-w-md">
 						<div
 							class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-medium dark:text-gray-200"
@@ -256,7 +327,9 @@
 							>
 								<div class="mb-1">
 									<div class=" text-2xl font-medium">
-										{#if $config?.onboarding ?? false}
+										{#if mfaRequired}
+											{$i18n.t('Verify two-factor code')}
+										{:else if $config?.onboarding ?? false}
 											{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
 										{:else if mode === 'ldap'}
 											{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
@@ -277,7 +350,64 @@
 									{/if}
 								</div>
 
-								{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
+								{#if mfaRequired}
+									<div class="flex flex-col mt-4">
+										<div class="mb-2 text-left text-xs text-gray-500 dark:text-gray-400">
+											{$i18n.t('Account')}: {pendingMfaEmail}
+										</div>
+
+										{#if useBackupCode}
+											<div>
+												<label
+													for="backup-code"
+													class="text-sm font-medium text-left mb-1 block"
+													>{$i18n.t('Backup code')}</label
+												>
+												<input
+													bind:value={mfaBackupCode}
+													type="text"
+													id="backup-code"
+													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+													autocomplete="one-time-code"
+													name="backup-code"
+													placeholder={$i18n.t('Enter backup code')}
+													required
+												/>
+											</div>
+										{:else}
+											<div>
+												<label for="totp-code" class="text-sm font-medium text-left mb-1 block"
+													>{$i18n.t('Authenticator code')}</label
+												>
+												<input
+													bind:value={mfaCode}
+													type="text"
+													inputmode="numeric"
+													id="totp-code"
+													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+													autocomplete="one-time-code"
+													name="totp-code"
+													placeholder={$i18n.t('Enter 6-digit code')}
+													required
+												/>
+											</div>
+										{/if}
+
+										<button
+											class="mt-3 text-xs underline text-center"
+											type="button"
+											on:click={() => {
+												useBackupCode = !useBackupCode;
+												mfaCode = '';
+												mfaBackupCode = '';
+											}}
+										>
+											{useBackupCode
+												? $i18n.t('Use authenticator code')
+												: $i18n.t('Use backup code')}
+										</button>
+									</div>
+								{:else if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 									<div class="flex flex-col mt-4">
 										{#if mode === 'signup'}
 											<div class="mb-2">
@@ -370,7 +500,24 @@
 									</div>
 								{/if}
 								<div class="mt-5">
-									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
+									{#if mfaRequired}
+										<button
+											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											type="submit"
+										>
+											{$i18n.t('Verify')}
+										</button>
+
+										<button
+											class="mt-3 text-xs underline text-center"
+											type="button"
+											on:click={() => {
+												clearTOTPChallenge();
+											}}
+										>
+											{$i18n.t('Cancel')}
+										</button>
+									{:else if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										{#if mode === 'ldap'}
 											<button
 												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"

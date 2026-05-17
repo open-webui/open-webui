@@ -2,11 +2,18 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import { goto } from '$app/navigation';
 
-	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
+	import {
+		disableUserTOTPById,
+		getUserGroupsById,
+		getUserTOTPStatusById,
+		updateUserById
+	} from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -14,7 +21,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import UserProfileImage from '$lib/components/chat/Settings/Account/UserProfileImage.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
 	dayjs.extend(localizedFormat);
 
@@ -31,6 +38,7 @@
 			_user = selectedUser;
 			_user.password = '';
 			loadUserGroups();
+			loadTOTPStatus();
 		}
 	};
 
@@ -43,6 +51,7 @@
 	};
 
 	let userGroups: any[] | null = null;
+	let totpStatus: { enabled: boolean; backup_codes_remaining: number } | null = null;
 
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
@@ -63,6 +72,29 @@
 			toast.error(`${error}`);
 			return null;
 		});
+	};
+
+	const loadTOTPStatus = async () => {
+		if (!selectedUser?.id) return;
+		totpStatus = await getUserTOTPStatusById(localStorage.token, selectedUser.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+	};
+
+	const disableTOTPHandler = async () => {
+		if (!selectedUser?.id) return;
+		if (!confirm($i18n.t('Disable two-factor authentication for this user?'))) return;
+
+		const res = await disableUserTOTPById(localStorage.token, selectedUser.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			totpStatus = res;
+			toast.success($i18n.t('Two-factor authentication disabled.'));
+		}
 	};
 </script>
 
@@ -214,6 +246,28 @@
 											/>
 										</div>
 									</div>
+
+									{#if totpStatus?.enabled}
+										<div class="flex flex-col w-full">
+											<div class="mb-1 text-xs text-gray-500">
+												{$i18n.t('Two-factor authentication')}
+											</div>
+
+											<div class="flex items-center justify-between gap-3">
+												<div class="text-xs text-gray-500">
+													{$i18n.t('Backup codes remaining')}: {totpStatus.backup_codes_remaining}
+												</div>
+
+												<button
+													class="text-xs font-medium text-red-500"
+													type="button"
+													on:click={disableTOTPHandler}
+												>
+													{$i18n.t('Disable')}
+												</button>
+											</div>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</div>

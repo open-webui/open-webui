@@ -38,7 +38,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_TRUSTED_ROLE_HEADER,
 )
-from open_webui.internal.db import get_async_session
+from open_webui.internal.db import get_async_db_context, get_async_session
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -52,6 +52,7 @@ from open_webui.models.auths import (
 )
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.totp import UserTOTP, UserTOTPs
 from open_webui.models.users import (
     UpdateProfileForm,
     UserModel,
@@ -78,17 +79,27 @@ from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.oauth import auth_manager_config
 from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
+from open_webui.utils.totp import (
+    build_otpauth_uri,
+    decrypt_totp_secret,
+    encrypt_totp_secret,
+    generate_backup_codes,
+    generate_totp_secret,
+    hash_backup_code,
+    verify_backup_code,
+    verify_totp,
+)
 from open_webui.utils.webhook import post_webhook
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
 log = logging.getLogger(__name__)
 
-# Forgive us our failed attempts, as we forgive those
-# who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+totp_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5, window=60 * 5)
 
 
 async def create_session_response(
@@ -143,6 +154,89 @@ async def create_session_response(
     }
 
 
+def create_totp_challenge_response(user) -> dict:
+    mfa_token = create_token(
+        data={'mfa_user_id': user.id, 'purpose': 'totp_login'},
+        expires_delta=datetime.timedelta(minutes=5),
+    )
+    return {
+        'mfa_required': True,
+        'mfa_token': mfa_token,
+        'token_type': 'mfa',
+        'email': user.email,
+    }
+
+
+async def create_session_or_totp_challenge_response(
+    request: Request, user, db, response: Response = None, set_cookie: bool = False
+) -> dict:
+    if await UserTOTPs.is_totp_enabled_by_user_id(user.id, db=db):
+        return create_totp_challenge_response(user)
+
+    return await create_session_response(request, user, db, response, set_cookie=set_cookie)
+
+
+def get_totp_challenge_user_id(mfa_token: str) -> str:
+    data = decode_token(mfa_token)
+    if not data or data.get('purpose') != 'totp_login' or not data.get('mfa_user_id'):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.INVALID_TOKEN,
+        )
+    return data['mfa_user_id']
+
+
+async def verify_totp_or_backup_code(
+    user_id: str,
+    *,
+    code: str | None = None,
+    backup_code: str | None = None,
+    db: AsyncSession | None = None,
+) -> bool:
+    if bool(code) == bool(backup_code):
+        return False
+
+    try:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(UserTOTP).filter_by(user_id=user_id).with_for_update())
+            user_totp = result.scalars().first()
+            if not user_totp or not user_totp.enabled or not user_totp.secret:
+                return False
+
+            now = int(time.time())
+
+            if backup_code:
+                backup_codes = list(user_totp.backup_codes or [])
+                for index, hashed_code in enumerate(backup_codes):
+                    if verify_backup_code(backup_code, hashed_code):
+                        user_totp.backup_codes = backup_codes[:index] + backup_codes[index + 1 :]
+                        user_totp.last_used_at = now
+                        user_totp.updated_at = now
+                        await session.commit()
+                        return True
+
+                return False
+
+            try:
+                secret = decrypt_totp_secret(user_totp.secret)
+            except Exception:
+                log.exception('Failed to decrypt TOTP secret')
+                return False
+
+            used_step = verify_totp(secret, code, last_used_step=user_totp.last_used_step)
+            if used_step is None:
+                return False
+
+            user_totp.last_used_at = now
+            user_totp.last_used_step = used_step
+            user_totp.updated_at = now
+            await session.commit()
+            return True
+    except Exception:
+        log.exception('Failed to verify TOTP or backup code')
+        return False
+
+
 ############################
 # GetSessionUser
 ############################
@@ -157,6 +251,54 @@ class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     bio: str | None = None
     gender: str | None = None
     date_of_birth: datetime.date | None = None
+
+
+class TOTPChallengeResponse(BaseModel):
+    mfa_required: bool = True
+    mfa_token: str
+    token_type: str = 'mfa'
+    email: str | None = None
+
+
+class TOTPStatusResponse(BaseModel):
+    enabled: bool
+    created_at: int | None = None
+    last_used_at: int | None = None
+    backup_codes_remaining: int = 0
+
+
+class TOTPSetupResponse(BaseModel):
+    secret: str
+    otpauth_url: str
+
+
+class TOTPEnableForm(BaseModel):
+    code: str
+
+
+class TOTPCodeForm(BaseModel):
+    code: str | None = None
+    backup_code: str | None = None
+
+
+class TOTPLoginForm(TOTPCodeForm):
+    mfa_token: str
+
+
+class TOTPBackupCodesResponse(TOTPStatusResponse):
+    backup_codes: list[str]
+
+
+def get_totp_status_response(user_totp) -> TOTPStatusResponse:
+    if not user_totp or not user_totp.enabled:
+        return TOTPStatusResponse(enabled=False)
+
+    return TOTPStatusResponse(
+        enabled=True,
+        created_at=user_totp.created_at,
+        last_used_at=user_totp.last_used_at,
+        backup_codes_remaining=len(user_totp.backup_codes or []),
+    )
 
 
 @router.get('/', response_model=SessionUserInfoResponse)
@@ -222,6 +364,181 @@ async def get_session_user(
     }
 
     return response_data
+
+
+############################
+# TOTP
+############################
+
+
+@router.get('/totp', response_model=TOTPStatusResponse)
+async def get_totp_status(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    user_totp = await UserTOTPs.get_user_totp_by_user_id(user.id, db=db)
+    return get_totp_status_response(user_totp)
+
+
+@router.post('/totp/setup', response_model=TOTPSetupResponse)
+async def setup_totp(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    existing_totp = await UserTOTPs.get_user_totp_by_user_id(user.id, db=db)
+    if existing_totp and existing_totp.enabled:
+        raise HTTPException(400, detail='TOTP is already enabled.')
+
+    secret = generate_totp_secret()
+    encrypted_secret = encrypt_totp_secret(secret)
+    user_totp = await UserTOTPs.save_pending_secret_by_user_id(user.id, encrypted_secret, db=db)
+    if not user_totp:
+        raise HTTPException(500, detail='Failed to start TOTP setup.')
+
+    issuer = request.app.state.WEBUI_NAME or 'Open WebUI'
+    return {
+        'secret': secret,
+        'otpauth_url': build_otpauth_uri(issuer, user.email, secret),
+    }
+
+
+@router.post('/totp/enable', response_model=TOTPBackupCodesResponse)
+async def enable_totp(
+    form_data: TOTPEnableForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if totp_rate_limiter.is_limited(f'enable:{user.id}'):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+        )
+
+    user_totp = await UserTOTPs.get_user_totp_by_user_id(user.id, db=db)
+    if not user_totp or not user_totp.secret:
+        raise HTTPException(400, detail='TOTP setup has not been started.')
+    if user_totp.enabled:
+        raise HTTPException(400, detail='TOTP is already enabled.')
+
+    try:
+        secret = decrypt_totp_secret(user_totp.secret)
+    except Exception:
+        log.exception('Failed to decrypt TOTP secret')
+        raise HTTPException(500, detail='Failed to enable TOTP.')
+
+    used_step = verify_totp(secret, form_data.code)
+    if used_step is None:
+        raise HTTPException(400, detail='Invalid TOTP code.')
+
+    backup_codes = generate_backup_codes()
+    hashed_backup_codes = [hash_backup_code(code) for code in backup_codes]
+    user_totp = await UserTOTPs.enable_totp_by_user_id(user.id, hashed_backup_codes, used_step, db=db)
+    if not user_totp:
+        raise HTTPException(500, detail='Failed to enable TOTP.')
+
+    status_response = get_totp_status_response(user_totp).model_dump()
+    return {
+        **status_response,
+        'backup_codes': backup_codes,
+    }
+
+
+@router.post('/totp/verify', response_model=SessionUserResponse)
+async def verify_totp_login(
+    request: Request,
+    response: Response,
+    form_data: TOTPLoginForm,
+    db: AsyncSession = Depends(get_async_session),
+):
+    user_id = get_totp_challenge_user_id(form_data.mfa_token)
+    if totp_rate_limiter.is_limited(f'login:{user_id}'):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+        )
+
+    user = await Users.get_user_by_id(user_id, db=db)
+    if not user:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+    verified = await verify_totp_or_backup_code(
+        user.id,
+        code=form_data.code,
+        backup_code=form_data.backup_code,
+        db=db,
+    )
+    if not verified:
+        raise HTTPException(400, detail='Invalid TOTP or backup code.')
+
+    return await create_session_response(request, user, db, response, set_cookie=True)
+
+
+@router.post('/totp/disable', response_model=TOTPStatusResponse)
+async def disable_totp(
+    form_data: TOTPCodeForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if totp_rate_limiter.is_limited(f'disable:{user.id}'):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+        )
+
+    if not await UserTOTPs.is_totp_enabled_by_user_id(user.id, db=db):
+        return TOTPStatusResponse(enabled=False)
+
+    verified = await verify_totp_or_backup_code(
+        user.id,
+        code=form_data.code,
+        backup_code=form_data.backup_code,
+        db=db,
+    )
+    if not verified:
+        raise HTTPException(400, detail='Invalid TOTP or backup code.')
+
+    if not await UserTOTPs.disable_totp_by_user_id(user.id, db=db):
+        raise HTTPException(500, detail='Failed to disable TOTP.')
+
+    return TOTPStatusResponse(enabled=False)
+
+
+@router.post('/totp/backup-codes/regenerate', response_model=TOTPBackupCodesResponse)
+async def regenerate_totp_backup_codes(
+    form_data: TOTPCodeForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if totp_rate_limiter.is_limited(f'backup:{user.id}'):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+        )
+
+    if not await UserTOTPs.is_totp_enabled_by_user_id(user.id, db=db):
+        raise HTTPException(400, detail='TOTP is not enabled.')
+
+    verified = await verify_totp_or_backup_code(
+        user.id,
+        code=form_data.code,
+        backup_code=form_data.backup_code,
+        db=db,
+    )
+    if not verified:
+        raise HTTPException(400, detail='Invalid TOTP or backup code.')
+
+    backup_codes = generate_backup_codes()
+    hashed_backup_codes = [hash_backup_code(code) for code in backup_codes]
+    user_totp = await UserTOTPs.replace_backup_codes_by_user_id(user.id, hashed_backup_codes, db=db)
+    if not user_totp:
+        raise HTTPException(500, detail='Failed to regenerate backup codes.')
+
+    status_response = get_totp_status_response(user_totp).model_dump()
+    return {
+        **status_response,
+        'backup_codes': backup_codes,
+    }
 
 
 ############################
@@ -311,7 +628,7 @@ async def update_password(
 ############################
 # LDAP Authentication
 ############################
-@router.post('/ldap', response_model=SessionUserResponse)
+@router.post('/ldap', response_model=SessionUserResponse | TOTPChallengeResponse)
 async def ldap_auth(
     request: Request,
     response: Response,
@@ -548,7 +865,7 @@ async def ldap_auth(
                     except Exception as e:
                         log.error(f'Failed to sync groups for user {user.id}: {e}')
 
-                return await create_session_response(request, user, db, response, set_cookie=True)
+                return await create_session_or_totp_challenge_response(request, user, db, response, set_cookie=True)
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
@@ -563,7 +880,7 @@ async def ldap_auth(
 ############################
 
 
-@router.post('/signin', response_model=SessionUserResponse)
+@router.post('/signin', response_model=SessionUserResponse | TOTPChallengeResponse)
 async def signin(
     request: Request,
     response: Response,
@@ -666,7 +983,7 @@ async def signin(
         )
 
     if user:
-        return await create_session_response(request, user, db, response, set_cookie=True)
+        return await create_session_or_totp_challenge_response(request, user, db, response, set_cookie=True)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -1285,7 +1602,7 @@ class TokenExchangeForm(BaseModel):
     token: str  # OAuth access token from external provider
 
 
-@router.post('/oauth/{provider}/token/exchange', response_model=SessionUserResponse)
+@router.post('/oauth/{provider}/token/exchange', response_model=SessionUserResponse | TOTPChallengeResponse)
 async def token_exchange(
     request: Request,
     response: Response,
@@ -1386,4 +1703,4 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
-    return await create_session_response(request, user, db)
+    return await create_session_or_totp_challenge_response(request, user, db)

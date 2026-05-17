@@ -80,6 +80,7 @@ from open_webui.env import (
 from open_webui.models.auths import Auths
 from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.totp import UserTOTPs
 from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.auth import create_token, get_password_hash
@@ -1058,6 +1059,56 @@ class OAuthManager:
             return client._server_metadata_url if hasattr(client, '_server_metadata_url') else None
         return None
 
+    async def _set_oauth_session_cookies(self, response, user_id: str, provider: str, token: dict, cookie_max_age, db=None):
+        if ENABLE_OAUTH_ID_TOKEN_COOKIE:
+            response.set_cookie(
+                key='oauth_id_token',
+                value=token.get('id_token'),
+                httponly=True,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
+                **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
+            )
+
+        try:
+            _normalize_token_expiry(token)
+
+            # Enforce max concurrent sessions per user/provider to prevent
+            # unbounded growth while allowing multi-device usage.
+            sessions = await OAuthSessions.get_sessions_by_user_id(user_id, db=db)
+            provider_sessions = sorted(
+                [session for session in sessions if session.provider == provider],
+                key=lambda session: session.created_at,
+                reverse=True,
+            )
+
+            if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
+                for old_session in provider_sessions[OAUTH_MAX_SESSIONS_PER_USER - 1 :]:
+                    await OAuthSessions.delete_session_by_id(old_session.id, db=db)
+
+            session = await OAuthSessions.create_session(
+                user_id=user_id,
+                provider=provider,
+                token=token,
+                db=db,
+            )
+
+            if session:
+                response.set_cookie(
+                    key='oauth_session_id',
+                    value=session.id,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                    **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
+                )
+
+                log.info(f'Stored OAuth session server-side for user {user_id}, provider {provider}')
+            else:
+                log.warning(f'Failed to create OAuth session for user {user_id}, provider {provider}')
+        except Exception as e:
+            log.error(f'Failed to store OAuth session server-side: {e}')
+
     async def get_oauth_token(self, user_id: str, session_id: str, force_refresh: bool = False):
         """
         Get a valid OAuth token for the user, automatically refreshing if needed.
@@ -1487,6 +1538,11 @@ class OAuthManager:
             raise HTTPException(404)
 
         error_message = None
+        jwt_token = None
+        mfa_token = None
+        mfa_email = None
+        token = None
+        user = None
         try:
             client = self.get_client(provider)
 
@@ -1737,16 +1793,24 @@ class OAuthManager:
                         detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                     )
 
-            jwt_token = create_token(
-                data={'id': user.id},
-                expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
-            )
             if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
                 await self.update_user_groups(
                     user=user,
                     user_data=user_data,
                     default_permissions=request.app.state.config.USER_PERMISSIONS,
                     db=db,
+                )
+
+            if await UserTOTPs.is_totp_enabled_by_user_id(user.id, db=db):
+                mfa_token = create_token(
+                    data={'mfa_user_id': user.id, 'purpose': 'totp_login'},
+                    expires_delta=timedelta(minutes=5),
+                )
+                mfa_email = user.email
+            else:
+                jwt_token = create_token(
+                    data={'id': user.id},
+                    expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
                 )
 
         except Exception as e:
@@ -1770,6 +1834,12 @@ class OAuthManager:
         expires_delta = parse_duration(auth_manager_config.JWT_EXPIRES_IN)
         cookie_max_age = int(expires_delta.total_seconds()) if expires_delta else None
 
+        if mfa_token:
+            mfa_params = urllib.parse.urlencode({'mfa_token': mfa_token, 'mfa_email': mfa_email or ''})
+            response = RedirectResponse(url=f'{redirect_url}#{mfa_params}', headers=response.headers)
+            await self._set_oauth_session_cookies(response, user.id, provider, token, cookie_max_age, db=db)
+            return response
+
         # Set the cookie token
         # Redirect back to the frontend with the JWT token
         response.set_cookie(
@@ -1781,55 +1851,7 @@ class OAuthManager:
             **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
         )
 
-        # Legacy cookies for compatibility with older frontend versions
-        if ENABLE_OAUTH_ID_TOKEN_COOKIE:
-            response.set_cookie(
-                key='oauth_id_token',
-                value=token.get('id_token'),
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-                **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
-            )
-
-        try:
-            _normalize_token_expiry(token)
-
-            # Enforce max concurrent sessions per user/provider to prevent
-            # unbounded growth while allowing multi-device usage
-            sessions = await OAuthSessions.get_sessions_by_user_id(user.id, db=db)
-            provider_sessions = sorted(
-                [session for session in sessions if session.provider == provider],
-                key=lambda session: session.created_at,
-                reverse=True,
-            )
-            # Keep the newest sessions up to the limit, prune the rest
-            if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
-                for old_session in provider_sessions[OAUTH_MAX_SESSIONS_PER_USER - 1 :]:
-                    await OAuthSessions.delete_session_by_id(old_session.id, db=db)
-
-            session = await OAuthSessions.create_session(
-                user_id=user.id,
-                provider=provider,
-                token=token,
-                db=db,
-            )
-
-            if session:
-                response.set_cookie(
-                    key='oauth_session_id',
-                    value=session.id,
-                    httponly=True,
-                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                    secure=WEBUI_AUTH_COOKIE_SECURE,
-                    **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
-                )
-
-                log.info(f'Stored OAuth session server-side for user {user.id}, provider {provider}')
-            else:
-                log.warning(f'Failed to create OAuth session for user {user.id}, provider {provider}')
-        except Exception as e:
-            log.error(f'Failed to store OAuth session server-side: {e}')
+        await self._set_oauth_session_cookies(response, user.id, provider, token, cookie_max_age, db=db)
 
         return response
 

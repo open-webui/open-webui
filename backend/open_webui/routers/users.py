@@ -30,6 +30,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.tools import Tools
+from open_webui.models.totp import UserTOTPs
 from open_webui.socket.main import disconnect_user_sessions
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.auth import (
@@ -414,6 +415,13 @@ class UserActiveResponse(UserStatus):
     model_config = ConfigDict(extra='allow')
 
 
+class UserTOTPAdminStatusResponse(BaseModel):
+    enabled: bool
+    created_at: int | None = None
+    last_used_at: int | None = None
+    backup_codes_remaining: int = 0
+
+
 @router.get('/{user_id}', response_model=UserActiveResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
 
@@ -453,6 +461,49 @@ async def get_user_info_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+
+
+@router.get('/{user_id}/totp', response_model=UserTOTPAdminStatusResponse)
+async def get_user_totp_status_by_id(
+    user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
+    target_user = await Users.get_user_by_id(user_id, db=db)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    user_totp = await UserTOTPs.get_user_totp_by_user_id(user_id, db=db)
+    if not user_totp or not user_totp.enabled:
+        return UserTOTPAdminStatusResponse(enabled=False)
+
+    return UserTOTPAdminStatusResponse(
+        enabled=True,
+        created_at=user_totp.created_at,
+        last_used_at=user_totp.last_used_at,
+        backup_codes_remaining=len(user_totp.backup_codes or []),
+    )
+
+
+@router.delete('/{user_id}/totp', response_model=UserTOTPAdminStatusResponse)
+async def disable_user_totp_by_id(
+    user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
+    target_user = await Users.get_user_by_id(user_id, db=db)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    if not await UserTOTPs.disable_totp_by_user_id(user_id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+    return UserTOTPAdminStatusResponse(enabled=False)
 
 
 @router.get('/{user_id}/oauth/sessions')
