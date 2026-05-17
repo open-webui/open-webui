@@ -44,6 +44,7 @@ services:
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
       - ENABLE_FORWARD_USER_INFO_HEADERS=true
       - ENABLE_MCP=true
+      - DEFAULT_PROMPT_SUGGESTIONS=[{"title":["What kinds of corruption","in Nepal\u0027s procurement?"],"content":"What kinds of procurement-related corruption take place in Nepal?"},{"title":["How does CIAA handle","corruption cases in Nepal?"],"content":"Show me how CIAA handles corruption cases in Nepal."},{"title":["Show me","big corruption cases in Nepal"],"content":"Show me some big corruption cases in Nepal."},{"title":["How many corruption cases","in 2081/82 BS?"],"content":"How many corruption cases were registered in the year 2081/82 BS?"},{"title":["What is Jawafdehi?","Explain the platform"],"content":"What is Jawafdehi and how does it help fight corruption in Nepal?"},{"title":["How to file","a corruption complaint?"],"content":"How can I file a corruption complaint with CIAA in Nepal?"}]
 
   jawafdehi-mcp:
     image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim

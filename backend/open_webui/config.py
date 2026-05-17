@@ -1281,31 +1281,28 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            'title': ['Help me study', 'vocabulary for a college entrance exam'],
-            'content': "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            'title': ['What kinds of corruption', "in Nepal's procurement?"],
+            'content': 'What kinds of procurement-related corruption take place in Nepal?',
         },
         {
-            'title': ['Give me ideas', "for what to do with my kids' art"],
-            'content': "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            'title': ['How does CIAA handle', 'corruption cases in Nepal?'],
+            'content': 'Show me how CIAA handles corruption cases in Nepal.',
         },
         {
-            'title': ['Tell me a fun fact', 'about the Roman Empire'],
-            'content': 'Tell me a random fun fact about the Roman Empire',
+            'title': ['Show me', 'big corruption cases in Nepal'],
+            'content': 'Show me some big corruption cases in Nepal.',
         },
         {
-            'title': ['Show me a code snippet', "of a website's sticky header"],
-            'content': "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            'title': ['How many corruption cases', 'in 2081/82 BS?'],
+            'content': 'How many corruption cases were registered in the year 2081/82 BS?',
         },
         {
-            'title': [
-                'Explain options trading',
-                "if I'm familiar with buying and selling stocks",
-            ],
-            'content': "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            'title': ['What is Jawafdehi?', 'Explain the platform'],
+            'content': 'What is Jawafdehi and how does it help fight corruption in Nepal?',
         },
         {
-            'title': ['Overcome procrastination', 'give me tips'],
-            'content': 'Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?',
+            'title': ['How to file', 'a corruption complaint?'],
+            'content': 'How can I file a corruption complaint with CIAA in Nepal?',
         },
     ]
 
