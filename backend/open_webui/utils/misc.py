@@ -296,7 +296,28 @@ def convert_output_to_messages(
     # Flush remaining content/tool_calls
     flush_pending()
 
-    return messages
+    # Strip orphan tool_calls: if a tool_call id has no matching tool role message,
+    # the function_call_output was lost (e.g., KB state changed between turns).
+    # Remove the dangling tool_calls from the assistant message. If that leaves the
+    # assistant message empty (no content, no tool_calls), drop it entirely.
+    seen_tool_call_ids = set()
+    for msg in messages:
+        if msg.get('role') == 'tool':
+            seen_tool_call_ids.add(msg.get('tool_call_id', ''))
+
+    result = []
+    for msg in messages:
+        if msg.get('role') == 'assistant':
+            tool_calls = msg.get('tool_calls')
+            if tool_calls:
+                retained = [tc for tc in tool_calls if tc.get('id', '') in seen_tool_call_ids]
+                if retained:
+                    msg = {**msg, 'tool_calls': retained}
+                elif not msg.get('content'):
+                    continue
+        result.append(msg)
+
+    return result
 
 
 def get_last_user_message(messages: list[dict]) -> str | None:
