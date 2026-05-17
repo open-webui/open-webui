@@ -89,7 +89,7 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.headers import include_user_info_headers, get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -2690,8 +2690,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         connection_headers = mcp_server_connection.get('headers', None)
                         if connection_headers and isinstance(connection_headers, dict):
-                            for key, value in connection_headers.items():
-                                headers[key] = value
+                            custom_headers = get_custom_headers(connection_headers, user, metadata)
+                            headers.update(custom_headers)
 
                         # Add user info headers if enabled
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
