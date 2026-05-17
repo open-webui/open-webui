@@ -1,0 +1,7 @@
+redis>=5.0.0
+httpx>=0.25.0
+python-gitlab>=4.0.0
+pydantic>=2.0.0
+structlog>=24.0.0
+chromadb>=0.5.0
+qdrant-client>=1.9.0

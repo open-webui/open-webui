@@ -7,6 +7,8 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    networks:
+      - open-webui-network
 
   open-webui:
     build:
@@ -16,18 +18,90 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
-      - .:/app
+      # NOTE: Removing host .:/app mount to preserve built frontend in image.
+      # If you need live code reloading for development, build the frontend first:
+      #   cd /app && npm ci && npm run build
     depends_on:
       - ollama
+      - redis
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - 'REDIS_URL=redis://redis:6379/0'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    networks:
+      - open-webui-network
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: open-webui-chroma
+    restart: unless-stopped
+    volumes:
+      - chroma-data:/chroma/chroma
+    networks:
+      - open-webui-network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: open-webui-qdrant
+    restart: unless-stopped
+    ports:
+      - "6335:6333"
+      - "6336:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - open-webui-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: open-webui-redis
+    restart: unless-stopped
+    networks:
+      - open-webui-network
+
+  gitlab-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.gitlab-worker
+    container_name: open-webui-gitlab-worker
+    restart: unless-stopped
+    volumes:
+      - gitlab-worker-data:/app/data
+      - ./gitlab_worker:/app/gitlab_worker
+    environment:
+      - GITLAB_WORKER_ENABLED=true
+      - GITLAB_WORKER_LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_EMBEDDING_MODEL=${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+      - VECTOR_DB_PROVIDER=${VECTOR_DB_PROVIDER:-qdrant}
+      - VECTOR_DB_URL=${VECTOR_DB_URL:-http://qdrant:6335}
+      - QDRANT_URL=http://qdrant:6335
+      - QDRANT_API_KEY=
+      - QDRANT_COLLECTION_PREFIX=gitlab
+      - LOCAL_STORAGE_ENABLED=true
+      - LOCAL_STORAGE_PATH=/app/data/repos
+    depends_on:
+      - redis
+      - ollama
+      - qdrant
+    networks:
+      - open-webui-network
 
 volumes:
   ollama: {}
   open-webui: {}
+  gitlab-worker-data: {}
+  chroma-data: {}
+  qdrant-data: {}
+
+networks:
+  open-webui-network:
+    driver: bridge

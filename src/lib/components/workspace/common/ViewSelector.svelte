@@ -14,7 +14,8 @@
 	const items = [
 		{ value: '', label: $i18n.t('All') },
 		{ value: 'created', label: $i18n.t('Created by you') },
-		{ value: 'shared', label: $i18n.t('Shared with you') }
+		{ value: 'shared', label: $i18n.t('Shared with you') },
+		{ value: 'gitlab', label: $i18n.t('GitLab') }
 	];
 </script>
 

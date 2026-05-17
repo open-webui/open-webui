@@ -134,48 +134,73 @@ services:
 ## Implementation Order
 
 ### Phase 1: Backend Service
-1. Create `services/gitlab.py` - GitLab API client
+1. Create `services/gitlab.py` - GitLab API client ✅
    - Authentication with personal access token
    - Repository listing
    - File tree traversal
    - File content fetching
 
 ### Phase 2: Backend API
-2. Modify `routers/configs.py` - Add GitLab config CRUD endpoints
-3. Add config storage as `GITLAB_CONNECTIONS` (similar to `TOOL_SERVER_CONNECTIONS`)
-4. Add Redis queue integration for job dispatch
+2. Modify `routers/configs.py` - Add GitLab config CRUD endpoints ✅
+3. Add config storage as `GITLAB_CONNECTIONS` (similar to `TOOL_SERVER_CONNECTIONS`) ✅
+4. Add Redis queue integration for job dispatch ✅
 
 ### Phase 3: GitLab Worker Service
-5. Create `Dockerfile.gitlab-worker` - Standalone worker image
-6. Create `gitlab_worker/main.py` - Worker entrypoint
-7. Create `gitlab_worker/job_queue.py` - Redis job handling
-8. Create `gitlab_worker/gitlab_fetcher.py` - Repo content fetching
-9. Create `gitlab_worker/chunker.py` - Text chunking logic
-10. Create `gitlab_worker/embedder.py` - Ollama embedding integration
-11. Create `gitlab_worker/vector_store.py` - Vector DB storage
+5. Create `Dockerfile.gitlab-worker` - Standalone worker image ✅
+6. Create `gitlab_worker/main.py` - Worker entrypoint ✅
+7. Create `gitlab_worker/job_queue.py` - Redis job handling ✅
+8. Create `gitlab_worker/gitlab_fetcher.py` - Repo content fetching ✅
+9. Create `gitlab_worker/chunker.py` - Text chunking logic ✅
+10. Create `gitlab_worker/embedder.py` - Ollama embedding integration ✅
+11. Create `gitlab_worker/vector_store.py` - Vector DB storage ✅
 
 ### Phase 4: Ollama Integration (in Worker)
-12. Implement Ollama client for embeddings
+12. Implement Ollama client for embeddings ✅
     - Connect to `OLLAMA_BASE_URL`
     - Use `OLLAMA_EMBEDDING_MODEL` for vector generation
     - Handle batching for large repos
 
 ### Phase 5: Frontend - Connection Management
-13. Create `AddGitLabModal.svelte` - Connection form modal
-14. Modify `Integrations.svelte` - Add GitLab section to admin tab
-15. Add API methods to `apis/configs.ts`
+13. Create `AddGitLabModal.svelte` - Connection form modal ✅
+14. Modify `Integrations.svelte` - Add GitLab section to admin tab ✅
+15. Add API methods to `apis/configs.ts` ✅
 
 ### Phase 6: Knowledge UI
-16. Knowledge page - Show GitLab repos as knowledge sources
-    - View synced content
-    - Trigger refresh/sync
-    - Delete/unlink repos
+16. Knowledge page - Show GitLab repos as knowledge sources ✅
+    - View synced content ✅
+    - Trigger refresh/sync ✅ (with progress tracking)
+    - Delete/unlink repos ✅ (via edit modal)
+    - Search synced GitLab content ✅ (new)
 
 ### Phase 7: Integration with Chat
-17. Works via existing `meta.knowledge` system
-    - GitLab content stored as collections
-    - Attached to models in ModelEditor
-    - Chat middleware queries collection at runtime
+17. Works via existing `meta.knowledge` system ✅ (partially - search API exists)
+    - GitLab content stored as collections ✅
+    - Attached to models in ModelEditor ✅
+    - Chat middleware queries collection at runtime ✅
+    - Collection access control for gitlab-* collections ✅
+
+## Phase 6 Implementation Details
+
+### New Backend Endpoints
+- `GET /configs/gitlab/jobs/{job_id}/status` - Get sync job status from Redis
+- `POST /configs/gitlab/search` - Search GitLab knowledge with embeddings
+
+### New Frontend Features
+- Job status polling during sync (polls every 2 seconds)
+- Progress bar showing sync progress
+- Search UI for GitLab knowledge
+- Search results display with file path and project info
+
+### Knowledge Search Flow
+```
+User searches "authentication flow"
+    ↓
+Backend embeds query via EMBEDDING_FUNCTION
+    ↓
+Search all gitlab_* collections in vector DB
+    ↓
+Return sorted results with metadata
+```
 
 ## File Changes Summary
 
@@ -364,3 +389,82 @@ Supported embedding models:
 - Commit/PR/issue integration
 - Branch selection UI
 - Selective folder/file sync
+
+## Implementation Status (Updated May 2026)
+
+### Completed Implementation
+
+**Backend:**
+- `backend/open_webui/services/gitlab.py` - GitLab API client with async methods
+- `backend/open_webui/services/__init__.py` - Services package init
+- `backend/open_webui/routers/configs.py` - Added GitLab config CRUD endpoints:
+  - `GET /configs/gitlab` - Get all GitLab connections
+  - `POST /configs/gitlab` - Save GitLab connections
+  - `POST /configs/gitlab/verify` - Verify GitLab connection
+  - `GET /configs/gitlab/{id}/projects` - List projects from GitLab
+  - `POST /configs/gitlab/{id}/sync` - Trigger sync job
+- `backend/open_webui/config.py` - Added `GITLAB_CONNECTIONS` PersistentConfig
+- `backend/open_webui/main.py` - Initialized GITLAB_CONNECTIONS in app.state
+
+**GitLab Worker:**
+- `gitlab_worker/config.py` - Configuration management
+- `gitlab_worker/requirements.txt` - Worker dependencies
+- `gitlab_worker/job_queue.py` - Redis job queue handling
+- `gitlab_worker/gitlab_fetcher.py` - GitLab API fetcher
+- `gitlab_worker/chunker.py` - Text chunking logic (supports code structures)
+- `gitlab_worker/embedder.py` - Ollama embedding client
+- `gitlab_worker/vector_store.py` - Vector DB storage (Chroma)
+- `gitlab_worker/main.py` - Worker entrypoint with sync orchestration
+
+**Frontend:**
+- `src/lib/apis/configs/index.ts` - Added GitLab API methods:
+  - `getGitLabConnections`, `setGitLabConnections`
+  - `verifyGitLabConnection`, `getGitLabProjects`, `triggerGitLabSync`
+  - `getGitLabJobStatus`, `searchGitLabKnowledge` (new)
+- `src/lib/components/AddGitLabModal.svelte` - Connection form modal
+- `src/lib/components/admin/Settings/Integrations.svelte` - Added GitLab section with:
+  - Job status polling and progress bar
+  - Search UI for GitLab knowledge (new)
+  - Search results display (new)
+
+**Infrastructure:**
+- `Dockerfile.gitlab-worker` - Worker container image
+- `docker-compose.dev.yaml` - Added gitlab-worker, redis services
+
+## Backend API Additions
+
+### New Endpoints in `/api/v1/configs`
+- `GET /gitlab/jobs/{job_id}/status` - Get job status from Redis
+- `POST /gitlab/search` - Search GitLab knowledge across all synced projects
+- `GET /gitlab/collections` - Get all synced GitLab collections with metadata
+
+### Data Flow for Search
+```
+POST /gitlab/search {query: "..."}
+    ↓
+request.app.state.EMBEDDING_FUNCTION(query) → query_embedding
+    ↓
+Get all GitLab connections and their projects
+    ↓
+Search each gitlab_{project_id} collection
+    ↓
+Merge and sort results by distance
+    ↓
+Return [{text, metadata, distance}, ...]
+```
+
+### Model Knowledge Integration
+```
+User selects GitLab repo in ModelEditor
+    ↓
+meta.knowledge = [{collection_name: "gitlab_123", name: "my-repo", ...}]
+    ↓
+Chat middleware injects collection into RAG pipeline
+    ↓
+RAG queries gitlab_123 collection
+    ↓
+Results injected into context
+```
+
+### Collection Access Control
+GitLab collections (prefix `gitlab-*`) are automatically allowed for all users since they are admin-managed repository contents.

@@ -1232,6 +1232,23 @@ except Exception:
     TERMINAL_PROXY_HEADERS = {}
 
 ####################################
+# GITLAB
+####################################
+
+try:
+    gitlab_connections = json.loads(os.environ.get('GITLAB_CONNECTIONS', '[]'))
+except Exception as e:
+    log.exception(f'Error loading GITLAB_CONNECTIONS: {e}')
+    gitlab_connections = []
+
+
+GITLAB_CONNECTIONS = PersistentConfig(
+    'GITLAB_CONNECTIONS',
+    'gitlab.connections',
+    gitlab_connections,
+)
+
+####################################
 # WEBUI
 ####################################
 

@@ -64,11 +64,14 @@
 		}
 	};
 
+	import { getGitLabCollections } from '$lib/apis/configs';
+
 	let folderItems = [];
 	let knowledgeItems = [];
 	let fileItems = [];
+	let gitlabItems = [];
 
-	$: items = [...folderItems, ...knowledgeItems, ...fileItems];
+	$: items = [...folderItems, ...knowledgeItems, ...gitlabItems, ...fileItems];
 
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
@@ -84,6 +87,7 @@
 	const getItems = () => {
 		getFolderItems();
 		getKnowledgeItems();
+		getGitLabItems();
 		getKnowledgeFileItems();
 	};
 
@@ -130,6 +134,29 @@
 		}
 	};
 
+	const getGitLabItems = async () => {
+		const res = await getGitLabCollections(localStorage.token).catch(() => null);
+		if (res?.collections) {
+			const filtered = query
+				? res.collections.filter(
+					(c) =>
+						c.name.toLowerCase().includes(query.toLowerCase()) ||
+						c.path.toLowerCase().includes(query.toLowerCase())
+				)
+				: res.collections;
+			gitlabItems = filtered.map((c) => ({
+				id: c.collection_name,
+				name: c.name,
+				description: c.path,
+				type: 'gitlab',
+				collection_name: c.collection_name,
+				web_url: c.web_url,
+				project_id: c.project_id,
+				gitlab_id: c.gitlab_id
+			}));
+		}
+	};
+
 	onMount(async () => {
 		if ($folders === null) {
 			await folders.set(await getFolders(localStorage.token));
@@ -147,6 +174,8 @@
 					{$i18n.t('Folders')}
 				{:else if item?.type === 'collection'}
 					{$i18n.t('Collections')}
+				{:else if item?.type === 'gitlab'}
+					{$i18n.t('GitLab')}
 				{:else if item?.type === 'file'}
 					{$i18n.t('Files')}
 				{/if}
@@ -180,13 +209,19 @@
 								? `${item?.collection?.name} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
 									? $i18n.t('Collection')
-									: ''}
+									: item?.type === 'gitlab'
+										? $i18n.t('GitLab')
+										: ''}
 						placement="top"
 					>
 						{#if item?.type === 'collection'}
 							<Database className="size-4" />
 						{:else if item?.type === 'folder'}
 							<Folder className="size-4" />
+						{:else if item?.type === 'gitlab'}
+							<svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
+								<path d="M22.65 10.785l-1.423-4.39L17.257 2.5 8.938 8.068 3.743 6.395l-1.423 4.39L0 12.227l8.928 6.868 4.035 1.424 1.424-4.39 8.283-5.344z"/>
+							</svg>
 						{:else}
 							<DocumentPage className="size-4" />
 						{/if}

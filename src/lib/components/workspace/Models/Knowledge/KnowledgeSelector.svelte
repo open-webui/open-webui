@@ -4,6 +4,7 @@
 	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
+	import { getGitLabCollections } from '$lib/apis/configs';
 
 	import { decodeString } from '$lib/utils';
 
@@ -29,10 +30,11 @@
 	let noteItems = [];
 	let knowledgeItems = [];
 	let fileItems = [];
+	let gitlabItems = [];
 
 	let items = [];
 
-	$: items = [...noteItems, ...knowledgeItems, ...fileItems];
+	$: items = [...noteItems, ...knowledgeItems, ...gitlabItems, ...fileItems];
 
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
@@ -49,6 +51,7 @@
 		getNoteItems();
 		getKnowledgeItems();
 		getKnowledgeFileItems();
+		getGitLabItems();
 	};
 
 	const getNoteItems = async () => {
@@ -78,6 +81,36 @@
 				return {
 					...note,
 					type: 'collection'
+				};
+			});
+		}
+	};
+
+	const getGitLabItems = async () => {
+		const res = await getGitLabCollections(localStorage.token).catch(() => {
+			return null;
+		});
+
+		if (res?.collections) {
+			const filtered = query
+				? res.collections.filter(
+						(c) =>
+							c.name.toLowerCase().includes(query.toLowerCase()) ||
+							c.path.toLowerCase().includes(query.toLowerCase())
+					)
+				: res.collections;
+
+			gitlabItems = filtered.map((collection) => {
+				return {
+					id: collection.collection_name,
+					name: collection.name,
+					description: collection.path,
+					type: 'gitlab',
+					collection_name: collection.collection_name,
+					synced: collection.synced,
+					web_url: collection.web_url,
+					project_id: collection.project_id,
+					gitlab_id: collection.gitlab_id
 				};
 			});
 		}
@@ -146,6 +179,8 @@
 									{$i18n.t('Notes')}
 								{:else if item?.type === 'collection'}
 									{$i18n.t('Collections')}
+								{:else if item?.type === 'gitlab'}
+									{$i18n.t('GitLab')}
 								{:else if item?.type === 'file'}
 									{$i18n.t('Files')}
 								{/if}
@@ -187,6 +222,16 @@
 											tippyOptions={{ zIndex: 100000 }}
 										>
 											<DocumentPage className="size-4" />
+										</Tooltip>
+									{:else if item.type === 'gitlab'}
+										<Tooltip
+											content={$i18n.t('GitLab')}
+											placement="top"
+											tippyOptions={{ zIndex: 100000 }}
+										>
+											<svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
+												<path d="M22.65 10.785l-1.423-4.39L17.257 2.5 8.928 8.068 3.743 6.395l-1.423 4.39L0 12.227l8.928 6.868 4.035 1.424 1.424-4.39 8.283-5.344z"/>
+											</svg>
 										</Tooltip>
 									{/if}
 

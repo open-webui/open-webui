@@ -144,6 +144,8 @@ from open_webui.config import (
     TOOL_SERVER_CONNECTIONS,
     # Terminal Server
     TERMINAL_SERVER_CONNECTIONS,
+    # GitLab
+    GITLAB_CONNECTIONS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -842,6 +844,14 @@ app.state.TOOL_SERVERS = []
 
 app.state.config.TERMINAL_SERVER_CONNECTIONS = TERMINAL_SERVER_CONNECTIONS
 app.state.TERMINAL_SERVERS = []
+
+########################################
+#
+# GITLAB
+#
+########################################
+
+app.state.config.GITLAB_CONNECTIONS = GITLAB_CONNECTIONS
 
 ########################################
 #
@@ -1859,7 +1869,7 @@ async def chat_completion(
                                 [
                                     file_item.get('id')
                                     for file_item in user_message_files
-                                    if file_item.get('type') == 'file'
+                                    if file_item.get('type') == 'file' or file_item.get('type') == 'gitlab'
                                 ],
                                 user.id,
                             )
@@ -1915,7 +1925,7 @@ async def chat_completion(
                                 [
                                     file_item.get('id')
                                     for file_item in user_message_files
-                                    if file_item.get('type') == 'file'
+                                    if file_item.get('type') == 'file' or file_item.get('type') == 'gitlab'
                                 ],
                                 user.id,
                             )

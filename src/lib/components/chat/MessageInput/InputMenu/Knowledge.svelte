@@ -5,6 +5,7 @@
 	import { knowledge } from '$lib/stores';
 
 	import { getKnowledgeBases, searchKnowledgeFilesById } from '$lib/apis/knowledge';
+	import { getGitLabCollections } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
@@ -92,10 +93,13 @@
 
 	let page = 1;
 	let items = null;
+	let gitlabItems = [];
 	let total = null;
 
 	let itemsLoading = false;
 	let allItemsLoaded = false;
+
+	$: combinedItems = [...(items ?? []), ...(gitlabItems ?? [])];
 
 	$: if (loaded) {
 		init();
@@ -104,7 +108,23 @@
 	const init = async () => {
 		reset();
 		await tick();
-		await getItemsPage();
+		await Promise.all([getItemsPage(), getGitLabItems()]);
+	};
+
+	const getGitLabItems = async () => {
+		const res = await getGitLabCollections(localStorage.token).catch(() => null);
+		if (res?.collections) {
+			gitlabItems = res.collections.map((c) => ({
+				id: c.collection_name,
+				name: c.name,
+				description: c.path,
+				type: 'gitlab',
+				collection_name: c.collection_name,
+				web_url: c.web_url,
+				project_id: c.project_id,
+				gitlab_id: c.gitlab_id
+			}));
+		}
 	};
 
 	const reset = () => {
@@ -159,12 +179,12 @@
 
 {#if loaded && items !== null}
 	<div class="flex flex-col gap-0.5">
-		{#if items.length === 0}
+	{#if combinedItems.length === 0}
 			<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
 				{$i18n.t('No knowledge bases found.')}
 			</div>
 		{:else}
-			{#each items as item, idx (item.id)}
+			{#each combinedItems as item, idx (item.id)}
 				<div
 					class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
 					selectedIdx
@@ -176,7 +196,7 @@
 						type="button"
 						on:click={() => {
 							onSelect({
-								type: 'collection',
+								type: item.type === 'gitlab' ? 'gitlab' : 'collection',
 								...item
 							});
 						}}
@@ -191,8 +211,14 @@
 						data-selected={idx === selectedIdx}
 					>
 						<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
-							<Tooltip content={$i18n.t('Collection')} placement="top">
-								<Database className="size-4" />
+							<Tooltip content={item.type === 'gitlab' ? 'GitLab' : $i18n.t('Collection')} placement="top">
+								{#if item.type === 'gitlab'}
+									<svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
+										<path d="M22.65 10.785l-1.423-4.39L17.257 2.5 8.938 8.068 3.743 6.395l-1.423 4.39L0 12.227l8.928 6.868 4.035 1.424 1.424-4.39 8.283-5.344z"/>
+									</svg>
+								{:else}
+									<Database className="size-4" />
+								{/if}
 							</Tooltip>
 
 							<Tooltip
@@ -207,6 +233,7 @@
 						</div>
 					</button>
 
+					{#if item.type !== 'gitlab'}
 					<Tooltip content={$i18n.t('Show Files')} placement="top">
 						<button
 							type="button"
@@ -226,9 +253,10 @@
 							{/if}
 						</button>
 					</Tooltip>
-				</div>
+					{/if}
+			</div>
 
-				{#if selectedItem && selectedItem.id === item.id}
+			{#if selectedItem && selectedItem.id === item.id}
 					<div class="pl-3 mb-1 flex flex-col gap-0.5">
 						{#if selectedFileItems === null && selectedFileItemsTotal === null}
 							<div class=" py-1 flex justify-center">

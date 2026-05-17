@@ -1070,6 +1070,7 @@ async def filter_accessible_collections(
       - file-*          → validated via has_access_to_file
       - user-memory-*   → must match user's own memory collection
       - web-search-*    → ephemeral per-query collections, always allowed
+      - gitlab-*        → always allowed (admin-managed GitLab repos)
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
                           via Knowledges.check_access_by_user_id; if no
@@ -1095,6 +1096,9 @@ async def filter_accessible_collections(
             # Ephemeral collections created by process_web_search — safe
             # to allow because they contain only transient web-search
             # results scoped to the requesting user's session.
+            validated.add(name)
+        elif name.startswith('gitlab-') or name.startswith('gitlab_'):
+            # GitLab collections (both legacy hyphen and underscore naming)
             validated.add(name)
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.

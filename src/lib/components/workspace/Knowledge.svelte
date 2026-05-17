@@ -13,6 +13,7 @@
 		searchKnowledgeBases,
 		exportKnowledgeById
 	} from '$lib/apis/knowledge';
+	import { getGitLabCollections } from '$lib/apis/configs';
 
 	import { goto } from '$app/navigation';
 	import { capitalizeFirstLetter } from '$lib/utils';
@@ -83,6 +84,34 @@
 
 	const getItemsPage = async () => {
 		itemsLoading = true;
+
+		let gitlabCollections = [];
+		if (viewOption === 'gitlab' || viewOption === '') {
+			const res = await getGitLabCollections(localStorage.token).catch(() => null);
+			if (res?.collections) {
+				gitlabCollections = res.collections
+					.filter(
+						(c) =>
+							!query ||
+							c.name.toLowerCase().includes(query.toLowerCase()) ||
+							c.path.toLowerCase().includes(query.toLowerCase())
+					)
+					.map((c) => ({
+						...c,
+						type: 'gitlab',
+						updated_at: Math.floor(Date.now() / 1000)
+					}));
+			}
+		}
+
+		if (viewOption === 'gitlab') {
+			items = gitlabCollections;
+			total = gitlabCollections.length;
+			allItemsLoaded = true;
+			itemsLoading = false;
+			return;
+		}
+
 		const res = await searchKnowledgeBases(localStorage.token, query, viewOption, page).catch(
 			() => {
 				return [];
@@ -91,7 +120,7 @@
 
 		if (res) {
 			console.log(res);
-			total = res.total;
+			total = res.total + (viewOption === '' ? gitlabCollections.length : 0);
 			const pageItems = res.items;
 
 			if ((pageItems ?? []).length === 0) {
@@ -100,12 +129,13 @@
 				allItemsLoaded = false;
 			}
 
+			let newItems = [];
 			if (items) {
 				const existingIds = new Set(items.map((item) => item.id));
-				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				newItems = pageItems.filter((item) => !existingIds.has(item.id));
 				items = [...items, ...newItems];
 			} else {
-				items = pageItems;
+				items = [...gitlabCollections, ...pageItems];
 			}
 		}
 
@@ -250,7 +280,11 @@
 						<button
 							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 							on:click={() => {
-								if (item?.meta?.document) {
+								if (item.type === 'gitlab') {
+									if (item.web_url) {
+										window.open(item.web_url, '_blank');
+									}
+								} else if (item?.meta?.document) {
 									toast.error(
 										$i18n.t(
 											'Only collections can be edited, create a new knowledge base to edit/add documents.'
@@ -266,17 +300,20 @@
 									<div class="flex items-center justify-between -my-1 h-8">
 										<div class=" flex gap-2 items-center justify-between w-full">
 											<div>
-												<Badge type="success" content={$i18n.t('Collection')} />
+												<Badge
+													type={item.type === 'gitlab' ? 'info' : 'success'}
+													content={item.type === 'gitlab' ? 'GitLab' : $i18n.t('Collection')}
+												/>
 											</div>
 
-											{#if !item?.write_access}
+											{#if item.type !== 'gitlab' && !item?.write_access}
 												<div>
 													<Badge type="muted" content={$i18n.t('Read Only')} />
 												</div>
 											{/if}
 										</div>
 
-										{#if item?.write_access || $user?.role === 'admin'}
+										{#if item.type !== 'gitlab' && (item?.write_access || $user?.role === 'admin')}
 											<div class="flex items-center gap-2">
 												<div class=" flex self-center">
 													<ItemMenu
@@ -298,6 +335,13 @@
 									<div class=" flex items-center gap-1 justify-between px-1.5">
 										<Tooltip content={item?.description ?? item.name}>
 											<div class=" flex items-center gap-2">
+												{#if item.type === 'gitlab'}
+													<svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
+														<path
+															d="M22.65 10.785l-1.423-4.39L17.257 2.5 8.928 8.068 3.743 6.395l-1.423 4.39L0 12.227l8.928 6.868 4.035 1.424 1.424-4.39 8.283-5.344z"
+														/>
+													</svg>
+												{/if}
 												<div class=" text-sm font-medium line-clamp-1 capitalize">{item.name}</div>
 											</div>
 										</Tooltip>
@@ -310,19 +354,21 @@
 												</div>
 											</Tooltip>
 
-											<div class="text-xs text-gray-500 shrink-0">
-												<Tooltip
-													content={item?.user?.email ?? $i18n.t('Deleted User')}
-													className="flex shrink-0"
-													placement="top-start"
-												>
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
-												</Tooltip>
-											</div>
+											{#if item.user}
+												<div class="text-xs text-gray-500 shrink-0">
+													<Tooltip
+														content={item?.user?.email ?? $i18n.t('Deleted User')}
+														className="flex shrink-0"
+														placement="top-start"
+													>
+														{$i18n.t('By {{name}}', {
+															name: capitalizeFirstLetter(
+																item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+															)
+														})}
+													</Tooltip>
+												</div>
+											{/if}
 										</div>
 									</div>
 								</div>

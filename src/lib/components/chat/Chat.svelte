@@ -1034,6 +1034,14 @@
 			await uploadGoogleDriveFile(data);
 		} else if (type === 'web') {
 			await uploadWeb(data);
+		} else if (type === 'knowledge') {
+			const knowledgeFile = {
+				...data,
+				status: 'processed'
+			};
+			if (!files.find((f) => f.id === knowledgeFile.id)) {
+				files = [...files, knowledgeFile];
+			}
 		}
 	};
 
@@ -1909,7 +1917,7 @@
 		chatFiles.push(
 			..._files.filter(
 				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+					['doc', 'text', 'note', 'chat', 'folder', 'collection', 'gitlab'].includes(item.type) ||
 					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 			)
 		);
@@ -2262,7 +2270,7 @@
 		files.push(
 			...(userMessage?.files ?? []).filter(
 				(item) =>
-					['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
+					['doc', 'text', 'note', 'chat', 'collection', 'folder', 'gitlab'].includes(item.type) ||
 					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 			)
 		);

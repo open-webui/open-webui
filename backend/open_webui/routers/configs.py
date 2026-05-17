@@ -1,8 +1,10 @@
 import logging
 import copy
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 import aiohttp
+import httpx
+from urllib.parse import urlparse
 
 from typing import Optional
 
@@ -20,6 +22,14 @@ from open_webui.utils.tools import (
 )
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.models.oauth_sessions import OAuthSessions
+
+from open_webui.services.gitlab import create_gitlab_client
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+
+import json
+import os
+import uuid
+from datetime import datetime
 
 
 from open_webui.utils.oauth import (
@@ -186,7 +196,6 @@ async def set_tool_servers_config(
         auth_type = connection.get('auth_type', 'none')
 
         if auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-            # Remove existing OAuth clients for tool servers
             server_id = connection.get('info', {}).get('id')
             client_key = f'{server_type}:{server_id}'
 
@@ -195,7 +204,6 @@ async def set_tool_servers_config(
             except Exception:
                 pass
 
-    # Set new tool server connections
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
@@ -224,280 +232,344 @@ async def set_tool_servers_config(
     }
 
 
-class TerminalServerConnection(BaseModel):
-    id: Optional[str] = ''
-    name: Optional[str] = ''
+############################
+# GitLab Config
+############################
 
-    enabled: Optional[bool] = True
 
+class GitLabConnection(BaseModel):
+    id: Optional[str] = None
+    name: str
     url: str
-    path: Optional[str] = '/openapi.json'
-
-    key: Optional[str] = ''
-    auth_type: Optional[str] = 'bearer'
-
-    config: Optional[dict] = None
-
-    # Orchestrator policy fields
-    server_type: Optional[str] = None  # "orchestrator", "terminal"
-    policy_id: Optional[str] = None
-    policy: Optional[dict] = None  # cached policy data
+    token: Optional[str] = None
+    owner: Optional[str] = None
+    repo: Optional[str] = None
+    branch: Optional[str] = None
+    include_wiki: Optional[bool] = False
+    exclude_patterns: Optional[str] = None
+    enabled: Optional[bool] = True
+    auto_sync: Optional[bool] = False
+    created_at: Optional[str] = None
 
     model_config = ConfigDict(extra='allow')
 
 
-class TerminalServersConfigForm(BaseModel):
-    TERMINAL_SERVER_CONNECTIONS: list[TerminalServerConnection]
+class GitLabConfigForm(BaseModel):
+    GITLAB_CONNECTIONS: list[GitLabConnection]
 
 
-@router.get('/terminal_servers')
-async def get_terminal_servers_config(request: Request, user=Depends(get_admin_user)):
+@router.get('/gitlab', response_model=GitLabConfigForm)
+async def get_gitlab_config(request: Request, user=Depends(get_admin_user)):
     return {
-        'TERMINAL_SERVER_CONNECTIONS': request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
+        'GITLAB_CONNECTIONS': request.app.state.config.GITLAB_CONNECTIONS,
     }
 
 
-@router.post('/terminal_servers')
-async def set_terminal_servers_config(
+@router.post('/gitlab', response_model=GitLabConfigForm)
+async def set_gitlab_config(
     request: Request,
-    form_data: TerminalServersConfigForm,
+    form_data: GitLabConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.TERMINAL_SERVER_CONNECTIONS = [
-        connection.model_dump() for connection in form_data.TERMINAL_SERVER_CONNECTIONS
-    ]
+    connections = []
+    for connection in form_data.GITLAB_CONNECTIONS:
+        conn_dict = connection.model_dump()
+        if not conn_dict.get('id'):
+            conn_dict['id'] = str(uuid.uuid4())
+        if not conn_dict.get('created_at'):
+            conn_dict['created_at'] = datetime.now().isoformat()
+        if conn_dict.get('token'):
+            token = conn_dict['token']
+            # Check if token is already encrypted (already stored previously)
+            try:
+                decrypted = decrypt_data(token)
+                if isinstance(decrypted, str) and decrypted.startswith('glpat-'):
+                    # Already encrypted and valid, keep it
+                    pass
+                else:
+                    # Not a gitlab token after decrypt, might be plaintext
+                    conn_dict['token'] = encrypt_data(token)
+            except Exception:
+                # Decryption failed = plaintext, encrypt it
+                conn_dict['token'] = encrypt_data(token)
+        connections.append(conn_dict)
 
-    await set_terminal_servers(request)
+    request.app.state.config.GITLAB_CONNECTIONS = connections
 
     return {
-        'TERMINAL_SERVER_CONNECTIONS': request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
+        'GITLAB_CONNECTIONS': request.app.state.config.GITLAB_CONNECTIONS,
     }
 
 
-@router.post('/terminal_servers/verify')
-async def verify_terminal_server_connection(
-    request: Request, form_data: TerminalServerConnection, user=Depends(get_admin_user)
-):
-    """
-    Verify the connection to a terminal server by detecting its type.
-
-    Tries GET {url}/api/v1/policies (orchestrator) then GET {url}/api/config
-    (plain terminal).  Returns ``{status: true, type: "orchestrator"|"terminal"}``.
-    """
-    base_url = (form_data.url or '').rstrip('/')
-    if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
-
-    headers = {}
-    if form_data.auth_type == 'bearer' and form_data.key:
-        headers['Authorization'] = f'Bearer {form_data.key}'
-
-    try:
-        async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        ) as session:
-            # Orchestrators expose a policies API; plain terminals don't.
-            try:
-                async with session.get(
-                    f'{base_url}/api/v1/policies', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                ) as resp:
-                    if resp.ok:
-                        return {'status': True, 'type': 'orchestrator'}
-            except Exception:
-                pass
-
-            # Fall back to open-terminal config endpoint.
-            try:
-                async with session.get(
-                    f'{base_url}/api/config', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                ) as resp:
-                    if resp.ok:
-                        return {'status': True, 'type': 'terminal'}
-            except Exception:
-                pass
-
-    except Exception as e:
-        log.debug(f'Failed to connect to the terminal server: {e}')
-
-    raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
-
-
-class TerminalServerPolicyForm(BaseModel):
+class VerifyGitLabConnectionForm(BaseModel):
     url: str
-    key: Optional[str] = ''
-    auth_type: Optional[str] = 'bearer'
-    policy_id: str
-    policy_data: dict
+    token: str
 
 
-@router.post('/terminal_servers/policy')
-async def put_terminal_server_policy(
-    request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
+@router.post('/gitlab/verify')
+async def verify_gitlab_connection(
+    request: Request,
+    user=Depends(get_admin_user),
 ):
-    """
-    Proxy a policy PUT to an orchestrator terminal server.
-    """
-    base_url = (form_data.url or '').rstrip('/')
-    if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
-
-    headers = {'Content-Type': 'application/json'}
-    if form_data.auth_type == 'bearer' and form_data.key:
-        headers['Authorization'] = f'Bearer {form_data.key}'
-
     try:
-        async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        ) as session:
-            policy_url = f'{base_url}/api/v1/policies/{form_data.policy_id}'
-            async with session.put(
-                policy_url, headers=headers, json=form_data.policy_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
-            ) as resp:
-                if resp.ok:
-                    return await resp.json()
-                detail = await resp.text()
-                raise HTTPException(status_code=resp.status, detail=detail)
+        body = await request.json()
+        url = body.get('url', '').rstrip('/')
+        token = body.get('token', '')
+
+        if not url or not token:
+            log.error(f"Verify GitLab failed: url={url}, token={'set' if token else 'empty'}")
+            raise HTTPException(status_code=400, detail='URL and token are required')
+
+        # Relax validation to allow any valid URL for self-hosted instances
+        if not url.startswith('http'):
+            log.error(f"Verify GitLab failed: invalid url format {url}")
+            raise HTTPException(status_code=400, detail='Invalid URL. Must start with http:// or https://')
+
+        client = create_gitlab_client(url, token)
+        try:
+            result = await client.test_connection()
+            return {'status': True, 'user': result}
+        except Exception as e:
+            log.error(f"GitLab connection test failed: {e}")
+            raise e
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Failed to save policy to terminal server: {e}')
-        raise HTTPException(status_code=400, detail='Failed to save policy to terminal server')
-
-
-@router.post('/tool_servers/verify')
-async def verify_tool_servers_config(request: Request, form_data: ToolServerConnection, user=Depends(get_admin_user)):
-    """
-    Verify the connection to the tool server.
-    """
-    try:
-        if form_data.type == 'mcp':
-            if form_data.auth_type in ('oauth_2.1', 'oauth_2.1_static'):
-                oauth_server_url = (
-                    form_data.info.get('oauth_server_url')
-                    if form_data.info and form_data.info.get('oauth_server_url')
-                    else form_data.url
-                )
-                discovery_urls = await get_discovery_urls(oauth_server_url)
-                for discovery_url in discovery_urls:
-                    log.debug(f'Trying to fetch OAuth 2.1 discovery document from {discovery_url}')
-                    async with aiohttp.ClientSession(
-                        trust_env=True,
-                        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-                    ) as session:
-                        async with session.get(
-                            discovery_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                        ) as oauth_server_metadata_response:
-                            if oauth_server_metadata_response.status == 200:
-                                try:
-                                    oauth_server_metadata = OAuthMetadata.model_validate(
-                                        await oauth_server_metadata_response.json()
-                                    )
-                                    return {
-                                        'status': True,
-                                        'oauth_server_metadata': oauth_server_metadata.model_dump(mode='json'),
-                                    }
-                                except Exception as e:
-                                    log.info(f'Failed to parse OAuth 2.1 discovery document: {e}')
-                                    raise HTTPException(
-                                        status_code=400,
-                                        detail=f'Failed to parse OAuth 2.1 discovery document from {discovery_url}',
-                                    )
-
-                raise HTTPException(
-                    status_code=400,
-                    detail=f'Failed to fetch OAuth 2.1 discovery document from {discovery_urls}',
-                )
-            else:
-                try:
-                    client = MCPClient()
-                    headers = None
-
-                    token = None
-                    if form_data.auth_type == 'bearer':
-                        token = form_data.key
-                    elif form_data.auth_type == 'session':
-                        token = request.state.token.credentials
-                    elif form_data.auth_type == 'system_oauth':
-                        oauth_token = None
-                        try:
-                            if request.cookies.get('oauth_session_id', None):
-                                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                                    user.id,
-                                    request.cookies.get('oauth_session_id', None),
-                                )
-
-                                if oauth_token:
-                                    token = oauth_token.get('access_token', '')
-                        except Exception as e:
-                            pass
-                    if token:
-                        headers = {'Authorization': f'Bearer {token}'}
-
-                    if form_data.headers and isinstance(form_data.headers, dict):
-                        if headers is None:
-                            headers = {}
-                        custom_headers = get_custom_headers(form_data.headers, user)
-                        headers.update(custom_headers)
-
-                    await client.connect(form_data.url, headers=headers)
-                    specs = await client.list_tool_specs()
-                    return {
-                        'status': True,
-                        'specs': specs,
-                    }
-                except Exception as e:
-                    log.debug(f'Failed to create MCP client: {e}')
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f'Failed to create MCP client',
-                    )
-                finally:
-                    if client:
-                        await client.disconnect()
-        else:  # openapi
-            token = None
-            headers = None
-            if form_data.auth_type == 'bearer':
-                token = form_data.key
-            elif form_data.auth_type == 'session':
-                token = request.state.token.credentials
-            elif form_data.auth_type == 'system_oauth':
-                try:
-                    if request.cookies.get('oauth_session_id', None):
-                        oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                            user.id,
-                            request.cookies.get('oauth_session_id', None),
-                        )
-
-                        if oauth_token:
-                            token = oauth_token.get('access_token', '')
-
-                except Exception as e:
-                    pass
-
-            if token:
-                headers = {'Authorization': f'Bearer {token}'}
-
-            if form_data.headers and isinstance(form_data.headers, dict):
-                if headers is None:
-                    headers = {}
-                custom_headers = get_custom_headers(form_data.headers, user)
-                headers.update(custom_headers)
-
-            url = get_tool_server_url(form_data.url, form_data.path)
-            return await get_tool_server_data(url, headers=headers)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        log.debug(f'Failed to connect to the tool server: {e}')
+        error_str = str(e)
+        if isinstance(e, httpx.HTTPStatusError):
+            try:
+                error_data = e.response.json()
+                if 'message' in error_data:
+                    error_str = error_data['message']
+                elif 'error' in error_data:
+                    error_str = error_data['error']
+            except:
+                pass
+        
+        log.error(f'Failed to verify GitLab connection: {e}')
+        
+        if '302' in error_str or 'Redirect' in error_str:
+            raise HTTPException(
+                status_code=400,
+                detail='Invalid token or URL. Please check your GitLab URL (use base URL only, e.g., https://gitlab.com) and personal access token.',
+            )
         raise HTTPException(
             status_code=400,
-            detail=f'Failed to connect to the tool server',
+            detail=f'Failed to connect to GitLab: {error_str}',
         )
 
 
+@router.get('/gitlab/{gitlab_id}/projects')
+async def get_gitlab_projects(
+    request: Request,
+    gitlab_id: str,
+    page: int = 1,
+    per_page: int = 20,
+    user=Depends(get_admin_user),
+):
+    connections = request.app.state.config.GITLAB_CONNECTIONS
+    connection = next((c for c in connections if c.get('id') == gitlab_id), None)
+
+    if not connection:
+        raise HTTPException(status_code=404, detail='GitLab connection not found')
+
+    token = connection.get('token', '')
+    if token:
+        token = decrypt_data(token)
+
+    client = create_gitlab_client(connection.get('url', ''), token)
+    projects = await client.list_projects(per_page=per_page, page=page)
+    return {'projects': projects}
+
+
+@router.post('/gitlab/{gitlab_id}/sync')
+async def trigger_gitlab_sync(
+    request: Request,
+    gitlab_id: str,
+    user=Depends(get_admin_user),
+):
+    connections = request.app.state.config.GITLAB_CONNECTIONS
+    connection = next((c for c in connections if c.get('id') == gitlab_id), None)
+
+    if not connection:
+        raise HTTPException(status_code=404, detail='GitLab connection not found')
+
+    project_ids = []
+    try:
+        body = await request.json()
+        project_ids = body.get('project_ids', []) or []
+    except Exception:
+        pass
+
+    job_id = str(uuid.uuid4())
+
+    try:
+        import redis
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        r = redis.from_url(redis_url)
+        token = ''
+        try:
+            token = decrypt_data(connection.get('token', '')) if connection.get('token') else ''
+        except Exception:
+            token = connection.get('token', '')
+
+        job_data = {
+            'job_id': job_id,
+            'gitlab_id': gitlab_id,
+            'connection': {
+                'url': connection.get('url', ''),
+                'token': token,
+                'owner': connection.get('owner', ''),
+                'repo': connection.get('repo', ''),
+                'branch': connection.get('branch', ''),
+                'include_wiki': connection.get('include_wiki', False),
+                'exclude_patterns': connection.get('exclude_patterns', ''),
+            },
+            'project_ids': project_ids or [],
+            'triggered_by': user.id,
+        }
+        r.lpush('gitlab_sync_queue', json.dumps(job_data))
+    except Exception as e:
+        log.debug(f'Failed to enqueue GitLab sync job: {e}')
+
+    return {'job_id': job_id, 'status': 'queued'}
+
+
+@router.get('/gitlab/jobs/{job_id}/status')
+async def get_gitlab_job_status(
+    request: Request,
+    job_id: str,
+    user=Depends(get_admin_user),
+):
+    try:
+        import redis
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        r = redis.from_url(redis_url)
+        status_key = f'gitlab_job:{job_id}:status'
+        status_data = r.get(status_key)
+        if status_data:
+            import json
+            return json.loads(status_data)
+        return {'status': 'unknown', 'progress': 0, 'message': 'Job not found'}
+    except Exception as e:
+        log.debug(f'Failed to get job status: {e}')
+        return {'status': 'unknown', 'progress': 0, 'message': str(e)}
+
+
+class GitLabSearchForm(BaseModel):
+    query: str
+    project_ids: Optional[list[str]] = None
+    limit: Optional[int] = 10
+
+
+async def get_gitlab_connection_projects(request: Request, gitlab_id: str) -> list:
+    """Helper to get all projects for a GitLab connection."""
+    connections = request.app.state.config.GITLAB_CONNECTIONS
+    connection = next((c for c in connections if c.get('id') == gitlab_id), None)
+    if not connection:
+        return []
+    token = connection.get('token', '')
+    if token:
+        try:
+            token = decrypt_data(token)
+        except Exception:
+            pass
+    try:
+        client = create_gitlab_client(connection.get('url', ''), token)
+        return await client.list_projects(per_page=100)
+    except Exception as e:
+        log.debug(f'Failed to get projects for GitLab connection {gitlab_id}: {e}')
+        return []
+
+
+@router.post('/gitlab/search')
+async def search_gitlab_knowledge(
+    request: Request,
+    form_data: GitLabSearchForm,
+    user=Depends(get_admin_user),
+):
+    try:
+        query_embedding = await request.app.state.EMBEDDING_FUNCTION(form_data.query)
+        
+        connections = request.app.state.config.GITLAB_CONNECTIONS
+        
+        all_results = []
+        search_collections = []
+        
+        if form_data.project_ids:
+            search_collections = [f'gitlab_{pid}' for pid in form_data.project_ids]
+        else:
+            for conn in connections:
+                projects = await get_gitlab_connection_projects(request, conn.get('id', ''))
+                for project in projects:
+                    search_collections.append(f'gitlab_{project.get("id")}')
+        
+        for collection_name in search_collections:
+            try:
+                result = await ASYNC_VECTOR_DB_CLIENT.search(
+                    collection_name=collection_name,
+                    vectors=[query_embedding],
+                    limit=form_data.limit or 10,
+                )
+                if result and result.documents:
+                    for i in range(len(result.documents[0])):
+                        all_results.append({
+                            'collection': collection_name,
+                            'text': result.documents[0][i],
+                            'metadata': result.metadatas[0][i] if result.metadatas else {},
+                            'distance': result.distances[0][i] if result.distances else None,
+                        })
+            except Exception as e:
+                log.debug(f'Search in {collection_name} failed: {e}')
+                continue
+        
+        all_results.sort(key=lambda x: x.get('distance', 9999))
+        return {'results': all_results[:form_data.limit or 20]}
+    except Exception as e:
+        log.debug(f'GitLab search failed: {e}')
+        raise HTTPException(status_code=400, detail=f'Search failed: {str(e)}')
+
+
+@router.get('/gitlab/collections')
+async def get_gitlab_collections(
+    request: Request,
+    user=Depends(get_admin_user),
+):
+    """Get all synced GitLab collections with metadata."""
+    connections = request.app.state.config.GITLAB_CONNECTIONS
+    collections = []
+    
+    for conn in connections:
+        gitlab_id = conn.get('id', '')
+        if not gitlab_id:
+            continue
+        
+        projects = await get_gitlab_connection_projects(request, gitlab_id)
+        for project in projects:
+            project_id = str(project.get('id', ''))
+            collection_name = f'gitlab_{project_id}'
+            
+            try:
+                exists = await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name)
+            except Exception:
+                exists = False
+            
+            collections.append({
+                'id': f'{gitlab_id}_{project_id}',
+                'gitlab_id': gitlab_id,
+                'project_id': project_id,
+                'name': project.get('name', 'Unknown'),
+                'path': project.get('path_with_namespace', ''),
+                'collection_name': collection_name,
+                'synced': exists,
+                'web_url': project.get('web_url', ''),
+            })
+    
+    return {'collections': collections}
+
+
+############################
+# CodeInterpreterConfig
 ############################
 # CodeInterpreterConfig
 ############################
