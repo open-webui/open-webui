@@ -745,6 +745,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         files={'file': (filename, audio_file)},
                         data=payload,
                         timeout=AIOHTTP_CLIENT_TIMEOUT,
+                        verify=AIOHTTP_CLIENT_SESSION_SSL,
                     )
 
                 if r.status_code == 200:
@@ -806,6 +807,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                     params=params,
                     data=file_data,
                     timeout=AIOHTTP_CLIENT_TIMEOUT,
+                    verify=AIOHTTP_CLIENT_SESSION_SSL,
                 )
 
                 if r.status_code == 200:
@@ -914,6 +916,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         'Ocp-Apim-Subscription-Key': api_key,
                     },
                     timeout=AIOHTTP_CLIENT_TIMEOUT,
+                    verify=AIOHTTP_CLIENT_SESSION_SSL,
                 )
 
             r.raise_for_status()
@@ -1067,6 +1070,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                         'Content-Type': 'application/json',
                     },
                     timeout=AIOHTTP_CLIENT_TIMEOUT,
+                    verify=AIOHTTP_CLIENT_SESSION_SSL,
                 )
 
                 r.raise_for_status()
@@ -1106,6 +1110,7 @@ def transcription_handler(request, file_path, metadata, user=None):
                             'Authorization': f'Bearer {api_key}',
                         },
                         timeout=AIOHTTP_CLIENT_TIMEOUT,
+                        verify=AIOHTTP_CLIENT_SESSION_SSL,
                     )
 
                 r.raise_for_status()
