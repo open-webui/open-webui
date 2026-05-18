@@ -2686,22 +2686,16 @@ USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING = (
 USER_PERMISSIONS_NOTES_ALLOW_SHARING = os.getenv('USER_PERMISSIONS_NOTES_ALLOW_SHARING', 'False').lower() == 'true'
 
 
-MISTRAL_OCR_USE_BASE64 = PersistentConfig(
-    "MISTRAL_OCR_USE_BASE64",
-    "rag.mistral_ocr_use_base64",
-    os.environ.get("MISTRAL_OCR_USE_BASE64", "False").lower() == "true",
+MISTRAL_OCR_USE_BASE64 = ConfigVar(
+    'MISTRAL_OCR_USE_BASE64',
+    'rag.mistral_ocr_use_base64',
+    os.getenv('MISTRAL_OCR_USE_BASE64', 'False').lower() == 'true',
 )
 
-MISTRAL_OCR_MODEL = PersistentConfig(
-    "MISTRAL_OCR_MODEL",
-    "rag.mistral_ocr_model",
-    os.getenv("MISTRAL_OCR_MODEL", "mistral-ocr-latest"),
-)
-
-PADDLEOCR_VL_BASE_URL = PersistentConfig(
-    'PADDLEOCR_VL_BASE_URL',
-    'rag.paddleocr_vl_base_url',
-    os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080'),
+MISTRAL_OCR_MODEL = ConfigVar(
+    'MISTRAL_OCR_MODEL',
+    'rag.mistral_ocr_model',
+    os.getenv('MISTRAL_OCR_MODEL', 'mistral-ocr-latest'),
 )
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
