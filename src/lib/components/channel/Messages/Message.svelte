@@ -356,6 +356,7 @@
 							<Markdown
 								id={`${message.id}-reply-to`}
 								content={message?.reply_to_message?.content}
+								allowEmbeds={false}
 							/>
 						</div>
 					</button>
@@ -527,6 +528,7 @@
 									id={message.id}
 									content={message.content}
 									paragraphTag="span"
+									allowEmbeds={!!message?.meta?.model_id}
 								/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
 										class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 									>{/if}

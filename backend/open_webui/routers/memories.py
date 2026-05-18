@@ -1,17 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
-import logging
+from __future__ import annotations
+
 import asyncio
+import logging
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.internal.db import get_async_session
 from open_webui.models.memories import Memories, MemoryModel
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-from open_webui.utils.auth import get_verified_user
-from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from open_webui.utils.access_control import has_permission
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.auth import get_verified_user
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -56,10 +57,10 @@ class AddMemoryForm(BaseModel):
 
 
 class MemoryUpdateModel(BaseModel):
-    content: Optional[str] = None
+    content: str | None = None
 
 
-@router.post('/add', response_model=Optional[MemoryModel])
+@router.post('/add', response_model=MemoryModel | None)
 async def add_memory(
     request: Request,
     form_data: AddMemoryForm,
@@ -107,7 +108,7 @@ async def add_memory(
 
 class QueryMemoryForm(BaseModel):
     content: str
-    k: Optional[int] = 1
+    k: int | None = 1
 
 
 @router.post('/query')
@@ -275,7 +276,7 @@ async def delete_memory_by_user_id(
 ############################
 
 
-@router.post('/{memory_id}/update', response_model=Optional[MemoryModel])
+@router.post('/{memory_id}/update', response_model=MemoryModel | None)
 async def update_memory_by_id(
     memory_id: str,
     request: Request,

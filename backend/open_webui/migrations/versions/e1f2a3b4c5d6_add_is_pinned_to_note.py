@@ -6,8 +6,8 @@ Create Date: 2026-04-14 22:00:00.000000
 
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'e1f2a3b4c5d6'
 down_revision = 'b7c8d9e0f1a2'
@@ -16,7 +16,12 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('note', sa.Column('is_pinned', sa.Boolean(), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('note')]
+
+    if 'is_pinned' not in columns:
+        op.add_column('note', sa.Column('is_pinned', sa.Boolean(), nullable=True))
 
 
 def downgrade():

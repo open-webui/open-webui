@@ -5,8 +5,6 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
-
-import requests
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
@@ -14,41 +12,41 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Optional,
     Sequence,
     Union,
-    Literal,
 )
 
-from fastapi.concurrency import run_in_threadpool
 import aiohttp
 import certifi
+import requests
 import validators
+from fastapi.concurrency import run_in_threadpool
 from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
-
-from open_webui.retrieval.loaders.tavily import TavilyLoader
-from open_webui.retrieval.loaders.external_web import ExternalWebLoader
-from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
-from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
-    PLAYWRIGHT_WS_URL,
-    PLAYWRIGHT_TIMEOUT,
-    WEB_LOADER_ENGINE,
-    WEB_LOADER_TIMEOUT,
+    EXTERNAL_WEB_LOADER_API_KEY,
+    EXTERNAL_WEB_LOADER_URL,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     FIRECRAWL_TIMEOUT,
+    PLAYWRIGHT_TIMEOUT,
+    PLAYWRIGHT_WS_URL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
-    EXTERNAL_WEB_LOADER_URL,
-    EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
+    WEB_LOADER_ENGINE,
+    WEB_LOADER_TIMEOUT,
 )
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, USER_AGENT
+from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.loaders.tavily import TavilyLoader
+from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_string_allowed
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +65,14 @@ def resolve_hostname(hostname):
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        # Reject parser-confusing chars: urlparse and requests/aiohttp split
+        # on these differently, e.g. http://127.0.0.1\@1.1.1.1 → urlparse
+        # extracts 1.1.1.1 (public, passes filter) while requests connects
+        # to 127.0.0.1 (internal). Same shape with tab/CR/LF.
+        if any(ch in url for ch in ('\\', '\t', '\n', '\r')):
+            log.warning(f'Blocked URL with parser-confusing char: {url!r}')
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         parsed_url = urllib.parse.urlparse(url)
@@ -486,6 +492,26 @@ class SafeWebBaseLoader(WebBaseLoader):
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
 
+        # Propagate USER_AGENT env var so that both the sync _scrape() and
+        # async _fetch() paths present a real UA instead of python-requests/2.x
+        # which gets blocked by Cloudflare, Wikipedia, and similar bot-detection.
+        # _fetch() forwards self.session.headers to the aiohttp session, so
+        # setting it here covers both code-paths.
+        if USER_AGENT:
+            self.session.headers['User-Agent'] = USER_AGENT
+
+        # Prevent redirect-based SSRF on the synchronous _scrape() path.
+        # validate_url() is called once on the originally-submitted URL, but the
+        # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
+        # which by default follows redirects. Without the override below, an attacker
+        # can submit a public URL that 302-redirects to an internal address (RFC1918,
+        # 127.0.0.1, 169.254.169.254, etc.) and the redirected target is fetched without
+        # re-validation. Matches the policy enforced on the async _fetch() path below.
+        self.requests_kwargs = {
+            **(self.requests_kwargs or {}),
+            'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+        }
+
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
             for i in range(retries):
@@ -502,7 +528,6 @@ class SafeWebBaseLoader(WebBaseLoader):
                     async with session.get(
                         url,
                         **(self.requests_kwargs | kwargs),
-                        allow_redirects=False,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()

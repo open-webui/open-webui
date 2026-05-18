@@ -60,6 +60,7 @@
 
 	let oauthClientId = '';
 	let oauthClientSecret = '';
+	let oauthServerUrl = '';
 
 	let enable = true;
 	let loading = false;
@@ -86,10 +87,17 @@
 		// client_id is the tool server ID (used as the internal lookup key for both flows).
 		// For static, client_secret signals the backend to use the static credential path.
 		// The actual OAuth client_id/secret come from the connection info at save time.
-		const formData: { url: string; client_id: string; client_secret?: string } = {
+		const formData: {
+			url: string;
+			client_id: string;
+			client_secret?: string;
+			oauth_server_url?: string;
+		} = {
 			url: url,
 			client_id: id,
-			...(auth_type === 'oauth_2.1_static' ? { client_secret: oauthClientSecret } : {})
+			...(auth_type === 'oauth_2.1_static'
+				? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
+				: {})
 		};
 
 		const res = await registerOAuthClient(localStorage.token, formData, 'mcp').catch((err) => {
@@ -336,7 +344,11 @@
 				description: description,
 				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
 				...(auth_type === 'oauth_2.1_static'
-					? { oauth_client_id: oauthClientId, oauth_client_secret: oauthClientSecret }
+					? {
+							oauth_client_id: oauthClientId,
+							oauth_client_secret: oauthClientSecret,
+							oauth_server_url: oauthServerUrl
+						}
 					: {})
 			}
 		};
@@ -364,6 +376,7 @@
 		oauthClientInfo = null;
 		oauthClientId = '';
 		oauthClientSecret = '';
+		oauthServerUrl = '';
 
 		enable = true;
 		functionNameFilterList = '';
@@ -390,6 +403,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 			oauthClientId = connection.info?.oauth_client_id ?? '';
 			oauthClientSecret = connection.info?.oauth_client_secret ?? '';
+			oauthServerUrl = connection.info?.oauth_server_url ?? '';
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
@@ -730,6 +744,15 @@
 													placeholder={$i18n.t('Client Secret')}
 													required={false}
 												/>
+												<div class="flex flex-1 items-center">
+													<input
+														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+														type="text"
+														bind:value={oauthServerUrl}
+														placeholder={$i18n.t('OAuth Server URL')}
+														autocomplete="off"
+													/>
+												</div>
 											</div>
 										{/if}
 									</div>

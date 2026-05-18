@@ -1,70 +1,58 @@
-import json
-import logging
 import base64
 import io
+import json
+import logging
 from typing import Optional
 
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
-from fastapi.responses import Response, StreamingResponse, FileResponse
-from pydantic import BaseModel
-from pydantic import field_validator
-
-from open_webui.socket.main import (
-    emit_to_users,
-    enter_room_for_users,
-    sio,
-    get_user_ids_from_room,
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import FileResponse, Response, StreamingResponse
+from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import STATIC_DIR
+from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
+from open_webui.models.channels import (
+    ChannelForm,
+    ChannelModel,
+    ChannelResponse,
+    Channels,
+    ChannelWebhookForm,
+    ChannelWebhookModel,
+    CreateChannelForm,
+)
+from open_webui.models.groups import Groups
+from open_webui.models.messages import (
+    MessageForm,
+    MessageModel,
+    MessageResponse,
+    Messages,
+    MessageWithReactionsResponse,
 )
 from open_webui.models.users import (
     UserIdNameResponse,
     UserIdNameStatusResponse,
     UserListResponse,
-    UserModelResponse,
-    Users,
     UserModel,
+    UserModelResponse,
     UserNameResponse,
+    Users,
 )
-
-from open_webui.models.groups import Groups
-from open_webui.models.channels import (
-    Channels,
-    ChannelModel,
-    ChannelForm,
-    ChannelResponse,
-    CreateChannelForm,
-    ChannelWebhookModel,
-    ChannelWebhookForm,
+from open_webui.socket.main import (
+    emit_to_users,
+    enter_room_for_users,
+    get_user_ids_from_room,
+    sio,
 )
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
-from open_webui.models.messages import (
-    Messages,
-    MessageModel,
-    MessageResponse,
-    MessageWithReactionsResponse,
-    MessageForm,
-)
-
-
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.utils.files import get_image_base64_from_file_id
-
-from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import STATIC_DIR
-
-
 from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
-from open_webui.utils.chat import generate_chat_completion
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.channels import extract_mentions, replace_mentions
-from open_webui.internal.db import get_async_session
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -979,57 +967,48 @@ async def model_response_handler(request, channel, message, user, db=None):
                         ],
                     ]
 
+                # Resolve model config (same helpers automations use)
+                from open_webui.utils.automations import (
+                    _resolve_model_features,
+                    _resolve_model_filter_ids,
+                    _resolve_model_tool_ids,
+                )
+
+                tool_ids = _resolve_model_tool_ids(request.app, model_id)
+                features = _resolve_model_features(request.app, model_id)
+                filter_ids = _resolve_model_filter_ids(request.app, model_id)
+
+                # Build full form_data — same shape as frontend POST.
+                # The channel: prefix routes pipeline events to the
+                # channel emitter in socket/main.py instead of the
+                # default chat emitter.
                 form_data = {
                     'model': model_id,
                     'messages': [
                         system_message,
                         {'role': 'user', 'content': content},
                     ],
-                    'stream': False,
+                    'stream': True,
+                    'chat_id': f'channel:{channel.id}',
+                    'id': response_message.id,
+                    'session_id': f'channel:{channel.id}',
+                    'background_tasks': {},
                 }
+                if tool_ids:
+                    form_data['tool_ids'] = tool_ids
+                if features:
+                    form_data['features'] = features
+                if filter_ids:
+                    form_data['filter_ids'] = filter_ids
 
-                res = await generate_chat_completion(
-                    request,
-                    form_data=form_data,
-                    user=user,
-                )
+                # Call the full chat completion pipeline — streaming,
+                # tools, filters, RAG — everything. The pipeline runs as
+                # an async task; the channel emitter handles progressive
+                # message updates via socket events.
+                await request.app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
-                if res:
-                    if res.get('choices', []) and len(res['choices']) > 0:
-                        await update_message_by_id(
-                            request,
-                            channel.id,
-                            response_message.id,
-                            MessageForm(
-                                **{
-                                    'content': res['choices'][0]['message']['content'],
-                                    'meta': {
-                                        'done': True,
-                                    },
-                                }
-                            ),
-                            user,
-                            db,
-                        )
-                    elif res.get('error', None):
-                        await update_message_by_id(
-                            request,
-                            channel.id,
-                            response_message.id,
-                            MessageForm(
-                                **{
-                                    'content': f'Error: {res["error"]}',
-                                    'meta': {
-                                        'done': True,
-                                    },
-                                }
-                            ),
-                            user,
-                            db,
-                        )
             except Exception as e:
-                log.info(e)
-                pass
+                log.exception(e)
 
     return True
 
@@ -1256,7 +1235,8 @@ async def pin_channel_message(
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
-        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
+        # Pin/unpin mutates is_pinned/pinned_by/pinned_at — require write.
+        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='write', db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     message = await Messages.get_message_by_id(message_id, db=db)
@@ -1367,6 +1347,9 @@ async def update_message_by_id(
 
     if channel.type in ['group', 'dm']:
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+        # Membership is not authorship — block cross-member edits.
+        if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
         if (
@@ -1568,6 +1551,9 @@ async def delete_message_by_id(
 
     if channel.type in ['group', 'dm']:
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+        # Membership is not authorship — block cross-member deletes.
+        if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
         if (

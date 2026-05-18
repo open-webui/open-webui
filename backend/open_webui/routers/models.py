@@ -1,43 +1,43 @@
-from typing import Optional
-import io
-import base64
-import json
+from __future__ import annotations
+
 import asyncio
+import base64
+import io
+import json
 import logging
 import posixpath
+from typing import Optional
 from urllib.parse import unquote
 
-from open_webui.models.groups import Groups
-from open_webui.models.models import (
-    ModelForm,
-    ModelMeta,
-    ModelModel,
-    ModelParams,
-    ModelResponse,
-    ModelListResponse,
-    ModelAccessListResponse,
-    ModelAccessResponse,
-    Models,
-)
-from open_webui.models.access_grants import AccessGrants
-
-from pydantic import BaseModel
-from open_webui.constants import ERROR_MESSAGES
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     Request,
-    status,
     Response,
+    status,
 )
 from fastapi.responses import RedirectResponse, StreamingResponse
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING
 from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.models.models import (
+    ModelAccessListResponse,
+    ModelAccessResponse,
+    ModelForm,
+    ModelListResponse,
+    ModelMeta,
+    ModelModel,
+    ModelParams,
+    ModelResponse,
+    Models,
+)
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _safe_static_redirect_path(url: str) -> Optional[str]:
+def _safe_static_redirect_path(url: str) -> str | None:
     """
     If url is a same-origin static asset path, return a normalized path safe for
     RedirectResponse Location. Otherwise None (caller should fall back to default).
@@ -89,12 +89,12 @@ PAGE_ITEM_COUNT = 30
 
 @router.get('/list', response_model=ModelAccessListResponse)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
-    query: Optional[str] = None,
-    view_option: Optional[str] = None,
-    tag: Optional[str] = None,
-    order_by: Optional[str] = None,
-    direction: Optional[str] = None,
-    page: Optional[int] = 1,
+    query: str | None = None,
+    view_option: str | None = None,
+    tag: str | None = None,
+    order_by: str | None = None,
+    direction: str | None = None,
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -191,7 +191,7 @@ async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Dep
 ############################
 
 
-@router.post('/create', response_model=Optional[ModelModel])
+@router.post('/create', response_model=ModelModel | None)
 async def create_new_model(
     request: Request,
     form_data: ModelForm,
@@ -408,34 +408,41 @@ class ModelIdForm(BaseModel):
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get('/model', response_model=Optional[ModelAccessResponse])
+@router.get('/model', response_model=ModelAccessResponse | None)
 async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
-        if (
+        write_access = (
             (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-            or model.user_id == user.id
+            or user.id == model.user_id
             or await AccessGrants.has_access(
                 user_id=user.id,
                 resource_type='model',
                 resource_id=model.id,
-                permission='read',
+                permission='write',
                 db=db,
             )
+        )
+
+        if write_access or await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='model',
+            resource_id=model.id,
+            permission='read',
+            db=db,
         ):
+            model_dict = model.model_dump()
+            # Strip params (system prompt and other admin-curated config)
+            # for read-only callers — matches the params strip already
+            # enforced on /api/models in utils/models.py.  Owners, admins
+            # under BYPASS_ADMIN_ACCESS_CONTROL, and write-grant holders
+            # still receive the full object so the workspace edit UI keeps
+            # working for users who legitimately curate the model.
+            if not write_access:
+                model_dict['params'] = {}
             return ModelAccessResponse(
-                **model.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='model',
-                        resource_id=model.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
+                **model_dict,
+                write_access=write_access,
             )
         else:
             raise HTTPException(
@@ -456,47 +463,67 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 
 @router.get('/model/profile/image')
 async def get_model_profile_image(
+    request: Request,
     id: str,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    model_meta = await Models.get_model_meta_by_id(id, db=db)
+    profile_image_url = None
+    updated_at = None
 
+    # First, check the database for regular models
+    model_meta = await Models.get_model_meta_by_id(id, db=db)
     if model_meta:
         meta, updated_at = model_meta
         profile_image_url = (meta or {}).get('profile_image_url')
 
-        if profile_image_url:
-            if profile_image_url.startswith('http'):
+    # Fallback: check arena models stored in config (not in the DB)
+    if not profile_image_url:
+        arena_models = getattr(
+            getattr(request.app.state, 'config', None),
+            'EVALUATION_ARENA_MODELS',
+            [],
+        )
+        for arena_model in arena_models:
+            if arena_model.get('id') == id:
+                profile_image_url = arena_model.get('meta', {}).get('profile_image_url')
+                break
+
+    if profile_image_url:
+        if profile_image_url.startswith('http'):
+            if ENABLE_PROFILE_IMAGE_URL_FORWARDING:
                 return Response(
                     status_code=status.HTTP_302_FOUND,
                     headers={'Location': profile_image_url},
                 )
-            elif profile_image_url.startswith('data:image'):
-                try:
-                    header, base64_data = profile_image_url.split(',', 1)
-                    image_data = base64.b64decode(base64_data)
-                    image_buffer = io.BytesIO(image_data)
-                    media_type = header.split(';')[0].lstrip('data:')
+            # When forwarding is disabled, fall through to the
+            # default image to prevent client-side IP/UA/Referer
+            # leaks via 302 redirect to external origins.
+        elif profile_image_url.startswith('data:image'):
+            try:
+                header, base64_data = profile_image_url.split(',', 1)
+                image_data = base64.b64decode(base64_data)
+                image_buffer = io.BytesIO(image_data)
+                media_type = header.split(';')[0].lstrip('data:')
 
-                    headers = {'Content-Disposition': 'inline'}
-                    if updated_at:
-                        headers['ETag'] = f'"{updated_at}"'
+                headers = {'Content-Disposition': 'inline'}
+                if updated_at:
+                    headers['ETag'] = f'"{updated_at}"'
 
-                    return StreamingResponse(
-                        image_buffer,
-                        media_type=media_type,
-                        headers=headers,
-                    )
-                except Exception:
-                    pass
-            else:
-                safe_static = _safe_static_redirect_path(profile_image_url)
-                if safe_static:
-                    return RedirectResponse(
-                        url=safe_static,
-                        status_code=status.HTTP_302_FOUND,
-                    )
+                return StreamingResponse(
+                    image_buffer,
+                    media_type=media_type,
+                    headers=headers,
+                )
+            except Exception:
+                pass
+        else:
+            safe_static = _safe_static_redirect_path(profile_image_url)
+            if safe_static:
+                return RedirectResponse(
+                    url=safe_static,
+                    status_code=status.HTTP_302_FOUND,
+                )
 
     return RedirectResponse(
         url='/static/favicon.png',
@@ -509,7 +536,7 @@ async def get_model_profile_image(
 ############################
 
 
-@router.post('/model/toggle', response_model=Optional[ModelResponse])
+@router.post('/model/toggle', response_model=ModelResponse | None)
 async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
@@ -550,7 +577,7 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Async
 ############################
 
 
-@router.post('/model/update', response_model=Optional[ModelModel])
+@router.post('/model/update', response_model=ModelModel | None)
 async def update_model_by_id(
     request: Request,
     form_data: ModelForm,
@@ -599,11 +626,11 @@ async def update_model_by_id(
 
 class ModelAccessGrantsForm(BaseModel):
     id: str
-    name: Optional[str] = None
+    name: str | None = None
     access_grants: list[dict]
 
 
-@router.post('/model/access/update', response_model=Optional[ModelModel])
+@router.post('/model/access/update', response_model=ModelModel | None)
 async def update_model_access_by_id(
     request: Request,
     form_data: ModelAccessGrantsForm,

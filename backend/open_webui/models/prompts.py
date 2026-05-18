@@ -1,19 +1,18 @@
+from __future__ import annotations
+
 import json
 import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, delete, update, or_, func, text, cast, String
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.groups import Groups
-from open_webui.models.users import Users, User, UserModel, UserResponse
-from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
-
-
+from open_webui.models.groups import Groups
+from open_webui.models.prompt_history import PromptHistories
+from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Boolean, Column, Text, JSON
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # Prompts DB Schema
@@ -40,18 +39,18 @@ class Prompt(Base):
 
 
 class PromptModel(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     command: str
     user_id: str
     name: str
     content: str
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    tags: Optional[list[str]] = None
-    is_active: Optional[bool] = True
-    version_id: Optional[str] = None
-    created_at: Optional[int] = None
-    updated_at: Optional[int] = None
+    data: dict | None = None
+    meta: dict | None = None
+    tags: list[str | None] = None
+    is_active: bool | None = True
+    version_id: str | None = None
+    created_at: int | None = None
+    updated_at: int | None = None
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
@@ -63,11 +62,11 @@ class PromptModel(BaseModel):
 
 
 class PromptUserResponse(PromptModel):
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class PromptAccessResponse(PromptUserResponse):
-    write_access: Optional[bool] = False
+    write_access: bool | None = False
 
 
 class PromptListResponse(BaseModel):
@@ -84,24 +83,24 @@ class PromptForm(BaseModel):
     command: str
     name: str  # Changed from title
     content: str
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    tags: Optional[list[str]] = None
-    access_grants: Optional[list[dict]] = None
-    version_id: Optional[str] = None  # Active version
-    commit_message: Optional[str] = None  # For history tracking
-    is_production: Optional[bool] = True  # Whether to set new version as production
+    data: dict | None = None
+    meta: dict | None = None
+    tags: list[str | None] = None
+    access_grants: list[dict | None] = None
+    version_id: str | None = None  # Active version
+    commit_message: str | None = None  # For history tracking
+    is_production: bool | None = True  # Whether to set new version as production
 
 
 class PromptsTable:
-    async def _get_access_grants(self, prompt_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
+    async def _get_access_grants(self, prompt_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
         return await AccessGrants.get_grants_by_resource('prompt', prompt_id, db=db)
 
     async def _to_prompt_model(
         self,
         prompt: Prompt,
-        access_grants: Optional[list[AccessGrantModel]] = None,
-        db: Optional[AsyncSession] = None,
+        access_grants: list[AccessGrantModel | None] = None,
+        db: AsyncSession | None = None,
     ) -> PromptModel:
         prompt_data = PromptModel.model_validate(prompt).model_dump(exclude={'access_grants'})
         prompt_data['access_grants'] = (
@@ -110,8 +109,8 @@ class PromptsTable:
         return PromptModel.model_validate(prompt_data)
 
     async def insert_new_prompt(
-        self, user_id: str, form_data: PromptForm, db: Optional[AsyncSession] = None
-    ) -> Optional[PromptModel]:
+        self, user_id: str, form_data: PromptForm, db: AsyncSession | None = None
+    ) -> PromptModel | None:
         now = int(time.time())
         prompt_id = str(uuid.uuid4())
 
@@ -171,7 +170,7 @@ class PromptsTable:
         except Exception:
             return None
 
-    async def get_prompt_by_id(self, prompt_id: str, db: Optional[AsyncSession] = None) -> Optional[PromptModel]:
+    async def get_prompt_by_id(self, prompt_id: str, db: AsyncSession | None = None) -> PromptModel | None:
         """Get prompt by UUID."""
         try:
             async with get_async_db_context(db) as db:
@@ -183,7 +182,7 @@ class PromptsTable:
         except Exception:
             return None
 
-    async def get_prompt_by_command(self, command: str, db: Optional[AsyncSession] = None) -> Optional[PromptModel]:
+    async def get_prompt_by_command(self, command: str, db: AsyncSession | None = None) -> PromptModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Prompt).filter_by(command=command))
@@ -194,7 +193,7 @@ class PromptsTable:
         except Exception:
             return None
 
-    async def get_prompts(self, db: Optional[AsyncSession] = None) -> list[PromptUserResponse]:
+    async def get_prompts(self, db: AsyncSession | None = None) -> list[PromptUserResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(Prompt).filter(Prompt.is_active == True).order_by(Prompt.updated_at.desc())
@@ -229,26 +228,53 @@ class PromptsTable:
             return prompts
 
     async def get_prompts_by_user_id(
-        self, user_id: str, permission: str = 'write', db: Optional[AsyncSession] = None
+        self, user_id: str, permission: str = 'write', db: AsyncSession | None = None
     ) -> list[PromptUserResponse]:
-        prompts = await self.get_prompts(db=db)
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
+        async with get_async_db_context(db) as db:
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_group_ids = [group.id for group in user_groups]
 
-        result = []
-        for prompt in prompts:
-            if prompt.user_id == user_id:
-                result.append(prompt)
-            elif await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='prompt',
-                resource_id=prompt.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
+            query = select(Prompt).filter(Prompt.is_active == True).order_by(Prompt.updated_at.desc())
+            query = AccessGrants.has_permission_filter(
                 db=db,
-            ):
-                result.append(prompt)
-        return result
+                query=query,
+                DocumentModel=Prompt,
+                filter={'user_id': user_id, 'group_ids': user_group_ids},
+                resource_type='prompt',
+                permission=permission,
+            )
+
+            result = await db.execute(query)
+            accessible_prompts = result.scalars().all()
+
+            if not accessible_prompts:
+                return []
+
+            prompt_ids = [p.id for p in accessible_prompts]
+            owner_ids = list({p.user_id for p in accessible_prompts})
+
+            users = await Users.get_users_by_user_ids(owner_ids, db=db)
+            users_dict = {u.id: u for u in users}
+            grants_map = await AccessGrants.get_grants_by_resources('prompt', prompt_ids, db=db)
+
+            results = []
+            for prompt in accessible_prompts:
+                user = users_dict.get(prompt.user_id)
+                results.append(
+                    PromptUserResponse.model_validate(
+                        {
+                            **(
+                                await self._to_prompt_model(
+                                    prompt,
+                                    access_grants=grants_map.get(prompt.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
+                            'user': user.model_dump() if user else None,
+                        }
+                    )
+                )
+            return results
 
     async def search_prompts(
         self,
@@ -256,7 +282,7 @@ class PromptsTable:
         filter: dict = {},
         skip: int = 0,
         limit: int = 30,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> PromptListResponse:
         async with get_async_db_context(db) as db:
             # Join with User table for user filtering and sorting
@@ -377,8 +403,8 @@ class PromptsTable:
         command: str,
         form_data: PromptForm,
         user_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[PromptModel]:
+        db: AsyncSession | None = None,
+    ) -> PromptModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Prompt).filter_by(command=command))
@@ -443,8 +469,8 @@ class PromptsTable:
         prompt_id: str,
         form_data: PromptForm,
         user_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[PromptModel]:
+        db: AsyncSession | None = None,
+    ) -> PromptModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Prompt).filter_by(id=prompt_id))
@@ -518,9 +544,9 @@ class PromptsTable:
         prompt_id: str,
         name: str,
         command: str,
-        tags: Optional[list[str]] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[PromptModel]:
+        tags: list[str | None] = None,
+        db: AsyncSession | None = None,
+    ) -> PromptModel | None:
         """Update only name, command, and tags (no history created)."""
         try:
             async with get_async_db_context(db) as db:
@@ -546,8 +572,8 @@ class PromptsTable:
         self,
         prompt_id: str,
         version_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[PromptModel]:
+        db: AsyncSession | None = None,
+    ) -> PromptModel | None:
         """Set the active version of a prompt and restore content from that version's snapshot."""
         try:
             async with get_async_db_context(db) as db:
@@ -579,7 +605,7 @@ class PromptsTable:
         except Exception:
             return None
 
-    async def toggle_prompt_active(self, prompt_id: str, db: Optional[AsyncSession] = None) -> Optional[PromptModel]:
+    async def toggle_prompt_active(self, prompt_id: str, db: AsyncSession | None = None) -> PromptModel | None:
         """Toggle the is_active flag on a prompt."""
         try:
             async with get_async_db_context(db) as db:
@@ -595,7 +621,7 @@ class PromptsTable:
         except Exception:
             return None
 
-    async def delete_prompt_by_command(self, command: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_prompt_by_command(self, command: str, db: AsyncSession | None = None) -> bool:
         """Permanently delete a prompt and its history."""
         try:
             async with get_async_db_context(db) as db:
@@ -612,7 +638,7 @@ class PromptsTable:
         except Exception:
             return False
 
-    async def delete_prompt_by_id(self, prompt_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_prompt_by_id(self, prompt_id: str, db: AsyncSession | None = None) -> bool:
         """Permanently delete a prompt and its history."""
         try:
             async with get_async_db_context(db) as db:
@@ -629,15 +655,41 @@ class PromptsTable:
         except Exception:
             return False
 
-    async def get_tags(self, db: Optional[AsyncSession] = None) -> list[str]:
+    async def get_tags(self, db: AsyncSession | None = None) -> list[str]:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Prompt).filter_by(is_active=True))
-                prompts = result.scalars().all()
+                result = await db.execute(select(Prompt.tags).filter(Prompt.is_active == True))
                 tags = set()
-                for prompt in prompts:
-                    if prompt.tags:
-                        for tag in prompt.tags:
+                for (tag_list,) in result.all():
+                    if tag_list:
+                        for tag in tag_list:
+                            if tag:
+                                tags.add(tag)
+                return sorted(list(tags))
+        except Exception:
+            return []
+
+    async def get_tags_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[str]:
+        try:
+            async with get_async_db_context(db) as db:
+                user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+                user_group_ids = [group.id for group in user_groups]
+
+                query = select(Prompt.tags).filter(Prompt.is_active == True)
+                query = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=query,
+                    DocumentModel=Prompt,
+                    filter={'user_id': user_id, 'group_ids': user_group_ids},
+                    resource_type='prompt',
+                    permission='read',
+                )
+
+                result = await db.execute(query)
+                tags = set()
+                for (tag_list,) in result.all():
+                    if tag_list:
+                        for tag in tag_list:
                             if tag:
                                 tags.add(tag)
                 return sorted(list(tags))

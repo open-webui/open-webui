@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
@@ -7,11 +8,11 @@ from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 log = logging.getLogger(__name__)
 
 
-def search_searxng(
+def search_searxng(  # noqa: PLR0913
     query_url: str,
     query: str,
     count: int,
-    filter_list: Optional[list[str]] = None,
+    filter_list: list[str | None] = None,
     **kwargs,
 ) -> list[SearchResult]:
     """
@@ -28,7 +29,7 @@ def search_searxng(
         language (str): Language filter for the search results; e.g., "all", "en-US", "es". Defaults to "all".
         safesearch (int): Safe search filter for safer web results; 0 = off, 1 = moderate, 2 = strict. Defaults to 1 (moderate).
         time_range (str): Time range for filtering results by date; e.g., "2023-04-05..today" or "all-time". Defaults to ''.
-        categories: (Optional[list[str]]): Specific categories within which the search should be performed, defaulting to an empty string if not provided.
+        categories: (list[str | None]): Specific categories within which the search should be performed, defaulting to an empty string if not provided.
 
     Returns:
         list[SearchResult]: A list of SearchResults sorted by relevance score in descending order.
@@ -38,7 +39,7 @@ def search_searxng(
     """
 
     # Default values for optional parameters are provided as empty strings or None when not specified.
-    language = kwargs.get('language', 'all')
+    language = kwargs.get('language', 'all').strip().rstrip(',')
     safesearch = kwargs.get('safesearch', '1')
     time_range = kwargs.get('time_range', '')
     categories = ''.join(kwargs.get('categories', []))

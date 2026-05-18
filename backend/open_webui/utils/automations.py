@@ -25,14 +25,13 @@ from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
 from fastapi import Request
-from starlette.datastructures import Headers
-
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.automations import Automations, AutomationRuns, AutomationModel
+from open_webui.internal.db import get_async_db
+from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.users import Users
 from open_webui.utils.task import prompt_template
-from open_webui.internal.db import get_async_db
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
@@ -360,7 +359,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await _record_run(automation.id, 'error', error='User not found')
             return
 
-        prompt = prompt_template(automation.data['prompt'], user)
+        prompt = await prompt_template(automation.data['prompt'], user)
         model_id = automation.data['model_id']
         terminal_config = automation.data.get('terminal')
 

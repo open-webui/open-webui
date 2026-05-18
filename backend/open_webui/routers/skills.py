@@ -1,28 +1,25 @@
 import logging
 from typing import Optional
 
-from open_webui.models.groups import Groups
-from pydantic import BaseModel
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
 from open_webui.models.skills import (
+    SkillAccessListResponse,
+    SkillAccessResponse,
     SkillForm,
     SkillModel,
     SkillResponse,
-    SkillUserResponse,
-    SkillAccessResponse,
-    SkillAccessListResponse,
     Skills,
+    SkillUserResponse,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
-
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -176,6 +173,19 @@ async def create_new_skill(
             detail=ERROR_MESSAGES.ID_TAKEN,
         )
 
+    # Strip public/user grants the requesting user is not permitted to assign
+    # (matches the channel/notes/calendar pattern). Without this, a user with
+    # workspace.skills permission could attach principal_id='*' read/write
+    # grants in the create payload, bypassing the sharing.public_skills gate
+    # that the dedicated /access/update endpoint already enforces.
+    form_data.access_grants = await filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_skills',
+    )
+
     try:
         skill = await Skills.insert_new_skill(user.id, form_data, db=db)
         if skill:
@@ -275,6 +285,19 @@ async def update_skill_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    # Strip public/user grants the requesting user is not permitted to assign
+    # (matches the channel/notes/calendar pattern). The access check above only
+    # restricts WHO can write to the skill; this filter restricts WHICH grants
+    # they may set, so a non-admin owner cannot make their own skill publicly
+    # readable/writable without sharing.public_skills permission.
+    form_data.access_grants = await filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_skills',
+    )
 
     try:
         updated = {

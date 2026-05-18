@@ -1,129 +1,122 @@
+from __future__ import annotations
+
+import asyncio
 import json
 import logging
 import mimetypes
 import os
-import shutil
-import asyncio
-
 import re
+import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Iterator, Optional, Sequence, Union
 
+import tiktoken
 from fastapi import (
+    APIRouter,
     Depends,
     FastAPI,
-    Query,
     File,
     Form,
     HTTPException,
-    UploadFile,
+    Query,
     Request,
+    UploadFile,
     status,
-    APIRouter,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel
-import tiktoken
-
-
+from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.documents import Document
 from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
     TokenTextSplitter,
-    MarkdownHeaderTextSplitter,
 )
-from langchain_core.documents import Document
-
-from open_webui.models.files import FileModel, FileUpdateForm, Files
-from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.models.knowledge import Knowledges
-from open_webui.storage.provider import Storage
-from open_webui.internal.db import get_async_db, get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-
-
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-
-# Document loaders
-
-from open_webui.retrieval.loaders.youtube import YoutubeLoader
-
-# Web search engines
-from open_webui.retrieval.web.main import SearchResult
-from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.retrieval.web.ollama import search_ollama_cloud
-from open_webui.retrieval.web.perplexity_search import search_perplexity_search
-from open_webui.retrieval.web.brave import search_brave
-from open_webui.retrieval.web.kagi import search_kagi
-from open_webui.retrieval.web.mojeek import search_mojeek
-from open_webui.retrieval.web.bocha import search_bocha
-from open_webui.retrieval.web.duckduckgo import search_duckduckgo
-from open_webui.retrieval.web.google_pse import search_google_pse
-from open_webui.retrieval.web.jina_search import search_jina
-from open_webui.retrieval.web.searchapi import search_searchapi
-from open_webui.retrieval.web.serpapi import search_serpapi
-from open_webui.retrieval.web.searxng import search_searxng
-from open_webui.retrieval.web.yacy import search_yacy
-from open_webui.retrieval.web.serper import search_serper
-from open_webui.retrieval.web.serply import search_serply
-from open_webui.retrieval.web.serpstack import search_serpstack
-from open_webui.retrieval.web.tavily import search_tavily
-from open_webui.retrieval.web.bing import search_bing
-from open_webui.retrieval.web.azure import search_azure
-from open_webui.retrieval.web.exa import search_exa
-from open_webui.retrieval.web.perplexity import search_perplexity
-from open_webui.retrieval.web.sougou import search_sougou
-from open_webui.retrieval.web.firecrawl import search_firecrawl
-from open_webui.retrieval.web.external import search_external
-from open_webui.retrieval.web.yandex import search_yandex
-from open_webui.retrieval.web.ydc import search_youcom
-
-from open_webui.retrieval.utils import (
-    build_loader_from_config,
-    filter_accessible_collections,
-    get_content_from_url,
-    get_embedding_function,
-    get_reranking_function,
-    get_model_path,
-    query_collection,
-    query_collection_with_hybrid_search,
-    query_doc,
-    query_doc_with_hybrid_search,
-)
-from open_webui.retrieval.vector.utils import filter_metadata
-from open_webui.utils.misc import (
-    calculate_sha256_string,
-    sanitize_text_for_db,
-)
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
-
 from open_webui.config import (
+    DEFAULT_LOCALE,
     ENV,
+    RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_EMBEDDING_QUERY_PREFIX,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
-    DEFAULT_LOCALE,
-    RAG_EMBEDDING_CONTENT_PREFIX,
-    RAG_EMBEDDING_QUERY_PREFIX,
 )
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
     RAG_EMBEDDING_TIMEOUT,
     SENTENCE_TRANSFORMERS_BACKEND,
-    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
+    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
 )
+from open_webui.internal.db import get_async_db, get_async_session
+from open_webui.models.files import FileModel, Files, FileUpdateForm
+from open_webui.models.knowledge import Knowledges
 
-from open_webui.constants import ERROR_MESSAGES
+# Document loaders
+from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.utils import (
+    build_loader_from_config,
+    filter_accessible_collections,
+    get_content_from_url,
+    get_embedding_function,
+    get_model_path,
+    get_reranking_function,
+    query_collection,
+    query_collection_with_hybrid_search,
+    query_doc,
+    query_doc_with_hybrid_search,
+)
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.utils import filter_metadata
+from open_webui.retrieval.web.azure import search_azure
+from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.bocha import search_bocha
+from open_webui.retrieval.web.brave import search_brave
+from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
+from open_webui.retrieval.web.duckduckgo import search_duckduckgo
+from open_webui.retrieval.web.exa import search_exa
+from open_webui.retrieval.web.external import search_external
+from open_webui.retrieval.web.firecrawl import search_firecrawl
+from open_webui.retrieval.web.google_pse import search_google_pse
+from open_webui.retrieval.web.jina_search import search_jina
+from open_webui.retrieval.web.kagi import search_kagi
+
+# Web search engines
+from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.mojeek import search_mojeek
+from open_webui.retrieval.web.ollama import search_ollama_cloud
+from open_webui.retrieval.web.perplexity import search_perplexity
+from open_webui.retrieval.web.perplexity_search import search_perplexity_search
+from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.searxng import search_searxng
+from open_webui.retrieval.web.serpapi import search_serpapi
+from open_webui.retrieval.web.serper import search_serper
+from open_webui.retrieval.web.serply import search_serply
+from open_webui.retrieval.web.serpstack import search_serpstack
+from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.tavily import search_tavily
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.web.yacy import search_yacy
+from open_webui.retrieval.web.yandex import search_yandex
+from open_webui.retrieval.web.ydc import search_youcom
+from open_webui.storage.provider import Storage
+from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.misc import (
+    calculate_sha256_string,
+    sanitize_text_for_db,
+)
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -161,7 +154,7 @@ def get_ef(
 
 def get_rf(
     engine: str = '',
-    reranking_model: Optional[str] = None,
+    reranking_model: str | None = None,
     external_reranker_url: str = '',
     external_reranker_api_key: str = '',
     external_reranker_timeout: str = '',
@@ -248,7 +241,7 @@ router = APIRouter()
 
 
 class CollectionNameForm(BaseModel):
-    collection_name: Optional[str] = None
+    collection_name: str | None = None
 
 
 class ProcessUrlForm(CollectionNameForm):
@@ -256,23 +249,7 @@ class ProcessUrlForm(CollectionNameForm):
 
 
 class SearchForm(BaseModel):
-    queries: List[str]
-
-
-@router.get('/')
-async def get_status(request: Request):
-    return {
-        'status': True,
-        'CHUNK_SIZE': request.app.state.config.CHUNK_SIZE,
-        'CHUNK_OVERLAP': request.app.state.config.CHUNK_OVERLAP,
-        'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
-        'RAG_EMBEDDING_ENGINE': request.app.state.config.RAG_EMBEDDING_ENGINE,
-        'RAG_EMBEDDING_MODEL': request.app.state.config.RAG_EMBEDDING_MODEL,
-        'RAG_RERANKING_MODEL': request.app.state.config.RAG_RERANKING_MODEL,
-        'RAG_EMBEDDING_BATCH_SIZE': request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-        'ENABLE_ASYNC_EMBEDDING': request.app.state.config.ENABLE_ASYNC_EMBEDDING,
-        'RAG_EMBEDDING_CONCURRENT_REQUESTS': request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
-    }
+    queries: list[str]
 
 
 @router.get('/embedding')
@@ -317,14 +294,14 @@ class AzureOpenAIConfigForm(BaseModel):
 
 
 class EmbeddingModelUpdateForm(BaseModel):
-    openai_config: Optional[OpenAIConfigForm] = None
-    ollama_config: Optional[OllamaConfigForm] = None
-    azure_openai_config: Optional[AzureOpenAIConfigForm] = None
+    openai_config: OpenAIConfigForm | None = None
+    ollama_config: OllamaConfigForm | None = None
+    azure_openai_config: AzureOpenAIConfigForm | None = None
     RAG_EMBEDDING_ENGINE: str
     RAG_EMBEDDING_MODEL: str
-    RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
-    ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
-    RAG_EMBEDDING_CONCURRENT_REQUESTS: Optional[int] = 0
+    RAG_EMBEDDING_BATCH_SIZE: int | None = 1
+    ENABLE_ASYNC_EMBEDDING: bool | None = True
+    RAG_EMBEDDING_CONCURRENT_REQUESTS: int | None = 0
 
 
 def unload_embedding_model(request: Request):
@@ -350,7 +327,7 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
     unload_embedding_model(request)
     try:
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
-        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL
+        request.app.state.config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL.strip()
         request.app.state.config.RAG_EMBEDDING_BATCH_SIZE = form_data.RAG_EMBEDDING_BATCH_SIZE
         request.app.state.config.ENABLE_ASYNC_EMBEDDING = form_data.ENABLE_ASYNC_EMBEDDING
         request.app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS = form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS
@@ -534,6 +511,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'GOOGLE_PSE_API_KEY': request.app.state.config.GOOGLE_PSE_API_KEY,
             'GOOGLE_PSE_ENGINE_ID': request.app.state.config.GOOGLE_PSE_ENGINE_ID,
             'BRAVE_SEARCH_API_KEY': request.app.state.config.BRAVE_SEARCH_API_KEY,
+            'BRAVE_SEARCH_CONTEXT_TOKENS': request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS,
             'KAGI_SEARCH_API_KEY': request.app.state.config.KAGI_SEARCH_API_KEY,
             'MOJEEK_SEARCH_API_KEY': request.app.state.config.MOJEEK_SEARCH_API_KEY,
             'BOCHA_SEARCH_API_KEY': request.app.state.config.BOCHA_SEARCH_API_KEY,
@@ -583,154 +561,155 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
 
 
 class WebConfig(BaseModel):
-    ENABLE_WEB_SEARCH: Optional[bool] = None
-    WEB_SEARCH_ENGINE: Optional[str] = None
-    WEB_SEARCH_TRUST_ENV: Optional[bool] = None
-    WEB_SEARCH_RESULT_COUNT: Optional[int] = None
-    WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
-    WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
-    WEB_FETCH_MAX_CONTENT_LENGTH: Optional[int] = None
-    WEB_LOADER_CONCURRENT_REQUESTS: Optional[int] = None
-    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
-    BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
-    OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
-    SEARXNG_QUERY_URL: Optional[str] = None
-    SEARXNG_LANGUAGE: Optional[str] = None
-    YACY_QUERY_URL: Optional[str] = None
-    YACY_USERNAME: Optional[str] = None
-    YACY_PASSWORD: Optional[str] = None
-    GOOGLE_PSE_API_KEY: Optional[str] = None
-    GOOGLE_PSE_ENGINE_ID: Optional[str] = None
-    BRAVE_SEARCH_API_KEY: Optional[str] = None
-    KAGI_SEARCH_API_KEY: Optional[str] = None
-    MOJEEK_SEARCH_API_KEY: Optional[str] = None
-    BOCHA_SEARCH_API_KEY: Optional[str] = None
-    SERPSTACK_API_KEY: Optional[str] = None
-    SERPSTACK_HTTPS: Optional[bool] = None
-    SERPER_API_KEY: Optional[str] = None
-    SERPLY_API_KEY: Optional[str] = None
-    DDGS_BACKEND: Optional[str] = None
-    TAVILY_API_KEY: Optional[str] = None
-    SEARCHAPI_API_KEY: Optional[str] = None
-    SEARCHAPI_ENGINE: Optional[str] = None
-    SERPAPI_API_KEY: Optional[str] = None
-    SERPAPI_ENGINE: Optional[str] = None
-    JINA_API_KEY: Optional[str] = None
-    JINA_API_BASE_URL: Optional[str] = None
-    BING_SEARCH_V7_ENDPOINT: Optional[str] = None
-    BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
-    EXA_API_KEY: Optional[str] = None
-    PERPLEXITY_API_KEY: Optional[str] = None
-    PERPLEXITY_MODEL: Optional[str] = None
-    PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
-    PERPLEXITY_SEARCH_API_URL: Optional[str] = None
-    SOUGOU_API_SID: Optional[str] = None
-    SOUGOU_API_SK: Optional[str] = None
-    WEB_LOADER_ENGINE: Optional[str] = None
-    WEB_LOADER_TIMEOUT: Optional[str] = None
-    ENABLE_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
-    PLAYWRIGHT_WS_URL: Optional[str] = None
-    PLAYWRIGHT_TIMEOUT: Optional[int] = None
-    FIRECRAWL_API_KEY: Optional[str] = None
-    FIRECRAWL_API_BASE_URL: Optional[str] = None
-    FIRECRAWL_TIMEOUT: Optional[str] = None
-    TAVILY_EXTRACT_DEPTH: Optional[str] = None
-    EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
-    EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
-    EXTERNAL_WEB_LOADER_URL: Optional[str] = None
-    EXTERNAL_WEB_LOADER_API_KEY: Optional[str] = None
-    YOUTUBE_LOADER_LANGUAGE: Optional[List[str]] = None
-    YOUTUBE_LOADER_PROXY_URL: Optional[str] = None
-    YOUTUBE_LOADER_TRANSLATION: Optional[str] = None
-    YANDEX_WEB_SEARCH_URL: Optional[str] = None
-    YANDEX_WEB_SEARCH_API_KEY: Optional[str] = None
-    YANDEX_WEB_SEARCH_CONFIG: Optional[str] = None
-    YOUCOM_API_KEY: Optional[str] = None
+    ENABLE_WEB_SEARCH: bool | None = None
+    WEB_SEARCH_ENGINE: str | None = None
+    WEB_SEARCH_TRUST_ENV: bool | None = None
+    WEB_SEARCH_RESULT_COUNT: int | None = None
+    WEB_SEARCH_CONCURRENT_REQUESTS: int | None = None
+    WEB_SEARCH_DOMAIN_FILTER_LIST: list[str | None] = []
+    WEB_FETCH_MAX_CONTENT_LENGTH: int | None = None
+    WEB_LOADER_CONCURRENT_REQUESTS: int | None = None
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: bool | None = None
+    BYPASS_WEB_SEARCH_WEB_LOADER: bool | None = None
+    OLLAMA_CLOUD_WEB_SEARCH_API_KEY: str | None = None
+    SEARXNG_QUERY_URL: str | None = None
+    SEARXNG_LANGUAGE: str | None = None
+    YACY_QUERY_URL: str | None = None
+    YACY_USERNAME: str | None = None
+    YACY_PASSWORD: str | None = None
+    GOOGLE_PSE_API_KEY: str | None = None
+    GOOGLE_PSE_ENGINE_ID: str | None = None
+    BRAVE_SEARCH_API_KEY: str | None = None
+    BRAVE_SEARCH_CONTEXT_TOKENS: int | None = None
+    KAGI_SEARCH_API_KEY: str | None = None
+    MOJEEK_SEARCH_API_KEY: str | None = None
+    BOCHA_SEARCH_API_KEY: str | None = None
+    SERPSTACK_API_KEY: str | None = None
+    SERPSTACK_HTTPS: bool | None = None
+    SERPER_API_KEY: str | None = None
+    SERPLY_API_KEY: str | None = None
+    DDGS_BACKEND: str | None = None
+    TAVILY_API_KEY: str | None = None
+    SEARCHAPI_API_KEY: str | None = None
+    SEARCHAPI_ENGINE: str | None = None
+    SERPAPI_API_KEY: str | None = None
+    SERPAPI_ENGINE: str | None = None
+    JINA_API_KEY: str | None = None
+    JINA_API_BASE_URL: str | None = None
+    BING_SEARCH_V7_ENDPOINT: str | None = None
+    BING_SEARCH_V7_SUBSCRIPTION_KEY: str | None = None
+    EXA_API_KEY: str | None = None
+    PERPLEXITY_API_KEY: str | None = None
+    PERPLEXITY_MODEL: str | None = None
+    PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
+    PERPLEXITY_SEARCH_API_URL: str | None = None
+    SOUGOU_API_SID: str | None = None
+    SOUGOU_API_SK: str | None = None
+    WEB_LOADER_ENGINE: str | None = None
+    WEB_LOADER_TIMEOUT: str | None = None
+    ENABLE_WEB_LOADER_SSL_VERIFICATION: bool | None = None
+    PLAYWRIGHT_WS_URL: str | None = None
+    PLAYWRIGHT_TIMEOUT: int | None = None
+    FIRECRAWL_API_KEY: str | None = None
+    FIRECRAWL_API_BASE_URL: str | None = None
+    FIRECRAWL_TIMEOUT: str | None = None
+    TAVILY_EXTRACT_DEPTH: str | None = None
+    EXTERNAL_WEB_SEARCH_URL: str | None = None
+    EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
+    EXTERNAL_WEB_LOADER_URL: str | None = None
+    EXTERNAL_WEB_LOADER_API_KEY: str | None = None
+    YOUTUBE_LOADER_LANGUAGE: list[str | None] = None
+    YOUTUBE_LOADER_PROXY_URL: str | None = None
+    YOUTUBE_LOADER_TRANSLATION: str | None = None
+    YANDEX_WEB_SEARCH_URL: str | None = None
+    YANDEX_WEB_SEARCH_API_KEY: str | None = None
+    YANDEX_WEB_SEARCH_CONFIG: str | None = None
+    YOUCOM_API_KEY: str | None = None
 
 
 class ConfigForm(BaseModel):
     # RAG settings
-    RAG_TEMPLATE: Optional[str] = None
-    TOP_K: Optional[int] = None
-    BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
-    RAG_FULL_CONTEXT: Optional[bool] = None
+    RAG_TEMPLATE: str | None = None
+    TOP_K: int | None = None
+    BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
+    RAG_FULL_CONTEXT: bool | None = None
 
     # Hybrid search settings
-    ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
-    ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: Optional[bool] = None
-    TOP_K_RERANKER: Optional[int] = None
-    RELEVANCE_THRESHOLD: Optional[float] = None
-    HYBRID_BM25_WEIGHT: Optional[float] = None
+    ENABLE_RAG_HYBRID_SEARCH: bool | None = None
+    ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: bool | None = None
+    TOP_K_RERANKER: int | None = None
+    RELEVANCE_THRESHOLD: float | None = None
+    HYBRID_BM25_WEIGHT: float | None = None
 
     # Content extraction settings
-    CONTENT_EXTRACTION_ENGINE: Optional[str] = None
-    PDF_EXTRACT_IMAGES: Optional[bool] = None
-    PDF_LOADER_MODE: Optional[str] = None
+    CONTENT_EXTRACTION_ENGINE: str | None = None
+    PDF_EXTRACT_IMAGES: bool | None = None
+    PDF_LOADER_MODE: str | None = None
 
-    DATALAB_MARKER_API_KEY: Optional[str] = None
-    DATALAB_MARKER_API_BASE_URL: Optional[str] = None
-    DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
-    DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
-    DATALAB_MARKER_FORCE_OCR: Optional[bool] = None
-    DATALAB_MARKER_PAGINATE: Optional[bool] = None
-    DATALAB_MARKER_STRIP_EXISTING_OCR: Optional[bool] = None
-    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: Optional[bool] = None
-    DATALAB_MARKER_FORMAT_LINES: Optional[bool] = None
-    DATALAB_MARKER_USE_LLM: Optional[bool] = None
-    DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
+    DATALAB_MARKER_API_KEY: str | None = None
+    DATALAB_MARKER_API_BASE_URL: str | None = None
+    DATALAB_MARKER_ADDITIONAL_CONFIG: str | None = None
+    DATALAB_MARKER_SKIP_CACHE: bool | None = None
+    DATALAB_MARKER_FORCE_OCR: bool | None = None
+    DATALAB_MARKER_PAGINATE: bool | None = None
+    DATALAB_MARKER_STRIP_EXISTING_OCR: bool | None = None
+    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: bool | None = None
+    DATALAB_MARKER_FORMAT_LINES: bool | None = None
+    DATALAB_MARKER_USE_LLM: bool | None = None
+    DATALAB_MARKER_OUTPUT_FORMAT: str | None = None
 
-    EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
-    EXTERNAL_DOCUMENT_LOADER_API_KEY: Optional[str] = None
+    EXTERNAL_DOCUMENT_LOADER_URL: str | None = None
+    EXTERNAL_DOCUMENT_LOADER_API_KEY: str | None = None
 
-    TIKA_SERVER_URL: Optional[str] = None
-    DOCLING_SERVER_URL: Optional[str] = None
-    DOCLING_API_KEY: Optional[str] = None
-    DOCLING_PARAMS: Optional[dict] = None
-    DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
-    DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
-    DOCUMENT_INTELLIGENCE_MODEL: Optional[str] = None
-    MISTRAL_OCR_API_BASE_URL: Optional[str] = None
-    MISTRAL_OCR_API_KEY: Optional[str] = None
+    TIKA_SERVER_URL: str | None = None
+    DOCLING_SERVER_URL: str | None = None
+    DOCLING_API_KEY: str | None = None
+    DOCLING_PARAMS: dict | None = None
+    DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = None
+    DOCUMENT_INTELLIGENCE_KEY: str | None = None
+    DOCUMENT_INTELLIGENCE_MODEL: str | None = None
+    MISTRAL_OCR_API_BASE_URL: str | None = None
+    MISTRAL_OCR_API_KEY: str | None = None
     MISTRAL_OCR_USE_BASE64: Optional[bool] = None
     MISTRAL_OCR_MODEL: Optional[str] = None
-    PADDLEOCR_VL_BASE_URL: Optional[str] = None
-    PADDLEOCR_VL_TOKEN: Optional[str] = None
+    PADDLEOCR_VL_BASE_URL: str | None = None
+    PADDLEOCR_VL_TOKEN: str | None = None
 
     # MinerU settings
-    MINERU_API_MODE: Optional[str] = None
-    MINERU_API_URL: Optional[str] = None
-    MINERU_API_KEY: Optional[str] = None
-    MINERU_API_TIMEOUT: Optional[str] = None
-    MINERU_PARAMS: Optional[dict] = None
+    MINERU_API_MODE: str | None = None
+    MINERU_API_URL: str | None = None
+    MINERU_API_KEY: str | None = None
+    MINERU_API_TIMEOUT: str | None = None
+    MINERU_PARAMS: dict | None = None
 
     # Reranking settings
-    RAG_RERANKING_MODEL: Optional[str] = None
-    RAG_RERANKING_ENGINE: Optional[str] = None
-    RAG_RERANKING_BATCH_SIZE: Optional[int] = None
-    RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
-    RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
-    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
+    RAG_RERANKING_MODEL: str | None = None
+    RAG_RERANKING_ENGINE: str | None = None
+    RAG_RERANKING_BATCH_SIZE: int | None = None
+    RAG_EXTERNAL_RERANKER_URL: str | None = None
+    RAG_EXTERNAL_RERANKER_API_KEY: str | None = None
+    RAG_EXTERNAL_RERANKER_TIMEOUT: str | None = None
 
     # Chunking settings
-    TEXT_SPLITTER: Optional[str] = None
-    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
-    CHUNK_SIZE: Optional[int] = None
-    CHUNK_MIN_SIZE_TARGET: Optional[int] = None
-    CHUNK_OVERLAP: Optional[int] = None
+    TEXT_SPLITTER: str | None = None
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: bool | None = None
+    CHUNK_SIZE: int | None = None
+    CHUNK_MIN_SIZE_TARGET: int | None = None
+    CHUNK_OVERLAP: int | None = None
 
     # File upload settings
-    FILE_MAX_SIZE: Optional[Union[int, str]] = None
-    FILE_MAX_COUNT: Optional[Union[int, str]] = None
-    FILE_IMAGE_COMPRESSION_WIDTH: Optional[Union[int, str]] = None
-    FILE_IMAGE_COMPRESSION_HEIGHT: Optional[Union[int, str]] = None
-    ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
+    FILE_MAX_SIZE: Union[int, str | None] = None
+    FILE_MAX_COUNT: Union[int, str | None] = None
+    FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
+    FILE_IMAGE_COMPRESSION_HEIGHT: Union[int, str | None] = None
+    ALLOWED_FILE_EXTENSIONS: list[str | None] = None
 
     # Integration settings
-    ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
-    ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
+    ENABLE_GOOGLE_DRIVE_INTEGRATION: bool | None = None
+    ENABLE_ONEDRIVE_INTEGRATION: bool | None = None
 
     # Web search settings
-    web: Optional[WebConfig] = None
+    web: WebConfig | None = None
 
 
 @router.post('/config/update')
@@ -1097,6 +1076,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.GOOGLE_PSE_API_KEY = form_data.web.GOOGLE_PSE_API_KEY
         request.app.state.config.GOOGLE_PSE_ENGINE_ID = form_data.web.GOOGLE_PSE_ENGINE_ID
         request.app.state.config.BRAVE_SEARCH_API_KEY = form_data.web.BRAVE_SEARCH_API_KEY
+        if form_data.web.BRAVE_SEARCH_CONTEXT_TOKENS is not None:
+            request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS = form_data.web.BRAVE_SEARCH_CONTEXT_TOKENS
         request.app.state.config.KAGI_SEARCH_API_KEY = form_data.web.KAGI_SEARCH_API_KEY
         request.app.state.config.MOJEEK_SEARCH_API_KEY = form_data.web.MOJEEK_SEARCH_API_KEY
         request.app.state.config.BOCHA_SEARCH_API_KEY = form_data.web.BOCHA_SEARCH_API_KEY
@@ -1235,6 +1216,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'GOOGLE_PSE_API_KEY': request.app.state.config.GOOGLE_PSE_API_KEY,
             'GOOGLE_PSE_ENGINE_ID': request.app.state.config.GOOGLE_PSE_ENGINE_ID,
             'BRAVE_SEARCH_API_KEY': request.app.state.config.BRAVE_SEARCH_API_KEY,
+            'BRAVE_SEARCH_CONTEXT_TOKENS': request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS,
             'KAGI_SEARCH_API_KEY': request.app.state.config.KAGI_SEARCH_API_KEY,
             'MOJEEK_SEARCH_API_KEY': request.app.state.config.MOJEEK_SEARCH_API_KEY,
             'BOCHA_SEARCH_API_KEY': request.app.state.config.BOCHA_SEARCH_API_KEY,
@@ -1370,7 +1352,7 @@ def save_docs_to_vector_db(
     request: Request,
     docs,
     collection_name,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
@@ -1568,8 +1550,8 @@ def save_docs_to_vector_db(
 
 class ProcessFileForm(BaseModel):
     file_id: str
-    content: Optional[str] = None
-    collection_name: Optional[str] = None
+    content: str | None = None
+    collection_name: str | None = None
 
 
 @router.post('/process/file')
@@ -1596,6 +1578,8 @@ async def process_file(
 
             if collection_name is None:
                 collection_name = f'file-{file.id}'
+            else:
+                await _validate_collection_access([collection_name], user, access_type='write')
 
             if form_data.content:
                 # Update the content in the file
@@ -1794,7 +1778,7 @@ async def process_file(
 class ProcessTextForm(BaseModel):
     name: str
     content: str
-    collection_name: Optional[str] = None
+    collection_name: str | None = None
 
 
 @router.post('/process/text')
@@ -1979,6 +1963,17 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
+    elif engine == 'brave_llm_context':
+        if request.app.state.config.BRAVE_SEARCH_API_KEY:
+            return search_brave_llm_context(
+                request.app.state.config.BRAVE_SEARCH_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS,
             )
         else:
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
@@ -2373,10 +2368,10 @@ async def _validate_collection_access(collection_names: list[str], user, access_
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
-    k: Optional[int] = None
-    k_reranker: Optional[int] = None
-    r: Optional[float] = None
-    hybrid: Optional[bool] = None
+    k: int | None = None
+    k_reranker: int | None = None
+    r: float | None = None
+    hybrid: bool | None = None
 
 
 @router.post('/query/doc')
@@ -2439,12 +2434,12 @@ async def query_doc_handler(
 class QueryCollectionsForm(BaseModel):
     collection_names: list[str]
     query: str
-    k: Optional[int] = None
-    k_reranker: Optional[int] = None
-    r: Optional[float] = None
-    hybrid: Optional[bool] = None
-    hybrid_bm25_weight: Optional[float] = None
-    enable_enriched_texts: Optional[bool] = None
+    k: int | None = None
+    k_reranker: int | None = None
+    r: float | None = None
+    hybrid: bool | None = None
+    hybrid_bm25_weight: float | None = None
+    enable_enriched_texts: bool | None = None
 
 
 @router.post('/query/collection')
@@ -2597,24 +2592,24 @@ async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
 if ENV == 'dev':
 
     @router.get('/ef/{text}')
-    async def get_embeddings(request: Request, text: Optional[str] = 'Hello World!'):
+    async def get_embeddings(request: Request, text: str | None = 'Hello World!'):
         return {'result': await request.app.state.EMBEDDING_FUNCTION(text, prefix=RAG_EMBEDDING_QUERY_PREFIX)}
 
 
 class BatchProcessFilesForm(BaseModel):
-    files: List[FileModel]
+    files: list[FileModel]
     collection_name: str
 
 
 class BatchProcessFilesResult(BaseModel):
     file_id: str
     status: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class BatchProcessFilesResponse(BaseModel):
-    results: List[BatchProcessFilesResult]
-    errors: List[BatchProcessFilesResult]
+    results: list[BatchProcessFilesResult]
+    errors: list[BatchProcessFilesResult]
 
 
 @router.post('/process/files/batch')
@@ -2635,12 +2630,15 @@ async def process_files_batch(
 
     collection_name = form_data.collection_name
 
-    file_results: List[BatchProcessFilesResult] = []
-    file_errors: List[BatchProcessFilesResult] = []
-    file_updates: List[FileUpdateForm] = []
+    if collection_name:
+        await _validate_collection_access([collection_name], user, access_type='write')
+
+    file_results: list[BatchProcessFilesResult] = []
+    file_errors: list[BatchProcessFilesResult] = []
+    file_updates: list[FileUpdateForm] = []
 
     # Prepare all documents first
-    all_docs: List[Document] = []
+    all_docs: list[Document] = []
 
     for file in form_data.files:
         try:
@@ -2666,7 +2664,7 @@ async def process_files_batch(
                 continue
 
             text_content = file.data.get('content', '')
-            docs: List[Document] = [
+            docs: list[Document] = [
                 Document(
                     page_content=text_content.replace('<br/>', '\n'),
                     metadata={

@@ -1,10 +1,10 @@
+from open_webui.config import (
+    ENABLE_MILVUS_MULTITENANCY_MODE,
+    ENABLE_QDRANT_MULTITENANCY_MODE,
+    VECTOR_DB,
+)
 from open_webui.retrieval.vector.main import VectorDBBase
 from open_webui.retrieval.vector.type import VectorType
-from open_webui.config import (
-    VECTOR_DB,
-    ENABLE_QDRANT_MULTITENANCY_MODE,
-    ENABLE_MILVUS_MULTITENANCY_MODE,
-)
 
 
 class Vector:

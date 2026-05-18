@@ -12,13 +12,13 @@ from urllib.parse import unquote
 import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
-from starlette.background import BackgroundTask
-
-from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_connection_access
+from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
+from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.auth import get_verified_user
+from starlette.background import BackgroundTask
 
 log = logging.getLogger(__name__)
 
@@ -151,6 +151,8 @@ async def proxy_terminal(
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
         }
+        if TERMINAL_PROXY_HEADERS:
+            filtered_headers.update(TERMINAL_PROXY_HEADERS)
 
         # Stream binary responses directly
         if any(t in upstream_content_type for t in STREAMING_CONTENT_TYPES):
@@ -196,6 +198,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     """
     import asyncio
     import json
+
     from open_webui.utils.auth import decode_token
 
     # First-message authentication

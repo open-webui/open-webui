@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
 
 class BaseReranker(ABC):

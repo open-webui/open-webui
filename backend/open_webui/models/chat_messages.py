@@ -3,21 +3,24 @@ import time
 import uuid
 from typing import Any, Optional
 
-from sqlalchemy import select, delete, func, cast, Integer
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import normalize_usage
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     Column,
     ForeignKey,
-    Text,
-    JSON,
     Index,
+    Integer,
+    Text,
+    cast,
+    delete,
+    func,
+    select,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # Helpers
@@ -46,6 +49,25 @@ def get_usage(data: dict) -> Optional[dict]:
     """Extract and normalize usage from message data."""
     usage = data.get('usage') or (data.get('info') or {}).get('usage')
     return normalize_usage(usage) if usage else None
+
+
+def _token_columns(dialect: str):
+    """Return (input_tokens, output_tokens) SQL column expressions.
+
+    Falls back to OpenAI-style keys (prompt_tokens / completion_tokens)
+    when the normalized keys are absent.
+    """
+    if dialect == 'sqlite':
+        extract = lambda key: cast(func.json_extract(ChatMessage.usage, f'$.{key}'), Integer)
+    elif dialect == 'postgresql':
+        extract = lambda key: cast(func.json_extract_path_text(ChatMessage.usage, key), Integer)
+    else:
+        raise NotImplementedError(f'Unsupported dialect: {dialect}')
+
+    return (
+        func.coalesce(extract('input_tokens'), extract('prompt_tokens')),
+        func.coalesce(extract('output_tokens'), extract('completion_tokens')),
+    )
 
 
 ####################
@@ -222,6 +244,79 @@ class ChatMessageTable:
             messages = result.scalars().all()
             return [ChatMessageModel.model_validate(message) for message in messages]
 
+    # DB column names that differ from the JSON message keys.
+    DB_TO_JSON_KEY_MAP = {
+        'parent_id': 'parentId',
+        'model_id': 'model',
+        'status_history': 'statusHistory',
+        'created_at': 'timestamp',
+    }
+    # DB-internal columns excluded from the reconstructed message dict.
+    EXCLUDED_COLUMNS = frozenset({'id', 'chat_id', 'user_id', 'updated_at'})
+
+    async def get_messages_map_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> Optional[dict]:
+        """Build a {message_id: message_dict} map from chat_message rows.
+
+        Returns the same shape as chat.history.messages so callers
+        (get_message_list, middleware) work unchanged.  Returns None if
+        no rows exist for the chat (caller should fall back to the
+        embedded JSON blob for legacy chats).
+        """
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(ChatMessage).filter_by(chat_id=chat_id))
+            rows = result.scalars().all()
+
+        if not rows:
+            return None
+
+        # Strip the composite-id prefix ("{chat_id}-") to recover the
+        # original message_id used as map key.
+        prefix = f'{chat_id}-'
+        prefix_len = len(prefix)
+        col_keys = [c.key for c in ChatMessage.__table__.columns]
+
+        messages_map: dict[str, dict] = {}
+        for row in rows:
+            msg_id = row.id[prefix_len:] if row.id.startswith(prefix) else row.id
+
+            msg: dict = {'id': msg_id}
+            for key in col_keys:
+                if key in self.EXCLUDED_COLUMNS:
+                    continue
+                val = getattr(row, key)
+                if val is None:
+                    continue
+                json_key = self.DB_TO_JSON_KEY_MAP.get(key, key)
+                msg[json_key] = val
+
+            # Ensure content always has a value
+            msg.setdefault('content', '')
+
+            # Mirror usage into info.usage for callers that read it there
+            if 'usage' in msg:
+                msg['info'] = {'usage': msg['usage']}
+
+            messages_map[msg_id] = msg
+
+        # Reconstruct childrenIds from parentId links so that the map
+        # is fully navigable (callers like the frontend rely on this).
+        for msg_id, msg in messages_map.items():
+            parent_id = msg.get('parentId')
+            if parent_id and parent_id in messages_map:
+                parent = messages_map[parent_id]
+                children = parent.get('childrenIds')
+                if children is None:
+                    parent['childrenIds'] = [msg_id]
+                elif msg_id not in children:
+                    children.append(msg_id)
+
+        # Ensure every message has a childrenIds list (leaf nodes get [])
+        for msg in messages_map.values():
+            if 'childrenIds' not in msg:
+                msg['childrenIds'] = []
+
+        return messages_map
+
     async def get_messages_by_user_id(
         self,
         user_id: str,
@@ -343,20 +438,7 @@ class ChatMessageTable:
             bind = await db.connection()
             dialect = bind.dialect.name
 
-            if dialect == 'sqlite':
-                input_tokens = cast(func.json_extract(ChatMessage.usage, '$.input_tokens'), Integer)
-                output_tokens = cast(func.json_extract(ChatMessage.usage, '$.output_tokens'), Integer)
-            elif dialect == 'postgresql':
-                input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'input_tokens'),
-                    Integer,
-                )
-                output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'output_tokens'),
-                    Integer,
-                )
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect}')
+            input_tokens, output_tokens = _token_columns(dialect)
 
             stmt = select(
                 ChatMessage.model_id,
@@ -404,20 +486,7 @@ class ChatMessageTable:
             bind = await db.connection()
             dialect = bind.dialect.name
 
-            if dialect == 'sqlite':
-                input_tokens = cast(func.json_extract(ChatMessage.usage, '$.input_tokens'), Integer)
-                output_tokens = cast(func.json_extract(ChatMessage.usage, '$.output_tokens'), Integer)
-            elif dialect == 'postgresql':
-                input_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'input_tokens'),
-                    Integer,
-                )
-                output_tokens = cast(
-                    func.json_extract_path_text(ChatMessage.usage, 'output_tokens'),
-                    Integer,
-                )
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect}')
+            input_tokens, output_tokens = _token_columns(dialect)
 
             stmt = select(
                 ChatMessage.user_id,
@@ -513,6 +582,7 @@ class ChatMessageTable:
         """Get message counts grouped by day and model."""
         async with get_async_db_context(db) as db:
             from datetime import datetime, timedelta
+
             from open_webui.models.groups import GroupMember
 
             stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
