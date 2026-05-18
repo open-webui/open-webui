@@ -35,6 +35,8 @@ network as OpenWebUI. There is no external path for header spoofing.
 | `.env.example` | Template for OpenWebUI OAUTH environment variables |
 | `custom/` | Python overrides bind-mounted in production (middleware, tools) |
 | `static/` | Jawafdehi branding assets (favicon, logo, splash screens) |
+| `nginx/chat.jawafdehi.org.conf` | Nginx reverse proxy config (HTTP → HTTPS → OpenWebUI:8080) |
+| `bin/deploy.sh` | Deployment script for monal-instance1 |
 
 ## Quick Start
 
@@ -85,7 +87,15 @@ ChatUserIdentity.objects.create(owui_user_id="abc123-def456", user=user)
 
 ## Production Deployment (monal-instance1)
 
-The production stack uses pre-built Docker Hub images and custom Python overrides:
+The production stack uses pre-built Docker Hub images and custom Python overrides.
+
+### Quick Deploy
+
+```bash
+./bin/deploy.sh
+```
+
+### Manual Deploy
 
 ```bash
 cp mcp.env.example mcp.env
@@ -93,6 +103,11 @@ cp .env.example .env
 # Edit both with real credentials
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+### With GCP Cloud Logging
+
+```bash
+LOG_DRIVER=gcplogs ./bin/deploy.sh
 
 Custom Python overrides in `custom/` are bind-mounted directly into the container,
 avoiding the need to rebuild the Docker image for code changes.
