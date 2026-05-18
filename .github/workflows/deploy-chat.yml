@@ -43,7 +43,7 @@ jobs:
       - name: Host setup
         if: ${{ inputs.setup_only || github.event_name == 'workflow_dispatch' }}
         run: |
-          ssh monal-instance1 'sudo mkdir -p /opt/openwebui /opt/openwebui-secrets && sudo chown -R $USER:$USER /opt/openwebui /opt/openwebui-secrets'
+          ssh monal-instance1 'sudo mkdir -p /opt/openwebui /opt/openwebui-secrets && sudo chown -R $USER:$USER /opt/openwebui /opt/openwebui-secrets && if [ -d /home/ubuntu/secrets ]; then for f in .env mcp.env owui-log-writer.credentials.json; do sudo cp -n /home/ubuntu/secrets/$f /opt/openwebui-secrets/ 2>/dev/null; done; sudo chown -R $USER:$USER /opt/openwebui-secrets; fi'
 
       - name: Generate deploy timestamp
         if: ${{ !inputs.setup_only }}
