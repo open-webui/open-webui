@@ -32,14 +32,14 @@ done
 
 # Assert required secret files
 echo "--- Checking secrets ---"
-for f in .env mcp.env; do
+for f in .env mcp.env admin-api-key.txt; do
   [ -f "${SECRETS_DIR}/${f}" ] || die "${SECRETS_DIR}/${f} required but missing"
 done
 echo "  Secrets OK."
 
 # Verify bundle
 echo "--- Verifying bundle ---"
-for f in docker-compose.prod.yml custom/middleware.py custom/tools_utils.py custom/tools_models.py static/favicon.ico static/logo.png; do
+for f in docker-compose.prod.yml code/middleware.py code/tools_utils.py code/tools_models.py static/favicon.ico static/logo.png; do
   [ -f "${BUNDLE}/${f}" ] || die "missing bundle file: ${f}"
 done
 echo "  Bundle verified."
@@ -61,13 +61,16 @@ docker pull "jawafdehi/open-webui:${BRANCH}"
 # Redeploy
 echo "--- Redeploying ---"
 cd "${TARGET}"
+docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
 # Bootstrap configs if script exists
 BOOTSTRAP="${TARGET}/bin/bootstrap-config.sh"
 if [ -x "${BOOTSTRAP}" ]; then
   echo "--- Bootstrapping configs ---"
-  "${BOOTSTRAP}"
+  OWUI_API_KEY="$(cat "${SECRETS_DIR}/admin-api-key.txt")" \
+  OWUI_BASE_URL="https://chat.jawafdehi.org" \
+  "${BOOTSTRAP}" || echo "  Bootstrap completed with warnings (non-fatal)"
 fi
 
 echo "=== Deploy complete ==="
