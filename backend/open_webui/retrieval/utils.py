@@ -167,11 +167,21 @@ def _is_text_content_type(content_type: str) -> bool:
     return not ct  # empty / missing → assume HTML
 
 
+def _load_url_with_loader(request, url: str) -> tuple[str, list]:
+    loader = get_loader(request, url)
+    docs = loader.load()
+    content = ' '.join([doc.page_content for doc in docs])
+    return content, docs
+
+
 def get_content_from_url(request, url: str) -> str:
     from open_webui.retrieval.web.utils import validate_url
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
+
+    if is_youtube_url(url):
+        return _load_url_with_loader(request, url)
 
     # Streamed GET to check Content-Type without downloading the body.
     # allow_redirects=False prevents redirect-based SSRF: validate_url() above is
@@ -190,10 +200,7 @@ def get_content_from_url(request, url: str) -> str:
     if response is None or _is_text_content_type(content_type):
         if response is not None:
             response.close()
-        loader = get_loader(request, url)
-        docs = loader.load()
-        content = ' '.join([doc.page_content for doc in docs])
-        return content, docs
+        return _load_url_with_loader(request, url)
 
     # Binary content (PDF, DOCX, XLSX, PPTX, etc.) — download and extract
     try:
