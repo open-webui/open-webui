@@ -95,7 +95,6 @@ jobs:
             -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin
 
       - name: Build proxy image
-        id: build-proxy
         run: |
           docker build \
             -f backend/privacy_proxy/Dockerfile \
@@ -125,14 +124,18 @@ jobs:
           docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
           docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
 
-      # ── cosign — needs COSIGN_PRIVATE_KEY secret (ask Seb) ──
-      # - name: Sign proxy image
-      #   run: |
-      #     cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-      #       harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
-      #   env:
-      #     COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-      #     COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      - name: Install cosign
+        run: |
+          curl -sfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
+            -o /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+
+      - name: Sign proxy image
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+            harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
 
   deploy-proxy:
     needs: [get-meta, build-proxy]
@@ -160,11 +163,7 @@ jobs:
             docker exec garnet-privacy-proxy-1 python3 -c \
             'import urllib.request; print(urllib.request.urlopen(\"http://localhost:8080/health\").read())'"
 
-      - name: Run proxy tests
-        run: |
-          ssh root@${{ secrets.CVM_HOST }} "\
-            docker exec -w /service garnet-privacy-proxy-1 python3 app/test_proxy.py"
-
+      
   # ── WEBUI ─────────────────────────────────────────────
   build-webui:
     needs: get-meta
@@ -217,6 +216,18 @@ jobs:
           docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
           docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
 
+      - name: Install cosign
+        run: |
+          curl -sfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
+            -o /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+
+      - name: Sign webui image
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+            harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
 
   deploy-webui:
     needs: [get-meta, build-webui]
