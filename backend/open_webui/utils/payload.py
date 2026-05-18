@@ -149,6 +149,13 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
     params = remove_open_webui_params(params)
     params = dict(params)  # local copy so .pop is safe
 
+    # service_tier is a per-request user choice (selected from the UI), not a
+    # model-level default. ModelParams allows extra="allow" so a stray value
+    # can persist in model.params from old data; without this strip, the
+    # open-ended else: out[key] = value in apply_model_params_to_body would
+    # silently override the request's tier with the model's stale one.
+    params.pop("service_tier", None)
+
     custom_params = params.pop("custom_params", {})
     if custom_params:
         custom_params = dict(custom_params)

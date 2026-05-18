@@ -1609,8 +1609,6 @@ async def process_chat_response(
     event_emitter = None
     event_caller = None
 
-    log.info(f"🔍 METADATA CHECK: session_id={metadata.get('session_id')}, chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}")
-
     if (
         "session_id" in metadata
         and metadata["session_id"]
@@ -1619,11 +1617,8 @@ async def process_chat_response(
         and "message_id" in metadata
         and metadata["message_id"]
     ):
-        log.info(f"✅ ALL CONDITIONS MET - Creating event_emitter with metadata: {metadata}")
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
-    else:
-        log.warning(f"❌ CONDITIONS NOT MET - event_emitter will be None!")
 
     model_id = form_data.get("model", "")
 

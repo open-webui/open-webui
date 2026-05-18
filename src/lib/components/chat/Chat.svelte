@@ -5031,6 +5031,7 @@
 									bind:webSearchEnabled
 									bind:studyModeEnabled
 									bind:dataVizEnabled
+									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -5044,10 +5045,6 @@
 										// Capture reasoning effort from MessageInput (only if changed to prevent infinite loop)
 										if (data.reasoning && data.reasoning.effort !== reasoning.effort) {
 											reasoning = data.reasoning;
-										}
-										// Capture service tier from MessageInput
-										if (data.service_tier && data.service_tier !== serviceTier) {
-											serviceTier = data.service_tier;
 										}
 									}}
 									on:upload={async (e) => {
@@ -5094,6 +5091,7 @@
 									bind:webSearchEnabled
 									bind:studyModeEnabled
 									bind:dataVizEnabled
+									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

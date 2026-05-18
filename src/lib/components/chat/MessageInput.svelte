@@ -128,7 +128,7 @@
 	// back to the OpenAI vocabulary when the model didn't customize it.
 	const DEFAULT_SERVICE_TIERS = ['default', 'flex', 'priority'] as const;
 	type ServiceTier = string;
-	let serviceTier: ServiceTier = 'default';
+	export let serviceTier: ServiceTier = 'default';
 	let serviceTierByModel: Record<string, ServiceTier> = {};
 	let showServiceTierSelector = false;
 	let allowedServiceTiers: readonly string[] = DEFAULT_SERVICE_TIERS;
@@ -341,11 +341,7 @@
 		studyModeEnabled,
 		dataVizEnabled,
 		// Only include reasoning when the selected model is configured as a reasoning model.
-		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {}),
-		// Always ship service_tier — but force 'default' when the model has it
-		// disabled, so a stale 'flex' from localStorage can't leak into the
-		// payload after the user switches models or disables service_tier.
-		service_tier: showServiceTierSelector ? serviceTier : 'default'
+		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {})
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
