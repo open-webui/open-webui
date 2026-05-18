@@ -12,7 +12,7 @@
 #     cd /opt/openwebui && ./bin/deploy.sh
 #
 # Requires:
-#   - Docker and docker compose
+#   - Docker and docker compose (user must be in docker group)
 #   - mcp.env and .env configured
 #   - gcloud authenticated for gcplogs driver (owui-log-writer@newnepal2)
 
@@ -22,6 +22,38 @@ BRANCH="${BRANCH:-jawafdehi-main}"
 TARGET="/opt/openwebui"
 BUNDLE="/tmp/openwebui-deploy"
 SECRETS_DIR="/opt/openwebui-secrets"
+
+maybe_sudo() {
+  if [ -w "$(dirname "$1")" ] || [ -w "$1" ] 2>/dev/null; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+ensure_dir() {
+  for d in "$@"; do
+    if [ -d "$d" ] && [ -w "$d" ]; then
+      continue
+    fi
+    mkdir -p "$d" 2>/dev/null || sudo mkdir -p "$d"
+  done
+}
+
+sync_to_target() {
+  rsync -av --delete \
+    --exclude='/.env' \
+    --exclude='/mcp.env' \
+    --exclude='/data' \
+    --exclude='/venv' \
+    "${BUNDLE}/" "${TARGET}/" 2>/dev/null \
+    || sudo rsync -av --delete \
+    --exclude='/.env' \
+    --exclude='/mcp.env' \
+    --exclude='/data' \
+    --exclude='/venv' \
+    "${BUNDLE}/" "${TARGET}/"
+}
 
 echo "=== Deploying chat.jawafdehi.org (branch: ${BRANCH}) ==="
 
@@ -45,12 +77,14 @@ if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
   done
   echo "  Bundle verified."
 
+  # Ensure target directories exist
+  ensure_dir "${TARGET}" "${SECRETS_DIR}"
+
   # Preserve secrets before replacing target
   echo "--- Preserving secrets ---"
-  mkdir -p "${SECRETS_DIR}"
   for f in .env mcp.env; do
     if [ -f "${TARGET}/${f}" ]; then
-      cp -p "${TARGET}/${f}" "${SECRETS_DIR}/${f}"
+      maybe_sudo cp -p "${TARGET}/${f}" "${SECRETS_DIR}/${f}"
       echo "  Saved ${f} → ${SECRETS_DIR}/${f}"
     elif [ ! -f "${SECRETS_DIR}/${f}" ]; then
       echo "  WARNING: ${f} not found in ${TARGET} or ${SECRETS_DIR} — deploy may fail"
@@ -59,17 +93,12 @@ if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
 
   # Sync bundle to target (preserve data volume, secrets are external)
   echo "--- Syncing to ${TARGET} ---"
-  rsync -av --delete \
-    --exclude='/.env' \
-    --exclude='/mcp.env' \
-    --exclude='/data' \
-    --exclude='/venv' \
-    "${BUNDLE}/" "${TARGET}/"
+  sync_to_target
 
   # Restore secrets (if not already provided by external secrets dir)
   for f in .env mcp.env; do
     if [ -f "${SECRETS_DIR}/${f}" ] && [ ! -f "${TARGET}/${f}" ]; then
-      cp -p "${SECRETS_DIR}/${f}" "${TARGET}/${f}"
+      maybe_sudo cp -p "${SECRETS_DIR}/${f}" "${TARGET}/${f}"
       echo "  Restored ${f} from ${SECRETS_DIR}"
     fi
   done
