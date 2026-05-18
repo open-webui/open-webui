@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - jawafdehi-custom
+      - jawafdehi-main
     tags:
       - v*
 

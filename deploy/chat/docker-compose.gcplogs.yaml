@@ -1,0 +1,17 @@
+# Docker Compose override to ship Open WebUI container logs to GCP Cloud Logging.
+#
+# Usage:
+#   docker compose -f docker-compose.yaml -f docker-compose.gcplogs.yaml up -d
+#
+# Requires:
+#   - gcloud CLI installed and authenticated with owui-log-writer@newnepal2 SA
+#   - GOOGLE_APPLICATION_CREDENTIALS set or gcloud ADC configured on the host
+
+services:
+  open-webui:
+    logging:
+      driver: gcplogs
+      options:
+        gcp-project: newnepal2
+        gcp-log-cmd: "true"
+        labels: service=chat.jawafdehi.org

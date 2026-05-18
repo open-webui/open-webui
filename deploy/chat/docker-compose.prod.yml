@@ -1,0 +1,74 @@
+# chat.jawafdehi.org — Production deployment (monal-instance1)
+#
+# Uses pre-built Docker Hub images tagged jawafdehi-main.
+# Custom Python overrides are bind-mounted for rapid iteration.
+# Branding assets are mounted from deploy/chat/static/.
+#
+# Prerequisites on host:
+#   cp mcp.env.example mcp.env          # fill in real values
+#   cp .env.example .env                # fill in OAUTH secrets
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Architecture:
+#   User → Google OAuth → OpenWebUI (jawafdehi-main image)
+#                            │
+#                            ▼  http://jawafdehi-mcp:8000
+#                     jawafdehi-mcp → jawafdehi-api
+
+version: "3.8"
+
+services:
+  openwebui:
+    image: jawafdehi/open-webui:jawafdehi-main
+    container_name: openwebui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - openwebui-data:/app/backend/data
+      - ./custom/middleware.py:/app/backend/open_webui/utils/middleware.py:ro
+      - ./custom/tools_utils.py:/app/backend/open_webui/utils/tools.py:ro
+      - ./custom/tools_models.py:/app/backend/open_webui/models/tools.py:ro
+    environment:
+      - WEBUI_NAME=Jawafdehi Chat
+      - WEBUI_URL=https://chat.jawafdehi.org
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_FORWARD_USER_INFO_HEADERS=true
+      - ENABLE_MCP=true
+      - BYPASS_MODEL_ACCESS_CONTROL=true
+      - ENABLE_OAUTH_SIGNUP=true
+      - ENABLE_LOGIN_FORM=false
+      - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
+      - OAUTH_PROVIDER=google
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - OPENID_PROVIDER_URL=https://accounts.google.com
+      - OAUTH_CLIENT_INFO_ENCRYPTION_KEY=${OAUTH_CLIENT_INFO_ENCRYPTION_KEY}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  jawafdehi-mcp:
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "apt-get update -qq && apt-get install -y -qq git && uvx --from git+https://github.com/Jawafdehi/jawafdehi-mcp.git jawafdehi-mcp-http"
+    container_name: jawafdehi-mcp
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - mcp.env
+    environment:
+      - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=8000
+      - LOG_LEVEL=info
+    volumes:
+      - chat_logs:/var/log/jawafdehi-mcp
+
+volumes:
+  openwebui-data:
+  chat_logs:
+    driver: local

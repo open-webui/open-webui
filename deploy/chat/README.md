@@ -27,9 +27,14 @@ network as OpenWebUI. There is no external path for header spoofing.
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.yml` | jawafdehi-mcp service definition (add to existing OpenWebUI compose) |
+| `docker-compose.yml` | Reference stack (builds from `jawafdehi-main` source). Suitable for development. |
+| `docker-compose.prod.yml` | Production deployment config (uses pre-built Docker Hub images). Matches monal-instance1. |
+| `docker-compose.gcplogs.yaml` | GCP Cloud Logging driver override for `docker-compose.prod.yml`. |
 | `openwebui/tools-config.json` | OpenWebUI External Tools MCP server config |
 | `mcp.env.example` | Template for jawafdehi-mcp environment variables |
+| `.env.example` | Template for OpenWebUI OAUTH environment variables |
+| `custom/` | Python overrides bind-mounted in production (middleware, tools) |
+| `static/` | Jawafdehi branding assets (favicon, logo, splash screens) |
 
 ## Quick Start
 
@@ -78,9 +83,39 @@ user = User.objects.get(username="caseworker.name")
 ChatUserIdentity.objects.create(owui_user_id="abc123-def456", user=user)
 ```
 
+## Production Deployment (monal-instance1)
+
+The production stack uses pre-built Docker Hub images and custom Python overrides:
+
+```bash
+cp mcp.env.example mcp.env
+cp .env.example .env
+# Edit both with real credentials
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Custom Python overrides in `custom/` are bind-mounted directly into the container,
+avoiding the need to rebuild the Docker image for code changes.
+
+## GCP Cloud Logging
+
+To ship container logs to GCP Cloud Logging, apply the gcplogs override:
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.gcplogs.yaml up -d
+```
+
+Requires:
+- gcloud CLI installed and authenticated on the host
+- `owui-log-writer@newnepal2` service account credentials configured
+- `GOOGLE_APPLICATION_CREDENTIALS` set to the SA key file path
+
+See [JAWA-1361](/JAWA/issues/JAWA-1361) for the investigation and implementation details.
+
 ## Security
 
 - jawafdehi-mcp port is internal only (`expose`, not `ports`) — unreachable from outside
 - OpenWebUI's Custom Headers are the sole source of `X-Jawafdehi-*` headers
 - Service account token is never exposed to end users
 - jawafdehi-api enforces authorization server-side regardless of tool requests
+- Never commit `.env`, `mcp.env`, or GCP service account keys to the repository

@@ -1,13 +1,13 @@
 # chat.jawafdehi.org — Full stack deployment
 #
-# Builds OpenWebUI from the jawafdehi-custom branch and runs jawafdehi-mcp
+# Builds OpenWebUI from the jawafdehi-main branch and runs jawafdehi-mcp
 # on an internal Docker network.
 #
 # Prerequisites:
 #   cp mcp.env.example mcp.env  # then edit with real values
 #
 # Architecture:
-#   OpenWebUI (jawafdehi-custom) → http://jawafdehi-mcp:8000 (Docker network)
+#   OpenWebUI (jawafdehi-main) → http://jawafdehi-mcp:8000 (Docker network)
 #                                  → jawafdehi-api (identity resolution)
 #
 # Note: The uv:bookworm-slim image does not include git.
@@ -32,7 +32,7 @@ version: "3.8"
 services:
   open-webui:
     build:
-      context: https://github.com/Jawafdehi/open-webui.git#jawafdehi-custom
+      context: https://github.com/Jawafdehi/open-webui.git#jawafdehi-main
       dockerfile: Dockerfile
     container_name: open-webui
     restart: unless-stopped
