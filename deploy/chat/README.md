@@ -28,15 +28,14 @@ network as OpenWebUI. There is no external path for header spoofing.
 | File | Purpose |
 |------|---------|
 | `docker-compose.yml` | Reference stack (builds from `jawafdehi-main` source). Suitable for development. |
-| `docker-compose.prod.yml` | Production deployment config (uses pre-built Docker Hub images). Matches monal-instance1. |
-| `docker-compose.gcplogs.yaml` | GCP Cloud Logging driver override for `docker-compose.prod.yml`. |
+| `docker-compose.prod.yml` | Production deployment config (pre-built images, MCP, GCP Cloud Logging). Single-file stack. |
 | `openwebui/tools-config.json` | OpenWebUI External Tools MCP server config |
 | `mcp.env.example` | Template for jawafdehi-mcp environment variables |
 | `.env.example` | Template for OpenWebUI OAUTH environment variables |
 | `custom/` | Python overrides bind-mounted in production (middleware, tools) |
 | `static/` | Jawafdehi branding assets (favicon, logo, splash screens) |
 | `nginx/chat.jawafdehi.org.conf` | Nginx reverse proxy config (HTTP → HTTPS → OpenWebUI:8080) |
-| `bin/deploy.sh` | Deployment script for monal-instance1 |
+| `bin/deploy.sh` | Self-contained deploy script (run on monal host; pulls compose + custom files from repo) |
 
 ## Quick Start
 
@@ -87,13 +86,17 @@ ChatUserIdentity.objects.create(owui_user_id="abc123-def456", user=user)
 
 ## Production Deployment (monal-instance1)
 
-The production stack uses pre-built Docker Hub images and custom Python overrides.
+The production stack uses pre-built Docker Hub images, custom Python overrides,
+and GCP Cloud Logging — all in a single `docker-compose.prod.yml`.
 
-### Quick Deploy
+### Quick Deploy (from monal host)
 
 ```bash
-./bin/deploy.sh
+cd /opt/openwebui && ./deploy.sh
 ```
+
+This pulls the latest compose file, custom Python overrides, and static assets
+from the `jawafdehi-main` branch, then pulls the latest Docker image and restarts.
 
 ### Manual Deploy
 
@@ -104,26 +107,11 @@ cp .env.example .env
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### With GCP Cloud Logging
+### GCP Cloud Logging
 
-```bash
-LOG_DRIVER=gcplogs ./bin/deploy.sh
-
-Custom Python overrides in `custom/` are bind-mounted directly into the container,
-avoiding the need to rebuild the Docker image for code changes.
-
-## GCP Cloud Logging
-
-To ship container logs to GCP Cloud Logging, apply the gcplogs override:
-
-```bash
-docker compose -f docker-compose.prod.yml -f docker-compose.gcplogs.yaml up -d
-```
-
-Requires:
-- gcloud CLI installed and authenticated on the host
-- `owui-log-writer@newnepal2` service account credentials configured
-- `GOOGLE_APPLICATION_CREDENTIALS` set to the SA key file path
+The gcplogs driver is baked into `docker-compose.prod.yml` (newnepal2 project).
+Requires gcloud CLI authenticated on the host with
+`owui-log-writer@newnepal2` service account credentials.
 
 See [JAWA-1361](/JAWA/issues/JAWA-1361) for the investigation and implementation details.
 

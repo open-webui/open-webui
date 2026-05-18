@@ -1,43 +1,55 @@
 #!/usr/bin/env bash
-# deploy.sh — Deploy chat.jawafdehi.org stack on monal-instance1
+# deploy.sh — Deploy chat.jawafdehi.org stack
 #
-# Usage:
-#   ./deploy.sh                    # deploy latest jawafdehi-main image
-#   LOG_DRIVER=gcplogs ./deploy.sh # deploy with GCP Cloud Logging
+# Run from within the monal host (/opt/openwebui).
+# Pulls the latest compose file, custom Python overrides, and static
+# assets from the jawafdehi-main branch, then restarts the Docker stack.
+#
+# Usage (on monal-instance1):
+#   cd /opt/openwebui && ./deploy.sh
 #
 # Requires:
-#   - SSH access to monal-instance1
-#   - Docker and docker compose on the target host
-#   - mcp.env and .env configured on the target host
+#   - Docker and docker compose
+#   - mcp.env and .env configured
+#   - gcloud authenticated for gcplogs driver (owui-log-writer@newnepal2)
 
 set -euo pipefail
 
-SSH_HOST="${SSH_HOST:-monal-instance1}"
-DEPLOY_DIR="${DEPLOY_DIR:-/opt/openwebui}"
-COMPOSE_FILE="docker-compose.prod.yml"
 BRANCH="${BRANCH:-jawafdehi-main}"
-LOG_DRIVER="${LOG_DRIVER:-}"
+REPO_BASE="https://raw.githubusercontent.com/Jawafdehi/open-webui/${BRANCH}/deploy/chat"
 
 echo "=== Deploying chat.jawafdehi.org (branch: ${BRANCH}) ==="
 
-# Pull latest deploy files from the repo branch
-echo "--- Updating deploy files from jawafdehi-main ---"
-ssh "$SSH_HOST" "cd ${DEPLOY_DIR} && \
-  curl -sSfL -o docker-compose.prod.yml https://raw.githubusercontent.com/Jawafdehi/open-webui/${BRANCH}/deploy/chat/docker-compose.prod.yml && \
-  curl -sSfL -o docker-compose.gcplogs.yaml https://raw.githubusercontent.com/Jawafdehi/open-webui/${BRANCH}/deploy/chat/docker-compose.gcplogs.yaml"
+# Pull latest deployment files from the repo
+echo "--- Updating compose file ---"
+curl -sSfL -o docker-compose.prod.yml "${REPO_BASE}/docker-compose.prod.yml"
+
+echo "--- Updating custom Python overrides ---"
+mkdir -p custom
+curl -sSfL -o custom/middleware.py    "${REPO_BASE}/custom/middleware.py"
+curl -sSfL -o custom/tools_utils.py   "${REPO_BASE}/custom/tools_utils.py"
+curl -sSfL -o custom/tools_models.py  "${REPO_BASE}/custom/tools_models.py"
+
+echo "--- Updating static assets ---"
+mkdir -p static
+for f in apple-touch-icon.png custom.css favicon-96x96.png favicon-dark.png \
+         favicon.ico favicon.png favicon.svg logo.png site.webmanifest \
+         splash-dark.png splash.png web-app-manifest-192x192.png \
+         web-app-manifest-512x512.png; do
+  curl -sSfL -o "static/${f}" "${REPO_BASE}/static/${f}"
+done
+
+echo "--- Updating env templates (if not already present) ---"
+test -f .env.example   || curl -sSfL -o .env.example   "${REPO_BASE}/.env.example"
+test -f mcp.env.example || curl -sSfL -o mcp.env.example "${REPO_BASE}/mcp.env.example"
 
 # Pull latest Docker image
 echo "--- Pulling latest image ---"
-ssh "$SSH_HOST" "docker pull jawafdehi/open-webui:${BRANCH}"
+docker pull "jawafdehi/open-webui:${BRANCH}"
 
-# Restart the stack
-if [ -n "$LOG_DRIVER" ]; then
-  echo "--- Redeploying with gcplogs logging driver ---"
-  ssh "$SSH_HOST" "cd ${DEPLOY_DIR} && docker compose -f ${COMPOSE_FILE} -f docker-compose.gcplogs.yaml up -d --remove-orphans"
-else
-  echo "--- Redeploying ---"
-  ssh "$SSH_HOST" "cd ${DEPLOY_DIR} && docker compose -f ${COMPOSE_FILE} up -d --remove-orphans"
-fi
+# Redeploy
+echo "--- Redeploying ---"
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
 echo "=== Deploy complete ==="
 echo "Verify: curl -s https://chat.jawafdehi.org/ | head -5"
