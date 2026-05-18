@@ -2702,6 +2702,7 @@ PADDLEOCR_VL_BASE_URL = PersistentConfig(
     'PADDLEOCR_VL_BASE_URL',
     'rag.paddleocr_vl_base_url',
     os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080'),
+)
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     os.getenv('USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
