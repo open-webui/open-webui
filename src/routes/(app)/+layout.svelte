@@ -44,6 +44,8 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import CitationModal from '$lib/components/chat/Messages/Citations/CitationModal.svelte';
+	import { citationModal, closeCitation } from '$lib/stores/citations';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -56,6 +58,10 @@
 	let localDBChats = [];
 
 	let version;
+
+	let citationModalShow = false;
+	$: citationModalShow = $citationModal.show;
+	$: if (!citationModalShow && $citationModal.show) closeCitation();
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
@@ -378,6 +384,13 @@
 
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
+
+<CitationModal
+	bind:show={citationModalShow}
+	citation={$citationModal.citation}
+	showRelevance={$citationModal.showRelevance}
+	showPercentage={$citationModal.showPercentage}
+/>
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
