@@ -1,2 +1,55 @@
-/* Jawafdehi branding overrides for OpenWebUI */
-/* Loaded via app.html as /static/custom.css */
+:root {
+  --jawafdehi-red: #dc2626;
+  --jawafdehi-orange: #ea580c;
+  --jawafdehi-dark: #171717;
+}
+
+header nav a[href="/"],
+header nav span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Replace title text in sidebar header */
+.sidebar-header span,
+nav a div span:first-of-type {
+  font-weight: 700;
+}
+
+/* Ensure logo renders properly in sidebar */
+.sidebar-logo img,
+nav a img[alt="logo"],
+nav img[alt="Open WebUI"],
+img[alt="Open WebUI"] {
+  display: inline-block;
+}
+
+/* Override default OpenWebUI accent color with Jawafdehi red */
+.hover\:bg-accent:hover,
+.bg-accent {
+  background-color: var(--jawafdehi-red) !important;
+}
+
+/* Keep original accent for selected items */
+button.bg-accent,
+a.bg-accent,
+.selected {
+  background-color: var(--jawafdehi-red) !important;
+}
+
+/* Jawafdehi orange accent for secondary highlights */
+.text-accent {
+  color: #dc2626 !important;
+}
+
+/* Improve sidebar branding area */
+aside nav > div:first-of-type {
+  border-bottom: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+/* Admin/About dialog brand color */
+.about-section strong,
+.admin-header span {
+  color: #dc2626;
+}
