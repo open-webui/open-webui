@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { embed, showControls, showEmbeds } from '$lib/stores';
-
-	import CitationModal from './Citations/CitationModal.svelte';
+	import { openCitation } from '$lib/stores/citations';
 
 	const i18n = getContext('i18n');
 
@@ -16,12 +15,7 @@
 	let showPercentage = false;
 	let showRelevance = true;
 
-	let citationModal = null;
-
 	let showCitations = false;
-	let showCitationModal = false;
-
-	let selectedCitation: any = null;
 
 	export const showSourceModal = (sourceId) => {
 		let index;
@@ -61,12 +55,10 @@
 						});
 					}
 				} else {
-					selectedCitation = citations[index];
-					showCitationModal = true;
+					openCitation(citations[index], { showRelevance, showPercentage });
 				}
 			} else {
-				selectedCitation = citations[index];
-				showCitationModal = true;
+				openCitation(citations[index], { showRelevance, showPercentage });
 			}
 		}
 	};
@@ -151,13 +143,6 @@
 	};
 </script>
 
-<CitationModal
-	bind:show={showCitationModal}
-	citation={selectedCitation}
-	{showPercentage}
-	{showRelevance}
-/>
-
 {#if citations.length > 0}
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
@@ -217,8 +202,7 @@
 					})}
 					class="no-toggle outline-hidden flex dark:text-gray-300 bg-transparent text-gray-600 rounded-xl gap-1.5 items-center"
 					on:click={() => {
-						showCitationModal = true;
-						selectedCitation = citation;
+						openCitation(citation, { showRelevance, showPercentage });
 					}}
 				>
 					<div class=" font-medium bg-gray-50 dark:bg-gray-850 rounded-md px-1">
