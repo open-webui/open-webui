@@ -3,7 +3,11 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /service
 COPY requirements.txt .
 RUN apt-get update && \
-    apt-get install -y --only-upgrade openssl libssl3 && \
+    apt-get install -y --only-upgrade \
+      openssl libssl3 \
+      libcap2 \
+      libsystemd0 \
+      libudev1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir wheel==0.46.2 "jaraco.context>=6.1.0" && \
     pip install --no-cache-dir -r requirements.txt && \
