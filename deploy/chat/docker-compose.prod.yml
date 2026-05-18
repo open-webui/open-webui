@@ -23,9 +23,9 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - openwebui-data:/app/backend/data
-      - ./custom/middleware.py:/app/backend/open_webui/utils/middleware.py:ro
-      - ./custom/tools_utils.py:/app/backend/open_webui/utils/tools.py:ro
-      - ./custom/tools_models.py:/app/backend/open_webui/models/tools.py:ro
+      - ./code/middleware.py:/app/backend/open_webui/utils/middleware.py:ro
+      - ./code/tools_utils.py:/app/backend/open_webui/utils/tools.py:ro
+      - ./code/tools_models.py:/app/backend/open_webui/models/tools.py:ro
     env_file:
       - /opt/openwebui-secrets/.env
     environment:

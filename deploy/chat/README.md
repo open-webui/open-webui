@@ -32,10 +32,10 @@ network as OpenWebUI. There is no external path for header spoofing.
 | `openwebui/tools-config.json` | OpenWebUI External Tools MCP server config |
 | `mcp.env.example` | Template for jawafdehi-mcp environment variables |
 | `.env.example` | Template for OpenWebUI OAUTH environment variables |
-| `custom/` | Python overrides bind-mounted in production (middleware, tools) |
+| `code/` | Python overrides bind-mounted in production (middleware, tools) |
 | `static/` | Jawafdehi branding assets (favicon, logo, splash screens) |
 | `nginx/chat.jawafdehi.org.conf` | Nginx reverse proxy config (HTTP → HTTPS → OpenWebUI:8080) |
-| `bin/deploy.sh` | Self-contained deploy script (run on monal host; pulls compose + custom files from repo) |
+| `bin/deploy.sh` | Self-contained deploy script (run on monal host; pulls compose + code files from repo) |
 
 ## Quick Start
 
@@ -86,7 +86,7 @@ ChatUserIdentity.objects.create(owui_user_id="abc123-def456", user=user)
 
 ## Production Deployment (monal-instance1)
 
-The production stack uses pre-built Docker Hub images, custom Python overrides,
+The production stack uses pre-built Docker Hub images, code Python overrides,
 and GCP Cloud Logging — all in a single `docker-compose.prod.yml`.
 
 ### Quick Deploy (from monal host)
@@ -95,7 +95,7 @@ and GCP Cloud Logging — all in a single `docker-compose.prod.yml`.
 cd /opt/openwebui && ./deploy.sh
 ```
 
-This pulls the latest compose file, custom Python overrides, and static assets
+This pulls the latest compose file, code Python overrides, and static assets
 from the `jawafdehi-main` branch, then pulls the latest Docker image and restarts.
 
 ### Manual Deploy

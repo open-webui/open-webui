@@ -63,5 +63,12 @@ echo "--- Redeploying ---"
 cd "${TARGET}"
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
+# Bootstrap configs if script exists
+BOOTSTRAP="${TARGET}/bin/bootstrap-config.sh"
+if [ -x "${BOOTSTRAP}" ]; then
+  echo "--- Bootstrapping configs ---"
+  "${BOOTSTRAP}"
+fi
+
 echo "=== Deploy complete ==="
 echo "Verify: curl -s https://chat.jawafdehi.org/ | head -5"
