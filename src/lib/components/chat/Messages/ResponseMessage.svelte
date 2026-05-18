@@ -55,6 +55,7 @@
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
+	import OutputRenderer from './OutputRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
@@ -125,9 +126,13 @@
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
-			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
-			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
-			if (message.content !== source.content || message.done !== source.done) {
+			// Fast path: O(1) check on the fields that change most often
+			// (content during streaming, output during output-based streaming, done at end)
+			if (
+				message.content !== source.content ||
+				message.done !== source.done ||
+				message.output?.length !== source.output?.length
+			) {
 				message = structuredClone(source);
 			} else if (!equal(message, source)) {
 				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
@@ -191,6 +196,23 @@
 
 	let showRateComment = false;
 
+	/**
+	 * Extract visible text from output[] (skip reasoning/tool blocks).
+	 * Used for copy and TTS when structured output is available.
+	 */
+	const extractTextFromOutput = (output: any[]): string => {
+		const parts: string[] = [];
+		for (const item of output) {
+			if (item.type === 'message') {
+				for (const part of item.content ?? []) {
+					const text = (part.text ?? '').trim();
+					if (text) parts.push(text);
+				}
+			}
+		}
+		return parts.join('\n');
+	};
+
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
 
@@ -226,7 +248,11 @@
 			: $config?.audio?.tts?.voice);
 
 	const speak = async () => {
-		if (!(message?.content ?? '').trim().length) {
+		const textForTTS = message.output?.length
+			? extractTextFromOutput(message.output)
+			: (message?.content ?? '');
+
+		if (!textForTTS.trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
 		}
@@ -236,7 +262,7 @@
 		const { signal } = speakAbort;
 
 		speaking = true;
-		const content = removeAllDetails(message.content);
+		const content = message.output?.length ? textForTTS : removeAllDetails(message.content);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -370,16 +396,6 @@
 		return restoredContent;
 	}
 
-	/** Extract plain text from output items for immediate display after edit.
-	 *  NOT a serialize_output port — just grabs text parts. Backend re-serializes
-	 *  the full rich content (with <details> blocks) on save. */
-	function extractTextFromOutput(output: any[]): string {
-		return output
-			.filter((item) => item.type === 'message')
-			.flatMap((item) => (item.content ?? []).map((p: any) => p.text ?? ''))
-			.join('\n')
-			.trim();
-	}
 
 	const editMessageHandler = async () => {
 		edit = true;
@@ -826,11 +842,66 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if message.content === '' && !message.done && !message.error && !hasVisibleStatus}
+							{#if message.output?.length}
+								<!-- Render directly from structured output (no regex parsing needed) -->
+								<OutputRenderer
+									id={`${chatId}-${message.id}`}
+									output={message.output}
+									sources={message.sources}
+									floatingButtons={message?.done &&
+										!readOnly &&
+										($settings?.showFloatingActionButtons ?? true)}
+									save={!readOnly}
+									preview={!readOnly}
+									{editCodeBlock}
+									{topPadding}
+									done={($settings?.chatFadeStreamingText ?? true)
+										? (message?.done ?? false)
+										: true}
+									{model}
+									onTaskClick={async (e) => {
+										console.log(e);
+									}}
+									onSourceClick={async (id) => {
+										console.log(id);
+
+										if (citationsElement) {
+											citationsElement?.showSourceModal(id);
+										}
+									}}
+									onSetInputText={(text) => {
+										setInputText(text);
+									}}
+									onSave={({ raw, oldContent, newContent }) => {
+										// Update the content cache (for DB persistence)
+										history.messages[message.id].content = history.messages[
+											message.id
+										].content.replace(raw, raw.replace(oldContent, newContent));
+
+										// Also update the output item so display stays in sync
+										const outputItems = history.messages[message.id].output;
+										if (outputItems) {
+											for (const item of outputItems) {
+												if (item.type === 'message' && item.content) {
+													for (const part of item.content) {
+														if (part.text && part.text.includes(oldContent)) {
+															part.text = part.text.replace(oldContent, newContent);
+															break;
+														}
+													}
+												}
+											}
+											// Trigger reactivity
+											history.messages[message.id].output = outputItems;
+										}
+
+										updateChat();
+									}}
+								/>
+							{:else if message.content === '' && !message.done && !message.error && !hasVisibleStatus}
 								<Skeleton />
 							{:else if message.content && message.error !== true}
-								<!-- always show message contents even if there's an error -->
-								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+								<!-- Legacy fallback: render from content string for messages without output -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
 									content={message.content}
@@ -1033,7 +1104,11 @@
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
-											copyToClipboard(message.content);
+											copyToClipboard(
+												message.output?.length
+													? extractTextFromOutput(message.output)
+													: message.content
+											);
 										}}
 									>
 										<svg

@@ -1227,9 +1227,17 @@
 		const messages = history ? createMessagesList(history, history.currentId) : [];
 		let contents = [];
 		messages.forEach((message) => {
-			if (message?.role !== 'user' && message?.content) {
+			if (message?.role !== 'user') {
+				let text = message?.content || '';
+				if (!text && message?.output?.length) {
+					text = message.output
+						.filter((i) => i.type === 'message')
+						.flatMap((i) => (i.content ?? []).map((p) => p.text ?? ''))
+						.join('\n');
+				}
+				if (!text) return;
 				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
-					message.content
+					text
 				);
 
 				if (htmlGroups && htmlGroups.length > 0) {
@@ -1891,9 +1899,35 @@
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
 
+		const extractTextFromOutput = (o) =>
+			o
+				.filter((i) => i.type === 'message')
+				.flatMap((i) => (i.content ?? []).map((p) => (p.text ?? '').trim()))
+				.filter(Boolean)
+				.join('\n');
+
+		const dispatchStreamingTTS = (getText) => {
+			if (!$showCallOverlay) return;
+			const text = getText();
+			const parts = getMessageContentParts(
+				text,
+				$config?.audio?.tts?.split_on ?? 'punctuation'
+			);
+			parts.pop();
+			if (parts.length > 0 && parts[parts.length - 1] !== message.lastSentence) {
+				message.lastSentence = parts[parts.length - 1];
+				eventTarget.dispatchEvent(
+					new CustomEvent('chat', {
+						detail: { id: message.id, content: parts[parts.length - 1] }
+					})
+				);
+			}
+		};
+
 		// Store raw OR-aligned output items from backend
 		if (output) {
 			message.output = output;
+			dispatchStreamingTTS(() => extractTextFromOutput(output));
 		}
 
 		if (error) {
@@ -1904,7 +1938,9 @@
 			message.sources = sources;
 		}
 
-		if (choices) {
+		// Only accumulate content from choices when there's no structured output
+		// (output-based rendering takes priority — avoids redundant serialize/parse round-trip)
+		if (choices && !output) {
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
@@ -1920,30 +1956,7 @@
 						navigator.vibrate(5);
 					}
 
-					// Emit chat event for TTS (only when call overlay is active)
-					if ($showCallOverlay) {
-						const messageContentParts = getMessageContentParts(
-							removeAllDetails(message.content),
-							$config?.audio?.tts?.split_on ?? 'punctuation'
-						);
-						messageContentParts.pop();
-
-						// dispatch only last sentence and make sure it hasn't been dispatched before
-						if (
-							messageContentParts.length > 0 &&
-							messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-						) {
-							message.lastSentence = messageContentParts[messageContentParts.length - 1];
-							eventTarget.dispatchEvent(
-								new CustomEvent('chat', {
-									detail: {
-										id: message.id,
-										content: messageContentParts[messageContentParts.length - 1]
-									}
-								})
-							);
-						}
-					}
+					dispatchStreamingTTS(() => removeAllDetails(message.content));
 				}
 			}
 		}
@@ -1956,30 +1969,7 @@
 				navigator.vibrate(5);
 			}
 
-			// Emit chat event for TTS (only when call overlay is active)
-			if ($showCallOverlay) {
-				const messageContentParts = getMessageContentParts(
-					removeAllDetails(message.content),
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				);
-				messageContentParts.pop();
-
-				// dispatch only last sentence and make sure it hasn't been dispatched before
-				if (
-					messageContentParts.length > 0 &&
-					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-				) {
-					message.lastSentence = messageContentParts[messageContentParts.length - 1];
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: {
-								id: message.id,
-								content: messageContentParts[messageContentParts.length - 1]
-							}
-						})
-					);
-				}
-			}
+			dispatchStreamingTTS(() => removeAllDetails(message.content));
 		}
 
 		if (selected_model_id) {
