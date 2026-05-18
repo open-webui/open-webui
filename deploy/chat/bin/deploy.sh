@@ -1,133 +1,62 @@
 #!/usr/bin/env bash
-# deploy.sh — Deploy chat.jawafdehi.org stack
+# deploy.sh — Deploy chat.jawafdehi.org stack (CI mode)
 #
-# Supports two modes:
-#   CI mode:   bundle is pre-copied to /tmp/openwebui-deploy/ by GitHub Actions
-#   Manual:    run from /opt/openwebui (pulls files from jawafdehi-main branch)
+# Bundle is pre-copied to /tmp/openwebui-deploy-<datetime>/ by GitHub Actions
+# via rsync. This script syncs the bundle to /opt/openwebui and redeploys.
 #
-# Usage:
-#   CI (via GitHub Actions deploy-chat.yml):
-#     Post-build: bundle lands in /tmp/openwebui-deploy/; this script syncs to /opt/openwebui
-#   Manual (on monal-instance1):
-#     cd /opt/openwebui && ./bin/deploy.sh
-#
-# Host prerequisites (must be set up before first deploy):
-#   mkdir -p /opt/openwebui /opt/openwebui-secrets
-#   chown <deploy-user> /opt/openwebui /opt/openwebui-secrets
+# Host prerequisites (one-time):
+#   sudo mkdir -p /opt/openwebui /opt/openwebui-secrets
+#   sudo chown <deploy-user>:<deploy-user> /opt/openwebui /opt/openwebui-secrets
+#   # place secrets in /opt/openwebui-secrets/:
+#   #   .env, mcp.env, owui-log-writer.credentials.json
+#   sudo gcloud auth application-default login --cred-file=/opt/openwebui-secrets/owui-log-writer.credentials.json --quiet
 #   usermod -aG docker <deploy-user>
-#   cp .env.example /opt/openwebui-secrets/.env    # fill in OAUTH secrets
-#   cp mcp.env.example /opt/openwebui-secrets/mcp.env  # fill in MCP secrets
-#   gcloud auth activate-service-account --key-file=owui-log-writer.credentials.json
 
 set -euo pipefail
 
-BRANCH="${BRANCH:-jawafdehi-main}"
 TARGET="/opt/openwebui"
 BUNDLE="${BUNDLE_DIR:-/tmp/openwebui-deploy}"
 SECRETS_DIR="/opt/openwebui-secrets"
+BRANCH="${BRANCH:-jawafdehi-main}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
 echo "=== Deploying chat.jawafdehi.org (branch: ${BRANCH}) ==="
+echo "--- CI mode: syncing bundle from ${BUNDLE} ---"
 
-if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
-  echo "--- CI mode: syncing bundle from ${BUNDLE} ---"
+# Preconditions
+for d in "${TARGET}" "${SECRETS_DIR}"; do
+  [ -d "$d" ] || die "${d} does not exist"
+  [ -w "$d" ] || die "${d} is not writable by $(whoami)"
+done
 
-  # Precondition checks
-  for d in "${TARGET}" "${SECRETS_DIR}"; do
-    [ -d "$d" ] || die "${d} does not exist. Run: mkdir -p ${d} && chown \$USER ${d}"
-    [ -w "$d" ] || die "${d} is not writable by $(whoami). Run: sudo chown $(whoami) ${d}"
-  done
-  echo "  Preconditions met."
+# Assert required secret files
+echo "--- Checking secrets ---"
+for f in .env mcp.env; do
+  [ -f "${SECRETS_DIR}/${f}" ] || die "${SECRETS_DIR}/${f} required but missing"
+done
+echo "  Secrets OK."
 
-  # Assert secrets exist
-  echo "--- Checking secrets ---"
-  for f in .env mcp.env; do
-    [ -f "${SECRETS_DIR}/${f}" ] || die "${SECRETS_DIR}/${f} is required but missing. Copy it from /home/ubuntu/secrets/"
-  done
-  echo "  Secrets found."
+# Verify bundle
+echo "--- Verifying bundle ---"
+for f in docker-compose.prod.yml custom/middleware.py custom/tools_utils.py custom/tools_models.py static/favicon.ico static/logo.png; do
+  [ -f "${BUNDLE}/${f}" ] || die "missing bundle file: ${f}"
+done
+echo "  Bundle verified."
 
-  # Verify bundle integrity
-  echo "--- Verifying bundle ---"
-  for f in \
-    docker-compose.prod.yml \
-    custom/middleware.py \
-    custom/tools_utils.py \
-    custom/tools_models.py \
-    static/favicon.ico \
-    static/logo.png; do
-    [ -f "${BUNDLE}/${f}" ] || die "missing bundle file: ${f}"
-  done
-  echo "  Bundle verified."
-
-  # Preserve secrets before replacing target
-  echo "--- Preserving secrets ---"
-  for f in .env mcp.env; do
-    if [ -f "${TARGET}/${f}" ]; then
-      cp -p "${TARGET}/${f}" "${SECRETS_DIR}/${f}"
-      echo "  Saved ${f} → ${SECRETS_DIR}/${f}"
-    elif [ ! -f "${SECRETS_DIR}/${f}" ]; then
-      echo "  WARNING: ${f} not found in ${TARGET} or ${SECRETS_DIR} — deploy may fail"
-    fi
-  done
-
-  # Sync bundle to target
-  echo "--- Syncing to ${TARGET} ---"
-  rsync -av --no-group \
-    --exclude='/.env' \
-    --exclude='/mcp.env' \
-    --exclude='/data' \
-    --exclude='/venv' \
-    "${BUNDLE}/" "${TARGET}/"
-
-  # Restore secrets
-  for f in .env mcp.env; do
-    if [ -f "${SECRETS_DIR}/${f}" ] && [ ! -f "${TARGET}/${f}" ]; then
-      cp -p "${SECRETS_DIR}/${f}" "${TARGET}/${f}"
-      echo "  Restored ${f} from ${SECRETS_DIR}"
-    fi
-  done
-
+# Sync to target
+echo "--- Syncing to ${TARGET} ---"
+rsync -av --no-group \
+  --exclude='/.env' \
+  --exclude='/mcp.env' \
+  --exclude='/data' \
+  --exclude='/venv' \
+  "${BUNDLE}/" "${TARGET}/"
   echo "  Sync complete."
 
-else
-  # Manual mode: pull from GitHub raw
-  echo "--- Manual mode: pulling from GitHub raw ---"
-  REPO_BASE="https://raw.githubusercontent.com/Jawafdehi/open-webui/${BRANCH}/deploy/chat"
-
-  echo "--- Updating compose file ---"
-  curl -sSfL -o "${TARGET}/docker-compose.prod.yml" "${REPO_BASE}/docker-compose.prod.yml"
-
-  echo "--- Updating custom Python overrides ---"
-  mkdir -p "${TARGET}/custom"
-  curl -sSfL -o "${TARGET}/custom/middleware.py"    "${REPO_BASE}/custom/middleware.py"
-  curl -sSfL -o "${TARGET}/custom/tools_utils.py"   "${REPO_BASE}/custom/tools_utils.py"
-  curl -sSfL -o "${TARGET}/custom/tools_models.py"  "${REPO_BASE}/custom/tools_models.py"
-
-  echo "--- Updating static assets ---"
-  mkdir -p "${TARGET}/static"
-  for f in apple-touch-icon.png custom.css favicon-96x96.png favicon-dark.png \
-           favicon.ico favicon.png favicon.svg logo.png site.webmanifest \
-           splash-dark.png splash.png web-app-manifest-192x192.png \
-           web-app-manifest-512x512.png; do
-    curl -sSfL -o "${TARGET}/static/${f}" "${REPO_BASE}/static/${f}"
-  done
-
-  echo "--- Updating env templates (if not already present) ---"
-  test -f "${TARGET}/.env.example"   || curl -sSfL -o "${TARGET}/.env.example"   "${REPO_BASE}/.env.example"
-  test -f "${TARGET}/mcp.env.example" || curl -sSfL -o "${TARGET}/mcp.env.example" "${REPO_BASE}/mcp.env.example"
-fi
-
-# Pull latest Docker image
-echo "--- Pulling latest image ---"
+# Pull image
+echo "--- Pulling image ---"
 docker pull "jawafdehi/open-webui:${BRANCH}"
-
-# Ensure GCP credentials for gcplogs driver
-GCP_KEY="/opt/openwebui-secrets/owui-log-writer.credentials.json"
-if [ -f "${GCP_KEY}" ]; then
-  echo "--- Authenticating GCP ---"
-  gcloud auth activate-service-account --key-file="${GCP_KEY}" --quiet 2>/dev/null || true
-fi
 
 # Redeploy
 echo "--- Redeploying ---"

@@ -2,22 +2,17 @@
 #
 # Uses pre-built Docker Hub images tagged jawafdehi-main.
 # Custom Python overrides are bind-mounted for rapid iteration.
-# GCP Cloud Logging is enabled on the OWUI service via gcplogs driver.
 #
 # Prerequisites on host:
 #   mkdir -p /opt/openwebui-secrets
 #   cp mcp.env.example /opt/openwebui-secrets/mcp.env   # fill in real values
 #   cp .env.example   /opt/openwebui-secrets/.env        # fill in OAUTH secrets
-#   gcloud auth activate-service-account --key-file=owui-log-writer.credentials.json
 #   docker compose -f docker-compose.prod.yml up -d
 #
 # Architecture:
 #   User → Google OAuth → OpenWebUI (jawafdehi-main image)
-#                            │  logs → GCP Cloud Logging (newnepal2)
 #                            ▼  http://jawafdehi-mcp:8000
 #                     jawafdehi-mcp → jawafdehi-api
-
-version: "3.8"
 
 services:
   openwebui:
@@ -49,11 +44,10 @@ services:
       - OPENID_PROVIDER_URL=https://accounts.google.com
       - OAUTH_CLIENT_INFO_ENCRYPTION_KEY=${OAUTH_CLIENT_INFO_ENCRYPTION_KEY}
     logging:
-      driver: gcplogs
+      driver: json-file
       options:
-        gcp-project: newnepal2
-        gcp-log-cmd: "true"
-        labels: service=chat.jawafdehi.org
+        max-size: 10m
+        max-file: 3
 
   jawafdehi-mcp:
     image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
