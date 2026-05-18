@@ -40,6 +40,19 @@ services:
       - "3000:8080"
     volumes:
       - open-webui:/app/backend/data
+      - ./static/favicon.png:/app/build/static/favicon.png:ro
+      - ./static/favicon-96x96.png:/app/build/static/favicon-96x96.png:ro
+      - ./static/favicon.svg:/app/build/static/favicon.svg:ro
+      - ./static/favicon.ico:/app/build/static/favicon.ico:ro
+      - ./static/favicon-dark.png:/app/build/static/favicon-dark.png:ro
+      - ./static/apple-touch-icon.png:/app/build/static/apple-touch-icon.png:ro
+      - ./static/splash.png:/app/build/static/splash.png:ro
+      - ./static/splash-dark.png:/app/build/static/splash-dark.png:ro
+      - ./static/logo.png:/app/build/static/logo.png:ro
+      - ./static/web-app-manifest-192x192.png:/app/build/static/web-app-manifest-192x192.png:ro
+      - ./static/web-app-manifest-512x512.png:/app/build/static/web-app-manifest-512x512.png:ro
+      - ./static/site.webmanifest:/app/build/static/site.webmanifest:ro
+      - ./static/custom.css:/app/build/static/custom.css:ro
     environment:
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
       - ENABLE_FORWARD_USER_INFO_HEADERS=true
