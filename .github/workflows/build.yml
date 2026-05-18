@@ -89,22 +89,34 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
           df -h
 
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use --name garnet-builder
+          docker buildx inspect --bootstrap
+
       - name: Login to Harbor
         run: |
           echo "${{ secrets.HARBOR_PASSWORD }}" | docker login harbor.enclaive.cloud \
             -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin
 
-      - name: Build proxy image
+      - name: Build and push proxy image
+        id: build-proxy
         run: |
-          docker build \
+          DIGEST=$(docker buildx build \
             -f backend/privacy_proxy/Dockerfile \
             --build-arg PRODUCT_VERSION=${{ needs.get-meta.outputs.version }} \
             --build-arg PRODUCT_REVISION=${{ needs.get-meta.outputs.revision }} \
-            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.tag }} \
-            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.version }} \
-            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }} \
-            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }} \
-            backend/privacy_proxy/
+            --cache-from type=registry,ref=harbor.enclaive.cloud/garnetdemo/privacy-proxy:cache \
+            --cache-to   type=registry,ref=harbor.enclaive.cloud/garnetdemo/privacy-proxy:cache,mode=max \
+            --tag harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.tag }} \
+            --tag harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.version }} \
+            --tag harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }} \
+            --tag harbor.enclaive.cloud/garnetdemo/privacy-proxy:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }} \
+            --push \
+            --metadata-file /tmp/proxy-meta.json \
+            backend/privacy_proxy/ && \
+          cat /tmp/proxy-meta.json | python3 -c "import sys,json; print(json.load(sys.stdin)['containerimage.digest'])")
+          echo "digest=harbor.enclaive.cloud/garnetdemo/privacy-proxy@${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Scan proxy image
         run: |
@@ -117,13 +129,6 @@ jobs:
             --scanners vuln \
             harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
 
-      - name: Push proxy image
-        run: |
-          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.tag }}
-          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.version }}
-          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
-          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
-
       - name: Install cosign
         run: |
           curl -sfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
@@ -131,11 +136,11 @@ jobs:
 
       - name: Sign proxy image
         run: |
-          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-            harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > /tmp/cosign.key
+          chmod 600 /tmp/cosign.key
+          COSIGN_PASSWORD="" cosign sign --yes --key /tmp/cosign.key \
+            ${{ steps.build-proxy.outputs.digest }}
+          rm /tmp/cosign.key
 
   deploy-proxy:
     needs: [get-meta, build-proxy]
@@ -163,7 +168,11 @@ jobs:
             docker exec garnet-privacy-proxy-1 python3 -c \
             'import urllib.request; print(urllib.request.urlopen(\"http://localhost:8080/health\").read())'"
 
-      
+      - name: Run proxy tests
+        run: |
+          ssh root@${{ secrets.CVM_HOST }} "\
+            docker exec -w /service garnet-privacy-proxy-1 python3 app/test_proxy.py"
+
   # ── WEBUI ─────────────────────────────────────────────
   build-webui:
     needs: get-meta
@@ -182,21 +191,33 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
           df -h
 
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use --name garnet-builder
+          docker buildx inspect --bootstrap
+
       - name: Login to Harbor
         run: |
           echo "${{ secrets.HARBOR_PASSWORD }}" | docker login harbor.enclaive.cloud \
             -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin
 
-      - name: Build webui image
+      - name: Build and push webui image
+        id: build-webui
         run: |
-          docker build \
+          DIGEST=$(docker buildx build \
             --build-arg PRODUCT_VERSION=${{ needs.get-meta.outputs.version }} \
             --build-arg PRODUCT_REVISION=${{ needs.get-meta.outputs.revision }} \
-            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.tag }} \
-            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.version }} \
-            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }} \
-            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }} \
-            .
+            --cache-from type=registry,ref=harbor.enclaive.cloud/garnetdemo/garnet-webui:cache \
+            --cache-to   type=registry,ref=harbor.enclaive.cloud/garnetdemo/garnet-webui:cache,mode=max \
+            --tag harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.tag }} \
+            --tag harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.version }} \
+            --tag harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }} \
+            --tag harbor.enclaive.cloud/garnetdemo/garnet-webui:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }} \
+            --push \
+            --metadata-file /tmp/webui-meta.json \
+            . && \
+          cat /tmp/webui-meta.json | python3 -c "import sys,json; print(json.load(sys.stdin)['containerimage.digest'])")
+          echo "digest=harbor.enclaive.cloud/garnetdemo/garnet-webui@${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Scan webui image
         run: |
@@ -209,13 +230,6 @@ jobs:
             --scanners vuln \
             harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
 
-      - name: Push webui image
-        run: |
-          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.tag }}
-          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.version }}
-          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
-          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
-
       - name: Install cosign
         run: |
           curl -sfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
@@ -223,11 +237,11 @@ jobs:
 
       - name: Sign webui image
         run: |
-          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-            harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > /tmp/cosign.key
+          chmod 600 /tmp/cosign.key
+          COSIGN_PASSWORD="" cosign sign --yes --key /tmp/cosign.key \
+            ${{ steps.build-webui.outputs.digest }}
+          rm /tmp/cosign.key
 
   deploy-webui:
     needs: [get-meta, build-webui]
