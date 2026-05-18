@@ -101,7 +101,8 @@
 				key,
 				config: {
 					auth_type,
-					...(provider ? { provider } : azure ? { azure: true } : {}),
+					...(azure ? { azure: true } : {}),
+					...(provider ? { provider } : {}),
 					api_version: apiVersion,
 					...(_headers ? { headers: _headers } : {})
 				}
@@ -189,7 +190,8 @@
 				connection_type: connectionType,
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
-				...(provider ? { provider } : !ollama && azure ? { azure: true } : {}),
+				...(azure ? { azure: true } : {}),
+				...(provider ? { provider } : {}),
 				...(azure ? { api_version: apiVersion } : {}),
 				...(apiType ? { api_type: apiType } : {})
 			}
