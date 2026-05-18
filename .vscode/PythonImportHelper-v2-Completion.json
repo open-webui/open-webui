@@ -14360,6 +14360,22 @@
         "documentation": {}
     },
     {
+        "label": "FastAPI",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "Request",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
         "label": "logging,",
         "kind": 6,
         "isExtraImport": true,
@@ -19958,6 +19974,14 @@
         "documentation": {}
     },
     {
+        "label": "dataclass",
+        "importPath": "dataclasses",
+        "description": "dataclasses",
+        "isExtraImport": true,
+        "detail": "dataclasses",
+        "documentation": {}
+    },
+    {
         "label": "URL",
         "importPath": "yarl",
         "description": "yarl",
@@ -21802,6 +21826,30 @@
     },
     {
         "label": "RedirectResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "JSONResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "Response",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "StreamingResponse",
         "importPath": "fastapi.responses",
         "description": "fastapi.responses",
         "isExtraImport": true,
@@ -26886,6 +26934,423 @@
         "description": "redis.asyncio",
         "isExtraImport": true,
         "detail": "redis.asyncio",
+        "documentation": {}
+    },
+    {
+        "label": "PatternRecognizer",
+        "importPath": "presidio_analyzer",
+        "description": "presidio_analyzer",
+        "isExtraImport": true,
+        "detail": "presidio_analyzer",
+        "documentation": {}
+    },
+    {
+        "label": "Pattern",
+        "importPath": "presidio_analyzer",
+        "description": "presidio_analyzer",
+        "isExtraImport": true,
+        "detail": "presidio_analyzer",
+        "documentation": {}
+    },
+    {
+        "label": "AnalyzerEngine",
+        "importPath": "presidio_analyzer",
+        "description": "presidio_analyzer",
+        "isExtraImport": true,
+        "detail": "presidio_analyzer",
+        "documentation": {}
+    },
+    {
+        "label": "orjson",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "orjson",
+        "description": "orjson",
+        "detail": "orjson",
+        "documentation": {}
+    },
+    {
+        "label": "pseudonymize",
+        "importPath": "app.pseudonymizer",
+        "description": "app.pseudonymizer",
+        "isExtraImport": true,
+        "detail": "app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "detect_entities",
+        "importPath": "app.pseudonymizer",
+        "description": "app.pseudonymizer",
+        "isExtraImport": true,
+        "detail": "app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "depseudonymize",
+        "importPath": "app.depseudonymizer",
+        "description": "app.depseudonymizer",
+        "isExtraImport": true,
+        "detail": "app.depseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "MappingStore",
+        "importPath": "app.mapping_store",
+        "description": "app.mapping_store",
+        "isExtraImport": true,
+        "detail": "app.mapping_store",
+        "documentation": {}
+    },
+    {
+        "label": "log_sep",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_garnet",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_entity_filter",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_in_user",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_out_user",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_no_pii",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_in_file",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_out_file",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_large_file",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_out_file_chunked",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_file_scan",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_file_pii",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_file_pii_duplicate",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_internal",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_privacy_off",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_history_depseudo",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_to_llm",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_from_llm",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_to_user",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_mapping",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_self_loop",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_responses_api",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_image",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_health",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_start",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_done",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_skip",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_error",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_analyze",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_analyze_result",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_error",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_error_passthrough",
+        "importPath": "app.logs",
+        "description": "app.logs",
+        "isExtraImport": true,
+        "detail": "app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "detect",
+        "importPath": "langdetect",
+        "description": "langdetect",
+        "isExtraImport": true,
+        "detail": "langdetect",
+        "documentation": {}
+    },
+    {
+        "label": "NlpEngineProvider",
+        "importPath": "presidio_analyzer.nlp_engine",
+        "description": "presidio_analyzer.nlp_engine",
+        "isExtraImport": true,
+        "detail": "presidio_analyzer.nlp_engine",
+        "documentation": {}
+    },
+    {
+        "label": "email_recognizer_en",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "email_recognizer_de",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "org_recognizer_en",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "org_recognizer_de",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "iban_recognizer_en",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "iban_recognizer_de",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "phone_recognizer_en",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "phone_recognizer_de",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "id_recognizer_en",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "id_recognizer_de",
+        "importPath": "app.custom_recognizers",
+        "description": "app.custom_recognizers",
+        "isExtraImport": true,
+        "detail": "app.custom_recognizers",
         "documentation": {}
     },
     {
@@ -48943,6 +49408,951 @@
         "description": "backend.open_webui.tasks",
         "peekOfCode": "REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'\nasync def redis_task_command_listener(app):\n    redis: Redis = app.state.redis\n    pubsub = redis.pubsub()\n    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)\n    async for message in pubsub.listen():\n        if message['type'] != 'message':\n            continue\n        try:\n            command = json.loads(message['data'])",
         "detail": "backend.open_webui.tasks",
+        "documentation": {}
+    },
+    {
+        "label": "email_patterns",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "email_patterns = [\n    Pattern(\"EMAIL\", r\"\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b\", 0.99),\n]\nemail_recognizer_en = PatternRecognizer(\n    supported_entity=\"EMAIL_ADDRESS\", patterns=email_patterns, supported_language=\"en\",\n    context=[],\n)\nemail_recognizer_de = PatternRecognizer(\n    supported_entity=\"EMAIL_ADDRESS\", patterns=email_patterns, supported_language=\"de\",\n    context=[],",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "email_recognizer_en",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "email_recognizer_en = PatternRecognizer(\n    supported_entity=\"EMAIL_ADDRESS\", patterns=email_patterns, supported_language=\"en\",\n    context=[],\n)\nemail_recognizer_de = PatternRecognizer(\n    supported_entity=\"EMAIL_ADDRESS\", patterns=email_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- ORG (en + de) ---\norg_patterns = [",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "email_recognizer_de",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "email_recognizer_de = PatternRecognizer(\n    supported_entity=\"EMAIL_ADDRESS\", patterns=email_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- ORG (en + de) ---\norg_patterns = [\n    Pattern(\"ORG_SUFFIX\", r\"\\b(?:[A-Z][\\w-]*\\s){1,3}(?:GmbH|Inc|Ltd|AG|Corp|LLC|SE|Co|SA|SAS|SARL|BV|NV|Bank|Group|Partners|Solutions|Technologies|Foundation|Institute|Association)\\b\", 0.90),\n]\norg_recognizer_en = PatternRecognizer(\n    supported_entity=\"ORGANIZATION\", patterns=org_patterns, supported_language=\"en\",",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "org_patterns",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "org_patterns = [\n    Pattern(\"ORG_SUFFIX\", r\"\\b(?:[A-Z][\\w-]*\\s){1,3}(?:GmbH|Inc|Ltd|AG|Corp|LLC|SE|Co|SA|SAS|SARL|BV|NV|Bank|Group|Partners|Solutions|Technologies|Foundation|Institute|Association)\\b\", 0.90),\n]\norg_recognizer_en = PatternRecognizer(\n    supported_entity=\"ORGANIZATION\", patterns=org_patterns, supported_language=\"en\",\n    context=[],\n)\norg_recognizer_de = PatternRecognizer(\n    supported_entity=\"ORGANIZATION\", patterns=org_patterns, supported_language=\"de\",\n    context=[],",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "org_recognizer_en",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "org_recognizer_en = PatternRecognizer(\n    supported_entity=\"ORGANIZATION\", patterns=org_patterns, supported_language=\"en\",\n    context=[],\n)\norg_recognizer_de = PatternRecognizer(\n    supported_entity=\"ORGANIZATION\", patterns=org_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- IBAN (en + de) ---\niban_patterns = [",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "org_recognizer_de",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "org_recognizer_de = PatternRecognizer(\n    supported_entity=\"ORGANIZATION\", patterns=org_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- IBAN (en + de) ---\niban_patterns = [\n    Pattern(\"IBAN\", r\"\\b[A-Z]{2}\\d{2}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{0,2}\\b\", 0.95),\n]\niban_recognizer_en = PatternRecognizer(\n    supported_entity=\"IBAN_CODE\", patterns=iban_patterns, supported_language=\"en\",",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "iban_patterns",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "iban_patterns = [\n    Pattern(\"IBAN\", r\"\\b[A-Z]{2}\\d{2}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{4}\\s?\\d{0,2}\\b\", 0.95),\n]\niban_recognizer_en = PatternRecognizer(\n    supported_entity=\"IBAN_CODE\", patterns=iban_patterns, supported_language=\"en\",\n    context=[],\n)\niban_recognizer_de = PatternRecognizer(\n    supported_entity=\"IBAN_CODE\", patterns=iban_patterns, supported_language=\"de\",\n    context=[],",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "iban_recognizer_en",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "iban_recognizer_en = PatternRecognizer(\n    supported_entity=\"IBAN_CODE\", patterns=iban_patterns, supported_language=\"en\",\n    context=[],\n)\niban_recognizer_de = PatternRecognizer(\n    supported_entity=\"IBAN_CODE\", patterns=iban_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- PHONE (en + de) ---\nphone_patterns = [",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "iban_recognizer_de",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "iban_recognizer_de = PatternRecognizer(\n    supported_entity=\"IBAN_CODE\", patterns=iban_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- PHONE (en + de) ---\nphone_patterns = [\n    Pattern(\"PHONE_INTL\", r\"\\b\\+\\d{1,3}[\\s.-]?\\d{2,4}[\\s.-]?\\d{3,10}\\b\", 0.85),\n]\nphone_recognizer_en = PatternRecognizer(\n    supported_entity=\"PHONE_NUMBER\", patterns=phone_patterns, supported_language=\"en\",",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "phone_patterns",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "phone_patterns = [\n    Pattern(\"PHONE_INTL\", r\"\\b\\+\\d{1,3}[\\s.-]?\\d{2,4}[\\s.-]?\\d{3,10}\\b\", 0.85),\n]\nphone_recognizer_en = PatternRecognizer(\n    supported_entity=\"PHONE_NUMBER\", patterns=phone_patterns, supported_language=\"en\",\n    context=[],\n)\nphone_recognizer_de = PatternRecognizer(\n    supported_entity=\"PHONE_NUMBER\", patterns=phone_patterns, supported_language=\"de\",\n    context=[],",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "phone_recognizer_en",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "phone_recognizer_en = PatternRecognizer(\n    supported_entity=\"PHONE_NUMBER\", patterns=phone_patterns, supported_language=\"en\",\n    context=[],\n)\nphone_recognizer_de = PatternRecognizer(\n    supported_entity=\"PHONE_NUMBER\", patterns=phone_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- ID (en + de) ---\nid_patterns = [",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "phone_recognizer_de",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "phone_recognizer_de = PatternRecognizer(\n    supported_entity=\"PHONE_NUMBER\", patterns=phone_patterns, supported_language=\"de\",\n    context=[],\n)\n# --- ID (en + de) ---\nid_patterns = [\n    Pattern(\"PASSPORT\", r\"\\b[A-Z][0-9]{2}[A-Z0-9]{5,7}\\b\", 0.6),\n    Pattern(\"ID_NUMBER\", r\"\\b\\d{2,4}[-/]\\d{4,8}[-/]\\d{2,4}\\b\", 0.6),\n]\nid_recognizer_en = PatternRecognizer(",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "id_patterns",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "id_patterns = [\n    Pattern(\"PASSPORT\", r\"\\b[A-Z][0-9]{2}[A-Z0-9]{5,7}\\b\", 0.6),\n    Pattern(\"ID_NUMBER\", r\"\\b\\d{2,4}[-/]\\d{4,8}[-/]\\d{2,4}\\b\", 0.6),\n]\nid_recognizer_en = PatternRecognizer(\n    supported_entity=\"ID\", patterns=id_patterns, supported_language=\"en\",\n    context=[],\n)\nid_recognizer_de = PatternRecognizer(\n    supported_entity=\"ID\", patterns=id_patterns, supported_language=\"de\",",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "id_recognizer_en",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "id_recognizer_en = PatternRecognizer(\n    supported_entity=\"ID\", patterns=id_patterns, supported_language=\"en\",\n    context=[],\n)\nid_recognizer_de = PatternRecognizer(\n    supported_entity=\"ID\", patterns=id_patterns, supported_language=\"de\",\n    context=[],\n)",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "id_recognizer_de",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.custom_recognizers",
+        "description": "backend.privacy_proxy.app.custom_recognizers",
+        "peekOfCode": "id_recognizer_de = PatternRecognizer(\n    supported_entity=\"ID\", patterns=id_patterns, supported_language=\"de\",\n    context=[],\n)",
+        "detail": "backend.privacy_proxy.app.custom_recognizers",
+        "documentation": {}
+    },
+    {
+        "label": "check_leakage",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.depseudonymizer",
+        "description": "backend.privacy_proxy.app.depseudonymizer",
+        "peekOfCode": "def check_leakage(text: str, mapping: dict) -> str:\n    for pattern in LEAK_PATTERNS:\n        if pattern in text.lower():\n            for original in mapping.values():\n                if original in text:\n                    text = text.replace(original, \"[REDACTED]\")\n    return text\ndef depseudonymize(text: str, session_id: str, store: dict) -> str:\n    mapping = store.get(session_id, {})\n    text = check_leakage(text, mapping)",
+        "detail": "backend.privacy_proxy.app.depseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "depseudonymize",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.depseudonymizer",
+        "description": "backend.privacy_proxy.app.depseudonymizer",
+        "peekOfCode": "def depseudonymize(text: str, session_id: str, store: dict) -> str:\n    mapping = store.get(session_id, {})\n    text = check_leakage(text, mapping)\n    for token in sorted(mapping.keys(), key=len, reverse=True):\n        text = text.replace(token, mapping[token])\n    return text",
+        "detail": "backend.privacy_proxy.app.depseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "LEAK_PATTERNS",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.depseudonymizer",
+        "description": "backend.privacy_proxy.app.depseudonymizer",
+        "peekOfCode": "LEAK_PATTERNS = [\n    \"refers to\",\n    \"stands for\",\n    \"is actually\",\n    \"real name is\",\n    \"which is\",\n    \"also known as\",\n    \"means\",\n]\ndef check_leakage(text: str, mapping: dict) -> str:",
+        "detail": "backend.privacy_proxy.app.depseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "log_sep",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_sep(): print(SEP)\ndef log_garnet(session_id, provider, privacy, model, path):\n    print(f\"[GARNET] session={session_id[:8]} provider={provider} privacy={'ON' if privacy else 'OFF'} model={model} path={path}\")\ndef log_entity_filter(enabled_types):\n    print(f\"[ENTITY FILTER] active → only: {enabled_types}\")\ndef log_in_user(text):\n    print(f\"[IN  USER] {text[:200]}\")\ndef log_out_user(text):\n    print(f\"[OUT USER] {text[:200]}\")\ndef log_no_pii():",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_garnet",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_garnet(session_id, provider, privacy, model, path):\n    print(f\"[GARNET] session={session_id[:8]} provider={provider} privacy={'ON' if privacy else 'OFF'} model={model} path={path}\")\ndef log_entity_filter(enabled_types):\n    print(f\"[ENTITY FILTER] active → only: {enabled_types}\")\ndef log_in_user(text):\n    print(f\"[IN  USER] {text[:200]}\")\ndef log_out_user(text):\n    print(f\"[OUT USER] {text[:200]}\")\ndef log_no_pii():\n    print(f\"[NO PII] message unchanged — no entities detected\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_entity_filter",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_entity_filter(enabled_types):\n    print(f\"[ENTITY FILTER] active → only: {enabled_types}\")\ndef log_in_user(text):\n    print(f\"[IN  USER] {text[:200]}\")\ndef log_out_user(text):\n    print(f\"[OUT USER] {text[:200]}\")\ndef log_no_pii():\n    print(f\"[NO PII] message unchanged — no entities detected\")\ndef log_in_file(role, length, text):\n    print(f\"[IN  FILE] role={role} len={length} | {text[:200]}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_in_user",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_in_user(text):\n    print(f\"[IN  USER] {text[:200]}\")\ndef log_out_user(text):\n    print(f\"[OUT USER] {text[:200]}\")\ndef log_no_pii():\n    print(f\"[NO PII] message unchanged — no entities detected\")\ndef log_in_file(role, length, text):\n    print(f\"[IN  FILE] role={role} len={length} | {text[:200]}\")\ndef log_out_file(text):\n    print(f\"[OUT FILE] {text[:200]}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_out_user",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_out_user(text):\n    print(f\"[OUT USER] {text[:200]}\")\ndef log_no_pii():\n    print(f\"[NO PII] message unchanged — no entities detected\")\ndef log_in_file(role, length, text):\n    print(f\"[IN  FILE] role={role} len={length} | {text[:200]}\")\ndef log_out_file(text):\n    print(f\"[OUT FILE] {text[:200]}\")\ndef log_large_file(length, n_chunks):\n    print(f\"[LARGE FILE] {length} chars → chunked pseudo ({n_chunks} chunks)\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_no_pii",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_no_pii():\n    print(f\"[NO PII] message unchanged — no entities detected\")\ndef log_in_file(role, length, text):\n    print(f\"[IN  FILE] role={role} len={length} | {text[:200]}\")\ndef log_out_file(text):\n    print(f\"[OUT FILE] {text[:200]}\")\ndef log_large_file(length, n_chunks):\n    print(f\"[LARGE FILE] {length} chars → chunked pseudo ({n_chunks} chunks)\")\ndef log_out_file_chunked(n_chunks, total_chars):\n    print(f\"[OUT FILE] chunked {n_chunks} parts → {total_chars} chars\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_in_file",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_in_file(role, length, text):\n    print(f\"[IN  FILE] role={role} len={length} | {text[:200]}\")\ndef log_out_file(text):\n    print(f\"[OUT FILE] {text[:200]}\")\ndef log_large_file(length, n_chunks):\n    print(f\"[LARGE FILE] {length} chars → chunked pseudo ({n_chunks} chunks)\")\ndef log_out_file_chunked(n_chunks, total_chars):\n    print(f\"[OUT FILE] chunked {n_chunks} parts → {total_chars} chars\")\ndef log_file_scan(count):\n    print(f\"[FILE SCAN] {count} RAG chunk(s) processed\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_out_file",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_out_file(text):\n    print(f\"[OUT FILE] {text[:200]}\")\ndef log_large_file(length, n_chunks):\n    print(f\"[LARGE FILE] {length} chars → chunked pseudo ({n_chunks} chunks)\")\ndef log_out_file_chunked(n_chunks, total_chars):\n    print(f\"[OUT FILE] chunked {n_chunks} parts → {total_chars} chars\")\ndef log_file_scan(count):\n    print(f\"[FILE SCAN] {count} RAG chunk(s) processed\")\ndef log_file_pii(count, breakdown):\n    print(f\"[FILE PII] {count} new entities detected | breakdown={breakdown or 'in-memory-only'}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_large_file",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_large_file(length, n_chunks):\n    print(f\"[LARGE FILE] {length} chars → chunked pseudo ({n_chunks} chunks)\")\ndef log_out_file_chunked(n_chunks, total_chars):\n    print(f\"[OUT FILE] chunked {n_chunks} parts → {total_chars} chars\")\ndef log_file_scan(count):\n    print(f\"[FILE SCAN] {count} RAG chunk(s) processed\")\ndef log_file_pii(count, breakdown):\n    print(f\"[FILE PII] {count} new entities detected | breakdown={breakdown or 'in-memory-only'}\")\ndef log_file_pii_duplicate():\n    print(f\"[FILE PII] 0 new entities — already in mapping (duplicate upload)\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_out_file_chunked",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_out_file_chunked(n_chunks, total_chars):\n    print(f\"[OUT FILE] chunked {n_chunks} parts → {total_chars} chars\")\ndef log_file_scan(count):\n    print(f\"[FILE SCAN] {count} RAG chunk(s) processed\")\ndef log_file_pii(count, breakdown):\n    print(f\"[FILE PII] {count} new entities detected | breakdown={breakdown or 'in-memory-only'}\")\ndef log_file_pii_duplicate():\n    print(f\"[FILE PII] 0 new entities — already in mapping (duplicate upload)\")\ndef log_internal(internal_type):\n    print(f\"[INTERNAL] type={internal_type} → skipped pseudonymization\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_file_scan",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_file_scan(count):\n    print(f\"[FILE SCAN] {count} RAG chunk(s) processed\")\ndef log_file_pii(count, breakdown):\n    print(f\"[FILE PII] {count} new entities detected | breakdown={breakdown or 'in-memory-only'}\")\ndef log_file_pii_duplicate():\n    print(f\"[FILE PII] 0 new entities — already in mapping (duplicate upload)\")\ndef log_internal(internal_type):\n    print(f\"[INTERNAL] type={internal_type} → skipped pseudonymization\")\ndef log_privacy_off():\n    print(f\"[PRIVACY OFF] forwarding raw → no pseudonymization\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_file_pii",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_file_pii(count, breakdown):\n    print(f\"[FILE PII] {count} new entities detected | breakdown={breakdown or 'in-memory-only'}\")\ndef log_file_pii_duplicate():\n    print(f\"[FILE PII] 0 new entities — already in mapping (duplicate upload)\")\ndef log_internal(internal_type):\n    print(f\"[INTERNAL] type={internal_type} → skipped pseudonymization\")\ndef log_privacy_off():\n    print(f\"[PRIVACY OFF] forwarding raw → no pseudonymization\")\ndef log_history_depseudo(count):\n    print(f\"[HISTORY DEPSEUDO] restored tokens in {count} assistant message(s)\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_file_pii_duplicate",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_file_pii_duplicate():\n    print(f\"[FILE PII] 0 new entities — already in mapping (duplicate upload)\")\ndef log_internal(internal_type):\n    print(f\"[INTERNAL] type={internal_type} → skipped pseudonymization\")\ndef log_privacy_off():\n    print(f\"[PRIVACY OFF] forwarding raw → no pseudonymization\")\ndef log_history_depseudo(count):\n    print(f\"[HISTORY DEPSEUDO] restored tokens in {count} assistant message(s)\")\ndef log_to_llm(url, model):\n    print(f\"[→ LLM   ] {url} | model={model}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_internal",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_internal(internal_type):\n    print(f\"[INTERNAL] type={internal_type} → skipped pseudonymization\")\ndef log_privacy_off():\n    print(f\"[PRIVACY OFF] forwarding raw → no pseudonymization\")\ndef log_history_depseudo(count):\n    print(f\"[HISTORY DEPSEUDO] restored tokens in {count} assistant message(s)\")\ndef log_to_llm(url, model):\n    print(f\"[→ LLM   ] {url} | model={model}\")\ndef log_from_llm(chunk_text):\n    print(f\"[← LLM   ] {repr(chunk_text[:200])}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_privacy_off",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_privacy_off():\n    print(f\"[PRIVACY OFF] forwarding raw → no pseudonymization\")\ndef log_history_depseudo(count):\n    print(f\"[HISTORY DEPSEUDO] restored tokens in {count} assistant message(s)\")\ndef log_to_llm(url, model):\n    print(f\"[→ LLM   ] {url} | model={model}\")\ndef log_from_llm(chunk_text):\n    print(f\"[← LLM   ] {repr(chunk_text[:200])}\")\ndef log_to_user(token_count):\n    print(f\"[→ USER  ] depseudo complete, {token_count} tokens in mapping\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_history_depseudo",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_history_depseudo(count):\n    print(f\"[HISTORY DEPSEUDO] restored tokens in {count} assistant message(s)\")\ndef log_to_llm(url, model):\n    print(f\"[→ LLM   ] {url} | model={model}\")\ndef log_from_llm(chunk_text):\n    print(f\"[← LLM   ] {repr(chunk_text[:200])}\")\ndef log_to_user(token_count):\n    print(f\"[→ USER  ] depseudo complete, {token_count} tokens in mapping\")\ndef log_mapping(session_id, total_tokens):\n    print(f\"[MAPPING] session={session_id[:8]} total_tokens={total_tokens}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_to_llm",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_to_llm(url, model):\n    print(f\"[→ LLM   ] {url} | model={model}\")\ndef log_from_llm(chunk_text):\n    print(f\"[← LLM   ] {repr(chunk_text[:200])}\")\ndef log_to_user(token_count):\n    print(f\"[→ USER  ] depseudo complete, {token_count} tokens in mapping\")\ndef log_mapping(session_id, total_tokens):\n    print(f\"[MAPPING] session={session_id[:8]} total_tokens={total_tokens}\")\ndef log_self_loop(resolved_url):\n    print(f\"[SELF-LOOP] detected → resolved to {resolved_url}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_from_llm",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_from_llm(chunk_text):\n    print(f\"[← LLM   ] {repr(chunk_text[:200])}\")\ndef log_to_user(token_count):\n    print(f\"[→ USER  ] depseudo complete, {token_count} tokens in mapping\")\ndef log_mapping(session_id, total_tokens):\n    print(f\"[MAPPING] session={session_id[:8]} total_tokens={total_tokens}\")\ndef log_self_loop(resolved_url):\n    print(f\"[SELF-LOOP] detected → resolved to {resolved_url}\")\ndef log_responses_api(model):\n    print(f\"[RESPONSES API] model={model} → using /responses endpoint\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_to_user",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_to_user(token_count):\n    print(f\"[→ USER  ] depseudo complete, {token_count} tokens in mapping\")\ndef log_mapping(session_id, total_tokens):\n    print(f\"[MAPPING] session={session_id[:8]} total_tokens={total_tokens}\")\ndef log_self_loop(resolved_url):\n    print(f\"[SELF-LOOP] detected → resolved to {resolved_url}\")\ndef log_responses_api(model):\n    print(f\"[RESPONSES API] model={model} → using /responses endpoint\")\ndef log_image(model, prompt, url):\n    print(f\"[IMAGE] model={model} prompt={prompt[:80]} → {url}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_mapping",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_mapping(session_id, total_tokens):\n    print(f\"[MAPPING] session={session_id[:8]} total_tokens={total_tokens}\")\ndef log_self_loop(resolved_url):\n    print(f\"[SELF-LOOP] detected → resolved to {resolved_url}\")\ndef log_responses_api(model):\n    print(f\"[RESPONSES API] model={model} → using /responses endpoint\")\ndef log_image(model, prompt, url):\n    print(f\"[IMAGE] model={model} prompt={prompt[:80]} → {url}\")\ndef log_health():\n    print(f\"[HEALTH] ping received → ok\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_self_loop",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_self_loop(resolved_url):\n    print(f\"[SELF-LOOP] detected → resolved to {resolved_url}\")\ndef log_responses_api(model):\n    print(f\"[RESPONSES API] model={model} → using /responses endpoint\")\ndef log_image(model, prompt, url):\n    print(f\"[IMAGE] model={model} prompt={prompt[:80]} → {url}\")\ndef log_health():\n    print(f\"[HEALTH] ping received → ok\")\ndef log_vault_start(file_id, session_id, enabled_types):\n    print(f\"[VAULT START] file_id={file_id} session={session_id} entity_filter={enabled_types or 'ALL'}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_responses_api",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_responses_api(model):\n    print(f\"[RESPONSES API] model={model} → using /responses endpoint\")\ndef log_image(model, prompt, url):\n    print(f\"[IMAGE] model={model} prompt={prompt[:80]} → {url}\")\ndef log_health():\n    print(f\"[HEALTH] ping received → ok\")\ndef log_vault_start(file_id, session_id, enabled_types):\n    print(f\"[VAULT START] file_id={file_id} session={session_id} entity_filter={enabled_types or 'ALL'}\")\ndef log_vault_done(file_id, count, report):\n    print(f\"[VAULT DONE] file_id={file_id} → {count} new entities | breakdown={report}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_image",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_image(model, prompt, url):\n    print(f\"[IMAGE] model={model} prompt={prompt[:80]} → {url}\")\ndef log_health():\n    print(f\"[HEALTH] ping received → ok\")\ndef log_vault_start(file_id, session_id, enabled_types):\n    print(f\"[VAULT START] file_id={file_id} session={session_id} entity_filter={enabled_types or 'ALL'}\")\ndef log_vault_done(file_id, count, report):\n    print(f\"[VAULT DONE] file_id={file_id} → {count} new entities | breakdown={report}\")\ndef log_vault_skip(file_id):\n    print(f\"[VAULT SKIP] privacy=OFF file_id={file_id}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_health",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_health():\n    print(f\"[HEALTH] ping received → ok\")\ndef log_vault_start(file_id, session_id, enabled_types):\n    print(f\"[VAULT START] file_id={file_id} session={session_id} entity_filter={enabled_types or 'ALL'}\")\ndef log_vault_done(file_id, count, report):\n    print(f\"[VAULT DONE] file_id={file_id} → {count} new entities | breakdown={report}\")\ndef log_vault_skip(file_id):\n    print(f\"[VAULT SKIP] privacy=OFF file_id={file_id}\")\ndef log_vault_error(field):\n    print(f\"[VAULT ERROR] missing {field} field\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_start",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_vault_start(file_id, session_id, enabled_types):\n    print(f\"[VAULT START] file_id={file_id} session={session_id} entity_filter={enabled_types or 'ALL'}\")\ndef log_vault_done(file_id, count, report):\n    print(f\"[VAULT DONE] file_id={file_id} → {count} new entities | breakdown={report}\")\ndef log_vault_skip(file_id):\n    print(f\"[VAULT SKIP] privacy=OFF file_id={file_id}\")\ndef log_vault_error(field):\n    print(f\"[VAULT ERROR] missing {field} field\")\ndef log_analyze(language, enabled_types, text):\n    print(f\"[ANALYZE] lang={language or 'auto'} filter={enabled_types or 'ALL'} text={text[:100]}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_done",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_vault_done(file_id, count, report):\n    print(f\"[VAULT DONE] file_id={file_id} → {count} new entities | breakdown={report}\")\ndef log_vault_skip(file_id):\n    print(f\"[VAULT SKIP] privacy=OFF file_id={file_id}\")\ndef log_vault_error(field):\n    print(f\"[VAULT ERROR] missing {field} field\")\ndef log_analyze(language, enabled_types, text):\n    print(f\"[ANALYZE] lang={language or 'auto'} filter={enabled_types or 'ALL'} text={text[:100]}\")\ndef log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_skip",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_vault_skip(file_id):\n    print(f\"[VAULT SKIP] privacy=OFF file_id={file_id}\")\ndef log_vault_error(field):\n    print(f\"[VAULT ERROR] missing {field} field\")\ndef log_analyze(language, enabled_types, text):\n    print(f\"[ANALYZE] lang={language or 'auto'} filter={enabled_types or 'ALL'} text={text[:100]}\")\ndef log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")\ndef log_error(msg):\n    print(f\"[ERROR] {msg}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_vault_error",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_vault_error(field):\n    print(f\"[VAULT ERROR] missing {field} field\")\ndef log_analyze(language, enabled_types, text):\n    print(f\"[ANALYZE] lang={language or 'auto'} filter={enabled_types or 'ALL'} text={text[:100]}\")\ndef log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")\ndef log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_analyze",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_analyze(language, enabled_types, text):\n    print(f\"[ANALYZE] lang={language or 'auto'} filter={enabled_types or 'ALL'} text={text[:100]}\")\ndef log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")\ndef log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_analyze_result",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")\ndef log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_error",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "log_error_passthrough",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "def log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "SEP",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.logs",
+        "description": "backend.privacy_proxy.app.logs",
+        "peekOfCode": "SEP = \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\ndef log_sep(): print(SEP)\ndef log_garnet(session_id, provider, privacy, model, path):\n    print(f\"[GARNET] session={session_id[:8]} provider={provider} privacy={'ON' if privacy else 'OFF'} model={model} path={path}\")\ndef log_entity_filter(enabled_types):\n    print(f\"[ENTITY FILTER] active → only: {enabled_types}\")\ndef log_in_user(text):\n    print(f\"[IN  USER] {text[:200]}\")\ndef log_out_user(text):\n    print(f\"[OUT USER] {text[:200]}\")",
+        "detail": "backend.privacy_proxy.app.logs",
+        "documentation": {}
+    },
+    {
+        "label": "ORJSONResponse",
+        "kind": 6,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "class ORJSONResponse(Response):\n    media_type = \"application/json\"\n    def render(self, content) -> bytes:\n        return orjson.dumps(content)\napp = FastAPI(default_response_class=ORJSONResponse)\nstore = MappingStore(ttl=3600)\ndef extract_text_content(content) -> str:\n    if isinstance(content, str):\n        return content\n    if isinstance(content, list):",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "extract_text_content",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "def extract_text_content(content) -> str:\n    if isinstance(content, str):\n        return content\n    if isinstance(content, list):\n        parts = []\n        for block in content:\n            if isinstance(block, dict) and block.get(\"type\") == \"text\":\n                parts.append(block.get(\"text\", \"\"))\n        return \" \".join(parts)\n    return str(content)",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "rebuild_content",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "def rebuild_content(original_content, pseudonymized_text: str):\n    if isinstance(original_content, str):\n        return pseudonymized_text\n    if isinstance(original_content, list):\n        result = []\n        for block in original_content:\n            if isinstance(block, dict) and block.get(\"type\") == \"text\":\n                result.append({\"type\": \"text\", \"text\": pseudonymized_text})\n            else:\n                result.append(block)",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "split_at_safe_boundary",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "def split_at_safe_boundary(buffer: str):\n    TOKEN_NAMES = ['PERSON', 'ORGANIZATION', 'EMAIL_ADDRESS', 'IBAN_CODE', 'PHONE_NUMBER', 'ID', 'LOCATION']\n    partial_pattern = r'(PERSON|ORGANIZATION|EMAIL_ADDRESS|IBAN_CODE|PHONE_NUMBER|ID|LOCATION)_[a-f0-9]{0,7}$'\n    for token in TOKEN_NAMES:\n        for length in range(1, len(token) + 1):\n            prefix = token[:length]\n            if buffer.endswith(prefix):\n                safe = buffer[:-len(prefix)]\n                return safe, buffer[len(safe):]\n    if re.search(partial_pattern, buffer):",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "detect_internal_type",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "def detect_internal_type(content: str) -> str:\n    if \"follow_ups\" in content:\n        return \"follow_ups\"\n    if \"Generate a concise\" in content and \"title\" in content:\n        return \"title_gen\"\n    if \"Generate 1-3 broad tags\" in content or \"categorizing the main themes\" in content:\n        return \"tags_gen\"\n    if \"search_query\" in content or \"Generate a hypothetical\" in content:\n        return \"search_query\"\n    return \"internal\"",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "IMAGE_MODELS",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "IMAGE_MODELS = [\"dall-e-3\", \"dall-e-2\", \"gpt-image-1\"]\nRESPONSES_API_MODELS = {\"gpt-5.5\", \"gpt-5.5-pro\", \"gpt-5.5-2026-04-23\", \"gpt-5.5-pro-2026-04-23\"}\nOLLAMA_URL = os.getenv(\"OLLAMA_URL\", \"http://localhost:11434\")\nOPENAI_API_URL = os.getenv(\"OPENAI_API_URL\", \"https://api.openai.com/v1\")\nSYSTEM_PROMPT_MARKERS = [\n    \"### Task:\", \"### Guidelines:\", \"### Output:\",\n    \"JSON format:\", \"follow_ups\", \"Generate\", \"Suggest\"\n]\nclass ORJSONResponse(Response):\n    media_type = \"application/json\"",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "RESPONSES_API_MODELS",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "RESPONSES_API_MODELS = {\"gpt-5.5\", \"gpt-5.5-pro\", \"gpt-5.5-2026-04-23\", \"gpt-5.5-pro-2026-04-23\"}\nOLLAMA_URL = os.getenv(\"OLLAMA_URL\", \"http://localhost:11434\")\nOPENAI_API_URL = os.getenv(\"OPENAI_API_URL\", \"https://api.openai.com/v1\")\nSYSTEM_PROMPT_MARKERS = [\n    \"### Task:\", \"### Guidelines:\", \"### Output:\",\n    \"JSON format:\", \"follow_ups\", \"Generate\", \"Suggest\"\n]\nclass ORJSONResponse(Response):\n    media_type = \"application/json\"\n    def render(self, content) -> bytes:",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "OLLAMA_URL",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "OLLAMA_URL = os.getenv(\"OLLAMA_URL\", \"http://localhost:11434\")\nOPENAI_API_URL = os.getenv(\"OPENAI_API_URL\", \"https://api.openai.com/v1\")\nSYSTEM_PROMPT_MARKERS = [\n    \"### Task:\", \"### Guidelines:\", \"### Output:\",\n    \"JSON format:\", \"follow_ups\", \"Generate\", \"Suggest\"\n]\nclass ORJSONResponse(Response):\n    media_type = \"application/json\"\n    def render(self, content) -> bytes:\n        return orjson.dumps(content)",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "OPENAI_API_URL",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "OPENAI_API_URL = os.getenv(\"OPENAI_API_URL\", \"https://api.openai.com/v1\")\nSYSTEM_PROMPT_MARKERS = [\n    \"### Task:\", \"### Guidelines:\", \"### Output:\",\n    \"JSON format:\", \"follow_ups\", \"Generate\", \"Suggest\"\n]\nclass ORJSONResponse(Response):\n    media_type = \"application/json\"\n    def render(self, content) -> bytes:\n        return orjson.dumps(content)\napp = FastAPI(default_response_class=ORJSONResponse)",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "SYSTEM_PROMPT_MARKERS",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "SYSTEM_PROMPT_MARKERS = [\n    \"### Task:\", \"### Guidelines:\", \"### Output:\",\n    \"JSON format:\", \"follow_ups\", \"Generate\", \"Suggest\"\n]\nclass ORJSONResponse(Response):\n    media_type = \"application/json\"\n    def render(self, content) -> bytes:\n        return orjson.dumps(content)\napp = FastAPI(default_response_class=ORJSONResponse)\nstore = MappingStore(ttl=3600)",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "app = FastAPI(default_response_class=ORJSONResponse)\nstore = MappingStore(ttl=3600)\ndef extract_text_content(content) -> str:\n    if isinstance(content, str):\n        return content\n    if isinstance(content, list):\n        parts = []\n        for block in content:\n            if isinstance(block, dict) and block.get(\"type\") == \"text\":\n                parts.append(block.get(\"text\", \"\"))",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "store",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.main",
+        "description": "backend.privacy_proxy.app.main",
+        "peekOfCode": "store = MappingStore(ttl=3600)\ndef extract_text_content(content) -> str:\n    if isinstance(content, str):\n        return content\n    if isinstance(content, list):\n        parts = []\n        for block in content:\n            if isinstance(block, dict) and block.get(\"type\") == \"text\":\n                parts.append(block.get(\"text\", \"\"))\n        return \" \".join(parts)",
+        "detail": "backend.privacy_proxy.app.main",
+        "documentation": {}
+    },
+    {
+        "label": "MappingStore",
+        "kind": 6,
+        "importPath": "backend.privacy_proxy.app.mapping_store",
+        "description": "backend.privacy_proxy.app.mapping_store",
+        "peekOfCode": "class MappingStore:\n    def __init__(self, ttl: int = 3600):\n        self._store = {}\n        self._timestamps = {}\n        self._ttl = ttl\n        self._lock = threading.Lock()\n    def get_mapping(self, session_id: str) -> dict:\n        with self._lock:\n            self._cleanup(session_id)\n            return self._store.setdefault(session_id, {})",
+        "detail": "backend.privacy_proxy.app.mapping_store",
+        "documentation": {}
+    },
+    {
+        "label": "_RedisAwareStore",
+        "kind": 6,
+        "importPath": "backend.privacy_proxy.app.mapping_store",
+        "description": "backend.privacy_proxy.app.mapping_store",
+        "peekOfCode": "class _RedisAwareStore:\n    def __init__(self, memory: dict, ttl: int):\n        self._memory = memory\n        self._ttl = ttl\n    def get(self, session_id: str, default=None):\n        if session_id in self._memory:\n            return self._memory[session_id]\n        if _redis_client:\n            try:\n                raw = _redis_client.get(f\"garnet:mapping:{session_id}\")",
+        "detail": "backend.privacy_proxy.app.mapping_store",
+        "documentation": {}
+    },
+    {
+        "label": "_TrackedDict",
+        "kind": 6,
+        "importPath": "backend.privacy_proxy.app.mapping_store",
+        "description": "backend.privacy_proxy.app.mapping_store",
+        "peekOfCode": "class _TrackedDict(dict):\n    def __init__(self, session_id: str, data: dict, store: '_RedisAwareStore'):\n        super().__init__(data)\n        self._session_id = session_id\n        self._store = store\n    def __setitem__(self, key, value):\n        super().__setitem__(key, value)\n        self._store._memory[self._session_id] = dict(self)\n    def flush(self):\n        self._store.flush(self._session_id)",
+        "detail": "backend.privacy_proxy.app.mapping_store",
+        "documentation": {}
+    },
+    {
+        "label": "EntityMapping",
+        "kind": 6,
+        "importPath": "backend.privacy_proxy.app.models",
+        "description": "backend.privacy_proxy.app.models",
+        "peekOfCode": "class EntityMapping:\n    placeholder: str\n    original: str\n    entity_type: str",
+        "detail": "backend.privacy_proxy.app.models",
+        "documentation": {}
+    },
+    {
+        "label": "build_analyzer",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def build_analyzer(language: str) -> AnalyzerEngine:\n    if language == \"de\":\n        provider = NlpEngineProvider(nlp_configuration={\n            \"nlp_engine_name\": \"spacy\",\n            \"models\": [{\"lang_code\": \"de\", \"model_name\": \"de_core_news_md\"}],\n        })\n        recognizers = [email_recognizer_de, org_recognizer_de, iban_recognizer_de, phone_recognizer_de, id_recognizer_de]\n    else:\n        provider = NlpEngineProvider(nlp_configuration={\n            \"nlp_engine_name\": \"spacy\",",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "strip_markdown",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def strip_markdown(text: str):\n    result = []\n    pos_map = []\n    i = 0\n    while i < len(text):\n        if text[i:i+2] in ('**', '__'):\n            i += 2\n        elif text[i] in ('*', '_', '`'):\n            i += 1\n        else:",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "generate_token",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def generate_token(entity_type: str, value: str) -> str:\n    h = hashlib.sha256(value.encode()).hexdigest()[:8]\n    return f\"{entity_type}_{h}\"\ndef trim_org_results(results, text):\n    kept = []\n    for r in results:\n        if r.entity_type == \"ORGANIZATION\":\n            span = text[r.start:r.end]\n            m = ORG_REGEX.search(span)\n            if m:",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "trim_org_results",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def trim_org_results(results, text):\n    kept = []\n    for r in results:\n        if r.entity_type == \"ORGANIZATION\":\n            span = text[r.start:r.end]\n            m = ORG_REGEX.search(span)\n            if m:\n                new_start = r.start + m.start()\n                new_end = r.start + m.end()\n                r.start = new_start",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "filter_overlaps",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def filter_overlaps(results):\n    regex_types = {\"EMAIL_ADDRESS\", \"IBAN_CODE\", \"PHONE_NUMBER\", \"ID\", \"ORGANIZATION\", \"LOCATION\"}\n    results = sorted(results, key=lambda x: (\n        0 if x.entity_type in regex_types else 1,\n        -(x.end - x.start)\n    ))\n    filtered = []\n    for r in results:\n        overlap = False\n        for kept in filtered:",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "detect_entities",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def detect_entities(text: str, language: str = None, enabled_types=None) -> list:\n    try:\n        if language is None:\n            language = detect(text)\n        if language not in [\"en\", \"de\"]:\n            language = \"en\"\n    except:\n        language = \"en\"\n    original_text = text\n    entities = []",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "pseudonymize",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "def pseudonymize(text: str, session_id: str, store: dict, enabled_types=None) -> str:\n    try:\n        lang = detect(text)\n        if lang not in [\"en\", \"de\"]:\n            lang = \"en\"\n    except:\n        lang = \"en\"\n    mapping = store.setdefault(session_id, {})\n    entities = detect_entities(text, lang, enabled_types=enabled_types)\n    entities = sorted(entities, key=lambda x: x[\"start\"], reverse=True)",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "EMAIL_REGEX",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "EMAIL_REGEX = re.compile(r'\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b')\nORG_REGEX = re.compile(r'(?:[A-Z][\\w-]*\\s){1,3}(?:GmbH|Inc|Ltd|AG|Corp|LLC|SE|Co|SA|SAS|SARL|BV|NV|Bank|Group|Partners|Solutions|Technologies)\\b')\nPHONE_REGEX = re.compile(r'\\+\\d{1,3}[\\s.-]?\\d{2,4}[\\s.-]?\\d{3,4}[\\s.-]?\\d{0,5}')\ndef build_analyzer(language: str) -> AnalyzerEngine:\n    if language == \"de\":\n        provider = NlpEngineProvider(nlp_configuration={\n            \"nlp_engine_name\": \"spacy\",\n            \"models\": [{\"lang_code\": \"de\", \"model_name\": \"de_core_news_md\"}],\n        })\n        recognizers = [email_recognizer_de, org_recognizer_de, iban_recognizer_de, phone_recognizer_de, id_recognizer_de]",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "ORG_REGEX",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "ORG_REGEX = re.compile(r'(?:[A-Z][\\w-]*\\s){1,3}(?:GmbH|Inc|Ltd|AG|Corp|LLC|SE|Co|SA|SAS|SARL|BV|NV|Bank|Group|Partners|Solutions|Technologies)\\b')\nPHONE_REGEX = re.compile(r'\\+\\d{1,3}[\\s.-]?\\d{2,4}[\\s.-]?\\d{3,4}[\\s.-]?\\d{0,5}')\ndef build_analyzer(language: str) -> AnalyzerEngine:\n    if language == \"de\":\n        provider = NlpEngineProvider(nlp_configuration={\n            \"nlp_engine_name\": \"spacy\",\n            \"models\": [{\"lang_code\": \"de\", \"model_name\": \"de_core_news_md\"}],\n        })\n        recognizers = [email_recognizer_de, org_recognizer_de, iban_recognizer_de, phone_recognizer_de, id_recognizer_de]\n    else:",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "PHONE_REGEX",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.pseudonymizer",
+        "description": "backend.privacy_proxy.app.pseudonymizer",
+        "peekOfCode": "PHONE_REGEX = re.compile(r'\\+\\d{1,3}[\\s.-]?\\d{2,4}[\\s.-]?\\d{3,4}[\\s.-]?\\d{0,5}')\ndef build_analyzer(language: str) -> AnalyzerEngine:\n    if language == \"de\":\n        provider = NlpEngineProvider(nlp_configuration={\n            \"nlp_engine_name\": \"spacy\",\n            \"models\": [{\"lang_code\": \"de\", \"model_name\": \"de_core_news_md\"}],\n        })\n        recognizers = [email_recognizer_de, org_recognizer_de, iban_recognizer_de, phone_recognizer_de, id_recognizer_de]\n    else:\n        provider = NlpEngineProvider(nlp_configuration={",
+        "detail": "backend.privacy_proxy.app.pseudonymizer",
+        "documentation": {}
+    },
+    {
+        "label": "check",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "def check(name, condition, got=\"\"):\n    status = PASS if condition else FAIL\n    msg = f\"{status} {name}\"\n    if not condition:\n        msg += f\" | got: {got}\"\n    print(msg)\n    results.append((name, condition))\ndef post(path, payload, headers=None):\n    data = json.dumps(payload).encode()\n    h = {\"Content-Type\": \"application/json\"}",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "post",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "def post(path, payload, headers=None):\n    data = json.dumps(payload).encode()\n    h = {\"Content-Type\": \"application/json\"}\n    if headers:\n        h.update(headers)\n    req = urllib.request.Request(f\"{BASE_URL}{path}\", data=data, headers=h)\n    try:\n        res = urllib.request.urlopen(req, timeout=10)\n        return json.loads(res.read())\n    except Exception as e:",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "get",
+        "kind": 2,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "def get(path):\n    try:\n        res = urllib.request.urlopen(f\"{BASE_URL}{path}\", timeout=10)\n        return json.loads(res.read())\n    except Exception as e:\n        return {\"error\": str(e)}\nprint(SEP)\nprint(\"[TEST] Garnet Proxy — starting test suite\")\nprint(SEP)\n# ── T01 health ──────────────────────────────────────────",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "BASE_URL",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "BASE_URL = \"http://localhost:8080\"\nPASS = \"✅\"\nFAIL = \"❌\"\nresults = []\nSEP = \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\ndef check(name, condition, got=\"\"):\n    status = PASS if condition else FAIL\n    msg = f\"{status} {name}\"\n    if not condition:\n        msg += f\" | got: {got}\"",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "PASS",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "PASS = \"✅\"\nFAIL = \"❌\"\nresults = []\nSEP = \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\ndef check(name, condition, got=\"\"):\n    status = PASS if condition else FAIL\n    msg = f\"{status} {name}\"\n    if not condition:\n        msg += f\" | got: {got}\"\n    print(msg)",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "FAIL",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "FAIL = \"❌\"\nresults = []\nSEP = \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\ndef check(name, condition, got=\"\"):\n    status = PASS if condition else FAIL\n    msg = f\"{status} {name}\"\n    if not condition:\n        msg += f\" | got: {got}\"\n    print(msg)\n    results.append((name, condition))",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "results",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "results = []\nSEP = \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\ndef check(name, condition, got=\"\"):\n    status = PASS if condition else FAIL\n    msg = f\"{status} {name}\"\n    if not condition:\n        msg += f\" | got: {got}\"\n    print(msg)\n    results.append((name, condition))\ndef post(path, payload, headers=None):",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "SEP",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "SEP = \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\ndef check(name, condition, got=\"\"):\n    status = PASS if condition else FAIL\n    msg = f\"{status} {name}\"\n    if not condition:\n        msg += f\" | got: {got}\"\n    print(msg)\n    results.append((name, condition))\ndef post(path, payload, headers=None):\n    data = json.dumps(payload).encode()",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = get(\"/health\")\ncheck(\"health returns ok\", res.get(\"status\") == \"ok\", res)\n# ── T02 logs.py import ──────────────────────────────────\nprint(\"\\n[T02] logs.py import\")\ntry:\n    from app.logs import (\n        log_health, log_garnet, log_in_user, log_out_user,\n        log_file_pii, log_internal, log_privacy_off,\n        log_to_llm, log_to_user, log_error, log_sep\n    )",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/analyze\", {\"text\": \"Max Mustermann works at Enclaive GmbH\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON detected\", \"PERSON\" in types, types)\ncheck(\"ORGANIZATION detected\", \"ORGANIZATION\" in types, types)\n# ── T04 analyze — EMAIL ──────────────────────────────────\nprint(\"\\n[T04] /analyze — EMAIL_ADDRESS\")\nres = post(\"/analyze\", {\"text\": \"Contact me at max@enclaive.com\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"EMAIL_ADDRESS detected\", \"EMAIL_ADDRESS\" in types, types)\n# ── T05 analyze — IBAN ───────────────────────────────────",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "types",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "types = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON detected\", \"PERSON\" in types, types)\ncheck(\"ORGANIZATION detected\", \"ORGANIZATION\" in types, types)\n# ── T04 analyze — EMAIL ──────────────────────────────────\nprint(\"\\n[T04] /analyze — EMAIL_ADDRESS\")\nres = post(\"/analyze\", {\"text\": \"Contact me at max@enclaive.com\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"EMAIL_ADDRESS detected\", \"EMAIL_ADDRESS\" in types, types)\n# ── T05 analyze — IBAN ───────────────────────────────────\nprint(\"\\n[T05] /analyze — IBAN_CODE\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/analyze\", {\"text\": \"Contact me at max@enclaive.com\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"EMAIL_ADDRESS detected\", \"EMAIL_ADDRESS\" in types, types)\n# ── T05 analyze — IBAN ───────────────────────────────────\nprint(\"\\n[T05] /analyze — IBAN_CODE\")\nres = post(\"/analyze\", {\"text\": \"IBAN: DE89370400440532013000\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"IBAN_CODE detected\", \"IBAN_CODE\" in types, types)\n# ── T06 analyze — PHONE ──────────────────────────────────\nprint(\"\\n[T06] /analyze — PHONE_NUMBER\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "types",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "types = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"EMAIL_ADDRESS detected\", \"EMAIL_ADDRESS\" in types, types)\n# ── T05 analyze — IBAN ───────────────────────────────────\nprint(\"\\n[T05] /analyze — IBAN_CODE\")\nres = post(\"/analyze\", {\"text\": \"IBAN: DE89370400440532013000\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"IBAN_CODE detected\", \"IBAN_CODE\" in types, types)\n# ── T06 analyze — PHONE ──────────────────────────────────\nprint(\"\\n[T06] /analyze — PHONE_NUMBER\")\nres = post(\"/analyze\", {\"text\": \"Call me at +49 172 99887766\"})",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/analyze\", {\"text\": \"IBAN: DE89370400440532013000\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"IBAN_CODE detected\", \"IBAN_CODE\" in types, types)\n# ── T06 analyze — PHONE ──────────────────────────────────\nprint(\"\\n[T06] /analyze — PHONE_NUMBER\")\nres = post(\"/analyze\", {\"text\": \"Call me at +49 172 99887766\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PHONE_NUMBER detected\", \"PHONE_NUMBER\" in types, types)\n# ── T07 analyze — German text ────────────────────────────\nprint(\"\\n[T07] /analyze — German NER\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "types",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "types = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"IBAN_CODE detected\", \"IBAN_CODE\" in types, types)\n# ── T06 analyze — PHONE ──────────────────────────────────\nprint(\"\\n[T06] /analyze — PHONE_NUMBER\")\nres = post(\"/analyze\", {\"text\": \"Call me at +49 172 99887766\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PHONE_NUMBER detected\", \"PHONE_NUMBER\" in types, types)\n# ── T07 analyze — German text ────────────────────────────\nprint(\"\\n[T07] /analyze — German NER\")\nres = post(\"/analyze\", {\"text\": \"Mein Name ist Thomas Müller von Siemens AG\"})",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/analyze\", {\"text\": \"Call me at +49 172 99887766\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PHONE_NUMBER detected\", \"PHONE_NUMBER\" in types, types)\n# ── T07 analyze — German text ────────────────────────────\nprint(\"\\n[T07] /analyze — German NER\")\nres = post(\"/analyze\", {\"text\": \"Mein Name ist Thomas Müller von Siemens AG\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON detected in German\", \"PERSON\" in types, types)\n# ── T08 analyze — entity filter ──────────────────────────\nprint(\"\\n[T08] /analyze — entity filter (PERSON only)\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "types",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "types = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PHONE_NUMBER detected\", \"PHONE_NUMBER\" in types, types)\n# ── T07 analyze — German text ────────────────────────────\nprint(\"\\n[T07] /analyze — German NER\")\nres = post(\"/analyze\", {\"text\": \"Mein Name ist Thomas Müller von Siemens AG\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON detected in German\", \"PERSON\" in types, types)\n# ── T08 analyze — entity filter ──────────────────────────\nprint(\"\\n[T08] /analyze — entity filter (PERSON only)\")\nres = post(",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/analyze\", {\"text\": \"Mein Name ist Thomas Müller von Siemens AG\"})\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON detected in German\", \"PERSON\" in types, types)\n# ── T08 analyze — entity filter ──────────────────────────\nprint(\"\\n[T08] /analyze — entity filter (PERSON only)\")\nres = post(\n    \"/analyze\",\n    {\"text\": \"Anna Schmidt, email: anna@test.com\"},\n    headers={\"x-garnet-entities\": \"PERSON\"}\n)",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "types",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "types = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON detected in German\", \"PERSON\" in types, types)\n# ── T08 analyze — entity filter ──────────────────────────\nprint(\"\\n[T08] /analyze — entity filter (PERSON only)\")\nres = post(\n    \"/analyze\",\n    {\"text\": \"Anna Schmidt, email: anna@test.com\"},\n    headers={\"x-garnet-entities\": \"PERSON\"}\n)\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\n    \"/analyze\",\n    {\"text\": \"Anna Schmidt, email: anna@test.com\"},\n    headers={\"x-garnet-entities\": \"PERSON\"}\n)\ntypes = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON returned\", \"PERSON\" in types, types)\ncheck(\"EMAIL_ADDRESS filtered out\", \"EMAIL_ADDRESS\" not in types, types)\n# ── T09 analyze — no PII ─────────────────────────────────\nprint(\"\\n[T09] /analyze — no PII in text\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "types",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "types = [e.get(\"type\") for e in res.get(\"entities\", [])]\ncheck(\"PERSON returned\", \"PERSON\" in types, types)\ncheck(\"EMAIL_ADDRESS filtered out\", \"EMAIL_ADDRESS\" not in types, types)\n# ── T09 analyze — no PII ─────────────────────────────────\nprint(\"\\n[T09] /analyze — no PII in text\")\nres = post(\"/analyze\", {\"text\": \"What is the capital of France?\"})\nentities = res.get(\"entities\", [])\ncheck(\"no entities detected\", len(entities) == 0, entities)\n# ── T10 vault/scan ───────────────────────────────────────\nprint(\"\\n[T10] /vault/scan — pseudonymizes file content\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/analyze\", {\"text\": \"What is the capital of France?\"})\nentities = res.get(\"entities\", [])\ncheck(\"no entities detected\", len(entities) == 0, entities)\n# ── T10 vault/scan ───────────────────────────────────────\nprint(\"\\n[T10] /vault/scan — pseudonymizes file content\")\nres = post(\"/vault/scan\", {\n    \"text\": \"Anna Schmidt, email: anna@enclaive.com, IBAN: DE89370400440532013000\",\n    \"file_id\": \"test-file-001\",\n    \"privacy_proxy\": True\n})",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "entities",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "entities = res.get(\"entities\", [])\ncheck(\"no entities detected\", len(entities) == 0, entities)\n# ── T10 vault/scan ───────────────────────────────────────\nprint(\"\\n[T10] /vault/scan — pseudonymizes file content\")\nres = post(\"/vault/scan\", {\n    \"text\": \"Anna Schmidt, email: anna@enclaive.com, IBAN: DE89370400440532013000\",\n    \"file_id\": \"test-file-001\",\n    \"privacy_proxy\": True\n})\ncheck(\"entity_count > 0\", res.get(\"entity_count\", 0) > 0, res.get(\"entity_count\"))",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/vault/scan\", {\n    \"text\": \"Anna Schmidt, email: anna@enclaive.com, IBAN: DE89370400440532013000\",\n    \"file_id\": \"test-file-001\",\n    \"privacy_proxy\": True\n})\ncheck(\"entity_count > 0\", res.get(\"entity_count\", 0) > 0, res.get(\"entity_count\"))\ncheck(\"pseudonymized_text contains token\", \"PERSON_\" in res.get(\"pseudonymized_text\", \"\"), res.get(\"pseudonymized_text\", \"\")[:100])\n# ── T11 vault/scan — privacy OFF ─────────────────────────\nprint(\"\\n[T11] /vault/scan — privacy OFF returns raw text\")\noriginal = \"Anna Schmidt works at Enclaive\"",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "original",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "original = \"Anna Schmidt works at Enclaive\"\nres = post(\"/vault/scan\", {\n    \"text\": original,\n    \"file_id\": \"test-file-002\",\n    \"privacy_proxy\": False\n})\ncheck(\"entity_count=0 when privacy OFF\", res.get(\"entity_count\") == 0, res.get(\"entity_count\"))\ncheck(\"text unchanged when privacy OFF\", res.get(\"pseudonymized_text\") == original, res.get(\"pseudonymized_text\", \"\")[:80])\n# ── SUMMARY ──────────────────────────────────────────────\nprint(f\"\\n{SEP}\")",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "res",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "res = post(\"/vault/scan\", {\n    \"text\": original,\n    \"file_id\": \"test-file-002\",\n    \"privacy_proxy\": False\n})\ncheck(\"entity_count=0 when privacy OFF\", res.get(\"entity_count\") == 0, res.get(\"entity_count\"))\ncheck(\"text unchanged when privacy OFF\", res.get(\"pseudonymized_text\") == original, res.get(\"pseudonymized_text\", \"\")[:80])\n# ── SUMMARY ──────────────────────────────────────────────\nprint(f\"\\n{SEP}\")\npassed = sum(1 for _, ok in results if ok)",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "passed",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "passed = sum(1 for _, ok in results if ok)\nfailed = sum(1 for _, ok in results if not ok)\nprint(f\"[RESULT] {passed}/{len(results)} passed — {failed} failed\")\nif failed:\n    print(\"[FAILED TESTS]\")\n    for name, ok in results:\n        if not ok:\n            print(f\"  {FAIL} {name}\")\nprint(SEP)",
+        "detail": "backend.privacy_proxy.app.test_proxy",
+        "documentation": {}
+    },
+    {
+        "label": "failed",
+        "kind": 5,
+        "importPath": "backend.privacy_proxy.app.test_proxy",
+        "description": "backend.privacy_proxy.app.test_proxy",
+        "peekOfCode": "failed = sum(1 for _, ok in results if not ok)\nprint(f\"[RESULT] {passed}/{len(results)} passed — {failed} failed\")\nif failed:\n    print(\"[FAILED TESTS]\")\n    for name, ok in results:\n        if not ok:\n            print(f\"  {FAIL} {name}\")\nprint(SEP)",
+        "detail": "backend.privacy_proxy.app.test_proxy",
         "documentation": {}
     },
     {
