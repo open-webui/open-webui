@@ -129,7 +129,7 @@ apply_knowledge() {
         col_desc=$(echo "$col" | jq -r '.description')
 
         local kb_id
-        kb_id=$(echo "$existing" | jq -r --arg name "$col_name" '.[] | select(.name == $name) | .id // empty' 2>/dev/null || echo "")
+        kb_id=$(echo "$existing" | jq -r --arg name "$col_name" '.items[]? | select(.name == $name) | .id // empty' 2>/dev/null || echo "")
 
         if [ -z "$kb_id" ]; then
             if [ "$DRY_RUN" = "1" ]; then
@@ -161,16 +161,38 @@ apply_knowledge() {
             fi
 
             info "Uploading document: $doc"
-            # OpenWebUI KB file upload: POST /knowledge/{id}/file/add
-            # Uses multipart form with the file
-            #
-            # NOTE: curl multipart upload for KB files — may need API tuning.
-            # The File upload is multipart POST with the file field.
+            # OpenWebUI KB file upload flow (two-step):
+            #   1. POST /api/v1/files/           (multipart) → {id: "file-uuid", ...}
+            #   2. POST /api/v1/knowledge/{id}/file/add  (JSON body: {"file_id": "..."})
+            # The /file/add endpoint takes KnowledgeFileIdForm (file_id str),
+            # NOT a multipart file upload.
             if [ "$kb_id" != "dry-run-id" ]; then
-                curl -s -X POST "${OWUI_API}/knowledge/${kb_id}/file/add" \
+                local upload_resp http_code file_id
+                upload_resp=$(curl -s -w "\n%{http_code}" \
+                    -X POST "${OWUI_API}/files/" \
                     -H "Authorization: Bearer ${OWUI_API_KEY}" \
-                    -F "file=@${doc_path}" \
-                    -o /dev/null -w "%{http_code}" 2>/dev/null || warn "Upload failed for $doc"
+                    -F "file=@${doc_path}" 2>/dev/null)
+                http_code=$(echo "$upload_resp" | tail -1)
+                if [[ "${http_code}" -ge 200 && "${http_code}" -lt 300 ]]; then
+                    file_id=$(echo "$upload_resp" | sed '$d' | jq -r '.id // empty')
+                    if [[ -z "${file_id}" ]]; then
+                        warn "File upload succeeded but no file_id returned for $doc"
+                        continue
+                    fi
+                    local add_code
+                    add_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                        -X POST "${OWUI_API}/knowledge/${kb_id}/file/add" \
+                        -H "Authorization: Bearer ${OWUI_API_KEY}" \
+                        -H "Content-Type: application/json" \
+                        -d "{\"file_id\":\"${file_id}\"}" 2>/dev/null)
+                    if [[ "${add_code}" -ge 200 && "${add_code}" -lt 300 ]]; then
+                        info "  Added to KB (file_id=${file_id})"
+                    else
+                        warn "Failed to add $doc to KB (HTTP ${add_code})"
+                    fi
+                else
+                    warn "File upload failed for $doc (HTTP ${http_code})"
+                fi
             fi
         done <<< "$docs"
 
