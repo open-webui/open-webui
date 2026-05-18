@@ -19,7 +19,11 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pytz import UTC
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.internal.db import get_async_session
 from open_webui.env import (
     ENABLE_OTEL,
     ENABLE_PASSWORD_VALIDATION,
@@ -37,7 +41,6 @@ from open_webui.env import (
 from open_webui.models.auths import Auths
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
-from pytz import UTC
 
 log = logging.getLogger(__name__)
 
@@ -465,6 +468,28 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+async def get_analytics_user(
+    request: Request,
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role == 'admin':
+        return user
+
+    if await has_permission(
+        user.id,
+        'admin.analytics',
+        request.app.state.config.USER_PERMISSIONS,
+        db=db,
+    ):
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+    )
 
 
 async def create_admin_user(email: str, password: str, name: str = 'Admin'):

@@ -68,5 +68,8 @@ export const DEFAULT_PERMISSIONS = {
 	},
 	settings: {
 		interface: true
+	},
+	admin: {
+		analytics: false
 	}
 } as const;

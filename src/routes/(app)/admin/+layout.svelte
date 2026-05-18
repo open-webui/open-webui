@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	import { WEBUI_NAME, config, mobile, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { hasAdminAccess, hasAnalyticsAccess, isAnalyticsOnlyUser } from '$lib/utils/admin';
 
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 
@@ -12,12 +13,19 @@
 
 	let loaded = false;
 
-	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
+	$: canAccessAdmin = hasAdminAccess($user);
+	$: canAccessAnalytics = hasAnalyticsAccess($user);
+	$: analyticsOnly = isAnalyticsOnlyUser($user);
+
+	$: if ($user?.id) {
+		if (!canAccessAnalytics) {
+			goto('/');
+		} else if (analyticsOnly && !$page.url.pathname.includes('/admin/analytics')) {
+			goto('/admin/analytics');
+		} else {
+			loaded = true;
 		}
-		loaded = true;
-	});
+	}
 </script>
 
 <svelte:head>
@@ -59,15 +67,17 @@
 					<div
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 					>
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin">{$i18n.t('Users')}</a
-						>
+						{#if canAccessAdmin}
+							<a
+								draggable="false"
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+								href="/admin">{$i18n.t('Users')}</a
+							>
+						{/if}
 
-						{#if $config?.features.enable_admin_analytics ?? true}
+						{#if ($config?.features.enable_admin_analytics ?? true) && canAccessAnalytics}
 							<a
 								draggable="false"
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/analytics')
@@ -77,29 +87,31 @@
 							>
 						{/if}
 
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin/evaluations">{$i18n.t('Evaluations')}</a
-						>
+						{#if canAccessAdmin}
+							<a
+								draggable="false"
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/evaluations')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+								href="/admin/evaluations">{$i18n.t('Evaluations')}</a
+							>
 
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/functions')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin/functions">{$i18n.t('Functions')}</a
-						>
+							<a
+								draggable="false"
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/functions')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+								href="/admin/functions">{$i18n.t('Functions')}</a
+							>
 
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/settings')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin/settings">{$i18n.t('Settings')}</a
-						>
+							<a
+								draggable="false"
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/settings')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+								href="/admin/settings">{$i18n.t('Settings')}</a
+							>
+						{/if}
 					</div>
 				</div>
 			</div>

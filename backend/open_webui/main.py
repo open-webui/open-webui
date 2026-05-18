@@ -382,6 +382,7 @@ from open_webui.config import (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     UPLOAD_DIR,
     USER_PERMISSIONS,
+    DEFAULT_USER_PERMISSIONS,
     VOICE_MODE_PROMPT_TEMPLATE,
     WEB_FETCH_MAX_CONTENT_LENGTH,
     WEB_LOADER_CONCURRENT_REQUESTS,
@@ -632,6 +633,15 @@ async def lifespan(app: FastAPI):
 
     if RESET_CONFIG_ON_START:
         await async_reset_config()
+
+    from open_webui.utils.access_control import fill_missing_permissions
+
+    merged_user_permissions = fill_missing_permissions(
+        json.loads(json.dumps(USER_PERMISSIONS.value)),
+        DEFAULT_USER_PERMISSIONS,
+    )
+    if merged_user_permissions != USER_PERMISSIONS.value:
+        app.state.config.USER_PERMISSIONS = merged_user_permissions
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)

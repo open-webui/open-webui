@@ -192,7 +192,32 @@
 		tools.set(toolsData);
 	};
 
+	const waitForSessionUser = () =>
+		new Promise<void>((resolve) => {
+			if ($user !== undefined && $user !== null) {
+				resolve();
+				return;
+			}
+
+			const timeout = setTimeout(() => {
+				unsubscribe();
+				resolve();
+			}, 15000);
+
+			const unsubscribe = user.subscribe((value) => {
+				if (value !== undefined && value !== null) {
+					clearTimeout(timeout);
+					unsubscribe();
+					resolve();
+				}
+			});
+		});
+
 	onMount(async () => {
+		if (localStorage.token && ($user === undefined || $user === null)) {
+			await waitForSessionUser();
+		}
+
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
 			return;

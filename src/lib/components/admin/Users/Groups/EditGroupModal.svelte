@@ -68,7 +68,8 @@
 				access_grants: { ...DEFAULT_PERMISSIONS.access_grants, ...loadedPermissions.access_grants },
 				chat: { ...DEFAULT_PERMISSIONS.chat, ...loadedPermissions.chat },
 				features: { ...DEFAULT_PERMISSIONS.features, ...loadedPermissions.features },
-				settings: { ...DEFAULT_PERMISSIONS.settings, ...loadedPermissions.settings }
+				settings: { ...DEFAULT_PERMISSIONS.settings, ...loadedPermissions.settings },
+				admin: { ...DEFAULT_PERMISSIONS.admin, ...loadedPermissions.admin }
 			};
 			data = group?.data ?? {};
 

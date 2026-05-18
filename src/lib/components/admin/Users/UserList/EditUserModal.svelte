@@ -12,6 +12,7 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import UserProfileImage from '$lib/components/chat/Settings/Account/UserProfileImage.svelte';
 
 	const i18n = getContext('i18n');
@@ -30,6 +31,7 @@
 		if (selectedUser) {
 			_user = selectedUser;
 			_user.password = '';
+			analyticsAccess = selectedUser?.info?.permissions?.admin?.analytics ?? false;
 			loadUserGroups();
 		}
 	};
@@ -42,10 +44,19 @@
 		password: ''
 	};
 
+	let analyticsAccess = false;
+
 	let userGroups: any[] | null = null;
 
 	const submitHandler = async () => {
-		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
+		const res = await updateUserById(localStorage.token, selectedUser.id, {
+			..._user,
+			permissions: {
+				admin: {
+					analytics: analyticsAccess
+				}
+			}
+		}).catch((error) => {
 			toast.error(`${error}`);
 		});
 
@@ -130,6 +141,15 @@
 														</a>
 													</span>
 												{/each}
+											</div>
+										</div>
+									{/if}
+
+									{#if _user.role !== 'admin'}
+										<div class="flex flex-col w-full">
+											<div class="flex w-full justify-between my-1">
+												<div class="text-xs text-gray-500">{$i18n.t('Analytics Access')}</div>
+												<Switch bind:state={analyticsAccess} />
 											</div>
 										</div>
 									{/if}

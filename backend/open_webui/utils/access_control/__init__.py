@@ -52,17 +52,37 @@ async def get_permissions(
                     permissions[key] = permissions[key] or value  # Use the most permissive value (True > False)
         return permissions
 
+    from open_webui.models.users import Users
+
     user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
 
-    # Deep copy default permissions to avoid modifying the original dict
-    permissions = json.loads(json.dumps(default_permissions))
+    # Merge persisted defaults with code defaults so upgrades keep new permission keys
+    permission_template = fill_missing_permissions(
+        json.loads(json.dumps(default_permissions)),
+        DEFAULT_USER_PERMISSIONS,
+    )
+
+    # Deep copy to avoid modifying the template dict
+    permissions = json.loads(json.dumps(permission_template))
 
     # Combine permissions from all user groups
     for group in user_groups:
         permissions = combine_permissions(permissions, group.permissions or {})
 
-    # Ensure all fields from default_permissions are present and filled in
-    permissions = fill_missing_permissions(permissions, default_permissions)
+    user = await Users.get_user_by_id(user_id, db=db)
+
+    # Merge per-user permissions stored in user.info
+    if user and user.info and user.info.get('permissions'):
+        permissions = combine_permissions(permissions, user.info['permissions'])
+
+    # Ensure all fields from the template are present and filled in
+    permissions = fill_missing_permissions(permissions, permission_template)
+
+    # Admins always have analytics access
+    if user and user.role == 'admin':
+        if 'admin' not in permissions:
+            permissions['admin'] = {}
+        permissions['admin']['analytics'] = True
 
     return permissions
 
@@ -91,11 +111,24 @@ async def has_permission(
 
     permission_hierarchy = permission_key.split('.')
 
+    from open_webui.models.users import Users
+
+    user = await Users.get_user_by_id(user_id, db=db)
+
+    # Admins always have admin-scoped permissions (e.g. analytics)
+    if user and user.role == 'admin' and permission_hierarchy[0] == 'admin':
+        return True
+
     # Retrieve user group permissions
     user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
 
     for group in user_groups:
         if get_permission(group.permissions or {}, permission_hierarchy):
+            return True
+
+    # Check per-user permissions stored in user.info
+    if user and user.info and user.info.get('permissions'):
+        if get_permission(user.info['permissions'], permission_hierarchy):
             return True
 
     # Check default permissions afterward if the group permissions don't allow it

@@ -242,6 +242,10 @@ class SettingsPermissions(BaseModel):
     interface: bool = True
 
 
+class AdminPermissions(BaseModel):
+    analytics: bool = False
+
+
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
     sharing: SharingPermissions
@@ -249,6 +253,7 @@ class UserPermissions(BaseModel):
     chat: ChatPermissions
     features: FeaturesPermissions
     settings: SettingsPermissions
+    admin: AdminPermissions
 
 
 @router.get('/default/permissions', response_model=UserPermissions)
@@ -260,6 +265,7 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
         'chat': ChatPermissions(**request.app.state.config.USER_PERMISSIONS.get('chat', {})),
         'features': FeaturesPermissions(**request.app.state.config.USER_PERMISSIONS.get('features', {})),
         'settings': SettingsPermissions(**request.app.state.config.USER_PERMISSIONS.get('settings', {})),
+        'admin': AdminPermissions(**request.app.state.config.USER_PERMISSIONS.get('admin', {})),
     }
 
 
@@ -602,6 +608,25 @@ async def update_user_by_id(
         if form_data.profile_image_url is not None:
             update_data['profile_image_url'] = form_data.profile_image_url
 
+        if form_data.permissions is not None:
+            existing_info = user.info or {}
+            existing_permissions = existing_info.get('permissions', {})
+
+            def combine_permissions(permissions: dict, override: dict) -> dict:
+                for key, value in override.items():
+                    if isinstance(value, dict):
+                        if key not in permissions:
+                            permissions[key] = {}
+                        permissions[key] = combine_permissions(permissions[key], value)
+                    else:
+                        permissions[key] = value
+                return permissions
+
+            update_data['info'] = {
+                **existing_info,
+                'permissions': combine_permissions(existing_permissions, form_data.permissions),
+            }
+
         if update_data:
             updated_user = await Users.update_user_by_id(
                 user_id,
@@ -612,9 +637,12 @@ async def update_user_by_id(
             updated_user = user
 
         if updated_user:
-            # If the role changed, disconnect all socket sessions so stale
+            # If the role or permissions changed, disconnect all socket sessions so stale
             # privileges cached in SESSION_POOL are invalidated.
-            if updated_user.role != user.role:
+            permissions_changed = form_data.permissions is not None and (
+                (user.info or {}).get('permissions') != (updated_user.info or {}).get('permissions')
+            )
+            if updated_user.role != user.role or permissions_changed:
                 await disconnect_user_sessions(user_id)
             return updated_user
 

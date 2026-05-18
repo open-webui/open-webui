@@ -2778,6 +2778,10 @@ USER_PERMISSIONS_FEATURES_CALENDAR = os.getenv('USER_PERMISSIONS_FEATURES_CALEND
 
 USER_PERMISSIONS_SETTINGS_INTERFACE = os.getenv('USER_PERMISSIONS_SETTINGS_INTERFACE', 'True').lower() == 'true'
 
+USER_PERMISSIONS_ADMIN_ANALYTICS = (
+    os.environ.get('USER_PERMISSIONS_ADMIN_ANALYTICS', 'False').lower() == 'true'
+)
+
 
 DEFAULT_USER_PERMISSIONS = {
     'workspace': {
@@ -2851,6 +2855,9 @@ DEFAULT_USER_PERMISSIONS = {
     },
     'settings': {
         'interface': USER_PERMISSIONS_SETTINGS_INTERFACE,
+    },
+    'admin': {
+        'analytics': USER_PERMISSIONS_ADMIN_ANALYTICS,
     },
 }
 

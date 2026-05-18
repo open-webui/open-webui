@@ -24,7 +24,8 @@
 			access_grants: { ...defaults.access_grants, ...obj.access_grants },
 			chat: { ...defaults.chat, ...obj.chat },
 			features: { ...defaults.features, ...obj.features },
-			settings: { ...defaults.settings, ...obj.settings }
+			settings: { ...defaults.settings, ...obj.settings },
+			admin: { ...defaults.admin, ...obj.admin }
 		};
 	}
 
@@ -961,6 +962,28 @@
 				<Switch bind:state={permissions.features.calendar} />
 			</div>
 			{#if defaultPermissions?.features?.calendar && !permissions.features.calendar}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Admin Permissions')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Analytics Access')}
+				</div>
+				<Switch bind:state={permissions.admin.analytics} />
+			</div>
+			{#if defaultPermissions?.admin?.analytics && !permissions.admin.analytics}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

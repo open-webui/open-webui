@@ -10,7 +10,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.feedbacks import Feedbacks
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
-from open_webui.utils.auth import get_admin_user
+from open_webui.utils.auth import get_analytics_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,7 +58,7 @@ async def get_model_analytics(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts per model."""
@@ -78,7 +78,7 @@ async def get_user_analytics(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     limit: int = Query(50, description='Max users to return'),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts and token usage per user with user info."""
@@ -121,7 +121,7 @@ async def get_messages(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     skip: int = Query(0),
     limit: int = Query(50, le=100),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Query messages with filters."""
@@ -155,7 +155,7 @@ async def get_summary(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get summary statistics for the dashboard."""
@@ -192,7 +192,7 @@ async def get_daily_stats(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
     granularity: str = Query('daily', description="Granularity: 'hourly' or 'daily'"),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get message counts grouped by model for time-series chart."""
@@ -227,7 +227,7 @@ async def get_token_usage(
     start_date: Optional[int] = Query(None),
     end_date: Optional[int] = Query(None),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get token usage aggregated by model."""
@@ -276,7 +276,7 @@ async def get_model_chats(
     end_date: Optional[int] = Query(None),
     skip: int = Query(0),
     limit: int = Query(50, le=100),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get chats that used a specific model, with preview and feedback info."""
@@ -362,7 +362,7 @@ class ModelOverviewResponse(BaseModel):
 async def get_model_overview(
     model_id: str,
     days: int = Query(30, description='Number of days of history (0 for all)'),
-    user=Depends(get_admin_user),
+    user=Depends(get_analytics_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get model overview with feedback history and chat tags."""

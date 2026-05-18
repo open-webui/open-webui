@@ -1,12 +1,13 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { config } from '$lib/stores';
+	import { config, user } from '$lib/stores';
+	import { hasAdminAccess } from '$lib/utils/admin';
 	import Analytics from '$lib/components/admin/Analytics.svelte';
 
 	onMount(() => {
 		if (!($config?.features.enable_admin_analytics ?? true)) {
-			goto('/admin');
+			goto(hasAdminAccess($user) ? '/admin' : '/');
 		}
 	});
 </script>

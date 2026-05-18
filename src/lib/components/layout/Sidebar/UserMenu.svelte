@@ -18,6 +18,7 @@
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { hasAnalyticsAccess, isAnalyticsOnlyUser } from '$lib/utils/admin';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -254,9 +255,9 @@
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</button>
 
-			{#if role === 'admin'}
+			{#if hasAnalyticsAccess($user)}
 				<a
-					href="/admin"
+					href={isAnalyticsOnlyUser($user) ? '/admin/analytics' : '/admin'}
 					draggable="false"
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 					on:click={async (e) => {
@@ -265,7 +266,7 @@
 						}
 						e.preventDefault();
 						show = false;
-						goto('/admin');
+						goto(isAnalyticsOnlyUser($user) ? '/admin/analytics' : '/admin');
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -275,7 +276,9 @@
 					<div class=" self-center mr-3">
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+					<div class=" self-center truncate">
+						{isAnalyticsOnlyUser($user) ? $i18n.t('Analytics') : $i18n.t('Admin Panel')}
+					</div>
 				</a>
 			{/if}
 
