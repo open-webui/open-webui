@@ -49838,7 +49838,7 @@
         "kind": 2,
         "importPath": "backend.privacy_proxy.app.logs",
         "description": "backend.privacy_proxy.app.logs",
-        "peekOfCode": "def log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")\ndef log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "peekOfCode": "def log_analyze_result(count, types):\n    print(f\"[ANALYZE RESULT] {count} entities found → {types}\")\ndef log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test\n# retest\n# cosign test",
         "detail": "backend.privacy_proxy.app.logs",
         "documentation": {}
     },
@@ -49847,7 +49847,7 @@
         "kind": 2,
         "importPath": "backend.privacy_proxy.app.logs",
         "description": "backend.privacy_proxy.app.logs",
-        "peekOfCode": "def log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "peekOfCode": "def log_error(msg):\n    print(f\"[ERROR] {msg}\")\ndef log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test\n# retest\n# cosign test\n# cosign test",
         "detail": "backend.privacy_proxy.app.logs",
         "documentation": {}
     },
@@ -49856,7 +49856,7 @@
         "kind": 2,
         "importPath": "backend.privacy_proxy.app.logs",
         "description": "backend.privacy_proxy.app.logs",
-        "peekOfCode": "def log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test",
+        "peekOfCode": "def log_error_passthrough(status, url, body):\n    print(f\"[ERROR] passthrough status={status} url={url} body={body[:200]}\")# test\n# test\n# test\n# retest\n# cosign test\n# cosign test",
         "detail": "backend.privacy_proxy.app.logs",
         "documentation": {}
     },

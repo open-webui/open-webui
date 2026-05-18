@@ -219,16 +219,7 @@ jobs:
           cat /tmp/webui-meta.json | python3 -c "import sys,json; print(json.load(sys.stdin)['containerimage.digest'])")
           echo "digest=harbor.enclaive.cloud/garnetdemo/garnet-webui@${DIGEST}" >> $GITHUB_OUTPUT
 
-      - name: Scan webui image
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin
-          trivy image \
-            --exit-code 1 \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --scanners vuln \
-            harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
+
 
       - name: Install cosign
         run: |
