@@ -186,13 +186,16 @@ main() {
     log "Target: ${OWUI_BASE_URL}"
     [ "$DRY_RUN" = "1" ] && log "DRY RUN — no changes will be made"
 
-    # Verify API connectivity (with retries — nginx may return 502 briefly)
+    # Verify API connectivity (with retries — up to 3 minutes)
     local health
-    for attempt in $(seq 1 10); do
+    local max_attempts=30
+    local attempt=0
+    while [ $attempt -lt $max_attempts ]; do
         health=$(curl -s -o /dev/null -w "%{http_code}" "${OWUI_BASE_URL}/api/v1/tools/" \
             -H "Authorization: Bearer ${OWUI_API_KEY}" 2>/dev/null || echo "000")
-        [ "$health" = "502" ] && sleep 2 && continue
-        break
+        [ "$health" != "000" ] && [ "$health" != "502" ] && break
+        attempt=$((attempt + 1))
+        [ $attempt -lt $max_attempts ] && sleep 6
     done
 
     if [ "$health" -ge 200 ] 2>/dev/null && [ "$health" -lt 500 ]; then

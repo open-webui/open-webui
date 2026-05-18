@@ -67,6 +67,17 @@ docker compose -f docker-compose.prod.yml up -d --remove-orphans
 # Bootstrap configs if script exists
 BOOTSTRAP="${TARGET}/bin/bootstrap-config.sh"
 if [ -x "${BOOTSTRAP}" ]; then
+  echo "--- Fetching caseworker skills from jawafdehi-meta ---"
+  SKILLS_DIR="${TARGET}/configs/knowledge/caseworker"
+  mkdir -p "${SKILLS_DIR}"
+  git clone --depth 1 https://github.com/Jawafdehi/jawafdehi-meta /tmp/jawafdehi-meta-fetch 2>/dev/null || true
+  for skill in jawafdehi-caseworker jawafdehi-case-reviewer jawafdehi-script-generator; do
+    if [ -f "/tmp/jawafdehi-meta-fetch/.agents/skills/${skill}/SKILL.md" ]; then
+      cp "/tmp/jawafdehi-meta-fetch/.agents/skills/${skill}/SKILL.md" "${SKILLS_DIR}/${skill}.md"
+    fi
+  done
+  rm -rf /tmp/jawafdehi-meta-fetch
+
   echo "--- Bootstrapping configs ---"
   OWUI_API_KEY="$(cat "${SECRETS_DIR}/admin-api-key.txt")" \
   OWUI_BASE_URL="https://chat.jawafdehi.org" \
