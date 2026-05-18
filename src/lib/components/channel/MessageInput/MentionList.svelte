@@ -124,7 +124,7 @@
 			if (modelSuggestions) {
 				_models = [
 					...$models
-						.filter((m) => !m?.direct)
+						.filter((m) => !m?.direct && !m?.info?.meta?.hidden)
 						.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))
 				];
 			}
