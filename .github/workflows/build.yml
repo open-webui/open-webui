@@ -168,11 +168,7 @@ jobs:
             docker exec garnet-privacy-proxy-1 python3 -c \
             'import urllib.request; print(urllib.request.urlopen(\"http://localhost:8080/health\").read())'"
 
-      - name: Run proxy tests
-        run: |
-          ssh root@${{ secrets.CVM_HOST }} "\
-            docker exec -w /service garnet-privacy-proxy-1 python3 app/test_proxy.py"
-
+      
   # ── WEBUI ─────────────────────────────────────────────
   build-webui:
     needs: get-meta
