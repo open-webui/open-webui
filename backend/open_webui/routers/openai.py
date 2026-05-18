@@ -80,6 +80,11 @@ def _clean_proxy_headers(raw_headers) -> dict:
     return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
 
 
+def is_azure_openai_config(api_config: dict) -> bool:
+    """True when the connection should use Azure OpenAI-style URL paths."""
+    return bool(api_config.get('azure', False) or api_config.get('provider') == 'azure')
+
+
 async def send_get_request(
     request: Request = None,
     url=None,
@@ -595,7 +600,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
             try:
                 headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-                if api_config.get('azure', False):
+                if is_azure_openai_config(api_config):
                     models = {
                         'data': api_config.get('model_ids', []) or [],
                         'object': 'list',
@@ -681,7 +686,7 @@ async def verify_connection(
         try:
             headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-            if api_config.get('azure', False):
+            if is_azure_openai_config(api_config):
                 # Only set api-key header if not using Azure Entra ID authentication
                 auth_type = api_config.get('auth_type', 'bearer')
                 if auth_type not in ('azure_ad', 'microsoft_entra_id'):
@@ -1151,7 +1156,7 @@ async def generate_chat_completion(
 
     is_responses = api_config.get('api_type') == 'responses'
 
-    if api_config.get('azure', False):
+    if is_azure_openai_config(api_config):
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get('auth_type', 'bearer')
         if auth_type not in ('azure_ad', 'microsoft_entra_id'):
@@ -1408,7 +1413,7 @@ async def responses(
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if is_azure_openai_config(api_config):
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                 headers['api-key'] = key
@@ -1519,7 +1524,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if is_azure_openai_config(api_config):
             # Only set api-key header if not using Azure Entra ID authentication
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
