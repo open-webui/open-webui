@@ -1,0 +1,44 @@
+name: Deploy chat.jawafdehi.org
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or tag to deploy
+        required: false
+        default: jawafdehi-main
+  push:
+    branches:
+      - jawafdehi-main
+    paths:
+      - deploy/chat/**
+      - .github/workflows/deploy-chat.yml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: monal-instance1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Install SSH key and known_hosts
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.MONAL_SSH_KEY }}
+          known_hosts: ${{ secrets.MONAL_SSH_KNOWN_HOSTS }}
+          config: |
+            Host monal-instance1
+            HostName ${{ secrets.MONAL_SSH_HOST }}
+            User ${{ secrets.MONAL_SSH_USER }}
+            IdentityFile ~/.ssh/id_rsa
+
+      - name: Upload deploy bundle to host
+        run: |
+          rsync -avz --delete deploy/chat/ monal-instance1:/tmp/openwebui-deploy/
+
+      - name: Run deploy script on host
+        run: |
+          ssh monal-instance1 'bash /tmp/openwebui-deploy/bin/deploy.sh'

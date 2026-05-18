@@ -5,10 +5,11 @@
 # GCP Cloud Logging is enabled on the OWUI service via gcplogs driver.
 #
 # Prerequisites on host:
-#   cp mcp.env.example mcp.env          # fill in real values
-#   cp .env.example .env                # fill in OAUTH secrets
+#   mkdir -p /opt/openwebui-secrets
+#   cp mcp.env.example /opt/openwebui-secrets/mcp.env   # fill in real values
+#   cp .env.example   /opt/openwebui-secrets/.env        # fill in OAUTH secrets
 #   gcloud auth activate-service-account --key-file=owui-log-writer.credentials.json
-#   docker compose up -d
+#   docker compose -f docker-compose.prod.yml up -d
 #
 # Architecture:
 #   User → Google OAuth → OpenWebUI (jawafdehi-main image)
@@ -30,6 +31,8 @@ services:
       - ./custom/middleware.py:/app/backend/open_webui/utils/middleware.py:ro
       - ./custom/tools_utils.py:/app/backend/open_webui/utils/tools.py:ro
       - ./custom/tools_models.py:/app/backend/open_webui/models/tools.py:ro
+    env_file:
+      - /opt/openwebui-secrets/.env
     environment:
       - WEBUI_NAME=Jawafdehi Chat
       - WEBUI_URL=https://chat.jawafdehi.org
@@ -62,7 +65,7 @@ services:
     expose:
       - "8000"
     env_file:
-      - mcp.env
+      - /opt/openwebui-secrets/mcp.env
     environment:
       - HTTP_HOST=0.0.0.0
       - HTTP_PORT=8000
