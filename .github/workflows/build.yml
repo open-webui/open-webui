@@ -224,7 +224,7 @@ jobs:
 
       - name: Sign webui image
         run: |
-          sleep 10    ← wait for Harbor to fully store manifest
+          sleep 10 
           echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > /tmp/cosign.key
           chmod 600 /tmp/cosign.key
           COSIGN_PASSWORD="" cosign sign --yes --key /tmp/cosign.key \
