@@ -66,7 +66,7 @@ if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
 
   # Sync bundle to target
   echo "--- Syncing to ${TARGET} ---"
-  rsync -av \
+  rsync -av --no-group \
     --exclude='/.env' \
     --exclude='/mcp.env' \
     --exclude='/data' \
