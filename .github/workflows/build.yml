@@ -20,11 +20,13 @@ on:
 
 jobs:
 
+  # ── GET VERSION + TAG ─────────────────────────────────
   get-meta:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       tag: ${{ steps.get_tag.outputs.name }}
+      revision: ${{ steps.get_revision.outputs.revision }}
       proxy_changed: ${{ steps.changes.outputs.proxy }}
       webui_changed: ${{ steps.changes.outputs.webui }}
     steps:
@@ -42,6 +44,10 @@ jobs:
             echo "version=$(cat version/VERSION).nightly" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get revision
+        id: get_revision
+        run: echo "revision=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Get tag
         id: get_tag
         run: |
@@ -49,9 +55,11 @@ jobs:
             refs/heads/deploy/staging) NAME=staging ;;
             refs/heads/deploy/prod)    NAME=prod    ;;
             refs/tags/v*)              NAME=latest  ;;
-            *)                         NAME=dev     ;;
+            *)                         NAME="${FALLBACK}" ;;
           esac
           echo "name=${NAME}" >> $GITHUB_OUTPUT
+        env:
+          FALLBACK: ${{ steps.get_revision.outputs.revision }}
 
       - name: Check changed files
         id: changes
@@ -87,13 +95,16 @@ jobs:
             -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin
 
       - name: Build proxy image
+        id: build-proxy
         run: |
-          docker build --no-cache \
+          docker build \
             -f backend/privacy_proxy/Dockerfile \
             --build-arg PRODUCT_VERSION=${{ needs.get-meta.outputs.version }} \
+            --build-arg PRODUCT_REVISION=${{ needs.get-meta.outputs.revision }} \
             -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.tag }} \
             -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.version }} \
-            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ github.sha }} \
+            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }} \
+            -t harbor.enclaive.cloud/garnetdemo/privacy-proxy:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }} \
             backend/privacy_proxy/
 
       - name: Scan proxy image
@@ -105,13 +116,23 @@ jobs:
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --scanners vuln \
-            harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ github.sha }}
+            harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
 
       - name: Push proxy image
         run: |
           docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.tag }}
           docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.version }}
-          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ github.sha }}
+          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
+          docker push harbor.enclaive.cloud/garnetdemo/privacy-proxy:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
+
+      # ── cosign — needs COSIGN_PRIVATE_KEY secret (ask Seb) ──
+      # - name: Sign proxy image
+      #   run: |
+      #     cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+      #       harbor.enclaive.cloud/garnetdemo/privacy-proxy:${{ needs.get-meta.outputs.revision }}
+      #   env:
+      #     COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      #     COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
 
   deploy-proxy:
     needs: [get-meta, build-proxy]
@@ -139,6 +160,10 @@ jobs:
             docker exec garnet-privacy-proxy-1 python3 -c \
             'import urllib.request; print(urllib.request.urlopen(\"http://localhost:8080/health\").read())'"
 
+      - name: Run proxy tests
+        run: |
+          ssh root@${{ secrets.CVM_HOST }} "\
+            docker exec -w /service garnet-privacy-proxy-1 python3 app/test_proxy.py"
 
   # ── WEBUI ─────────────────────────────────────────────
   build-webui:
@@ -165,11 +190,13 @@ jobs:
 
       - name: Build webui image
         run: |
-          docker build --no-cache \
+          docker build \
             --build-arg PRODUCT_VERSION=${{ needs.get-meta.outputs.version }} \
+            --build-arg PRODUCT_REVISION=${{ needs.get-meta.outputs.revision }} \
             -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.tag }} \
             -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.version }} \
-            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ github.sha }} \
+            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }} \
+            -t harbor.enclaive.cloud/garnetdemo/garnet-webui:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }} \
             .
 
       - name: Scan webui image
@@ -181,13 +208,15 @@ jobs:
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --scanners vuln \
-            harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ github.sha }}
+            harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
 
       - name: Push webui image
         run: |
           docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.tag }}
           docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.version }}
-          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ github.sha }}
+          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:${{ needs.get-meta.outputs.revision }}
+          docker push harbor.enclaive.cloud/garnetdemo/garnet-webui:gh-run-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.run_number }}
+
 
   deploy-webui:
     needs: [get-meta, build-webui]
