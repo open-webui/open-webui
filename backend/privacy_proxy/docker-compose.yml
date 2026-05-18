@@ -1,0 +1,131 @@
+services:
+  garnet-dashboard:
+    image: harbor.enclaive.cloud/garnetdemo/garnet-dashboard:latest
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      privacy-proxy:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4'
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  privacy-proxy:
+    image: harbor.enclaive.cloud/garnetdemo/privacy-proxy:${IMAGE_TAG:-latest}
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OPENAI_API_URL=https://api.openai.com/v1
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      ollama:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+          cpus: '2'
+
+  open-webui:
+    image: harbor.enclaive.cloud/garnetdemo/garnet-webui:latest
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://privacy-proxy:8080
+      - OPENAI_API_BASE_URL=http://privacy-proxy:8080/openai
+      - FORCE_OPENAI_BASE_URL=http://privacy-proxy:8080/openai
+      - FORCE_OLLAMA_BASE_URL=http://privacy-proxy:8080
+      - ENABLE_IMAGE_GENERATION=True
+      - IMAGE_GENERATION_ENGINE=openai
+      - IMAGE_GENERATION_MODEL=dall-e-3
+      - IMAGES_OPENAI_API_BASE_URL=https://api.openai.com/v1
+      - WEBUI_NAME=Garnet
+      - BYPASS_MODEL_ACCESS_CONTROL=true
+      - RAG_SYSTEM_CONTEXT=True
+      - CONTENT_EXTRACTION_ENGINE=default
+    depends_on:
+      privacy-proxy:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      open-webui:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  ollama-data:
+  caddy-data:
+  caddy-config:
+  open-webui-data:
+  redis-data:
