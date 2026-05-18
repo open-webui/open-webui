@@ -1,10 +1,7 @@
-import asyncio
-import base64
-import io
-import mimetypes
-import re
-from pathlib import Path
-from typing import Optional
+from open_webui.routers.images import (
+    get_image_data,
+    upload_image,
+)
 
 from fastapi import (
     APIRouter,
@@ -13,20 +10,27 @@ from fastapi import (
     Request,
     UploadFile,
 )
+from typing import Optional
+from pathlib import Path
+
+from open_webui.storage.provider import Storage
+
+from open_webui.models.chats import Chats
+from open_webui.models.files import Files
+from open_webui.routers.files import upload_file_handler
+from open_webui.retrieval.web.utils import validate_url
+
+import asyncio
+import mimetypes
+import base64
+import io
+import re
+
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK,
 )
-from open_webui.models.chats import Chats
-from open_webui.models.files import Files
-from open_webui.retrieval.web.utils import validate_url
-from open_webui.routers.files import upload_file_handler
-from open_webui.routers.images import (
-    get_image_data,
-    upload_image,
-)
-from open_webui.storage.provider import Storage
 from open_webui.utils.session_pool import get_session
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)

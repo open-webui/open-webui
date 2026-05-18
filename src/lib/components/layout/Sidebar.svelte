@@ -119,8 +119,7 @@
 					$user?.permissions?.workspace?.models ||
 					$user?.permissions?.workspace?.knowledge ||
 					$user?.permissions?.workspace?.prompts ||
-					$user?.permissions?.workspace?.tools ||
-					$user?.permissions?.workspace?.skills
+					$user?.permissions?.workspace?.tools
 				);
 			case 'automations':
 				return (

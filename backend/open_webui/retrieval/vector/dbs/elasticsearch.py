@@ -2,28 +2,28 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import ssl
+from elasticsearch import Elasticsearch, BadRequestError
 from typing import Optional
-
-from elasticsearch import BadRequestError, Elasticsearch
+import ssl
 from elasticsearch.helpers import bulk, scan
-from open_webui.config import (
-    ELASTICSEARCH_API_KEY,
-    ELASTICSEARCH_CA_CERTS,
-    ELASTICSEARCH_CLOUD_ID,
-    ELASTICSEARCH_INDEX_PREFIX,
-    ELASTICSEARCH_PASSWORD,
-    ELASTICSEARCH_URL,
-    ELASTICSEARCH_USERNAME,
-    SSL_ASSERT_FINGERPRINT,
-)
+
+from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
-    GetResult,
-    SearchResult,
     VectorDBBase,
     VectorItem,
+    SearchResult,
+    GetResult,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.config import (
+    ELASTICSEARCH_URL,
+    ELASTICSEARCH_CA_CERTS,
+    ELASTICSEARCH_API_KEY,
+    ELASTICSEARCH_USERNAME,
+    ELASTICSEARCH_PASSWORD,
+    ELASTICSEARCH_CLOUD_ID,
+    ELASTICSEARCH_INDEX_PREFIX,
+    SSL_ASSERT_FINGERPRINT,
+)
 
 
 class ElasticsearchClient(VectorDBBase):

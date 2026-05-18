@@ -1,7 +1,6 @@
+from pydantic import BaseModel
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
-
-from pydantic import BaseModel
 
 
 class VectorItem(BaseModel):

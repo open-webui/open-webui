@@ -1,16 +1,18 @@
 """Prompt history model for version tracking."""
 
-import difflib
-import json
 import time
 import uuid
 from typing import Optional
+import json
+import difflib
 
-from open_webui.internal.db import Base, get_async_db_context
-from open_webui.models.users import UserResponse, Users
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, func, select
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, get_async_db_context
+from open_webui.models.users import Users, UserResponse
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, Text, JSON, Index
 
 ####################
 # PromptHistory DB Schema

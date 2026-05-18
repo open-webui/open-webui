@@ -3,15 +3,18 @@ import io
 import json
 import logging
 import os
-from typing import List, Optional
-from xml.etree import ElementTree as ET
-from xml.etree.ElementTree import Element
+from typing import Optional, List
 
 import requests
+
 from fastapi import Request
-from open_webui.env import FORWARD_SESSION_INFO_HEADER_CHAT_ID
+
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.env import FORWARD_SESSION_INFO_HEADER_CHAT_ID
+
+from xml.etree import ElementTree as ET
+from xml.etree.ElementTree import Element
 
 log = logging.getLogger(__name__)
 
@@ -119,8 +122,8 @@ def search_yandex(
 
 
 if __name__ == '__main__':
-    from fastapi import FastAPI
     from starlette.datastructures import Headers
+    from fastapi import FastAPI
 
     result = search_yandex(
         Request(

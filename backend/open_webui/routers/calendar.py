@@ -3,27 +3,28 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.access_grants import AccessGrants
+
 from open_webui.models.calendar import (
-    CalendarEventAttendees,
-    CalendarEventForm,
-    CalendarEventListResponse,
-    CalendarEventModel,
-    CalendarEvents,
-    CalendarEventUpdateForm,
-    CalendarEventUserResponse,
-    CalendarForm,
-    CalendarModel,
     Calendars,
+    CalendarEvents,
+    CalendarEventAttendees,
+    CalendarForm,
     CalendarUpdateForm,
+    CalendarEventForm,
+    CalendarEventUpdateForm,
+    CalendarModel,
+    CalendarEventModel,
+    CalendarEventUserResponse,
+    CalendarEventListResponse,
     RSVPForm,
 )
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.calendar import expand_recurring_event
+from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ async def get_events(
         cal_id_list is None or SCHEDULED_TASKS_CALENDAR_ID in cal_id_list
     ):
         try:
-            from open_webui.models.automations import AutomationRuns, Automations
+            from open_webui.models.automations import Automations, AutomationRuns
 
             # Future runs: expand RRULEs for active automations only
             active_automations = await Automations.get_active_by_user(user.id)

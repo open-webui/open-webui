@@ -3,11 +3,13 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_async_db_context
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, UniqueConstraint, and_, delete, or_, select
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, get_async_db_context
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, Text, UniqueConstraint, or_, and_
+from sqlalchemy.dialects.postgresql import JSONB
 
 log = logging.getLogger(__name__)
 
@@ -621,8 +623,8 @@ class AccessGrantsTable:
         Get all users who have the specified permission on a resource.
         Returns a list of UserModel instances.
         """
+        from open_webui.models.users import Users, UserModel
         from open_webui.models.groups import Groups
-        from open_webui.models.users import UserModel, Users
 
         async with get_async_db_context(db) as db:
             result = await db.execute(

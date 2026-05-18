@@ -1,16 +1,17 @@
 import asyncio
 import logging
-from contextlib import AsyncExitStack
 from typing import Optional
+from contextlib import AsyncExitStack
 
 log = logging.getLogger(__name__)
 
 import anyio
-import httpx
+
 from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+import httpx
 from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER
 
 

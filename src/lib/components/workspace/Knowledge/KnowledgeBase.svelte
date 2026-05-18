@@ -22,8 +22,7 @@
 		updateFileDataContentById,
 		uploadFile,
 		deleteFileById,
-		getFileById,
-		renameFileById
+		getFileById
 	} from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
@@ -33,28 +32,20 @@
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
-		searchKnowledgeFilesById,
-		createKnowledgeDirectory,
-		updateKnowledgeDirectory,
-		deleteKnowledgeDirectory,
-		moveFileInKnowledge
+		searchKnowledgeFilesById
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { blobToFile, isYoutubeUrl } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
-	import NewDirectoryModal from './KnowledgeBase/NewDirectoryModal.svelte';
-	import KnowledgeBreadcrumbs from './KnowledgeBase/KnowledgeBreadcrumbs.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
-	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -72,7 +63,6 @@
 
 	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
-	let showNewDirectoryModal = false;
 
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
@@ -110,15 +100,6 @@
 	let currentPage = 1;
 	let fileItems = null;
 	let fileItemsTotal = null;
-
-	// Directory state
-	let currentDirectoryId: string | null = null;
-	let directoryItems = [];
-	let breadcrumbs = [];
-
-	let showDeleteDirectoryConfirm = false;
-	let pendingDeleteDirectoryId: string | null = null;
-	let deleteDirectoryContents = true;
 
 	const reset = () => {
 		currentPage = 1;
@@ -175,8 +156,7 @@
 			viewOption,
 			sortKey,
 			direction,
-			currentPage,
-			currentDirectoryId
+			currentPage
 		).catch(() => {
 			return null;
 		});
@@ -184,8 +164,6 @@
 		if (res) {
 			fileItems = res.items;
 			fileItemsTotal = res.total;
-			directoryItems = res.directories ?? [];
-			breadcrumbs = res.breadcrumbs ?? [];
 		}
 		return res;
 	};
@@ -553,12 +531,7 @@
 	};
 
 	const addFileHandler = async (fileId) => {
-		const res = await addFileToKnowledgeById(
-			localStorage.token,
-			id,
-			fileId,
-			currentDirectoryId
-		).catch((e) => {
+		const res = await addFileToKnowledgeById(localStorage.token, id, fileId).catch((e) => {
 			toast.error(`${e}`);
 			return null;
 		});
@@ -569,103 +542,6 @@
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
 			fileItems = fileItems.filter((file) => file.id !== fileId);
-		}
-	};
-
-	// Directory handlers
-	const navigateToDirectory = (directoryId: string | null) => {
-		currentDirectoryId = directoryId;
-		currentPage = 1;
-		selectedFileId = null;
-		selectedFile = null;
-		getItemsPage();
-	};
-
-	const createDirectoryHandler = async (name: string) => {
-		const res = await createKnowledgeDirectory(
-			localStorage.token,
-			knowledge.id,
-			name,
-			currentDirectoryId
-		).catch((e) => {
-			toast.error(`${e}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Directory created.'));
-			getItemsPage();
-		}
-	};
-
-	const renameDirectoryHandler = async (dirId: string, name: string) => {
-		const res = await updateKnowledgeDirectory(localStorage.token, knowledge.id, dirId, {
-			name
-		}).catch((e) => {
-			toast.error(`${e}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Directory renamed.'));
-			getItemsPage();
-		}
-	};
-
-	const confirmDeleteDirectory = (dirId: string) => {
-		pendingDeleteDirectoryId = dirId;
-		showDeleteDirectoryConfirm = true;
-	};
-
-	const deleteDirectoryHandler = async (moveFiles: boolean) => {
-		if (!pendingDeleteDirectoryId) return;
-
-		const res = await deleteKnowledgeDirectory(
-			localStorage.token,
-			knowledge.id,
-			pendingDeleteDirectoryId,
-			moveFiles
-		).catch((e) => {
-			toast.error(`${e}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Directory deleted.'));
-			getItemsPage();
-		}
-		pendingDeleteDirectoryId = null;
-	};
-
-	const moveFileToDirectoryHandler = async (fileId: string, directoryId: string | null) => {
-		const res = await moveFileInKnowledge(
-			localStorage.token,
-			knowledge.id,
-			fileId,
-			directoryId
-		).catch((e) => {
-			toast.error(`${e}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('File moved.'));
-			getItemsPage();
-		}
-	};
-
-	const moveDirectoryHandler = async (dirId: string, targetParentId: string | null) => {
-		if (dirId === targetParentId) return;
-		const res = await updateKnowledgeDirectory(localStorage.token, knowledge.id, dirId, {
-			parent_id: targetParentId
-		}).catch((e) => {
-			toast.error(`${e}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Directory moved.'));
-			getItemsPage();
 		}
 	};
 
@@ -683,18 +559,6 @@
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
-			toast.error(`${e}`);
-		}
-	};
-
-	const renameFileHandler = async (fileId: string, name: string) => {
-		try {
-			const res = await renameFileById(localStorage.token, fileId, name);
-			if (res) {
-				toast.success($i18n.t('File renamed.'));
-				getItemsPage();
-			}
-		} catch (e) {
 			toast.error(`${e}`);
 		}
 	};
@@ -942,13 +806,6 @@
 	}}
 />
 
-<NewDirectoryModal
-	bind:show={showNewDirectoryModal}
-	on:submit={(e) => {
-		createDirectoryHandler(e.detail.name);
-	}}
-/>
-
 <input
 	id="files-input"
 	bind:files={inputFiles}
@@ -1044,10 +901,10 @@
 						{/if}
 					</div>
 
-					<div class="flex w-full items-center">
+					<div class="flex w-full">
 						<input
 							type="text"
-							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden flex-1"
+							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
 							aria-label={$i18n.t('Knowledge Description')}
 							placeholder={$i18n.t('Knowledge Description')}
@@ -1056,20 +913,6 @@
 								changeDebounceHandler();
 							}}
 						/>
-
-						<div class="hidden md:block">
-						<Tooltip content={$i18n.t('Click to copy ID')}>
-							<button
-								class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
-								on:click={() => {
-									copyToClipboard(id);
-									toast.success($i18n.t('ID copied to clipboard'));
-								}}
-							>
-								{id}
-							</button>
-						</Tooltip>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -1099,8 +942,6 @@
 								onUpload={(data) => {
 									if (data.type === 'directory') {
 										uploadDirectoryHandler();
-									} else if (data.type === 'new_directory') {
-										showNewDirectoryModal = true;
 									} else if (data.type === 'web') {
 										showAddWebpageModal = true;
 									} else if (data.type === 'text') {
@@ -1117,12 +958,6 @@
 					{/if}
 				</div>
 			</div>
-
-			{#if currentDirectoryId !== null}
-				<div class="px-5 -mt-1 pb-2">
-					<KnowledgeBreadcrumbs rootLabel={knowledge.name} {breadcrumbs} onNavigate={(dirId) => navigateToDirectory(dirId)} onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)} onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)} />
-				</div>
-			{/if}
 
 			<div class="px-3 flex justify-between">
 				<div
@@ -1185,11 +1020,10 @@
 					<div class="flex-1 flex">
 						<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
 							<div class="w-full h-full flex flex-col min-h-full">
-								{#if fileItems.length > 0 || directoryItems.length > 0}
+								{#if fileItems.length > 0}
 									<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
 										<Files
 											files={fileItems}
-											directories={directoryItems}
 											{knowledge}
 											{selectedFileId}
 											onClick={(fileId) => {
@@ -1210,15 +1044,7 @@
 
 												deleteFileHandler(fileId);
 											}}
-											onRename={(fileId, name) => renameFileHandler(fileId, name)}
-									onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
-											onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
-											onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
-											onMoveFileToDirectory={(fileId, dirId) =>
-												moveFileToDirectoryHandler(fileId, dirId)}
-											onMoveDirectoryToDirectory={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
-								/>
-
+										/>
 									</div>
 
 									{#if fileItemsTotal > 30}
@@ -1307,26 +1133,3 @@
 		<Spinner className="size-5" />
 	{/if}
 </div>
-
-<ConfirmDialog
-	bind:show={showDeleteDirectoryConfirm}
-	title={$i18n.t('Delete directory?')}
-	on:confirm={() => {
-		deleteDirectoryHandler(!deleteDirectoryContents);
-	}}
-	on:cancel={() => {
-		pendingDeleteDirectoryId = null;
-	}}
->
-	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
-		{$i18n.t(`Are you sure you want to delete this directory?`)}
-	</div>
-
-	<div class="flex items-center gap-1.5">
-		<input type="checkbox" bind:checked={deleteDirectoryContents} />
-
-		<div class="text-xs text-gray-500">
-			{$i18n.t('Delete all contents inside this directory')}
-		</div>
-	</div>
-</ConfirmDialog>

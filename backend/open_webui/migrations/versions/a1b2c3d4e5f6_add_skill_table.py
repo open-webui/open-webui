@@ -8,8 +8,9 @@ Create Date: 2026-02-11 09:30:00.000000
 
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
+
 from open_webui.migrations.util import get_existing_tables
 
 revision: str = 'a1b2c3d4e5f6'

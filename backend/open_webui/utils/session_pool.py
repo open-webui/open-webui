@@ -27,6 +27,7 @@ import logging
 from typing import Optional
 
 import aiohttp
+
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_POOL_CONNECTIONS,

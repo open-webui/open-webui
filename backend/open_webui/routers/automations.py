@@ -1,29 +1,30 @@
 import asyncio
 import logging
-from typing import Optional
 
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.internal.db import get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from open_webui.models.automations import (
+    Automations,
+    AutomationRuns,
     AutomationForm,
-    AutomationListResponse,
     AutomationModel,
     AutomationResponse,
     AutomationRunModel,
-    AutomationRuns,
-    Automations,
+    AutomationListResponse,
 )
-from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.automations import (
-    execute_automation,
-    next_n_runs_ns,
-    next_run_ns,
-    rrule_interval_seconds,
     validate_rrule,
+    next_run_ns,
+    next_n_runs_ns,
+    execute_automation,
+    rrule_interval_seconds,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.access_control import has_permission
+from open_webui.internal.db import get_async_session
+from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 

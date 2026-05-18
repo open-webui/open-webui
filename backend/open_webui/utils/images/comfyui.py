@@ -5,9 +5,10 @@ import urllib.parse
 from typing import Optional
 
 import aiohttp
+from pydantic import BaseModel
+
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.utils.session_pool import get_session
-from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 

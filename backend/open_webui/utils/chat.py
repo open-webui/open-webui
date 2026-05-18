@@ -1,45 +1,56 @@
-import asyncio
-import json
-import logging
-import random
-import sys
 import time
-import uuid
-from typing import Any, Optional
+import logging
+import sys
 
 from aiocache import cached
+from typing import Any, Optional
+import random
+import json
+
+import uuid
+import asyncio
+
 from fastapi import HTTPException, Request, status
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
-from open_webui.functions import generate_function_chat_completion
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
+from starlette.responses import Response, StreamingResponse, JSONResponse
+
+
 from open_webui.models.users import UserModel
-from open_webui.routers.ollama import (
-    generate_chat_completion as generate_ollama_chat_completion,
+
+from open_webui.socket.main import (
+    sio,
+    get_event_call,
+    get_event_emitter,
 )
+from open_webui.functions import generate_function_chat_completion
+
 from open_webui.routers.openai import (
     generate_chat_completion as generate_openai_chat_completion,
 )
+
+from open_webui.routers.ollama import (
+    generate_chat_completion as generate_ollama_chat_completion,
+)
+
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
-from open_webui.socket.main import (
-    get_event_call,
-    get_event_emitter,
-    sio,
-)
-from open_webui.utils.filter import (
-    get_sorted_filter_ids,
-    process_filter_functions,
-)
-from open_webui.utils.models import check_model_access, get_all_models
+
+from open_webui.models.functions import Functions
+from open_webui.models.models import Models
+
+from open_webui.utils.models import get_all_models, check_model_access
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
     convert_streaming_response_ollama_to_openai,
 )
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from open_webui.utils.filter import (
+    get_sorted_filter_ids,
+    process_filter_functions,
+)
+
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)

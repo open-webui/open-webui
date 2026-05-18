@@ -19,10 +19,6 @@
 	import CheckBox from '$lib/components/icons/CheckBox.svelte';
 	import ArrowLeftTag from '$lib/components/icons/ArrowLeftTag.svelte';
 	import ArrowRightTag from '$lib/components/icons/ArrowRightTag.svelte';
-
-	import EmojiPicker from '../EmojiPicker.svelte';
-	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
-	import { shortCodesToEmojis } from '$lib/stores';
 </script>
 
 <div
@@ -183,26 +179,4 @@
 			<CodeBracket />
 		</button>
 	</Tooltip>
-
-	<EmojiPicker
-		onSubmit={(shortCode) => {
-			const codepoint = $shortCodesToEmojis[shortCode];
-			if (codepoint) {
-				const emoji = codepoint
-					.split('-')
-					.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
-					.join('');
-				editor?.chain().focus().insertContent(emoji).run();
-			}
-		}}
-	>
-		<Tooltip placement="top" content={$i18n.t('Emoji')}>
-			<button
-				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-				type="button"
-			>
-				<FaceSmile className="size-4" />
-			</button>
-		</Tooltip>
-	</EmojiPicker>
 </div>

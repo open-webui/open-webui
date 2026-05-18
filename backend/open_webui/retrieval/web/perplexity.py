@@ -1,7 +1,7 @@
 import logging
-from typing import Literal, Optional
-
+from typing import Optional, Literal
 import requests
+
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 MODELS = Literal[
@@ -37,7 +37,7 @@ def search_perplexity(
 
     """
 
-    # Handle ConfigVar object
+    # Handle PersistentConfig object
     if hasattr(api_key, '__str__'):
         api_key = str(api_key)
 

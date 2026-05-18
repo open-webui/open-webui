@@ -1,11 +1,14 @@
-from __future__ import annotations
-
 from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.internal.db import get_async_session
+from open_webui.models.prompts import (
+    PromptForm,
+    PromptUserResponse,
+    PromptAccessResponse,
+    PromptAccessListResponse,
+    PromptModel,
+    Prompts,
+)
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
@@ -13,18 +16,13 @@ from open_webui.models.prompt_history import (
     PromptHistoryModel,
     PromptHistoryResponse,
 )
-from open_webui.models.prompts import (
-    PromptAccessListResponse,
-    PromptAccessResponse,
-    PromptForm,
-    PromptModel,
-    Prompts,
-    PromptUserResponse,
-)
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from pydantic import BaseModel
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 
 class PromptVersionUpdateForm(BaseModel):
@@ -34,7 +32,7 @@ class PromptVersionUpdateForm(BaseModel):
 class PromptMetadataForm(BaseModel):
     name: str
     command: str
-    tags: list[str | None] = None
+    tags: Optional[list[str]] = None
 
 
 router = APIRouter()
@@ -68,12 +66,12 @@ async def get_prompt_tags(user=Depends(get_verified_user), db: AsyncSession = De
 
 @router.get('/list', response_model=PromptAccessListResponse)
 async def get_prompt_list(
-    query: str | None = None,
-    view_option: str | None = None,
-    tag: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
-    page: int | None = 1,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    tag: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -138,7 +136,7 @@ async def get_prompt_list(
 ############################
 
 
-@router.post('/create', response_model=PromptModel | None)
+@router.post('/create', response_model=Optional[PromptModel])
 async def create_new_prompt(
     request: Request,
     form_data: PromptForm,
@@ -193,7 +191,7 @@ async def create_new_prompt(
 ############################
 
 
-@router.get('/command/{command}', response_model=PromptAccessResponse | None)
+@router.get('/command/{command}', response_model=Optional[PromptAccessResponse])
 async def get_prompt_by_command(
     command: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -237,7 +235,7 @@ async def get_prompt_by_command(
 ############################
 
 
-@router.get('/id/{prompt_id}', response_model=PromptAccessResponse | None)
+@router.get('/id/{prompt_id}', response_model=Optional[PromptAccessResponse])
 async def get_prompt_by_id(
     prompt_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -281,7 +279,7 @@ async def get_prompt_by_id(
 ############################
 
 
-@router.post('/id/{prompt_id}/update', response_model=PromptModel | None)
+@router.post('/id/{prompt_id}/update', response_model=Optional[PromptModel])
 async def update_prompt_by_id(
     request: Request,
     prompt_id: str,
@@ -347,7 +345,7 @@ async def update_prompt_by_id(
 ############################
 
 
-@router.post('/id/{prompt_id}/update/meta', response_model=PromptModel | None)
+@router.post('/id/{prompt_id}/update/meta', response_model=Optional[PromptModel])
 async def update_prompt_metadata(
     prompt_id: str,
     form_data: PromptMetadataForm,
@@ -400,7 +398,7 @@ async def update_prompt_metadata(
         )
 
 
-@router.post('/id/{prompt_id}/update/version', response_model=PromptModel | None)
+@router.post('/id/{prompt_id}/update/version', response_model=Optional[PromptModel])
 async def set_prompt_version(
     prompt_id: str,
     form_data: PromptVersionUpdateForm,
@@ -449,7 +447,7 @@ class PromptAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post('/id/{prompt_id}/access/update', response_model=PromptModel | None)
+@router.post('/id/{prompt_id}/access/update', response_model=Optional[PromptModel])
 async def update_prompt_access_by_id(
     request: Request,
     prompt_id: str,
@@ -498,7 +496,7 @@ async def update_prompt_access_by_id(
 ############################
 
 
-@router.post('/id/{prompt_id}/toggle', response_model=PromptModel | None)
+@router.post('/id/{prompt_id}/toggle', response_model=Optional[PromptModel])
 async def toggle_prompt_active(
     prompt_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):

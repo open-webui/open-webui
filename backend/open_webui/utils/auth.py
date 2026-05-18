@@ -1,43 +1,49 @@
-from __future__ import annotations
-
-import base64
-import hashlib
-import hmac
-import json
 import logging
-import os
 import uuid
-from datetime import datetime, timedelta
-from typing import Optional, Union
-
-import bcrypt
 import jwt
-import pytz
+import base64
+import hmac
+import hashlib
 import requests
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
+import os
+import bcrypt
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
+import json
+
+
+from datetime import datetime, timedelta
+import pytz
+from pytz import UTC
+from typing import Optional, Union, List, Dict
+
+
+from open_webui.utils.access_control import has_permission
+from open_webui.models.users import Users
+from open_webui.models.auths import Auths
+
+
 from open_webui.constants import ERROR_MESSAGES
+
 from open_webui.env import (
     ENABLE_OTEL,
     ENABLE_PASSWORD_VALIDATION,
-    LICENSE_BLOB,
     OFFLINE_MODE,
+    LICENSE_BLOB,
     PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
-    STATIC_DIR,
-    TRUSTED_SIGNATURE_KEY,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_SECRET_KEY,
     pk,
+    WEBUI_SECRET_KEY,
+    TRUSTED_SIGNATURE_KEY,
+    STATIC_DIR,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
 )
-from open_webui.models.auths import Auths
-from open_webui.models.users import Users
-from open_webui.utils.access_control import has_permission
-from pytz import UTC
+
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 log = logging.getLogger(__name__)
 
@@ -205,7 +211,7 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
     return encoded_jwt
 
 
-def decode_token(token: str) -> dict | None:
+def decode_token(token: str) -> Optional[dict]:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
@@ -278,7 +284,7 @@ def create_api_key():
     return f'sk-{key}'
 
 
-def get_http_authorization_cred(auth_header: str | None):
+def get_http_authorization_cred(auth_header: Optional[str]):
     if not auth_header:
         return None
     try:

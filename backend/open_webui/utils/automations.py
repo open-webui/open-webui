@@ -25,13 +25,14 @@ from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
 from fastapi import Request
+from starlette.datastructures import Headers
+
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.internal.db import get_async_db
-from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
+from open_webui.models.automations import Automations, AutomationRuns, AutomationModel
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.users import Users
 from open_webui.utils.task import prompt_template
-from starlette.datastructures import Headers
+from open_webui.internal.db import get_async_db
 
 log = logging.getLogger(__name__)
 

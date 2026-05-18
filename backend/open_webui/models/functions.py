@@ -1,14 +1,13 @@
-from __future__ import annotations
-
 import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.users import UserModel, UserResponse, Users
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, Index, String, Text, delete, select, update
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.models.users import Users, UserModel, UserResponse
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +37,8 @@ class Function(Base):
 
 
 class FunctionMeta(BaseModel):
-    description: str | None = None
-    manifest: dict | None = {}
+    description: Optional[str] = None
+    manifest: Optional[dict] = {}
     model_config = ConfigDict(extra='allow')
 
 
@@ -65,7 +64,7 @@ class FunctionWithValvesModel(BaseModel):
     type: str
     content: str
     meta: FunctionMeta
-    valves: dict | None = None
+    valves: Optional[dict] = None
     is_active: bool = False
     is_global: bool = False
     updated_at: int  # timestamp in epoch
@@ -94,7 +93,7 @@ class FunctionResponse(BaseModel):
 
 
 class FunctionUserResponse(FunctionResponse):
-    user: UserResponse | None = None
+    user: Optional[UserResponse] = None
 
 
 class FunctionForm(BaseModel):
@@ -105,7 +104,7 @@ class FunctionForm(BaseModel):
 
 
 class FunctionValves(BaseModel):
-    valves: dict | None = None
+    valves: Optional[dict] = None
 
 
 class FunctionsTable:
@@ -114,8 +113,8 @@ class FunctionsTable:
         user_id: str,
         type: str,
         form_data: FunctionForm,
-        db: AsyncSession | None = None,
-    ) -> FunctionModel | None:
+        db: Optional[AsyncSession] = None,
+    ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
@@ -144,7 +143,7 @@ class FunctionsTable:
         self,
         user_id: str,
         functions: list[FunctionWithValvesModel],
-        db: AsyncSession | None = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[FunctionWithValvesModel]:
         # Synchronize functions for a user by updating existing ones, inserting new ones, and removing those that are no longer present.
         try:
@@ -192,7 +191,7 @@ class FunctionsTable:
             log.exception(f'Error syncing functions for user {user_id}: {e}')
             return []
 
-    async def get_function_by_id(self, id: str, db: AsyncSession | None = None) -> FunctionModel | None:
+    async def get_function_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[FunctionModel]:
         try:
             async with get_async_db_context(db) as db:
                 function = await db.get(Function, id)
@@ -200,7 +199,7 @@ class FunctionsTable:
         except Exception:
             return None
 
-    async def get_functions_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> list[FunctionModel]:
+    async def get_functions_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> list[FunctionModel]:
         """
         Batch fetch multiple functions by their IDs in a single query.
         Returns functions in the same order as the input IDs (None entries filtered out).
@@ -219,7 +218,7 @@ class FunctionsTable:
             return []
 
     async def get_functions(
-        self, active_only=False, include_valves=False, db: AsyncSession | None = None
+        self, active_only=False, include_valves=False, db: Optional[AsyncSession] = None
     ) -> list[FunctionModel | FunctionWithValvesModel]:
         async with get_async_db_context(db) as db:
             if active_only:
@@ -234,7 +233,7 @@ class FunctionsTable:
             else:
                 return [FunctionModel.model_validate(function) for function in functions]
 
-    async def get_function_list(self, db: AsyncSession | None = None) -> list[FunctionUserResponse]:
+    async def get_function_list(self, db: Optional[AsyncSession] = None) -> list[FunctionUserResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Function).order_by(Function.updated_at.desc()))
             functions = result.scalars().all()
@@ -263,7 +262,7 @@ class FunctionsTable:
             ]
 
     async def get_functions_by_type(
-        self, type: str, active_only=False, db: AsyncSession | None = None
+        self, type: str, active_only=False, db: Optional[AsyncSession] = None
     ) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
             if active_only:
@@ -272,17 +271,17 @@ class FunctionsTable:
                 result = await db.execute(select(Function).filter_by(type=type))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
-    async def get_global_filter_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
+    async def get_global_filter_functions(self, db: Optional[AsyncSession] = None) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Function).filter_by(type='filter', is_active=True, is_global=True))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
-    async def get_global_action_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
+    async def get_global_action_functions(self, db: Optional[AsyncSession] = None) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Function).filter_by(type='action', is_active=True, is_global=True))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
-    async def get_function_valves_by_id(self, id: str, db: AsyncSession | None = None) -> dict | None:
+    async def get_function_valves_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[dict]:
         async with get_async_db_context(db) as db:
             try:
                 function = await db.get(Function, id)
@@ -291,7 +290,7 @@ class FunctionsTable:
                 log.exception(f'Error getting function valves by id {id}: {e}')
                 return None
 
-    async def get_function_valves_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> dict[str, dict]:
+    async def get_function_valves_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> dict[str, dict]:
         """
         Batch fetch valves for multiple functions in a single query.
         Returns a dict mapping function_id -> valves dict.
@@ -309,8 +308,8 @@ class FunctionsTable:
             return {}
 
     async def update_function_valves_by_id(
-        self, id: str, valves: dict, db: AsyncSession | None = None
-    ) -> FunctionValves | None:
+        self, id: str, valves: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[FunctionValves]:
         async with get_async_db_context(db) as db:
             try:
                 function = await db.get(Function, id)
@@ -323,8 +322,8 @@ class FunctionsTable:
                 return None
 
     async def update_function_metadata_by_id(
-        self, id: str, metadata: dict, db: AsyncSession | None = None
-    ) -> FunctionModel | None:
+        self, id: str, metadata: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[FunctionModel]:
         async with get_async_db_context(db) as db:
             try:
                 function = await db.get(Function, id)
@@ -346,8 +345,8 @@ class FunctionsTable:
                 return None
 
     async def get_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str, db: AsyncSession | None = None
-    ) -> dict | None:
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
         try:
             user = await Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -364,8 +363,8 @@ class FunctionsTable:
             return None
 
     async def update_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str, valves: dict, db: AsyncSession | None = None
-    ) -> dict | None:
+        self, id: str, user_id: str, valves: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
         try:
             user = await Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -387,8 +386,8 @@ class FunctionsTable:
             return None
 
     async def update_function_by_id(
-        self, id: str, updated: dict, db: AsyncSession | None = None
-    ) -> FunctionModel | None:
+        self, id: str, updated: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[FunctionModel]:
         async with get_async_db_context(db) as db:
             try:
                 await db.execute(
@@ -405,7 +404,7 @@ class FunctionsTable:
             except Exception:
                 return None
 
-    async def deactivate_all_functions(self, db: AsyncSession | None = None) -> bool | None:
+    async def deactivate_all_functions(self, db: Optional[AsyncSession] = None) -> Optional[bool]:
         async with get_async_db_context(db) as db:
             try:
                 await db.execute(
@@ -419,7 +418,7 @@ class FunctionsTable:
             except Exception:
                 return None
 
-    async def delete_function_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
+    async def delete_function_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
             try:
                 await db.execute(delete(Function).filter_by(id=id))

@@ -7,27 +7,31 @@ NOTE: This is an experimental implementation and may not fully comply with SCIM 
 
 import hmac
 import logging
-import time
 import uuid
+import time
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Query, Header, status
 from fastapi.responses import JSONResponse
-from open_webui.config import OAUTH_PROVIDERS
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SCIM_AUTH_PROVIDER
-from open_webui.internal.db import get_async_session
-from open_webui.models.groups import GroupModel, Groups
-from open_webui.models.users import UserModel, Users
+from pydantic import BaseModel, Field, ConfigDict
+
+from open_webui.models.users import Users, UserModel
+from open_webui.models.groups import Groups, GroupModel
 from open_webui.utils.auth import (
-    decode_token,
     get_admin_user,
     get_current_user,
+    decode_token,
     get_verified_user,
 )
-from pydantic import BaseModel, ConfigDict, Field
+from open_webui.constants import ERROR_MESSAGES
+
+from open_webui.config import OAUTH_PROVIDERS
+from open_webui.env import SCIM_AUTH_PROVIDER
+
+
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import get_async_session
 
 log = logging.getLogger(__name__)
 
@@ -259,7 +263,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
         enable_scim = getattr(request.app.state, 'ENABLE_SCIM', False)
         log.info(f'SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}')
 
-        # Handle both ConfigVar and direct value
+        # Handle both PersistentConfig and direct value
         if hasattr(enable_scim, 'value'):
             enable_scim = enable_scim.value
 
@@ -271,7 +275,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
 
         # Verify the SCIM token
         scim_token = getattr(request.app.state, 'SCIM_TOKEN', None)
-        # Handle both ConfigVar and direct value
+        # Handle both PersistentConfig and direct value
         if hasattr(scim_token, 'value'):
             scim_token = scim_token.value
         log.debug(f'SCIM token configured: {bool(scim_token)}')

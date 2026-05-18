@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import hashlib
 import json
@@ -10,52 +8,62 @@ from urllib.parse import quote, urlparse
 
 import aiohttp
 from aiocache import cached
+
+
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+
+from fastapi import Depends, HTTPException, Request, APIRouter, status
 from fastapi.responses import (
     FileResponse,
+    StreamingResponse,
     JSONResponse,
     PlainTextResponse,
-    StreamingResponse,
 )
+from pydantic import BaseModel, ConfigDict
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from open_webui.internal.db import get_async_session
+
+from open_webui.models.models import Models
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.utils.access_control import has_connection_access, check_model_access
 from open_webui.config import (
     CACHE_DIR,
 )
-from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-    BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
-    ENABLE_OPENAI_API_PASSTHROUGH,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
-    MODELS_CACHE_TTL,
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_OPENAI_API_PASSTHROUGH,
 )
-from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
-from open_webui.models.models import Models
 from open_webui.models.users import UserModel
-from open_webui.utils.access_control import check_model_access, has_connection_access
-from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import get_custom_headers, include_user_info_headers
-from open_webui.utils.misc import (
-    convert_logit_bias_input_to_json,
-    stream_chunks_handler,
-)
+
+from open_webui.constants import ERROR_MESSAGES
+
+
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
+)
+from open_webui.utils.misc import (
+    convert_logit_bias_input_to_json,
+    stream_chunks_handler,
 )
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_session,
     stream_wrapper,
 )
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.headers import include_user_info_headers, get_custom_headers
+from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
 
 log = logging.getLogger(__name__)
 
@@ -152,7 +160,7 @@ async def get_headers_and_cookies(
     url,
     key=None,
     config=None,
-    metadata: dict | None = None,
+    metadata: Optional[dict] = None,
     user: UserModel = None,
 ):
     cookies = {}
@@ -248,7 +256,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 
 class OpenAIConfigForm(BaseModel):
-    ENABLE_OPENAI_API: bool | None = None
+    ENABLE_OPENAI_API: Optional[bool] = None
     OPENAI_API_BASE_URLS: list[str]
     OPENAI_API_KEYS: list[str]
     OPENAI_API_CONFIGS: dict
@@ -485,6 +493,39 @@ async def get_filtered_models(models, user, db=None):
     return filtered_models
 
 
+async def get_openai_loaded_models(request: Request, models: dict, api_base_urls: list):
+    """
+    Fetch loaded-model state from providers that expose it and annotate
+    each model dict with a ``loaded`` boolean.
+
+    Currently supports:
+      - **llama.cpp** – queries ``GET /slots`` and matches slot model IDs.
+    """
+    api_configs = request.app.state.config.OPENAI_API_CONFIGS
+    api_keys = request.app.state.config.OPENAI_API_KEYS
+
+    for idx, url in enumerate(api_base_urls):
+        api_config = api_configs.get(
+            str(idx),
+            api_configs.get(url, {}),
+        )
+        provider = api_config.get('provider', '')
+
+        if provider == 'llama.cpp':
+            try:
+                root_url = url.rstrip('/').removesuffix('/v1')
+                key = api_keys[idx] if idx < len(api_keys) else None
+                slots = await send_get_request(url=f'{root_url}/slots', key=key)
+                loaded_model_ids = (
+                    {s.get('model') for s in slots if s.get('model')} if isinstance(slots, list) else set()
+                )
+                for model_id, model in models.items():
+                    if model.get('urlIdx') == idx:
+                        model['loaded'] = model_id in loaded_model_ids
+            except Exception as e:
+                log.debug(f'Failed to fetch llama.cpp slots for idx {idx}: {e}')
+
+
 @cached(
     ttl=MODELS_CACHE_TTL,
     key=lambda _, user: f'openai_all_models_{user.id}' if user else 'openai_all_models',
@@ -539,7 +580,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                         continue
 
                     if model_id and model_id not in models:
-                        merged = {
+                        models[model_id] = {
                             **model,
                             'name': model.get('name', model_id),
                             'owned_by': 'openai',
@@ -549,18 +590,13 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             'urlIdx': idx,
                         }
 
-                        # llama.cpp router mode: derive loaded state from
-                        # the status object returned by GET /v1/models.
-                        status = model.get('status')
-                        if isinstance(status, dict) and 'value' in status:
-                            merged['loaded'] = status['value'] in ('loaded', 'sleeping')
-
-                        models[model_id] = merged
-
         return models
 
     models = get_merged_models(map(extract_data, responses))
     log.debug(f'models: {models}')
+
+    # Fetch loaded state for providers that support it (e.g. llama.cpp /slots)
+    await get_openai_loaded_models(request, models, api_base_urls)
 
     request.app.state.OPENAI_MODELS = models
     return {'data': list(models.values())}
@@ -568,7 +604,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
 @router.get('/models')
 @router.get('/models/{url_idx}')
-async def get_models(request: Request, url_idx: int | None = None, user=Depends(get_verified_user)):
+async def get_models(request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)):
     if not request.app.state.config.ENABLE_OPENAI_API:
         raise HTTPException(status_code=503, detail='OpenAI API is disabled')
 
@@ -660,7 +696,7 @@ class ConnectionVerificationForm(BaseModel):
     url: str
     key: str
 
-    config: dict | None = None
+    config: Optional[dict] = None
 
 
 @router.post('/verify')
@@ -1351,20 +1387,20 @@ class ResponsesForm(BaseModel):
     model_config = ConfigDict(extra='allow')
 
     model: str
-    input: list | str | None = None
-    instructions: str | None = None
-    stream: bool | None = None
-    temperature: float | None = None
-    max_output_tokens: int | None = None
-    top_p: float | None = None
-    tools: list | None = None
-    tool_choice: str | dict | None = None
-    text: dict | None = None
-    truncation: str | None = None
-    metadata: dict | None = None
-    store: bool | None = None
-    reasoning: dict | None = None
-    previous_response_id: str | None = None
+    input: Optional[list | str] = None
+    instructions: Optional[str] = None
+    stream: Optional[bool] = None
+    temperature: Optional[float] = None
+    max_output_tokens: Optional[int] = None
+    top_p: Optional[float] = None
+    tools: Optional[list] = None
+    tool_choice: Optional[str | dict] = None
+    text: Optional[dict] = None
+    truncation: Optional[str] = None
+    metadata: Optional[dict] = None
+    store: Optional[bool] = None
+    reasoning: Optional[dict] = None
+    previous_response_id: Optional[str] = None
 
 
 @router.post('/responses')

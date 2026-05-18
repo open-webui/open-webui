@@ -1,17 +1,20 @@
+import time
+import logging
+import uuid
+from typing import Optional, List
 import base64
 import hashlib
 import json
-import logging
-import time
-import uuid
-from typing import List, Optional
 
 from cryptography.fernet import Fernet
-from open_webui.env import OAUTH_SESSION_TOKEN_ENCRYPTION_KEY
-from open_webui.internal.db import Base, get_async_db_context
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Index, String, Text, delete, select, update
+
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, get_async_db_context
+from open_webui.env import OAUTH_SESSION_TOKEN_ENCRYPTION_KEY
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Column, String, Text, Index
 
 log = logging.getLogger(__name__)
 

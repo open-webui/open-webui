@@ -1,7 +1,7 @@
 import json
 import logging
-
 import aiohttp
+
 from open_webui.config import WEBUI_FAVICON_URL
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, VERSION
 

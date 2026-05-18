@@ -201,8 +201,7 @@ export const searchKnowledgeFilesById = async (
 	viewOption?: string | null = null,
 	orderBy?: string | null = null,
 	direction?: string | null = null,
-	page: number = 1,
-	directoryId?: string | null = undefined
+	page: number = 1
 ) => {
 	let error = null;
 
@@ -212,10 +211,6 @@ export const searchKnowledgeFilesById = async (
 	if (orderBy) searchParams.append('order_by', orderBy);
 	if (direction) searchParams.append('direction', direction);
 	searchParams.append('page', page.toString());
-	// directoryId: undefined = don't filter, null = root, string = specific dir
-	if (directoryId !== undefined) {
-		searchParams.append('directory_id', directoryId ?? '');
-	}
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/knowledge/${id}/files?${searchParams.toString()}`,
@@ -327,16 +322,8 @@ export const updateKnowledgeAccessGrants = async (
 	return res;
 };
 
-export const addFileToKnowledgeById = async (
-	token: string,
-	id: string,
-	fileId: string,
-	directoryId?: string | null
-) => {
+export const addFileToKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
-
-	const body: Record<string, string> = { file_id: fileId };
-	if (directoryId) body.directory_id = directoryId;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/add`, {
 		method: 'POST',
@@ -345,7 +332,9 @@ export const addFileToKnowledgeById = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(body)
+		body: JSON.stringify({
+			file_id: fileId
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -542,154 +531,6 @@ export const exportKnowledgeById = async (token: string, id: string) => {
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.blob();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-// ── Directory API ───────────────────────────────────────────────────
-
-export const createKnowledgeDirectory = async (
-	token: string,
-	id: string,
-	name: string,
-	parentId?: string | null
-) => {
-	let error = null;
-
-	const body: Record<string, string | null> = { name };
-	if (parentId) body.parent_id = parentId;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/dirs/create`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateKnowledgeDirectory = async (
-	token: string,
-	id: string,
-	dirId: string,
-	form: { name?: string; parent_id?: string | null }
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/dirs/${dirId}/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(form)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteKnowledgeDirectory = async (
-	token: string,
-	id: string,
-	dirId: string,
-	moveFiles: boolean = true
-) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	searchParams.append('move_files', moveFiles.toString());
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/knowledge/${id}/dirs/${dirId}/delete?${searchParams.toString()}`,
-		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const moveFileInKnowledge = async (
-	token: string,
-	id: string,
-	fileId: string,
-	directoryId?: string | null
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/move`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			file_id: fileId,
-			directory_id: directoryId ?? null
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;

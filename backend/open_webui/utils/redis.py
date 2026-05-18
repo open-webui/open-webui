@@ -1,20 +1,22 @@
-import asyncio
 import inspect
-import logging
-import time
 from urllib.parse import urlparse
+import asyncio
+import time
+
+import logging
 
 import redis
+
 from open_webui.env import (
     REDIS_CLUSTER,
     REDIS_HEALTH_CHECK_INTERVAL,
-    REDIS_RECONNECT_DELAY,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
+    REDIS_SOCKET_KEEPALIVE,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_MAX_RETRY_COUNT,
     REDIS_SENTINEL_PORT,
-    REDIS_SOCKET_CONNECT_TIMEOUT,
-    REDIS_SOCKET_KEEPALIVE,
     REDIS_URL,
+    REDIS_RECONNECT_DELAY,
 )
 
 log = logging.getLogger(__name__)

@@ -2,18 +2,17 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import logging
-from typing import Any, Dict, List, Optional, Union
-
-import boto3
-from open_webui.config import S3_VECTOR_BUCKET_NAME, S3_VECTOR_REGION
+from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
-    GetResult,
-    SearchResult,
     VectorDBBase,
     VectorItem,
+    GetResult,
+    SearchResult,
 )
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.config import S3_VECTOR_BUCKET_NAME, S3_VECTOR_REGION
+from typing import List, Optional, Dict, Any, Union
+import logging
+import boto3
 
 log = logging.getLogger(__name__)
 

@@ -1,42 +1,42 @@
-from __future__ import annotations
-
-import io
-import logging
-import zipfile
 from typing import List, Optional
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.responses import StreamingResponse
+
+import logging
+import io
+import zipfile
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import StreamingResponse
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
+from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.files import FileMetadataResponse, FileModel, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
-    KnowledgeDirectoryForm,
-    KnowledgeDirectoryModel,
     KnowledgeFileListResponse,
+    Knowledges,
     KnowledgeForm,
     KnowledgeResponse,
-    Knowledges,
     KnowledgeUserResponse,
 )
-from open_webui.models.models import ModelForm, Models
+from open_webui.models.files import Files, FileModel, FileMetadataResponse
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
-    BatchProcessFilesForm,
-    ProcessFileForm,
     process_file,
+    ProcessFileForm,
     process_files_batch,
+    BatchProcessFilesForm,
 )
 from open_webui.storage.provider import Storage
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.models.access_grants import AccessGrants
+
+
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.models.models import Models, ModelForm
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ async def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bo
 
 
 class KnowledgeAccessResponse(KnowledgeUserResponse):
-    write_access: bool | None = False
+    write_access: Optional[bool] = False
 
 
 class KnowledgeAccessListResponse(BaseModel):
@@ -110,7 +110,7 @@ class KnowledgeAccessListResponse(BaseModel):
 
 @router.get('/', response_model=KnowledgeAccessListResponse)
 async def get_knowledge_bases(
-    page: int | None = 1,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -159,9 +159,9 @@ async def get_knowledge_bases(
 
 @router.get('/search', response_model=KnowledgeAccessListResponse)
 async def search_knowledge_bases(
-    query: str | None = None,
-    view_option: str | None = None,
-    page: int | None = 1,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -215,8 +215,8 @@ async def search_knowledge_bases(
 
 @router.get('/search/files', response_model=KnowledgeFileListResponse)
 async def search_knowledge_files(
-    query: str | None = None,
-    page: int | None = 1,
+    query: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -242,7 +242,7 @@ async def search_knowledge_files(
 ############################
 
 
-@router.post('/create', response_model=KnowledgeResponse | None)
+@router.post('/create', response_model=Optional[KnowledgeResponse])
 async def create_new_knowledge(
     request: Request,
     form_data: KnowledgeForm,
@@ -380,11 +380,11 @@ async def reindex_knowledge_base_metadata_embeddings(
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
-    files: list[FileMetadataResponse | None] = None
-    write_access: bool | None = False
+    files: Optional[list[FileMetadataResponse]] = None
+    write_access: Optional[bool] = False
 
 
-@router.get('/{id}', response_model=KnowledgeFilesResponse | None)
+@router.get('/{id}', response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
 
@@ -431,7 +431,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Asyn
 ############################
 
 
-@router.post('/{id}/update', response_model=KnowledgeFilesResponse | None)
+@router.post('/{id}/update', response_model=Optional[KnowledgeFilesResponse])
 async def update_knowledge_by_id(
     request: Request,
     id: str,
@@ -501,7 +501,7 @@ class KnowledgeAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post('/{id}/access/update', response_model=KnowledgeFilesResponse | None)
+@router.post('/{id}/access/update', response_model=Optional[KnowledgeFilesResponse])
 async def update_knowledge_access_by_id(
     request: Request,
     id: str,
@@ -556,12 +556,11 @@ async def update_knowledge_access_by_id(
 @router.get('/{id}/files', response_model=KnowledgeFileListResponse)
 async def get_knowledge_files_by_id(
     id: str,
-    query: str | None = None,
-    view_option: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
-    directory_id: str | None = Query(None, description='Filter by directory ID. Pass empty string for root.'),
-    page: int | None = 1,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -602,9 +601,6 @@ async def get_knowledge_files_by_id(
         filter['order_by'] = order_by
     if direction:
         filter['direction'] = direction
-    # directory_id filtering: present in filter = scope to that directory (None = root)
-    if directory_id is not None:
-        filter['directory_id'] = directory_id if directory_id else None
 
     return await Knowledges.search_files_by_id(id, user.id, filter=filter, skip=skip, limit=limit, db=db)
 
@@ -616,10 +612,9 @@ async def get_knowledge_files_by_id(
 
 class KnowledgeFileIdForm(BaseModel):
     file_id: str
-    directory_id: Optional[str] = None
 
 
-@router.post('/{id}/file/add', response_model=KnowledgeFilesResponse | None)
+@router.post('/{id}/file/add', response_model=Optional[KnowledgeFilesResponse])
 async def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
@@ -670,23 +665,25 @@ async def add_file_to_knowledge_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-    # Add content to the vector database
+    # Link the file to the knowledge base FIRST, then process.
+    # This prevents the race condition where a user navigates away before the
+    # final linking step completes, leaving processed files orphaned in the
+    # vector database with no corresponding relational record.
     try:
-        await process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-            db=db,
-        )
+        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, user_id=user.id, db=db)
 
-        # Add file to knowledge base
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=form_data.file_id,
-            user_id=user.id,
-            directory_id=form_data.directory_id,
-            db=db,
-        )
+        try:
+            # Add content to the vector database (may take 5-60s for embedding)
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+                user=user,
+                db=db,
+            )
+        except Exception:
+            # Processing failed — rollback the link so we don't leave a broken reference
+            await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
+            raise
     except Exception as e:
         log.debug(e)
         raise HTTPException(
@@ -706,7 +703,7 @@ async def add_file_to_knowledge_by_id(
         )
 
 
-@router.post('/{id}/file/update', response_model=KnowledgeFilesResponse | None)
+@router.post('/{id}/file/update', response_model=Optional[KnowledgeFilesResponse])
 async def update_file_from_knowledge_by_id(
     request: Request,
     id: str,
@@ -785,7 +782,7 @@ async def update_file_from_knowledge_by_id(
 ############################
 
 
-@router.post('/{id}/file/remove', response_model=KnowledgeFilesResponse | None)
+@router.post('/{id}/file/remove', response_model=Optional[KnowledgeFilesResponse])
 async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
@@ -947,7 +944,7 @@ async def delete_knowledge_by_id(
 ############################
 
 
-@router.post('/{id}/reset', response_model=KnowledgeResponse | None)
+@router.post('/{id}/reset', response_model=Optional[KnowledgeResponse])
 async def reset_knowledge_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -989,7 +986,7 @@ async def reset_knowledge_by_id(
 ############################
 
 
-@router.post('/{id}/files/batch/add', response_model=KnowledgeFilesResponse | None)
+@router.post('/{id}/files/batch/add', response_model=Optional[KnowledgeFilesResponse])
 async def add_files_to_knowledge_batch(
     request: Request,
     id: str,
@@ -1046,6 +1043,19 @@ async def add_files_to_knowledge_batch(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
+    # Link all files to the knowledge base FIRST, then process.
+    # This prevents the race condition where a user navigates away before the
+    # final linking step completes, leaving processed files orphaned in the
+    # vector database with no corresponding relational record.
+    linked_file_ids = []
+    try:
+        for file_id in file_ids:
+            await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+            linked_file_ids.append(file_id)
+    except Exception as e:
+        log.error(f'add_files_to_knowledge_batch: Failed to link files: {e}', exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     # Process files
     try:
         result = await process_files_batch(
@@ -1055,13 +1065,16 @@ async def add_files_to_knowledge_batch(
             db=db,
         )
     except Exception as e:
+        # Processing failed — rollback all links
+        for file_id in linked_file_ids:
+            await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=file_id, db=db)
         log.error(f'add_files_to_knowledge_batch: Exception occurred: {e}', exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    # Only add files that were successfully processed
-    successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
-    for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+    # Unlink any files that failed to process
+    for file_id in linked_file_ids:
+        if file_id not in {r.file_id for r in result.results if r.status == 'completed'}:
+            await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=file_id, db=db)
 
     # If there were any errors, include them in the response
     if result.errors:
@@ -1130,178 +1143,3 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
         media_type='application/zip',
         headers={'Content-Disposition': content_disposition},
     )
-
-
-############################
-# Directory endpoints
-############################
-
-
-class KnowledgeDirectoryCreateForm(BaseModel):
-    name: str
-    parent_id: Optional[str] = None
-
-
-class KnowledgeDirectoryUpdateForm(BaseModel):
-    name: Optional[str] = None
-    parent_id: Optional[str] = '__unset__'
-
-
-class KnowledgeFileMoveForm(BaseModel):
-    file_id: str
-    directory_id: Optional[str] = None
-
-
-async def _verify_knowledge_write_access(
-    id: str, user, db: AsyncSession
-):
-    """Verify the user has write access to the knowledge base. Returns the knowledge model."""
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-    if (
-        knowledge.user_id != user.id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='knowledge',
-            resource_id=knowledge.id,
-            permission='write',
-            db=db,
-        )
-        and user.role != 'admin'
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-    return knowledge
-
-
-@router.post('/{id}/dirs/create', response_model=KnowledgeDirectoryModel)
-async def create_knowledge_directory(
-    id: str,
-    form_data: KnowledgeDirectoryCreateForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    await _verify_knowledge_write_access(id, user, db)
-
-    directory = await Knowledges.create_directory(
-        knowledge_id=id,
-        name=form_data.name,
-        user_id=user.id,
-        parent_id=form_data.parent_id,
-        db=db,
-    )
-    if not directory:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Failed to create directory. A directory with this name may already exist at this level.',
-        )
-    return directory
-
-
-@router.post('/{id}/dirs/{dir_id}/update', response_model=KnowledgeDirectoryModel)
-async def update_knowledge_directory(
-    id: str,
-    dir_id: str,
-    form_data: KnowledgeDirectoryUpdateForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    await _verify_knowledge_write_access(id, user, db)
-
-    # Verify directory belongs to this knowledge base
-    directory = await Knowledges.get_directory_by_id(dir_id, db=db)
-    if not directory or directory.knowledge_id != id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    result = await Knowledges.update_directory(
-        directory_id=dir_id,
-        name=form_data.name,
-        parent_id=form_data.parent_id,
-        db=db,
-    )
-    if not result:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Failed to update directory. This may be caused by a naming conflict or circular move.',
-        )
-    return result
-
-
-@router.delete('/{id}/dirs/{dir_id}/delete')
-async def delete_knowledge_directory(
-    id: str,
-    dir_id: str,
-    move_files: bool = Query(True, description='If true, move contained files to parent. If false, delete them.'),
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    await _verify_knowledge_write_access(id, user, db)
-
-    # Verify directory belongs to this knowledge base
-    directory = await Knowledges.get_directory_by_id(dir_id, db=db)
-    if not directory or directory.knowledge_id != id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    success = await Knowledges.delete_directory(
-        directory_id=dir_id,
-        move_files_to_parent=move_files,
-        db=db,
-    )
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to delete directory.',
-        )
-    return {'status': True}
-
-
-@router.post('/{id}/file/move')
-async def move_file_in_knowledge(
-    id: str,
-    form_data: KnowledgeFileMoveForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    await _verify_knowledge_write_access(id, user, db)
-
-    # Verify file belongs to this knowledge base
-    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # If target directory is set, verify it belongs to this knowledge base
-    if form_data.directory_id:
-        directory = await Knowledges.get_directory_by_id(form_data.directory_id, db=db)
-        if not directory or directory.knowledge_id != id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail='Target directory not found.',
-            )
-
-    success = await Knowledges.move_file_to_directory(
-        knowledge_id=id,
-        file_id=form_data.file_id,
-        directory_id=form_data.directory_id,
-        db=db,
-    )
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to move file.',
-        )
-    return {'status': True}
-

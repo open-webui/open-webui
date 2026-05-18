@@ -1,41 +1,43 @@
-from __future__ import annotations
-
-import asyncio
 import json
 import logging
 from typing import Optional
 from uuid import uuid4
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
 from fastapi.responses import StreamingResponse
-from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
+
+
+from open_webui.utils.misc import get_message_list
+from open_webui.utils.middleware import serialize_output
+from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
-    AggregateChatStats,
-    ChatBody,
     ChatForm,
-    ChatHistoryStats,
     ChatImportForm,
+    ChatUsageStatsListResponse,
+    ChatsImportForm,
     ChatResponse,
     Chats,
-    ChatsImportForm,
-    ChatStatsExport,
     ChatTitleIdResponse,
-    ChatUsageStatsListResponse,
+    ChatStatsExport,
+    AggregateChatStats,
+    ChatBody,
+    ChatHistoryStats,
     MessageStats,
 )
-from open_webui.models.folders import Folders
-from open_webui.models.shared_chats import SharedChatResponse, SharedChats
+from open_webui.models.shared_chats import SharedChats, SharedChatResponse
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.tags import TagModel, Tags
-from open_webui.socket.main import get_event_emitter
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.middleware import serialize_output
-from open_webui.utils.misc import get_message_list
+from open_webui.models.folders import Folders
+from open_webui.internal.db import get_async_session
+
+from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
+from open_webui.constants import ERROR_MESSAGES
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+
+
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 
 log = logging.getLogger(__name__)
 
@@ -52,9 +54,9 @@ router = APIRouter()
 @router.get('/list', response_model=list[ChatTitleIdResponse])
 async def get_session_user_chat_list(
     user=Depends(get_verified_user),
-    page: int | None = None,
-    include_pinned: bool | None = False,
-    include_folders: bool | None = False,
+    page: Optional[int] = None,
+    include_pinned: Optional[bool] = False,
+    include_folders: Optional[bool] = False,
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -90,8 +92,8 @@ async def get_session_user_chat_list(
 
 @router.get('/stats/usage', response_model=ChatUsageStatsListResponse)
 async def get_session_user_chat_usage_stats(
-    items_per_page: int | None = 50,
-    page: int | None = 1,
+    items_per_page: Optional[int] = 50,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -208,7 +210,7 @@ class ChatStatsExportList(BaseModel):
     page: int
 
 
-def _process_chat_for_export(chat) -> ChatStatsExport | None:
+def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
     try:
 
         def get_message_content_length(message):
@@ -393,8 +395,8 @@ async def generate_chat_stats_jsonl_generator(user_id, filter):
 @router.get('/stats/export', response_model=ChatStatsExportList)
 async def export_chat_stats(
     request: Request,
-    updated_at: int | None = None,
-    page: int | None = 1,
+    updated_at: Optional[int] = None,
+    page: Optional[int] = 1,
     stream: bool = False,
     user=Depends(get_verified_user),
 ):
@@ -436,7 +438,7 @@ async def export_chat_stats(
 ############################
 
 
-@router.get('/stats/export/{chat_id}', response_model=ChatStatsExport | None)
+@router.get('/stats/export/{chat_id}', response_model=Optional[ChatStatsExport])
 async def export_single_chat_stats(
     request: Request,
     chat_id: str,
@@ -514,10 +516,10 @@ async def delete_all_user_chats(
 @router.get('/list/user/{user_id}', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
     user_id: str,
-    page: int | None = None,
-    query: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -551,24 +553,12 @@ async def get_user_chat_list_by_user_id(
 ############################
 
 
-@router.post('/new', response_model=ChatResponse | None)
+@router.post('/new', response_model=Optional[ChatResponse])
 async def create_new_chat(
     form_data: ChatForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Reject a folder_id that doesn't belong to the caller. Without this the
-    # row is persisted with a dangling foreign reference — no read path
-    # surfaces it across users (all chat reads are user_id-filtered), but
-    # the row state is meaningless and downstream consumers shouldn't have
-    # to assume the column is clean. Also catches non-UUID / nonexistent IDs.
-    if form_data.folder_id is not None:
-        if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
-
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())
@@ -604,7 +594,7 @@ async def import_chats(
 @router.get('/search', response_model=list[ChatTitleIdResponse])
 async def search_user_chats(
     text: str,
-    page: int | None = None,
+    page: Optional[int] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -654,7 +644,7 @@ async def get_chats_by_folder_id(
 @router.get('/folder/{folder_id}/list')
 async def get_chat_list_by_folder_id(
     folder_id: str,
-    page: int | None = 1,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -776,10 +766,10 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSessio
 
 @router.get('/archived', response_model=list[ChatTitleIdResponse])
 async def get_archived_session_user_chat_list(
-    page: int | None = None,
-    query: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -833,10 +823,10 @@ async def unarchive_all_chats(user=Depends(get_verified_user), db: AsyncSession 
 
 @router.get('/shared', response_model=list[SharedChatResponse])
 async def get_shared_session_user_chat_list(
-    page: int | None = None,
-    query: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -868,7 +858,7 @@ async def get_shared_session_user_chat_list(
 ############################
 
 
-@router.get('/share/{share_id}', response_model=ChatResponse | None)
+@router.get('/share/{share_id}', response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(
     share_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -914,8 +904,8 @@ class TagForm(BaseModel):
 
 
 class TagFilterForm(TagForm):
-    skip: int | None = 0
-    limit: int | None = 50
+    skip: Optional[int] = 0
+    limit: Optional[int] = 50
 
 
 @router.post('/tags', response_model=list[ChatTitleIdResponse])
@@ -938,7 +928,7 @@ async def get_user_chat_list_by_tag_name(
 ############################
 
 
-@router.get('/{id}', response_model=ChatResponse | None)
+@router.get('/{id}', response_model=Optional[ChatResponse])
 async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
@@ -968,7 +958,7 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
 ############################
 
 
-@router.post('/{id}', response_model=ChatResponse | None)
+@router.post('/{id}', response_model=Optional[ChatResponse])
 async def update_chat_by_id(
     id: str,
     form_data: ChatForm,
@@ -1002,7 +992,7 @@ class MessageForm(BaseModel):
     content: str
 
 
-@router.post('/{id}/messages/{message_id}', response_model=ChatResponse | None)
+@router.post('/{id}/messages/{message_id}', response_model=Optional[ChatResponse])
 async def update_chat_message_by_id(
     id: str,
     message_id: str,
@@ -1064,7 +1054,7 @@ class EventForm(BaseModel):
     data: dict
 
 
-@router.post('/{id}/messages/{message_id}/event', response_model=bool | None)
+@router.post('/{id}/messages/{message_id}/event', response_model=Optional[bool])
 async def send_chat_message_event_by_id(
     id: str,
     message_id: str,
@@ -1152,7 +1142,7 @@ async def delete_chat_by_id(
 ############################
 
 
-@router.get('/{id}/pinned', response_model=bool | None)
+@router.get('/{id}/pinned', response_model=Optional[bool])
 async def get_pinned_status_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -1168,7 +1158,7 @@ async def get_pinned_status_by_id(
 ############################
 
 
-@router.post('/{id}/pin', response_model=ChatResponse | None)
+@router.post('/{id}/pin', response_model=Optional[ChatResponse])
 async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
@@ -1184,10 +1174,10 @@ async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
 
 
 class CloneForm(BaseModel):
-    title: str | None = None
+    title: Optional[str] = None
 
 
-@router.post('/{id}/clone', response_model=ChatResponse | None)
+@router.post('/{id}/clone', response_model=Optional[ChatResponse])
 async def clone_chat_by_id(
     form_data: CloneForm,
     id: str,
@@ -1235,7 +1225,7 @@ async def clone_chat_by_id(
 ############################
 
 
-@router.post('/{id}/clone/shared', response_model=ChatResponse | None)
+@router.post('/{id}/clone/shared', response_model=Optional[ChatResponse])
 async def clone_shared_chat_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -1304,7 +1294,7 @@ async def clone_shared_chat_by_id(
 ############################
 
 
-@router.post('/{id}/archive', response_model=ChatResponse | None)
+@router.post('/{id}/archive', response_model=Optional[ChatResponse])
 async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
@@ -1328,7 +1318,7 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: Async
 ############################
 
 
-@router.post('/{id}/share', response_model=ChatResponse | None)
+@router.post('/{id}/share', response_model=Optional[ChatResponse])
 async def share_chat_by_id(
     request: Request,
     id: str,
@@ -1382,7 +1372,7 @@ async def share_chat_by_id(
 ############################
 
 
-@router.delete('/{id}/share', response_model=bool | None)
+@router.delete('/{id}/share', response_model=Optional[bool])
 async def delete_shared_chat_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -1414,7 +1404,7 @@ class ChatAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post('/shared/{id}/access/update', response_model=ChatResponse | None)
+@router.post('/shared/{id}/access/update', response_model=Optional[ChatResponse])
 async def update_shared_chat_access_by_id(
     request: Request,
     id: str,
@@ -1484,10 +1474,10 @@ async def get_shared_chat_access_by_id(
 
 
 class ChatFolderIdForm(BaseModel):
-    folder_id: str | None = None
+    folder_id: Optional[str] = None
 
 
-@router.post('/{id}/folder', response_model=ChatResponse | None)
+@router.post('/{id}/folder', response_model=Optional[ChatResponse])
 async def update_chat_folder_id_by_id(
     id: str,
     form_data: ChatFolderIdForm,
@@ -1496,15 +1486,6 @@ async def update_chat_folder_id_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        # Same ownership check as the create path — reject foreign / dangling
-        # folder_id values. None is allowed (moves the chat out of any folder).
-        if form_data.folder_id is not None:
-            if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
-
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
@@ -1590,7 +1571,7 @@ async def delete_tag_by_id_and_tag_name(
 ############################
 
 
-@router.delete('/{id}/tags/all', response_model=bool | None)
+@router.delete('/{id}/tags/all', response_model=Optional[bool])
 async def delete_all_tags_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):

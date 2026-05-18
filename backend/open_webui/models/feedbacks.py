@@ -3,11 +3,13 @@ import time
 import uuid
 from typing import Optional
 
+from sqlalchemy import select, delete, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel
+
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 log = logging.getLogger(__name__)
 
@@ -317,8 +319,8 @@ class FeedbackTable:
         If days=0, returns all time data starting from first feedback.
         Returns: [{"date": "2026-01-08", "won": 5, "lost": 2}, ...]
         """
-        from collections import defaultdict
         from datetime import datetime, timedelta
+        from collections import defaultdict
 
         async with get_async_db_context(db) as db:
             if days == 0:

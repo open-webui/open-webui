@@ -1,92 +1,98 @@
 import base64
+from dataclasses import dataclass, field
 import copy
-import fnmatch
 import hashlib
-import json
 import logging
 import mimetypes
-import re
-import secrets
 import sys
-import time
 import urllib
 import uuid
-from dataclasses import dataclass, field
+import json
 from datetime import datetime, timedelta
-from typing import Literal, Optional
+
+import re
+import fnmatch
+import time
+import secrets
+from cryptography.fernet import Fernet
+from typing import Literal
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
 from authlib.jose.errors import BadSignatureError
-from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
-from cryptography.fernet import Fernet
 from fastapi import (
     HTTPException,
     status,
 )
-from mcp.shared.auth import (
-    OAuthClientMetadata as MCPOAuthClientMetadata,
-)
-from mcp.shared.auth import (
-    OAuthMetadata,
-)
+from starlette.responses import RedirectResponse
+from typing import Optional
+
+
+from open_webui.models.auths import Auths
+from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.users import Users
+
+
+from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
-    ENABLE_OAUTH_GROUP_CREATION,
-    ENABLE_OAUTH_GROUP_MANAGEMENT,
-    ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_SIGNUP,
-    JWT_EXPIRES_IN,
-    OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
+    OAUTH_CLIENT_TIMEOUT,
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    OAUTH_PROVIDERS,
+    ENABLE_OAUTH_ROLE_MANAGEMENT,
+    ENABLE_OAUTH_GROUP_MANAGEMENT,
+    ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_GROUP_DEFAULT_SHARE,
+    OAUTH_BLOCKED_GROUPS,
+    OAUTH_GROUPS_SEPARATOR,
+    OAUTH_ROLES_SEPARATOR,
+    OAUTH_ROLES_CLAIM,
+    OAUTH_SUB_CLAIM,
+    OAUTH_GROUPS_CLAIM,
+    OAUTH_EMAIL_CLAIM,
+    OAUTH_PICTURE_CLAIM,
+    OAUTH_USERNAME_CLAIM,
+    OAUTH_ALLOWED_ROLES,
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
-    OAUTH_ALLOWED_ROLES,
+    OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_UPDATE_NAME_ON_LOGIN,
+    OAUTH_UPDATE_EMAIL_ON_LOGIN,
+    OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_AUDIENCE,
     OAUTH_AUTHORIZE_PARAMS,
-    OAUTH_BLOCKED_GROUPS,
-    OAUTH_CLIENT_TIMEOUT,
-    OAUTH_EMAIL_CLAIM,
-    OAUTH_GROUP_DEFAULT_SHARE,
-    OAUTH_GROUPS_CLAIM,
-    OAUTH_GROUPS_SEPARATOR,
-    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
-    OAUTH_PICTURE_CLAIM,
-    OAUTH_PROVIDERS,
-    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
-    OAUTH_ROLES_CLAIM,
-    OAUTH_ROLES_SEPARATOR,
-    OAUTH_SUB_CLAIM,
-    OAUTH_UPDATE_EMAIL_ON_LOGIN,
-    OAUTH_UPDATE_NAME_ON_LOGIN,
-    OAUTH_UPDATE_PICTURE_ON_LOGIN,
-    OAUTH_USERNAME_CLAIM,
     WEBHOOK_URL,
+    JWT_EXPIRES_IN,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
-    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
-    ENABLE_OAUTH_EMAIL_FALLBACK,
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    WEBUI_NAME,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
     REDIS_KEY_PREFIX,
-    WEBUI_AUTH_COOKIE_SAME_SITE,
-    WEBUI_AUTH_COOKIE_SECURE,
-    WEBUI_NAME,
 )
-from open_webui.models.auths import Auths
-from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
-from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.models.users import Users
-from open_webui.retrieval.web.utils import validate_url
-from open_webui.utils.auth import create_token, get_password_hash
-from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
-from starlette.responses import RedirectResponse
+from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.retrieval.web.utils import validate_url
+
+from mcp.shared.auth import (
+    OAuthClientMetadata as MCPOAuthClientMetadata,
+    OAuthMetadata,
+)
+
+from authlib.oauth2.rfc6749.errors import OAuth2Error
 
 
 class OAuthClientMetadata(MCPOAuthClientMetadata):

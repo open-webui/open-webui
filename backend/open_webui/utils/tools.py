@@ -1,102 +1,109 @@
-from __future__ import annotations
-
-import asyncio
 import base64
 import copy
 import inspect
-import json
 import logging
-import os
 import re
-from functools import partial, update_wrapper
+import inspect
+import aiohttp
+import asyncio
+import yaml
+import json
+from urllib.parse import quote, urlencode
+
+from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 from typing import (
     Any,
     Awaitable,
     Callable,
-    Optional,
-    Type,
-    Union,
+    get_type_hints,
     get_args,
     get_origin,
-    get_type_hints,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    Optional,
+    Type,
 )
-from urllib.parse import quote, urlencode
+from functools import update_wrapper, partial
 
-import aiohttp
-import yaml
+
 from fastapi import Request
+from pydantic import BaseModel, Field, create_model
+
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
 )
+
+
+from open_webui.utils.misc import is_string_allowed
+from open_webui.models.tools import Tools
+from open_webui.models.users import UserModel
+from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.plugin import load_tool_module_by_id
+from open_webui.utils.access_control import has_access, has_connection_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
-    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
+    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     REDIS_KEY_PREFIX,
 )
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
-from open_webui.models.tools import Tools
-from open_webui.models.users import UserModel
+from open_webui.utils.headers import include_user_info_headers, get_custom_headers
 from open_webui.tools.builtin import (
-    add_memory,
-    calculate_timestamp,
-    create_automation,
-    create_calendar_event,
-    create_tasks,
-    delete_automation,
-    delete_calendar_event,
-    delete_memory,
-    edit_image,
-    execute_code,
+    search_web,
     fetch_url,
     generate_image,
-    get_current_timestamp,
-    grep_knowledge_files,
-    kb_exec,
-    list_automations,
-    list_knowledge,
-    list_knowledge_bases,
-    list_memories,
-    query_knowledge_bases,
-    query_knowledge_files,
-    replace_memory_content,
-    replace_note_content,
-    search_calendar_events,
-    search_channel_messages,
-    search_channels,
-    search_chats,
-    search_knowledge_bases,
-    search_knowledge_files,
+    edit_image,
+    execute_code,
     search_memories,
+    add_memory,
+    replace_memory_content,
+    delete_memory,
+    list_memories,
+    get_current_timestamp,
+    calculate_timestamp,
     search_notes,
-    search_web,
-    toggle_automation,
-    update_automation,
-    update_calendar_event,
-    update_task,
+    search_chats,
+    search_channels,
+    search_channel_messages,
+    view_note,
+    view_chat,
     view_channel_message,
     view_channel_thread,
-    view_chat,
+    replace_note_content,
+    write_note,
+    list_knowledge_bases,
+    search_knowledge_bases,
+    query_knowledge_bases,
+    search_knowledge_files,
+    query_knowledge_files,
+    list_knowledge,
     view_file,
     view_knowledge_file,
-    view_note,
     view_skill,
-    write_note,
+    create_tasks,
+    update_task,
+    create_automation,
+    update_automation,
+    list_automations,
+    toggle_automation,
+    delete_automation,
+    search_calendar_events,
+    create_calendar_event,
+    update_calendar_event,
+    delete_calendar_event,
 )
-from open_webui.utils.access_control import has_access, has_connection_access, has_permission
-from open_webui.utils.headers import get_custom_headers, include_user_info_headers
-from open_webui.utils.misc import is_string_allowed
-from open_webui.utils.plugin import load_tool_module_by_id
-from pydantic import BaseModel, Field, create_model
-from pydantic.fields import FieldInfo
+
+from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 
@@ -434,33 +441,30 @@ async def get_builtin_tools(
     if folder_knowledge:
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
     if is_builtin_tool_enabled('knowledge'):
-        from open_webui.env import ENABLE_KB_EXEC
-
-        if ENABLE_KB_EXEC:
-            builtin_functions.append(kb_exec)
+        if model_knowledge:
+            # Model has attached knowledge - provide discovery, search and semantic tools
+            builtin_functions.append(list_knowledge)
+            builtin_functions.append(search_knowledge_files)
             builtin_functions.append(query_knowledge_files)
-            # Notes attached to the model need view_note since kb_exec is file-only
-            if model_knowledge:
-                knowledge_types = {item.get('type') for item in model_knowledge}
-                if 'note' in knowledge_types:
-                    builtin_functions.append(view_note)
-            if not model_knowledge:
-                builtin_functions.append(query_knowledge_bases)
-                builtin_functions.append(search_knowledge_bases)
-        elif model_knowledge:
-            builtin_functions.extend([list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files])
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
-                builtin_functions.extend([view_file, view_knowledge_file])
+                builtin_functions.append(view_file)
+                builtin_functions.append(view_knowledge_file)
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
-            builtin_functions.extend([
-                list_knowledge_bases, search_knowledge_bases, query_knowledge_bases,
-                grep_knowledge_files, search_knowledge_files, query_knowledge_files,
-                view_knowledge_file,
-            ])
+            # No model knowledge - allow full KB browsing
+            builtin_functions.extend(
+                [
+                    list_knowledge_bases,
+                    search_knowledge_bases,
+                    query_knowledge_bases,
+                    search_knowledge_files,
+                    query_knowledge_files,
+                    view_knowledge_file,
+                ]
+            )
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):
@@ -948,8 +952,8 @@ async def get_tool_servers(request: Request):
 async def get_terminal_cwd(
     base_url: str,
     headers: dict,
-    cookies: dict | None = None,
-) -> str | None:
+    cookies: Optional[dict] = None,
+) -> Optional[str]:
     """Fetch the current working directory from a terminal server."""
     try:
         cwd_url = f'{base_url.rstrip("/")}/files/cwd'
@@ -971,8 +975,8 @@ async def get_terminal_cwd(
 async def get_terminal_system_prompt(
     base_url: str,
     headers: dict,
-    cookies: dict | None = None,
-) -> str | None:
+    cookies: Optional[dict] = None,
+) -> Optional[str]:
     """Fetch the system prompt from a terminal server.
 
     Checks ``/api/config`` for the ``system`` feature flag first;
@@ -1092,7 +1096,7 @@ async def get_terminal_tools(
     terminal_id: str,
     user: UserModel,
     extra_params: dict,
-) -> dict[str, dict] | tuple[dict[str, dict], str | None]:
+) -> dict[str, dict] | tuple[dict[str, dict], Optional[str]]:
     """Resolve tools for a terminal server identified by terminal_id.
 
     - Finds the connection in TERMINAL_SERVER_CONNECTIONS
@@ -1185,7 +1189,7 @@ async def get_terminal_tools(
     return tools_dict, system_prompt
 
 
-async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]:
+async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
     _headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -1227,7 +1231,7 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
     return res
 
 
-async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # Prepare list of enabled servers along with their original index
 
     tasks = []
@@ -1328,12 +1332,12 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
 
 async def execute_tool_server(
     url: str,
-    headers: dict[str, str],
-    cookies: dict[str, str],
+    headers: Dict[str, str],
+    cookies: Dict[str, str],
     name: str,
-    params: dict[str, Any],
-    server_data: dict[str, Any],
-) -> tuple[dict[str, Any], dict[str, Any | None]]:
+    params: Dict[str, Any],
+    server_data: Dict[str, Any],
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     error = None
     try:
         openapi = server_data.get('openapi', {})
@@ -1481,7 +1485,7 @@ async def execute_tool_server(
         return ({'error': error}, None)
 
 
-def get_tool_server_url(url: str | None, path: str) -> str:
+def get_tool_server_url(url: Optional[str], path: str) -> str:
     """
     Build the full URL for a tool server, given a base url and a path.
     """

@@ -2,36 +2,37 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import json
+from typing import Optional, List, Dict, Any
 import logging
 import re
-from typing import Any, Dict, List, Optional
-
-from pgvector.sqlalchemy import Vector
+import json
 from sqlalchemy import (
-    Column,
-    Integer,
-    LargeBinary,
-    MetaData,
-    Table,
-    Text,
+    func,
+    literal,
     cast,
     column,
     create_engine,
-    func,
-    literal,
+    Column,
+    Integer,
+    MetaData,
+    LargeBinary,
     select,
     text,
+    Text,
+    Table,
     values,
 )
-from sqlalchemy.dialects import registry
-from sqlalchemy.dialects.postgresql import JSONB, array
-from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
-from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool, QueuePool
 from sqlalchemy.sql import true
+from sqlalchemy.pool import NullPool, QueuePool
+
+from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
+from sqlalchemy.dialects.postgresql import JSONB, array
+from pgvector.sqlalchemy import Vector
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.exc import NoSuchTableError
+
+from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+from sqlalchemy.dialects import registry
 
 
 class OpenGaussDialect(PGDialect_psycopg2):
@@ -55,22 +56,23 @@ class OpenGaussDialect(PGDialect_psycopg2):
 # Register dialect
 registry.register('opengauss', __name__, 'OpenGaussDialect')
 
+from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import (
     OPENGAUSS_DB_URL,
     OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH,
-    OPENGAUSS_POOL_MAX_OVERFLOW,
-    OPENGAUSS_POOL_RECYCLE,
     OPENGAUSS_POOL_SIZE,
+    OPENGAUSS_POOL_MAX_OVERFLOW,
     OPENGAUSS_POOL_TIMEOUT,
+    OPENGAUSS_POOL_RECYCLE,
 )
+
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.retrieval.vector.main import (
-    GetResult,
-    SearchResult,
-    VectorDBBase,
-    VectorItem,
-)
-from open_webui.retrieval.vector.utils import process_metadata
 
 VECTOR_LENGTH = OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH
 Base = declarative_base()

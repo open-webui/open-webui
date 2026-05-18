@@ -1,17 +1,16 @@
-from __future__ import annotations
-
-import asyncio
-import hashlib
 import logging
 import os
-import re
-import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import Awaitable, Optional, Union
-from urllib.parse import quote
 
-import aiohttp
 import requests
+import aiohttp
+import asyncio
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
+import time
+import re
+
+from urllib.parse import quote
 from huggingface_hub import snapshot_download
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
@@ -19,33 +18,41 @@ from langchain_classic.retrievers import (
 )
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from open_webui.config import (
-    RAG_EMBEDDING_CONTENT_PREFIX,
-    RAG_EMBEDDING_PREFIX_FIELD_NAME,
-    RAG_EMBEDDING_QUERY_PREFIX,
-    VECTOR_DB,
-)
-from open_webui.env import (
-    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
-    AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    OFFLINE_MODE,
-)
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.chats import Chats
-from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
-from open_webui.models.notes import Notes
-from open_webui.models.users import UserModel
-from open_webui.retrieval.loaders.youtube import YoutubeLoader
+
+from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.main import GetResult
-from open_webui.retrieval.web.utils import get_web_loader
+
+
+from open_webui.models.users import UserModel
+from open_webui.models.files import Files
+from open_webui.models.knowledge import Knowledges
+
+from open_webui.models.chats import Chats
+from open_webui.models.notes import Notes
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.files import has_access_to_file
+
+from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import get_message_list
+
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.loaders.youtube import YoutubeLoader
+
+
+from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT,
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    OFFLINE_MODE,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+)
+from open_webui.config import (
+    RAG_EMBEDDING_QUERY_PREFIX,
+    RAG_EMBEDDING_CONTENT_PREFIX,
+    RAG_EMBEDDING_PREFIX_FIELD_NAME,
+)
 
 log = logging.getLogger(__name__)
 
@@ -1114,7 +1121,7 @@ async def get_sources_from_items(
     hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
-    user: UserModel | None = None,
+    user: Optional[UserModel] = None,
 ):
     log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
 
@@ -1426,7 +1433,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Callbacks | None = None,
+        callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
         """Compress retrieved documents given the query context.
 
@@ -1445,7 +1452,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Callbacks | None = None,
+        callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 
@@ -1453,12 +1460,13 @@ class RerankCompressor(BaseDocumentCompressor):
         if reranking:
             scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
-            from sentence_transformers import util as st_util
+            from sentence_transformers import util
 
             query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-            doc_texts = [doc.page_content for doc in documents]
-            document_embedding = await self.embedding_function(doc_texts, RAG_EMBEDDING_CONTENT_PREFIX)
-            scores = st_util.cos_sim(query_embedding, document_embedding)[0]
+            document_embedding = await self.embedding_function(
+                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
+            )
+            scores = util.cos_sim(query_embedding, document_embedding)[0]
 
         if scores is not None:
             docs_with_scores = list(

@@ -1,33 +1,32 @@
-from __future__ import annotations
-
-import logging
 import os
 import re
+
+import logging
+import aiohttp
 from pathlib import Path
 from typing import Optional
 
-import aiohttp
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
-from open_webui.internal.db import get_async_session
 from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
-    Functions,
     FunctionUserResponse,
     FunctionWithValvesModel,
+    Functions,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
-    get_function_module_from_cache,
     load_function_module_by_id,
     replace_imports,
+    get_function_module_from_cache,
     resolve_valves_schema_options,
 )
+from open_webui.config import CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel, HttpUrl
+from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -92,7 +91,7 @@ def github_url_to_raw_url(url: str) -> str:
     return url
 
 
-@router.post('/load/url', response_model=dict | None)
+@router.post('/load/url', response_model=Optional[dict])
 async def load_function_from_url(request: Request, form_data: LoadUrlForm, user=Depends(get_admin_user)):
     # NOTE: This is NOT a SSRF vulnerability:
     # This endpoint is admin-only (see get_admin_user), meant for *trusted* internal use,
@@ -180,7 +179,7 @@ async def sync_functions(
 ############################
 
 
-@router.post('/create', response_model=FunctionResponse | None)
+@router.post('/create', response_model=Optional[FunctionResponse])
 async def create_new_function(
     request: Request,
     form_data: FunctionForm,
@@ -241,7 +240,7 @@ async def create_new_function(
 ############################
 
 
-@router.get('/id/{id}', response_model=FunctionModel | None)
+@router.get('/id/{id}', response_model=Optional[FunctionModel])
 async def get_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     function = await Functions.get_function_by_id(id, db=db)
 
@@ -259,7 +258,7 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
 ############################
 
 
-@router.post('/id/{id}/toggle', response_model=FunctionModel | None)
+@router.post('/id/{id}/toggle', response_model=Optional[FunctionModel])
 async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
@@ -284,7 +283,7 @@ async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: Async
 ############################
 
 
-@router.post('/id/{id}/toggle/global', response_model=FunctionModel | None)
+@router.post('/id/{id}/toggle/global', response_model=Optional[FunctionModel])
 async def toggle_global_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
@@ -309,7 +308,7 @@ async def toggle_global_by_id(id: str, user=Depends(get_admin_user), db: AsyncSe
 ############################
 
 
-@router.post('/id/{id}/update', response_model=FunctionModel | None)
+@router.post('/id/{id}/update', response_model=Optional[FunctionModel])
 async def update_function_by_id(
     request: Request,
     id: str,
@@ -375,7 +374,7 @@ async def delete_function_by_id(
 ############################
 
 
-@router.get('/id/{id}/valves', response_model=dict | None)
+@router.get('/id/{id}/valves', response_model=Optional[dict])
 async def get_function_valves_by_id(
     id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -401,7 +400,7 @@ async def get_function_valves_by_id(
 ############################
 
 
-@router.get('/id/{id}/valves/spec', response_model=dict | None)
+@router.get('/id/{id}/valves/spec', response_model=Optional[dict])
 async def get_function_valves_spec_by_id(
     request: Request,
     id: str,
@@ -431,7 +430,7 @@ async def get_function_valves_spec_by_id(
 ############################
 
 
-@router.post('/id/{id}/valves/update', response_model=dict | None)
+@router.post('/id/{id}/valves/update', response_model=Optional[dict])
 async def update_function_valves_by_id(
     request: Request,
     id: str,
@@ -477,7 +476,7 @@ async def update_function_valves_by_id(
 ############################
 
 
-@router.get('/id/{id}/valves/user', response_model=dict | None)
+@router.get('/id/{id}/valves/user', response_model=Optional[dict])
 async def get_function_user_valves_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -498,7 +497,7 @@ async def get_function_user_valves_by_id(
         )
 
 
-@router.get('/id/{id}/valves/user/spec', response_model=dict | None)
+@router.get('/id/{id}/valves/user/spec', response_model=Optional[dict])
 async def get_function_user_valves_spec_by_id(
     request: Request,
     id: str,
@@ -523,7 +522,7 @@ async def get_function_user_valves_spec_by_id(
         )
 
 
-@router.post('/id/{id}/valves/user/update', response_model=dict | None)
+@router.post('/id/{id}/valves/user/update', response_model=Optional[dict])
 async def update_function_user_valves_by_id(
     request: Request,
     id: str,

@@ -2,29 +2,30 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import logging
 from typing import Optional
+import logging
 from urllib.parse import urlparse
 
-from open_webui.config import (
-    QDRANT_API_KEY,
-    QDRANT_COLLECTION_PREFIX,
-    QDRANT_GRPC_PORT,
-    QDRANT_HNSW_M,
-    QDRANT_ON_DISK,
-    QDRANT_PREFER_GRPC,
-    QDRANT_TIMEOUT,
-    QDRANT_URI,
-)
-from open_webui.retrieval.vector.main import (
-    GetResult,
-    SearchResult,
-    VectorDBBase,
-    VectorItem,
-)
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
+
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
+from open_webui.config import (
+    QDRANT_URI,
+    QDRANT_API_KEY,
+    QDRANT_ON_DISK,
+    QDRANT_GRPC_PORT,
+    QDRANT_PREFER_GRPC,
+    QDRANT_COLLECTION_PREFIX,
+    QDRANT_TIMEOUT,
+    QDRANT_HNSW_M,
+)
 
 NO_LIMIT = 999999999
 

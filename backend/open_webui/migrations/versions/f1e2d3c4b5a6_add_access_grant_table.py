@@ -11,12 +11,13 @@ Access control semantics:
 - {read: {...}, write: {...}}: Custom permissions -> insert specific grants
 """
 
+from typing import Sequence, Union
 import time
 import uuid
-from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
+
 from open_webui.migrations.util import get_existing_tables
 
 revision: str = 'f1e2d3c4b5a6'
@@ -80,17 +81,12 @@ def upgrade() -> None:
         if table_name not in existing_tables:
             continue
 
-        # Check if access_control and id columns exist (may already be dropped on re-run,
-        # or table may have been rebuilt without id during intermediate migration states)
-        insp = sa.inspect(conn)
-        insp.clear_cache()  # Ensure fresh metadata after prior migrations that rebuild tables
-        table_cols = {c['name'] for c in insp.get_columns(table_name)}
-        if 'access_control' not in table_cols or 'id' not in table_cols:
-            continue
-
         # Query all rows
-        result = conn.execute(sa.text(f'SELECT id, access_control FROM "{table_name}"'))
-        rows = result.fetchall()
+        try:
+            result = conn.execute(sa.text(f'SELECT id, access_control FROM "{table_name}"'))
+            rows = result.fetchall()
+        except Exception:
+            continue
 
         for row in rows:
             resource_id = row[0]
@@ -212,15 +208,15 @@ def upgrade() -> None:
                     except Exception:
                         pass
 
-    # Drop access_control columns from resource tables (only if column still exists)
-    inspector = sa.inspect(conn)
+    # Drop access_control columns from resource tables
     for table_name, _ in resource_tables:
         if table_name not in existing_tables:
             continue
-        cols = {c['name'] for c in inspector.get_columns(table_name)}
-        if 'access_control' in cols:
+        try:
             with op.batch_alter_table(table_name) as batch:
                 batch.drop_column('access_control')
+        except Exception:
+            pass
 
 
 def downgrade() -> None:

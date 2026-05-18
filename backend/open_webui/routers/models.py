@@ -1,14 +1,28 @@
-from __future__ import annotations
-
-import asyncio
-import base64
+from typing import Optional
 import io
+import base64
 import json
+import asyncio
 import logging
 import posixpath
-from typing import Optional
 from urllib.parse import unquote
 
+from open_webui.models.groups import Groups
+from open_webui.models.models import (
+    ModelForm,
+    ModelMeta,
+    ModelModel,
+    ModelParams,
+    ModelResponse,
+    ModelListResponse,
+    ModelAccessListResponse,
+    ModelAccessResponse,
+    Models,
+)
+from open_webui.models.access_grants import AccessGrants
+
+from pydantic import BaseModel
+from open_webui.constants import ERROR_MESSAGES
 from fastapi import (
     APIRouter,
     Depends,
@@ -18,26 +32,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import RedirectResponse, StreamingResponse
+
+
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING
 from open_webui.internal.db import get_async_session
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
-from open_webui.models.models import (
-    ModelAccessListResponse,
-    ModelAccessResponse,
-    ModelForm,
-    ModelListResponse,
-    ModelMeta,
-    ModelModel,
-    ModelParams,
-    ModelResponse,
-    Models,
-)
-from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _safe_static_redirect_path(url: str) -> str | None:
+def _safe_static_redirect_path(url: str) -> Optional[str]:
     """
     If url is a same-origin static asset path, return a normalized path safe for
     RedirectResponse Location. Otherwise None (caller should fall back to default).
@@ -89,12 +90,12 @@ PAGE_ITEM_COUNT = 30
 
 @router.get('/list', response_model=ModelAccessListResponse)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
-    query: str | None = None,
-    view_option: str | None = None,
-    tag: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
-    page: int | None = 1,
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    tag: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -191,7 +192,7 @@ async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Dep
 ############################
 
 
-@router.post('/create', response_model=ModelModel | None)
+@router.post('/create', response_model=Optional[ModelModel])
 async def create_new_model(
     request: Request,
     form_data: ModelForm,
@@ -408,7 +409,7 @@ class ModelIdForm(BaseModel):
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get('/model', response_model=ModelAccessResponse | None)
+@router.get('/model', response_model=Optional[ModelAccessResponse])
 async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
@@ -536,7 +537,7 @@ async def get_model_profile_image(
 ############################
 
 
-@router.post('/model/toggle', response_model=ModelResponse | None)
+@router.post('/model/toggle', response_model=Optional[ModelResponse])
 async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
@@ -577,7 +578,7 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Async
 ############################
 
 
-@router.post('/model/update', response_model=ModelModel | None)
+@router.post('/model/update', response_model=Optional[ModelModel])
 async def update_model_by_id(
     request: Request,
     form_data: ModelForm,
@@ -626,11 +627,11 @@ async def update_model_by_id(
 
 class ModelAccessGrantsForm(BaseModel):
     id: str
-    name: str | None = None
+    name: Optional[str] = None
     access_grants: list[dict]
 
 
-@router.post('/model/access/update', response_model=ModelModel | None)
+@router.post('/model/access/update', response_model=Optional[ModelModel])
 async def update_model_access_by_id(
     request: Request,
     form_data: ModelAccessGrantsForm,

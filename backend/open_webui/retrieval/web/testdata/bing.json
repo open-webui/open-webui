@@ -1,0 +1,58 @@
+{
+	"_type": "SearchResponse",
+	"queryContext": {
+		"originalQuery": "Top 10 international results"
+	},
+	"webPages": {
+		"webSearchUrl": "https://www.bing.com/search?q=Top+10+international+results",
+		"totalEstimatedMatches": 687,
+		"value": [
+			{
+				"id": "https://api.bing.microsoft.com/api/v7/#WebPages.0",
+				"name": "2024 Mexican Grand Prix - F1 results and latest standings ... - PlanetF1",
+				"url": "https://www.planetf1.com/news/f1-results-2024-mexican-grand-prix-race-standings",
+				"datePublished": "2024-10-27T00:00:00.0000000",
+				"datePublishedFreshnessText": "1 day ago",
+				"isFamilyFriendly": true,
+				"displayUrl": "https://www.planetf1.com/news/f1-results-2024-mexican-grand-prix-race-standings",
+				"snippet": "Nico Hulkenberg and Pierre Gasly completed the top 10. A full report of the Mexican Grand Prix is available at the bottom of this article. F1 results – 2024 Mexican Grand Prix",
+				"dateLastCrawled": "2024-10-28T07:15:00.0000000Z",
+				"cachedPageUrl": "https://cc.bingj.com/cache.aspx?q=Top+10+international+results&d=916492551782&mkt=en-US&setlang=en-US&w=zBsfaAPyF2tUrHFHr_vFFdUm8sng4g34",
+				"language": "en",
+				"isNavigational": false,
+				"noCache": false
+			},
+			{
+				"id": "https://api.bing.microsoft.com/api/v7/#WebPages.1",
+				"name": "F1 Results Today: HUGE Verstappen penalties cause major title change",
+				"url": "https://www.gpfans.com/en/f1-news/1033512/f1-results-today-mexican-grand-prix-huge-max-verstappen-penalties-cause-major-title-change/",
+				"datePublished": "2024-10-27T00:00:00.0000000",
+				"datePublishedFreshnessText": "1 day ago",
+				"isFamilyFriendly": true,
+				"displayUrl": "https://www.gpfans.com/en/f1-news/1033512/f1-results-today-mexican-grand-prix-huge-max...",
+				"snippet": "Elsewhere, Mercedes duo Lewis Hamilton and George Russell came home in P4 and P5 respectively. Meanwhile, the surprise package of the day were Haas, with both Kevin Magnussen and Nico Hulkenberg finishing inside the points.. READ MORE: RB star issues apology after red flag CRASH at Mexican GP Mexican Grand Prix 2024 results. 1. Carlos Sainz [Ferrari] 2. Lando Norris [McLaren] - +4.705",
+				"dateLastCrawled": "2024-10-28T06:06:00.0000000Z",
+				"cachedPageUrl": "https://cc.bingj.com/cache.aspx?q=Top+10+international+results&d=2840656522642&mkt=en-US&setlang=en-US&w=-Tbkwxnq52jZCvG7l3CtgcwT1vwAjIUD",
+				"language": "en",
+				"isNavigational": false,
+				"noCache": false
+			},
+			{
+				"id": "https://api.bing.microsoft.com/api/v7/#WebPages.2",
+				"name": "International Power Rankings: England flying, Kangaroos cruising, Fiji rise",
+				"url": "https://www.loverugbyleague.com/post/international-power-rankings-england-flying-kangaroos-cruising-fiji-rise",
+				"datePublished": "2024-10-28T00:00:00.0000000",
+				"datePublishedFreshnessText": "7 hours ago",
+				"isFamilyFriendly": true,
+				"displayUrl": "https://www.loverugbyleague.com/post/international-power-rankings-england-flying...",
+				"snippet": "LRL RECOMMENDS: England player ratings from first Test against Samoa as omnificent George Williams scores perfect 10. 2. Australia (Men) – SAME. The Kangaroos remain 2nd in our Power Rankings after their 22-10 win against New Zealand in Christchurch on Sunday. As was the case in their win against Tonga last week, Mal Meninga’s side weren ...",
+				"dateLastCrawled": "2024-10-28T07:09:00.0000000Z",
+				"cachedPageUrl": "https://cc.bingj.com/cache.aspx?q=Top+10+international+results&d=1535008462672&mkt=en-US&setlang=en-US&w=82ujhH4Kp0iuhCS7wh1xLUFYUeetaVVm",
+				"language": "en",
+				"isNavigational": false,
+				"noCache": false
+			}
+		],
+		"someResultsRemoved": true
+	}
+}

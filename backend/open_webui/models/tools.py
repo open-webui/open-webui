@@ -1,16 +1,16 @@
-from __future__ import annotations
-
 import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.access_grants import AccessGrantModel, AccessGrants
-from open_webui.models.groups import Groups
-from open_webui.models.users import UserResponse, Users
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Column, String, Text, delete, select, update
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.models.users import Users, UserResponse
+from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import BigInteger, Column, String, Text
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +37,8 @@ class Tool(Base):
 
 
 class ToolMeta(BaseModel):
-    description: str | None = None
-    manifest: dict | None = {}
+    description: Optional[str] = None
+    manifest: Optional[dict] = {}
 
 
 class ToolModel(BaseModel):
@@ -62,7 +62,7 @@ class ToolModel(BaseModel):
 
 
 class ToolUserModel(ToolModel):
-    user: UserResponse | None = None
+    user: Optional[UserResponse] = None
 
 
 class ToolResponse(BaseModel):
@@ -76,13 +76,13 @@ class ToolResponse(BaseModel):
 
 
 class ToolUserResponse(ToolResponse):
-    user: UserResponse | None = None
+    user: Optional[UserResponse] = None
 
     model_config = ConfigDict(extra='allow')
 
 
 class ToolAccessResponse(ToolUserResponse):
-    write_access: bool | None = False
+    write_access: Optional[bool] = False
 
 
 class ToolForm(BaseModel):
@@ -90,22 +90,22 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    access_grants: list[dict | None] = None
+    access_grants: Optional[list[dict]] = None
 
 
 class ToolValves(BaseModel):
-    valves: dict | None = None
+    valves: Optional[dict] = None
 
 
 class ToolsTable:
-    async def _get_access_grants(self, tool_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
+    async def _get_access_grants(self, tool_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
         return await AccessGrants.get_grants_by_resource('tool', tool_id, db=db)
 
     async def _to_tool_model(
         self,
         tool: Tool,
-        access_grants: list[AccessGrantModel | None] = None,
-        db: AsyncSession | None = None,
+        access_grants: Optional[list[AccessGrantModel]] = None,
+        db: Optional[AsyncSession] = None,
     ) -> ToolModel:
         tool_data = ToolModel.model_validate(tool).model_dump(exclude={'access_grants'})
         tool_data['access_grants'] = (
@@ -118,8 +118,8 @@ class ToolsTable:
         user_id: str,
         form_data: ToolForm,
         specs: list[dict],
-        db: AsyncSession | None = None,
-    ) -> ToolModel | None:
+        db: Optional[AsyncSession] = None,
+    ) -> Optional[ToolModel]:
         async with get_async_db_context(db) as db:
             try:
                 result = Tool(
@@ -143,7 +143,7 @@ class ToolsTable:
                 log.exception(f'Error creating a new tool: {e}')
                 return None
 
-    async def get_tool_by_id(self, id: str, db: AsyncSession | None = None) -> ToolModel | None:
+    async def get_tool_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ToolModel]:
         try:
             async with get_async_db_context(db) as db:
                 tool = await db.get(Tool, id)
@@ -151,7 +151,7 @@ class ToolsTable:
         except Exception:
             return None
 
-    async def get_tools(self, defer_content: bool = False, db: AsyncSession | None = None) -> list[ToolUserModel]:
+    async def get_tools(self, defer_content: bool = False, db: Optional[AsyncSession] = None) -> list[ToolUserModel]:
         async with get_async_db_context(db) as db:
             stmt = select(Tool).order_by(Tool.updated_at.desc())
             if defer_content:
@@ -190,7 +190,7 @@ class ToolsTable:
         user_id: str,
         permission: str = 'write',
         defer_content: bool = False,
-        db: AsyncSession | None = None,
+        db: Optional[AsyncSession] = None,
     ) -> list[ToolUserModel]:
         tools = await self.get_tools(defer_content=defer_content, db=db)
         user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
@@ -211,7 +211,7 @@ class ToolsTable:
                 result.append(tool)
         return result
 
-    async def get_tool_valves_by_id(self, id: str, db: AsyncSession | None = None) -> dict | None:
+    async def get_tool_valves_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[dict]:
         try:
             async with get_async_db_context(db) as db:
                 tool = await db.get(Tool, id)
@@ -221,8 +221,8 @@ class ToolsTable:
             return None
 
     async def update_tool_valves_by_id(
-        self, id: str, valves: dict, db: AsyncSession | None = None
-    ) -> ToolValves | None:
+        self, id: str, valves: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[ToolValves]:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(update(Tool).filter_by(id=id).values(valves=valves, updated_at=int(time.time())))
@@ -232,8 +232,8 @@ class ToolsTable:
             return None
 
     async def get_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str, db: AsyncSession | None = None
-    ) -> dict | None:
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
         try:
             user = await Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -250,8 +250,8 @@ class ToolsTable:
             return None
 
     async def update_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str, valves: dict, db: AsyncSession | None = None
-    ) -> dict | None:
+        self, id: str, user_id: str, valves: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
         try:
             user = await Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
@@ -272,7 +272,7 @@ class ToolsTable:
             log.exception(f'Error updating user valves by id {id} and user_id {user_id}: {e}')
             return None
 
-    async def update_tool_by_id(self, id: str, updated: dict, db: AsyncSession | None = None) -> ToolModel | None:
+    async def update_tool_by_id(self, id: str, updated: dict, db: Optional[AsyncSession] = None) -> Optional[ToolModel]:
         try:
             async with get_async_db_context(db) as db:
                 access_grants = updated.pop('access_grants', None)
@@ -287,7 +287,7 @@ class ToolsTable:
         except Exception:
             return None
 
-    async def delete_tool_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
+    async def delete_tool_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await AccessGrants.revoke_all_access('tool', id, db=db)

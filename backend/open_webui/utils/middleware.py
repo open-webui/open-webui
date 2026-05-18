@@ -1,133 +1,147 @@
-import ast
-import asyncio
-import base64
 import copy
+import time
+import logging
+import sys
+import os
+import base64
+import textwrap
+
+import asyncio
+from aiocache import cached
+from typing import Any, Optional
+import random
+import json
 import html
 import inspect
-import json
-import logging
-import os
-import random
 import re
-import sys
-import textwrap
-import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Optional
-from uuid import uuid4
+import ast
 
-from aiocache import cached
-from fastapi import HTTPException, Request
+from uuid import uuid4
+from concurrent.futures import ThreadPoolExecutor
+
+
+from fastapi import Request, HTTPException
 from fastapi.responses import HTMLResponse
-from open_webui.config import (
-    CACHE_DIR,
-    CODE_INTERPRETER_BLOCKED_MODULES,
-    CODE_INTERPRETER_PYODIDE_PROMPT,
-    DEFAULT_CODE_INTERPRETER_PROMPT,
-    DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
-)
-from open_webui.constants import TASKS
-from open_webui.env import (
-    BYPASS_MODEL_ACCESS_CONTROL,
-    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
-    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
-    ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    ENABLE_QUERIES_CACHE,
-    ENABLE_REALTIME_CHAT_SAVE,
-    ENABLE_RESPONSES_API_STATEFUL,
-    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
-    FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
-    GLOBAL_LOG_LEVEL,
-    RAG_SYSTEM_CONTEXT,
-)
+from starlette.responses import Response, StreamingResponse, JSONResponse
+
+
+from open_webui.utils.misc import is_string_allowed
+from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.models.users import UserModel, Users
-from open_webui.retrieval.utils import get_sources_from_items
-from open_webui.routers.images import (
-    CreateImageForm,
-    EditImageForm,
-    image_edits,
-    image_generations,
-)
-from open_webui.routers.memories import QueryMemoryForm, query_memory
-from open_webui.routers.pipelines import (
-    process_pipeline_inlet_filter,
-    process_pipeline_outlet_filter,
-)
-from open_webui.routers.retrieval import (
-    SearchForm,
-    process_web_search,
-)
-from open_webui.routers.tasks import (
-    generate_chat_tags,
-    generate_follow_ups,
-    generate_image_prompt,
-    generate_queries,
-    generate_title,
-)
+from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-from open_webui.utils.access_control import has_connection_access
-from open_webui.utils.access_control.files import get_accessible_folder_files
-from open_webui.utils.chat import generate_chat_completion
-from open_webui.utils.code_interpreter import execute_code_jupyter
+from open_webui.routers.tasks import (
+    generate_queries,
+    generate_title,
+    generate_follow_ups,
+    generate_image_prompt,
+    generate_chat_tags,
+)
+from open_webui.routers.retrieval import (
+    process_web_search,
+    SearchForm,
+)
+from open_webui.utils.tools import get_builtin_tools
+from open_webui.routers.images import (
+    image_generations,
+    CreateImageForm,
+    image_edits,
+    EditImageForm,
+)
+from open_webui.routers.pipelines import (
+    process_pipeline_inlet_filter,
+    process_pipeline_outlet_filter,
+)
+from open_webui.routers.memories import query_memory, QueryMemoryForm
+
+from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
     get_image_base64_from_url,
     get_image_url_from_base64,
 )
-from open_webui.utils.filter import (
-    get_sorted_filter_ids,
-    process_filter_functions,
-)
-from open_webui.utils.headers import include_user_info_headers
-from open_webui.utils.mcp.client import MCPClient
-from open_webui.utils.misc import (
-    add_or_update_system_message,
-    add_or_update_user_message,
-    convert_logit_bias_input_to_json,
-    convert_output_to_messages,
-    deep_update,
-    extract_urls,
-    get_content_from_message,
-    get_last_assistant_message,
-    get_last_user_message,
-    get_last_user_message_item,
-    get_message_list,
-    get_system_message,
-    is_string_allowed,
-    merge_system_messages,
-    prepend_to_first_user_message_content,
-    replace_system_message_content,
-    set_last_user_message_content,
-    strip_empty_content_blocks,
-)
-from open_webui.utils.payload import apply_system_prompt_to_body
-from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.response import normalize_usage
+
+
+from open_webui.models.users import UserModel
+from open_webui.models.functions import Functions
+from open_webui.models.models import Models
+
+from open_webui.retrieval.utils import get_sources_from_items
+
+
 from open_webui.utils.sanitize import sanitize_code
+from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.misc import (
+    deep_update,
+    extract_urls,
+    get_message_list,
+    add_or_update_system_message,
+    add_or_update_user_message,
+    set_last_user_message_content,
+    get_last_user_message,
+    get_last_user_message_item,
+    get_last_assistant_message,
+    get_system_message,
+    merge_system_messages,
+    replace_system_message_content,
+    prepend_to_first_user_message_content,
+    convert_logit_bias_input_to_json,
+    get_content_from_message,
+    convert_output_to_messages,
+    strip_empty_content_blocks,
+)
 from open_webui.utils.tools import (
-    get_builtin_tools,
-    get_terminal_tools,
     get_tools,
     get_updated_tool_function,
+    get_terminal_tools,
 )
-from open_webui.utils.webhook import post_webhook
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.access_control.files import get_accessible_folder_files
+from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.filter import (
+    get_sorted_filter_ids,
+    process_filter_functions,
+)
+from open_webui.utils.code_interpreter import execute_code_jupyter
+from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.response import normalize_usage
+from open_webui.utils.mcp.client import MCPClient
+
+
+from open_webui.config import (
+    CACHE_DIR,
+    DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
+    DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    DEFAULT_CODE_INTERPRETER_PROMPT,
+    CODE_INTERPRETER_PYODIDE_PROMPT,
+    CODE_INTERPRETER_BLOCKED_MODULES,
+)
+from open_webui.env import (
+    GLOBAL_LOG_LEVEL,
+    ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
+    BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_REALTIME_CHAT_SAVE,
+    ENABLE_QUERIES_CACHE,
+    RAG_SYSTEM_CONTEXT,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+    FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+    ENABLE_RESPONSES_API_STATEFUL,
+)
+from open_webui.utils.headers import include_user_info_headers
+from open_webui.constants import TASKS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)

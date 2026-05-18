@@ -1,12 +1,11 @@
-import json
-import logging
 import os
 import time
-from typing import List, Optional
-
 import requests
-from fastapi import HTTPException, status
+import logging
+import json
+from typing import List, Optional
 from langchain_core.documents import Document
+from fastapi import HTTPException, status
 
 log = logging.getLogger(__name__)
 
