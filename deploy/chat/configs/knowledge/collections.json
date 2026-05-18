@@ -1,0 +1,14 @@
+{
+  "collections": [
+    {
+      "id": "caseworker-skills",
+      "name": "Jawafdehi Caseworker Skills",
+      "description": "AI assistant skills for Jawafdehi caseworkers: corruption case analysis, court data lookups, case documentation, and public communication scripts with Nepali language support",
+      "documents": [
+        "caseworker/jawafdehi-caseworker.md",
+        "caseworker/jawafdehi-case-reviewer.md",
+        "caseworker/jawafdehi-script-generator.md"
+      ]
+    }
+  ]
+}

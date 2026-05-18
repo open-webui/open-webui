@@ -155,7 +155,7 @@ apply_knowledge() {
             local doc_path="${kb_dir}/${doc}"
             [ ! -f "$doc_path" ] && warn "Document not found: $doc_path" && continue
 
-            if [ "$DRY_RUN" = "1"" ]; then
+            if [ "$DRY_RUN" = "1" ]; then
                 log "[DRY RUN] Would upload: $doc"
                 continue
             fi
@@ -186,10 +186,14 @@ main() {
     log "Target: ${OWUI_BASE_URL}"
     [ "$DRY_RUN" = "1" ] && log "DRY RUN — no changes will be made"
 
-    # Verify API connectivity
+    # Verify API connectivity (with retries — nginx may return 502 briefly)
     local health
-    health=$(curl -s -o /dev/null -w "%{http_code}" "${OWUI_BASE_URL}/api/v1/tools/" \
-        -H "Authorization: Bearer ${OWUI_API_KEY}" 2>/dev/null || echo "000")
+    for attempt in $(seq 1 10); do
+        health=$(curl -s -o /dev/null -w "%{http_code}" "${OWUI_BASE_URL}/api/v1/tools/" \
+            -H "Authorization: Bearer ${OWUI_API_KEY}" 2>/dev/null || echo "000")
+        [ "$health" = "502" ] && sleep 2 && continue
+        break
+    done
 
     if [ "$health" -ge 200 ] 2>/dev/null && [ "$health" -lt 500 ]; then
         info "API reachable (HTTP $health)"
