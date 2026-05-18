@@ -40,6 +40,13 @@ if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
   done
   echo "  Preconditions met."
 
+  # Assert secrets exist
+  echo "--- Checking secrets ---"
+  for f in .env mcp.env; do
+    [ -f "${SECRETS_DIR}/${f}" ] || die "${SECRETS_DIR}/${f} is required but missing. Copy it from /home/ubuntu/secrets/"
+  done
+  echo "  Secrets found."
+
   # Verify bundle integrity
   echo "--- Verifying bundle ---"
   for f in \
@@ -114,6 +121,13 @@ fi
 # Pull latest Docker image
 echo "--- Pulling latest image ---"
 docker pull "jawafdehi/open-webui:${BRANCH}"
+
+# Ensure GCP credentials for gcplogs driver
+GCP_KEY="/opt/openwebui-secrets/owui-log-writer.credentials.json"
+if [ -f "${GCP_KEY}" ]; then
+  echo "--- Authenticating GCP ---"
+  gcloud auth activate-service-account --key-file="${GCP_KEY}" --quiet 2>/dev/null || true
+fi
 
 # Redeploy
 echo "--- Redeploying ---"
