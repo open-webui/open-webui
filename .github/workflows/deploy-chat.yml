@@ -7,6 +7,11 @@ on:
         description: Branch or tag to deploy
         required: false
         default: jawafdehi-main
+      setup_only:
+        description: Run host setup only (create dirs, set permissions, then exit)
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - jawafdehi-main
@@ -35,10 +40,24 @@ jobs:
             User ${{ secrets.MONAL_SSH_USER }}
             IdentityFile ~/.ssh/id_rsa
 
-      - name: Upload deploy bundle to host
+      - name: Host setup
+        if: ${{ inputs.setup_only || github.event_name == 'workflow_dispatch' }}
         run: |
-          rsync -avz --delete deploy/chat/ monal-instance1:/tmp/openwebui-deploy/
+          ssh monal-instance1 'sudo mkdir -p /opt/openwebui /opt/openwebui-secrets && sudo chown $USER /opt/openwebui /opt/openwebui-secrets'
+
+      - name: Generate deploy timestamp
+        if: ${{ !inputs.setup_only }}
+        id: ts
+        run: |
+          echo "datetime=$(TZ=America/Los_Angeles date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Upload deploy bundle to host
+        if: ${{ !inputs.setup_only }}
+        run: |
+          ssh monal-instance1 'mkdir -p /tmp/openwebui-deploy-${{ steps.ts.outputs.datetime }}'
+          rsync -avz deploy/chat/ monal-instance1:/tmp/openwebui-deploy-${{ steps.ts.outputs.datetime }}/
 
       - name: Run deploy script on host
+        if: ${{ !inputs.setup_only }}
         run: |
-          ssh monal-instance1 'bash /tmp/openwebui-deploy/bin/deploy.sh'
+          ssh monal-instance1 'BUNDLE_DIR=/tmp/openwebui-deploy-${{ steps.ts.outputs.datetime }} bash /tmp/openwebui-deploy-${{ steps.ts.outputs.datetime }}/bin/deploy.sh'

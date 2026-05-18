@@ -11,55 +11,34 @@
 #   Manual (on monal-instance1):
 #     cd /opt/openwebui && ./bin/deploy.sh
 #
-# Requires:
-#   - Docker and docker compose (user must be in docker group)
-#   - mcp.env and .env configured
-#   - gcloud authenticated for gcplogs driver (owui-log-writer@newnepal2)
+# Host prerequisites (must be set up before first deploy):
+#   mkdir -p /opt/openwebui /opt/openwebui-secrets
+#   chown <deploy-user> /opt/openwebui /opt/openwebui-secrets
+#   usermod -aG docker <deploy-user>
+#   cp .env.example /opt/openwebui-secrets/.env    # fill in OAUTH secrets
+#   cp mcp.env.example /opt/openwebui-secrets/mcp.env  # fill in MCP secrets
+#   gcloud auth activate-service-account --key-file=owui-log-writer.credentials.json
 
 set -euo pipefail
 
 BRANCH="${BRANCH:-jawafdehi-main}"
 TARGET="/opt/openwebui"
-BUNDLE="/tmp/openwebui-deploy"
+BUNDLE="${BUNDLE_DIR:-/tmp/openwebui-deploy}"
 SECRETS_DIR="/opt/openwebui-secrets"
 
-maybe_sudo() {
-  if [ -w "$(dirname "$1")" ] || [ -w "$1" ] 2>/dev/null; then
-    "$@"
-  else
-    sudo "$@"
-  fi
-}
-
-ensure_dir() {
-  for d in "$@"; do
-    if [ -d "$d" ] && [ -w "$d" ]; then
-      continue
-    fi
-    mkdir -p "$d" 2>/dev/null || sudo mkdir -p "$d"
-  done
-}
-
-sync_to_target() {
-  rsync -av --delete \
-    --exclude='/.env' \
-    --exclude='/mcp.env' \
-    --exclude='/data' \
-    --exclude='/venv' \
-    "${BUNDLE}/" "${TARGET}/" 2>/dev/null \
-    || sudo rsync -av --delete \
-    --exclude='/.env' \
-    --exclude='/mcp.env' \
-    --exclude='/data' \
-    --exclude='/venv' \
-    "${BUNDLE}/" "${TARGET}/"
-}
+die() { echo "ERROR: $*" >&2; exit 1; }
 
 echo "=== Deploying chat.jawafdehi.org (branch: ${BRANCH}) ==="
 
-# Detect mode: CI push vs manual pull
 if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
   echo "--- CI mode: syncing bundle from ${BUNDLE} ---"
+
+  # Precondition checks
+  for d in "${TARGET}" "${SECRETS_DIR}"; do
+    [ -d "$d" ] || die "${d} does not exist. Run: mkdir -p ${d} && chown \$USER ${d}"
+    [ -w "$d" ] || die "${d} is not writable by $(whoami). Run: sudo chown $(whoami) ${d}"
+  done
+  echo "  Preconditions met."
 
   # Verify bundle integrity
   echo "--- Verifying bundle ---"
@@ -70,35 +49,34 @@ if [ -d "${BUNDLE}/bin" ] && [ -f "${BUNDLE}/docker-compose.prod.yml" ]; then
     custom/tools_models.py \
     static/favicon.ico \
     static/logo.png; do
-    if [ ! -f "${BUNDLE}/${f}" ]; then
-      echo "ERROR: missing bundle file: ${f}" >&2
-      exit 1
-    fi
+    [ -f "${BUNDLE}/${f}" ] || die "missing bundle file: ${f}"
   done
   echo "  Bundle verified."
-
-  # Ensure target directories exist
-  ensure_dir "${TARGET}" "${SECRETS_DIR}"
 
   # Preserve secrets before replacing target
   echo "--- Preserving secrets ---"
   for f in .env mcp.env; do
     if [ -f "${TARGET}/${f}" ]; then
-      maybe_sudo cp -p "${TARGET}/${f}" "${SECRETS_DIR}/${f}"
+      cp -p "${TARGET}/${f}" "${SECRETS_DIR}/${f}"
       echo "  Saved ${f} → ${SECRETS_DIR}/${f}"
     elif [ ! -f "${SECRETS_DIR}/${f}" ]; then
       echo "  WARNING: ${f} not found in ${TARGET} or ${SECRETS_DIR} — deploy may fail"
     fi
   done
 
-  # Sync bundle to target (preserve data volume, secrets are external)
+  # Sync bundle to target
   echo "--- Syncing to ${TARGET} ---"
-  sync_to_target
+  rsync -av \
+    --exclude='/.env' \
+    --exclude='/mcp.env' \
+    --exclude='/data' \
+    --exclude='/venv' \
+    "${BUNDLE}/" "${TARGET}/"
 
-  # Restore secrets (if not already provided by external secrets dir)
+  # Restore secrets
   for f in .env mcp.env; do
     if [ -f "${SECRETS_DIR}/${f}" ] && [ ! -f "${TARGET}/${f}" ]; then
-      maybe_sudo cp -p "${SECRETS_DIR}/${f}" "${TARGET}/${f}"
+      cp -p "${SECRETS_DIR}/${f}" "${TARGET}/${f}"
       echo "  Restored ${f} from ${SECRETS_DIR}"
     fi
   done
