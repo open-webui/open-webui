@@ -498,20 +498,13 @@ class ChatTable:
     async def reconcile_messages_by_chat_id(
         self, chat_id: str, user_id: str, messages: dict[str, dict]
     ) -> None:
-        """Sync ``chat_message`` rows with the committed JSON blob.
+        """Upsert ``chat_message`` rows from the blob; never delete.
 
-        Upserts current messages via ``backfill_messages_by_chat_id``
-        and deletes orphaned rows whose message_id no longer appears
-        in the blob.  Best-effort: errors are logged but never raised.
+        Diff-based pruning (table − blob) is unsafe: a lost blob write
+        from a read-modify-write race would drop a still-valid row.
         """
         try:
             await self.backfill_messages_by_chat_id(chat_id, user_id, messages)
-
-            existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id)
-            if existing_map is not None:
-                orphaned_ids = set(existing_map.keys()) - set(messages.keys())
-                if orphaned_ids:
-                    await ChatMessages.delete_message_ids_by_chat_id(chat_id, orphaned_ids)
         except Exception as e:
             log.warning('Failed to reconcile chat_message rows for chat %s: %s', chat_id, e)
 
