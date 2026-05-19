@@ -151,6 +151,23 @@ class ToolsTable:
         except Exception:
             return None
 
+    async def get_tools_by_ids(
+        self, tool_ids: list[str], db: AsyncSession | None = None
+    ) -> dict[str, ToolModel]:
+        """Batch-fetch multiple tools by ID, returning a dict keyed by tool ID."""
+        if not tool_ids:
+            return {}
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Tool).where(Tool.id.in_(tool_ids)))
+            tools = result.scalars().all()
+            grants_map = await AccessGrants.get_grants_by_resources(
+                'tool', [tool.id for tool in tools], db=db
+            )
+            return {
+                tool.id: await self._to_tool_model(tool, access_grants=grants_map.get(tool.id, []), db=db)
+                for tool in tools
+            }
+
     async def get_tools(self, defer_content: bool = False, db: AsyncSession | None = None) -> list[ToolUserModel]:
         async with get_async_db_context(db) as db:
             stmt = select(Tool).order_by(Tool.updated_at.desc())
