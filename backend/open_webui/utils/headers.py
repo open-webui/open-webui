@@ -28,6 +28,8 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         '{{MESSAGE_ID}}': metadata.get('message_id', '') or '',
         '{{USER_ID}}': (user.id if user else '') or '',
         '{{USER_NAME}}': (user.name if user else '') or '',
+        '{{USER_EMAIL}}': (user.email if user else '') or '',
+        '{{USER_ROLE}}': (user.role if user else '') or '',
     }
 
     parsed_headers = {}
@@ -39,3 +41,4 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         parsed_headers[key] = value
 
     return parsed_headers
+
