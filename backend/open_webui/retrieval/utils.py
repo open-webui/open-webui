@@ -173,6 +173,18 @@ def get_content_from_url(request, url: str) -> str:
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
 
+    # YouTube URLs (including youtu.be short links) should go straight to
+    # YoutubeLoader, which uses youtube-transcript-api and never needs the
+    # HTTP response body.  Probing the URL first is harmful for short URLs:
+    # youtu.be returns a 303 redirect with Content-Type: application/binary
+    # when allow_redirects=False, causing the binary-content path to run
+    # and produce empty docs → HTTP 400.
+    if is_youtube_url(url):
+        loader = get_loader(request, url)
+        docs = loader.load()
+        content = ' '.join([doc.page_content for doc in docs])
+        return content, docs
+
     # Streamed GET to check Content-Type without downloading the body.
     # allow_redirects=False prevents redirect-based SSRF: validate_url() above is
     # called on the originally-submitted URL only; following 3xx redirects without
