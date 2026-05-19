@@ -2878,6 +2878,12 @@ ENABLE_CHANNELS = ConfigVar(
     os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true',
 )
 
+ICE_SERVERS = ConfigVar(
+    'ICE_SERVERS',
+    'channels.ice_servers',
+    json.loads(os.environ.get('ICE_SERVERS', '[]')),
+)
+
 ENABLE_CALENDAR = ConfigVar(
     'ENABLE_CALENDAR',
     'calendar.enable',
