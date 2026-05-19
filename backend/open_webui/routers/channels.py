@@ -851,6 +851,20 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
     return True
 
 
+def _is_image_attachment(file: dict) -> bool:
+    return file.get('type', '') == 'image' or (file.get('content_type') or '').startswith('image/')
+
+
+def _get_channel_file_key(file: dict) -> str:
+    if file.get('id'):
+        return f'id:{file["id"]}'
+    if file.get('collection_name'):
+        return f'collection:{file["collection_name"]}'
+    if file.get('url'):
+        return f'url:{file["url"]}'
+    return json.dumps(file, sort_keys=True)
+
+
 async def model_response_handler(request, channel, message, user, db=None):
     MODELS = {model['id']: model for model in await get_filtered_models(await get_all_models(request, user=user), user)}
 
@@ -911,6 +925,8 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                 thread_history = []
                 images = []
+                files = []
+                seen_file_keys = set()
 
                 # Batch fetch all users in a single query (fixes N+1 problem)
                 user_ids = list({message.user_id for message in thread_messages})
@@ -931,12 +947,21 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                     thread_message_files = (thread_message.data or {}).get('files', [])
                     for file in thread_message_files:
-                        if file.get('type', '') == 'image':
-                            images.append(file.get('url', ''))
-                        elif file.get('content_type', '').startswith('image/'):
-                            image = await get_image_base64_from_file_id(file.get('id', ''))
-                            if image:
-                                images.append(image)
+                        if not isinstance(file, dict):
+                            continue
+
+                        if _is_image_attachment(file):
+                            if file.get('type', '') == 'image':
+                                images.append(file.get('url', ''))
+                            else:
+                                image = await get_image_base64_from_file_id(file.get('id', ''))
+                                if image:
+                                    images.append(image)
+                        else:
+                            file_key = _get_channel_file_key(file)
+                            if file_key not in seen_file_keys:
+                                seen_file_keys.add(file_key)
+                                files.append(file)
 
                 thread_history_string = '\n\n'.join(thread_history)
                 system_message = {
@@ -1000,6 +1025,8 @@ async def model_response_handler(request, channel, message, user, db=None):
                     form_data['features'] = features
                 if filter_ids:
                     form_data['filter_ids'] = filter_ids
+                if files:
+                    form_data['files'] = files
 
                 # Call the full chat completion pipeline — streaming,
                 # tools, filters, RAG — everything. The pipeline runs as
