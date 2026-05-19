@@ -678,27 +678,33 @@
 			);
 
 			let uploadedCount = 0;
-			for (const entry of filesToUpload) {
-				uploadedCount++;
-				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-					current: uploadedCount,
-					total: filesToUpload.length,
-					file: displayPath
-				});
+			const BATCH_SIZE = 3;
+			for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
+				const batch = filesToUpload.slice(i, i + BATCH_SIZE);
+				await Promise.all(
+					batch.map(async (entry) => {
+						uploadedCount++;
+						const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
+						syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
+							current: uploadedCount,
+							total: filesToUpload.length,
+							file: displayPath
+						});
 
-				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(
-					localStorage.token,
-					fileObject,
-					{
-						knowledge_id: knowledge.id,
-						file_hash: entry.checksum,
-						directory_id: entry.path ? createdDirectoryIds[entry.path] : null
-					},
-					null,
-					false
-				).catch(() => null);
+						const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+						await uploadFile(
+							localStorage.token,
+							fileObject,
+							{
+								knowledge_id: knowledge.id,
+								file_hash: entry.checksum,
+								directory_id: entry.path ? createdDirectoryIds[entry.path] : null
+							},
+							null,
+							false
+						).catch(() => null);
+					})
+				);
 			}
 
 			// ── 6. Cleanup — remove deleted files + rmdir orphaned directories ──
@@ -1374,7 +1380,7 @@
 			</div>
 
 			{#if syncing}
-				<div class="mx-2.5 mt-2">
+				<div class="mx-2.5 mt-2.5 -mb-0.5">
 					<div class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850">
 						<Spinner className="size-3.5 shrink-0" />
 						<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
