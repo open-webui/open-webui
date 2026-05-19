@@ -66,7 +66,7 @@ async def has_access_to_file(
 
     # Check if the file is associated with any chats the user has access to
     shared_chat_ids = await Chats.get_shared_chat_ids_by_file_id(file_id, db=db)
-    if shared_chat_ids:
+    if access_type == 'read' and shared_chat_ids:
         accessible_ids = await AccessGrants.get_accessible_resource_ids(
             user_id=user.id,
             resource_type='shared_chat',
