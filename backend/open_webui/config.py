@@ -1914,6 +1914,24 @@ YOUCOM_API_KEY = ConfigVar(
     os.getenv('YOUCOM_API_KEY', ''),
 )
 
+LINKUP_API_KEY = ConfigVar(
+    'LINKUP_API_KEY',
+    'rag.web.search.linkup_api_key',
+    os.getenv('LINKUP_API_KEY', ''),
+)
+
+linkup_search_params = os.getenv('LINKUP_SEARCH_PARAMS', '')
+try:
+    linkup_search_params = json.loads(linkup_search_params)
+except json.JSONDecodeError:
+    linkup_search_params = {}
+
+LINKUP_SEARCH_PARAMS = ConfigVar(
+    'LINKUP_SEARCH_PARAMS',
+    'rag.web.search.linkup_search_params',
+    linkup_search_params,
+)
+
 ####################################
 # Images
 ####################################
