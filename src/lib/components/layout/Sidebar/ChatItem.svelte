@@ -340,9 +340,7 @@
 
 	const generateTitleHandler = async () => {
 		generating = true;
-		if (!chat) {
-			chat = await getChatById(localStorage.token, id);
-		}
+		chat = await getChatById(localStorage.token, id);
 
 		const chatContent = chat.chat;
 
@@ -367,7 +365,13 @@
 		// active branch. This avoids using the stale top-level `models`
 		// array which may reference a model from an older edit.
 		let model = '';
-		if (history?.messages && history?.currentId) {
+
+		// For the active chat, prefer the live dropdown selection.
+		if (id === $chatId) {
+			try { model = JSON.parse(sessionStorage.selectedModels || '[]').find((m) => m) ?? ''; } catch {}
+		}
+
+		if (!model && history?.messages && history?.currentId) {
 			let currentId = history.currentId;
 			while (currentId) {
 				const msg = history.messages[currentId];
