@@ -185,6 +185,7 @@ async def process_uploaded_file(
                         request,
                         ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
                         user=user,
+                        db=db_session,
                     )
                     log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
                 except Exception as e:

@@ -78,7 +78,8 @@
 	let showNewDirectoryModal = false;
 
 	let showSyncConfirmModal = false;
-	let pendingSyncFiles: Array<{path: string, filename: string, file: File}> | null = null;
+	let pendingSyncFiles: Array<{ path: string; filename: string; file: File }> | null = null;
+	let syncing: string | null = null;
 	let showAccessControlModal = false;
 
 	let minSize = 0;
@@ -542,13 +543,17 @@
 	};
 
 	// Collect files from a directory without uploading — returns {path, filename, file}[]
-	const collectDirectoryFiles = async (): Promise<Array<{path: string, filename: string, file: File}> | null> => {
+	const collectDirectoryFiles = async (): Promise<Array<{
+		path: string;
+		filename: string;
+		file: File;
+	}> | null> => {
 		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
 
 		try {
 			if (isFileSystemAccessSupported) {
 				const dirHandle = await window.showDirectoryPicker();
-				const collected: Array<{path: string, filename: string, file: File}> = [];
+				const collected: Array<{ path: string; filename: string; file: File }> = [];
 
 				async function traverse(handle: FileSystemDirectoryHandle, dirPath = '') {
 					for await (const entry of handle.values()) {
@@ -580,8 +585,9 @@
 
 					input.onchange = () => {
 						try {
-							const files = Array.from(input.files || [])
-								.filter((file) => !hasHiddenFolder(file.webkitRelativePath) && !file.name.startsWith('.'));
+							const files = Array.from(input.files || []).filter(
+								(file) => !hasHiddenFolder(file.webkitRelativePath) && !file.name.startsWith('.')
+							);
 
 							const collected = files.map((file) => {
 								const parts = file.webkitRelativePath.split('/');
@@ -618,92 +624,112 @@
 	const syncDirectoryHandler = async () => {
 		if (!pendingSyncFiles?.length) return;
 
-		// ── 2. Compute checksums ──
-		toast.info($i18n.t('Computing checksums...'));
-		const manifest = await Promise.all(
-			pendingSyncFiles.map(async (entry) => ({
-				...entry,
-				checksum: await computeFileHash(entry.file),
-				size: entry.file.size
-			}))
-		);
-		pendingSyncFiles = null;
-
-		// ── 3. Diff against knowledge base ──
-		toast.info($i18n.t('Comparing with knowledge base...'));
-		const diff = await syncKnowledgeDiff(
-			localStorage.token,
-			id,
-			manifest.map(({ filename, path, checksum, size }) => ({ filename, path, checksum, size }))
-		);
-
-		if (!diff) {
-			toast.error($i18n.t('Failed to compare files.'));
-			return;
-		}
-
-		// ── 4. mkdir — create missing directories (parents first) ──
-		const createdDirectoryIds: Record<string, string> = {};
-		for (const dirPath of diff.mkdir) {
-			const segments = dirPath.split('/');
-			const name = segments.at(-1)!;
-			const parentPath = segments.slice(0, -1).join('/');
-			const parentId = parentPath ? createdDirectoryIds[parentPath] : null;
-
-			const directory = await createKnowledgeDirectory(
-				localStorage.token, knowledge.id, name, parentId
-			);
-			if (directory) {
-				createdDirectoryIds[dirPath] = directory.id;
-			}
-		}
-
-		// ── 5. Upload added + modified files ──
-		const filesToUpload = manifest.filter((entry) =>
-			diff.added.some((a: any) => a.filename === entry.filename && a.path === entry.path) ||
-			diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
-		);
-
-		let uploadedCount = 0;
-		for (const entry of filesToUpload) {
-			const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-			await uploadFile(localStorage.token, fileObject, {
-				knowledge_id: knowledge.id,
-				file_hash: entry.checksum,
-				directory_id: entry.path ? createdDirectoryIds[entry.path] : null
+		try {
+			// ── 2. Compute checksums ──
+			syncing = $i18n.t('Computing checksums ({{count}} files)', {
+				count: pendingSyncFiles.length
 			});
-			uploadedCount++;
-			toast.info(
-				$i18n.t('Uploading: {{current}}/{{total}}', {
-					current: uploadedCount,
-					total: filesToUpload.length
-				})
+			const manifest = await Promise.all(
+				pendingSyncFiles.map(async (entry) => ({
+					...entry,
+					checksum: await computeFileHash(entry.file),
+					size: entry.file.size
+				}))
 			);
-		}
+			pendingSyncFiles = null;
 
-		// ── 6. Cleanup — remove deleted files + rmdir orphaned directories ──
-		const staleFileIds = [
-			...diff.deleted.map((d: any) => d.file_id),
-			...diff.modified.map((m: any) => m.stale_file_id)
-		];
+			// ── 3. Diff against knowledge base ──
+			syncing = $i18n.t('Comparing with knowledge base...');
+			const diff = await syncKnowledgeDiff(
+				localStorage.token,
+				id,
+				manifest.map(({ filename, path, checksum, size }) => ({ filename, path, checksum, size }))
+			);
 
-		if (staleFileIds.length > 0 || diff.rmdir.length > 0) {
-			await syncKnowledgeCleanup(localStorage.token, id, staleFileIds, diff.rmdir);
-		}
+			if (!diff) {
+				toast.error($i18n.t('Failed to compare files.'));
+				return;
+			}
 
-		// ── 7. Report ──
-		toast.success(
-			$i18n.t(
-				'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
-				{
-					added: diff.added.length,
-					modified: diff.modified.length,
-					deleted: diff.deleted.length,
-					unmodified: diff.unmodified_count
+			// ── 4. mkdir — create missing directories (parents first) ──
+			const createdDirectoryIds: Record<string, string> = {};
+			for (const dirPath of diff.mkdir) {
+				const segments = dirPath.split('/');
+				const name = segments.at(-1)!;
+				const parentPath = segments.slice(0, -1).join('/');
+				const parentId = parentPath ? createdDirectoryIds[parentPath] : null;
+
+				const directory = await createKnowledgeDirectory(
+					localStorage.token,
+					knowledge.id,
+					name,
+					parentId
+				);
+				if (directory) {
+					createdDirectoryIds[dirPath] = directory.id;
 				}
-			)
-		);
-		init();
+			}
+
+			// ── 5. Upload added + modified files ──
+			const filesToUpload = manifest.filter(
+				(entry) =>
+					diff.added.some((a: any) => a.filename === entry.filename && a.path === entry.path) ||
+					diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
+			);
+
+			let uploadedCount = 0;
+			for (const entry of filesToUpload) {
+				uploadedCount++;
+				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
+				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
+					current: uploadedCount,
+					total: filesToUpload.length,
+					file: displayPath
+				});
+
+				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+				await uploadFile(
+					localStorage.token,
+					fileObject,
+					{
+						knowledge_id: knowledge.id,
+						file_hash: entry.checksum,
+						directory_id: entry.path ? createdDirectoryIds[entry.path] : null
+					},
+					null,
+					false
+				).catch(() => null);
+			}
+
+			// ── 6. Cleanup — remove deleted files + rmdir orphaned directories ──
+			const staleFileIds = [
+				...diff.deleted.map((d: any) => d.file_id),
+				...diff.modified.map((m: any) => m.stale_file_id)
+			];
+
+			if (staleFileIds.length > 0 || diff.rmdir.length > 0) {
+				syncing = $i18n.t('Removing {{count}} stale files...', { count: staleFileIds.length });
+				await syncKnowledgeCleanup(localStorage.token, id, staleFileIds, diff.rmdir);
+			}
+
+			// ── 7. Report ──
+			toast.success(
+				$i18n.t(
+					'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
+					{
+						added: diff.added.length,
+						modified: diff.modified.length,
+						deleted: diff.deleted.length,
+						unmodified: diff.unmodified_count
+					}
+				)
+			);
+			init();
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			syncing = null;
+		}
 	};
 
 	const addFileHandler = async (fileId) => {
@@ -1216,17 +1242,17 @@
 						/>
 
 						<div class="hidden md:block">
-						<Tooltip content={$i18n.t('Click to copy ID')}>
-							<button
-								class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
-								on:click={() => {
-									copyToClipboard(id);
-									toast.success($i18n.t('ID copied to clipboard'));
-								}}
-							>
-								{id}
-							</button>
-						</Tooltip>
+							<Tooltip content={$i18n.t('Click to copy ID')}>
+								<button
+									class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
+									on:click={() => {
+										copyToClipboard(id);
+										toast.success($i18n.t('ID copied to clipboard'));
+									}}
+								>
+									{id}
+								</button>
+							</Tooltip>
 						</div>
 					</div>
 				</div>
@@ -1281,7 +1307,13 @@
 
 			{#if currentDirectoryId !== null}
 				<div class="px-5 -mt-1 pb-2">
-					<KnowledgeBreadcrumbs rootLabel={knowledge.name} {breadcrumbs} onNavigate={(dirId) => navigateToDirectory(dirId)} onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)} onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)} />
+					<KnowledgeBreadcrumbs
+						rootLabel={knowledge.name}
+						{breadcrumbs}
+						onNavigate={(dirId) => navigateToDirectory(dirId)}
+						onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)}
+						onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
+					/>
 				</div>
 			{/if}
 
@@ -1341,6 +1373,17 @@
 				</div>
 			</div>
 
+			{#if syncing}
+				<div class="mx-2.5 mt-2">
+					<div class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850">
+						<Spinner className="size-3.5 shrink-0" />
+						<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+							{syncing}
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			{#if fileItems !== null && fileItemsTotal !== null}
 				<div class="flex flex-row flex-1 gap-3 px-2.5 mt-2">
 					<div class="flex-1 flex">
@@ -1372,14 +1415,14 @@
 												deleteFileHandler(fileId);
 											}}
 											onRename={(fileId, name) => renameFileHandler(fileId, name)}
-									onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
+											onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
 											onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
 											onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
 											onMoveFileToDirectory={(fileId, dirId) =>
 												moveFileToDirectoryHandler(fileId, dirId)}
-											onMoveDirectoryToDirectory={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
-								/>
-
+											onMoveDirectoryToDirectory={(dirId, targetId) =>
+												moveDirectoryHandler(dirId, targetId)}
+										/>
 									</div>
 
 									{#if fileItemsTotal > 30}
