@@ -987,6 +987,14 @@ async def update_chat_by_id(
                 msg['content'] = serialize_output(msg['output'])
 
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
+
+        # Reconcile chat_message rows with the committed blob.
+        # This is the only caller where the frontend pushes a full
+        # history with potential edits, deletions, or new branches.
+        messages = (updated_chat.get('history') or {}).get('messages') or {}
+        if messages:
+            await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
+
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(

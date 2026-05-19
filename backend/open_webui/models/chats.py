@@ -394,6 +394,9 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as db:
                 chat_item = await db.get(Chat, id)
+                if chat_item is None:
+                    return None
+
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
 
@@ -494,6 +497,26 @@ class ChatTable:
                 )
             except Exception as e:
                 log.warning('Backfill failed for message %s in chat %s: %s', message_id, chat_id, e)
+
+    async def reconcile_messages_by_chat_id(
+        self, chat_id: str, user_id: str, messages: dict[str, dict]
+    ) -> None:
+        """Sync ``chat_message`` rows with the committed JSON blob.
+
+        Upserts current messages via ``backfill_messages_by_chat_id``
+        and deletes orphaned rows whose message_id no longer appears
+        in the blob.  Best-effort: errors are logged but never raised.
+        """
+        try:
+            await self.backfill_messages_by_chat_id(chat_id, user_id, messages)
+
+            existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id)
+            if existing_map is not None:
+                orphaned_ids = set(existing_map.keys()) - set(messages.keys())
+                if orphaned_ids:
+                    await ChatMessages.delete_message_ids_by_chat_id(chat_id, orphaned_ids)
+        except Exception as e:
+            log.warning('Failed to reconcile chat_message rows for chat %s: %s', chat_id, e)
 
     async def get_messages_map_by_chat_id(self, id: str) -> dict | None:
         """Message map for walking history (see ``get_message_list``).

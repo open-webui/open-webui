@@ -394,6 +394,24 @@ class ChatMessageTable:
             await db.commit()
             return True
 
+    async def delete_message_ids_by_chat_id(
+        self,
+        chat_id: str,
+        message_ids: set[str],
+        db: Optional[AsyncSession] = None,
+    ) -> bool:
+        """Delete specific ``chat_message`` rows by their original message IDs."""
+        if not message_ids:
+            return True
+        async with get_async_db_context(db) as db:
+            await db.execute(
+                delete(ChatMessage)
+                .where(ChatMessage.chat_id == chat_id)
+                .where(ChatMessage.id.in_({f'{chat_id}-{mid}' for mid in message_ids}))
+            )
+            await db.commit()
+            return True
+
     # Analytics methods
     async def get_message_count_by_model(
         self,
