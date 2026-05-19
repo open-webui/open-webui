@@ -98,7 +98,7 @@ class YoutubeLoader:
         try:
             transcript_list = transcript_api.list(self.video_id)
         except Exception as e:
-            log.exception('Loading YouTube transcript failed')
+            log.warning(f'Loading YouTube transcript failed: {e}')
             return []
 
         # Try each language in order of priority
