@@ -911,6 +911,7 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                 thread_history = []
                 images = []
+                files = []
 
                 # Batch fetch all users in a single query (fixes N+1 problem)
                 user_ids = list({message.user_id for message in thread_messages})
@@ -937,6 +938,8 @@ async def model_response_handler(request, channel, message, user, db=None):
                             image = await get_image_base64_from_file_id(file.get('id', ''), user=user)
                             if image:
                                 images.append(image)
+                        elif file.get('id'):
+                            files.append(file)
 
                 thread_history_string = '\n\n'.join(thread_history)
                 system_message = {
@@ -994,6 +997,8 @@ async def model_response_handler(request, channel, message, user, db=None):
                     'session_id': f'channel:{channel.id}',
                     'background_tasks': {},
                 }
+                if files:
+                    form_data['files'] = files
                 if tool_ids:
                     form_data['tool_ids'] = tool_ids
                 if features:
