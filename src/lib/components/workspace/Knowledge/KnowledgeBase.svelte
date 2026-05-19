@@ -678,33 +678,21 @@
 			);
 
 			let uploadedCount = 0;
-			const BATCH_SIZE = 3;
-			for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
-				const batch = filesToUpload.slice(i, i + BATCH_SIZE);
-				await Promise.all(
-					batch.map(async (entry) => {
-						uploadedCount++;
-						const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-						syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-							current: uploadedCount,
-							total: filesToUpload.length,
-							file: displayPath
-						});
+			for (const entry of filesToUpload) {
+				uploadedCount++;
+				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
+				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
+					current: uploadedCount,
+					total: filesToUpload.length,
+					file: displayPath
+				});
 
-						const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-						await uploadFile(
-							localStorage.token,
-							fileObject,
-							{
-								knowledge_id: knowledge.id,
-								file_hash: entry.checksum,
-								directory_id: entry.path ? createdDirectoryIds[entry.path] : null
-							},
-							null,
-							false
-						).catch(() => null);
-					})
-				);
+				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+				await uploadFile(localStorage.token, fileObject, {
+					knowledge_id: knowledge.id,
+					file_hash: entry.checksum,
+					directory_id: entry.path ? createdDirectoryIds[entry.path] : null
+				}).catch(() => null);
 			}
 
 			// ── 6. Cleanup — remove deleted files + rmdir orphaned directories ──
