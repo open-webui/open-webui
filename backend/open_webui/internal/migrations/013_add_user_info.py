@@ -30,18 +30,18 @@ import peewee as pw
 from peewee_migrate import Migrator
 
 with suppress(ImportError):
-    import playhouse.postgres_ext as pw_pext
+    pass
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
     # Adding fields info to the 'user' table
-    migrator.add_fields('user', info=pw.TextField(null=True))
+    migrator.add_fields("user", info=pw.TextField(null=True))
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
     # Remove the settings field
-    migrator.remove_fields('user', 'info')
+    migrator.remove_fields("user", "info")

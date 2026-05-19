@@ -1,34 +1,28 @@
-import json
 import secrets
 import time
 import uuid
-from typing import Optional
 
-from open_webui.utils.validate import validate_profile_image_url
-
-from sqlalchemy import select, delete, update, func, case, or_, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.internal.db import Base, get_async_db_context
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
-from open_webui.models.access_grants import (
-    AccessGrantModel,
-    AccessGrants,
-)
-
+from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy.dialects.postgresql import JSONB
-
-
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     Column,
     ForeignKey,
-    String,
     Text,
-    JSON,
     UniqueConstraint,
+    and_,
+    case,
+    delete,
+    func,
+    or_,
+    select,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # Channel DB Schema
@@ -36,7 +30,7 @@ from sqlalchemy import (
 
 
 class Channel(Base):
-    __tablename__ = 'channel'
+    __tablename__ = "channel"
 
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
@@ -69,31 +63,31 @@ class ChannelModel(BaseModel):
     id: str
     user_id: str
 
-    type: Optional[str] = None
+    type: str | None = None
 
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
-    is_private: Optional[bool] = None
+    is_private: bool | None = None
 
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    data: dict | None = None
+    meta: dict | None = None
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     created_at: int  # timestamp in epoch (time_ns)
 
     updated_at: int  # timestamp in epoch (time_ns)
-    updated_by: Optional[str] = None
+    updated_by: str | None = None
 
-    archived_at: Optional[int] = None  # timestamp in epoch (time_ns)
-    archived_by: Optional[str] = None
+    archived_at: int | None = None  # timestamp in epoch (time_ns)
+    archived_by: str | None = None
 
-    deleted_at: Optional[int] = None  # timestamp in epoch (time_ns)
-    deleted_by: Optional[str] = None
+    deleted_at: int | None = None  # timestamp in epoch (time_ns)
+    deleted_by: str | None = None
 
 
 class ChannelMember(Base):
-    __tablename__ = 'channel_member'
+    __tablename__ = "channel_member"
 
     id = Column(Text, primary_key=True, unique=True)
     channel_id = Column(Text, nullable=False)
@@ -129,43 +123,49 @@ class ChannelMemberModel(BaseModel):
     channel_id: str
     user_id: str
 
-    role: Optional[str] = None
-    status: Optional[str] = None
+    role: str | None = None
+    status: str | None = None
 
     is_active: bool = True
 
     is_channel_muted: bool = False
     is_channel_pinned: bool = False
 
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    data: dict | None = None
+    meta: dict | None = None
 
-    invited_at: Optional[int] = None  # timestamp in epoch (time_ns)
-    invited_by: Optional[str] = None
+    invited_at: int | None = None  # timestamp in epoch (time_ns)
+    invited_by: str | None = None
 
-    joined_at: Optional[int] = None  # timestamp in epoch (time_ns)
-    left_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    joined_at: int | None = None  # timestamp in epoch (time_ns)
+    left_at: int | None = None  # timestamp in epoch (time_ns)
 
-    last_read_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    last_read_at: int | None = None  # timestamp in epoch (time_ns)
 
-    created_at: Optional[int] = None  # timestamp in epoch (time_ns)
-    updated_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    created_at: int | None = None  # timestamp in epoch (time_ns)
+    updated_at: int | None = None  # timestamp in epoch (time_ns)
 
 
 class ChannelFile(Base):
-    __tablename__ = 'channel_file'
+    __tablename__ = "channel_file"
 
     id = Column(Text, unique=True, primary_key=True)
     user_id = Column(Text, nullable=False)
 
-    channel_id = Column(Text, ForeignKey('channel.id', ondelete='CASCADE'), nullable=False)
-    message_id = Column(Text, ForeignKey('message.id', ondelete='CASCADE'), nullable=True)
-    file_id = Column(Text, ForeignKey('file.id', ondelete='CASCADE'), nullable=False)
+    channel_id = Column(
+        Text, ForeignKey("channel.id", ondelete="CASCADE"), nullable=False
+    )
+    message_id = Column(
+        Text, ForeignKey("message.id", ondelete="CASCADE"), nullable=True
+    )
+    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (UniqueConstraint('channel_id', 'file_id', name='uq_channel_file_channel_file'),)
+    __table_args__ = (
+        UniqueConstraint("channel_id", "file_id", name="uq_channel_file_channel_file"),
+    )
 
 
 class ChannelFileModel(BaseModel):
@@ -182,7 +182,7 @@ class ChannelFileModel(BaseModel):
 
 
 class ChannelWebhook(Base):
-    __tablename__ = 'channel_webhook'
+    __tablename__ = "channel_webhook"
 
     id = Column(Text, primary_key=True, unique=True)
     channel_id = Column(Text, nullable=False)
@@ -206,10 +206,10 @@ class ChannelWebhookModel(BaseModel):
     user_id: str
 
     name: str
-    profile_image_url: Optional[str] = None
+    profile_image_url: str | None = None
 
     token: str
-    last_used_at: Optional[int] = None  # timestamp in epoch (time_ns)
+    last_used_at: int | None = None  # timestamp in epoch (time_ns)
 
     created_at: int  # timestamp in epoch (time_ns)
     updated_at: int  # timestamp in epoch (time_ns)
@@ -224,57 +224,63 @@ class ChannelResponse(ChannelModel):
     is_manager: bool = False
     write_access: bool = False
 
-    user_count: Optional[int] = None
+    user_count: int | None = None
 
 
 class ChannelForm(BaseModel):
-    name: str = ''
-    description: Optional[str] = None
-    is_private: Optional[bool] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    access_grants: Optional[list[dict]] = None
-    group_ids: Optional[list[str]] = None
-    user_ids: Optional[list[str]] = None
+    name: str = ""
+    description: str | None = None
+    is_private: bool | None = None
+    data: dict | None = None
+    meta: dict | None = None
+    access_grants: list[dict] | None = None
+    group_ids: list[str] | None = None
+    user_ids: list[str] | None = None
 
 
 class CreateChannelForm(ChannelForm):
-    type: Optional[str] = None
+    type: str | None = None
 
 
 class ChannelWebhookForm(BaseModel):
     name: str
-    profile_image_url: Optional[str] = None
+    profile_image_url: str | None = None
 
-    @field_validator('profile_image_url', mode='before')
+    @field_validator("profile_image_url", mode="before")
     @classmethod
-    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+    def check_profile_image_url(cls, v: str | None) -> str | None:
         if v is None:
             return v
         return validate_profile_image_url(v)
 
 
 class ChannelTable:
-    async def _get_access_grants(self, channel_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
-        return await AccessGrants.get_grants_by_resource('channel', channel_id, db=db)
+    async def _get_access_grants(
+        self, channel_id: str, db: AsyncSession | None = None
+    ) -> list[AccessGrantModel]:
+        return await AccessGrants.get_grants_by_resource("channel", channel_id, db=db)
 
     async def _to_channel_model(
         self,
         channel: Channel,
-        access_grants: Optional[list[AccessGrantModel]] = None,
-        db: Optional[AsyncSession] = None,
+        access_grants: list[AccessGrantModel] | None = None,
+        db: AsyncSession | None = None,
     ) -> ChannelModel:
-        channel_data = ChannelModel.model_validate(channel).model_dump(exclude={'access_grants'})
-        channel_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(channel_data['id'], db=db)
+        channel_data = ChannelModel.model_validate(channel).model_dump(
+            exclude={"access_grants"}
+        )
+        channel_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else await self._get_access_grants(channel_data["id"], db=db)
         )
         return ChannelModel.model_validate(channel_data)
 
     async def _collect_unique_user_ids(
         self,
         invited_by: str,
-        user_ids: Optional[list[str]] = None,
-        group_ids: Optional[list[str]] = None,
+        user_ids: list[str] | None = None,
+        group_ids: list[str] | None = None,
     ) -> set[str]:
         """
         Collect unique user ids from:
@@ -308,55 +314,55 @@ class ChannelTable:
         for uid in user_ids:
             model = ChannelMemberModel(
                 **{
-                    'id': str(uuid.uuid4()),
-                    'channel_id': channel_id,
-                    'user_id': uid,
-                    'status': 'joined',
-                    'is_active': True,
-                    'is_channel_muted': False,
-                    'is_channel_pinned': False,
-                    'invited_at': now,
-                    'invited_by': invited_by,
-                    'joined_at': now,
-                    'left_at': None,
-                    'last_read_at': now,
-                    'created_at': now,
-                    'updated_at': now,
+                    "id": str(uuid.uuid4()),
+                    "channel_id": channel_id,
+                    "user_id": uid,
+                    "status": "joined",
+                    "is_active": True,
+                    "is_channel_muted": False,
+                    "is_channel_pinned": False,
+                    "invited_at": now,
+                    "invited_by": invited_by,
+                    "joined_at": now,
+                    "left_at": None,
+                    "last_read_at": now,
+                    "created_at": now,
+                    "updated_at": now,
                 }
             )
             memberships.append(ChannelMember(**model.model_dump()))
 
         return memberships
 
-    def _has_permission(self, db, query, filter: dict, permission: str = 'read'):
+    def _has_permission(self, db, query, filter: dict, permission: str = "read"):
         return AccessGrants.has_permission_filter(
             db=db,
             query=query,
             DocumentModel=Channel,
             filter=filter,
-            resource_type='channel',
+            resource_type="channel",
             permission=permission,
         )
 
     async def insert_new_channel(
-        self, form_data: CreateChannelForm, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelModel]:
+        self, form_data: CreateChannelForm, user_id: str, db: AsyncSession | None = None
+    ) -> ChannelModel | None:
         async with get_async_db_context(db) as db:
             channel = ChannelModel(
                 **{
-                    **form_data.model_dump(exclude={'access_grants'}),
-                    'type': form_data.type if form_data.type else None,
-                    'name': form_data.name.lower(),
-                    'id': str(uuid.uuid4()),
-                    'user_id': user_id,
-                    'created_at': int(time.time_ns()),
-                    'updated_at': int(time.time_ns()),
-                    'access_grants': [],
+                    **form_data.model_dump(exclude={"access_grants"}),
+                    "type": form_data.type if form_data.type else None,
+                    "name": form_data.name.lower(),
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "created_at": int(time.time_ns()),
+                    "updated_at": int(time.time_ns()),
+                    "access_grants": [],
                 }
             )
-            new_channel = Channel(**channel.model_dump(exclude={'access_grants'}))
+            new_channel = Channel(**channel.model_dump(exclude={"access_grants"}))
 
-            if form_data.type in ['group', 'dm']:
+            if form_data.type in ["group", "dm"]:
                 users = await self._collect_unique_user_ids(
                     invited_by=user_id,
                     user_ids=form_data.user_ids,
@@ -371,15 +377,19 @@ class ChannelTable:
                 db.add_all(memberships)
             db.add(new_channel)
             await db.commit()
-            await AccessGrants.set_access_grants('channel', new_channel.id, form_data.access_grants, db=db)
+            await AccessGrants.set_access_grants(
+                "channel", new_channel.id, form_data.access_grants, db=db
+            )
             return await self._to_channel_model(new_channel, db=db)
 
-    async def get_channels(self, db: Optional[AsyncSession] = None) -> list[ChannelModel]:
+    async def get_channels(self, db: AsyncSession | None = None) -> list[ChannelModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Channel))
             channels = result.scalars().all()
             channel_ids = [channel.id for channel in channels]
-            grants_map = await AccessGrants.get_grants_by_resources('channel', channel_ids, db=db)
+            grants_map = await AccessGrants.get_grants_by_resources(
+                "channel", channel_ids, db=db
+            )
             return [
                 await self._to_channel_model(
                     channel,
@@ -389,9 +399,14 @@ class ChannelTable:
                 for channel in channels
             ]
 
-    async def get_channels_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChannelModel]:
+    async def get_channels_by_user_id(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> list[ChannelModel]:
         async with get_async_db_context(db) as db:
-            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                group.id
+                for group in await Groups.get_groups_by_member_id(user_id, db=db)
+            ]
 
             result = await db.execute(
                 select(Channel)
@@ -399,7 +414,7 @@ class ChannelTable:
                 .filter(
                     Channel.deleted_at.is_(None),
                     Channel.archived_at.is_(None),
-                    Channel.type.in_(['group', 'dm']),
+                    Channel.type.in_(["group", "dm"]),
                     ChannelMember.user_id == user_id,
                     ChannelMember.is_active.is_(True),
                 )
@@ -411,25 +426,32 @@ class ChannelTable:
                 Channel.archived_at.is_(None),
                 or_(
                     Channel.type.is_(None),  # True NULL/None
-                    Channel.type == '',  # Empty string
-                    and_(Channel.type != 'group', Channel.type != 'dm'),
+                    Channel.type == "",  # Empty string
+                    and_(Channel.type != "group", Channel.type != "dm"),
                 ),
             )
-            stmt = self._has_permission(db, stmt, {'user_id': user_id, 'group_ids': user_group_ids})
+            stmt = self._has_permission(
+                db, stmt, {"user_id": user_id, "group_ids": user_group_ids}
+            )
 
             result = await db.execute(stmt)
             standard_channels = result.scalars().all()
 
             all_channels = list(membership_channels) + list(standard_channels)
             channel_ids = [c.id for c in all_channels]
-            grants_map = await AccessGrants.get_grants_by_resources('channel', channel_ids, db=db)
+            grants_map = await AccessGrants.get_grants_by_resources(
+                "channel", channel_ids, db=db
+            )
             return [
-                await self._to_channel_model(c, access_grants=grants_map.get(c.id, []), db=db) for c in all_channels
+                await self._to_channel_model(
+                    c, access_grants=grants_map.get(c.id, []), db=db
+                )
+                for c in all_channels
             ]
 
     async def get_dm_channel_by_user_ids(
-        self, user_ids: list[str], db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelModel]:
+        self, user_ids: list[str], db: AsyncSession | None = None
+    ) -> ChannelModel | None:
         async with get_async_db_context(db) as db:
             # Ensure uniqueness in case a list with duplicates is passed
             unique_user_ids = list(set(user_ids))
@@ -455,7 +477,7 @@ class ChannelTable:
                 select(Channel)
                 .filter(
                     Channel.id.in_(select(subquery.c.channel_id)),
-                    Channel.type == 'dm',
+                    Channel.type == "dm",
                 )
                 .limit(1)
             )
@@ -467,33 +489,44 @@ class ChannelTable:
         self,
         channel_id: str,
         invited_by: str,
-        user_ids: Optional[list[str]] = None,
-        group_ids: Optional[list[str]] = None,
-        db: Optional[AsyncSession] = None,
+        user_ids: list[str] | None = None,
+        group_ids: list[str] | None = None,
+        db: AsyncSession | None = None,
     ) -> list[ChannelMemberModel]:
         async with get_async_db_context(db) as db:
             # 1. Collect all user_ids including groups + inviter
-            requested_users = await self._collect_unique_user_ids(invited_by, user_ids, group_ids)
+            requested_users = await self._collect_unique_user_ids(
+                invited_by, user_ids, group_ids
+            )
 
-            result = await db.execute(select(ChannelMember.user_id).filter(ChannelMember.channel_id == channel_id))
+            result = await db.execute(
+                select(ChannelMember.user_id).filter(
+                    ChannelMember.channel_id == channel_id
+                )
+            )
             existing_users = {row[0] for row in result.all()}
 
             new_user_ids = requested_users - existing_users
             if not new_user_ids:
                 return []  # Nothing to add
 
-            new_memberships = self._create_membership_models(channel_id, invited_by, new_user_ids)
+            new_memberships = self._create_membership_models(
+                channel_id, invited_by, new_user_ids
+            )
 
             db.add_all(new_memberships)
             await db.commit()
 
-            return [ChannelMemberModel.model_validate(membership) for membership in new_memberships]
+            return [
+                ChannelMemberModel.model_validate(membership)
+                for membership in new_memberships
+            ]
 
     async def remove_members_from_channel(
         self,
         channel_id: str,
         user_ids: list[str],
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> int:
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -505,7 +538,9 @@ class ChannelTable:
             await db.commit()
             return result.rowcount  # number of rows deleted
 
-    async def is_user_channel_manager(self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def is_user_channel_manager(
+        self, channel_id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Channel).filter(Channel.id == channel_id))
             channel = result.scalars().first()
@@ -517,15 +552,15 @@ class ChannelTable:
                     ChannelMember.channel_id == channel_id,
                     ChannelMember.user_id == user_id,
                     ChannelMember.is_active.is_(True),
-                    ChannelMember.role == 'manager',
+                    ChannelMember.role == "manager",
                 )
             )
             membership = result.scalars().first()
             return membership is not None
 
     async def join_channel(
-        self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelMemberModel]:
+        self, channel_id: str, user_id: str, db: AsyncSession | None = None
+    ) -> ChannelMemberModel | None:
         async with get_async_db_context(db) as db:
             # Check if the membership already exists
             result = await db.execute(
@@ -541,18 +576,18 @@ class ChannelTable:
             # Create new membership
             channel_member = ChannelMemberModel(
                 **{
-                    'id': str(uuid.uuid4()),
-                    'channel_id': channel_id,
-                    'user_id': user_id,
-                    'status': 'joined',
-                    'is_active': True,
-                    'is_channel_muted': False,
-                    'is_channel_pinned': False,
-                    'joined_at': int(time.time_ns()),
-                    'left_at': None,
-                    'last_read_at': int(time.time_ns()),
-                    'created_at': int(time.time_ns()),
-                    'updated_at': int(time.time_ns()),
+                    "id": str(uuid.uuid4()),
+                    "channel_id": channel_id,
+                    "user_id": user_id,
+                    "status": "joined",
+                    "is_active": True,
+                    "is_channel_muted": False,
+                    "is_channel_pinned": False,
+                    "joined_at": int(time.time_ns()),
+                    "left_at": None,
+                    "last_read_at": int(time.time_ns()),
+                    "created_at": int(time.time_ns()),
+                    "updated_at": int(time.time_ns()),
                 }
             )
             new_membership = ChannelMember(**channel_member.model_dump())
@@ -561,7 +596,9 @@ class ChannelTable:
             await db.commit()
             return channel_member
 
-    async def leave_channel(self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def leave_channel(
+        self, channel_id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChannelMember).filter(
@@ -573,7 +610,7 @@ class ChannelTable:
             if not membership:
                 return False
 
-            membership.status = 'left'
+            membership.status = "left"
             membership.is_active = False
             membership.left_at = int(time.time_ns())
             membership.updated_at = int(time.time_ns())
@@ -582,8 +619,8 @@ class ChannelTable:
             return True
 
     async def get_member_by_channel_and_user_id(
-        self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelMemberModel]:
+        self, channel_id: str, user_id: str, db: AsyncSession | None = None
+    ) -> ChannelMemberModel | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChannelMember).filter(
@@ -595,19 +632,24 @@ class ChannelTable:
             return ChannelMemberModel.model_validate(membership) if membership else None
 
     async def get_members_by_channel_id(
-        self, channel_id: str, db: Optional[AsyncSession] = None
+        self, channel_id: str, db: AsyncSession | None = None
     ) -> list[ChannelMemberModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelMember).filter(ChannelMember.channel_id == channel_id))
+            result = await db.execute(
+                select(ChannelMember).filter(ChannelMember.channel_id == channel_id)
+            )
             memberships = result.scalars().all()
-            return [ChannelMemberModel.model_validate(membership) for membership in memberships]
+            return [
+                ChannelMemberModel.model_validate(membership)
+                for membership in memberships
+            ]
 
     async def pin_channel(
         self,
         channel_id: str,
         user_id: str,
         is_pinned: bool,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -627,7 +669,7 @@ class ChannelTable:
             return True
 
     async def update_member_last_read_at(
-        self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None
+        self, channel_id: str, user_id: str, db: AsyncSession | None = None
     ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -651,7 +693,7 @@ class ChannelTable:
         channel_id: str,
         user_id: str,
         is_active: bool,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -670,7 +712,9 @@ class ChannelTable:
             await db.commit()
             return True
 
-    async def is_user_channel_member(self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def is_user_channel_member(
+        self, channel_id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChannelMember)
@@ -684,7 +728,9 @@ class ChannelTable:
             membership = result.scalars().first()
             return membership is not None
 
-    async def get_channel_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChannelModel]:
+    async def get_channel_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> ChannelModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Channel).filter(Channel.id == id))
@@ -693,14 +739,22 @@ class ChannelTable:
         except Exception:
             return None
 
-    async def get_channels_by_file_id(self, file_id: str, db: Optional[AsyncSession] = None) -> list[ChannelModel]:
+    async def get_channels_by_file_id(
+        self, file_id: str, db: AsyncSession | None = None
+    ) -> list[ChannelModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelFile).filter(ChannelFile.file_id == file_id))
+            result = await db.execute(
+                select(ChannelFile).filter(ChannelFile.file_id == file_id)
+            )
             channel_files = result.scalars().all()
             channel_ids = [cf.channel_id for cf in channel_files]
-            result = await db.execute(select(Channel).filter(Channel.id.in_(channel_ids)))
+            result = await db.execute(
+                select(Channel).filter(Channel.id.in_(channel_ids))
+            )
             channels = result.scalars().all()
-            grants_map = await AccessGrants.get_grants_by_resources('channel', channel_ids, db=db)
+            grants_map = await AccessGrants.get_grants_by_resources(
+                "channel", channel_ids, db=db
+            )
             return [
                 await self._to_channel_model(
                     channel,
@@ -711,11 +765,13 @@ class ChannelTable:
             ]
 
     async def get_channels_by_file_id_and_user_id(
-        self, file_id: str, user_id: str, db: Optional[AsyncSession] = None
+        self, file_id: str, user_id: str, db: AsyncSession | None = None
     ) -> list[ChannelModel]:
         async with get_async_db_context(db) as db:
             # 1. Determine which channels have this file
-            result = await db.execute(select(ChannelFile).filter(ChannelFile.file_id == file_id))
+            result = await db.execute(
+                select(ChannelFile).filter(ChannelFile.file_id == file_id)
+            )
             channel_file_rows = result.scalars().all()
             channel_ids = [row.channel_id for row in channel_file_rows]
 
@@ -735,13 +791,15 @@ class ChannelTable:
                 return []
 
             # Preload user's group membership
-            user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                g.id for g in await Groups.get_groups_by_member_id(user_id, db=db)
+            ]
 
             allowed_channels = []
 
             for channel in channels:
                 # --- Case A: group or dm => user must be an active member ---
-                if channel.type in ['group', 'dm']:
+                if channel.type in ["group", "dm"]:
                     result = await db.execute(
                         select(ChannelMember)
                         .filter(
@@ -753,7 +811,9 @@ class ChannelTable:
                     )
                     membership = result.scalars().first()
                     if membership:
-                        allowed_channels.append(await self._to_channel_model(channel, db=db))
+                        allowed_channels.append(
+                            await self._to_channel_model(channel, db=db)
+                        )
                     continue
 
                 # --- Case B: standard channel => rely on ACL permissions ---
@@ -762,20 +822,22 @@ class ChannelTable:
                 stmt = self._has_permission(
                     db,
                     stmt,
-                    {'user_id': user_id, 'group_ids': user_group_ids},
-                    permission='read',
+                    {"user_id": user_id, "group_ids": user_group_ids},
+                    permission="read",
                 )
 
                 result = await db.execute(stmt)
                 allowed = result.scalars().first()
                 if allowed:
-                    allowed_channels.append(await self._to_channel_model(allowed, db=db))
+                    allowed_channels.append(
+                        await self._to_channel_model(allowed, db=db)
+                    )
 
             return allowed_channels
 
     async def get_channel_by_id_and_user_id(
-        self, id: str, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelModel]:
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> ChannelModel | None:
         async with get_async_db_context(db) as db:
             # Fetch the channel
             result = await db.execute(
@@ -791,7 +853,7 @@ class ChannelTable:
                 return None
 
             # If the channel is a group or dm, read access requires membership (active)
-            if channel.type in ['group', 'dm']:
+            if channel.type in ["group", "dm"]:
                 result = await db.execute(
                     select(ChannelMember)
                     .filter(
@@ -811,23 +873,30 @@ class ChannelTable:
             stmt = select(Channel).filter(Channel.id == id)
 
             # Determine user groups
-            user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)]
+            user_group_ids = [
+                group.id
+                for group in await Groups.get_groups_by_member_id(user_id, db=db)
+            ]
 
             # Apply ACL rules
             stmt = self._has_permission(
                 db,
                 stmt,
-                {'user_id': user_id, 'group_ids': user_group_ids},
-                permission='read',
+                {"user_id": user_id, "group_ids": user_group_ids},
+                permission="read",
             )
 
             result = await db.execute(stmt)
             channel_allowed = result.scalars().first()
-            return await self._to_channel_model(channel_allowed, db=db) if channel_allowed else None
+            return (
+                await self._to_channel_model(channel_allowed, db=db)
+                if channel_allowed
+                else None
+            )
 
     async def update_channel_by_id(
-        self, id: str, form_data: ChannelForm, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelModel]:
+        self, id: str, form_data: ChannelForm, db: AsyncSession | None = None
+    ) -> ChannelModel | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Channel).filter(Channel.id == id))
             channel = result.scalars().first()
@@ -842,24 +911,30 @@ class ChannelTable:
             channel.meta = form_data.meta
 
             if form_data.access_grants is not None:
-                await AccessGrants.set_access_grants('channel', id, form_data.access_grants, db=db)
+                await AccessGrants.set_access_grants(
+                    "channel", id, form_data.access_grants, db=db
+                )
             channel.updated_at = int(time.time_ns())
 
             await db.commit()
             return await self._to_channel_model(channel, db=db) if channel else None
 
     async def add_file_to_channel_by_id(
-        self, channel_id: str, file_id: str, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelFileModel]:
+        self,
+        channel_id: str,
+        file_id: str,
+        user_id: str,
+        db: AsyncSession | None = None,
+    ) -> ChannelFileModel | None:
         async with get_async_db_context(db) as db:
             channel_file = ChannelFileModel(
                 **{
-                    'id': str(uuid.uuid4()),
-                    'channel_id': channel_id,
-                    'file_id': file_id,
-                    'user_id': user_id,
-                    'created_at': int(time.time()),
-                    'updated_at': int(time.time()),
+                    "id": str(uuid.uuid4()),
+                    "channel_id": channel_id,
+                    "file_id": file_id,
+                    "user_id": user_id,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
@@ -880,11 +955,15 @@ class ChannelTable:
         channel_id: str,
         file_id: str,
         message_id: str,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(ChannelFile).filter_by(channel_id=channel_id, file_id=file_id))
+                result = await db.execute(
+                    select(ChannelFile).filter_by(
+                        channel_id=channel_id, file_id=file_id
+                    )
+                )
                 channel_file = result.scalars().first()
                 if not channel_file:
                     return False
@@ -898,19 +977,25 @@ class ChannelTable:
             return False
 
     async def remove_file_from_channel_by_id(
-        self, channel_id: str, file_id: str, db: Optional[AsyncSession] = None
+        self, channel_id: str, file_id: str, db: AsyncSession | None = None
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(delete(ChannelFile).filter_by(channel_id=channel_id, file_id=file_id))
+                await db.execute(
+                    delete(ChannelFile).filter_by(
+                        channel_id=channel_id, file_id=file_id
+                    )
+                )
                 await db.commit()
                 return True
         except Exception:
             return False
 
-    async def delete_channel_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_channel_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
-            await AccessGrants.revoke_all_access('channel', id, db=db)
+            await AccessGrants.revoke_all_access("channel", id, db=db)
             await db.execute(delete(Channel).filter(Channel.id == id))
             await db.commit()
             return True
@@ -924,8 +1009,8 @@ class ChannelTable:
         channel_id: str,
         user_id: str,
         form_data: ChannelWebhookForm,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ChannelWebhookModel]:
+        db: AsyncSession | None = None,
+    ) -> ChannelWebhookModel | None:
         async with get_async_db_context(db) as db:
             webhook = ChannelWebhookModel(
                 id=str(uuid.uuid4()),
@@ -943,24 +1028,28 @@ class ChannelTable:
             return webhook
 
     async def get_webhooks_by_channel_id(
-        self, channel_id: str, db: Optional[AsyncSession] = None
+        self, channel_id: str, db: AsyncSession | None = None
     ) -> list[ChannelWebhookModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelWebhook).filter(ChannelWebhook.channel_id == channel_id))
+            result = await db.execute(
+                select(ChannelWebhook).filter(ChannelWebhook.channel_id == channel_id)
+            )
             webhooks = result.scalars().all()
             return [ChannelWebhookModel.model_validate(w) for w in webhooks]
 
     async def get_webhook_by_id(
-        self, webhook_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelWebhookModel]:
+        self, webhook_id: str, db: AsyncSession | None = None
+    ) -> ChannelWebhookModel | None:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelWebhook).filter(ChannelWebhook.id == webhook_id))
+            result = await db.execute(
+                select(ChannelWebhook).filter(ChannelWebhook.id == webhook_id)
+            )
             webhook = result.scalars().first()
             return ChannelWebhookModel.model_validate(webhook) if webhook else None
 
     async def get_webhook_by_id_and_token(
-        self, webhook_id: str, token: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChannelWebhookModel]:
+        self, webhook_id: str, token: str, db: AsyncSession | None = None
+    ) -> ChannelWebhookModel | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChannelWebhook).filter(
@@ -975,10 +1064,12 @@ class ChannelTable:
         self,
         webhook_id: str,
         form_data: ChannelWebhookForm,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ChannelWebhookModel]:
+        db: AsyncSession | None = None,
+    ) -> ChannelWebhookModel | None:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelWebhook).filter(ChannelWebhook.id == webhook_id))
+            result = await db.execute(
+                select(ChannelWebhook).filter(ChannelWebhook.id == webhook_id)
+            )
             webhook = result.scalars().first()
             if not webhook:
                 return None
@@ -988,9 +1079,13 @@ class ChannelTable:
             await db.commit()
             return ChannelWebhookModel.model_validate(webhook)
 
-    async def update_webhook_last_used_at(self, webhook_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def update_webhook_last_used_at(
+        self, webhook_id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelWebhook).filter(ChannelWebhook.id == webhook_id))
+            result = await db.execute(
+                select(ChannelWebhook).filter(ChannelWebhook.id == webhook_id)
+            )
             webhook = result.scalars().first()
             if not webhook:
                 return False
@@ -998,9 +1093,13 @@ class ChannelTable:
             await db.commit()
             return True
 
-    async def delete_webhook_by_id(self, webhook_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_webhook_by_id(
+        self, webhook_id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
-            result = await db.execute(delete(ChannelWebhook).filter(ChannelWebhook.id == webhook_id))
+            result = await db.execute(
+                delete(ChannelWebhook).filter(ChannelWebhook.id == webhook_id)
+            )
             await db.commit()
             return result.rowcount > 0
 

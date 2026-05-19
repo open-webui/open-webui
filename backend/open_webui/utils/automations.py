@@ -19,25 +19,27 @@ import os
 import random
 import time
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
 from fastapi import Request
-from starlette.datastructures import Headers
-
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.automations import Automations, AutomationRuns, AutomationModel
+from open_webui.internal.db import get_async_db
+from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.users import Users
 from open_webui.utils.task import prompt_template
-from open_webui.internal.db import get_async_db
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
-SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
-CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
+SCHEDULER_POLL_INTERVAL = int(
+    os.getenv("SCHEDULER_POLL_INTERVAL", os.getenv("AUTOMATION_POLL_INTERVAL", "10"))
+)
+CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(
+    os.getenv("CALENDAR_ALERT_LOOKAHEAD_MINUTES", "10")
+)
 
 
 ####################
@@ -45,7 +47,7 @@ CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUT
 ####################
 
 
-def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
+def _resolve_tz(tz: str = None) -> ZoneInfo | None:
     """Safely resolve a timezone string to ZoneInfo.
 
     Returns None (→ server-local fallback) when *tz* is empty, None,
@@ -56,8 +58,8 @@ def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
         return None
     try:
         return ZoneInfo(tz)
-    except (KeyError, Exception):
-        log.warning('Unknown timezone %r — falling back to server time', tz)
+    except KeyError, Exception:
+        log.warning("Unknown timezone %r — falling back to server time", tz)
         return None
 
 
@@ -67,11 +69,11 @@ def _parse_rule(s: str):
     MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
     so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
     """
-    raw = s.replace('RRULE:', '')
-    parts = dict(p.split('=', 1) for p in raw.split(';') if '=' in p)
-    freq = parts.get('FREQ', '')
+    raw = s.replace("RRULE:", "")
+    parts = dict(p.split("=", 1) for p in raw.split(";") if "=" in p)
+    freq = parts.get("FREQ", "")
 
-    if freq in ('MINUTELY', 'HOURLY'):
+    if freq in ("MINUTELY", "HOURLY"):
         epoch = datetime(2000, 1, 1, 0, 0, 0)
         return rrulestr(s, dtstart=epoch, ignoretz=True)
     return rrulestr(s, ignoretz=True)
@@ -94,7 +96,7 @@ def validate_rrule(s: str, tz: str = None) -> None:
         raise ValueError(ERROR_MESSAGES.AUTOMATION_NO_FUTURE_RUNS)
 
 
-def next_run_ns(s: str, tz: str = None) -> Optional[int]:
+def next_run_ns(s: str, tz: str = None) -> int | None:
     """Next occurrence as epoch nanoseconds, respecting user timezone."""
     zi = _resolve_tz(tz)
     now = datetime.now(zi) if zi else datetime.now()
@@ -129,13 +131,13 @@ def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
     return result
 
 
-def rrule_interval_seconds(s: str) -> Optional[int]:
+def rrule_interval_seconds(s: str) -> int | None:
     """Approximate interval between recurrences in seconds.
 
     Returns None for one-shot (COUNT=1) schedules or rules
     with fewer than two future occurrences.
     """
-    if 'COUNT=1' in s:
+    if "COUNT=1" in s:
         return None
     rule = _parse_rule(s)
     now = datetime.now()
@@ -169,30 +171,32 @@ async def scheduler_worker_loop(app) -> None:
     Runs on every instance. Poll interval is configurable via
     SCHEDULER_POLL_INTERVAL env var (default: 10 seconds).
     """
-    log.info(f'Scheduler worker started (poll interval: {SCHEDULER_POLL_INTERVAL}s)')
+    log.info(f"Scheduler worker started (poll interval: {SCHEDULER_POLL_INTERVAL}s)")
     while True:
         try:
             # ── Automations ──
-            if getattr(app.state.config, 'ENABLE_AUTOMATIONS', False):
+            if getattr(app.state.config, "ENABLE_AUTOMATIONS", False):
                 try:
                     async with get_async_db() as db:
-                        batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
+                        batch = await Automations.claim_due(
+                            int(time.time_ns()), limit=10, db=db
+                        )
                     if batch:
-                        log.info(f'Claimed {len(batch)} due automation(s)')
+                        log.info(f"Claimed {len(batch)} due automation(s)")
                     for automation in batch:
                         asyncio.create_task(execute_automation(app, automation))
                 except Exception:
-                    log.exception('Scheduler: automation error')
+                    log.exception("Scheduler: automation error")
 
             # ── Calendar Alerts ──
-            if getattr(app.state.config, 'ENABLE_CALENDAR', False):
+            if getattr(app.state.config, "ENABLE_CALENDAR", False):
                 try:
                     await _check_calendar_alerts(app)
                 except Exception:
-                    log.exception('Scheduler: calendar alert error')
+                    log.exception("Scheduler: calendar alert error")
 
         except Exception:
-            log.exception('Scheduler worker error')
+            log.exception("Scheduler worker error")
 
         # Jitter to spread load across instances
         await asyncio.sleep(SCHEDULER_POLL_INTERVAL + random.uniform(0, 2))
@@ -210,16 +214,16 @@ def _build_request(app) -> Request:
     (model pre-fetch, tool server init) for consistency.
     """
     scope = {
-        'type': 'http',
-        'asgi': {'version': '3.0', 'spec_version': '2.0'},
-        'method': 'POST',
-        'path': '/api/v1/automations/internal',
-        'query_string': b'',
-        'headers': Headers({}).raw,
-        'client': ('127.0.0.1', 0),
-        'server': ('127.0.0.1', 80),
-        'scheme': 'http',
-        'app': app,
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.0"},
+        "method": "POST",
+        "path": "/api/v1/automations/internal",
+        "query_string": b"",
+        "headers": Headers({}).raw,
+        "client": ("127.0.0.1", 0),
+        "server": ("127.0.0.1", 80),
+        "scheme": "http",
+        "app": app,
     }
     request = Request(scope)
     # Ensure request.state is initialized with required attributes
@@ -234,9 +238,9 @@ def _resolve_model_tool_ids(app, model_id: str) -> list[str]:
     The frontend does this in Chat.svelte (model.info.meta.toolIds).
     The backend never auto-resolves them, so we must do it explicitly.
     """
-    models = getattr(app.state, 'MODELS', {})
+    models = getattr(app.state, "MODELS", {})
     model = models.get(model_id, {})
-    tool_ids = model.get('info', {}).get('meta', {}).get('toolIds', [])
+    tool_ids = model.get("info", {}).get("meta", {}).get("toolIds", [])
     return list(tool_ids) if tool_ids else []
 
 
@@ -248,23 +252,23 @@ def _resolve_model_features(app, model_id: str) -> dict:
     code_interpreter, image_generation when the model has them as defaults
     AND the capability is enabled AND the admin has enabled the feature.
     """
-    models = getattr(app.state, 'MODELS', {})
+    models = getattr(app.state, "MODELS", {})
     model = models.get(model_id, {})
-    meta = model.get('info', {}).get('meta', {})
+    meta = model.get("info", {}).get("meta", {})
 
-    default_feature_ids = meta.get('defaultFeatureIds', [])
+    default_feature_ids = meta.get("defaultFeatureIds", [])
     if not default_feature_ids:
         return {}
 
-    capabilities = meta.get('capabilities', {})
+    capabilities = meta.get("capabilities", {})
     config = app.state.config
     features = {}
 
     # code_interpreter is excluded: it requires the frontend event emitter
     # and does not work in headless backend execution.
     feature_checks = {
-        'web_search': getattr(config, 'ENABLE_WEB_SEARCH', False),
-        'image_generation': getattr(config, 'ENABLE_IMAGE_GENERATION', False),
+        "web_search": getattr(config, "ENABLE_WEB_SEARCH", False),
+        "image_generation": getattr(config, "ENABLE_IMAGE_GENERATION", False),
     }
 
     for feature_id in default_feature_ids:
@@ -278,20 +282,20 @@ def _resolve_model_features(app, model_id: str) -> dict:
 
 def _resolve_model_filter_ids(app, model_id: str) -> list[str]:
     """Read model default filter_ids from model config."""
-    models = getattr(app.state, 'MODELS', {})
+    models = getattr(app.state, "MODELS", {})
     model = models.get(model_id, {})
-    filter_ids = model.get('info', {}).get('meta', {}).get('defaultFilterIds', [])
+    filter_ids = model.get("info", {}).get("meta", {}).get("defaultFilterIds", [])
     return list(filter_ids) if filter_ids else []
 
 
-def _resolve_model_terminal_id(app, model_id: str) -> Optional[str]:
+def _resolve_model_terminal_id(app, model_id: str) -> str | None:
     """Read model default terminal_id from model config.
 
     The frontend does this in Chat.svelte (model.info.meta.terminalId).
     """
-    models = getattr(app.state, 'MODELS', {})
+    models = getattr(app.state, "MODELS", {})
     model = models.get(model_id, {})
-    return model.get('info', {}).get('meta', {}).get('terminalId') or None
+    return model.get("info", {}).get("meta", {}).get("terminalId") or None
 
 
 async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -> None:
@@ -304,47 +308,51 @@ async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -
     import aiohttp
     from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 
-    connections = getattr(getattr(app, 'state', None), 'config', None)
+    connections = getattr(getattr(app, "state", None), "config", None)
     if connections is None:
         return
-    connections = getattr(connections, 'TERMINAL_SERVER_CONNECTIONS', None) or []
-    connection = next((c for c in connections if c.get('id') == server_id), None)
+    connections = getattr(connections, "TERMINAL_SERVER_CONNECTIONS", None) or []
+    connection = next((c for c in connections if c.get("id") == server_id), None)
     if connection is None:
-        log.warning(f'Terminal server {server_id} not found for CWD set')
+        log.warning(f"Terminal server {server_id} not found for CWD set")
         return
 
-    base_url = (connection.get('url') or '').rstrip('/')
+    base_url = (connection.get("url") or "").rstrip("/")
     if not base_url:
         return
 
     # Build target URL — route through orchestrator policy if configured
-    policy_id = connection.get('policy_id')
-    if connection.get('server_type') == 'orchestrator' and policy_id:
-        target_url = f'{base_url}/p/{policy_id}/files/cwd'
+    policy_id = connection.get("policy_id")
+    if connection.get("server_type") == "orchestrator" and policy_id:
+        target_url = f"{base_url}/p/{policy_id}/files/cwd"
     else:
-        target_url = f'{base_url}/files/cwd'
+        target_url = f"{base_url}/files/cwd"
 
-    headers = {'Content-Type': 'application/json', 'X-User-Id': user.id}
+    headers = {"Content-Type": "application/json", "X-User-Id": user.id}
     if chat_id:
-        headers['X-Session-Id'] = chat_id
+        headers["X-Session-Id"] = chat_id
 
-    auth_type = connection.get('auth_type', 'bearer')
-    if auth_type == 'bearer':
-        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+    auth_type = connection.get("auth_type", "bearer")
+    if auth_type == "bearer":
+        headers["Authorization"] = f'Bearer {connection.get("key", "")}'
 
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=10)
+        ) as session:
             async with session.post(
                 target_url,
-                json={'path': cwd},
+                json={"path": cwd},
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as resp:
                 if resp.status != 200:
                     body = await resp.text()
-                    log.warning(f'Failed to set terminal CWD to {cwd}: HTTP {resp.status} — {body[:200]}')
+                    log.warning(
+                        f"Failed to set terminal CWD to {cwd}: HTTP {resp.status} — {body[:200]}"
+                    )
     except Exception as e:
-        log.warning(f'Failed to set terminal CWD: {e}')
+        log.warning(f"Failed to set terminal CWD: {e}")
 
 
 async def execute_automation(app, automation: AutomationModel) -> None:
@@ -357,12 +365,12 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     try:
         user = await Users.get_user_by_id(automation.user_id)
         if not user:
-            await _record_run(automation.id, 'error', error='User not found')
+            await _record_run(automation.id, "error", error="User not found")
             return
 
-        prompt = await prompt_template(automation.data['prompt'], user)
-        model_id = automation.data['model_id']
-        terminal_config = automation.data.get('terminal')
+        prompt = await prompt_template(automation.data["prompt"], user)
+        model_id = automation.data["model_id"]
+        terminal_config = automation.data.get("terminal")
 
         # Generate proper UUIDs for messages (same as frontend)
         user_msg_id = str(uuid4())
@@ -374,55 +382,55 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             automation.user_id,
             ChatForm(
                 chat={
-                    'title': automation.name,
-                    'models': [model_id],
-                    'history': {
-                        'currentId': assistant_msg_id,
-                        'messages': {
+                    "title": automation.name,
+                    "models": [model_id],
+                    "history": {
+                        "currentId": assistant_msg_id,
+                        "messages": {
                             user_msg_id: {
-                                'id': user_msg_id,
-                                'parentId': None,
-                                'role': 'user',
-                                'content': prompt,
-                                'childrenIds': [assistant_msg_id],
-                                'timestamp': int(time.time()),
-                                'models': [model_id],
+                                "id": user_msg_id,
+                                "parentId": None,
+                                "role": "user",
+                                "content": prompt,
+                                "childrenIds": [assistant_msg_id],
+                                "timestamp": int(time.time()),
+                                "models": [model_id],
                             },
                             assistant_msg_id: {
-                                'id': assistant_msg_id,
-                                'parentId': user_msg_id,
-                                'role': 'assistant',
-                                'content': '',
-                                'done': False,
-                                'model': model_id,
-                                'childrenIds': [],
-                                'timestamp': int(time.time()),
+                                "id": assistant_msg_id,
+                                "parentId": user_msg_id,
+                                "role": "assistant",
+                                "content": "",
+                                "done": False,
+                                "model": model_id,
+                                "childrenIds": [],
+                                "timestamp": int(time.time()),
                             },
                         },
                     },
-                    'messages': [
-                        {'role': 'user', 'content': prompt},
+                    "messages": [
+                        {"role": "user", "content": prompt},
                     ],
-                    'meta': {'automation_id': automation.id},
+                    "meta": {"automation_id": automation.id},
                 }
             ),
         )
 
         if not chat:
-            await _record_run(automation.id, 'error', error='Failed to create chat')
+            await _record_run(automation.id, "error", error="Failed to create chat")
             return
 
         # Notify frontend to refresh chat list
         from open_webui.socket.main import sio
 
         await sio.emit(
-            'events',
+            "events",
             {
-                'chat_id': chat.id,
-                'message_id': user_msg_id,
-                'data': {'type': 'chat:list'},
+                "chat_id": chat.id,
+                "message_id": user_msg_id,
+                "data": {"type": "chat:list"},
             },
-            room=f'user:{automation.user_id}',
+            room=f"user:{automation.user_id}",
         )
 
         # Resolve model defaults (frontend does this, backend doesn't)
@@ -435,29 +443,29 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
-            'model': model_id,
-            'messages': [{'role': 'user', 'content': prompt}],
-            'stream': True,
-            'chat_id': chat.id,
-            'id': assistant_msg_id,
-            'parent_id': None,  # Root message (chat already created above)
-            'user_message': {
-                'id': user_msg_id,
-                'parentId': None,
-                'role': 'user',
-                'content': prompt,
+            "model": model_id,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+            "chat_id": chat.id,
+            "id": assistant_msg_id,
+            "parent_id": None,  # Root message (chat already created above)
+            "user_message": {
+                "id": user_msg_id,
+                "parentId": None,
+                "role": "user",
+                "content": prompt,
             },
-            'session_id': f'automation:{automation.id}',
-            'background_tasks': {},
+            "session_id": f"automation:{automation.id}",
+            "background_tasks": {},
         }
         if tool_ids:
-            form_data['tool_ids'] = tool_ids
+            form_data["tool_ids"] = tool_ids
         if features:
-            form_data['features'] = features
+            form_data["features"] = features
         if filter_ids:
-            form_data['filter_ids'] = filter_ids
+            form_data["filter_ids"] = filter_ids
         if terminal_id:
-            form_data['terminal_id'] = terminal_id
+            form_data["terminal_id"] = terminal_id
 
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
@@ -468,21 +476,21 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         from open_webui.socket.main import sio
 
         await sio.emit(
-            'automation:result',
+            "automation:result",
             {
-                'automation_id': automation.id,
-                'name': automation.name,
-                'chat_id': chat.id,
-                'status': 'success',
+                "automation_id": automation.id,
+                "name": automation.name,
+                "chat_id": chat.id,
+                "status": "success",
             },
-            room=f'user:{automation.user_id}',
+            room=f"user:{automation.user_id}",
         )
 
-        await _record_run(automation.id, 'success', chat_id=chat.id)
+        await _record_run(automation.id, "success", chat_id=chat.id)
 
     except Exception as e:
-        log.exception(f'Automation {automation.id} failed')
-        await _record_run(automation.id, 'error', error=str(e)[:4000])
+        log.exception(f"Automation {automation.id} failed")
+        await _record_run(automation.id, "error", error=str(e)[:4000])
 
 
 ####################
@@ -503,83 +511,97 @@ async def _check_calendar_alerts(app) -> None:
     default_lookahead_ns = CALENDAR_ALERT_LOOKAHEAD_MINUTES * 60 * 1_000_000_000
 
     async with get_async_db() as db:
-        upcoming = await CalendarEvents.get_upcoming_events(now_ns, default_lookahead_ns, db=db)
+        upcoming = await CalendarEvents.get_upcoming_events(
+            now_ns, default_lookahead_ns, db=db
+        )
 
     if not upcoming:
         return
 
     for event, user_tz in upcoming:
         # Skip if already alerted for this start time
-        if event.meta and event.meta.get('alerted_at'):
+        if event.meta and event.meta.get("alerted_at"):
             continue
 
         # Compute minutes until event starts
         minutes_until = max(0, int((event.start_at - now_ns) / (60 * 1_000_000_000)))
 
         alert_data = {
-            'event_id': event.id,
-            'title': event.title,
-            'description': event.description or '',
-            'start_at': event.start_at,
-            'minutes_until': minutes_until,
-            'calendar_id': event.calendar_id,
-            'location': event.location or '',
+            "event_id": event.id,
+            "title": event.title,
+            "description": event.description or "",
+            "start_at": event.start_at,
+            "minutes_until": minutes_until,
+            "calendar_id": event.calendar_id,
+            "location": event.location or "",
         }
 
         await sio.emit(
-            'events',
+            "events",
             {
-                'data': {
-                    'type': 'calendar:alert',
-                    'data': alert_data,
+                "data": {
+                    "type": "calendar:alert",
+                    "data": alert_data,
                 },
             },
-            room=f'user:{event.user_id}',
+            room=f"user:{event.user_id}",
         )
 
         # Mark as alerted in DB so it survives restarts / multi-instance
         try:
             await CalendarEvents.update_event_by_id(
                 event.id,
-                CalendarEventUpdateForm(meta={'alerted_at': now_ns}),
+                CalendarEventUpdateForm(meta={"alerted_at": now_ns}),
             )
         except Exception:
-            log.debug(f'Failed to mark event {event.id} as alerted', exc_info=True)
+            log.debug(f"Failed to mark event {event.id} as alerted", exc_info=True)
 
         # Send webhook notification if user has one configured
         try:
-            webui_name = getattr(app.state, 'WEBUI_NAME', 'Open WebUI')
-            enable_user_webhooks = getattr(app.state.config, 'ENABLE_USER_WEBHOOKS', False)
+            webui_name = getattr(app.state, "WEBUI_NAME", "Open WebUI")
+            enable_user_webhooks = getattr(
+                app.state.config, "ENABLE_USER_WEBHOOKS", False
+            )
 
             if enable_user_webhooks:
                 user = await Users.get_user_by_id(event.user_id)
                 if user and user.settings:
                     webhook_url = (
-                        user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
+                        user.settings.get("ui", {})
+                        .get("notifications", {})
+                        .get("webhook_url", None)
                         if isinstance(user.settings, dict)
-                        else getattr(getattr(user.settings, 'ui', None), 'get', lambda *a: None)(
-                            'notifications', {}
-                        ).get('webhook_url', None)
-                        if hasattr(user.settings, 'ui')
-                        else None
+                        else (
+                            getattr(
+                                getattr(user.settings, "ui", None),
+                                "get",
+                                lambda *a: None,
+                            )("notifications", {}).get("webhook_url", None)
+                            if hasattr(user.settings, "ui")
+                            else None
+                        )
                     )
                     if webhook_url:
                         from open_webui.utils.webhook import post_webhook
 
-                        time_str = f'in {minutes_until} min' if minutes_until > 0 else 'now'
+                        time_str = (
+                            f"in {minutes_until} min" if minutes_until > 0 else "now"
+                        )
                         await post_webhook(
                             webui_name,
                             webhook_url,
-                            f'{event.title} — starting {time_str}',
+                            f"{event.title} — starting {time_str}",
                             {
-                                'action': 'calendar_alert',
-                                'title': event.title,
-                                'minutes_until': minutes_until,
-                                'event_id': event.id,
+                                "action": "calendar_alert",
+                                "title": event.title,
+                                "minutes_until": minutes_until,
+                                "event_id": event.id,
                             },
                         )
         except Exception:
-            log.debug(f'Failed to send webhook for calendar alert {event.id}', exc_info=True)
+            log.debug(
+                f"Failed to send webhook for calendar alert {event.id}", exc_info=True
+            )
 
 
 async def _record_run(
@@ -590,4 +612,6 @@ async def _record_run(
 ):
     """Insert a run record into automation_run."""
     async with get_async_db() as db:
-        await AutomationRuns.insert(automation_id, status, chat_id=chat_id, error=error, db=db)
+        await AutomationRuns.insert(
+            automation_id, status, chat_id=chat_id, error=error, db=db
+        )

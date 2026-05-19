@@ -8,62 +8,49 @@ NOTE: This is an experimental implementation and may not fully comply with SCIM 
 import hmac
 import logging
 import uuid
-import time
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Query, Header, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ConfigDict
-
-from open_webui.models.users import Users, UserModel
-from open_webui.models.groups import Groups, GroupModel
-from open_webui.utils.auth import (
-    get_admin_user,
-    get_current_user,
-    decode_token,
-    get_verified_user,
-)
-from open_webui.constants import ERROR_MESSAGES
-
-from open_webui.config import OAUTH_PROVIDERS
 from open_webui.env import SCIM_AUTH_PROVIDER
-
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import get_async_session
+from open_webui.models.groups import GroupModel, Groups
+from open_webui.models.users import UserModel, Users
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # SCIM 2.0 Schema URIs
-SCIM_USER_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:User'
-SCIM_GROUP_SCHEMA = 'urn:ietf:params:scim:schemas:core:2.0:Group'
-SCIM_LIST_RESPONSE_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:ListResponse'
-SCIM_ERROR_SCHEMA = 'urn:ietf:params:scim:api:messages:2.0:Error'
+SCIM_USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
+SCIM_GROUP_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:Group"
+SCIM_LIST_RESPONSE_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+SCIM_ERROR_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:Error"
 
 # SCIM Resource Types
-SCIM_RESOURCE_TYPE_USER = 'User'
-SCIM_RESOURCE_TYPE_GROUP = 'Group'
+SCIM_RESOURCE_TYPE_USER = "User"
+SCIM_RESOURCE_TYPE_GROUP = "Group"
 
 
-def scim_error(status_code: int, detail: str, scim_type: Optional[str] = None):
+def scim_error(status_code: int, detail: str, scim_type: str | None = None):
     """Create a SCIM-compliant error response"""
     error_body = {
-        'schemas': [SCIM_ERROR_SCHEMA],
-        'status': str(status_code),
-        'detail': detail,
+        "schemas": [SCIM_ERROR_SCHEMA],
+        "status": str(status_code),
+        "detail": detail,
     }
 
     if scim_type:
-        error_body['scimType'] = scim_type
+        error_body["scimType"] = scim_type
     elif status_code == 404:
-        error_body['scimType'] = 'invalidValue'
+        error_body["scimType"] = "invalidValue"
     elif status_code == 409:
-        error_body['scimType'] = 'uniqueness'
+        error_body["scimType"] = "uniqueness"
     elif status_code == 400:
-        error_body['scimType'] = 'invalidSyntax'
+        error_body["scimType"] = "invalidSyntax"
 
     return JSONResponse(status_code=status_code, content=error_body)
 
@@ -71,10 +58,10 @@ def scim_error(status_code: int, detail: str, scim_type: Optional[str] = None):
 class SCIMError(BaseModel):
     """SCIM Error Response"""
 
-    schemas: List[str] = [SCIM_ERROR_SCHEMA]
+    schemas: list[str] = [SCIM_ERROR_SCHEMA]
     status: str
-    scimType: Optional[str] = None
-    detail: Optional[str] = None
+    scimType: str | None = None
+    detail: str | None = None
 
 
 class SCIMMeta(BaseModel):
@@ -83,46 +70,46 @@ class SCIMMeta(BaseModel):
     resourceType: str
     created: str
     lastModified: str
-    location: Optional[str] = None
-    version: Optional[str] = None
+    location: str | None = None
+    version: str | None = None
 
 
 class SCIMName(BaseModel):
     """SCIM User Name"""
 
-    formatted: Optional[str] = None
-    familyName: Optional[str] = None
-    givenName: Optional[str] = None
-    middleName: Optional[str] = None
-    honorificPrefix: Optional[str] = None
-    honorificSuffix: Optional[str] = None
+    formatted: str | None = None
+    familyName: str | None = None
+    givenName: str | None = None
+    middleName: str | None = None
+    honorificPrefix: str | None = None
+    honorificSuffix: str | None = None
 
 
 class SCIMEmail(BaseModel):
     """SCIM Email"""
 
     value: str
-    type: Optional[str] = 'work'
+    type: str | None = "work"
     primary: bool = True
-    display: Optional[str] = None
+    display: str | None = None
 
 
 class SCIMPhoto(BaseModel):
     """SCIM Photo"""
 
     value: str
-    type: Optional[str] = 'photo'
+    type: str | None = "photo"
     primary: bool = True
-    display: Optional[str] = None
+    display: str | None = None
 
 
 class SCIMGroupMember(BaseModel):
     """SCIM Group Member"""
 
     value: str  # User ID
-    ref: Optional[str] = Field(None, alias='$ref')
-    type: Optional[str] = 'User'
-    display: Optional[str] = None
+    ref: str | None = Field(None, alias="$ref")
+    type: str | None = "User"
+    display: str | None = None
 
 
 class SCIMUser(BaseModel):
@@ -130,16 +117,16 @@ class SCIMUser(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    schemas: List[str] = [SCIM_USER_SCHEMA]
+    schemas: list[str] = [SCIM_USER_SCHEMA]
     id: str
-    externalId: Optional[str] = None
+    externalId: str | None = None
     userName: str
-    name: Optional[SCIMName] = None
+    name: SCIMName | None = None
     displayName: str
-    emails: List[SCIMEmail]
+    emails: list[SCIMEmail]
     active: bool = True
-    photos: Optional[List[SCIMPhoto]] = None
-    groups: Optional[List[Dict[str, str]]] = None
+    photos: list[SCIMPhoto] | None = None
+    groups: list[dict[str, str]] | None = None
     meta: SCIMMeta
 
 
@@ -148,15 +135,15 @@ class SCIMUserCreateRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    schemas: List[str] = [SCIM_USER_SCHEMA]
-    externalId: Optional[str] = None
+    schemas: list[str] = [SCIM_USER_SCHEMA]
+    externalId: str | None = None
     userName: str
-    name: Optional[SCIMName] = None
+    name: SCIMName | None = None
     displayName: str
-    emails: List[SCIMEmail]
+    emails: list[SCIMEmail]
     active: bool = True
-    password: Optional[str] = None
-    photos: Optional[List[SCIMPhoto]] = None
+    password: str | None = None
+    photos: list[SCIMPhoto] | None = None
 
 
 class SCIMUserUpdateRequest(BaseModel):
@@ -164,15 +151,15 @@ class SCIMUserUpdateRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    schemas: List[str] = [SCIM_USER_SCHEMA]
-    id: Optional[str] = None
-    externalId: Optional[str] = None
-    userName: Optional[str] = None
-    name: Optional[SCIMName] = None
-    displayName: Optional[str] = None
-    emails: Optional[List[SCIMEmail]] = None
-    active: Optional[bool] = None
-    photos: Optional[List[SCIMPhoto]] = None
+    schemas: list[str] = [SCIM_USER_SCHEMA]
+    id: str | None = None
+    externalId: str | None = None
+    userName: str | None = None
+    name: SCIMName | None = None
+    displayName: str | None = None
+    emails: list[SCIMEmail] | None = None
+    active: bool | None = None
+    photos: list[SCIMPhoto] | None = None
 
 
 class SCIMGroup(BaseModel):
@@ -180,10 +167,10 @@ class SCIMGroup(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    schemas: List[str] = [SCIM_GROUP_SCHEMA]
+    schemas: list[str] = [SCIM_GROUP_SCHEMA]
     id: str
     displayName: str
-    members: Optional[List[SCIMGroupMember]] = []
+    members: list[SCIMGroupMember] | None = []
     meta: SCIMMeta
 
 
@@ -192,9 +179,9 @@ class SCIMGroupCreateRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    schemas: List[str] = [SCIM_GROUP_SCHEMA]
+    schemas: list[str] = [SCIM_GROUP_SCHEMA]
     displayName: str
-    members: Optional[List[SCIMGroupMember]] = []
+    members: list[SCIMGroupMember] | None = []
 
 
 class SCIMGroupUpdateRequest(BaseModel):
@@ -202,37 +189,37 @@ class SCIMGroupUpdateRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    schemas: List[str] = [SCIM_GROUP_SCHEMA]
-    displayName: Optional[str] = None
-    members: Optional[List[SCIMGroupMember]] = None
+    schemas: list[str] = [SCIM_GROUP_SCHEMA]
+    displayName: str | None = None
+    members: list[SCIMGroupMember] | None = None
 
 
 class SCIMListResponse(BaseModel):
     """SCIM List Response"""
 
-    schemas: List[str] = [SCIM_LIST_RESPONSE_SCHEMA]
+    schemas: list[str] = [SCIM_LIST_RESPONSE_SCHEMA]
     totalResults: int
     itemsPerPage: int
     startIndex: int
-    Resources: List[Any]
+    Resources: list[Any]
 
 
 class SCIMPatchOperation(BaseModel):
     """SCIM Patch Operation"""
 
     op: str  # "add", "replace", "remove"
-    path: Optional[str] = None
-    value: Optional[Any] = None
+    path: str | None = None
+    value: Any | None = None
 
 
 class SCIMPatchRequest(BaseModel):
     """SCIM Patch Request"""
 
-    schemas: List[str] = ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
-    Operations: List[SCIMPatchOperation]
+    schemas: list[str] = ["urn:ietf:params:scim:api:messages:2.0:PatchOp"]
+    Operations: list[SCIMPatchOperation]
 
 
-def get_scim_auth(request: Request, authorization: Optional[str] = Header(None)) -> bool:
+def get_scim_auth(request: Request, authorization: str | None = Header(None)) -> bool:
     """
     Verify SCIM authentication
     Checks for SCIM-specific bearer token configured in the system
@@ -240,8 +227,8 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Authorization header required',
-            headers={'WWW-Authenticate': 'Bearer'},
+            detail="Authorization header required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     try:
@@ -249,40 +236,42 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
         if len(parts) != 2:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Invalid authorization format. Expected: Bearer <token>',
+                detail="Invalid authorization format. Expected: Bearer <token>",
             )
 
         scheme, token = parts
-        if scheme.lower() != 'bearer':
+        if scheme.lower() != "bearer":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Invalid authentication scheme',
+                detail="Invalid authentication scheme",
             )
 
         # Check if SCIM is enabled
-        enable_scim = getattr(request.app.state, 'ENABLE_SCIM', False)
-        log.info(f'SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}')
+        enable_scim = getattr(request.app.state, "ENABLE_SCIM", False)
+        log.info(
+            f"SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}"
+        )
 
         # Handle both PersistentConfig and direct value
-        if hasattr(enable_scim, 'value'):
+        if hasattr(enable_scim, "value"):
             enable_scim = enable_scim.value
 
         if not enable_scim:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail='SCIM is not enabled',
+                detail="SCIM is not enabled",
             )
 
         # Verify the SCIM token
-        scim_token = getattr(request.app.state, 'SCIM_TOKEN', None)
+        scim_token = getattr(request.app.state, "SCIM_TOKEN", None)
         # Handle both PersistentConfig and direct value
-        if hasattr(scim_token, 'value'):
+        if hasattr(scim_token, "value"):
             scim_token = scim_token.value
-        log.debug(f'SCIM token configured: {bool(scim_token)}')
+        log.debug(f"SCIM token configured: {bool(scim_token)}")
         if not scim_token or not hmac.compare_digest(token, scim_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Invalid SCIM token',
+                detail="Invalid SCIM token",
             )
 
         return True
@@ -290,17 +279,17 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        log.error(f'SCIM authentication error: {e}')
+        log.error(f"SCIM authentication error: {e}")
         import traceback
 
-        log.error(f'Traceback: {traceback.format_exc()}')
+        log.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Authentication failed',
+            detail="Authentication failed",
         )
 
 
-def get_external_id(user: UserModel) -> Optional[str]:
+def get_external_id(user: UserModel) -> str | None:
     """Extract externalId from a user's scim data.
 
     Checks all stored provider entries and returns the first external_id found.
@@ -308,8 +297,8 @@ def get_external_id(user: UserModel) -> Optional[str]:
     if not user.scim:
         return None
     for provider_data in user.scim.values():
-        if isinstance(provider_data, dict) and 'external_id' in provider_data:
-            return provider_data['external_id']
+        if isinstance(provider_data, dict) and "external_id" in provider_data:
+            return provider_data["external_id"]
     return None
 
 
@@ -321,12 +310,12 @@ def get_scim_provider() -> str:
     if not SCIM_AUTH_PROVIDER:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='SCIM_AUTH_PROVIDER environment variable is required when SCIM is enabled',
+            detail="SCIM_AUTH_PROVIDER environment variable is required when SCIM is enabled",
         )
     return SCIM_AUTH_PROVIDER
 
 
-async def find_user_by_external_id(external_id: str, db=None) -> Optional[UserModel]:
+async def find_user_by_external_id(external_id: str, db=None) -> UserModel | None:
     """Find a user by SCIM externalId, falling back to OAuth sub match."""
     provider = get_scim_provider()
     user = await Users.get_user_by_scim_external_id(provider, external_id, db=db)
@@ -340,18 +329,18 @@ async def find_user_by_external_id(external_id: str, db=None) -> Optional[UserMo
 async def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
     """Convert internal User model to SCIM User"""
     # Parse display name into name components
-    name_parts = user.name.split(' ', 1) if user.name else ['', '']
-    given_name = name_parts[0] if name_parts else ''
-    family_name = name_parts[1] if len(name_parts) > 1 else ''
+    name_parts = user.name.split(" ", 1) if user.name else ["", ""]
+    given_name = name_parts[0] if name_parts else ""
+    family_name = name_parts[1] if len(name_parts) > 1 else ""
 
     # Get user's groups
     user_groups = await Groups.get_groups_by_member_id(user.id, db=db)
     groups = [
         {
-            'value': group.id,
-            'display': group.name,
-            '$ref': f'{request.base_url}api/v1/scim/v2/Groups/{group.id}',
-            'type': 'direct',
+            "value": group.id,
+            "display": group.name,
+            "$ref": f"{request.base_url}api/v1/scim/v2/Groups/{group.id}",
+            "type": "direct",
         }
         for group in user_groups
     ]
@@ -367,14 +356,18 @@ async def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
         ),
         displayName=user.name,
         emails=[SCIMEmail(value=user.email)],
-        active=user.role != 'pending',
-        photos=([SCIMPhoto(value=user.profile_image_url)] if user.profile_image_url else None),
+        active=user.role != "pending",
+        photos=(
+            [SCIMPhoto(value=user.profile_image_url)]
+            if user.profile_image_url
+            else None
+        ),
         groups=groups if groups else None,
         meta=SCIMMeta(
             resourceType=SCIM_RESOURCE_TYPE_USER,
-            created=datetime.fromtimestamp(user.created_at, tz=timezone.utc).isoformat(),
-            lastModified=datetime.fromtimestamp(user.updated_at, tz=timezone.utc).isoformat(),
-            location=f'{request.base_url}api/v1/scim/v2/Users/{user.id}',
+            created=datetime.fromtimestamp(user.created_at, tz=UTC).isoformat(),
+            lastModified=datetime.fromtimestamp(user.updated_at, tz=UTC).isoformat(),
+            location=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
         ),
     )
 
@@ -388,7 +381,7 @@ async def group_to_scim(group: GroupModel, request: Request, db=None) -> SCIMGro
     members = [
         SCIMGroupMember(
             value=user.id,
-            ref=f'{request.base_url}api/v1/scim/v2/Users/{user.id}',
+            ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
             display=user.name,
         )
         for user in users
@@ -400,104 +393,104 @@ async def group_to_scim(group: GroupModel, request: Request, db=None) -> SCIMGro
         members=members,
         meta=SCIMMeta(
             resourceType=SCIM_RESOURCE_TYPE_GROUP,
-            created=datetime.fromtimestamp(group.created_at, tz=timezone.utc).isoformat(),
-            lastModified=datetime.fromtimestamp(group.updated_at, tz=timezone.utc).isoformat(),
-            location=f'{request.base_url}api/v1/scim/v2/Groups/{group.id}',
+            created=datetime.fromtimestamp(group.created_at, tz=UTC).isoformat(),
+            lastModified=datetime.fromtimestamp(group.updated_at, tz=UTC).isoformat(),
+            location=f"{request.base_url}api/v1/scim/v2/Groups/{group.id}",
         ),
     )
 
 
 # SCIM Service Provider Config
-@router.get('/ServiceProviderConfig')
+@router.get("/ServiceProviderConfig")
 async def get_service_provider_config():
     """Get SCIM Service Provider Configuration"""
     return {
-        'schemas': ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
-        'patch': {'supported': True},
-        'bulk': {'supported': False, 'maxOperations': 1000, 'maxPayloadSize': 1048576},
-        'filter': {'supported': True, 'maxResults': 200},
-        'changePassword': {'supported': False},
-        'sort': {'supported': False},
-        'etag': {'supported': False},
-        'authenticationSchemes': [
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
+        "patch": {"supported": True},
+        "bulk": {"supported": False, "maxOperations": 1000, "maxPayloadSize": 1048576},
+        "filter": {"supported": True, "maxResults": 200},
+        "changePassword": {"supported": False},
+        "sort": {"supported": False},
+        "etag": {"supported": False},
+        "authenticationSchemes": [
             {
-                'type': 'oauthbearertoken',
-                'name': 'OAuth Bearer Token',
-                'description': 'Authentication using OAuth 2.0 Bearer Token',
+                "type": "oauthbearertoken",
+                "name": "OAuth Bearer Token",
+                "description": "Authentication using OAuth 2.0 Bearer Token",
             }
         ],
     }
 
 
 # SCIM Resource Types
-@router.get('/ResourceTypes')
+@router.get("/ResourceTypes")
 async def get_resource_types(request: Request):
     """Get SCIM Resource Types"""
     return [
         {
-            'schemas': ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'],
-            'id': 'User',
-            'name': 'User',
-            'endpoint': '/Users',
-            'schema': SCIM_USER_SCHEMA,
-            'meta': {
-                'location': f'{request.base_url}api/v1/scim/v2/ResourceTypes/User',
-                'resourceType': 'ResourceType',
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+            "id": "User",
+            "name": "User",
+            "endpoint": "/Users",
+            "schema": SCIM_USER_SCHEMA,
+            "meta": {
+                "location": f"{request.base_url}api/v1/scim/v2/ResourceTypes/User",
+                "resourceType": "ResourceType",
             },
         },
         {
-            'schemas': ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'],
-            'id': 'Group',
-            'name': 'Group',
-            'endpoint': '/Groups',
-            'schema': SCIM_GROUP_SCHEMA,
-            'meta': {
-                'location': f'{request.base_url}api/v1/scim/v2/ResourceTypes/Group',
-                'resourceType': 'ResourceType',
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+            "id": "Group",
+            "name": "Group",
+            "endpoint": "/Groups",
+            "schema": SCIM_GROUP_SCHEMA,
+            "meta": {
+                "location": f"{request.base_url}api/v1/scim/v2/ResourceTypes/Group",
+                "resourceType": "ResourceType",
             },
         },
     ]
 
 
 # SCIM Schemas
-@router.get('/Schemas')
+@router.get("/Schemas")
 async def get_schemas():
     """Get SCIM Schemas"""
     return [
         {
-            'schemas': ['urn:ietf:params:scim:schemas:core:2.0:Schema'],
-            'id': SCIM_USER_SCHEMA,
-            'name': 'User',
-            'description': 'User Account',
-            'attributes': [
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+            "id": SCIM_USER_SCHEMA,
+            "name": "User",
+            "description": "User Account",
+            "attributes": [
                 {
-                    'name': 'userName',
-                    'type': 'string',
-                    'required': True,
-                    'uniqueness': 'server',
+                    "name": "userName",
+                    "type": "string",
+                    "required": True,
+                    "uniqueness": "server",
                 },
-                {'name': 'displayName', 'type': 'string', 'required': True},
+                {"name": "displayName", "type": "string", "required": True},
                 {
-                    'name': 'emails',
-                    'type': 'complex',
-                    'multiValued': True,
-                    'required': True,
+                    "name": "emails",
+                    "type": "complex",
+                    "multiValued": True,
+                    "required": True,
                 },
-                {'name': 'active', 'type': 'boolean', 'required': False},
+                {"name": "active", "type": "boolean", "required": False},
             ],
         },
         {
-            'schemas': ['urn:ietf:params:scim:schemas:core:2.0:Schema'],
-            'id': SCIM_GROUP_SCHEMA,
-            'name': 'Group',
-            'description': 'Group',
-            'attributes': [
-                {'name': 'displayName', 'type': 'string', 'required': True},
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+            "id": SCIM_GROUP_SCHEMA,
+            "name": "Group",
+            "description": "Group",
+            "attributes": [
+                {"name": "displayName", "type": "string", "required": True},
                 {
-                    'name': 'members',
-                    'type': 'complex',
-                    'multiValued': True,
-                    'required': False,
+                    "name": "members",
+                    "type": "complex",
+                    "multiValued": True,
+                    "required": False,
                 },
             ],
         },
@@ -505,12 +498,12 @@ async def get_schemas():
 
 
 # Users endpoints
-@router.get('/Users', response_model=SCIMListResponse)
+@router.get("/Users", response_model=SCIMListResponse)
 async def get_users(
     request: Request,
     startIndex: int = Query(1),
     count: int = Query(20),
-    filter: Optional[str] = None,
+    filter: str | None = None,
     _: bool = Depends(get_scim_auth),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -525,24 +518,24 @@ async def get_users(
     # Get users from database
     if filter:
         # Simple filter parsing - supports userName eq, externalId eq
-        if 'userName eq' in filter:
+        if "userName eq" in filter:
             email = filter.split('"')[1]
             user = await Users.get_user_by_email(email, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0
-        elif 'externalId eq' in filter:
+        elif "externalId eq" in filter:
             external_id = filter.split('"')[1]
             user = await find_user_by_external_id(external_id, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0
         else:
             response = await Users.get_users(skip=skip, limit=limit, db=db)
-            users_list = response['users']
-            total = response['total']
+            users_list = response["users"]
+            total = response["total"]
     else:
         response = await Users.get_users(skip=skip, limit=limit, db=db)
-        users_list = response['users']
-        total = response['total']
+        users_list = response["users"]
+        total = response["total"]
 
     # Convert to SCIM format
     scim_users = [await user_to_scim(user, request, db=db) for user in users_list]
@@ -555,7 +548,7 @@ async def get_users(
     )
 
 
-@router.get('/Users/{user_id}', response_model=SCIMUser)
+@router.get("/Users/{user_id}", response_model=SCIMUser)
 async def get_user(
     user_id: str,
     request: Request,
@@ -565,12 +558,14 @@ async def get_user(
     """Get SCIM User by ID"""
     user = await Users.get_user_by_id(user_id, db=db)
     if not user:
-        return scim_error(status_code=status.HTTP_404_NOT_FOUND, detail=f'User {user_id} not found')
+        return scim_error(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found"
+        )
 
     return await user_to_scim(user, request, db=db)
 
 
-@router.post('/Users', response_model=SCIMUser, status_code=status.HTTP_201_CREATED)
+@router.post("/Users", response_model=SCIMUser, status_code=status.HTTP_201_CREATED)
 async def create_user(
     request: Request,
     user_data: SCIMUserCreateRequest,
@@ -584,7 +579,7 @@ async def create_user(
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f'User with externalId {user_data.externalId} already exists',
+                detail=f"User with externalId {user_data.externalId} already exists",
             )
 
     # Determine primary email (lowercased per RFC 5321)
@@ -600,7 +595,7 @@ async def create_user(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f'User with email {email} already exists',
+            detail=f"User with email {email} already exists",
         )
 
     # Create user
@@ -615,7 +610,7 @@ async def create_user(
             name = f'{user_data.name.givenName or ""} {user_data.name.familyName or ""}'.strip()
 
     # Get profile image if provided
-    profile_image = '/user.png'
+    profile_image = "/user.png"
     if user_data.photos and len(user_data.photos) > 0:
         profile_image = user_data.photos[0].value
 
@@ -624,26 +619,28 @@ async def create_user(
         name=name,
         email=email,
         profile_image_url=profile_image,
-        role='user' if user_data.active else 'pending',
+        role="user" if user_data.active else "pending",
         db=db,
     )
 
     if not new_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to create user',
+            detail="Failed to create user",
         )
 
     # Store externalId in the scim field
     if user_data.externalId:
         provider = get_scim_provider()
-        await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
+        await Users.update_user_scim_by_id(
+            user_id, provider, user_data.externalId, db=db
+        )
         new_user = await Users.get_user_by_id(user_id, db=db)
 
     return await user_to_scim(new_user, request, db=db)
 
 
-@router.put('/Users/{user_id}', response_model=SCIMUser)
+@router.put("/Users/{user_id}", response_model=SCIMUser)
 async def update_user(
     user_id: str,
     request: Request,
@@ -656,49 +653,53 @@ async def update_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'User {user_id} not found',
+            detail=f"User {user_id} not found",
         )
 
     # Build update dict
     update_data = {}
 
     if user_data.userName:
-        update_data['email'] = user_data.userName
+        update_data["email"] = user_data.userName
 
     if user_data.displayName:
-        update_data['name'] = user_data.displayName
+        update_data["name"] = user_data.displayName
     elif user_data.name:
         if user_data.name.formatted:
-            update_data['name'] = user_data.name.formatted
+            update_data["name"] = user_data.name.formatted
         elif user_data.name.givenName or user_data.name.familyName:
-            update_data['name'] = f'{user_data.name.givenName or ""} {user_data.name.familyName or ""}'.strip()
+            update_data["name"] = (
+                f'{user_data.name.givenName or ""} {user_data.name.familyName or ""}'.strip()
+            )
 
     if user_data.emails and len(user_data.emails) > 0:
-        update_data['email'] = user_data.emails[0].value
+        update_data["email"] = user_data.emails[0].value
 
     if user_data.active is not None:
-        update_data['role'] = 'user' if user_data.active else 'pending'
+        update_data["role"] = "user" if user_data.active else "pending"
 
     if user_data.photos and len(user_data.photos) > 0:
-        update_data['profile_image_url'] = user_data.photos[0].value
+        update_data["profile_image_url"] = user_data.photos[0].value
 
     updated_user = await Users.update_user_by_id(user_id, update_data, db=db)
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to update user',
+            detail="Failed to update user",
         )
 
     # Update externalId in the scim field
     if user_data.externalId:
         provider = get_scim_provider()
-        await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
+        await Users.update_user_scim_by_id(
+            user_id, provider, user_data.externalId, db=db
+        )
         updated_user = await Users.get_user_by_id(user_id, db=db)
 
     return await user_to_scim(updated_user, request, db=db)
 
 
-@router.patch('/Users/{user_id}', response_model=SCIMUser)
+@router.patch("/Users/{user_id}", response_model=SCIMUser)
 async def patch_user(
     user_id: str,
     request: Request,
@@ -711,7 +712,7 @@ async def patch_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'User {user_id} not found',
+            detail=f"User {user_id} not found",
         )
 
     update_data = {}
@@ -721,18 +722,18 @@ async def patch_user(
         path = operation.path
         value = operation.value
 
-        if op == 'replace':
-            if path == 'active':
-                update_data['role'] = 'user' if value else 'pending'
-            elif path == 'userName':
-                update_data['email'] = value
-            elif path == 'displayName':
-                update_data['name'] = value
-            elif path == 'emails[primary eq true].value':
-                update_data['email'] = value
-            elif path == 'name.formatted':
-                update_data['name'] = value
-            elif path == 'externalId':
+        if op == "replace":
+            if path == "active":
+                update_data["role"] = "user" if value else "pending"
+            elif path == "userName":
+                update_data["email"] = value
+            elif path == "displayName":
+                update_data["name"] = value
+            elif path == "emails[primary eq true].value":
+                update_data["email"] = value
+            elif path == "name.formatted":
+                update_data["name"] = value
+            elif path == "externalId":
                 provider = get_scim_provider()
                 await Users.update_user_scim_by_id(user_id, provider, value, db=db)
 
@@ -742,7 +743,7 @@ async def patch_user(
         if not updated_user:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail='Failed to update user',
+                detail="Failed to update user",
             )
     else:
         updated_user = user
@@ -750,7 +751,7 @@ async def patch_user(
     return await user_to_scim(updated_user, request, db=db)
 
 
-@router.delete('/Users/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/Users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: str,
     request: Request,
@@ -762,26 +763,26 @@ async def delete_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'User {user_id} not found',
+            detail=f"User {user_id} not found",
         )
 
     success = await Users.delete_user_by_id(user_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to delete user',
+            detail="Failed to delete user",
         )
 
     return None
 
 
 # Groups endpoints
-@router.get('/Groups', response_model=SCIMListResponse)
+@router.get("/Groups", response_model=SCIMListResponse)
 async def get_groups(
     request: Request,
     startIndex: int = Query(1),
     count: int = Query(20),
-    filter: Optional[str] = None,
+    filter: str | None = None,
     _: bool = Depends(get_scim_auth),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -793,7 +794,7 @@ async def get_groups(
 
     # Get groups, applying filter if provided
     if filter:
-        if 'displayName eq' in filter:
+        if "displayName eq" in filter:
             display_name = filter.split('"')[1]
             group = await Groups.get_group_by_name(display_name, db=db)
             groups_list = [group] if group else []
@@ -810,7 +811,9 @@ async def get_groups(
     paginated_groups = groups_list[start:end]
 
     # Convert to SCIM format
-    scim_groups = [await group_to_scim(group, request, db=db) for group in paginated_groups]
+    scim_groups = [
+        await group_to_scim(group, request, db=db) for group in paginated_groups
+    ]
 
     return SCIMListResponse(
         totalResults=total,
@@ -820,7 +823,7 @@ async def get_groups(
     )
 
 
-@router.get('/Groups/{group_id}', response_model=SCIMGroup)
+@router.get("/Groups/{group_id}", response_model=SCIMGroup)
 async def get_group(
     group_id: str,
     request: Request,
@@ -832,13 +835,13 @@ async def get_group(
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Group {group_id} not found',
+            detail=f"Group {group_id} not found",
         )
 
     return await group_to_scim(group, request, db=db)
 
 
-@router.post('/Groups', response_model=SCIMGroup, status_code=status.HTTP_201_CREATED)
+@router.post("/Groups", response_model=SCIMGroup, status_code=status.HTTP_201_CREATED)
 async def create_group(
     request: Request,
     group_data: SCIMGroupCreateRequest,
@@ -857,7 +860,7 @@ async def create_group(
 
     form = GroupForm(
         name=group_data.displayName,
-        description='',
+        description="",
     )
 
     # Need to get the creating user's ID - we'll use the first admin
@@ -865,14 +868,14 @@ async def create_group(
     if not admin_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='No admin user found',
+            detail="No admin user found",
         )
 
     new_group = await Groups.insert_new_group(admin_user.id, form, db=db)
     if not new_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to create group',
+            detail="Failed to create group",
         )
 
     # Add members if provided
@@ -892,7 +895,7 @@ async def create_group(
     return await group_to_scim(new_group, request, db=db)
 
 
-@router.put('/Groups/{group_id}', response_model=SCIMGroup)
+@router.put("/Groups/{group_id}", response_model=SCIMGroup)
 async def update_group(
     group_id: str,
     request: Request,
@@ -905,7 +908,7 @@ async def update_group(
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Group {group_id} not found',
+            detail=f"Group {group_id} not found",
         )
 
     # Build update form
@@ -926,13 +929,13 @@ async def update_group(
     if not updated_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to update group',
+            detail="Failed to update group",
         )
 
     return await group_to_scim(updated_group, request, db=db)
 
 
-@router.patch('/Groups/{group_id}', response_model=SCIMGroup)
+@router.patch("/Groups/{group_id}", response_model=SCIMGroup)
 async def patch_group(
     group_id: str,
     request: Request,
@@ -945,7 +948,7 @@ async def patch_group(
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Group {group_id} not found',
+            detail=f"Group {group_id} not found",
         )
 
     from open_webui.models.groups import GroupUpdateForm
@@ -960,22 +963,26 @@ async def patch_group(
         path = operation.path
         value = operation.value
 
-        if op == 'replace':
-            if path == 'displayName':
+        if op == "replace":
+            if path == "displayName":
                 update_form.name = value
-            elif path == 'members':
+            elif path == "members":
                 # Replace all members
-                await Groups.set_group_user_ids_by_id(group_id, [member['value'] for member in value], db=db)
+                await Groups.set_group_user_ids_by_id(
+                    group_id, [member["value"] for member in value], db=db
+                )
 
-        elif op == 'add':
-            if path == 'members':
+        elif op == "add":
+            if path == "members":
                 # Add members
                 if isinstance(value, list):
                     for member in value:
-                        if isinstance(member, dict) and 'value' in member:
-                            await Groups.add_users_to_group(group_id, [member['value']], db=db)
-        elif op == 'remove':
-            if path and path.startswith('members[value eq'):
+                        if isinstance(member, dict) and "value" in member:
+                            await Groups.add_users_to_group(
+                                group_id, [member["value"]], db=db
+                            )
+        elif op == "remove":
+            if path and path.startswith("members[value eq"):
                 # Remove specific member
                 member_id = path.split('"')[1]
                 await Groups.remove_users_from_group(group_id, [member_id], db=db)
@@ -985,13 +992,13 @@ async def patch_group(
     if not updated_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to update group',
+            detail="Failed to update group",
         )
 
     return await group_to_scim(updated_group, request, db=db)
 
 
-@router.delete('/Groups/{group_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/Groups/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_group(
     group_id: str,
     request: Request,
@@ -1003,14 +1010,14 @@ async def delete_group(
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Group {group_id} not found',
+            detail=f"Group {group_id} not found",
         )
 
     success = await Groups.delete_group_by_id(group_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to delete group',
+            detail="Failed to delete group",
         )
 
     return None

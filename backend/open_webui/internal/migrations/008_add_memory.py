@@ -30,7 +30,7 @@ import peewee as pw
 from peewee_migrate import Migrator
 
 with suppress(ImportError):
-    import playhouse.postgres_ext as pw_pext
+    pass
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
@@ -43,10 +43,10 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         created_at = pw.BigIntegerField(null=False)
 
         class Meta:
-            table_name = 'memory'
+            table_name = "memory"
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_model('memory')
+    migrator.remove_model("memory")

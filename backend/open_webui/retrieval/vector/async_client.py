@@ -53,7 +53,6 @@ their own `asyncio.to_thread`, e.g. ::
 from __future__ import annotations
 
 import asyncio
-from typing import Dict, List, Optional, Union
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.main import (
@@ -88,37 +87,39 @@ class AsyncVectorDBClient:
     async def delete_collection(self, collection_name: str) -> None:
         return await asyncio.to_thread(self._sync.delete_collection, collection_name)
 
-    async def insert(self, collection_name: str, items: List[VectorItem]) -> None:
+    async def insert(self, collection_name: str, items: list[VectorItem]) -> None:
         return await asyncio.to_thread(self._sync.insert, collection_name, items)
 
-    async def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
+    async def upsert(self, collection_name: str, items: list[VectorItem]) -> None:
         return await asyncio.to_thread(self._sync.upsert, collection_name, items)
 
     async def search(
         self,
         collection_name: str,
-        vectors: List[List[Union[float, int]]],
-        filter: Optional[Dict] = None,
+        vectors: list[list[float | int]],
+        filter: dict | None = None,
         limit: int = 10,
-    ) -> Optional[SearchResult]:
-        return await asyncio.to_thread(self._sync.search, collection_name, vectors, filter, limit)
+    ) -> SearchResult | None:
+        return await asyncio.to_thread(
+            self._sync.search, collection_name, vectors, filter, limit
+        )
 
     async def query(
         self,
         collection_name: str,
-        filter: Dict,
-        limit: Optional[int] = None,
-    ) -> Optional[GetResult]:
+        filter: dict,
+        limit: int | None = None,
+    ) -> GetResult | None:
         return await asyncio.to_thread(self._sync.query, collection_name, filter, limit)
 
-    async def get(self, collection_name: str) -> Optional[GetResult]:
+    async def get(self, collection_name: str) -> GetResult | None:
         return await asyncio.to_thread(self._sync.get, collection_name)
 
     async def delete(
         self,
         collection_name: str,
-        ids: Optional[List[str]] = None,
-        filter: Optional[Dict] = None,
+        ids: list[str] | None = None,
+        filter: dict | None = None,
     ) -> None:
         return await asyncio.to_thread(self._sync.delete, collection_name, ids, filter)
 

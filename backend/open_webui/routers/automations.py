@@ -1,30 +1,27 @@
 import asyncio
 import logging
 
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.internal.db import get_async_session
 from open_webui.models.automations import (
-    Automations,
-    AutomationRuns,
     AutomationForm,
     AutomationModel,
     AutomationResponse,
     AutomationRunModel,
-    AutomationListResponse,
+    AutomationRuns,
+    Automations,
 )
-from open_webui.utils.automations import (
-    validate_rrule,
-    next_run_ns,
-    next_n_runs_ns,
-    execute_automation,
-    rrule_interval_seconds,
-)
-from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_permission
-from open_webui.internal.db import get_async_session
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.auth import get_verified_user
+from open_webui.utils.automations import (
+    execute_automation,
+    next_n_runs_ns,
+    next_run_ns,
+    rrule_interval_seconds,
+    validate_rrule,
+)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -44,8 +41,8 @@ async def check_automations_permission(request, user):
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
+    if user.role != "admin" and not await has_permission(
+        user.id, "features.automations", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -59,16 +56,18 @@ def check_automation_access(automation, user):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    if user.role != 'admin' and user.id != automation.user_id:
+    if user.role != "admin" and user.id != automation.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
 
-async def check_automation_limits(request, user, rrule_str: str, db, is_create: bool = False):
+async def check_automation_limits(
+    request, user, rrule_str: str, db, is_create: bool = False
+):
     """Enforce global automation limits. Admins bypass all checks."""
-    if user.role == 'admin':
+    if user.role == "admin":
         return
 
     # Max count (create only)
@@ -76,7 +75,10 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
         max_count = request.app.state.config.AUTOMATION_MAX_COUNT
         if max_count:
             max_count = int(max_count)
-            if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
+            if (
+                max_count > 0
+                and await Automations.count_by_user(user.id, db=db) >= max_count
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=ERROR_MESSAGES.AUTOMATION_LIMIT_EXCEEDED(max_count),
@@ -95,13 +97,15 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
                 )
 
 
-async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: str = None) -> AutomationResponse:
+async def enrich_automation(
+    automation: AutomationModel, db: AsyncSession, tz: str = None
+) -> AutomationResponse:
     """Full enrichment for single-item views (includes next_runs computation)."""
     last_run = await AutomationRuns.get_latest(automation.id, db=db)
     return AutomationResponse(
         **automation.model_dump(),
         last_run=last_run,
-        next_runs=next_n_runs_ns(automation.data['rrule'], tz=tz),
+        next_runs=next_n_runs_ns(automation.data["rrule"], tz=tz),
     )
 
 
@@ -110,12 +114,12 @@ async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: s
 ############################
 
 
-@router.get('/list')
+@router.get("/list")
 async def get_automation_items(
     request: Request,
-    query: Optional[str] = None,
-    status: Optional[str] = None,
-    page: Optional[int] = 1,
+    query: str | None = None,
+    status: str | None = None,
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -138,14 +142,14 @@ async def get_automation_items(
     latest_runs = await AutomationRuns.get_latest_batch(ids, db=db) if ids else {}
 
     return {
-        'items': [
+        "items": [
             AutomationResponse(
                 **item.model_dump(),
                 last_run=latest_runs.get(item.id),
             )
             for item in result.items
         ],
-        'total': result.total,
+        "total": result.total,
     }
 
 
@@ -154,7 +158,7 @@ async def get_automation_items(
 ############################
 
 
-@router.post('/create', response_model=AutomationResponse)
+@router.post("/create", response_model=AutomationResponse)
 async def create_new_automation(
     request: Request,
     form_data: AutomationForm,
@@ -170,10 +174,14 @@ async def create_new_automation(
             detail=str(e),
         )
 
-    await check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
+    await check_automation_limits(
+        request, user, form_data.data.rrule, db, is_create=True
+    )
 
     tz = user.timezone
-    automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    automation = await Automations.insert(
+        user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db
+    )
     return await enrich_automation(automation, db, tz=tz)
 
 
@@ -182,7 +190,7 @@ async def create_new_automation(
 ############################
 
 
-@router.get('/{id}', response_model=AutomationResponse)
+@router.get("/{id}", response_model=AutomationResponse)
 async def get_automation_by_id(
     request: Request,
     id: str,
@@ -200,7 +208,7 @@ async def get_automation_by_id(
 ############################
 
 
-@router.post('/{id}/update', response_model=AutomationResponse)
+@router.post("/{id}/update", response_model=AutomationResponse)
 async def update_automation_by_id(
     request: Request,
     id: str,
@@ -220,10 +228,14 @@ async def update_automation_by_id(
             detail=str(e),
         )
 
-    await check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
+    await check_automation_limits(
+        request, user, form_data.data.rrule, db, is_create=False
+    )
 
     tz = user.timezone
-    updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    updated = await Automations.update_by_id(
+        id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db
+    )
     return await enrich_automation(updated, db, tz=tz)
 
 
@@ -232,7 +244,7 @@ async def update_automation_by_id(
 ############################
 
 
-@router.post('/{id}/toggle', response_model=AutomationResponse)
+@router.post("/{id}/toggle", response_model=AutomationResponse)
 async def toggle_automation_by_id(
     request: Request,
     id: str,
@@ -242,7 +254,9 @@ async def toggle_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
+    toggled = await Automations.toggle(
+        id, next_run_ns(automation.data["rrule"], tz=user.timezone), db=db
+    )
     return await enrich_automation(toggled, db, tz=user.timezone)
 
 
@@ -251,7 +265,7 @@ async def toggle_automation_by_id(
 ############################
 
 
-@router.post('/{id}/run')
+@router.post("/{id}/run")
 async def run_automation_by_id(
     request: Request,
     id: str,
@@ -270,7 +284,7 @@ async def run_automation_by_id(
 ############################
 
 
-@router.delete('/{id}/delete')
+@router.delete("/{id}/delete")
 async def delete_automation_by_id(
     request: Request,
     id: str,
@@ -289,7 +303,7 @@ async def delete_automation_by_id(
 ############################
 
 
-@router.get('/{id}/runs', response_model=list[AutomationRunModel])
+@router.get("/{id}/runs", response_model=list[AutomationRunModel])
 async def get_automation_runs(
     request: Request,
     id: str,

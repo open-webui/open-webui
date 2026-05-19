@@ -1,22 +1,20 @@
-import inspect
-from urllib.parse import urlparse
 import asyncio
-import time
-
+import inspect
 import logging
+import time
+from urllib.parse import urlparse
 
 import redis
-
 from open_webui.env import (
     REDIS_CLUSTER,
     REDIS_HEALTH_CHECK_INTERVAL,
-    REDIS_SOCKET_CONNECT_TIMEOUT,
-    REDIS_SOCKET_KEEPALIVE,
+    REDIS_RECONNECT_DELAY,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_MAX_RETRY_COUNT,
     REDIS_SENTINEL_PORT,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
+    REDIS_SOCKET_KEEPALIVE,
     REDIS_URL,
-    REDIS_RECONNECT_DELAY,
 )
 
 log = logging.getLogger(__name__)
@@ -47,7 +45,7 @@ class SentinelRedisProxy:
         if not callable(orig_attr):
             return orig_attr
 
-        FACTORY_METHODS = {'pipeline', 'pubsub', 'monitor', 'client', 'transaction'}
+        FACTORY_METHODS = {"pipeline", "pubsub", "monitor", "client", "transaction"}
         if item in FACTORY_METHODS:
             return orig_attr
 
@@ -68,7 +66,7 @@ class SentinelRedisProxy:
                             ) as e:
                                 if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
                                     log.debug(
-                                        'Redis sentinel fail-over (%s). Retry %s/%s',
+                                        "Redis sentinel fail-over (%s). Retry %s/%s",
                                         type(e).__name__,
                                         i + 1,
                                         REDIS_SENTINEL_MAX_RETRY_COUNT,
@@ -77,7 +75,7 @@ class SentinelRedisProxy:
                                         time.sleep(REDIS_RECONNECT_DELAY / 1000)
                                     continue
                                 log.error(
-                                    'Redis operation failed after %s retries: %s',
+                                    "Redis operation failed after %s retries: %s",
                                     REDIS_SENTINEL_MAX_RETRY_COUNT,
                                     e,
                                 )
@@ -101,7 +99,7 @@ class SentinelRedisProxy:
                     ) as e:
                         if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
                             log.debug(
-                                'Redis sentinel fail-over (%s). Retry %s/%s',
+                                "Redis sentinel fail-over (%s). Retry %s/%s",
                                 type(e).__name__,
                                 i + 1,
                                 REDIS_SENTINEL_MAX_RETRY_COUNT,
@@ -110,7 +108,7 @@ class SentinelRedisProxy:
                                 await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
                         log.error(
-                            'Redis operation failed after %s retries: %s',
+                            "Redis operation failed after %s retries: %s",
                             REDIS_SENTINEL_MAX_RETRY_COUNT,
                             e,
                         )
@@ -131,7 +129,7 @@ class SentinelRedisProxy:
                     ) as e:
                         if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
                             log.debug(
-                                'Redis sentinel fail-over (%s). Retry %s/%s',
+                                "Redis sentinel fail-over (%s). Retry %s/%s",
                                 type(e).__name__,
                                 i + 1,
                                 REDIS_SENTINEL_MAX_RETRY_COUNT,
@@ -140,7 +138,7 @@ class SentinelRedisProxy:
                                 time.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
                         log.error(
-                            'Redis operation failed after %s retries: %s',
+                            "Redis operation failed after %s retries: %s",
                             REDIS_SENTINEL_MAX_RETRY_COUNT,
                             e,
                         )
@@ -151,15 +149,15 @@ class SentinelRedisProxy:
 
 def parse_redis_service_url(redis_url):
     parsed_url = urlparse(redis_url)
-    if parsed_url.scheme != 'redis' and parsed_url.scheme != 'rediss':
+    if parsed_url.scheme != "redis" and parsed_url.scheme != "rediss":
         raise ValueError("Invalid Redis URL scheme. Must be 'redis' or 'rediss'.")
 
     return {
-        'username': parsed_url.username or None,
-        'password': parsed_url.password or None,
-        'service': parsed_url.hostname or 'mymaster',
-        'port': parsed_url.port or 6379,
-        'db': int(parsed_url.path.lstrip('/') or 0),
+        "username": parsed_url.username or None,
+        "password": parsed_url.password or None,
+        "service": parsed_url.hostname or "mymaster",
+        "port": parsed_url.port or 6379,
+        "db": int(parsed_url.path.lstrip("/") or 0),
     }
 
 
@@ -167,12 +165,14 @@ def get_redis_client(async_mode=False):
     try:
         return get_redis_connection(
             redis_url=REDIS_URL,
-            redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
+            redis_sentinels=get_sentinels_from_env(
+                REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+            ),
             redis_cluster=REDIS_CLUSTER,
             async_mode=async_mode,
         )
     except Exception as e:
-        log.debug(f'Failed to get Redis client: {e}')
+        log.debug(f"Failed to get Redis client: {e}")
         return None
 
 
@@ -196,12 +196,18 @@ def get_redis_connection(
     connection = None
 
     connect_timeout_kwargs = (
-        {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT} if REDIS_SOCKET_CONNECT_TIMEOUT is not None else {}
+        {"socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT}
+        if REDIS_SOCKET_CONNECT_TIMEOUT is not None
+        else {}
     )
 
-    keepalive_kwargs = {'socket_keepalive': True} if REDIS_SOCKET_KEEPALIVE else {}
+    keepalive_kwargs = {"socket_keepalive": True} if REDIS_SOCKET_KEEPALIVE else {}
 
-    health_check_kwargs = {'health_check_interval': REDIS_HEALTH_CHECK_INTERVAL} if REDIS_HEALTH_CHECK_INTERVAL else {}
+    health_check_kwargs = (
+        {"health_check_interval": REDIS_HEALTH_CHECK_INTERVAL}
+        if REDIS_HEALTH_CHECK_INTERVAL
+        else {}
+    )
 
     if async_mode:
         import redis.asyncio as redis
@@ -211,10 +217,10 @@ def get_redis_connection(
             redis_config = parse_redis_service_url(redis_url)
             sentinel = redis.sentinel.Sentinel(
                 redis_sentinels,
-                port=redis_config['port'],
-                db=redis_config['db'],
-                username=redis_config['username'],
-                password=redis_config['password'],
+                port=redis_config["port"],
+                db=redis_config["db"],
+                username=redis_config["username"],
+                password=redis_config["password"],
                 decode_responses=decode_responses,
                 socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
                 **keepalive_kwargs,
@@ -222,12 +228,12 @@ def get_redis_connection(
             )
             connection = SentinelRedisProxy(
                 sentinel,
-                redis_config['service'],
+                redis_config["service"],
                 async_mode=async_mode,
             )
         elif redis_cluster:
             if not redis_url:
-                raise ValueError('Redis URL must be provided for cluster mode.')
+                raise ValueError("Redis URL must be provided for cluster mode.")
             return redis.cluster.RedisCluster.from_url(
                 redis_url,
                 decode_responses=decode_responses,
@@ -250,10 +256,10 @@ def get_redis_connection(
             redis_config = parse_redis_service_url(redis_url)
             sentinel = redis.sentinel.Sentinel(
                 redis_sentinels,
-                port=redis_config['port'],
-                db=redis_config['db'],
-                username=redis_config['username'],
-                password=redis_config['password'],
+                port=redis_config["port"],
+                db=redis_config["db"],
+                username=redis_config["username"],
+                password=redis_config["password"],
                 decode_responses=decode_responses,
                 socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
                 **keepalive_kwargs,
@@ -261,12 +267,12 @@ def get_redis_connection(
             )
             connection = SentinelRedisProxy(
                 sentinel,
-                redis_config['service'],
+                redis_config["service"],
                 async_mode=async_mode,
             )
         elif redis_cluster:
             if not redis_url:
-                raise ValueError('Redis URL must be provided for cluster mode.')
+                raise ValueError("Redis URL must be provided for cluster mode.")
             return redis.cluster.RedisCluster.from_url(
                 redis_url,
                 decode_responses=decode_responses,
@@ -289,7 +295,7 @@ def get_redis_connection(
 
 def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):
     if sentinel_hosts_env:
-        sentinel_hosts = sentinel_hosts_env.split(',')
+        sentinel_hosts = sentinel_hosts_env.split(",")
         sentinel_port = int(sentinel_port_env)
         return [(host, sentinel_port) for host in sentinel_hosts]
     return []
@@ -297,10 +303,12 @@ def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):
 
 def get_sentinel_url_from_env(redis_url, sentinel_hosts_env, sentinel_port_env):
     redis_config = parse_redis_service_url(redis_url)
-    username = redis_config['username'] or ''
-    password = redis_config['password'] or ''
-    auth_part = ''
+    username = redis_config["username"] or ""
+    password = redis_config["password"] or ""
+    auth_part = ""
     if username or password:
-        auth_part = f'{username}:{password}@'
-    hosts_part = ','.join(f'{host}:{sentinel_port_env}' for host in sentinel_hosts_env.split(','))
+        auth_part = f"{username}:{password}@"
+    hosts_part = ",".join(
+        f"{host}:{sentinel_port_env}" for host in sentinel_hosts_env.split(",")
+    )
     return f'redis+sentinel://{auth_part}{hosts_part}/{redis_config["db"]}/{redis_config["service"]}'

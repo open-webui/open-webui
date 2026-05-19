@@ -2,28 +2,25 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-from elasticsearch import Elasticsearch, BadRequestError
-from typing import Optional
-import ssl
+from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk, scan
-
-from open_webui.retrieval.vector.utils import process_metadata
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
 from open_webui.config import (
-    ELASTICSEARCH_URL,
-    ELASTICSEARCH_CA_CERTS,
     ELASTICSEARCH_API_KEY,
-    ELASTICSEARCH_USERNAME,
-    ELASTICSEARCH_PASSWORD,
+    ELASTICSEARCH_CA_CERTS,
     ELASTICSEARCH_CLOUD_ID,
     ELASTICSEARCH_INDEX_PREFIX,
+    ELASTICSEARCH_PASSWORD,
+    ELASTICSEARCH_URL,
+    ELASTICSEARCH_USERNAME,
     SSL_ASSERT_FINGERPRINT,
 )
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
+from open_webui.retrieval.vector.utils import process_metadata
 
 
 class ElasticsearchClient(VectorDBBase):
@@ -51,7 +48,7 @@ class ElasticsearchClient(VectorDBBase):
 
     # Status: works
     def _get_index_name(self, dimension: int) -> str:
-        return f'{self.index_prefix}_d{str(dimension)}'
+        return f"{self.index_prefix}_d{str(dimension)}"
 
     # Status: works
     def _scan_result_to_get_result(self, result) -> GetResult:
@@ -62,24 +59,24 @@ class ElasticsearchClient(VectorDBBase):
         metadatas = []
 
         for hit in result:
-            ids.append(hit['_id'])
-            documents.append(hit['_source'].get('text'))
-            metadatas.append(hit['_source'].get('metadata'))
+            ids.append(hit["_id"])
+            documents.append(hit["_source"].get("text"))
+            metadatas.append(hit["_source"].get("metadata"))
 
         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
 
     # Status: works
     def _result_to_get_result(self, result) -> GetResult:
-        if not result['hits']['hits']:
+        if not result["hits"]["hits"]:
             return None
         ids = []
         documents = []
         metadatas = []
 
-        for hit in result['hits']['hits']:
-            ids.append(hit['_id'])
-            documents.append(hit['_source'].get('text'))
-            metadatas.append(hit['_source'].get('metadata'))
+        for hit in result["hits"]["hits"]:
+            ids.append(hit["_id"])
+            documents.append(hit["_source"].get("text"))
+            metadatas.append(hit["_source"].get("metadata"))
 
         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
 
@@ -90,11 +87,11 @@ class ElasticsearchClient(VectorDBBase):
         documents = []
         metadatas = []
 
-        for hit in result['hits']['hits']:
-            ids.append(hit['_id'])
-            distances.append(hit['_score'])
-            documents.append(hit['_source'].get('text'))
-            metadatas.append(hit['_source'].get('metadata'))
+        for hit in result["hits"]["hits"]:
+            ids.append(hit["_id"])
+            distances.append(hit["_score"])
+            documents.append(hit["_source"].get("text"))
+            metadatas.append(hit["_source"].get("metadata"))
 
         return SearchResult(
             ids=[ids],
@@ -106,26 +103,26 @@ class ElasticsearchClient(VectorDBBase):
     # Status: works
     def _create_index(self, dimension: int):
         body = {
-            'mappings': {
-                'dynamic_templates': [
+            "mappings": {
+                "dynamic_templates": [
                     {
-                        'strings': {
-                            'match_mapping_type': 'string',
-                            'mapping': {'type': 'keyword'},
+                        "strings": {
+                            "match_mapping_type": "string",
+                            "mapping": {"type": "keyword"},
                         }
                     }
                 ],
-                'properties': {
-                    'collection': {'type': 'keyword'},
-                    'id': {'type': 'keyword'},
-                    'vector': {
-                        'type': 'dense_vector',
-                        'dims': dimension,  # Adjust based on your vector dimensions
-                        'index': True,
-                        'similarity': 'cosine',
+                "properties": {
+                    "collection": {"type": "keyword"},
+                    "id": {"type": "keyword"},
+                    "vector": {
+                        "type": "dense_vector",
+                        "dims": dimension,  # Adjust based on your vector dimensions
+                        "index": True,
+                        "similarity": "cosine",
                     },
-                    'text': {'type': 'text'},
-                    'metadata': {'type': 'object'},
+                    "text": {"type": "text"},
+                    "metadata": {"type": "object"},
                 },
             }
         }
@@ -139,107 +136,121 @@ class ElasticsearchClient(VectorDBBase):
 
     # Status: works
     def has_collection(self, collection_name) -> bool:
-        query_body = {'query': {'bool': {'filter': []}}}
-        query_body['query']['bool']['filter'].append({'term': {'collection': collection_name}})
+        query_body = {"query": {"bool": {"filter": []}}}
+        query_body["query"]["bool"]["filter"].append(
+            {"term": {"collection": collection_name}}
+        )
 
         try:
-            result = self.client.count(index=f'{self.index_prefix}*', body=query_body)
+            result = self.client.count(index=f"{self.index_prefix}*", body=query_body)
 
-            return result.body['count'] > 0
-        except Exception as e:
+            return result.body["count"] > 0
+        except Exception:
             return None
 
     def delete_collection(self, collection_name: str):
-        query = {'query': {'term': {'collection': collection_name}}}
-        self.client.delete_by_query(index=f'{self.index_prefix}*', body=query)
+        query = {"query": {"term": {"collection": collection_name}}}
+        self.client.delete_by_query(index=f"{self.index_prefix}*", body=query)
 
     # Status: works
     def search(
         self,
         collection_name: str,
         vectors: list[list[float]],
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         limit: int = 10,
-    ) -> Optional[SearchResult]:
+    ) -> SearchResult | None:
         query = {
-            'size': limit,
-            '_source': ['text', 'metadata'],
-            'query': {
-                'script_score': {
-                    'query': {'bool': {'filter': [{'term': {'collection': collection_name}}]}},
-                    'script': {
-                        'source': "cosineSimilarity(params.vector, 'vector') + 1.0",
-                        'params': {'vector': vectors[0]},  # Assuming single query vector
+            "size": limit,
+            "_source": ["text", "metadata"],
+            "query": {
+                "script_score": {
+                    "query": {
+                        "bool": {"filter": [{"term": {"collection": collection_name}}]}
+                    },
+                    "script": {
+                        "source": "cosineSimilarity(params.vector, 'vector') + 1.0",
+                        "params": {
+                            "vector": vectors[0]
+                        },  # Assuming single query vector
                     },
                 }
             },
         }
 
-        result = self.client.search(index=self._get_index_name(len(vectors[0])), body=query)
+        result = self.client.search(
+            index=self._get_index_name(len(vectors[0])), body=query
+        )
 
         return self._result_to_search_result(result)
 
     # Status: only tested halfwat
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None) -> Optional[GetResult]:
+    def query(
+        self, collection_name: str, filter: dict, limit: int | None = None
+    ) -> GetResult | None:
         if not self.has_collection(collection_name):
             return None
 
         query_body = {
-            'query': {'bool': {'filter': []}},
-            '_source': ['text', 'metadata'],
+            "query": {"bool": {"filter": []}},
+            "_source": ["text", "metadata"],
         }
 
         for field, value in filter.items():
-            query_body['query']['bool']['filter'].append({'term': {field: value}})
-        query_body['query']['bool']['filter'].append({'term': {'collection': collection_name}})
+            query_body["query"]["bool"]["filter"].append({"term": {field: value}})
+        query_body["query"]["bool"]["filter"].append(
+            {"term": {"collection": collection_name}}
+        )
         size = limit if limit else 10
 
         try:
             result = self.client.search(
-                index=f'{self.index_prefix}*',
+                index=f"{self.index_prefix}*",
                 body=query_body,
                 size=size,
             )
 
             return self._result_to_get_result(result)
 
-        except Exception as e:
+        except Exception:
             return None
 
     # Status: works
     def _has_index(self, dimension: int):
-        return self.client.indices.exists(index=self._get_index_name(dimension=dimension))
+        return self.client.indices.exists(
+            index=self._get_index_name(dimension=dimension)
+        )
 
     def get_or_create_index(self, dimension: int):
         if not self._has_index(dimension=dimension):
             self._create_index(dimension=dimension)
 
     # Status: works
-    def get(self, collection_name: str) -> Optional[GetResult]:
+    def get(self, collection_name: str) -> GetResult | None:
         # Get all the items in the collection.
         query = {
-            'query': {'bool': {'filter': [{'term': {'collection': collection_name}}]}},
-            '_source': ['text', 'metadata'],
+            "query": {"bool": {"filter": [{"term": {"collection": collection_name}}]}},
+            "_source": ["text", "metadata"],
         }
-        results = list(scan(self.client, index=f'{self.index_prefix}*', query=query))
+        results = list(scan(self.client, index=f"{self.index_prefix}*", query=query))
 
         return self._scan_result_to_get_result(results)
 
     # Status: works
     def insert(self, collection_name: str, items: list[VectorItem]):
-        if not self._has_index(dimension=len(items[0]['vector'])):
-            self._create_index(dimension=len(items[0]['vector']))
+        if not self._has_index(dimension=len(items[0]["vector"])):
+            self._create_index(dimension=len(items[0]["vector"]))
 
         for batch in self._create_batches(items):
             actions = [
                 {
-                    '_index': self._get_index_name(dimension=len(items[0]['vector'])),
-                    '_id': item['id'],
-                    '_source': {
-                        'collection': collection_name,
-                        'vector': item['vector'],
-                        'text': item['text'],
-                        'metadata': process_metadata(item['metadata']),
+                    "_index": self._get_index_name(dimension=len(items[0]["vector"])),
+                    "_id": item["id"],
+                    "_source": {
+                        "collection": collection_name,
+                        "vector": item["vector"],
+                        "text": item["text"],
+                        "metadata": process_metadata(item["metadata"]),
                     },
                 }
                 for item in batch
@@ -248,21 +259,21 @@ class ElasticsearchClient(VectorDBBase):
 
     # Upsert documents using the update API with doc_as_upsert=True.
     def upsert(self, collection_name: str, items: list[VectorItem]):
-        if not self._has_index(dimension=len(items[0]['vector'])):
-            self._create_index(dimension=len(items[0]['vector']))
+        if not self._has_index(dimension=len(items[0]["vector"])):
+            self._create_index(dimension=len(items[0]["vector"]))
         for batch in self._create_batches(items):
             actions = [
                 {
-                    '_op_type': 'update',
-                    '_index': self._get_index_name(dimension=len(item['vector'])),
-                    '_id': item['id'],
-                    'doc': {
-                        'collection': collection_name,
-                        'vector': item['vector'],
-                        'text': item['text'],
-                        'metadata': process_metadata(item['metadata']),
+                    "_op_type": "update",
+                    "_index": self._get_index_name(dimension=len(item["vector"])),
+                    "_id": item["id"],
+                    "doc": {
+                        "collection": collection_name,
+                        "vector": item["vector"],
+                        "text": item["text"],
+                        "metadata": process_metadata(item["metadata"]),
                     },
-                    'doc_as_upsert': True,
+                    "doc_as_upsert": True,
                 }
                 for item in batch
             ]
@@ -272,20 +283,24 @@ class ElasticsearchClient(VectorDBBase):
     def delete(
         self,
         collection_name: str,
-        ids: Optional[list[str]] = None,
-        filter: Optional[dict] = None,
+        ids: list[str] | None = None,
+        filter: dict | None = None,
     ):
-        query = {'query': {'bool': {'filter': [{'term': {'collection': collection_name}}]}}}
+        query = {
+            "query": {"bool": {"filter": [{"term": {"collection": collection_name}}]}}
+        }
         # logic based on chromaDB
         if ids:
-            query['query']['bool']['filter'].append({'terms': {'_id': ids}})
+            query["query"]["bool"]["filter"].append({"terms": {"_id": ids}})
         elif filter:
             for field, value in filter.items():
-                query['query']['bool']['filter'].append({'term': {f'metadata.{field}': value}})
+                query["query"]["bool"]["filter"].append(
+                    {"term": {f"metadata.{field}": value}}
+                )
 
-        self.client.delete_by_query(index=f'{self.index_prefix}*', body=query)
+        self.client.delete_by_query(index=f"{self.index_prefix}*", body=query)
 
     def reset(self):
-        indices = self.client.indices.get(index=f'{self.index_prefix}*')
+        indices = self.client.indices.get(index=f"{self.index_prefix}*")
         for index in indices:
             self.client.indices.delete(index=index)

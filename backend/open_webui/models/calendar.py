@@ -1,30 +1,27 @@
-import time
 import logging
-from typing import Optional
+import time
 from uuid import uuid4
-
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import (
-    Column,
-    Text,
-    JSON,
-    Boolean,
-    BigInteger,
-    Index,
-    UniqueConstraint,
-    select,
-    or_,
-    exists,
-    func,
-    delete,
-    update,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Index,
+    Text,
+    UniqueConstraint,
+    delete,
+    func,
+    or_,
+    select,
+    update,
+)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 class Calendar(Base):
-    __tablename__ = 'calendar'
+    __tablename__ = "calendar"
 
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
@@ -48,11 +45,11 @@ class Calendar(Base):
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (Index('ix_calendar_user', 'user_id'),)
+    __table_args__ = (Index("ix_calendar_user", "user_id"),)
 
 
 class CalendarEvent(Base):
-    __tablename__ = 'calendar_event'
+    __tablename__ = "calendar_event"
 
     id = Column(Text, primary_key=True)
     calendar_id = Column(Text, nullable=False)
@@ -73,26 +70,26 @@ class CalendarEvent(Base):
     updated_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
-        Index('ix_calendar_event_calendar', 'calendar_id', 'start_at'),
-        Index('ix_calendar_event_user_date', 'user_id', 'start_at'),
+        Index("ix_calendar_event_calendar", "calendar_id", "start_at"),
+        Index("ix_calendar_event_user_date", "user_id", "start_at"),
     )
 
 
 class CalendarEventAttendee(Base):
-    __tablename__ = 'calendar_event_attendee'
+    __tablename__ = "calendar_event_attendee"
 
     id = Column(Text, primary_key=True)
     event_id = Column(Text, nullable=False)
     user_id = Column(Text, nullable=False)
-    status = Column(Text, nullable=False, default='pending')
+    status = Column(Text, nullable=False, default="pending")
     meta = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('event_id', 'user_id', name='uq_event_attendee'),
-        Index('ix_calendar_event_attendee_user', 'user_id', 'status'),
+        UniqueConstraint("event_id", "user_id", name="uq_event_attendee"),
+        Index("ix_calendar_event_attendee_user", "user_id", "status"),
     )
 
 
@@ -107,12 +104,12 @@ class CalendarModel(BaseModel):
     id: str
     user_id: str
     name: str
-    color: Optional[str] = None
+    color: str | None = None
     is_default: bool = False
     is_system: bool = False
 
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    data: dict | None = None
+    meta: dict | None = None
 
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
@@ -121,24 +118,24 @@ class CalendarModel(BaseModel):
 
 
 class CalendarEventModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True, extra='allow')
+    model_config = ConfigDict(from_attributes=True, extra="allow")
 
     id: str
     calendar_id: str
     user_id: str
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     start_at: int
-    end_at: Optional[int] = None
+    end_at: int | None = None
     all_day: bool = False
-    rrule: Optional[str] = None
-    color: Optional[str] = None
-    location: Optional[str] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    rrule: str | None = None
+    color: str | None = None
+    location: str | None = None
+    data: dict | None = None
+    meta: dict | None = None
     is_cancelled: bool = False
 
-    attendees: list['CalendarEventAttendeeModel'] = Field(default_factory=list)
+    attendees: list["CalendarEventAttendeeModel"] = Field(default_factory=list)
 
     created_at: int
     updated_at: int
@@ -150,8 +147,8 @@ class CalendarEventAttendeeModel(BaseModel):
     id: str
     event_id: str
     user_id: str
-    status: str = 'pending'
-    meta: Optional[dict] = None
+    status: str = "pending"
+    meta: dict | None = None
 
     created_at: int
     updated_at: int
@@ -164,49 +161,49 @@ class CalendarEventAttendeeModel(BaseModel):
 
 class CalendarForm(BaseModel):
     name: str
-    color: Optional[str] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    access_grants: Optional[list[dict]] = None
+    color: str | None = None
+    data: dict | None = None
+    meta: dict | None = None
+    access_grants: list[dict] | None = None
 
 
 class CalendarUpdateForm(BaseModel):
-    name: Optional[str] = None
-    color: Optional[str] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    access_grants: Optional[list[dict]] = None
+    name: str | None = None
+    color: str | None = None
+    data: dict | None = None
+    meta: dict | None = None
+    access_grants: list[dict] | None = None
 
 
 class CalendarEventForm(BaseModel):
     calendar_id: str
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     start_at: int
-    end_at: Optional[int] = None
+    end_at: int | None = None
     all_day: bool = False
-    rrule: Optional[str] = None
-    color: Optional[str] = None
-    location: Optional[str] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    attendees: Optional[list[dict]] = None
+    rrule: str | None = None
+    color: str | None = None
+    location: str | None = None
+    data: dict | None = None
+    meta: dict | None = None
+    attendees: list[dict] | None = None
 
 
 class CalendarEventUpdateForm(BaseModel):
-    calendar_id: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    start_at: Optional[int] = None
-    end_at: Optional[int] = None
-    all_day: Optional[bool] = None
-    rrule: Optional[str] = None
-    color: Optional[str] = None
-    location: Optional[str] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-    is_cancelled: Optional[bool] = None
-    attendees: Optional[list[dict]] = None
+    calendar_id: str | None = None
+    title: str | None = None
+    description: str | None = None
+    start_at: int | None = None
+    end_at: int | None = None
+    all_day: bool | None = None
+    rrule: str | None = None
+    color: str | None = None
+    location: str | None = None
+    data: dict | None = None
+    meta: dict | None = None
+    is_cancelled: bool | None = None
+    attendees: list[dict] | None = None
 
 
 class RSVPForm(BaseModel):
@@ -219,7 +216,7 @@ class RSVPForm(BaseModel):
 
 
 class CalendarEventUserResponse(CalendarEventModel):
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class CalendarEventListResponse(BaseModel):
@@ -233,26 +230,36 @@ class CalendarEventListResponse(BaseModel):
 
 
 class CalendarTable:
-    async def _get_access_grants(self, calendar_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
-        return await AccessGrants.get_grants_by_resource('calendar', calendar_id, db=db)
+    async def _get_access_grants(
+        self, calendar_id: str, db: AsyncSession | None = None
+    ) -> list[AccessGrantModel]:
+        return await AccessGrants.get_grants_by_resource("calendar", calendar_id, db=db)
 
     async def _to_calendar_model(
         self,
         cal: Calendar,
-        access_grants: Optional[list[AccessGrantModel]] = None,
-        db: Optional[AsyncSession] = None,
+        access_grants: list[AccessGrantModel] | None = None,
+        db: AsyncSession | None = None,
     ) -> CalendarModel:
-        cal_data = CalendarModel.model_validate(cal).model_dump(exclude={'access_grants'})
-        cal_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(cal_data['id'], db=db)
+        cal_data = CalendarModel.model_validate(cal).model_dump(
+            exclude={"access_grants"}
+        )
+        cal_data["access_grants"] = (
+            access_grants
+            if access_grants is not None
+            else await self._get_access_grants(cal_data["id"], db=db)
         )
         return CalendarModel.model_validate(cal_data)
 
-    async def get_or_create_defaults(self, user_id: str, db: Optional[AsyncSession] = None) -> list[CalendarModel]:
+    async def get_or_create_defaults(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> list[CalendarModel]:
         """Return user's calendars, creating 'Personal' default if none exist."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Calendar).filter(Calendar.user_id == user_id).order_by(Calendar.created_at.asc())
+                select(Calendar)
+                .filter(Calendar.user_id == user_id)
+                .order_by(Calendar.created_at.asc())
             )
             calendars = result.scalars().all()
 
@@ -263,8 +270,8 @@ class CalendarTable:
             cal = Calendar(
                 id=str(uuid4()),
                 user_id=user_id,
-                name='Personal',
-                color='#3b82f6',
+                name="Personal",
+                color="#3b82f6",
                 is_default=True,
                 created_at=now,
                 updated_at=now,
@@ -273,7 +280,9 @@ class CalendarTable:
             await db.commit()
             return [CalendarModel.model_validate(cal)]
 
-    async def get_calendars_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> list[CalendarModel]:
+    async def get_calendars_by_user(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> list[CalendarModel]:
         """Owned + shared calendars."""
         async with get_async_db_context(db) as db:
             user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
@@ -284,9 +293,9 @@ class CalendarTable:
                 db=db,
                 query=stmt,
                 DocumentModel=Calendar,
-                filter={'user_id': user_id, 'group_ids': user_group_ids},
-                resource_type='calendar',
-                permission='read',
+                filter={"user_id": user_id, "group_ids": user_group_ids},
+                resource_type="calendar",
+                permission="read",
             )
             stmt = stmt.order_by(Calendar.created_at.asc())
 
@@ -297,19 +306,28 @@ class CalendarTable:
                 return await self.get_or_create_defaults(user_id, db=db)
 
             cal_ids = [c.id for c in calendars]
-            grants_map = await AccessGrants.get_grants_by_resources('calendar', cal_ids, db=db)
+            grants_map = await AccessGrants.get_grants_by_resources(
+                "calendar", cal_ids, db=db
+            )
 
-            return [await self._to_calendar_model(c, access_grants=grants_map.get(c.id, []), db=db) for c in calendars]
+            return [
+                await self._to_calendar_model(
+                    c, access_grants=grants_map.get(c.id, []), db=db
+                )
+                for c in calendars
+            ]
 
-    async def get_calendar_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[CalendarModel]:
+    async def get_calendar_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> CalendarModel | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Calendar).filter(Calendar.id == id))
             cal = result.scalars().first()
             return await self._to_calendar_model(cal, db=db) if cal else None
 
     async def insert_new_calendar(
-        self, user_id: str, form_data: CalendarForm, db: Optional[AsyncSession] = None
-    ) -> Optional[CalendarModel]:
+        self, user_id: str, form_data: CalendarForm, db: AsyncSession | None = None
+    ) -> CalendarModel | None:
         async with get_async_db_context(db) as db:
             now = int(time.time_ns())
             cal = Calendar(
@@ -326,12 +344,14 @@ class CalendarTable:
             db.add(cal)
             await db.commit()
             if form_data.access_grants is not None:
-                await AccessGrants.set_access_grants('calendar', cal.id, form_data.access_grants, db=db)
+                await AccessGrants.set_access_grants(
+                    "calendar", cal.id, form_data.access_grants, db=db
+                )
             return await self._to_calendar_model(cal, db=db)
 
     async def update_calendar_by_id(
-        self, id: str, form_data: CalendarUpdateForm, db: Optional[AsyncSession] = None
-    ) -> Optional[CalendarModel]:
+        self, id: str, form_data: CalendarUpdateForm, db: AsyncSession | None = None
+    ) -> CalendarModel | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Calendar).filter(Calendar.id == id))
             cal = result.scalars().first()
@@ -339,24 +359,26 @@ class CalendarTable:
                 return None
 
             update_data = form_data.model_dump(exclude_unset=True)
-            if 'name' in update_data:
-                cal.name = update_data['name']
-            if 'color' in update_data:
-                cal.color = update_data['color']
-            if 'data' in update_data:
-                cal.data = {**(cal.data or {}), **update_data['data']}
-            if 'meta' in update_data:
-                cal.meta = {**(cal.meta or {}), **update_data['meta']}
-            if 'access_grants' in update_data:
-                await AccessGrants.set_access_grants('calendar', id, update_data['access_grants'], db=db)
+            if "name" in update_data:
+                cal.name = update_data["name"]
+            if "color" in update_data:
+                cal.color = update_data["color"]
+            if "data" in update_data:
+                cal.data = {**(cal.data or {}), **update_data["data"]}
+            if "meta" in update_data:
+                cal.meta = {**(cal.meta or {}), **update_data["meta"]}
+            if "access_grants" in update_data:
+                await AccessGrants.set_access_grants(
+                    "calendar", id, update_data["access_grants"], db=db
+                )
 
             cal.updated_at = int(time.time_ns())
             await db.commit()
             return await self._to_calendar_model(cal, db=db)
 
     async def set_default_calendar(
-        self, user_id: str, calendar_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[CalendarModel]:
+        self, user_id: str, calendar_id: str, db: AsyncSession | None = None
+    ) -> CalendarModel | None:
         """Set a calendar as the user's default, clearing all others."""
         async with get_async_db_context(db) as db:
             # Clear all defaults for this user
@@ -366,7 +388,11 @@ class CalendarTable:
                 .values(is_default=False)
             )
             # Set the new default
-            result = await db.execute(select(Calendar).filter(Calendar.id == calendar_id, Calendar.user_id == user_id))
+            result = await db.execute(
+                select(Calendar).filter(
+                    Calendar.id == calendar_id, Calendar.user_id == user_id
+                )
+            )
             cal = result.scalars().first()
             if not cal:
                 return None
@@ -375,7 +401,9 @@ class CalendarTable:
             await db.commit()
             return await self._to_calendar_model(cal, db=db)
 
-    async def delete_calendar_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_calendar_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> bool:
         """Delete a non-default calendar. Cascades to events, attendees, and grants."""
         try:
             async with get_async_db_context(db) as db:
@@ -385,15 +413,21 @@ class CalendarTable:
                     return False
 
                 # Delete attendees for all events in this calendar
-                event_ids_result = await db.execute(select(CalendarEvent.id).filter(CalendarEvent.calendar_id == id))
+                event_ids_result = await db.execute(
+                    select(CalendarEvent.id).filter(CalendarEvent.calendar_id == id)
+                )
                 event_ids = [r[0] for r in event_ids_result.all()]
                 if event_ids:
                     await db.execute(
-                        delete(CalendarEventAttendee).filter(CalendarEventAttendee.event_id.in_(event_ids))
+                        delete(CalendarEventAttendee).filter(
+                            CalendarEventAttendee.event_id.in_(event_ids)
+                        )
                     )
 
                 # Delete events
-                await db.execute(delete(CalendarEvent).filter(CalendarEvent.calendar_id == id))
+                await db.execute(
+                    delete(CalendarEvent).filter(CalendarEvent.calendar_id == id)
+                )
 
                 # Delete calendar
                 await db.execute(delete(Calendar).filter(Calendar.id == id))
@@ -401,37 +435,45 @@ class CalendarTable:
 
             # Revoke access grants in a separate transaction to avoid
             # write-lock contention on SQLite when session sharing is off.
-            await AccessGrants.revoke_all_access('calendar', id)
+            await AccessGrants.revoke_all_access("calendar", id)
             return True
         except Exception as e:
-            log.exception(f'Failed to delete calendar {id}: {e}')
+            log.exception(f"Failed to delete calendar {id}: {e}")
             return False
 
 
 class CalendarEventTable:
     async def _get_attendees(
-        self, event_id: str, db: Optional[AsyncSession] = None
+        self, event_id: str, db: AsyncSession | None = None
     ) -> list[CalendarEventAttendeeModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
+            result = await db.execute(
+                select(CalendarEventAttendee).filter(
+                    CalendarEventAttendee.event_id == event_id
+                )
+            )
             rows = result.scalars().all()
             return [CalendarEventAttendeeModel.model_validate(r) for r in rows]
 
     async def _to_event_model(
         self,
         event: CalendarEvent,
-        attendees: Optional[list[CalendarEventAttendeeModel]] = None,
-        db: Optional[AsyncSession] = None,
+        attendees: list[CalendarEventAttendeeModel] | None = None,
+        db: AsyncSession | None = None,
     ) -> CalendarEventModel:
-        event_data = CalendarEventModel.model_validate(event).model_dump(exclude={'attendees'})
-        event_data['attendees'] = (
-            attendees if attendees is not None else await self._get_attendees(event_data['id'], db=db)
+        event_data = CalendarEventModel.model_validate(event).model_dump(
+            exclude={"attendees"}
+        )
+        event_data["attendees"] = (
+            attendees
+            if attendees is not None
+            else await self._get_attendees(event_data["id"], db=db)
         )
         return CalendarEventModel.model_validate(event_data)
 
     async def insert_new_event(
-        self, user_id: str, form_data: CalendarEventForm, db: Optional[AsyncSession] = None
-    ) -> Optional[CalendarEventModel]:
+        self, user_id: str, form_data: CalendarEventForm, db: AsyncSession | None = None
+    ) -> CalendarEventModel | None:
         async with get_async_db_context(db) as db:
             now = int(time.time_ns())
             event = CalendarEvent(
@@ -457,13 +499,19 @@ class CalendarEventTable:
 
             # Add attendees
             if form_data.attendees:
-                await CalendarEventAttendees.set_attendees(event.id, form_data.attendees, db=db)
+                await CalendarEventAttendees.set_attendees(
+                    event.id, form_data.attendees, db=db
+                )
 
             return await self._to_event_model(event, db=db)
 
-    async def get_event_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[CalendarEventModel]:
+    async def get_event_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> CalendarEventModel | None:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(CalendarEvent).filter(CalendarEvent.id == id))
+            result = await db.execute(
+                select(CalendarEvent).filter(CalendarEvent.id == id)
+            )
             event = result.scalars().first()
             return await self._to_event_model(event, db=db) if event else None
 
@@ -472,8 +520,8 @@ class CalendarEventTable:
         user_id: str,
         start: int,
         end: int,
-        calendar_ids: Optional[list[str]] = None,
-        db: Optional[AsyncSession] = None,
+        calendar_ids: list[str] | None = None,
+        db: AsyncSession | None = None,
     ) -> list[CalendarEventUserResponse]:
         """Fetch events visible to user within a date range.
 
@@ -490,20 +538,24 @@ class CalendarEventTable:
                 db=db,
                 query=cal_stmt,
                 DocumentModel=Calendar,
-                filter={'user_id': user_id, 'group_ids': user_group_ids},
-                resource_type='calendar',
-                permission='read',
+                filter={"user_id": user_id, "group_ids": user_group_ids},
+                resource_type="calendar",
+                permission="read",
             )
             cal_result = await db.execute(cal_stmt)
             accessible_cal_ids = [r[0] for r in cal_result.all()]
 
             if calendar_ids:
                 # Filter to requested calendars only
-                accessible_cal_ids = [c for c in accessible_cal_ids if c in calendar_ids]
+                accessible_cal_ids = [
+                    c for c in accessible_cal_ids if c in calendar_ids
+                ]
 
             # Also get event IDs where user is an attendee
             attendee_event_ids_result = await db.execute(
-                select(CalendarEventAttendee.event_id).filter(CalendarEventAttendee.user_id == user_id)
+                select(CalendarEventAttendee.event_id).filter(
+                    CalendarEventAttendee.user_id == user_id
+                )
             )
             attendee_event_ids = [r[0] for r in attendee_event_ids_result.all()]
 
@@ -530,8 +582,10 @@ class CalendarEventTable:
                             CalendarEvent.rrule.is_(None)
                             & (CalendarEvent.start_at < end)
                             & or_(
-                                CalendarEvent.end_at.is_(None) & (CalendarEvent.start_at >= start),
-                                CalendarEvent.end_at.isnot(None) & (CalendarEvent.end_at > start),
+                                CalendarEvent.end_at.is_(None)
+                                & (CalendarEvent.start_at >= start),
+                                CalendarEvent.end_at.isnot(None)
+                                & (CalendarEvent.end_at > start),
                             )
                         ),
                         # Recurring: fetch all (expansion in Python)
@@ -550,21 +604,31 @@ class CalendarEventTable:
             # Batch-load attendees for all events in one query (avoid N+1)
             event_ids = [event.id for event, _user in items]
             att_result = await db.execute(
-                select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id.in_(event_ids))
+                select(CalendarEventAttendee).filter(
+                    CalendarEventAttendee.event_id.in_(event_ids)
+                )
             )
             att_rows = att_result.scalars().all()
             att_map: dict[str, list[CalendarEventAttendeeModel]] = {}
             for a in att_rows:
-                att_map.setdefault(a.event_id, []).append(CalendarEventAttendeeModel.model_validate(a))
+                att_map.setdefault(a.event_id, []).append(
+                    CalendarEventAttendeeModel.model_validate(a)
+                )
 
             events = []
             for event, user in items:
-                event_data = CalendarEventModel.model_validate(event).model_dump(exclude={'attendees'})
-                event_data['attendees'] = att_map.get(event.id, [])
+                event_data = CalendarEventModel.model_validate(event).model_dump(
+                    exclude={"attendees"}
+                )
+                event_data["attendees"] = att_map.get(event.id, [])
                 events.append(
                     CalendarEventUserResponse(
                         **event_data,
-                        user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
+                        user=(
+                            UserResponse(**UserModel.model_validate(user).model_dump())
+                            if user
+                            else None
+                        ),
                     )
                 )
 
@@ -573,10 +637,10 @@ class CalendarEventTable:
     async def search_events(
         self,
         user_id: str,
-        query: Optional[str] = None,
+        query: str | None = None,
         skip: int = 0,
         limit: int = 30,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> CalendarEventListResponse:
         async with get_async_db_context(db) as db:
             user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
@@ -588,9 +652,9 @@ class CalendarEventTable:
                 db=db,
                 query=cal_stmt,
                 DocumentModel=Calendar,
-                filter={'user_id': user_id, 'group_ids': user_group_ids},
-                resource_type='calendar',
-                permission='read',
+                filter={"user_id": user_id, "group_ids": user_group_ids},
+                resource_type="calendar",
+                permission="read",
             )
             cal_result = await db.execute(cal_stmt)
             accessible_cal_ids = [r[0] for r in cal_result.all()]
@@ -607,7 +671,7 @@ class CalendarEventTable:
             )
 
             if query:
-                search = f'%{query}%'
+                search = f"%{query}%"
                 stmt = stmt.filter(
                     or_(
                         CalendarEvent.title.ilike(search),
@@ -618,7 +682,9 @@ class CalendarEventTable:
 
             stmt = stmt.order_by(CalendarEvent.start_at.desc())
 
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            count_result = await db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )
             total = count_result.scalar()
 
             if skip:
@@ -635,58 +701,75 @@ class CalendarEventTable:
             # Batch-load attendees
             event_ids = [event.id for event, _user in items]
             att_result = await db.execute(
-                select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id.in_(event_ids))
+                select(CalendarEventAttendee).filter(
+                    CalendarEventAttendee.event_id.in_(event_ids)
+                )
             )
             att_rows = att_result.scalars().all()
             att_map: dict[str, list[CalendarEventAttendeeModel]] = {}
             for a in att_rows:
-                att_map.setdefault(a.event_id, []).append(CalendarEventAttendeeModel.model_validate(a))
+                att_map.setdefault(a.event_id, []).append(
+                    CalendarEventAttendeeModel.model_validate(a)
+                )
 
             events = []
             for event, user in items:
-                event_data = CalendarEventModel.model_validate(event).model_dump(exclude={'attendees'})
-                event_data['attendees'] = att_map.get(event.id, [])
+                event_data = CalendarEventModel.model_validate(event).model_dump(
+                    exclude={"attendees"}
+                )
+                event_data["attendees"] = att_map.get(event.id, [])
                 events.append(
                     CalendarEventUserResponse(
                         **event_data,
-                        user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
+                        user=(
+                            UserResponse(**UserModel.model_validate(user).model_dump())
+                            if user
+                            else None
+                        ),
                     )
                 )
 
             return CalendarEventListResponse(items=events, total=total)
 
     async def update_event_by_id(
-        self, id: str, form_data: CalendarEventUpdateForm, db: Optional[AsyncSession] = None
-    ) -> Optional[CalendarEventModel]:
+        self,
+        id: str,
+        form_data: CalendarEventUpdateForm,
+        db: AsyncSession | None = None,
+    ) -> CalendarEventModel | None:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(CalendarEvent).filter(CalendarEvent.id == id))
+            result = await db.execute(
+                select(CalendarEvent).filter(CalendarEvent.id == id)
+            )
             event = result.scalars().first()
             if not event:
                 return None
 
             update_data = form_data.model_dump(exclude_unset=True)
             for field in [
-                'calendar_id',
-                'title',
-                'description',
-                'start_at',
-                'end_at',
-                'all_day',
-                'rrule',
-                'color',
-                'location',
-                'is_cancelled',
+                "calendar_id",
+                "title",
+                "description",
+                "start_at",
+                "end_at",
+                "all_day",
+                "rrule",
+                "color",
+                "location",
+                "is_cancelled",
             ]:
                 if field in update_data:
                     setattr(event, field, update_data[field])
 
-            if 'data' in update_data and update_data['data'] is not None:
-                event.data = {**(event.data or {}), **update_data['data']}
-            if 'meta' in update_data and update_data['meta'] is not None:
-                event.meta = {**(event.meta or {}), **update_data['meta']}
+            if "data" in update_data and update_data["data"] is not None:
+                event.data = {**(event.data or {}), **update_data["data"]}
+            if "meta" in update_data and update_data["meta"] is not None:
+                event.meta = {**(event.meta or {}), **update_data["meta"]}
 
-            if 'attendees' in update_data and update_data['attendees'] is not None:
-                await CalendarEventAttendees.set_attendees(id, update_data['attendees'], db=db)
+            if "attendees" in update_data and update_data["attendees"] is not None:
+                await CalendarEventAttendees.set_attendees(
+                    id, update_data["attendees"], db=db
+                )
 
             event.updated_at = int(time.time_ns())
             await db.commit()
@@ -696,8 +779,8 @@ class CalendarEventTable:
         self,
         now_ns: int,
         default_lookahead_ns: int,
-        db: Optional[AsyncSession] = None,
-    ) -> list[tuple[CalendarEventModel, Optional[str]]]:
+        db: AsyncSession | None = None,
+    ) -> list[tuple[CalendarEventModel, str | None]]:
         """Events starting between now and now + lookahead, for alert processing.
 
         Per-event lookahead is read from meta.alert_minutes (falls back to
@@ -727,8 +810,8 @@ class CalendarEventTable:
             model = CalendarEventModel.model_validate(event)
             # Determine per-event alert window
             alert_minutes = None
-            if model.meta and 'alert_minutes' in model.meta:
-                alert_minutes = model.meta['alert_minutes']
+            if model.meta and "alert_minutes" in model.meta:
+                alert_minutes = model.meta["alert_minutes"]
 
             if alert_minutes is not None:
                 if alert_minutes < 0:
@@ -743,10 +826,14 @@ class CalendarEventTable:
 
         return events
 
-    async def delete_event_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_event_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(delete(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == id))
+                await db.execute(
+                    delete(CalendarEventAttendee).filter(
+                        CalendarEventAttendee.event_id == id
+                    )
+                )
                 await db.execute(delete(CalendarEvent).filter(CalendarEvent.id == id))
                 await db.commit()
                 return True
@@ -756,7 +843,7 @@ class CalendarEventTable:
 
 class CalendarEventAttendeeTable:
     async def set_attendees(
-        self, event_id: str, attendees: list[dict], db: Optional[AsyncSession] = None
+        self, event_id: str, attendees: list[dict], db: AsyncSession | None = None
     ) -> list[CalendarEventAttendeeModel]:
         """Replace all attendees for an event.
 
@@ -764,7 +851,11 @@ class CalendarEventAttendeeTable:
         """
         async with get_async_db_context(db) as db:
             # Remove existing
-            await db.execute(delete(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
+            await db.execute(
+                delete(CalendarEventAttendee).filter(
+                    CalendarEventAttendee.event_id == event_id
+                )
+            )
 
             now = int(time.time_ns())
             models = []
@@ -772,9 +863,9 @@ class CalendarEventAttendeeTable:
                 row = CalendarEventAttendee(
                     id=str(uuid4()),
                     event_id=event_id,
-                    user_id=att['user_id'],
-                    status=att.get('status', 'pending'),
-                    meta=att.get('meta'),
+                    user_id=att["user_id"],
+                    status=att.get("status", "pending"),
+                    meta=att.get("meta"),
                     created_at=now,
                     updated_at=now,
                 )
@@ -785,8 +876,8 @@ class CalendarEventAttendeeTable:
             return models
 
     async def update_rsvp(
-        self, event_id: str, user_id: str, status: str, db: Optional[AsyncSession] = None
-    ) -> Optional[CalendarEventAttendeeModel]:
+        self, event_id: str, user_id: str, status: str, db: AsyncSession | None = None
+    ) -> CalendarEventAttendeeModel | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(CalendarEventAttendee).filter(
@@ -804,17 +895,28 @@ class CalendarEventAttendeeTable:
             return CalendarEventAttendeeModel.model_validate(att)
 
     async def get_attendees_by_event(
-        self, event_id: str, db: Optional[AsyncSession] = None
+        self, event_id: str, db: AsyncSession | None = None
     ) -> list[CalendarEventAttendeeModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
-            return [CalendarEventAttendeeModel.model_validate(r) for r in result.scalars().all()]
+            result = await db.execute(
+                select(CalendarEventAttendee).filter(
+                    CalendarEventAttendee.event_id == event_id
+                )
+            )
+            return [
+                CalendarEventAttendeeModel.model_validate(r)
+                for r in result.scalars().all()
+            ]
 
-    async def get_events_by_attendee(self, user_id: str, db: Optional[AsyncSession] = None) -> list[str]:
+    async def get_events_by_attendee(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> list[str]:
         """Return event IDs where user is an attendee."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(CalendarEventAttendee.event_id).filter(CalendarEventAttendee.user_id == user_id)
+                select(CalendarEventAttendee.event_id).filter(
+                    CalendarEventAttendee.user_id == user_id
+                )
             )
             return [r[0] for r in result.all()]
 

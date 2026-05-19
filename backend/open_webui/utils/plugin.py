@@ -1,18 +1,17 @@
+import logging
 import os
 import re
 import subprocess
 import sys
-from importlib import util
-import types
 import tempfile
-import logging
+import types
 from typing import Any
 
 from open_webui.env import (
+    ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
+    OFFLINE_MODE,
     PIP_OPTIONS,
     PIP_PACKAGE_INDEX_OPTIONS,
-    OFFLINE_MODE,
-    ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
 )
 from open_webui.models.functions import FunctionModel, Functions
 from open_webui.models.tools import Tools
@@ -20,7 +19,9 @@ from open_webui.models.tools import Tools
 log = logging.getLogger(__name__)
 
 
-def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = None) -> dict:
+def resolve_valves_schema_options(
+    valves_class: type, schema: dict, user: Any = None
+) -> dict:
     """
     Resolve dynamic options in a Valves schema.
 
@@ -64,16 +65,16 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
     Returns:
         Modified schema dict with resolved options
     """
-    if not schema or 'properties' not in schema:
+    if not schema or "properties" not in schema:
         return schema
 
     # Make a copy to avoid mutating the original
     schema = dict(schema)
-    schema['properties'] = dict(schema.get('properties', {}))
+    schema["properties"] = dict(schema.get("properties", {}))
 
-    for prop_name, prop_schema in list(schema['properties'].items()):
+    for prop_name, prop_schema in list(schema["properties"].items()):
         # Get the original field info from the Pydantic model
-        if not hasattr(valves_class, 'model_fields'):
+        if not hasattr(valves_class, "model_fields"):
             continue
 
         field_info = valves_class.model_fields.get(prop_name)
@@ -85,11 +86,11 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
         if not json_schema_extra or not isinstance(json_schema_extra, dict):
             continue
 
-        input_config = json_schema_extra.get('input')
+        input_config = json_schema_extra.get("input")
         if not input_config or not isinstance(input_config, dict):
             continue
 
-        options = input_config.get('options')
+        options = input_config.get("options")
         if options is None:
             continue
 
@@ -103,7 +104,9 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
         elif isinstance(options, str) and options:
             method = getattr(valves_class, options, None)
             if method is None or not callable(method):
-                log.warning(f"options '{options}' not found or not callable on {valves_class.__name__}")
+                log.warning(
+                    f"options '{options}' not found or not callable on {valves_class.__name__}"
+                )
                 continue
 
             try:
@@ -114,32 +117,40 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
 
                 # Prepare kwargs based on what the method accepts
                 kwargs = {}
-                if '__user__' in params and user is not None:
-                    kwargs['__user__'] = user.model_dump() if hasattr(user, 'model_dump') else user
-                if 'user' in params and user is not None:
-                    kwargs['user'] = user.model_dump() if hasattr(user, 'model_dump') else user
+                if "__user__" in params and user is not None:
+                    kwargs["__user__"] = (
+                        user.model_dump() if hasattr(user, "model_dump") else user
+                    )
+                if "user" in params and user is not None:
+                    kwargs["user"] = (
+                        user.model_dump() if hasattr(user, "model_dump") else user
+                    )
 
                 resolved_options = method(**kwargs) if kwargs else method()
 
                 # Validate return type
                 if not isinstance(resolved_options, list):
-                    log.warning(f"Method '{options}' did not return a list for {prop_name}")
+                    log.warning(
+                        f"Method '{options}' did not return a list for {prop_name}"
+                    )
                     continue
 
             except Exception as e:
-                log.warning(f'Failed to resolve options for {prop_name}: {e}')
+                log.warning(f"Failed to resolve options for {prop_name}: {e}")
                 continue
         else:
             # Invalid options type - skip
             continue
 
         # Update the schema with resolved options
-        schema['properties'][prop_name] = dict(prop_schema)
-        if 'input' not in schema['properties'][prop_name]:
-            schema['properties'][prop_name]['input'] = {'type': 'select'}
+        schema["properties"][prop_name] = dict(prop_schema)
+        if "input" not in schema["properties"][prop_name]:
+            schema["properties"][prop_name]["input"] = {"type": "select"}
         else:
-            schema['properties'][prop_name]['input'] = dict(schema['properties'][prop_name].get('input', {}))
-        schema['properties'][prop_name]['input']['options'] = resolved_options
+            schema["properties"][prop_name]["input"] = dict(
+                schema["properties"][prop_name].get("input", {})
+            )
+        schema["properties"][prop_name]["input"]["options"] = resolved_options
 
     return schema
 
@@ -151,7 +162,7 @@ def extract_frontmatter(content):
     frontmatter = {}
     frontmatter_started = False
     frontmatter_ended = False
-    frontmatter_pattern = re.compile(r'^\s*([a-z_]+):\s*(.*)\s*$', re.IGNORECASE)
+    frontmatter_pattern = re.compile(r"^\s*([a-z_]+):\s*(.*)\s*$", re.IGNORECASE)
 
     try:
         lines = content.splitlines()
@@ -174,7 +185,7 @@ def extract_frontmatter(content):
                     frontmatter[key.strip()] = value.strip()
 
     except Exception as e:
-        log.exception(f'Failed to extract frontmatter: {e}')
+        log.exception(f"Failed to extract frontmatter: {e}")
         return {}
 
     return frontmatter
@@ -185,10 +196,10 @@ def replace_imports(content):
     Replace the import paths in the content.
     """
     replacements = {
-        'from utils': 'from open_webui.utils',
-        'from apps': 'from open_webui.apps',
-        'from main': 'from open_webui.main',
-        'from config': 'from open_webui.config',
+        "from utils": "from open_webui.utils",
+        "from apps": "from open_webui.apps",
+        "from main": "from open_webui.main",
+        "from config": "from open_webui.config",
     }
 
     for old, new in replacements.items():
@@ -203,18 +214,18 @@ async def load_tool_module_by_id(tool_id, content=None):
     if content is None:
         tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
-            raise Exception(f'Toolkit not found: {tool_id}')
+            raise Exception(f"Toolkit not found: {tool_id}")
 
         content = tool.content
 
         content = replace_imports(content)
-        await Tools.update_tool_by_id(tool_id, {'content': content})
+        await Tools.update_tool_by_id(tool_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
-        install_frontmatter_requirements(frontmatter.get('requirements', ''))
+        install_frontmatter_requirements(frontmatter.get("requirements", ""))
 
-    module_name = f'tool_{tool_id}'
+    module_name = f"tool_{tool_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -223,22 +234,22 @@ async def load_tool_module_by_id(tool_id, content=None):
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     temp_file.close()
     try:
-        with open(temp_file.name, 'w', encoding='utf-8') as f:
+        with open(temp_file.name, "w", encoding="utf-8") as f:
             f.write(content)
-        module.__dict__['__file__'] = temp_file.name
+        module.__dict__["__file__"] = temp_file.name
 
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        log.info(f'Loaded module: {module.__name__}')
+        log.info(f"Loaded module: {module.__name__}")
 
         # Create and return the object if the class 'Tools' is found in the module
-        if hasattr(module, 'Tools'):
+        if hasattr(module, "Tools"):
             return module.Tools(), frontmatter
         else:
-            raise Exception('No Tools class found in the module')
+            raise Exception("No Tools class found in the module")
     except Exception as e:
-        log.error(f'Error loading module: {tool_id}: {e}')
+        log.error(f"Error loading module: {tool_id}: {e}")
         del sys.modules[module_name]  # Clean up
         raise e
     finally:
@@ -249,16 +260,16 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
     if content is None:
         function = await Functions.get_function_by_id(function_id)
         if not function:
-            raise Exception(f'Function not found: {function_id}')
+            raise Exception(f"Function not found: {function_id}")
         content = function.content
 
         content = replace_imports(content)
-        await Functions.update_function_by_id(function_id, {'content': content})
+        await Functions.update_function_by_id(function_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
-        install_frontmatter_requirements(frontmatter.get('requirements', ''))
+        install_frontmatter_requirements(frontmatter.get("requirements", ""))
 
-    module_name = f'function_{function_id}'
+    module_name = f"function_{function_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -267,30 +278,30 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     temp_file.close()
     try:
-        with open(temp_file.name, 'w', encoding='utf-8') as f:
+        with open(temp_file.name, "w", encoding="utf-8") as f:
             f.write(content)
-        module.__dict__['__file__'] = temp_file.name
+        module.__dict__["__file__"] = temp_file.name
 
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        log.info(f'Loaded module: {module.__name__}')
+        log.info(f"Loaded module: {module.__name__}")
 
         # Create appropriate object based on available class type in the module
-        if hasattr(module, 'Pipe'):
-            return module.Pipe(), 'pipe', frontmatter
-        elif hasattr(module, 'Filter'):
-            return module.Filter(), 'filter', frontmatter
-        elif hasattr(module, 'Action'):
-            return module.Action(), 'action', frontmatter
+        if hasattr(module, "Pipe"):
+            return module.Pipe(), "pipe", frontmatter
+        elif hasattr(module, "Filter"):
+            return module.Filter(), "filter", frontmatter
+        elif hasattr(module, "Action"):
+            return module.Action(), "action", frontmatter
         else:
-            raise Exception('No Function class found in the module')
+            raise Exception("No Function class found in the module")
     except Exception as e:
-        log.error(f'Error loading module: {function_id}: {e}')
+        log.error(f"Error loading module: {function_id}: {e}")
         # Cleanup by removing the module in case of error
         del sys.modules[module_name]
 
-        await Functions.update_function_by_id(function_id, {'is_active': False})
+        await Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
     finally:
         os.unlink(temp_file.name)
@@ -301,32 +312,35 @@ async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
         # Always load from the database by default
         tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
-            raise Exception(f'Tool not found: {tool_id}')
+            raise Exception(f"Tool not found: {tool_id}")
         content = tool.content
 
         new_content = replace_imports(content)
         if new_content != content:
             content = new_content
             # Update the tool content in the database
-            await Tools.update_tool_by_id(tool_id, {'content': content})
+            await Tools.update_tool_by_id(tool_id, {"content": content})
 
-        if (hasattr(request.app.state, 'TOOL_CONTENTS') and tool_id in request.app.state.TOOL_CONTENTS) and (
-            hasattr(request.app.state, 'TOOLS') and tool_id in request.app.state.TOOLS
+        if (
+            hasattr(request.app.state, "TOOL_CONTENTS")
+            and tool_id in request.app.state.TOOL_CONTENTS
+        ) and (
+            hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS
         ):
             if request.app.state.TOOL_CONTENTS[tool_id] == content:
                 return request.app.state.TOOLS[tool_id], None
 
         tool_module, frontmatter = await load_tool_module_by_id(tool_id, content)
     else:
-        if hasattr(request.app.state, 'TOOLS') and tool_id in request.app.state.TOOLS:
+        if hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS:
             return request.app.state.TOOLS[tool_id], None
 
         tool_module, frontmatter = await load_tool_module_by_id(tool_id)
 
-    if not hasattr(request.app.state, 'TOOLS'):
+    if not hasattr(request.app.state, "TOOLS"):
         request.app.state.TOOLS = {}
 
-    if not hasattr(request.app.state, 'TOOL_CONTENTS'):
+    if not hasattr(request.app.state, "TOOL_CONTENTS"):
         request.app.state.TOOL_CONTENTS = {}
 
     request.app.state.TOOLS[tool_id] = tool_module
@@ -346,35 +360,46 @@ async def get_function_module_from_cache(
         if function is None:
             function = await Functions.get_function_by_id(function_id)
         if not function:
-            raise Exception(f'Function not found: {function_id}')
+            raise Exception(f"Function not found: {function_id}")
         content = function.content
 
         new_content = replace_imports(content)
         if new_content != content:
             content = new_content
             # Update the function content in the database
-            await Functions.update_function_by_id(function_id, {'content': content})
+            await Functions.update_function_by_id(function_id, {"content": content})
 
         if (
-            hasattr(request.app.state, 'FUNCTION_CONTENTS') and function_id in request.app.state.FUNCTION_CONTENTS
-        ) and (hasattr(request.app.state, 'FUNCTIONS') and function_id in request.app.state.FUNCTIONS):
+            hasattr(request.app.state, "FUNCTION_CONTENTS")
+            and function_id in request.app.state.FUNCTION_CONTENTS
+        ) and (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
             if request.app.state.FUNCTION_CONTENTS[function_id] == content:
                 return request.app.state.FUNCTIONS[function_id], None, None
 
-        function_module, function_type, frontmatter = await load_function_module_by_id(function_id, content)
+        function_module, function_type, frontmatter = await load_function_module_by_id(
+            function_id, content
+        )
     else:
         # Load from cache (e.g. "stream" hook)
         # This is useful for performance reasons
 
-        if hasattr(request.app.state, 'FUNCTIONS') and function_id in request.app.state.FUNCTIONS:
+        if (
+            hasattr(request.app.state, "FUNCTIONS")
+            and function_id in request.app.state.FUNCTIONS
+        ):
             return request.app.state.FUNCTIONS[function_id], None, None
 
-        function_module, function_type, frontmatter = await load_function_module_by_id(function_id)
+        function_module, function_type, frontmatter = await load_function_module_by_id(
+            function_id
+        )
 
-    if not hasattr(request.app.state, 'FUNCTIONS'):
+    if not hasattr(request.app.state, "FUNCTIONS"):
         request.app.state.FUNCTIONS = {}
 
-    if not hasattr(request.app.state, 'FUNCTION_CONTENTS'):
+    if not hasattr(request.app.state, "FUNCTION_CONTENTS"):
         request.app.state.FUNCTION_CONTENTS = {}
 
     request.app.state.FUNCTIONS[function_id] = function_module
@@ -389,24 +414,31 @@ _installed_requirements = set()
 def install_frontmatter_requirements(requirements: str):
     global _installed_requirements
     if not ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS:
-        log.info('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS is disabled, skipping installation of requirements.')
+        log.info(
+            "ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS is disabled, skipping installation of requirements."
+        )
         return
 
     if OFFLINE_MODE:
-        log.info('Offline mode enabled, skipping installation of requirements.')
+        log.info("Offline mode enabled, skipping installation of requirements.")
         return
 
     if requirements:
         try:
-            req_list = [req.strip() for req in requirements.split(',')]
-            new_reqs = [req for req in req_list if req and req not in _installed_requirements]
+            req_list = [req.strip() for req in requirements.split(",")]
+            new_reqs = [
+                req for req in req_list if req and req not in _installed_requirements
+            ]
 
             if not new_reqs:
                 return
 
             log.info(f'Installing requirements: {" ".join(new_reqs)}')
             subprocess.check_call(
-                [sys.executable, '-m', 'pip', 'install'] + PIP_OPTIONS + new_reqs + PIP_PACKAGE_INDEX_OPTIONS
+                [sys.executable, "-m", "pip", "install"]
+                + PIP_OPTIONS
+                + new_reqs
+                + PIP_PACKAGE_INDEX_OPTIONS
             )
             _installed_requirements.update(new_reqs)
         except Exception as e:
@@ -414,7 +446,7 @@ def install_frontmatter_requirements(requirements: str):
             raise e
 
     else:
-        log.info('No requirements found in frontmatter.')
+        log.info("No requirements found in frontmatter.")
 
 
 async def install_tool_and_function_dependencies():
@@ -428,19 +460,19 @@ async def install_tool_and_function_dependencies():
     function_list = await Functions.get_functions(active_only=True)
     tool_list = await Tools.get_tools()
 
-    all_dependencies = ''
+    all_dependencies = ""
     try:
         for function in function_list:
             frontmatter = extract_frontmatter(replace_imports(function.content))
-            if dependencies := frontmatter.get('requirements'):
-                all_dependencies += f'{dependencies}, '
+            if dependencies := frontmatter.get("requirements"):
+                all_dependencies += f"{dependencies}, "
         for tool in tool_list:
             # Only install requirements for admin tools
-            if tool.user and tool.user.role == 'admin':
+            if tool.user and tool.user.role == "admin":
                 frontmatter = extract_frontmatter(replace_imports(tool.content))
-                if dependencies := frontmatter.get('requirements'):
-                    all_dependencies += f'{dependencies}, '
+                if dependencies := frontmatter.get("requirements"):
+                    all_dependencies += f"{dependencies}, "
 
-        install_frontmatter_requirements(all_dependencies.strip(', '))
+        install_frontmatter_requirements(all_dependencies.strip(", "))
     except Exception as e:
-        log.error(f'Error installing requirements: {e}')
+        log.error(f"Error installing requirements: {e}")

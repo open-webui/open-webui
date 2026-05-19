@@ -1,20 +1,19 @@
 import logging
-from typing import Optional
 
 import requests
-from requests.auth import HTTPDigestAuth
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from requests.auth import HTTPDigestAuth
 
 log = logging.getLogger(__name__)
 
 
 def search_yacy(
     query_url: str,
-    username: Optional[str],
-    password: Optional[str],
+    username: str | None,
+    password: str | None,
     query: str,
     count: int,
-    filter_list: Optional[list[str]] = None,
+    filter_list: list[str] | None = None,
 ) -> list[SearchResult]:
     """
     Search a Yacy instance for a given query and return the results as a list of SearchResult objects.
@@ -41,29 +40,29 @@ def search_yacy(
         yacy_auth = HTTPDigestAuth(username, password)
 
     params = {
-        'query': query,
-        'contentdom': 'text',
-        'resource': 'global',
-        'maximumRecords': count,
-        'nav': 'none',
+        "query": query,
+        "contentdom": "text",
+        "resource": "global",
+        "maximumRecords": count,
+        "nav": "none",
     }
 
     # Check if provided a json API URL
-    if not query_url.endswith('yacysearch.json'):
+    if not query_url.endswith("yacysearch.json"):
         # Strip all query parameters from the URL
-        query_url = query_url.rstrip('/') + '/yacysearch.json'
+        query_url = query_url.rstrip("/") + "/yacysearch.json"
 
-    log.debug(f'searching {query_url}')
+    log.debug(f"searching {query_url}")
 
     response = requests.get(
         query_url,
         auth=yacy_auth,
         headers={
-            'User-Agent': 'Open WebUI (https://github.com/open-webui/open-webui) RAG Bot',
-            'Accept': 'text/html',
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Connection': 'keep-alive',
+            "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
+            "Accept": "text/html",
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Connection": "keep-alive",
         },
         params=params,
     )
@@ -71,15 +70,15 @@ def search_yacy(
     response.raise_for_status()  # Raise an exception for HTTP errors.
 
     json_response = response.json()
-    results = json_response.get('channels', [{}])[0].get('items', [])
-    sorted_results = sorted(results, key=lambda x: x.get('ranking', 0), reverse=True)
+    results = json_response.get("channels", [{}])[0].get("items", [])
+    sorted_results = sorted(results, key=lambda x: x.get("ranking", 0), reverse=True)
     if filter_list:
         sorted_results = get_filtered_results(sorted_results, filter_list)
     return [
         SearchResult(
-            link=result['link'],
-            title=result.get('title'),
-            snippet=result.get('description'),
+            link=result["link"],
+            title=result.get("title"),
+            snippet=result.get("description"),
         )
         for result in sorted_results[:count]
     ]

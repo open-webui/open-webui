@@ -1,29 +1,28 @@
+import datetime
 import time
-from typing import Optional
-
-from sqlalchemy import select, delete, update, func, or_, case, exists
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import Base, JSONField, get_async_db_context
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
-
+from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.misc import throttle
 from open_webui.utils.validate import validate_profile_image_url
-
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from sqlalchemy import (
-    BigInteger,
     JSON,
+    BigInteger,
     Column,
-    String,
-    Boolean,
-    Text,
     Date,
-    cast,
+    String,
+    Text,
+    case,
+    delete,
+    exists,
+    func,
+    or_,
+    select,
+    update,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-
-import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # User DB Schema
@@ -33,13 +32,13 @@ import datetime
 
 
 class UserSettings(BaseModel):
-    ui: Optional[dict] = {}
-    model_config = ConfigDict(extra='allow')
+    ui: dict | None = {}
+    model_config = ConfigDict(extra="allow")
     pass
 
 
 class User(Base):
-    __tablename__ = 'user'
+    __tablename__ = "user"
 
     id = Column(String, primary_key=True, unique=True)
     email = Column(String)
@@ -76,29 +75,29 @@ class UserModel(BaseModel):
     id: str
 
     email: str
-    username: Optional[str] = None
-    role: str = 'pending'
+    username: str | None = None
+    role: str = "pending"
 
     name: str
 
-    profile_image_url: Optional[str] = None
-    profile_banner_image_url: Optional[str] = None
+    profile_image_url: str | None = None
+    profile_banner_image_url: str | None = None
 
-    bio: Optional[str] = None
-    gender: Optional[str] = None
-    date_of_birth: Optional[datetime.date] = None
-    timezone: Optional[str] = None
+    bio: str | None = None
+    gender: str | None = None
+    date_of_birth: datetime.date | None = None
+    timezone: str | None = None
 
-    presence_state: Optional[str] = None
-    status_emoji: Optional[str] = None
-    status_message: Optional[str] = None
-    status_expires_at: Optional[int] = None
+    presence_state: str | None = None
+    status_emoji: str | None = None
+    status_message: str | None = None
+    status_expires_at: int | None = None
 
-    info: Optional[dict] = None
-    settings: Optional[UserSettings] = None
+    info: dict | None = None
+    settings: UserSettings | None = None
 
-    oauth: Optional[dict] = None
-    scim: Optional[dict] = None
+    oauth: dict | None = None
+    scim: dict | None = None
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -106,10 +105,10 @@ class UserModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def set_profile_image_url(self):
         if not self.profile_image_url:
-            self.profile_image_url = f'/api/v1/users/{self.id}/profile/image'
+            self.profile_image_url = f"/api/v1/users/{self.id}/profile/image"
         return self
 
 
@@ -120,7 +119,7 @@ class UserStatusModel(UserModel):
 
 
 class ApiKey(Base):
-    __tablename__ = 'api_key'
+    __tablename__ = "api_key"
 
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text, nullable=False)
@@ -136,9 +135,9 @@ class ApiKeyModel(BaseModel):
     id: str
     user_id: str
     key: str
-    data: Optional[dict] = None
-    expires_at: Optional[int] = None
-    last_used_at: Optional[int] = None
+    data: dict | None = None
+    expires_at: int | None = None
+    last_used_at: int | None = None
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
@@ -153,11 +152,11 @@ class ApiKeyModel(BaseModel):
 class UpdateProfileForm(BaseModel):
     profile_image_url: str
     name: str
-    bio: Optional[str] = None
-    gender: Optional[str] = None
-    date_of_birth: Optional[datetime.date] = None
+    bio: str | None = None
+    gender: str | None = None
+    date_of_birth: datetime.date | None = None
 
-    @field_validator('profile_image_url')
+    @field_validator("profile_image_url")
     @classmethod
     def check_profile_image_url(cls, v: str) -> str:
         return validate_profile_image_url(v)
@@ -168,7 +167,7 @@ class UserGroupIdsModel(UserModel):
 
 
 class UserModelResponse(UserModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
 
 
 class UserListResponse(BaseModel):
@@ -182,9 +181,9 @@ class UserGroupIdsListResponse(BaseModel):
 
 
 class UserStatus(BaseModel):
-    status_emoji: Optional[str] = None
-    status_message: Optional[str] = None
-    status_expires_at: Optional[int] = None
+    status_emoji: str | None = None
+    status_message: str | None = None
+    status_expires_at: int | None = None
 
 
 class UserInfoResponse(UserStatus):
@@ -192,8 +191,8 @@ class UserInfoResponse(UserStatus):
     name: str
     email: str
     role: str
-    bio: Optional[str] = None
-    groups: Optional[list] = []
+    bio: str | None = None
+    groups: list | None = []
     is_active: bool = False
 
 
@@ -205,7 +204,7 @@ class UserIdNameResponse(BaseModel):
 class UserIdNameStatusResponse(UserStatus):
     id: str
     name: str
-    is_active: Optional[bool] = None
+    is_active: bool | None = None
 
 
 class UserInfoListResponse(BaseModel):
@@ -239,15 +238,15 @@ class UserRoleUpdateForm(BaseModel):
 
 
 class UserUpdateForm(BaseModel):
-    role: Optional[str] = None
-    name: Optional[str] = None
-    email: Optional[str] = None
-    profile_image_url: Optional[str] = None
-    password: Optional[str] = None
+    role: str | None = None
+    name: str | None = None
+    email: str | None = None
+    profile_image_url: str | None = None
+    password: str | None = None
 
-    @field_validator('profile_image_url', mode='before')
+    @field_validator("profile_image_url", mode="before")
     @classmethod
-    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+    def check_profile_image_url(cls, v: str | None) -> str | None:
         if v is None:
             return v
         return validate_profile_image_url(v)
@@ -259,25 +258,25 @@ class UsersTable:
         id: str,
         name: str,
         email: str,
-        profile_image_url: str = '/user.png',
-        role: str = 'pending',
-        username: Optional[str] = None,
-        oauth: Optional[dict] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[UserModel]:
+        profile_image_url: str = "/user.png",
+        role: str = "pending",
+        username: str | None = None,
+        oauth: dict | None = None,
+        db: AsyncSession | None = None,
+    ) -> UserModel | None:
         async with get_async_db_context(db) as db:
             user = UserModel(
                 **{
-                    'id': id,
-                    'email': email,
-                    'name': name,
-                    'role': role,
-                    'profile_image_url': profile_image_url,
-                    'last_active_at': int(time.time()),
-                    'created_at': int(time.time()),
-                    'updated_at': int(time.time()),
-                    'username': username,
-                    'oauth': oauth,
+                    "id": id,
+                    "email": email,
+                    "name": name,
+                    "role": role,
+                    "profile_image_url": profile_image_url,
+                    "last_active_at": int(time.time()),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                    "username": username,
+                    "oauth": oauth,
                 }
             )
             result = User(**user.model_dump())
@@ -289,7 +288,9 @@ class UsersTable:
             else:
                 return None
 
-    async def get_user_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def get_user_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -298,58 +299,73 @@ class UsersTable:
         except Exception:
             return None
 
-    async def get_user_by_api_key(self, api_key: str, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def get_user_by_api_key(
+        self, api_key: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(
-                    select(User).join(ApiKey, User.id == ApiKey.user_id).filter(ApiKey.key == api_key)
+                    select(User)
+                    .join(ApiKey, User.id == ApiKey.user_id)
+                    .filter(ApiKey.key == api_key)
                 )
                 user = result.scalars().first()
                 return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
-    async def get_user_by_email(self, email: str, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def get_user_by_email(
+        self, email: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter(func.lower(User.email) == email.lower()))
+                result = await db.execute(
+                    select(User).filter(func.lower(User.email) == email.lower())
+                )
                 user = result.scalars().first()
                 return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
     async def get_user_by_oauth_sub(
-        self, provider: str, sub: str, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, provider: str, sub: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 dialect_name = db.bind.dialect.name
 
                 stmt = select(User)
-                if dialect_name == 'sqlite':
-                    stmt = stmt.filter(User.oauth.contains({provider: {'sub': sub}}))
-                elif dialect_name == 'postgresql':
-                    stmt = stmt.filter(User.oauth[provider].cast(JSONB)['sub'].astext == sub)
+                if dialect_name == "sqlite":
+                    stmt = stmt.filter(User.oauth.contains({provider: {"sub": sub}}))
+                elif dialect_name == "postgresql":
+                    stmt = stmt.filter(
+                        User.oauth[provider].cast(JSONB)["sub"].astext == sub
+                    )
 
                 result = await db.execute(stmt)
                 user = result.scalars().first()
                 return UserModel.model_validate(user) if user else None
-        except Exception as e:
+        except Exception:
             # You may want to log the exception here
             return None
 
     async def get_user_by_scim_external_id(
-        self, provider: str, external_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, provider: str, external_id: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 dialect_name = db.bind.dialect.name
 
                 stmt = select(User)
-                if dialect_name == 'sqlite':
-                    stmt = stmt.filter(User.scim.contains({provider: {'external_id': external_id}}))
-                elif dialect_name == 'postgresql':
-                    stmt = stmt.filter(User.scim[provider].cast(JSONB)['external_id'].astext == external_id)
+                if dialect_name == "sqlite":
+                    stmt = stmt.filter(
+                        User.scim.contains({provider: {"external_id": external_id}})
+                    )
+                elif dialect_name == "postgresql":
+                    stmt = stmt.filter(
+                        User.scim[provider].cast(JSONB)["external_id"].astext
+                        == external_id
+                    )
 
                 result = await db.execute(stmt)
                 user = result.scalars().first()
@@ -359,30 +375,30 @@ class UsersTable:
 
     async def get_users(
         self,
-        filter: Optional[dict] = None,
-        skip: Optional[int] = None,
-        limit: Optional[int] = None,
-        db: Optional[AsyncSession] = None,
+        filter: dict | None = None,
+        skip: int | None = None,
+        limit: int | None = None,
+        db: AsyncSession | None = None,
     ) -> dict:
         async with get_async_db_context(db) as db:
             # Import here to avoid circular imports
-            from open_webui.models.groups import GroupMember
             from open_webui.models.channels import ChannelMember
+            from open_webui.models.groups import GroupMember
 
             # Join GroupMember so we can order by group_id when requested
             stmt = select(User)
 
             if filter:
-                query_key = filter.get('query')
+                query_key = filter.get("query")
                 if query_key:
                     stmt = stmt.filter(
                         or_(
-                            User.name.ilike(f'%{query_key}%'),
-                            User.email.ilike(f'%{query_key}%'),
+                            User.name.ilike(f"%{query_key}%"),
+                            User.email.ilike(f"%{query_key}%"),
                         )
                     )
 
-                channel_id = filter.get('channel_id')
+                channel_id = filter.get("channel_id")
                 if channel_id:
                     stmt = stmt.filter(
                         exists(
@@ -393,13 +409,13 @@ class UsersTable:
                         )
                     )
 
-                user_ids = filter.get('user_ids')
-                group_ids = filter.get('group_ids')
+                user_ids = filter.get("user_ids")
+                group_ids = filter.get("group_ids")
 
                 if isinstance(user_ids, list) and isinstance(group_ids, list):
                     # If both are empty lists, return no users
                     if not user_ids and not group_ids:
-                        return {'users': [], 'total': 0}
+                        return {"users": [], "total": 0}
 
                 if user_ids:
                     stmt = stmt.filter(User.id.in_(user_ids))
@@ -414,21 +430,21 @@ class UsersTable:
                         )
                     )
 
-                roles = filter.get('roles')
+                roles = filter.get("roles")
                 if roles:
-                    include_roles = [role for role in roles if not role.startswith('!')]
-                    exclude_roles = [role[1:] for role in roles if role.startswith('!')]
+                    include_roles = [role for role in roles if not role.startswith("!")]
+                    exclude_roles = [role[1:] for role in roles if role.startswith("!")]
 
                     if include_roles:
                         stmt = stmt.filter(User.role.in_(include_roles))
                     if exclude_roles:
                         stmt = stmt.filter(~User.role.in_(exclude_roles))
 
-                order_by = filter.get('order_by')
-                direction = filter.get('direction')
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
 
-                if order_by and order_by.startswith('group_id:'):
-                    group_id = order_by.split(':', 1)[1]
+                if order_by and order_by.startswith("group_id:"):
+                    group_id = order_by.split(":", 1)[1]
 
                     # Subquery that checks if the user belongs to the group
                     membership_exists = exists(
@@ -441,42 +457,42 @@ class UsersTable:
                     # CASE: user in group → 1, user not in group → 0
                     group_sort = case((membership_exists, 1), else_=0)
 
-                    if direction == 'asc':
+                    if direction == "asc":
                         stmt = stmt.order_by(group_sort.asc(), User.name.asc())
                     else:
                         stmt = stmt.order_by(group_sort.desc(), User.name.asc())
 
-                elif order_by == 'name':
-                    if direction == 'asc':
+                elif order_by == "name":
+                    if direction == "asc":
                         stmt = stmt.order_by(User.name.asc())
                     else:
                         stmt = stmt.order_by(User.name.desc())
 
-                elif order_by == 'email':
-                    if direction == 'asc':
+                elif order_by == "email":
+                    if direction == "asc":
                         stmt = stmt.order_by(User.email.asc())
                     else:
                         stmt = stmt.order_by(User.email.desc())
 
-                elif order_by == 'created_at':
-                    if direction == 'asc':
+                elif order_by == "created_at":
+                    if direction == "asc":
                         stmt = stmt.order_by(User.created_at.asc())
                     else:
                         stmt = stmt.order_by(User.created_at.desc())
 
-                elif order_by == 'last_active_at':
-                    if direction == 'asc':
+                elif order_by == "last_active_at":
+                    if direction == "asc":
                         stmt = stmt.order_by(User.last_active_at.asc())
                     else:
                         stmt = stmt.order_by(User.last_active_at.desc())
 
-                elif order_by == 'updated_at':
-                    if direction == 'asc':
+                elif order_by == "updated_at":
+                    if direction == "asc":
                         stmt = stmt.order_by(User.updated_at.asc())
                     else:
                         stmt = stmt.order_by(User.updated_at.desc())
-                elif order_by == 'role':
-                    if direction == 'asc':
+                elif order_by == "role":
+                    if direction == "asc":
                         stmt = stmt.order_by(User.role.asc())
                     else:
                         stmt = stmt.order_by(User.role.desc())
@@ -485,7 +501,9 @@ class UsersTable:
                 stmt = stmt.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            count_result = await db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )
             total = count_result.scalar()
 
             # correct pagination logic
@@ -497,48 +515,56 @@ class UsersTable:
             result = await db.execute(stmt)
             users = result.scalars().all()
             return {
-                'users': [UserModel.model_validate(user) for user in users],
-                'total': total,
+                "users": [UserModel.model_validate(user) for user in users],
+                "total": total,
             }
 
-    async def get_users_by_group_id(self, group_id: str, db: Optional[AsyncSession] = None) -> list[UserModel]:
+    async def get_users_by_group_id(
+        self, group_id: str, db: AsyncSession | None = None
+    ) -> list[UserModel]:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
             result = await db.execute(
-                select(User).join(GroupMember, User.id == GroupMember.user_id).filter(GroupMember.group_id == group_id)
+                select(User)
+                .join(GroupMember, User.id == GroupMember.user_id)
+                .filter(GroupMember.group_id == group_id)
             )
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
     async def get_users_by_user_ids(
-        self, user_ids: list[str], db: Optional[AsyncSession] = None
+        self, user_ids: list[str], db: AsyncSession | None = None
     ) -> list[UserStatusModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
-    async def get_num_users(self, db: Optional[AsyncSession] = None) -> Optional[int]:
+    async def get_num_users(self, db: AsyncSession | None = None) -> int | None:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(func.count()).select_from(User))
             return result.scalar()
 
-    async def has_users(self, db: Optional[AsyncSession] = None) -> bool:
+    async def has_users(self, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(exists(select(User))))
             return result.scalar()
 
-    async def get_first_user(self, db: Optional[AsyncSession] = None) -> UserModel:
+    async def get_first_user(self, db: AsyncSession | None = None) -> UserModel:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).order_by(User.created_at).limit(1))
+                result = await db.execute(
+                    select(User).order_by(User.created_at).limit(1)
+                )
                 user = result.scalars().first()
                 return UserModel.model_validate(user) if user else None
         except Exception:
             return None
 
-    async def get_user_webhook_url_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[str]:
+    async def get_user_webhook_url_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> str | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -547,22 +573,30 @@ class UsersTable:
                 if user.settings is None:
                     return None
                 else:
-                    return user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
+                    return (
+                        user.settings.get("ui", {})
+                        .get("notifications", {})
+                        .get("webhook_url", None)
+                    )
         except Exception:
             return None
 
-    async def get_num_users_active_today(self, db: Optional[AsyncSession] = None) -> Optional[int]:
+    async def get_num_users_active_today(
+        self, db: AsyncSession | None = None
+    ) -> int | None:
         async with get_async_db_context(db) as db:
             current_timestamp = int(datetime.datetime.now().timestamp())
             today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
             result = await db.execute(
-                select(func.count()).select_from(User).filter(User.last_active_at > today_midnight_timestamp)
+                select(func.count())
+                .select_from(User)
+                .filter(User.last_active_at > today_midnight_timestamp)
             )
             return result.scalar()
 
     async def update_user_role_by_id(
-        self, id: str, role: str, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, id: str, role: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -577,8 +611,8 @@ class UsersTable:
             return None
 
     async def update_user_status_by_id(
-        self, id: str, form_data: UserStatus, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, id: str, form_data: UserStatus, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -594,8 +628,8 @@ class UsersTable:
             return None
 
     async def update_user_profile_image_url_by_id(
-        self, id: str, profile_image_url: str, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, id: str, profile_image_url: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -610,17 +644,23 @@ class UsersTable:
             return None
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
-    async def update_last_active_by_id(self, id: str, db: Optional[AsyncSession] = None) -> None:
+    async def update_last_active_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> None:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(User).filter_by(id=id).values(last_active_at=int(time.time())))
+                await db.execute(
+                    update(User)
+                    .filter_by(id=id)
+                    .values(last_active_at=int(time.time()))
+                )
                 await db.commit()
         except Exception:
             pass
 
     async def update_user_oauth_by_id(
-        self, id: str, provider: str, sub: str, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, id: str, provider: str, sub: str, db: AsyncSession | None = None
+    ) -> UserModel | None:
         """
         Update or insert an OAuth provider/sub pair into the user's oauth JSON field.
         Example resulting structure:
@@ -640,7 +680,7 @@ class UsersTable:
                 oauth = user.oauth or {}
 
                 # Update or insert provider entry
-                oauth[provider] = {'sub': sub}
+                oauth[provider] = {"sub": sub}
 
                 # Persist updated JSON
                 await db.execute(update(User).filter_by(id=id).values(oauth=oauth))
@@ -656,8 +696,8 @@ class UsersTable:
         id: str,
         provider: str,
         external_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[UserModel]:
+        db: AsyncSession | None = None,
+    ) -> UserModel | None:
         """
         Update or insert a SCIM provider/external_id pair into the user's scim JSON field.
         Example resulting structure:
@@ -674,7 +714,7 @@ class UsersTable:
                     return None
 
                 scim = user.scim or {}
-                scim[provider] = {'external_id': external_id}
+                scim[provider] = {"external_id": external_id}
 
                 await db.execute(update(User).filter_by(id=id).values(scim=scim))
                 await db.commit()
@@ -684,7 +724,9 @@ class UsersTable:
         except Exception:
             return None
 
-    async def update_user_by_id(self, id: str, updated: dict, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def update_user_by_id(
+        self, id: str, updated: dict, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -701,8 +743,8 @@ class UsersTable:
             return None
 
     async def update_user_settings_by_id(
-        self, id: str, updated: dict, db: Optional[AsyncSession] = None
-    ) -> Optional[UserModel]:
+        self, id: str, updated: dict, db: AsyncSession | None = None
+    ) -> UserModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(User).filter_by(id=id))
@@ -717,7 +759,9 @@ class UsersTable:
 
                 user_settings.update(updated)
 
-                await db.execute(update(User).filter_by(id=id).values(settings=user_settings))
+                await db.execute(
+                    update(User).filter_by(id=id).values(settings=user_settings)
+                )
                 await db.commit()
 
                 result = await db.execute(select(User).filter_by(id=id))
@@ -726,10 +770,10 @@ class UsersTable:
         except Exception:
             return None
 
-    async def delete_user_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_user_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
-            from open_webui.models.groups import Groups
             from open_webui.models.chats import Chats
+            from open_webui.models.groups import Groups
 
             # Remove User from Groups
             await Groups.remove_user_from_all_groups(id)
@@ -748,7 +792,9 @@ class UsersTable:
         except Exception:
             return False
 
-    async def get_user_api_key_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[str]:
+    async def get_user_api_key_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> str | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(ApiKey).filter_by(user_id=id))
@@ -757,7 +803,9 @@ class UsersTable:
         except Exception:
             return None
 
-    async def update_user_api_key_by_id(self, id: str, api_key: str, db: Optional[AsyncSession] = None) -> bool:
+    async def update_user_api_key_by_id(
+        self, id: str, api_key: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(delete(ApiKey).filter_by(user_id=id))
@@ -765,7 +813,7 @@ class UsersTable:
 
                 now = int(time.time())
                 new_api_key = ApiKey(
-                    id=f'key_{id}',
+                    id=f"key_{id}",
                     user_id=id,
                     key=api_key,
                     created_at=now,
@@ -779,7 +827,9 @@ class UsersTable:
         except Exception:
             return False
 
-    async def delete_user_api_key_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_user_api_key_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(delete(ApiKey).filter_by(user_id=id))
@@ -788,27 +838,33 @@ class UsersTable:
         except Exception:
             return False
 
-    async def get_valid_user_ids(self, user_ids: list[str], db: Optional[AsyncSession] = None) -> list[str]:
+    async def get_valid_user_ids(
+        self, user_ids: list[str], db: AsyncSession | None = None
+    ) -> list[str]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()
             return [user.id for user in users]
 
-    async def get_super_admin_user(self, db: Optional[AsyncSession] = None) -> Optional[UserModel]:
+    async def get_super_admin_user(
+        self, db: AsyncSession | None = None
+    ) -> UserModel | None:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(User).filter_by(role='admin').limit(1))
+            result = await db.execute(select(User).filter_by(role="admin").limit(1))
             user = result.scalars().first()
             if user:
                 return UserModel.model_validate(user)
             else:
                 return None
 
-    async def get_active_user_count(self, db: Optional[AsyncSession] = None) -> int:
+    async def get_active_user_count(self, db: AsyncSession | None = None) -> int:
         async with get_async_db_context(db) as db:
             # Consider user active if last_active_at within the last 3 minutes
             three_minutes_ago = int(time.time()) - 180
             result = await db.execute(
-                select(func.count()).select_from(User).filter(User.last_active_at >= three_minutes_ago)
+                select(func.count())
+                .select_from(User)
+                .filter(User.last_active_at >= three_minutes_ago)
             )
             return result.scalar()
 
@@ -820,7 +876,9 @@ class UsersTable:
             return user.last_active_at >= three_minutes_ago
         return False
 
-    async def is_user_active(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def is_user_active(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(User).filter_by(id=user_id))
             user = result.scalars().first()

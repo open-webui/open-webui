@@ -30,14 +30,14 @@ import peewee as pw
 from peewee_migrate import Migrator
 
 with suppress(ImportError):
-    import playhouse.postgres_ext as pw_pext
+    pass
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
     migrator.add_fields(
-        'function',
+        "function",
         is_global=pw.BooleanField(default=False),
     )
 
@@ -45,4 +45,4 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_fields('function', 'is_global')
+    migrator.remove_fields("function", "is_global")

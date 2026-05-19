@@ -1,32 +1,35 @@
 import logging
-import json
 import time
 import uuid
-from typing import Optional
 
-from sqlalchemy import select, delete, update, func, or_, and_, text
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import exists
-from sqlalchemy.sql.expression import bindparam
-from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.tags import TagModel, Tag, Tags
-from open_webui.models.folders import Folders
-from open_webui.models.chat_messages import ChatMessage, ChatMessages
+from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.automations import AutomationRun
+from open_webui.models.chat_messages import ChatMessage, ChatMessages
+from open_webui.models.folders import Folders
+from open_webui.models.tags import TagModel, Tags
 from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     Column,
     ForeignKey,
+    Index,
     String,
     Text,
-    JSON,
-    Index,
     UniqueConstraint,
+    and_,
+    delete,
+    func,
+    or_,
+    select,
+    text,
+    update,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import bindparam
 
 ####################
 # Chat DB Schema
@@ -38,7 +41,7 @@ log = logging.getLogger(__name__)
 
 
 class Chat(Base):
-    __tablename__ = 'chat'
+    __tablename__ = "chat"
 
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
@@ -52,7 +55,7 @@ class Chat(Base):
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    meta = Column(JSON, server_default='{}')
+    meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
 
     tasks = Column(JSON, nullable=True)
@@ -62,11 +65,11 @@ class Chat(Base):
 
     __table_args__ = (
         # Performance indexes for common queries
-        Index('folder_id_idx', 'folder_id'),
-        Index('user_id_pinned_idx', 'user_id', 'pinned'),
-        Index('user_id_archived_idx', 'user_id', 'archived'),
-        Index('updated_at_user_id_idx', 'updated_at', 'user_id'),
-        Index('folder_id_user_id_idx', 'folder_id', 'user_id'),
+        Index("folder_id_idx", "folder_id"),
+        Index("user_id_pinned_idx", "user_id", "pinned"),
+        Index("user_id_archived_idx", "user_id", "archived"),
+        Index("updated_at_user_id_idx", "updated_at", "user_id"),
+        Index("folder_id_user_id_idx", "folder_id", "user_id"),
     )
 
 
@@ -81,33 +84,35 @@ class ChatModel(BaseModel):
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
-    share_id: Optional[str] = None
+    share_id: str | None = None
     archived: bool = False
-    pinned: Optional[bool] = False
+    pinned: bool | None = False
 
     meta: dict = {}
-    folder_id: Optional[str] = None
+    folder_id: str | None = None
 
-    tasks: Optional[list] = None
-    summary: Optional[str] = None
+    tasks: list | None = None
+    summary: str | None = None
 
-    last_read_at: Optional[int] = None
+    last_read_at: int | None = None
 
 
 class ChatFile(Base):
-    __tablename__ = 'chat_file'
+    __tablename__ = "chat_file"
 
     id = Column(Text, unique=True, primary_key=True)
     user_id = Column(Text, nullable=False)
 
-    chat_id = Column(Text, ForeignKey('chat.id', ondelete='CASCADE'), nullable=False)
+    chat_id = Column(Text, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
     message_id = Column(Text, nullable=True)
-    file_id = Column(Text, ForeignKey('file.id', ondelete='CASCADE'), nullable=False)
+    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (UniqueConstraint('chat_id', 'file_id', name='uq_chat_file_chat_file'),)
+    __table_args__ = (
+        UniqueConstraint("chat_id", "file_id", name="uq_chat_file_chat_file"),
+    )
 
 
 class ChatFileModel(BaseModel):
@@ -115,7 +120,7 @@ class ChatFileModel(BaseModel):
     user_id: str
 
     chat_id: str
-    message_id: Optional[str] = None
+    message_id: str | None = None
     file_id: str
 
     created_at: int
@@ -131,14 +136,14 @@ class ChatFileModel(BaseModel):
 
 class ChatForm(BaseModel):
     chat: dict
-    folder_id: Optional[str] = None
+    folder_id: str | None = None
 
 
 class ChatImportForm(ChatForm):
-    meta: Optional[dict] = {}
-    pinned: Optional[bool] = False
-    created_at: Optional[int] = None
-    updated_at: Optional[int] = None
+    meta: dict | None = {}
+    pinned: bool | None = False
+    created_at: int | None = None
+    updated_at: int | None = None
 
 
 class ChatsImportForm(BaseModel):
@@ -161,14 +166,14 @@ class ChatResponse(BaseModel):
     chat: dict
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
-    share_id: Optional[str] = None  # id of the chat to be shared
+    share_id: str | None = None  # id of the chat to be shared
     archived: bool
-    pinned: Optional[bool] = False
+    pinned: bool | None = False
     meta: dict = {}
-    folder_id: Optional[str] = None
+    folder_id: str | None = None
 
-    tasks: Optional[list] = None
-    summary: Optional[str] = None
+    tasks: list | None = None
+    summary: str | None = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -176,13 +181,13 @@ class ChatTitleIdResponse(BaseModel):
     title: str
     updated_at: int
     created_at: int
-    last_read_at: Optional[int] = None
+    last_read_at: int | None = None
 
 
 class SharedChatResponse(BaseModel):
     id: str
     title: str
-    share_id: Optional[str] = None
+    share_id: str | None = None
     updated_at: int
     created_at: int
 
@@ -201,11 +206,19 @@ class ChatUsageStatsResponse(BaseModel):
     history_models: dict = {}  # models used in the chat history with their usage counts
     history_message_count: int  # number of messages in the chat history
     history_user_message_count: int  # number of user messages in the chat history
-    history_assistant_message_count: int  # number of assistant messages in the chat history
+    history_assistant_message_count: (
+        int  # number of assistant messages in the chat history
+    )
 
-    average_response_time: float  # average response time of assistant messages in seconds
-    average_user_message_content_length: float  # average length of user message contents
-    average_assistant_message_content_length: float  # average length of assistant message contents
+    average_response_time: (
+        float  # average response time of assistant messages in seconds
+    )
+    average_user_message_content_length: (
+        float  # average length of user message contents
+    )
+    average_assistant_message_content_length: (
+        float  # average length of assistant message contents
+    )
 
     tags: list[str] = []  # tags associated with the chat
 
@@ -213,29 +226,29 @@ class ChatUsageStatsResponse(BaseModel):
     updated_at: int
     created_at: int
 
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
 
 
 class ChatUsageStatsListResponse(BaseModel):
     items: list[ChatUsageStatsResponse]
     total: int
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
 
 
 class MessageStats(BaseModel):
     id: str
     role: str
-    model: Optional[str] = None
+    model: str | None = None
     content_length: int
-    token_count: Optional[int] = None
-    timestamp: Optional[int] = None
-    rating: Optional[int] = None  # Derived from message.annotation.rating
-    tags: Optional[list[str]] = None  # Derived from message.annotation.tags
+    token_count: int | None = None
+    timestamp: int | None = None
+    rating: int | None = None  # Derived from message.annotation.rating
+    tags: list[str] | None = None  # Derived from message.annotation.tags
 
 
 class ChatHistoryStats(BaseModel):
     messages: dict[str, MessageStats]
-    currentId: Optional[str] = None
+    currentId: str | None = None
 
 
 class ChatBody(BaseModel):
@@ -293,20 +306,22 @@ class ChatTable:
         return changed
 
     async def insert_new_chat(
-        self, id: str, user_id: str, form_data: ChatForm, db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
+        self, id: str, user_id: str, form_data: ChatForm, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         async with get_async_db_context(db) as db:
             chat = ChatModel(
                 **{
-                    'id': id,
-                    'user_id': user_id,
-                    'title': self._clean_null_bytes(
-                        form_data.chat['title'] if 'title' in form_data.chat else 'New Chat'
+                    "id": id,
+                    "user_id": user_id,
+                    "title": self._clean_null_bytes(
+                        form_data.chat["title"]
+                        if "title" in form_data.chat
+                        else "New Chat"
                     ),
-                    'chat': self._clean_null_bytes(form_data.chat),
-                    'folder_id': form_data.folder_id,
-                    'created_at': int(time.time()),
-                    'updated_at': int(time.time()),
+                    "chat": self._clean_null_bytes(form_data.chat),
+                    "folder_id": form_data.folder_id,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
@@ -317,10 +332,10 @@ class ChatTable:
 
             # Dual-write initial messages to chat_message table
             try:
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
+                history = form_data.chat.get("history", {})
+                messages = history.get("messages", {})
                 for message_id, message in messages.items():
-                    if isinstance(message, dict) and message.get('role'):
+                    if isinstance(message, dict) and message.get("role"):
                         await ChatMessages.upsert_message(
                             message_id=message_id,
                             chat_id=id,
@@ -328,23 +343,33 @@ class ChatTable:
                             data=message,
                         )
             except Exception as e:
-                log.warning(f'Failed to write initial messages to chat_message table: {e}')
+                log.warning(
+                    f"Failed to write initial messages to chat_message table: {e}"
+                )
 
             return ChatModel.model_validate(chat_item) if chat_item else None
 
-    def _chat_import_form_to_chat_model(self, user_id: str, form_data: ChatImportForm) -> ChatModel:
+    def _chat_import_form_to_chat_model(
+        self, user_id: str, form_data: ChatImportForm
+    ) -> ChatModel:
         id = str(uuid.uuid4())
         chat = ChatModel(
             **{
-                'id': id,
-                'user_id': user_id,
-                'title': self._clean_null_bytes(form_data.chat['title'] if 'title' in form_data.chat else 'New Chat'),
-                'chat': self._clean_null_bytes(form_data.chat),
-                'meta': form_data.meta,
-                'pinned': form_data.pinned,
-                'folder_id': form_data.folder_id,
-                'created_at': (form_data.created_at if form_data.created_at else int(time.time())),
-                'updated_at': (form_data.updated_at if form_data.updated_at else int(time.time())),
+                "id": id,
+                "user_id": user_id,
+                "title": self._clean_null_bytes(
+                    form_data.chat["title"] if "title" in form_data.chat else "New Chat"
+                ),
+                "chat": self._clean_null_bytes(form_data.chat),
+                "meta": form_data.meta,
+                "pinned": form_data.pinned,
+                "folder_id": form_data.folder_id,
+                "created_at": (
+                    form_data.created_at if form_data.created_at else int(time.time())
+                ),
+                "updated_at": (
+                    form_data.updated_at if form_data.updated_at else int(time.time())
+                ),
             }
         )
         return chat
@@ -353,7 +378,7 @@ class ChatTable:
         self,
         user_id: str,
         chat_import_forms: list[ChatImportForm],
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             chats = []
@@ -367,10 +392,10 @@ class ChatTable:
 
             # Dual-write messages to chat_message table
             for form_data, chat_obj in zip(chat_import_forms, chats):
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
+                history = form_data.chat.get("history", {})
+                messages = history.get("messages", {})
                 for message_id, message in messages.items():
-                    if isinstance(message, dict) and message.get('role'):
+                    if isinstance(message, dict) and message.get("role"):
                         try:
                             await ChatMessages.upsert_message(
                                 message_id=message_id,
@@ -379,16 +404,24 @@ class ChatTable:
                                 data=message,
                             )
                         except Exception as e:
-                            log.warning(f'Failed to write imported message {message_id} for chat {chat_obj.id}: {e}')
+                            log.warning(
+                                f"Failed to write imported message {message_id} for chat {chat_obj.id}: {e}"
+                            )
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
-    async def update_chat_by_id(self, id: str, chat: dict, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def update_chat_by_id(
+        self, id: str, chat: dict, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
                 chat_item = await db.get(Chat, id)
                 chat_item.chat = self._clean_null_bytes(chat)
-                chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
+                chat_item.title = (
+                    self._clean_null_bytes(chat["title"])
+                    if "title" in chat
+                    else "New Chat"
+                )
 
                 chat_item.updated_at = int(time.time())
 
@@ -398,7 +431,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def update_chat_last_read_at_by_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
@@ -410,7 +445,7 @@ class ChatTable:
         except Exception:
             return False
 
-    async def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
+    async def update_chat_title_by_id(self, id: str, title: str) -> ChatModel | None:
         try:
             async with get_async_db_context() as db:
                 chat_item = await db.get(Chat, id)
@@ -418,7 +453,7 @@ class ChatTable:
                     return None
                 clean_title = self._clean_null_bytes(title)
                 chat_item.title = clean_title
-                chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
+                chat_item.chat = {**(chat_item.chat or {}), "title": clean_title}
                 chat_item.updated_at = int(time.time())
                 await db.commit()
                 await db.refresh(chat_item)
@@ -426,18 +461,20 @@ class ChatTable:
         except Exception:
             return None
 
-    async def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> Optional[ChatModel]:
+    async def update_chat_tags_by_id(
+        self, id: str, tags: list[str], user
+    ) -> ChatModel | None:
         async with get_async_db_context() as db:
             chat = await db.get(Chat, id)
             if chat is None:
                 return None
 
-            old_tags = chat.meta.get('tags', [])
-            new_tags = [t for t in tags if t.replace(' ', '_').lower() != 'none']
-            new_tag_ids = [t.replace(' ', '_').lower() for t in new_tags]
+            old_tags = chat.meta.get("tags", [])
+            new_tags = [t for t in tags if t.replace(" ", "_").lower() != "none"]
+            new_tag_ids = [t.replace(" ", "_").lower() for t in new_tags]
 
             # Single meta update
-            chat.meta = {**chat.meta, 'tags': new_tag_ids}
+            chat.meta = {**chat.meta, "tags": new_tag_ids}
             await db.commit()
             await db.refresh(chat)
 
@@ -451,13 +488,13 @@ class ChatTable:
 
             return ChatModel.model_validate(chat)
 
-    async def get_chat_title_by_id(self, id: str) -> Optional[str]:
+    async def get_chat_title_by_id(self, id: str) -> str | None:
         async with get_async_db_context() as db:
             result = await db.execute(select(Chat.title).filter_by(id=id))
             row = result.first()
             if row is None:
                 return None
-            return row[0] or 'New Chat'
+            return row[0] or "New Chat"
 
     @staticmethod
     def get_unresolved_parent_ids(messages_map: dict) -> set[str]:
@@ -466,17 +503,19 @@ class ChatTable:
         An empty set means the message graph is fully connected.
         """
         return {
-            msg['parentId']
+            msg["parentId"]
             for msg in messages_map.values()
-            if msg.get('parentId') and msg['parentId'] not in messages_map
+            if msg.get("parentId") and msg["parentId"] not in messages_map
         }
 
-    async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
+    async def backfill_messages_by_chat_id(
+        self, chat_id: str, user_id: str, messages: dict[str, dict]
+    ) -> None:
         """Write messages to the ``chat_message`` table so future lookups
         use the fast path.  Errors are logged but never raised.
         """
         for message_id, message in messages.items():
-            if not isinstance(message, dict) or not message.get('role'):
+            if not isinstance(message, dict) or not message.get("role"):
                 continue
             try:
                 await ChatMessages.upsert_message(
@@ -486,9 +525,14 @@ class ChatTable:
                     data=message,
                 )
             except Exception as e:
-                log.warning('Backfill failed for message %s in chat %s: %s', message_id, chat_id, e)
+                log.warning(
+                    "Backfill failed for message %s in chat %s: %s",
+                    message_id,
+                    chat_id,
+                    e,
+                )
 
-    async def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
+    async def get_messages_map_by_chat_id(self, id: str) -> dict | None:
         """Message map for walking history (see ``get_message_list``).
 
         Prefer ``chat_message`` rows to avoid loading the large embedded
@@ -507,13 +551,15 @@ class ChatTable:
 
             # Graph has gaps — enrich from the legacy embedded history.
             log.info(
-                'Chat %s: %d unresolved parent reference(s) in chat_message — enriching from legacy history',
+                "Chat %s: %d unresolved parent reference(s) in chat_message — enriching from legacy history",
                 id,
                 len(unresolved_ids),
             )
             chat = await self.get_chat_by_id(id)
             if chat:
-                history_messages = chat.chat.get('history', {}).get('messages', {}) or {}
+                history_messages = (
+                    chat.chat.get("history", {}).get("messages", {}) or {}
+                )
                 missing_messages = {
                     message_id: history_messages[message_id]
                     for message_id in unresolved_ids
@@ -524,7 +570,9 @@ class ChatTable:
                     messages_map.update(missing_messages)
 
                     # Backfill so future requests use the fast path.
-                    await self.backfill_messages_by_chat_id(id, chat.user_id, missing_messages)
+                    await self.backfill_messages_by_chat_id(
+                        id, chat.user_id, missing_messages
+                    )
 
             return messages_map
 
@@ -533,7 +581,7 @@ class ChatTable:
         if chat is None:
             return None
 
-        history_messages = chat.chat.get('history', {}).get('messages', {}) or {}
+        history_messages = chat.chat.get("history", {}).get("messages", {}) or {}
 
         # Backfill so future requests use the fast path.
         if history_messages:
@@ -541,39 +589,41 @@ class ChatTable:
 
         return history_messages
 
-    async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> Optional[dict]:
+    async def get_message_by_id_and_message_id(
+        self, id: str, message_id: str
+    ) -> dict | None:
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None
 
-        return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
+        return chat.chat.get("history", {}).get("messages", {}).get(message_id, {})
 
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
-    ) -> Optional[ChatModel]:
+    ) -> ChatModel | None:
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None
 
         # Sanitize message content for null characters before upserting
-        if isinstance(message.get('content'), str):
-            message['content'] = sanitize_text_for_db(message['content'])
+        if isinstance(message.get("content"), str):
+            message["content"] = sanitize_text_for_db(message["content"])
 
         user_id = chat.user_id
         chat = chat.chat
-        history = chat.get('history', {})
+        history = chat.get("history", {})
 
-        if message_id in history.get('messages', {}):
-            history['messages'][message_id] = {
-                **history['messages'][message_id],
+        if message_id in history.get("messages", {}):
+            history["messages"][message_id] = {
+                **history["messages"][message_id],
                 **message,
             }
         else:
-            history['messages'][message_id] = message
+            history["messages"][message_id] = message
 
-        history['currentId'] = message_id
+        history["currentId"] = message_id
 
-        chat['history'] = history
+        chat["history"] = history
 
         # Dual-write to chat_message table
         try:
@@ -581,54 +631,56 @@ class ChatTable:
                 message_id=message_id,
                 chat_id=id,
                 user_id=user_id,
-                data=history['messages'][message_id],
+                data=history["messages"][message_id],
             )
         except Exception as e:
-            log.warning(f'Failed to write to chat_message table: {e}')
+            log.warning(f"Failed to write to chat_message table: {e}")
 
         return await self.update_chat_by_id(id, chat)
 
     async def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
-    ) -> Optional[ChatModel]:
+    ) -> ChatModel | None:
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None
 
         chat = chat.chat
-        history = chat.get('history', {})
+        history = chat.get("history", {})
 
-        if message_id in history.get('messages', {}):
-            status_history = history['messages'][message_id].get('statusHistory', [])
+        if message_id in history.get("messages", {}):
+            status_history = history["messages"][message_id].get("statusHistory", [])
             status_history.append(status)
-            history['messages'][message_id]['statusHistory'] = status_history
+            history["messages"][message_id]["statusHistory"] = status_history
 
-        chat['history'] = history
+        chat["history"] = history
         return await self.update_chat_by_id(id, chat)
 
-    async def add_message_files_by_id_and_message_id(self, id: str, message_id: str, files: list[dict]) -> list[dict]:
+    async def add_message_files_by_id_and_message_id(
+        self, id: str, message_id: str, files: list[dict]
+    ) -> list[dict]:
         async with get_async_db_context() as db:
             chat = await self.get_chat_by_id(id, db=db)
             if chat is None:
                 return None
 
             chat = chat.chat
-            history = chat.get('history', {})
+            history = chat.get("history", {})
 
             message_files = []
 
-            if message_id in history.get('messages', {}):
-                message_files = history['messages'][message_id].get('files', [])
+            if message_id in history.get("messages", {}):
+                message_files = history["messages"][message_id].get("files", [])
                 message_files = message_files + files
-                history['messages'][message_id]['files'] = message_files
+                history["messages"][message_id]["files"] = message_files
 
-            chat['history'] = history
+            chat["history"] = history
             await self.update_chat_by_id(id, chat, db=db)
             return message_files
 
     async def insert_shared_chat_by_chat_id(
-        self, chat_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
+        self, chat_id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         """Create a shared snapshot for a chat. Returns the original chat with share_id set."""
         from open_webui.models.shared_chats import SharedChats
 
@@ -652,8 +704,8 @@ class ChatTable:
             return ChatModel.model_validate(chat)
 
     async def update_shared_chat_by_chat_id(
-        self, chat_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
+        self, chat_id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         """Re-snapshot the shared chat with current chat data."""
         from open_webui.models.shared_chats import SharedChats
 
@@ -668,7 +720,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def delete_shared_chat_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_shared_chat_by_chat_id(
+        self, chat_id: str, db: AsyncSession | None = None
+    ) -> bool:
         """Delete shared snapshot for a chat."""
         from open_webui.models.shared_chats import SharedChats
 
@@ -677,18 +731,22 @@ class ChatTable:
         except Exception:
             return False
 
-    async def unarchive_all_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def unarchive_all_chats_by_user_id(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(archived=False))
+                await db.execute(
+                    update(Chat).filter_by(user_id=user_id).values(archived=False)
+                )
                 await db.commit()
                 return True
         except Exception:
             return False
 
     async def update_chat_share_id_by_id(
-        self, id: str, share_id: Optional[str], db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
+        self, id: str, share_id: str | None, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
@@ -699,7 +757,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def toggle_chat_pinned_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def toggle_chat_pinned_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
@@ -711,7 +771,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def toggle_chat_archive_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def toggle_chat_archive_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
@@ -724,10 +786,14 @@ class ChatTable:
         except Exception:
             return None
 
-    async def archive_all_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def archive_all_chats_by_user_id(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(archived=True))
+                await db.execute(
+                    update(Chat).filter_by(user_id=user_id).values(archived=True)
+                )
                 await db.commit()
                 return True
         except Exception:
@@ -736,34 +802,34 @@ class ChatTable:
     async def get_archived_chat_list_by_user_id(
         self,
         user_id: str,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(
-                user_id=user_id, archived=True
-            )
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            ).filter_by(user_id=user_id, archived=True)
 
             if filter:
-                query_key = filter.get('query')
+                query_key = filter.get("query")
                 if query_key:
-                    stmt = stmt.filter(Chat.title.ilike(f'%{query_key}%'))
+                    stmt = stmt.filter(Chat.title.ilike(f"%{query_key}%"))
 
-                order_by = filter.get('order_by')
-                direction = filter.get('direction')
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
 
                 if order_by and direction:
                     if not getattr(Chat, order_by, None):
-                        raise ValueError('Invalid order_by field')
+                        raise ValueError("Invalid order_by field")
 
-                    if direction.lower() == 'asc':
+                    if direction.lower() == "asc":
                         stmt = stmt.order_by(getattr(Chat, order_by).asc(), Chat.id)
-                    elif direction.lower() == 'desc':
+                    elif direction.lower() == "desc":
                         stmt = stmt.order_by(getattr(Chat, order_by).desc(), Chat.id)
                     else:
-                        raise ValueError('Invalid direction for ordering')
+                        raise ValueError("Invalid direction for ordering")
             else:
                 stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
@@ -777,10 +843,10 @@ class ChatTable:
             return [
                 ChatTitleIdResponse.model_validate(
                     {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
                     }
                 )
                 for chat in all_chats
@@ -789,47 +855,49 @@ class ChatTable:
     async def get_shared_chat_list_by_user_id(
         self,
         user_id: str,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[SharedChatResponse]:
         """Delegate to SharedChats for listing shared chats by user."""
         from open_webui.models.shared_chats import SharedChats
 
-        return await SharedChats.get_by_user_id(user_id, filter=filter, skip=skip, limit=limit, db=db)
+        return await SharedChats.get_by_user_id(
+            user_id, filter=filter, skip=skip, limit=limit, db=db
+        )
 
     async def get_chat_list_by_user_id(
         self,
         user_id: str,
         include_archived: bool = False,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
-                user_id=user_id
-            )
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
+            ).filter_by(user_id=user_id)
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
             if filter:
-                query_key = filter.get('query')
+                query_key = filter.get("query")
                 if query_key:
-                    stmt = stmt.filter(Chat.title.ilike(f'%{query_key}%'))
+                    stmt = stmt.filter(Chat.title.ilike(f"%{query_key}%"))
 
-                order_by = filter.get('order_by')
-                direction = filter.get('direction')
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
 
                 if order_by and direction and getattr(Chat, order_by):
-                    if direction.lower() == 'asc':
+                    if direction.lower() == "asc":
                         stmt = stmt.order_by(getattr(Chat, order_by).asc(), Chat.id)
-                    elif direction.lower() == 'desc':
+                    elif direction.lower() == "desc":
                         stmt = stmt.order_by(getattr(Chat, order_by).desc(), Chat.id)
                     else:
-                        raise ValueError('Invalid direction for ordering')
+                        raise ValueError("Invalid direction for ordering")
             else:
                 stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
@@ -843,11 +911,11 @@ class ChatTable:
             return [
                 ChatTitleIdResponse.model_validate(
                     {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
-                        'last_read_at': chat[4],
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                        "last_read_at": chat[4],
                     }
                 )
                 for chat in all_chats
@@ -859,14 +927,14 @@ class ChatTable:
         include_archived: bool = False,
         include_folders: bool = False,
         include_pinned: bool = False,
-        skip: Optional[int] = None,
-        limit: Optional[int] = None,
-        db: Optional[AsyncSession] = None,
+        skip: int | None = None,
+        limit: int | None = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
-                user_id=user_id
-            )
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
+            ).filter_by(user_id=user_id)
 
             if not include_folders:
                 stmt = stmt.filter_by(folder_id=None)
@@ -890,11 +958,11 @@ class ChatTable:
             return [
                 ChatTitleIdResponse.model_validate(
                     {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
-                        'last_read_at': chat[4],
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                        "last_read_at": chat[4],
                     }
                 )
                 for chat in all_chats
@@ -905,16 +973,21 @@ class ChatTable:
         chat_ids: list[str],
         skip: int = 0,
         limit: int = 50,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat).filter(Chat.id.in_(chat_ids)).filter_by(archived=False).order_by(Chat.updated_at.desc())
+                select(Chat)
+                .filter(Chat.id.in_(chat_ids))
+                .filter_by(archived=False)
+                .order_by(Chat.updated_at.desc())
             )
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    async def get_chat_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def get_chat_by_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
                 chat_item = await db.get(Chat, id)
@@ -929,7 +1002,9 @@ class ChatTable:
         except Exception:
             return None
 
-    async def get_chat_by_share_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def get_chat_by_share_id(
+        self, id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         """Look up a shared chat snapshot by its share token."""
         from open_webui.models.shared_chats import SharedChats
 
@@ -951,42 +1026,54 @@ class ChatTable:
             return None
 
     async def get_chat_by_id_and_user_id(
-        self, id: str, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Chat).filter_by(id=id, user_id=user_id))
+                result = await db.execute(
+                    select(Chat).filter_by(id=id, user_id=user_id)
+                )
                 chat = result.scalars().first()
                 return ChatModel.model_validate(chat) if chat else None
         except Exception:
             return None
 
-    async def is_chat_owner(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def is_chat_owner(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         """
         Lightweight ownership check — uses EXISTS subquery instead of loading
         the full Chat row (which includes the potentially large JSON blob).
         """
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(exists().where(and_(Chat.id == id, Chat.user_id == user_id))))
+                result = await db.execute(
+                    select(exists().where(and_(Chat.id == id, Chat.user_id == user_id)))
+                )
                 return result.scalar()
         except Exception:
             return False
 
-    async def get_chat_folder_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[str]:
+    async def get_chat_folder_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> str | None:
         """
         Fetch only the folder_id column for a chat, without loading the full
         JSON blob. Returns None if chat doesn't exist or doesn't belong to user.
         """
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Chat.folder_id).filter_by(id=id, user_id=user_id))
+                result = await db.execute(
+                    select(Chat.folder_id).filter_by(id=id, user_id=user_id)
+                )
                 row = result.first()
                 return row[0] if row else None
         except Exception:
             return None
 
-    async def get_chats(self, skip: int = 0, limit: int = 50, db: Optional[AsyncSession] = None) -> list[ChatModel]:
+    async def get_chats(
+        self, skip: int = 0, limit: int = 50, db: AsyncSession | None = None
+    ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Chat).order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
@@ -995,34 +1082,38 @@ class ChatTable:
     async def get_chats_by_user_id(
         self,
         user_id: str,
-        filter: Optional[dict] = None,
-        skip: Optional[int] = None,
-        limit: Optional[int] = None,
-        db: Optional[AsyncSession] = None,
+        filter: dict | None = None,
+        skip: int | None = None,
+        limit: int | None = None,
+        db: AsyncSession | None = None,
     ) -> ChatListResponse:
         async with get_async_db_context(db) as db:
             stmt = select(Chat).filter_by(user_id=user_id)
 
             if filter:
-                if filter.get('updated_at'):
-                    stmt = stmt.filter(Chat.updated_at > filter.get('updated_at'))
+                if filter.get("updated_at"):
+                    stmt = stmt.filter(Chat.updated_at > filter.get("updated_at"))
 
-                order_by = filter.get('order_by')
-                direction = filter.get('direction')
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
 
                 if order_by and direction:
                     if hasattr(Chat, order_by):
-                        if direction.lower() == 'asc':
+                        if direction.lower() == "asc":
                             stmt = stmt.order_by(getattr(Chat, order_by).asc(), Chat.id)
-                        elif direction.lower() == 'desc':
-                            stmt = stmt.order_by(getattr(Chat, order_by).desc(), Chat.id)
+                        elif direction.lower() == "desc":
+                            stmt = stmt.order_by(
+                                getattr(Chat, order_by).desc(), Chat.id
+                            )
                 else:
                     stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
             else:
                 stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            count_result = await db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )
             total = count_result.scalar()
 
             if skip is not None:
@@ -1035,17 +1126,23 @@ class ChatTable:
 
             return ChatListResponse(
                 **{
-                    'items': [ChatModel.model_validate(chat) for chat in all_chats],
-                    'total': total,
+                    "items": [ChatModel.model_validate(chat) for chat in all_chats],
+                    "total": total,
                 }
             )
 
     async def get_pinned_chats_by_user_id(
-        self, user_id: str, db: Optional[AsyncSession] = None
+        self, user_id: str, db: AsyncSession | None = None
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                select(
+                    Chat.id,
+                    Chat.title,
+                    Chat.updated_at,
+                    Chat.created_at,
+                    Chat.last_read_at,
+                )
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 .order_by(Chat.updated_at.desc())
             )
@@ -1053,20 +1150,24 @@ class ChatTable:
             return [
                 ChatTitleIdResponse.model_validate(
                     {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
-                        'last_read_at': chat[4],
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                        "last_read_at": chat[4],
                     }
                 )
                 for chat in all_chats
             ]
 
-    async def get_archived_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChatModel]:
+    async def get_archived_chats_by_user_id(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
+                select(Chat)
+                .filter_by(user_id=user_id, archived=True)
+                .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
 
@@ -1077,7 +1178,7 @@ class ChatTable:
         include_archived: bool = False,
         skip: int = 0,
         limit: int = 60,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatModel]:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
@@ -1089,51 +1190,57 @@ class ChatTable:
                 user_id, include_archived, filter={}, skip=skip, limit=limit, db=db
             )
 
-        search_text_words = search_text.split(' ')
+        search_text_words = search_text.split(" ")
 
         # search_text might contain 'tag:tag_name' format so we need to extract the tag_name
         tag_ids = [
-            word.replace('tag:', '').replace(' ', '_').lower() for word in search_text_words if word.startswith('tag:')
+            word.replace("tag:", "").replace(" ", "_").lower()
+            for word in search_text_words
+            if word.startswith("tag:")
         ]
 
         # Extract folder names
         folders = await Folders.search_folders_by_names(
             user_id,
-            [word.replace('folder:', '') for word in search_text_words if word.startswith('folder:')],
+            [
+                word.replace("folder:", "")
+                for word in search_text_words
+                if word.startswith("folder:")
+            ],
         )
         folder_ids = [folder.id for folder in folders]
 
         is_pinned = None
-        if 'pinned:true' in search_text_words:
+        if "pinned:true" in search_text_words:
             is_pinned = True
-        elif 'pinned:false' in search_text_words:
+        elif "pinned:false" in search_text_words:
             is_pinned = False
 
         is_archived = None
-        if 'archived:true' in search_text_words:
+        if "archived:true" in search_text_words:
             is_archived = True
-        elif 'archived:false' in search_text_words:
+        elif "archived:false" in search_text_words:
             is_archived = False
 
         is_shared = None
-        if 'shared:true' in search_text_words:
+        if "shared:true" in search_text_words:
             is_shared = True
-        elif 'shared:false' in search_text_words:
+        elif "shared:false" in search_text_words:
             is_shared = False
 
         search_text_words = [
             word
             for word in search_text_words
             if (
-                not word.startswith('tag:')
-                and not word.startswith('folder:')
-                and not word.startswith('pinned:')
-                and not word.startswith('archived:')
-                and not word.startswith('shared:')
+                not word.startswith("tag:")
+                and not word.startswith("folder:")
+                and not word.startswith("pinned:")
+                and not word.startswith("archived:")
+                and not word.startswith("shared:")
             )
         ]
 
-        search_text = ' '.join(search_text_words)
+        search_text = " ".join(search_text_words)
 
         async with get_async_db_context(db) as db:
             stmt = select(Chat).filter(Chat.user_id == user_id)
@@ -1160,32 +1267,30 @@ class ChatTable:
             # Check if the database dialect is either 'sqlite' or 'postgresql'
             bind = await db.connection()
             dialect_name = bind.dialect.name
-            if dialect_name == 'sqlite':
+            if dialect_name == "sqlite":
                 # SQLite case: using JSON1 extension for JSON searching
                 sqlite_content_sql = (
-                    'EXISTS ('
-                    '    SELECT 1 '
+                    "EXISTS ("
+                    "    SELECT 1 "
                     "    FROM json_each(Chat.chat, '$.messages') AS message "
                     "    WHERE LOWER(message.value->>'content') LIKE '%' || :content_key || '%'"
-                    ')'
+                    ")"
                 )
                 sqlite_content_clause = text(sqlite_content_sql)
                 stmt = stmt.filter(
-                    or_(Chat.title.ilike(bindparam('title_key')), sqlite_content_clause).params(
-                        title_key=f'%{search_text}%', content_key=search_text
-                    )
+                    or_(
+                        Chat.title.ilike(bindparam("title_key")), sqlite_content_clause
+                    ).params(title_key=f"%{search_text}%", content_key=search_text)
                 )
 
                 # Check if there are any tags to filter
-                if 'none' in tag_ids:
-                    stmt = stmt.filter(
-                        text("""
+                if "none" in tag_ids:
+                    stmt = stmt.filter(text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """)
-                    )
+                            """))
                 elif tag_ids:
                     stmt = stmt.filter(
                         and_(
@@ -1196,13 +1301,13 @@ class ChatTable:
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f'tag_id_{tag_idx}': tag_id})
+                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
                     )
 
-            elif dialect_name == 'postgresql':
+            elif dialect_name == "postgresql":
                 # Safety filter: JSON field must not contain \u0000
                 stmt = stmt.filter(text("Chat.chat::text NOT LIKE '%\\\\u0000%'"))
 
@@ -1222,20 +1327,18 @@ class ChatTable:
 
                 stmt = stmt.filter(
                     or_(
-                        Chat.title.ilike(bindparam('title_key')),
+                        Chat.title.ilike(bindparam("title_key")),
                         postgres_content_clause,
                     )
-                ).params(title_key=f'%{search_text}%', content_key=search_text.lower())
+                ).params(title_key=f"%{search_text}%", content_key=search_text.lower())
 
-                if 'none' in tag_ids:
-                    stmt = stmt.filter(
-                        text("""
+                if "none" in tag_ids:
+                    stmt = stmt.filter(text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """)
-                    )
+                            """))
                 elif tag_ids:
                     stmt = stmt.filter(
                         and_(
@@ -1246,20 +1349,20 @@ class ChatTable:
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f'tag_id_{tag_idx}': tag_id})
+                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
                     )
             else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
+                raise NotImplementedError(f"Unsupported dialect: {dialect_name}")
 
             # Perform pagination at the SQL level
             stmt = stmt.offset(skip).limit(limit)
             result = await db.execute(stmt)
             all_chats = result.scalars().all()
 
-            log.info(f'The number of chats: {len(all_chats)}')
+            log.info(f"The number of chats: {len(all_chats)}")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -1270,11 +1373,17 @@ class ChatTable:
         user_id: str,
         skip: int = 0,
         limit: int = 60,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             stmt = (
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                select(
+                    Chat.id,
+                    Chat.title,
+                    Chat.updated_at,
+                    Chat.created_at,
+                    Chat.last_read_at,
+                )
                 .filter_by(folder_id=folder_id, user_id=user_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
@@ -1291,18 +1400,18 @@ class ChatTable:
             return [
                 ChatTitleIdResponse.model_validate(
                     {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
-                        'last_read_at': chat[4],
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                        "last_read_at": chat[4],
                     }
                 )
                 for chat in all_chats
             ]
 
     async def get_chats_by_folder_ids_and_user_id(
-        self, folder_ids: list[str], user_id: str, db: Optional[AsyncSession] = None
+        self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             stmt = (
@@ -1318,8 +1427,8 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     async def update_chat_folder_id_by_id_and_user_id(
-        self, id: str, user_id: str, folder_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
+        self, id: str, user_id: str, folder_id: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
@@ -1333,13 +1442,13 @@ class ChatTable:
             return None
 
     async def get_chat_tags_by_id_and_user_id(
-        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+        self, id: str, user_id: str, db: AsyncSession | None = None
     ) -> list[TagModel]:
         async with get_async_db_context(db) as db:
             stmt = select(Chat.meta).where(Chat.id == id)
             result = await db.execute(stmt)
             meta = result.scalar_one_or_none()
-            tag_ids = (meta or {}).get('tags', [])
+            tag_ids = (meta or {}).get("tags", [])
             return await Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=db)
 
     async def get_chat_list_by_user_id_and_tag_name(
@@ -1348,27 +1457,31 @@ class ChatTable:
         tag_name: str,
         skip: int = 0,
         limit: int = 50,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
-                user_id=user_id
-            )
-            tag_id = tag_name.replace(' ', '_').lower()
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at
+            ).filter_by(user_id=user_id)
+            tag_id = tag_name.replace(" ", "_").lower()
 
             bind = await db.connection()
             dialect_name = bind.dialect.name
-            log.info(f'DB dialect name: {dialect_name}')
-            if dialect_name == 'sqlite':
+            log.info(f"DB dialect name: {dialect_name}")
+            if dialect_name == "sqlite":
                 stmt = stmt.filter(
-                    text(f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)")
+                    text(
+                        "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                    )
                 ).params(tag_id=tag_id)
-            elif dialect_name == 'postgresql':
+            elif dialect_name == "postgresql":
                 stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)")
+                    text(
+                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                    )
                 ).params(tag_id=tag_id)
             else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
+                raise NotImplementedError(f"Unsupported dialect: {dialect_name}")
 
             stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
@@ -1382,28 +1495,28 @@ class ChatTable:
             return [
                 ChatTitleIdResponse.model_validate(
                     {
-                        'id': chat[0],
-                        'title': chat[1],
-                        'updated_at': chat[2],
-                        'created_at': chat[3],
-                        'last_read_at': chat[4],
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                        "last_read_at": chat[4],
                     }
                 )
                 for chat in all_chats
             ]
 
     async def add_chat_tag_by_id_and_user_id_and_tag_name(
-        self, id: str, user_id: str, tag_name: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ChatModel]:
-        tag_id = tag_name.replace(' ', '_').lower()
+        self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
+    ) -> ChatModel | None:
+        tag_id = tag_name.replace(" ", "_").lower()
         await Tags.ensure_tags_exist([tag_name], user_id, db=db)
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
-                if tag_id not in chat.meta.get('tags', []):
+                if tag_id not in chat.meta.get("tags", []):
                     chat.meta = {
                         **chat.meta,
-                        'tags': list(set(chat.meta.get('tags', []) + [tag_id])),
+                        "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
                     }
                 await db.commit()
                 await db.refresh(chat)
@@ -1412,24 +1525,30 @@ class ChatTable:
             return None
 
     async def count_chats_by_tag_name_and_user_id(
-        self, tag_name: str, user_id: str, db: Optional[AsyncSession] = None
+        self, tag_name: str, user_id: str, db: AsyncSession | None = None
     ) -> int:
         async with get_async_db_context(db) as db:
-            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
-            tag_id = tag_name.replace(' ', '_').lower()
+            stmt = select(func.count(Chat.id)).filter_by(
+                user_id=user_id, archived=False
+            )
+            tag_id = tag_name.replace(" ", "_").lower()
 
             bind = await db.connection()
             dialect_name = bind.dialect.name
-            if dialect_name == 'sqlite':
+            if dialect_name == "sqlite":
                 stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)")
+                    text(
+                        "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                    )
                 ).params(tag_id=tag_id)
-            elif dialect_name == 'postgresql':
+            elif dialect_name == "postgresql":
                 stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)")
+                    text(
+                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                    )
                 ).params(tag_id=tag_id)
             else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
+                raise NotImplementedError(f"Unsupported dialect: {dialect_name}")
 
             result = await db.execute(stmt)
             return result.scalar()
@@ -1439,7 +1558,7 @@ class ChatTable:
         tag_ids: list[str],
         user_id: str,
         threshold: int = 0,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> None:
         """Delete tag rows from *tag_ids* that appear in at most *threshold*
         non-archived chats for *user_id*.  One query to find orphans, one to
@@ -1454,47 +1573,55 @@ class ChatTable:
         async with get_async_db_context(db) as db:
             orphans = []
             for tag_id in tag_ids:
-                count = await self.count_chats_by_tag_name_and_user_id(tag_id, user_id, db=db)
+                count = await self.count_chats_by_tag_name_and_user_id(
+                    tag_id, user_id, db=db
+                )
                 if count <= threshold:
                     orphans.append(tag_id)
             await Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=db)
 
     async def count_chats_by_folder_id_and_user_id(
-        self, folder_id: str, user_id: str, db: Optional[AsyncSession] = None
+        self, folder_id: str, user_id: str, db: AsyncSession | None = None
     ) -> int:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id))
+            result = await db.execute(
+                select(func.count(Chat.id)).filter_by(
+                    user_id=user_id, folder_id=folder_id
+                )
+            )
             count = result.scalar()
 
             log.info(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
     async def delete_tag_by_id_and_user_id_and_tag_name(
-        self, id: str, user_id: str, tag_name: str, db: Optional[AsyncSession] = None
+        self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
-                tags = chat.meta.get('tags', [])
-                tag_id = tag_name.replace(' ', '_').lower()
+                tags = chat.meta.get("tags", [])
+                tag_id = tag_name.replace(" ", "_").lower()
 
                 tags = [tag for tag in tags if tag != tag_id]
                 chat.meta = {
                     **chat.meta,
-                    'tags': list(set(tags)),
+                    "tags": list(set(tags)),
                 }
                 await db.commit()
                 return True
         except Exception:
             return False
 
-    async def delete_all_tags_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_all_tags_by_id_and_user_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 chat = await db.get(Chat, id)
                 chat.meta = {
                     **chat.meta,
-                    'tags': [],
+                    "tags": [],
                 }
                 await db.commit()
 
@@ -1502,10 +1629,12 @@ class ChatTable:
         except Exception:
             return False
 
-    async def delete_chat_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_chat_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
+                await db.execute(
+                    update(AutomationRun).filter_by(chat_id=id).values(chat_id=None)
+                )
                 await db.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await db.execute(delete(Chat).filter_by(id=id))
                 await db.commit()
@@ -1514,10 +1643,14 @@ class ChatTable:
         except Exception:
             return False
 
-    async def delete_chat_by_id_and_user_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_chat_by_id_and_user_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
+                await db.execute(
+                    update(AutomationRun).filter_by(chat_id=id).values(chat_id=None)
+                )
                 await db.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await db.execute(delete(Chat).filter_by(id=id, user_id=user_id))
                 await db.commit()
@@ -1526,19 +1659,31 @@ class ChatTable:
         except Exception:
             return False
 
-    async def delete_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_chats_by_user_id(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await self.delete_shared_chats_by_user_id(user_id, db=db)
 
-                chat_id_subquery = select(Chat.id).filter_by(user_id=user_id).scalar_subquery()
+                chat_id_subquery = (
+                    select(Chat.id).filter_by(user_id=user_id).scalar_subquery()
+                )
                 await db.execute(
                     update(AutomationRun)
-                    .filter(AutomationRun.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
+                    .filter(
+                        AutomationRun.chat_id.in_(
+                            select(Chat.id).filter_by(user_id=user_id)
+                        )
+                    )
                     .values(chat_id=None)
                 )
                 await db.execute(
-                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
+                    delete(ChatMessage).filter(
+                        ChatMessage.chat_id.in_(
+                            select(Chat.id).filter_by(user_id=user_id)
+                        )
+                    )
                 )
                 await db.execute(delete(Chat).filter_by(user_id=user_id))
                 await db.commit()
@@ -1548,16 +1693,24 @@ class ChatTable:
             return False
 
     async def delete_chats_by_user_id_and_folder_id(
-        self, user_id: str, folder_id: str, db: Optional[AsyncSession] = None
+        self, user_id: str, folder_id: str, db: AsyncSession | None = None
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
-                await db.execute(
-                    update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
+                chat_ids_stmt = select(Chat.id).filter_by(
+                    user_id=user_id, folder_id=folder_id
                 )
-                await db.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
-                await db.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
+                await db.execute(
+                    update(AutomationRun)
+                    .filter(AutomationRun.chat_id.in_(chat_ids_stmt))
+                    .values(chat_id=None)
+                )
+                await db.execute(
+                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt))
+                )
+                await db.execute(
+                    delete(Chat).filter_by(user_id=user_id, folder_id=folder_id)
+                )
                 await db.commit()
 
                 return True
@@ -1568,13 +1721,15 @@ class ChatTable:
         self,
         user_id: str,
         folder_id: str,
-        new_folder_id: Optional[str],
-        db: Optional[AsyncSession] = None,
+        new_folder_id: str | None,
+        db: AsyncSession | None = None,
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(
-                    update(Chat).filter_by(user_id=user_id, folder_id=folder_id).values(folder_id=new_folder_id)
+                    update(Chat)
+                    .filter_by(user_id=user_id, folder_id=folder_id)
+                    .values(folder_id=new_folder_id)
                 )
                 await db.commit()
 
@@ -1582,9 +1737,11 @@ class ChatTable:
         except Exception:
             return False
 
-    async def delete_shared_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_shared_chats_by_user_id(
+        self, user_id: str, db: AsyncSession | None = None
+    ) -> bool:
         """Delete all shared chat snapshots created by a user."""
-        from open_webui.models.shared_chats import SharedChats, SharedChat as SharedChatTable
+        from open_webui.models.shared_chats import SharedChat as SharedChatTable
 
         try:
             async with get_async_db_context(db) as db:
@@ -1592,7 +1749,9 @@ class ChatTable:
                 await db.execute(delete(SharedChatTable).filter_by(user_id=user_id))
 
                 # Clear share_id on all of this user's chats
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(share_id=None))
+                await db.execute(
+                    update(Chat).filter_by(user_id=user_id).values(share_id=None)
+                )
                 await db.commit()
 
                 return True
@@ -1605,16 +1764,25 @@ class ChatTable:
         message_id: str,
         file_ids: list[str],
         user_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[list[ChatFileModel]]:
+        db: AsyncSession | None = None,
+    ) -> list[ChatFileModel] | None:
         if not file_ids:
             return None
 
         chat_message_file_ids = {
-            item.id for item in await self.get_chat_files_by_chat_id_and_message_id(chat_id, message_id, db=db)
+            item.id
+            for item in await self.get_chat_files_by_chat_id_and_message_id(
+                chat_id, message_id, db=db
+            )
         }
         # Remove duplicates and existing file_ids
-        file_ids = list({file_id for file_id in file_ids if file_id and file_id not in chat_message_file_ids})
+        file_ids = list(
+            {
+                file_id
+                for file_id in file_ids
+                if file_id and file_id not in chat_message_file_ids
+            }
+        )
         if not file_ids:
             return None
 
@@ -1635,7 +1803,9 @@ class ChatTable:
                     for file_id in file_ids
                 ]
 
-                results = [ChatFile(**chat_file.model_dump()) for chat_file in chat_files]
+                results = [
+                    ChatFile(**chat_file.model_dump()) for chat_file in chat_files
+                ]
 
                 db.add_all(results)
                 await db.commit()
@@ -1645,25 +1815,35 @@ class ChatTable:
             return None
 
     async def get_chat_files_by_chat_id_and_message_id(
-        self, chat_id: str, message_id: str, db: Optional[AsyncSession] = None
+        self, chat_id: str, message_id: str, db: AsyncSession | None = None
     ) -> list[ChatFileModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(ChatFile).filter_by(chat_id=chat_id, message_id=message_id).order_by(ChatFile.created_at.asc())
+                select(ChatFile)
+                .filter_by(chat_id=chat_id, message_id=message_id)
+                .order_by(ChatFile.created_at.asc())
             )
             all_chat_files = result.scalars().all()
-            return [ChatFileModel.model_validate(chat_file) for chat_file in all_chat_files]
+            return [
+                ChatFileModel.model_validate(chat_file) for chat_file in all_chat_files
+            ]
 
-    async def delete_chat_file(self, chat_id: str, file_id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_chat_file(
+        self, chat_id: str, file_id: str, db: AsyncSession | None = None
+    ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(delete(ChatFile).filter_by(chat_id=chat_id, file_id=file_id))
+                await db.execute(
+                    delete(ChatFile).filter_by(chat_id=chat_id, file_id=file_id)
+                )
                 await db.commit()
                 return True
         except Exception:
             return False
 
-    async def get_shared_chat_ids_by_file_id(self, file_id: str, db: Optional[AsyncSession] = None) -> list[str]:
+    async def get_shared_chat_ids_by_file_id(
+        self, file_id: str, db: AsyncSession | None = None
+    ) -> list[str]:
         """Return IDs of chats that contain this file and have an active share link."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -1673,7 +1853,9 @@ class ChatTable:
             )
             return [row[0] for row in result.all()]
 
-    async def update_chat_tasks_by_id(self, id: str, tasks: list[dict]) -> Optional[ChatModel]:
+    async def update_chat_tasks_by_id(
+        self, id: str, tasks: list[dict]
+    ) -> ChatModel | None:
         """Update the tasks list on a chat."""
         try:
             async with get_async_db_context() as db:

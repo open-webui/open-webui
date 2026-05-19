@@ -1,12 +1,9 @@
-import validators
-
-from typing import Optional
 from urllib.parse import urlparse
 
-from pydantic import BaseModel
-
+import validators
 from open_webui.retrieval.web.utils import resolve_hostname
 from open_webui.utils.misc import is_string_allowed
+from pydantic import BaseModel
 
 
 def get_filtered_results(results, filter_list):
@@ -16,7 +13,7 @@ def get_filtered_results(results, filter_list):
     filtered_results = []
 
     for result in results:
-        url = result.get('url') or result.get('link', '') or result.get('href', '')
+        url = result.get("url") or result.get("link", "") or result.get("href", "")
         if not validators.url(url):
             continue
 
@@ -42,5 +39,5 @@ def get_filtered_results(results, filter_list):
 
 class SearchResult(BaseModel):
     link: str
-    title: Optional[str]
-    snippet: Optional[str]
+    title: str | None
+    snippet: str | None

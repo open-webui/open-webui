@@ -1,23 +1,24 @@
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class VectorItem(BaseModel):
     id: str
     text: str
-    vector: List[float | int]
+    vector: list[float | int]
     metadata: Any
 
 
 class GetResult(BaseModel):
-    ids: Optional[List[List[str]]]
-    documents: Optional[List[List[str]]]
-    metadatas: Optional[List[List[Any]]]
+    ids: list[list[str]] | None
+    documents: list[list[str]] | None
+    metadatas: list[list[Any]] | None
 
 
 class SearchResult(GetResult):
-    distances: Optional[List[List[float | int]]]
+    distances: list[list[float | int]] | None
 
 
 class VectorDBBase(ABC):
@@ -42,12 +43,12 @@ class VectorDBBase(ABC):
         pass
 
     @abstractmethod
-    def insert(self, collection_name: str, items: List[VectorItem]) -> None:
+    def insert(self, collection_name: str, items: list[VectorItem]) -> None:
         """Insert a list of vector items into a collection."""
         pass
 
     @abstractmethod
-    def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
+    def upsert(self, collection_name: str, items: list[VectorItem]) -> None:
         """Insert or update vector items in a collection."""
         pass
 
@@ -55,20 +56,22 @@ class VectorDBBase(ABC):
     def search(
         self,
         collection_name: str,
-        vectors: List[List[Union[float, int]]],
-        filter: Optional[Dict] = None,
+        vectors: list[list[float | int]],
+        filter: dict | None = None,
         limit: int = 10,
-    ) -> Optional[SearchResult]:
+    ) -> SearchResult | None:
         """Search for similar vectors in a collection."""
         pass
 
     @abstractmethod
-    def query(self, collection_name: str, filter: Dict, limit: Optional[int] = None) -> Optional[GetResult]:
+    def query(
+        self, collection_name: str, filter: dict, limit: int | None = None
+    ) -> GetResult | None:
         """Query vectors from a collection using metadata filter."""
         pass
 
     @abstractmethod
-    def get(self, collection_name: str) -> Optional[GetResult]:
+    def get(self, collection_name: str) -> GetResult | None:
         """Retrieve all vectors from a collection."""
         pass
 
@@ -76,8 +79,8 @@ class VectorDBBase(ABC):
     def delete(
         self,
         collection_name: str,
-        ids: Optional[List[str]] = None,
-        filter: Optional[Dict] = None,
+        ids: list[str] | None = None,
+        filter: dict | None = None,
     ) -> None:
         """Delete vectors by ID or filter from a collection."""
         pass
