@@ -934,7 +934,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                         if file.get('type', '') == 'image':
                             images.append(file.get('url', ''))
                         elif file.get('content_type', '').startswith('image/'):
-                            image = await get_image_base64_from_file_id(file.get('id', ''))
+                            image = await get_image_base64_from_file_id(file.get('id', ''), user=user)
                             if image:
                                 images.append(image)
 
