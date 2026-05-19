@@ -51,6 +51,8 @@ from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
+from open_webui.routers.tasks import generate_queries
+from open_webui.routers.retrieval import process_web_search, SearchForm
 from open_webui.utils.webhook import post_webhook
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -978,8 +980,66 @@ async def model_response_handler(request, channel, message, user, db=None):
                 )
 
                 tool_ids = _resolve_model_tool_ids(request.app, model_id)
-                features = _resolve_model_features(request.app, model_id)
+                model_features = _resolve_model_features(request.app, model_id)
                 filter_ids = _resolve_model_filter_ids(request.app, model_id)
+
+                message_features = (message.data or {}).get('features', {})
+                features = {**(model_features or {}), **message_features}
+
+                # Process web search before pipeline to avoid duplication
+                web_search_sources = []
+                if message_features.get('web_search'):
+                    user_message = content if isinstance(content, str) else content[0].get('text', '')
+                    queries = [user_message]
+
+                    try:
+                        queries_res = await generate_queries(
+                            request,
+                            {
+                                'model': model_id,
+                                'messages': [{'role': 'user', 'content': user_message}],
+                                'prompt': user_message,
+                                'type': 'web_search',
+                            },
+                            user,
+                        )
+                        if isinstance(queries_res, dict) and queries_res.get('choices'):
+                            response = queries_res['choices'][0]['message']['content']
+                            bracket_start = response.rfind('{')
+                            bracket_end = response.rfind('}') + 1
+                            if bracket_start != -1 and bracket_end > bracket_start:
+                                parsed = json.loads(response[bracket_start:bracket_end])
+                                queries = parsed.get('queries', [user_message])
+                    except Exception as e:
+                        log.exception(e)
+
+                    if queries:
+                        try:
+                            results = await process_web_search(
+                                request,
+                                SearchForm(queries=queries),
+                                user=user,
+                            )
+                            if results and results.get('docs'):
+                                web_search_sources = results.get('filenames', [])[:5]
+                                web_context = '\n\n### Web Search Results:\n'
+                                for i, doc in enumerate(results['docs'][:5], 1):
+                                    source_url = web_search_sources[i-1] if i <= len(web_search_sources) else ''
+                                    doc_content = doc.get('content', str(doc)) if isinstance(doc, dict) else str(doc)
+                                    web_context += f'\n[{i}] {source_url}\n{doc_content[:2000]}\n'
+
+                                if isinstance(content, str):
+                                    content = web_context + '\n\n### User Question:\n' + content
+                                elif isinstance(content, list):
+                                    for part in content:
+                                        if part.get('type') == 'text':
+                                            part['text'] = web_context + '\n\n### User Question:\n' + part['text']
+                                            break
+                        except Exception as e:
+                            log.exception(e)
+
+                    # Remove web_search from features so pipeline doesn't duplicate
+                    features = {k: v for k, v in features.items() if k != 'web_search'}
 
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the
@@ -1005,6 +1065,14 @@ async def model_response_handler(request, channel, message, user, db=None):
                     form_data['features'] = features
                 if filter_ids:
                     form_data['filter_ids'] = filter_ids
+
+                # Store sources for emitter to append when done
+                if web_search_sources:
+                    await Messages.update_message_by_id(
+                        response_message.id,
+                        MessageForm(content='', data={'web_search_sources': web_search_sources}),
+                        db=db,
+                    )
 
                 # Call the full chat completion pipeline — streaming,
                 # tools, filters, RAG — everything. The pipeline runs as

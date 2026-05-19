@@ -844,9 +844,18 @@ async def _make_channel_emitter(request_info):
 
         update_form = MessageForm(content=content)
         if done:
-            # Merge done flag into existing meta (preserve model_id etc.)
             msg = await Messages.get_message_by_id(message_id)
             existing_meta = (msg.meta or {}) if msg else {}
+            existing_data = (msg.data or {}) if msg else {}
+
+            # Append web search sources if present
+            web_search_sources = existing_data.get('web_search_sources', [])
+            if web_search_sources and content:
+                sources_text = '\n\n---\n**Sources:**\n'
+                for i, url in enumerate(web_search_sources, 1):
+                    sources_text += f'- [{i}] {url}\n'
+                content = content + sources_text
+
             update_form = MessageForm(
                 content=content,
                 meta={**existing_meta, 'done': True},

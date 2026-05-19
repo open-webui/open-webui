@@ -30,7 +30,9 @@
 	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
+	import IntegrationsMenu from '../chat/MessageInput/IntegrationsMenu.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Component from '../icons/Component.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import FileItem from '../common/FileItem.svelte';
@@ -40,6 +42,7 @@
 	import MentionList from './MessageInput/MentionList.svelte';
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import GlobeAlt from '../icons/GlobeAlt.svelte';
 
 	export let placeholder = $i18n.t('Type here...');
 	export let chatInputElement;
@@ -74,6 +77,11 @@
 	let recording = false;
 	let content = '';
 	let files = [];
+
+	let webSearchEnabled = false;
+	$: showWebSearchButton =
+		$config?.features?.enable_web_search &&
+		($user?.role === 'admin' || $user?.permissions?.features?.web_search);
 
 	let filesInputElement;
 	let inputFiles;
@@ -547,7 +555,14 @@
 		onSubmit({
 			content,
 			data: {
-				files: files
+				files: files,
+				features: {
+					web_search:
+						$config?.features?.enable_web_search &&
+						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+							? webSearchEnabled
+							: false
+				}
 			}
 		});
 
@@ -1008,6 +1023,53 @@
 													</svg>
 												</button>
 											</InputMenu>
+										{/if}
+
+										{#if showWebSearchButton}
+											<div
+												class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
+											/>
+
+											<IntegrationsMenu
+												selectedModels={[]}
+												fileUploadCapableModels={[]}
+												toggleFilters={[]}
+												showToolsButton={false}
+												{showWebSearchButton}
+												bind:webSearchEnabled
+												showImageGenerationButton={false}
+												imageGenerationEnabled={false}
+												showCodeInterpreterButton={false}
+												codeInterpreterEnabled={false}
+												selectedToolIds={[]}
+												selectedFilterIds={[]}
+												onShowValves={() => {}}
+												onClose={async () => {
+													await tick();
+													chatInputElement?.focus();
+												}}
+											>
+												<div
+													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												>
+													<Component className="size-4.5" strokeWidth="1.5" />
+												</div>
+											</IntegrationsMenu>
+
+											{#if webSearchEnabled}
+												<Tooltip content={$i18n.t('Web Search')} placement="top">
+													<button
+														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+														type="button"
+														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20"
+													>
+														<GlobeAlt className="size-4" strokeWidth="1.75" />
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+											{/if}
 										{/if}
 									</slot>
 								</div>
