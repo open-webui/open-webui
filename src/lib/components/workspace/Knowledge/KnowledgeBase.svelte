@@ -37,11 +37,14 @@
 		createKnowledgeDirectory,
 		updateKnowledgeDirectory,
 		deleteKnowledgeDirectory,
-		moveFileInKnowledge
+		moveFileInKnowledge,
+		syncKnowledgeDiff,
+		syncKnowledgeCleanup
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
 	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -75,6 +78,7 @@
 	let showNewDirectoryModal = false;
 
 	let showSyncConfirmModal = false;
+	let pendingSyncFiles: Array<{path: string, filename: string, file: File}> | null = null;
 	let showAccessControlModal = false;
 
 	let minSize = 0;
@@ -537,23 +541,169 @@
 		}
 	};
 
-	// Helper function to maintain file paths within zip
-	const syncDirectoryHandler = async () => {
-		if (fileItems.length > 0) {
-			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
-				toast.error(`${e}`);
-			});
+	// Collect files from a directory without uploading — returns {path, filename, file}[]
+	const collectDirectoryFiles = async (): Promise<Array<{path: string, filename: string, file: File}> | null> => {
+		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
 
-			if (res) {
-				fileItems = [];
-				toast.success($i18n.t('Knowledge reset successfully.'));
+		try {
+			if (isFileSystemAccessSupported) {
+				const dirHandle = await window.showDirectoryPicker();
+				const collected: Array<{path: string, filename: string, file: File}> = [];
 
-				// Upload directory
-				uploadDirectoryHandler();
+				async function traverse(handle: FileSystemDirectoryHandle, dirPath = '') {
+					for await (const entry of handle.values()) {
+						if (entry.name.startsWith('.')) continue;
+						const entryPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
+						if (hasHiddenFolder(entryPath)) continue;
+
+						if (entry.kind === 'file') {
+							const file = await entry.getFile();
+							collected.push({ path: dirPath, filename: entry.name, file });
+						} else if (entry.kind === 'directory') {
+							await traverse(entry, entryPath);
+						}
+					}
+				}
+
+				await traverse(dirHandle);
+				return collected;
+			} else {
+				// Firefox fallback
+				return new Promise((resolve, reject) => {
+					const input = document.createElement('input');
+					input.type = 'file';
+					input.webkitdirectory = true;
+					input.directory = true;
+					input.multiple = true;
+					input.style.display = 'none';
+					document.body.appendChild(input);
+
+					input.onchange = () => {
+						try {
+							const files = Array.from(input.files || [])
+								.filter((file) => !hasHiddenFolder(file.webkitRelativePath) && !file.name.startsWith('.'));
+
+							const collected = files.map((file) => {
+								const parts = file.webkitRelativePath.split('/');
+								// Remove root dir name, extract path and filename
+								const withoutRoot = parts.slice(1);
+								const filename = withoutRoot.pop() || file.name;
+								const path = withoutRoot.join('/');
+								return { path, filename, file };
+							});
+
+							document.body.removeChild(input);
+							resolve(collected);
+						} catch (error) {
+							document.body.removeChild(input);
+							reject(error);
+						}
+					};
+
+					input.onerror = (error) => {
+						document.body.removeChild(input);
+						reject(error);
+					};
+
+					input.click();
+				});
 			}
-		} else {
-			uploadDirectoryHandler();
+		} catch (error) {
+			handleUploadError(error);
+			return null;
 		}
+	};
+
+	// Incremental sync: hash locally → diff on server → upload only what changed
+	const syncDirectoryHandler = async () => {
+		if (!pendingSyncFiles?.length) return;
+
+		// ── 2. Compute checksums ──
+		toast.info($i18n.t('Computing checksums...'));
+		const manifest = await Promise.all(
+			pendingSyncFiles.map(async (entry) => ({
+				...entry,
+				checksum: await computeFileHash(entry.file),
+				size: entry.file.size
+			}))
+		);
+		pendingSyncFiles = null;
+
+		// ── 3. Diff against knowledge base ──
+		toast.info($i18n.t('Comparing with knowledge base...'));
+		const diff = await syncKnowledgeDiff(
+			localStorage.token,
+			id,
+			manifest.map(({ filename, path, checksum, size }) => ({ filename, path, checksum, size }))
+		);
+
+		if (!diff) {
+			toast.error($i18n.t('Failed to compare files.'));
+			return;
+		}
+
+		// ── 4. mkdir — create missing directories (parents first) ──
+		const createdDirectoryIds: Record<string, string> = {};
+		for (const dirPath of diff.mkdir) {
+			const segments = dirPath.split('/');
+			const name = segments.at(-1)!;
+			const parentPath = segments.slice(0, -1).join('/');
+			const parentId = parentPath ? createdDirectoryIds[parentPath] : null;
+
+			const directory = await createKnowledgeDirectory(
+				localStorage.token, knowledge.id, name, parentId
+			);
+			if (directory) {
+				createdDirectoryIds[dirPath] = directory.id;
+			}
+		}
+
+		// ── 5. Upload added + modified files ──
+		const filesToUpload = manifest.filter((entry) =>
+			diff.added.some((a: any) => a.filename === entry.filename && a.path === entry.path) ||
+			diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
+		);
+
+		let uploadedCount = 0;
+		for (const entry of filesToUpload) {
+			const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+			await uploadFile(localStorage.token, fileObject, {
+				knowledge_id: knowledge.id,
+				file_hash: entry.checksum,
+				directory_id: entry.path ? createdDirectoryIds[entry.path] : null
+			});
+			uploadedCount++;
+			toast.info(
+				$i18n.t('Uploading: {{current}}/{{total}}', {
+					current: uploadedCount,
+					total: filesToUpload.length
+				})
+			);
+		}
+
+		// ── 6. Cleanup — remove deleted files + rmdir orphaned directories ──
+		const staleFileIds = [
+			...diff.deleted.map((d: any) => d.file_id),
+			...diff.modified.map((m: any) => m.stale_file_id)
+		];
+
+		if (staleFileIds.length > 0 || diff.rmdir.length > 0) {
+			await syncKnowledgeCleanup(localStorage.token, id, staleFileIds, diff.rmdir);
+		}
+
+		// ── 7. Report ──
+		toast.success(
+			$i18n.t(
+				'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
+				{
+					added: diff.added.length,
+					modified: diff.modified.length,
+					deleted: diff.deleted.length,
+					unmodified: diff.unmodified_count
+				}
+			)
+		);
+		init();
 	};
 
 	const addFileHandler = async (fileId) => {
@@ -924,10 +1074,14 @@
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
-		'This will reset the knowledge base and sync all files. Do you wish to continue?'
+		'{{count}} files selected. Only new and modified files will be uploaded. Deleted files will be removed. The folder structure will be mirrored. Continue?',
+		{ count: pendingSyncFiles?.length ?? 0 }
 	)}
 	on:confirm={() => {
 		syncDirectoryHandler();
+	}}
+	on:cancel={() => {
+		pendingSyncFiles = null;
 	}}
 />
 
@@ -1113,8 +1267,11 @@
 										document.getElementById('files-input').click();
 									}
 								}}
-								onSync={() => {
-									showSyncConfirmModal = true;
+								onSync={async () => {
+									pendingSyncFiles = await collectDirectoryFiles();
+									if (pendingSyncFiles?.length) {
+										showSyncConfirmModal = true;
+									}
 								}}
 							/>
 						</div>

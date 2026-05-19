@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -290,6 +291,10 @@ async def upload_file_handler(
             },
         )
 
+        # SHA-256 of raw uploaded bytes for incremental sync diffing.
+        # If the client pre-computed and sent file_hash, use that.
+        file_hash = file_metadata.get('file_hash') or hashlib.sha256(contents).hexdigest()
+
         file_item = await Files.insert_new_file(
             user.id,
             FileForm(
@@ -304,6 +309,7 @@ async def upload_file_handler(
                         'name': name,
                         'content_type': (file.content_type if isinstance(file.content_type, str) else None),
                         'size': len(contents),
+                        'file_hash': file_hash,
                         'data': file_metadata,
                     },
                 }

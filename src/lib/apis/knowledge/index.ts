@@ -470,8 +470,82 @@ export const resetKnowledgeById = async (token: string, id: string) => {
 	return res;
 };
 
+export const syncKnowledgeDiff = async (
+	token: string,
+	id: string,
+	manifest: Array<{ filename: string; path: string; checksum: string; size: number }>
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/sync/diff`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ manifest })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const syncKnowledgeCleanup = async (
+	token: string,
+	id: string,
+	fileIds: string[],
+	dirIds: string[] = []
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/sync/cleanup`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ file_ids: fileIds, dir_ids: dirIds })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
+
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
 		method: 'DELETE',
