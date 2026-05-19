@@ -1,5 +1,5 @@
 app = "open-webui-26z5ca"
-primary_region = "sin"
+primary_region = "sin" 
 
 [build]
 
