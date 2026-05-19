@@ -1448,7 +1448,13 @@ class OAuthManager:
                     'Authorization': f'Bearer {access_token}',
                 }
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(picture_url, **get_kwargs, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                # allow_redirects=False prevents redirect-based SSRF: validate_url() only vetted the initial URL (CVE-2026-45401 cohort).
+                async with session.get(
+                    picture_url,
+                    **get_kwargs,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                ) as resp:
                     if resp.ok:
                         picture = await resp.read()
                         base64_encoded_picture = base64.b64encode(picture).decode('utf-8')
