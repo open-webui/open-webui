@@ -578,6 +578,20 @@ try:
 except ValueError:
     AIOHTTP_POOL_DNS_TTL = 300
 
+# Max size of a single chunk read from an SSE/HTTP stream, in bytes.
+# aiohttp's default is 64 KiB which can be exceeded when an upstream provider
+# emits a single very large SSE chunk (e.g. OpenRouter sometimes batches a
+# reasoning trace or tool-call payload into one chunk, or an image-generation
+# response is returned in one message). Raising this avoids
+# `Got more than N bytes when reading` 400 errors. Default 1 MiB.
+AIOHTTP_READ_BUFSIZE = os.getenv('AIOHTTP_READ_BUFSIZE', str(1024 * 1024))
+try:
+    AIOHTTP_READ_BUFSIZE = int(AIOHTTP_READ_BUFSIZE)
+    if AIOHTTP_READ_BUFSIZE <= 0:
+        AIOHTTP_READ_BUFSIZE = 1024 * 1024
+except ValueError:
+    AIOHTTP_READ_BUFSIZE = 1024 * 1024
+
 RAG_EMBEDDING_TIMEOUT = os.getenv('RAG_EMBEDDING_TIMEOUT', '')
 
 if RAG_EMBEDDING_TIMEOUT == '':

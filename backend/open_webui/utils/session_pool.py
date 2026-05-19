@@ -9,6 +9,11 @@ All pool parameters are configurable via environment variables:
     - AIOHTTP_POOL_CONNECTIONS (default 100) — max total connections
     - AIOHTTP_POOL_CONNECTIONS_PER_HOST (default 30) — per-host limit
     - AIOHTTP_POOL_DNS_TTL (default 300) — DNS cache TTL in seconds
+    - AIOHTTP_READ_BUFSIZE (default 1048576) — per-chunk read buffer size in
+      bytes. Raise this when an upstream emits very large SSE chunks (e.g.
+      reasoning-trace batching by some OpenRouter providers, or single-message
+      image-generation responses) which otherwise fail with
+      "Got more than N bytes when reading".
 
 Usage:
     from open_webui.utils.session_pool import get_session, cleanup_response
@@ -32,6 +37,7 @@ from open_webui.env import (
     AIOHTTP_POOL_CONNECTIONS,
     AIOHTTP_POOL_CONNECTIONS_PER_HOST,
     AIOHTTP_POOL_DNS_TTL,
+    AIOHTTP_READ_BUFSIZE,
 )
 
 log = logging.getLogger(__name__)
@@ -61,12 +67,14 @@ async def get_session() -> aiohttp.ClientSession:
             connector=connector,
             timeout=timeout,
             trust_env=True,
+            read_bufsize=AIOHTTP_READ_BUFSIZE,
         )
         log.info(
-            'Created shared aiohttp session pool (limit=%s, per_host=%s, dns_ttl=%d)',
+            'Created shared aiohttp session pool (limit=%s, per_host=%s, dns_ttl=%d, read_bufsize=%d)',
             AIOHTTP_POOL_CONNECTIONS or 'unlimited',
             AIOHTTP_POOL_CONNECTIONS_PER_HOST or 'unlimited',
             AIOHTTP_POOL_DNS_TTL,
+            AIOHTTP_READ_BUFSIZE,
         )
     return _session
 
