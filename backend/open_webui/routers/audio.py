@@ -438,7 +438,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 audio_data = await r.read()
                 content_type_header = r.headers.get('Content-Type', 'audio/mpeg')
 
-                if not transcode_audio_to_mp3(audio_data, content_type_header, file_path):
+                if not await asyncio.to_thread(
+                    transcode_audio_to_mp3, audio_data, content_type_header, file_path
+                ):
                     async with aiofiles.open(file_path, 'wb') as f:
                         await f.write(audio_data)
 
