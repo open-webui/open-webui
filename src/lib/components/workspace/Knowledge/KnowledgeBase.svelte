@@ -651,13 +651,24 @@
 				return;
 			}
 
-			// ── 4. mkdir — create missing directories (parents first) ──
-			const createdDirectoryIds: Record<string, string> = {};
+			// ── 4. Cleanup — remove deleted + stale modified files first ──
+			const staleFileIds = [
+				...diff.deleted.map((d: any) => d.file_id),
+				...diff.modified.map((m: any) => m.stale_file_id)
+			];
+
+			if (staleFileIds.length > 0 || diff.rmdir.length > 0) {
+				syncing = $i18n.t('Removing {{count}} stale files...', { count: staleFileIds.length });
+				await syncKnowledgeCleanup(localStorage.token, id, staleFileIds, diff.rmdir);
+			}
+
+			// ── 5. mkdir — create missing directories (parents first) ──
+			const directoryIdByPath: Record<string, string> = { ...(diff.directory_map || {}) };
 			for (const dirPath of diff.mkdir) {
 				const segments = dirPath.split('/');
 				const name = segments.at(-1)!;
 				const parentPath = segments.slice(0, -1).join('/');
-				const parentId = parentPath ? createdDirectoryIds[parentPath] : null;
+				const parentId = parentPath ? directoryIdByPath[parentPath] : null;
 
 				const directory = await createKnowledgeDirectory(
 					localStorage.token,
@@ -666,11 +677,11 @@
 					parentId
 				);
 				if (directory) {
-					createdDirectoryIds[dirPath] = directory.id;
+					directoryIdByPath[dirPath] = directory.id;
 				}
 			}
 
-			// ── 5. Upload added + modified files ──
+			// ── 6. Upload added + modified files ──
 			const filesToUpload = manifest.filter(
 				(entry) =>
 					diff.added.some((a: any) => a.filename === entry.filename && a.path === entry.path) ||
@@ -691,19 +702,8 @@
 				await uploadFile(localStorage.token, fileObject, {
 					knowledge_id: knowledge.id,
 					file_hash: entry.checksum,
-					directory_id: entry.path ? createdDirectoryIds[entry.path] : null
+					directory_id: entry.path ? directoryIdByPath[entry.path] : null
 				}).catch(() => null);
-			}
-
-			// ── 6. Cleanup — remove deleted files + rmdir orphaned directories ──
-			const staleFileIds = [
-				...diff.deleted.map((d: any) => d.file_id),
-				...diff.modified.map((m: any) => m.stale_file_id)
-			];
-
-			if (staleFileIds.length > 0 || diff.rmdir.length > 0) {
-				syncing = $i18n.t('Removing {{count}} stale files...', { count: staleFileIds.length });
-				await syncKnowledgeCleanup(localStorage.token, id, staleFileIds, diff.rmdir);
 			}
 
 			// ── 7. Report ──

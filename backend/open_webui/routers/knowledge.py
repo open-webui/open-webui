@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import zipfile
@@ -1007,6 +1008,7 @@ class SyncDiffResponse(BaseModel):
     mkdir: list[str]                # directory paths to create
     rmdir: list[str]                # directory IDs to remove
     unmodified_count: int
+    directory_map: dict[str, str]   # existing path → directory ID
 
 
 @router.post('/{id}/sync/diff', response_model=SyncDiffResponse)
@@ -1101,6 +1103,7 @@ async def sync_knowledge_diff(
         mkdir=mkdir,
         rmdir=rmdir,
         unmodified_count=unmodified_count,
+        directory_map=directory_id_by_path,
     )
 
 
@@ -1154,6 +1157,10 @@ async def sync_knowledge_cleanup(
 
         if file.user_id == user.id or user.role == 'admin':
             await Files.delete_file_by_id(file_id, db=db)
+            try:
+                await asyncio.to_thread(Storage.delete_file, file.path)
+            except Exception:
+                pass
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):
