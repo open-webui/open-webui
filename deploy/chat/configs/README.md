@@ -8,14 +8,10 @@ This directory stores Jawafdehi-specific OpenWebUI configuration as version-cont
 configs/
 ├── README.md                           # This file
 ├── models/
-│   └── jawafdehi-caseworker.json       # Jawafdehi Caseworker model preset
-├── knowledge/                          # Knowledge Base doc collections (see knowledge/collections.json)
-│   ├── legal-framework/               # Nepali legal documents
-│   ├── caseworker-guides/             # Caseworker operational guides
-│   └── court-reference/               # Court system reference docs
-└── collections.json                    # KB collection metadata
-scripts/
-└── bootstrap-config.sh                 # Idempotent script to apply configs via OpenWebUI API
+│   └── jawafdehi-caseworker.json        # Deployed model config (full, not a skeleton)
+└── knowledge/
+    ├── collections.json                # KB collection metadata
+    └── caseworker/                     # Skills (pulled from jawafdehi-meta at deploy)
 ```
 
 ## How it works
@@ -27,8 +23,17 @@ scripts/
 
 ## Model Configuration
 
-The `jawafdehi-caseworker.json` model is based on "Damo's custom Model" from chat.jawafdehi.org.
-Update `base_model_id` in the JSON to match the upstream model ID before deploying.
+`jawafdehi-caseworker.json` is a snapshot of the deployed "Jawafdehi Caseworker"
+configuration. It includes:
+
+- `base_model_id`: `deepseek-v4-pro`
+- System prompt for caseworker assistance
+- Full capability set (file upload, web search, code interpreter, terminal, citations)
+- MCP tool binding (`server:mcp:jawafdehi`)
+- Caseworker skill binding (`jawafdehi-caseworker`)
+
+This is a complete model config — not a skeleton. It can be applied directly
+by the bootstrap script with no manual steps needed.
 
 ## Adding Knowledge Base docs
 

@@ -1,17 +1,29 @@
 {
   "id": "jawafdehi-caseworker",
   "name": "Jawafdehi Caseworker",
-  "base_model_id": null,
+  "base_model_id": "deepseek-v4-pro",
   "params": {
+    "system": "You are an AI Assistant helping corruption caseworkers/researchers at Jawafdehi Initiative to support maintaining corruption cases into the Jawafdehi corruption database for Nepal, which is hosted at jawafdehi.org.",
     "temperature": 0.3,
     "top_p": 0.9
   },
   "meta": {
-    "description": "Jawafdehi caseworker assistant for corruption case analysis, court data lookups, and case documentation with Nepali language support",
     "profile_image_url": "/static/favicon.png",
+    "description": "Jawafdehi caseworker assistant for corruption case analysis, court data lookups, and case documentation with Nepali language support",
     "capabilities": {
-      "vision": false
-    }
+      "file_context": true,
+      "vision": false,
+      "file_upload": true,
+      "web_search": true,
+      "image_generation": false,
+      "code_interpreter": true,
+      "terminal": true,
+      "citations": true,
+      "status_updates": true,
+      "builtin_tools": true
+    },
+    "toolIds": ["server:mcp:jawafdehi"],
+    "skillIds": ["jawafdehi-caseworker"]
   },
   "is_active": true
 }
