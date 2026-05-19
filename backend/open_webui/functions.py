@@ -318,11 +318,10 @@ async def generate_function_chat_completion(request, form_data, user, models: di
                 async for line in res:
                     yield process_line(form_data, line)
 
-            if isinstance(res, str) or isinstance(res, Generator):
-                finish_message = openai_chat_chunk_message_template(form_data['model'], '')
-                finish_message['choices'][0]['finish_reason'] = 'stop'
-                yield f'data: {json.dumps(finish_message)}\n\n'
-                yield 'data: [DONE]'
+            finish_message = openai_chat_chunk_message_template(form_data['model'], '')
+            finish_message['choices'][0]['finish_reason'] = 'stop'
+            yield f'data: {json.dumps(finish_message)}\n\n'
+            yield 'data: [DONE]'
 
         return StreamingResponse(stream_content(), media_type='text/event-stream')
     else:
