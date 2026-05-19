@@ -641,13 +641,21 @@
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
 
-		// Prompt-related message types only submit text to the chat input —
-		// functionally equivalent to the user typing.  When same-origin is
-		// enabled they go through immediately.  When it is disabled (opaque
-		// origin) we show a confirmation dialog so the user stays in control.
-		const iframePromptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+		// Prompt-driving message types let an embedding page control the chat
+		// input / submission.  Cross-origin sources are only trusted when the
+		// user has explicitly opted in via the "iframe Sandbox Allow Same
+		// Origin" interface setting (the same toggle that governs whether
+		// rendered iframes receive `allow-same-origin`).
+		const promptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+		const isTrusted = isSameOrigin || ($settings?.iframeSandboxAllowSameOrigin ?? false);
 
-		if (!isSameOrigin && !iframePromptTypes.includes(type)) {
+		// Non-prompt message types are always restricted to same-origin only.
+		if (!isSameOrigin && !promptTypes.includes(type)) {
+			return;
+		}
+
+		// Prompt types from an untrusted cross-origin source are silently dropped.
+		if (promptTypes.includes(type) && !isTrusted) {
 			return;
 		}
 
@@ -655,8 +663,21 @@
 			console.debug(event.data.text);
 
 			if (prompt !== '') {
-				await tick();
-				submitHandler(prompt);
+				if (isSameOrigin) {
+					await tick();
+					submitHandler(prompt);
+				} else {
+					eventConfirmationInput = false;
+					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
+					eventConfirmationMessage = prompt;
+					eventCallback = async (confirmed: boolean) => {
+						if (confirmed) {
+							await tick();
+							submitHandler(prompt);
+						}
+					};
+					showEventConfirmation = true;
+				}
 			}
 		}
 
@@ -679,7 +700,6 @@
 					await tick();
 					submitHandler(event.data.text);
 				} else {
-					// Cross-origin: ask user to confirm before submitting
 					eventConfirmationInput = false;
 					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
 					eventConfirmationMessage = event.data.text;
