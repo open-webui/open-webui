@@ -950,7 +950,10 @@ async def delete_knowledge_by_id(
 
 @router.post('/{id}/reset', response_model=KnowledgeResponse | None)
 async def reset_knowledge_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str,
+    include_directories: bool = Query(True),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -981,7 +984,7 @@ async def reset_knowledge_by_id(
         log.debug(e)
         pass
 
-    knowledge = await Knowledges.reset_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
     return knowledge
 
 

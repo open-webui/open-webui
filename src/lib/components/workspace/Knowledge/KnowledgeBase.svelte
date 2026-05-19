@@ -81,6 +81,7 @@
 	let pendingSyncFiles: Array<{ path: string; filename: string; file: File }> | null = null;
 	let syncing: string | null = null;
 	let showAccessControlModal = false;
+	let showResetConfirm = false;
 
 	let minSize = 0;
 	type Knowledge = {
@@ -1292,8 +1293,11 @@
 									if (pendingSyncFiles?.length) {
 										showSyncConfirmModal = true;
 									}
-								}}
-							/>
+							}}
+							onReset={() => {
+								showResetConfirm = true;
+							}}
+						/>
 						</div>
 					{/if}
 				</div>
@@ -1526,5 +1530,19 @@
 		<div class="text-xs text-gray-500">
 			{$i18n.t('Delete all contents inside this directory')}
 		</div>
+	</div>
+</ConfirmDialog>
+
+<ConfirmDialog
+	bind:show={showResetConfirm}
+	title={$i18n.t('Reset knowledge base?')}
+	on:confirm={async () => {
+		await resetKnowledgeById(localStorage.token, id);
+		toast.success($i18n.t('Knowledge base has been reset'));
+		init();
+	}}
+>
+	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
+		{$i18n.t('This will remove all files and directories from this knowledge base. This action cannot be undone.')}
 	</div>
 </ConfirmDialog>

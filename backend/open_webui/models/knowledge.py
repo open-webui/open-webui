@@ -692,11 +692,16 @@ class KnowledgeTable:
         except Exception:
             return False
 
-    async def reset_knowledge_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[KnowledgeModel]:
+    async def reset_knowledge_by_id(self, id: str, include_directories: bool = True, db: Optional[AsyncSession] = None) -> Optional[KnowledgeModel]:
         try:
             async with get_async_db_context(db) as db:
                 # Delete all knowledge_file entries for this knowledge_id
                 await db.execute(delete(KnowledgeFile).filter_by(knowledge_id=id))
+
+                # Delete all directories if requested
+                if include_directories:
+                    await db.execute(delete(KnowledgeDirectory).filter_by(knowledge_id=id))
+
                 await db.commit()
 
                 # Update the knowledge entry's updated_at timestamp
