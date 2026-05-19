@@ -4832,6 +4832,27 @@ async def streaming_chat_response_handler(response, ctx):
                         log.debug(e)
                         break
 
+                # Tool calls still queued after the loop = the iteration cap cut the model off, not a natural finish.
+                if len(tool_calls) > 0 and tool_call_iterations >= CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS:
+                    log.info(f'Tool-call iteration limit reached ({CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS})')
+                    error_content = (
+                        f'Reached the maximum of {CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS} tool-call iterations '
+                        f'for this response. Send a new message to continue, or raise '
+                        f'CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS.'
+                    )
+                    if not metadata['chat_id'].startswith('channel:'):
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {'error': {'content': error_content}},
+                        )
+                    await event_emitter(
+                        {
+                            'type': 'chat:message:error',
+                            'data': {'error': {'content': error_content}},
+                        }
+                    )
+
                 if DETECT_CODE_INTERPRETER:
                     MAX_RETRIES = 5
                     retries = 0
