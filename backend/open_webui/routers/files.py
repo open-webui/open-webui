@@ -119,8 +119,7 @@ async def process_uploaded_file(
             if content_type and strict_match_mime_type(stt_supported, content_type):
                 # Audio / STT-supported files → transcribe then index
                 file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
-                result = await asyncio.to_thread(
-                    transcribe,
+                result = await transcribe(
                     request,
                     file_path_processed,
                     file_metadata,
