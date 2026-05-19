@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 import black
-import markdown
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -71,15 +70,6 @@ async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_v
             status_code=400,
             detail=ERROR_MESSAGES.DEFAULT('Code execution engine not supported'),
         )
-
-
-class MarkdownForm(BaseModel):
-    md: str
-
-
-@router.post('/markdown')
-async def get_html_from_markdown(form_data: MarkdownForm, user=Depends(get_verified_user)):
-    return {'html': markdown.markdown(form_data.md)}
 
 
 class ChatForm(BaseModel):
