@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.utils.access_control import has_permission
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ async def query_memory(
     if not memories:
         raise HTTPException(status_code=404, detail='No memories found for user')
 
-    vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)
+    vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, RAG_EMBEDDING_QUERY_PREFIX, user=user)
 
     results = await ASYNC_VECTOR_DB_CLIENT.search(
         collection_name=f'user-memory-{user.id}',
