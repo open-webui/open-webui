@@ -38,6 +38,7 @@ export enum Shortcut {
 	//Message
 	GENERATE_MESSAGE_PAIR = 'generateMessagePair',
 	REGENERATE_RESPONSE = 'regenerateResponse',
+	EDIT_LAST_USER_MESSAGE = 'editLastUserMessage',
 	COPY_LAST_CODE_BLOCK = 'copyLastCodeBlock',
 	COPY_LAST_RESPONSE = 'copyLastResponse',
 	STOP_GENERATING = 'stopGenerating'
@@ -141,6 +142,11 @@ export const shortcuts: ShortcutRegistry = {
 	[Shortcut.REGENERATE_RESPONSE]: {
 		name: 'Regenerate Response',
 		keys: ['mod', 'R'],
+		category: 'Message'
+	},
+	[Shortcut.EDIT_LAST_USER_MESSAGE]: {
+		name: 'Edit Last User Message',
+		keys: ['mod', 'shift', 'E'],
 		category: 'Message'
 	},
 	[Shortcut.STOP_GENERATING]: {

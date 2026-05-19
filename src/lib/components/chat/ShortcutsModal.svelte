@@ -90,6 +90,7 @@
 						<!-- {$i18n.t('Regenerate Response')} -->
 						<!-- {$i18n.t('Stop Generating')} -->
 						<!-- {$i18n.t('Edit Last Message')} -->
+						<!-- {$i18n.t('Edit Last User Message')} -->
 						<!-- {$i18n.t('Copy Last Response')} -->
 						<!-- {$i18n.t('Copy Last Code Block')} -->
 

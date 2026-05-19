@@ -263,6 +263,12 @@
 					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
 					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.EDIT_LAST_USER_MESSAGE])) {
+					console.log('Shortcut triggered: EDIT_LAST_USER_MESSAGE');
+					event.preventDefault();
+					const editButtons =
+						document.querySelectorAll<HTMLButtonElement>('.edit-user-message-button');
+					editButtons.item(editButtons.length - 1)?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_SIDEBAR])) {
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
