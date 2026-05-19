@@ -234,7 +234,7 @@
 											tooltip={$i18n.t(
 												'Set the default models that are automatically selected for all users when a new chat is created.'
 											)}
-											models={$models}
+											models={$models.filter((model) => !(model?.info?.meta?.hidden ?? false))}
 											bind:modelIds={defaultModelIds}
 										/>
 
@@ -245,7 +245,7 @@
 											tooltip={$i18n.t(
 												'Set the models that are automatically pinned to the sidebar for all users.'
 											)}
-											models={$models}
+											models={$models.filter((model) => !(model?.info?.meta?.hidden ?? false))}
 											bind:modelIds={defaultPinnedModelIds}
 										/>
 
