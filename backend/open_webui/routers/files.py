@@ -447,7 +447,7 @@ def set_file_processing_mode(
         )
 
     if mode == "pdf":
-        if not getattr(request.app.state.config, "PDF_CONVERSION_AVAILABLE", False):
+        if not getattr(request.app.state, "PDF_CONVERSION_AVAILABLE", False):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=ERROR_MESSAGES.DEFAULT(

@@ -887,7 +887,7 @@ import shutil as _shutil
 
 _libreoffice_bin = _shutil.which("libreoffice") or _shutil.which("soffice")
 app.state.LIBREOFFICE_BIN = _libreoffice_bin
-app.state.config.PDF_CONVERSION_AVAILABLE = _libreoffice_bin is not None
+app.state.PDF_CONVERSION_AVAILABLE = _libreoffice_bin is not None
 if _libreoffice_bin:
     log.info(
         "LibreOffice detected at %s; 'Convert to PDF' attachment mode enabled.",
@@ -1766,7 +1766,7 @@ async def get_app_config(request: Request):
                     "enable_user_webhooks": app.state.config.ENABLE_USER_WEBHOOKS,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
-                    "pdf_conversion_available": app.state.config.PDF_CONVERSION_AVAILABLE,
+                    "pdf_conversion_available": app.state.PDF_CONVERSION_AVAILABLE,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                     **(
