@@ -30,7 +30,7 @@ from open_webui.config import (
 from open_webui.constants import TASKS
 from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
-    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
+    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     ENABLE_QUERIES_CACHE,
@@ -4438,7 +4438,7 @@ async def streaming_chat_response_handler(response, ctx):
                     if response.background:
                         await response.background()
 
-                tool_call_retries = 0
+                tool_call_iterations = 0
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data['messages'])
@@ -4458,8 +4458,11 @@ async def streaming_chat_response_handler(response, ctx):
                         get_content_from_message(original_system_message) if original_system_message else None
                     )
 
-                while len(tool_calls) > 0 and tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES:
-                    tool_call_retries += 1
+                while tool_calls and (
+                    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS is None
+                    or tool_call_iterations < CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS
+                ):
+                    tool_call_iterations += 1
 
                     response_tool_calls = tool_calls.pop(0)
 
@@ -4831,6 +4834,26 @@ async def streaming_chat_response_handler(response, ctx):
                     except Exception as e:
                         log.debug(e)
                         break
+
+                if (
+                    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS is not None
+                    and tool_calls
+                    and tool_call_iterations >= CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS
+                ):
+                    log.warning('Tool-call iteration limit reached (%s)', CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS)
+                    error_content = f'Tool-call limit reached ({CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS} iterations).'
+                    if not metadata.get('chat_id', '').startswith('channel:'):
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {'error': {'content': error_content}},
+                        )
+                    await event_emitter(
+                        {
+                            'type': 'chat:message:error',
+                            'data': {'error': {'content': error_content}},
+                        }
+                    )
 
                 if DETECT_CODE_INTERPRETER:
                     MAX_RETRIES = 5
