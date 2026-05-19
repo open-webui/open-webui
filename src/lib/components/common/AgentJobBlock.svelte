@@ -107,16 +107,17 @@
 				<line x1="9.5" y1="16.3" x2="14.5" y2="16.3" />
 			</svg>
 
+			<span
+				class="shrink-0 font-mono text-xs tabular-nums text-gray-500 dark:text-gray-400"
+				title="Doba běhu agenta (tiká po sekundách)"
+			>
+				⏱ {fmt(elapsed)}
+			</span>
+
 			<span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
 				>{title}</span
 			>
 		</button>
-		<span
-			class="shrink-0 font-mono text-xs tabular-nums px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-			title="Doba běhu agenta (tiká po sekundách)"
-		>
-			⏱ {fmt(elapsed)}
-		</span>
 		{#if src}
 			<a
 				href={src}
