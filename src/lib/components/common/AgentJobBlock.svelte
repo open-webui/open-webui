@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	// Emitted by the seeded `background_agent` Tool as:
@@ -7,11 +8,32 @@
 	export let attributes: Record<string, string> = {};
 	export let summary: string = '';
 
-	let open = true;
+	// Debug display starts COLLAPSED — the user expands it on demand.
+	let open = false;
+
+	// Header stopwatch: live runtime, ticks every second. The block is
+	// emitted right when the job starts, so time-since-mount ≈ job runtime.
+	let started = Date.now();
+	let elapsed = 0;
+	let timer: ReturnType<typeof setInterval> | undefined;
+
+	const fmt = (s: number) => {
+		const m = Math.floor(s / 60);
+		const r = s % 60;
+		return `${m}:${r.toString().padStart(2, '0')}`;
+	};
+
+	onMount(() => {
+		started = Date.now();
+		timer = setInterval(() => {
+			elapsed = Math.floor((Date.now() - started) / 1000);
+		}, 1000);
+	});
+	onDestroy(() => timer && clearInterval(timer));
 
 	$: jobId = attributes?.job ?? '';
 	$: token = attributes?.tok ?? '';
-	$: title = (summary && summary.trim()) || 'Spouštím agenta…';
+	$: title = 'Pracuji: ' + ((summary && summary.trim()) || '…');
 	$: src =
 		jobId && token
 			? `${WEBUI_BASE_URL}/api/v1/agent/jobs/${jobId}/view?token=${encodeURIComponent(token)}`
@@ -44,6 +66,12 @@
 				>{title}</span
 			>
 		</button>
+		<span
+			class="shrink-0 font-mono text-xs tabular-nums px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+			title="Doba běhu agenta (tiká po sekundách)"
+		>
+			⏱ {fmt(elapsed)}
+		</span>
 		{#if src}
 			<a
 				href={src}
