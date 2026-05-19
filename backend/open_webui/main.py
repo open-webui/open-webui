@@ -880,6 +880,25 @@ app.state.config.RAG_OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
 
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
+# LibreOffice availability for the "Convert to PDF" attachment mode. Probed once
+# at startup; the frontend hides the PDF mode option when this is False so users
+# don't get failure toasts after the fact.
+import shutil as _shutil
+
+_libreoffice_bin = _shutil.which("libreoffice") or _shutil.which("soffice")
+app.state.LIBREOFFICE_BIN = _libreoffice_bin
+app.state.config.PDF_CONVERSION_AVAILABLE = _libreoffice_bin is not None
+if _libreoffice_bin:
+    log.info(
+        "LibreOffice detected at %s; 'Convert to PDF' attachment mode enabled.",
+        _libreoffice_bin,
+    )
+else:
+    log.warning(
+        "LibreOffice not found on PATH (looked for 'libreoffice' and 'soffice'). "
+        "'Convert to PDF' attachment mode is disabled. Install LibreOffice to enable."
+    )
+
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
@@ -1747,6 +1766,7 @@ async def get_app_config(request: Request):
                     "enable_user_webhooks": app.state.config.ENABLE_USER_WEBHOOKS,
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                    "pdf_conversion_available": app.state.config.PDF_CONVERSION_AVAILABLE,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                     **(

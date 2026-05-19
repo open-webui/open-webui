@@ -1636,6 +1636,17 @@ export const extractContentFromFile = async (file: File) => {
 		'.rtf'
 	];
 
+	// Binary formats whose UTF-8 decoding is garbage. Without this guard, the
+	// fallback readAsText below would inline e.g. a zipped docx as gibberish
+	// into the user's prompt.
+	const BINARY_EXTENSIONS = new Set([
+		'xlsx', 'xls', 'pptx', 'ppt', 'odt', 'odp', 'ods', 'doc',
+		'epub', 'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+		'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff', 'tif',
+		'heic', 'heif', 'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac',
+		'mp4', 'mov', 'avi', 'mkv', 'webm'
+	]);
+
 	function getExtension(filename: string) {
 		const dot = filename.lastIndexOf('.');
 		return dot === -1 ? '' : filename.substr(dot).toLowerCase();
@@ -1656,6 +1667,16 @@ export const extractContentFromFile = async (file: File) => {
 		return allText;
 	}
 
+	// Uses mammoth (browser build) to extract raw text from .docx. Mammoth is
+	// dynamically imported so it only ships in the bundle when actually needed.
+	async function extractDocxText(file: File) {
+		// @ts-expect-error — mammoth ships no @types/mammoth; ambient declaration in app.d.ts
+		const mammoth: any = await import('mammoth/mammoth.browser');
+		const arrayBuffer = await file.arrayBuffer();
+		const result = await mammoth.extractRawText({ arrayBuffer });
+		return (result?.value ?? '') as string;
+	}
+
 	// Reads file as text using FileReader
 	function readAsText(file: File) {
 		return new Promise((resolve, reject) => {
@@ -1674,9 +1695,27 @@ export const extractContentFromFile = async (file: File) => {
 		return await extractPdfText(file);
 	}
 
+	// DOCX check — same shape as PDF, mammoth handles the zipped XML.
+	if (
+		type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+		ext === '.docx'
+	) {
+		return await extractDocxText(file);
+	}
+
 	// Text check (plain or common text-based)
 	if (type.startsWith('text/') || textExtensions.includes(ext)) {
 		return await readAsText(file);
+	}
+
+	// Hard-fail on known-binary formats before the readAsText fallback so the
+	// user's prompt doesn't get polluted with decoded garbage.
+	const bareExt = ext.replace(/^\./, '');
+	if (BINARY_EXTENSIONS.has(bareExt)) {
+		throw new Error(
+			'This file type is not supported in temporary chats. Disable temporary chat to attach it: ' +
+				(file.name || type)
+		);
 	}
 
 	// Fallback: try to read as text, if decodable

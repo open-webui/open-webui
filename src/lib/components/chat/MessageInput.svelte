@@ -40,7 +40,7 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
-	import { uploadFile } from '$lib/apis/files';
+	import { uploadFile, getFileById } from '$lib/apis/files';
 	import type { ReasoningEffort } from '$lib/apis';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
@@ -105,6 +105,14 @@
 	export let files = [];
 	const canceledImageUploads = new Set<string>();
 	const imageUploadAbortControllers = new Map<string, AbortController>();
+
+	// Send button disable: blocks while any attached file is still in flight
+	// (browser upload) or having its text extracted on the backend. The chip's
+	// own spinner is the explanation for the disabled state, so no extra banner.
+	$: hasInFlightFiles = files.some(
+		(f) => f?.status === 'uploading' || f?.status === 'processing'
+	);
+	$: sendDisabled = (prompt === '' && files.length === 0) || hasInFlightFiles;
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
@@ -780,6 +788,43 @@
 		}
 	};
 
+	// Poll the backend file row to track text-extraction progress. The chip's
+	// status flips ready/failed when the backend lands data.status === 'completed'
+	// or 'failed', unlocking the send button. Bounded to ~5 minutes so a stuck
+	// extraction doesn't hold the UI hostage; after that we let the user
+	// proceed and rely on the backend's lazy fallback at chat-completion time.
+	const pollFileExtractionStatus = async (fileId, fileItem) => {
+		const maxAttempts = 150;
+		const delayMs = 2000;
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			await new Promise((r) => setTimeout(r, delayMs));
+			if (!files.some((f) => f?.id === fileId)) return;
+			try {
+				const file = await getFileById(localStorage.token, fileId);
+				if (!file) continue;
+				fileItem.file = file;
+				const status = file?.data?.status;
+				if (status === 'completed') {
+					fileItem.status = 'uploaded';
+					files = files;
+					return;
+				}
+				if (status === 'failed') {
+					fileItem.status = 'failed';
+					files = files;
+					return;
+				}
+				files = files;
+			} catch (e) {
+				console.error('pollFileExtractionStatus:', e);
+			}
+		}
+		// Polling exhausted — unlock the send button. Chat-completion's lazy
+		// fallback will handle the actual extraction.
+		fileItem.status = 'uploaded';
+		files = files;
+	};
+
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
@@ -839,10 +884,22 @@
 						toast.warning(uploadedFile.error);
 					}
 
-					fileItem.status = 'uploaded';
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
 					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+					// Track backend text-extraction state so the send button stays
+					// disabled until the file is ready. Old server versions that
+					// don't set data.status default to 'uploaded' immediately.
+					const initialBackendStatus = uploadedFile?.data?.status;
+					if (initialBackendStatus === 'pending' || initialBackendStatus === 'processing') {
+						fileItem.status = 'processing';
+						pollFileExtractionStatus(uploadedFile.id, fileItem);
+					} else if (initialBackendStatus === 'failed') {
+						fileItem.status = 'failed';
+					} else {
+						fileItem.status = 'uploaded';
+					}
 
 					files = files;
 				} else {
@@ -1726,6 +1783,11 @@
 														files.splice(fileIdx, 1);
 														files = files;
 													}}
+													on:modeChange={(e) => {
+														// Mode toggle on the chip mutates `file.processing_mode`
+														// in place; bump the array reference so reactivity fires.
+														files = files;
+													}}
 													on:click={() => {
 														console.log(file);
 													}}
@@ -2464,11 +2526,11 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class="{!(prompt === '' && files.length === 0)
+														class="{!sendDisabled
 															? 'bg-book-cloth text-white hover:bg-kraft'
 															: 'text-white/70 bg-gray-200 dark:bg-gray-800 dark:text-gray-500 disabled'} transition-colors duration-200 ease-paper rounded-full p-1.5 max-md:p-2.5 self-center"
 														type="submit"
-														disabled={prompt === '' && files.length === 0}
+														disabled={sendDisabled}
 													>
 														<svg
 															xmlns="http://www.w3.org/2000/svg"

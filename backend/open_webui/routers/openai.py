@@ -57,6 +57,11 @@ from open_webui.models.files import Files
 from open_webui.storage.provider import Storage
 from open_webui.constants import TASKS
 from open_webui.utils.task import title_generation_template, tags_generation_template
+from open_webui.utils.file_extraction import (
+    format_extracted_document,
+    get_or_extract_file_content,
+)
+from open_webui.utils.file_conversion import get_or_convert_to_pdf
 from open_webui.config import (
     DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
@@ -1188,77 +1193,204 @@ async def generate_chat_completion(
                     message["content"].pop(remove_idx)
                     log.debug(f"Removed image part at index {remove_idx}")
                 
-                # Process file parts (separate loop after image processing)
+                # Process file parts (separate loop after image processing).
+                # Tri-modal dispatch:
+                #   PDF or processing_mode=="pdf" → base64 + has_pdf_files flag
+                #     (handled by the OpenRouter `file-parser` plugin block below).
+                #   image MIME → promote to image_url part.
+                #   else (default mode=="text") → run Loader, replace with a text
+                #     content part containing a <document filename="..."> envelope.
                 for part in message["content"]:
                     if part.get("type") == "file":
                         file_obj = part.get("file") or {}
                         file_data = file_obj.get("file_data")
                         filename = file_obj.get("filename") or ""
+                        processing_mode = (
+                            (file_obj.get("processing_mode") or "text").lower()
+                        )
 
-                        if isinstance(file_data, str):
-                            if file_data.startswith("data:application/pdf"):
+                        if not isinstance(file_data, str):
+                            continue
+
+                        # Early PDF detection from the file_data URI itself (covers
+                        # the case where the frontend pre-base64s a PDF without
+                        # going through the file-id resolution path below).
+                        if file_data.startswith("data:application/pdf"):
+                            has_pdf_files = True
+                        if filename.lower().endswith(".pdf"):
+                            has_pdf_files = True
+
+                        match = re.search(
+                            r"/api/v1/files/([^/]+)(?:/content)?(?:\?|$)", file_data
+                        )
+                        if not match:
+                            match = re.search(r"/api/v1/files/([a-f0-9-]+)", file_data)
+                        if not match:
+                            continue
+
+                        file_id = match.group(1)
+                        file = Files.get_file_by_id(file_id)
+                        if not file or not user_can_read_file(file, user):
+                            continue
+
+                        content_type = (
+                            (file.meta or {}).get("content_type")
+                            or "application/octet-stream"
+                        )
+                        if isinstance(content_type, str):
+                            content_type = (
+                                content_type.split(";", 1)[0].strip().lower()
+                            )
+                        else:
+                            content_type = "application/octet-stream"
+
+                        is_pdf = (
+                            content_type == "application/pdf"
+                            or (file.filename or "").lower().endswith(".pdf")
+                            or filename.lower().endswith(".pdf")
+                        )
+                        is_image_mime = content_type.startswith("image/")
+                        display_filename = (
+                            filename
+                            or file.filename
+                            or (file.meta or {}).get("name")
+                            or "file"
+                        )
+
+                        if is_pdf:
+                            # Existing PDF path: forward the bytes to OpenRouter's
+                            # `file-parser` plugin (configured below in the
+                            # has_pdf_files block).
+                            try:
+                                file_path = Storage.get_file(file.path)
+                                with open(file_path, "rb") as f:
+                                    raw = f.read()
+                                base64_file = base64.b64encode(raw).decode("utf-8")
                                 has_pdf_files = True
-                            if file_data.lower().endswith(".pdf"):
-                                has_pdf_files = True
-                            if filename.lower().endswith(".pdf"):
-                                has_pdf_files = True
-
-                            # Match both /api/v1/files/{id} and /api/v1/files/{id}/content
-                            match = re.search(r"/api/v1/files/([^/]+)(?:/content)?(?:\?|$)", file_data)
-                            if not match:
-                                # Also try without query string (simpler match for /api/v1/files/{id})
-                                match = re.search(r"/api/v1/files/([a-f0-9-]+)", file_data)
-                            if match:
-                                file_id = match.group(1)
-                                file = Files.get_file_by_id(file_id)
-                                if file and user_can_read_file(file, user):
-                                    try:
-                                        file_path = Storage.get_file(file.path)
-                                        with open(file_path, "rb") as f:
-                                            raw = f.read()
-
-                                        base64_file = base64.b64encode(raw).decode(
-                                            "utf-8"
-                                        )
-
-                                        content_type = (
-                                            (file.meta or {}).get("content_type")
-                                            or "application/octet-stream"
-                                        )
-                                        if isinstance(content_type, str):
-                                            content_type = (
-                                                content_type.split(";", 1)[0]
-                                                .strip()
-                                                .lower()
-                                            )
-                                        else:
-                                            content_type = "application/octet-stream"
-
-                                        is_pdf = (
-                                            content_type == "application/pdf"
-                                            or (file.filename or "")
-                                            .lower()
-                                            .endswith(".pdf")
-                                            or filename.lower().endswith(".pdf")
-                                        )
-                                        if is_pdf:
-                                            has_pdf_files = True
-                                            content_type = "application/pdf"
-
-                                        file_obj["file_data"] = (
-                                            f"data:{content_type};base64,{base64_file}"
-                                        )
-                                        file_obj["filename"] = (
-                                            filename
-                                            or file.filename
-                                            or (file.meta or {}).get("name")
-                                            or "file"
-                                        )
-                                        part["file"] = file_obj
-                                    except Exception as e:
-                                        log.error(
-                                            f"Error resolving file URL {file_data}: {e}"
-                                        )
+                                file_obj["file_data"] = (
+                                    f"data:application/pdf;base64,{base64_file}"
+                                )
+                                file_obj["filename"] = display_filename
+                                part["file"] = file_obj
+                            except Exception as e:
+                                log.exception(
+                                    "Error reading PDF file %s: %s", file_id, e
+                                )
+                                part.clear()
+                                part["type"] = "text"
+                                part["text"] = format_extracted_document(
+                                    display_filename,
+                                    "",
+                                    error=f"Could not read PDF: {e}",
+                                )
+                        elif is_image_mime:
+                            # Image arrived as a file part (rare — images normally
+                            # come through as image_url). Promote in place.
+                            try:
+                                file_path = Storage.get_file(file.path)
+                                with open(file_path, "rb") as f:
+                                    raw = f.read()
+                                base64_file = base64.b64encode(raw).decode("utf-8")
+                                part.clear()
+                                part["type"] = "image_url"
+                                part["image_url"] = {
+                                    "url": f"data:{content_type};base64,{base64_file}"
+                                }
+                            except Exception as e:
+                                log.exception(
+                                    "Error reading image file %s: %s", file_id, e
+                                )
+                                part.clear()
+                                part["type"] = "text"
+                                part["text"] = format_extracted_document(
+                                    display_filename,
+                                    "",
+                                    error=f"Could not read image: {e}",
+                                )
+                        elif processing_mode == "pdf":
+                            # User selected "Convert to PDF" mode. Run LibreOffice
+                            # and route through the PDF binary path so the existing
+                            # file-parser plugin block handles it.
+                            try:
+                                pdf_file = await get_or_convert_to_pdf(
+                                    request, file_id, user
+                                )
+                                if pdf_file:
+                                    pdf_path = Storage.get_file(pdf_file.path)
+                                    with open(pdf_path, "rb") as f:
+                                        raw = f.read()
+                                    base64_file = base64.b64encode(raw).decode("utf-8")
+                                    has_pdf_files = True
+                                    file_obj["file_data"] = (
+                                        f"data:application/pdf;base64,{base64_file}"
+                                    )
+                                    file_obj["filename"] = display_filename
+                                    part["file"] = file_obj
+                                else:
+                                    # Conversion failed → fall back to text mode
+                                    # with a visible error marker.
+                                    refreshed = Files.get_file_by_id(file_id)
+                                    pdf_error = (
+                                        (refreshed.data if refreshed else {}) or {}
+                                    ).get("pdf_error", "PDF conversion failed")
+                                    text = await get_or_extract_file_content(
+                                        request, file_id, user
+                                    )
+                                    part.clear()
+                                    part["type"] = "text"
+                                    part["text"] = format_extracted_document(
+                                        display_filename,
+                                        text,
+                                        error=(
+                                            f"PDF conversion failed: {pdf_error}. "
+                                            "Used text extraction instead."
+                                        ),
+                                    )
+                            except Exception as e:
+                                log.exception(
+                                    "Error in PDF mode for file %s: %s", file_id, e
+                                )
+                                text = await get_or_extract_file_content(
+                                    request, file_id, user
+                                )
+                                part.clear()
+                                part["type"] = "text"
+                                part["text"] = format_extracted_document(
+                                    display_filename, text, error=str(e)
+                                )
+                        else:
+                            # Text mode (default). Extract via the Loader and
+                            # replace the file content part with a text part
+                            # wrapping a <document filename="..."> envelope.
+                            try:
+                                text = await get_or_extract_file_content(
+                                    request, file_id, user
+                                )
+                                if text:
+                                    part.clear()
+                                    part["type"] = "text"
+                                    part["text"] = format_extracted_document(
+                                        display_filename, text
+                                    )
+                                else:
+                                    refreshed = Files.get_file_by_id(file_id)
+                                    err = (
+                                        (refreshed.data if refreshed else {}) or {}
+                                    ).get("error", "extraction failed or empty")
+                                    part.clear()
+                                    part["type"] = "text"
+                                    part["text"] = format_extracted_document(
+                                        display_filename, "", error=err
+                                    )
+                            except Exception as e:
+                                log.exception(
+                                    "Error in text mode for file %s: %s", file_id, e
+                                )
+                                part.clear()
+                                part["type"] = "text"
+                                part["text"] = format_extracted_document(
+                                    display_filename, "", error=str(e)
+                                )
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)

@@ -35,6 +35,11 @@ from open_webui.models.files import (
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.file_extraction import (
+    extract_and_cache_file_content,
+    file_needs_extraction,
+)
+from open_webui.utils.file_conversion import convert_and_cache_file_to_pdf
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -133,17 +138,55 @@ def upload_file_handler(
                 content_type = "image/jpeg"
             elif content_type == "image/x-png":
                 content_type = "image/png"
-        if not content_type or content_type == "application/octet-stream":
-            inferred_content_type = {
-                "png": "image/png",
-                "jpg": "image/jpeg",
-                "jpeg": "image/jpeg",
-                "gif": "image/gif",
-                "webp": "image/webp",
-                "heic": "image/heic",
-                "heif": "image/heif",
-            }.get(file_extension.lower())
-            if inferred_content_type:
+
+        inferred_content_type = {
+            "png": "image/png",
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "gif": "image/gif",
+            "webp": "image/webp",
+            "heic": "image/heic",
+            "heif": "image/heif",
+            "pdf": "application/pdf",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "doc": "application/msword",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "xls": "application/vnd.ms-excel",
+            "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "ppt": "application/vnd.ms-powerpoint",
+            "odt": "application/vnd.oasis.opendocument.text",
+            "odp": "application/vnd.oasis.opendocument.presentation",
+            "ods": "application/vnd.oasis.opendocument.spreadsheet",
+            "epub": "application/epub+zip",
+            "csv": "text/csv",
+            "html": "text/html",
+            "htm": "text/html",
+            "md": "text/markdown",
+            "rtf": "application/rtf",
+            "txt": "text/plain",
+            "json": "application/json",
+            "xml": "application/xml",
+        }.get(file_extension.lower())
+
+        if inferred_content_type:
+            if not content_type or content_type == "application/octet-stream":
+                content_type = inferred_content_type
+            elif content_type in (
+                "application/zip",
+                "application/x-zip-compressed",
+                "multipart/x-zip",
+            ) and file_extension.lower() in (
+                "docx",
+                "xlsx",
+                "pptx",
+                "odt",
+                "odp",
+                "ods",
+                "epub",
+            ):
+                # macOS Safari (and some other browsers) report zip-based office
+                # formats with a generic zip MIME. Prefer the extension-based MIME
+                # so downstream loader/extraction code routes the file correctly.
                 content_type = inferred_content_type
 
         if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
@@ -181,6 +224,9 @@ def upload_file_handler(
             },
         )
 
+        needs_extraction = file_needs_extraction(content_type, file_extension)
+        initial_status = "pending" if needs_extraction else "completed"
+
         file_item = Files.insert_new_file(
             user.id,
             FileForm(
@@ -189,7 +235,7 @@ def upload_file_handler(
                     "filename": name,
                     "path": file_path,
                     "data": {
-                        "status": "completed",
+                        "status": initial_status,
                     },
                     "meta": {
                         "name": name,
@@ -202,6 +248,20 @@ def upload_file_handler(
         )
 
         if file_item:
+            # Kick off text extraction in the background. The Loader runs against
+            # the on-disk file, populates `file.data.content`, and walks status
+            # pending → processing → completed | failed. The lazy fallback in
+            # openai.py's file-part loop covers the race window where the user
+            # submits before the background task finishes, plus old files that
+            # were uploaded before background extraction was wired up.
+            if needs_extraction and process:
+                if process_in_background and background_tasks is not None:
+                    background_tasks.add_task(
+                        extract_and_cache_file_content, request, file_item.id
+                    )
+                else:
+                    extract_and_cache_file_content(request, file_item.id)
+
             return {"status": True, **file_item.model_dump()}
 
         raise HTTPException(
@@ -333,6 +393,91 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+############################
+# Set Processing Mode
+############################
+
+
+class ProcessModeForm(BaseModel):
+    mode: str  # "text" | "pdf"
+
+
+@router.post("/{id}/process-mode")
+def set_file_processing_mode(
+    request: Request,
+    id: str,
+    form_data: ProcessModeForm,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_verified_user),
+):
+    """Set how a file should be processed when attached to a chat.
+
+    For ``mode == "pdf"``, kicks off a background LibreOffice conversion if the
+    file isn't already a PDF and hasn't been converted yet. The chat-completion
+    file-part loop reads the converted PDF when this file flows into a message
+    with ``processing_mode: "pdf"``.
+
+    For ``mode == "text"``, this is a no-op: text extraction always runs at
+    upload time (or lazily at chat-completion time for old files).
+    """
+    file = Files.get_file_by_id(id)
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        file.user_id == user.id
+        or user.role == "admin"
+        or has_access_to_file(id, "read", user)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    mode = (form_data.mode or "").lower()
+    if mode not in ("text", "pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(f"Invalid processing mode: {form_data.mode}"),
+        )
+
+    if mode == "pdf":
+        if not getattr(request.app.state.config, "PDF_CONVERSION_AVAILABLE", False):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=ERROR_MESSAGES.DEFAULT(
+                    "PDF conversion is unavailable. Install LibreOffice on the server to enable."
+                ),
+            )
+
+        data = file.data or {}
+        already_converted = bool(data.get("pdf_file_id"))
+        in_progress = data.get("pdf_status") == "processing"
+
+        # Skip the source file itself if it's a PDF — nothing to convert.
+        content_type = (file.meta or {}).get("content_type") or ""
+        if content_type == "application/pdf" or file.filename.lower().endswith(".pdf"):
+            already_converted = True
+
+        if not already_converted and not in_progress:
+            Files.update_file_data_by_id(id, {"pdf_status": "pending"})
+            background_tasks.add_task(
+                convert_and_cache_file_to_pdf, request, id
+            )
+
+    file = Files.get_file_by_id(id)
+    return {
+        "status": True,
+        "file_id": id,
+        "mode": mode,
+        "pdf_status": (file.data or {}).get("pdf_status") if file else None,
+        "pdf_file_id": (file.data or {}).get("pdf_file_id") if file else None,
+    }
 
 
 ############################

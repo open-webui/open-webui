@@ -3,11 +3,28 @@
 	import { formatFileSize } from '$lib/utils';
 
 	import FileItemModal from './FileItemModal.svelte';
+	import FileItemModePopover from './FileItemModePopover.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { settings } from '$lib/stores';
+
+	// Files that have a meaningful Text/PDF choice (neither plain text, where
+	// PDF mode is pointless, nor PDF/image, where there's no choice at all).
+	const EXTRACTABLE_EXTS = new Set([
+		'docx', 'doc', 'odt', 'rtf',
+		'pptx', 'ppt',
+		'xlsx', 'xls',
+		'html', 'htm',
+		'epub'
+	]);
+	const SPREADSHEET_EXTS = new Set(['xlsx', 'xls', 'ods', 'csv', 'tsv']);
+
+	const getExtension = (filename: string) => {
+		const dot = (filename || '').toLowerCase().lastIndexOf('.');
+		return dot >= 0 ? (filename || '').slice(dot + 1).toLowerCase() : '';
+	};
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -35,6 +52,20 @@
 	import ChatBubble from '../icons/ChatBubble.svelte';
 	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
+	let showModePopover = false;
+	let pillAnchor: HTMLButtonElement;
+
+	$: itemExt = getExtension(item?.name || item?.file?.filename || name || '');
+	$: pillVisible = item && item.type === 'file' && !item.locked && EXTRACTABLE_EXTS.has(itemExt);
+	$: pillIsSpreadsheet = SPREADSHEET_EXTS.has(itemExt);
+	$: pillMode = (item?.processing_mode as 'text' | 'pdf') || 'text';
+	$: pillStatus = (() => {
+		// `item.status` is the frontend-facing state set by MessageInput's poll
+		// loop. Treat 'uploading' and 'processing' as the "still cooking" state.
+		if (item?.status === 'uploading' || item?.status === 'processing') return 'processing';
+		if (item?.status === 'failed') return 'failed';
+		return 'ready';
+	})();
 
 	const decodeString = (str: string) => {
 		try {
@@ -135,31 +166,135 @@
 			</div>
 
 			<div
-				class=" flex justify-between text-xs line-clamp-1 {($settings?.highContrastMode ?? false)
+				class=" flex justify-between items-center text-xs {($settings?.highContrastMode ?? false)
 					? 'text-gray-800 dark:text-gray-100'
 					: 'text-gray-500'}"
 			>
-				{#if type === 'file'}
-					{$i18n.t('File')}
-				{:else if type === 'note'}
-					{$i18n.t('Note')}
-				{:else if type === 'doc'}
-					{$i18n.t('Document')}
-				{:else if type === 'collection'}
-					{$i18n.t('Collection')}
-				{:else}
-					<span class=" capitalize line-clamp-1">{type}</span>
-				{/if}
-				{#if size}
-					<span class="capitalize">{formatFileSize(size)}</span>
-				{/if}
+				<span class="line-clamp-1">
+					{#if type === 'file'}
+						{$i18n.t('File')}
+					{:else if type === 'note'}
+						{$i18n.t('Note')}
+					{:else if type === 'doc'}
+						{$i18n.t('Document')}
+					{:else if type === 'collection'}
+						{$i18n.t('Collection')}
+					{:else}
+						<span class=" capitalize line-clamp-1">{type}</span>
+					{/if}
+				</span>
+				<div class="flex items-center gap-1.5 shrink-0 relative">
+					{#if size}
+						<span class="capitalize">{formatFileSize(size)}</span>
+					{/if}
+					{#if pillVisible}
+						<button
+							bind:this={pillAnchor}
+							type="button"
+							class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium
+								{pillStatus === 'failed'
+									? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+									: 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}"
+							on:click|stopPropagation={() => {
+								showModePopover = !showModePopover;
+							}}
+							aria-label={$i18n.t('Choose file processing mode')}
+						>
+							<span>{pillMode === 'pdf' ? 'PDF' : $i18n.t('Text')}</span>
+							{#if pillStatus === 'processing'}
+								<span class="inline-block animate-spin">⏳</span>
+							{:else if pillStatus === 'failed'}
+								<span>⚠</span>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="size-3"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							{/if}
+						</button>
+						{#if showModePopover}
+							<FileItemModePopover
+								mode={pillMode}
+								fileId={item?.id ?? null}
+								anchorEl={pillAnchor}
+								isSpreadsheet={pillIsSpreadsheet}
+								on:change={(e) => {
+									if (item) item.processing_mode = e.detail.mode;
+									dispatch('modeChange', e.detail);
+								}}
+								on:close={() => {
+									showModePopover = false;
+								}}
+							/>
+						{/if}
+					{/if}
+				</div>
 			</div>
 		</div>
 	{:else}
 		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
 			<div class="flex flex-col justify-center -space-y-0.5 px-1 w-full">
-				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
+				<div class=" dark:text-gray-100 text-sm flex justify-between items-center gap-1.5">
 					<div class="font-medium line-clamp-1 flex-1 pr-1">{decodeString(name)}</div>
+					{#if pillVisible}
+						<div class="relative shrink-0">
+							<button
+								bind:this={pillAnchor}
+								type="button"
+								class="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium
+									{pillStatus === 'failed'
+										? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+										: 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}"
+								on:click|stopPropagation={() => {
+									showModePopover = !showModePopover;
+								}}
+								aria-label={$i18n.t('Choose file processing mode')}
+							>
+								<span>{pillMode === 'pdf' ? 'PDF' : $i18n.t('Text')}</span>
+								{#if pillStatus === 'processing'}
+									<span class="inline-block animate-spin">⏳</span>
+								{:else if pillStatus === 'failed'}
+									<span>⚠</span>
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-3"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								{/if}
+							</button>
+							{#if showModePopover}
+								<FileItemModePopover
+									mode={pillMode}
+									fileId={item?.id ?? null}
+									anchorEl={pillAnchor}
+									isSpreadsheet={pillIsSpreadsheet}
+									on:change={(e) => {
+										if (item) item.processing_mode = e.detail.mode;
+										dispatch('modeChange', e.detail);
+									}}
+									on:close={() => {
+										showModePopover = false;
+									}}
+								/>
+							{/if}
+						</div>
+					{/if}
 					{#if size}
 						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
 					{:else}

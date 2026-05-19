@@ -2530,22 +2530,34 @@
 			return;
 		}
 
-		if (files.length > 0 && files.filter((file) => file.status === 'uploading').length > 0) {
-			const uploadingFiles = files.filter((file) => file.status === 'uploading');
-			const uploadCount = uploadingFiles.length;
+		if (
+			files.length > 0 &&
+			files.filter((file) => file.status === 'uploading' || file.status === 'processing')
+				.length > 0
+		) {
+			const inFlightFiles = files.filter(
+				(file) => file.status === 'uploading' || file.status === 'processing'
+			);
+			const uploadingFiles = inFlightFiles.filter((file) => file.status === 'uploading');
+			const processingFiles = inFlightFiles.filter((file) => file.status === 'processing');
 			const allSentWaitingForServer = uploadingFiles.every(
 				(file) => typeof file?.progress === 'number' && file.progress >= 99
 			);
 
 			toast.error(
-				allSentWaitingForServer
+				processingFiles.length > 0
 					? $i18n.t(
-							`Uploads have finished sending ({{count}} file(s)); waiting for the server to finish processing.`,
-							{ count: uploadCount }
+							`Open WebUI is still extracting content from {{count}} file(s). Please wait.`,
+							{ count: processingFiles.length }
 						)
-					: $i18n.t(
-							`Oops! There are files still uploading. Please wait for the upload to complete.`
-						)
+					: allSentWaitingForServer
+						? $i18n.t(
+								`Uploads have finished sending ({{count}} file(s)); waiting for the server to finish processing.`,
+								{ count: uploadingFiles.length }
+							)
+						: $i18n.t(
+								`Oops! There are files still uploading. Please wait for the upload to complete.`
+							)
 			);
 			return;
 		}
@@ -3319,6 +3331,28 @@
 			return false;
 		};
 
+		// Files that don't read as plain text but the backend can extract from:
+		// office formats, html, epub, etc. These travel as `type: "file"` content
+		// parts with a `processing_mode` and get materialised on the server
+		// (openai.py file-part loop: text mode → <document> text part;
+		// pdf mode → LibreOffice → existing PDF + file-parser plugin path).
+		const EXTRACTABLE_EXTS = new Set([
+			'docx', 'doc', 'odt', 'rtf',
+			'pptx', 'ppt',
+			'xlsx', 'xls',
+			'html', 'htm',
+			'epub'
+		]);
+
+		const isExtractableFile = (file) => {
+			if (file?.type !== 'file') return false;
+			const name = (file.name || file.file?.filename || '').toLowerCase();
+			if (name.endsWith('.pdf')) return false;
+			const dot = name.lastIndexOf('.');
+			const ext = dot >= 0 ? name.slice(dot + 1) : '';
+			return EXTRACTABLE_EXTS.has(ext);
+		};
+
 		const fetchTextFileContent = async (file) => {
 			if (typeof file._inlinedText === 'string') return file._inlinedText;
 			try {
@@ -3424,10 +3458,19 @@
 								file.file?.filename?.toLowerCase().endsWith('.pdf'))
 					);
 
+					// docx/xlsx/pptx/etc. — always sent as file parts so the backend
+					// can text-extract (or PDF-convert per processing_mode). Unlike
+					// images/PDFs these don't gate on vision capability — extracted
+					// text works on every model.
+					const hasExtractableFiles = message.files?.some(isExtractableFile);
+
 					const textPrefix = isUser ? await buildTextFileBlocks(message.files) : '';
 					const baseText = message?.merged?.content ?? message.content ?? '';
 
-					if ((hasImages || hasPdfFiles) && isUser && modelSupportsVision) {
+					if (
+						isUser &&
+						(((hasImages || hasPdfFiles) && modelSupportsVision) || hasExtractableFiles)
+					) {
 						return {
 							role: message.role,
 							content: [
@@ -3435,30 +3478,48 @@
 									type: 'text',
 									text: textPrefix + baseText
 								},
-								// Add image content parts
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									})),
-								// Add PDF file content parts for OpenRouter native processing
-								...message.files
-									.filter(
-										(file) =>
-											file.type === 'file' &&
-											(file.name?.toLowerCase().endsWith('.pdf') ||
-												file.file?.filename?.toLowerCase().endsWith('.pdf'))
-									)
-									.map((file) => ({
-										type: 'file',
-										file: {
-											filename: file.name || file.file?.filename || 'document.pdf',
-											file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
-										}
-									}))
+								// Add image content parts (vision-capable models only).
+								...(modelSupportsVision
+									? message.files
+											.filter((file) => file.type === 'image')
+											.map((file) => ({
+												type: 'image_url',
+												image_url: {
+													url: file.url
+												}
+											}))
+									: []),
+								// PDF file parts for OpenRouter's file-parser plugin
+								// (vision-capable models only; existing behavior).
+								...(modelSupportsVision
+									? message.files
+											.filter(
+												(file) =>
+													file.type === 'file' &&
+													(file.name?.toLowerCase().endsWith('.pdf') ||
+														file.file?.filename?.toLowerCase().endsWith('.pdf'))
+											)
+											.map((file) => ({
+												type: 'file',
+												file: {
+													filename: file.name || file.file?.filename || 'document.pdf',
+													file_data:
+														file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
+												}
+											}))
+									: []),
+								// docx/xlsx/pptx/etc. — backend extracts on receipt and
+								// replaces this part with either a <document> text part
+								// (mode == 'text') or a PDF binary part routed through
+								// the file-parser plugin (mode == 'pdf').
+								...message.files.filter(isExtractableFile).map((file) => ({
+									type: 'file',
+									file: {
+										filename: file.name || file.file?.filename || 'document',
+										file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`,
+										processing_mode: (file.processing_mode === 'pdf' ? 'pdf' : 'text')
+									}
+								}))
 							]
 						};
 					}
