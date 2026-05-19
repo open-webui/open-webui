@@ -2341,11 +2341,11 @@ async def get_app_config(request: Request):
         if data is not None and 'id' in data:
             user = await Users.get_user_by_id(data['id'])
 
-    user_count = await Users.get_num_users()
     onboarding = False
-
     if user is None:
-        onboarding = user_count == 0
+        onboarding = not await Users.has_users()
+
+    user_count = await Users.get_num_users() if app.state.LICENSE_METADATA else None
 
     return {
         **({'onboarding': True} if onboarding else {}),
@@ -2411,7 +2411,7 @@ async def get_app_config(request: Request):
                 'default_models': app.state.config.DEFAULT_MODELS,
                 'default_pinned_models': app.state.config.DEFAULT_PINNED_MODELS,
                 'default_prompt_suggestions': app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-                'user_count': user_count,
+                **({'user_count': user_count} if user_count is not None else {}),
                 'code': {
                     'engine': app.state.config.CODE_EXECUTION_ENGINE,
                     'interpreter_engine': app.state.config.CODE_INTERPRETER_ENGINE,
