@@ -18,3 +18,12 @@ uploads
 **/*.db
 _test
 backend/data/*
+.git
+.pytest_cache
+.venv
+.cache
+*.log
+dist
+build
+backend/__pycache__
+backend/.pytest_cache
