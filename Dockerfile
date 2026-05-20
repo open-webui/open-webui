@@ -26,9 +26,12 @@ ARG GID=0
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
+ARG BUILD_NODE_OPTIONS=""
+ARG BUILD_SOURCEMAP=true
 
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
 # ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS=${BUILD_NODE_OPTIONS}
 
 WORKDIR /app
 
@@ -40,6 +43,7 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+ENV VITE_BUILD_SOURCEMAP=${BUILD_SOURCEMAP}
 RUN npm run build
 
 ######## WebUI backend ########
