@@ -496,7 +496,7 @@
 				executeTool(data, cb, event.chat_id);
 				return;
 			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket.id);
+				if (import.meta.env.DEV) console.debug('request:chat:completion', data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
 
 				try {
@@ -531,7 +531,7 @@
 									cb({
 										status: true
 									});
-									console.log({ status: true });
+									if (import.meta.env.DEV) console.debug('chat completion stream started');
 
 									// res will either be SSE or JSON
 									const reader = res.body.getReader();
@@ -552,7 +552,7 @@
 											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
 
 											for (const line of lines) {
-												console.log(line);
+												if (import.meta.env.DEV) console.debug('chat completion stream line', line);
 												$socket?.emit(channel, line);
 											}
 										}
