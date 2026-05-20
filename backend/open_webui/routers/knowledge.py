@@ -1234,6 +1234,21 @@ async def add_files_to_knowledge_batch(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
+    # Link all files to the knowledge base FIRST, then process.
+    # This prevents the race condition where a user navigates away before the
+    # final linking step completes, leaving processed files orphaned in the
+    # vector database with no corresponding relational record.
+    linked_file_ids = []
+    try:
+        for file_id in file_ids:
+            await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id, file_id=file_id, user_id=user.id, db=db
+            )
+            linked_file_ids.append(file_id)
+    except Exception as e:
+        log.error(f'add_files_to_knowledge_batch: Failed to link files: {e}', exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     # Process files
     try:
         result = await process_files_batch(
@@ -1243,13 +1258,20 @@ async def add_files_to_knowledge_batch(
             db=db,
         )
     except Exception as e:
+        # Processing failed — rollback all links
+        for file_id in linked_file_ids:
+            await Knowledges.remove_file_from_knowledge_by_id(
+                knowledge_id=id, file_id=file_id, db=db
+            )
         log.error(f'add_files_to_knowledge_batch: Exception occurred: {e}', exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    # Only add files that were successfully processed
-    successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
-    for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+    # Unlink any files that failed to process
+    for file_id in linked_file_ids:
+        if file_id not in {r.file_id for r in result.results if r.status == 'completed'}:
+            await Knowledges.remove_file_from_knowledge_by_id(
+                knowledge_id=id, file_id=file_id, db=db
+            )
 
     # If there were any errors, include them in the response
     if result.errors:
