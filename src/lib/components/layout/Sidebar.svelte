@@ -290,19 +290,19 @@
 		allChatsLoaded = false;
 		scrollPaginationEnabled.set(false);
 
-		initFolders();
 		await Promise.all([
-			await (async () => {
+			initFolders().catch(() => {}),
+			(async () => {
 				console.log('Init tags');
 				const _tags = await getAllTags(localStorage.token);
 				tags.set(_tags);
 			})(),
-			await (async () => {
+			(async () => {
 				console.log('Init pinned chats');
 				const _pinnedChats = await getPinnedChatList(localStorage.token);
 				pinnedChats.set(_pinnedChats);
 			})(),
-			await (async () => {
+			(async () => {
 				if (
 					$config?.features?.enable_notes &&
 					($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
@@ -312,7 +312,7 @@
 					pinnedNotes.set(_pinnedNotes);
 				}
 			})(),
-			await (async () => {
+			(async () => {
 				console.log('Init chat list');
 				const _chats = await getChatList(localStorage.token, $currentChatPage);
 				await chats.set(_chats);
@@ -552,13 +552,13 @@
 
 				if (value) {
 					// Only fetch channels if the feature is enabled and user has permission
-					if (
+					const shouldInitChannels =
 						$config?.features?.enable_channels &&
-						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
-					) {
-						await initChannels();
-					}
-					await initChatList();
+						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true));
+					await Promise.all([
+						shouldInitChannels ? initChannels() : Promise.resolve(),
+						initChatList()
+					]);
 
 					// Check which chats have active tasks
 					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
