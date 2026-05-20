@@ -496,8 +496,7 @@
 				executeTool(data, cb, event.chat_id);
 				return;
 			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket.id);
-				const { session_id, channel, form_data, model } = data;
+				const { channel, form_data, model } = data;
 
 				try {
 					const directConnections = $settings?.directConnections ?? {};
@@ -515,11 +514,7 @@
 								form_data['model'] = form_data['model'].replace(`${prefixId}.`, ``);
 							}
 
-							const [res, controller] = await chatCompletion(
-								OPENAI_API_KEY,
-								form_data,
-								OPENAI_API_URL
-							);
+							const [res] = await chatCompletion(OPENAI_API_KEY, form_data, OPENAI_API_URL);
 
 							if (res) {
 								// raise if the response is not ok
@@ -531,7 +526,6 @@
 									cb({
 										status: true
 									});
-									console.log({ status: true });
 
 									// res will either be SSE or JSON
 									const reader = res.body.getReader();
@@ -552,7 +546,6 @@
 											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
 
 											for (const line of lines) {
-												console.log(line);
 												$socket?.emit(channel, line);
 											}
 										}
