@@ -39,6 +39,7 @@
 	export let run = true;
 	export let preview = false;
 	export let collapsed = false;
+	export let done = true;
 
 	export let token;
 	export let lang = '';
@@ -65,7 +66,14 @@
 	let renderHTML = null;
 	let renderError = null;
 
-	let highlightedCode = null;
+	const HIGHLIGHT_CODE_MAX_LENGTH = 6000;
+
+	let highlightedCode = '';
+	let highlightedCodeSource = '';
+	let highlightedCodeLang = '';
+	let highlightedCodeDone = true;
+	let displayHighlightedCode = false;
+	let editingCode = false;
 	let executing = false;
 
 	let stdout = null;
@@ -85,6 +93,7 @@
 
 		code = _code;
 		onSave(code);
+		editingCode = false;
 
 		setTimeout(() => {
 			saved = false;
@@ -101,7 +110,56 @@
 	};
 
 	const previewCode = () => {
-		onPreview(code);
+		onPreview(editingCode ? _code : code);
+	};
+
+	const editCode = () => {
+		_code = code;
+		editingCode = true;
+	};
+
+	const cancelEditCode = () => {
+		_code = code;
+		editingCode = false;
+	};
+
+	const escapeHtml = (value = '') => {
+		return value
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	};
+
+	const updateHighlightedCode = () => {
+		const shouldHighlight = done && code.length <= HIGHLIGHT_CODE_MAX_LENGTH;
+		if (
+			code === highlightedCodeSource &&
+			lang === highlightedCodeLang &&
+			done === highlightedCodeDone &&
+			shouldHighlight === displayHighlightedCode
+		) {
+			return;
+		}
+
+		highlightedCodeSource = code;
+		highlightedCodeLang = lang;
+		highlightedCodeDone = done;
+		displayHighlightedCode = shouldHighlight;
+		if (!shouldHighlight) {
+			highlightedCode = '';
+			return;
+		}
+
+		try {
+			const language = hljs.getLanguage(lang) ? lang : null;
+			highlightedCode = language
+				? hljs.highlight(code, { language }).value
+				: hljs.highlightAuto(code).value;
+		} catch (error) {
+			highlightedCode = escapeHtml(code);
+		}
 	};
 
 	const checkPythonCode = (str) => {
@@ -401,6 +459,10 @@
 		render();
 	}
 
+	$: if (!collapsed && !editingCode && (code || lang || done !== undefined)) {
+		updateHighlightedCode();
+	}
+
 	$: if (attributes) {
 		onAttributesUpdate();
 	}
@@ -505,7 +567,25 @@
 						{/if}
 					{/if}
 
-					{#if save}
+					{#if edit}
+						{#if editingCode}
+							<button
+								class="bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								on:click={cancelEditCode}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+						{:else}
+							<button
+								class="bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								on:click={editCode}
+							>
+								{$i18n.t('Edit')}
+							</button>
+						{/if}
+					{/if}
+
+					{#if save && (!edit || editingCode)}
 						<button
 							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 							on:click={saveCode}
@@ -542,9 +622,9 @@
 				<div class=" pt-6.5 bg-white dark:bg-black"></div>
 
 				{#if !collapsed}
-					{#if edit}
+					{#if edit && editingCode}
 						<CodeEditor
-							value={code}
+							value={_code}
 							{id}
 							{lang}
 							onSave={() => {
@@ -563,8 +643,7 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
+								>{#if displayHighlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
 							></pre>
 					{/if}
 				{:else}
