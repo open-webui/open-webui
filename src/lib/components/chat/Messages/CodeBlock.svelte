@@ -36,6 +36,7 @@
 	export let run = true;
 	export let preview = false;
 	export let collapsed = false;
+	export let done = true;
 
 	export let token;
 	export let lang = '';
@@ -62,7 +63,13 @@
 	let renderHTML = null;
 	let renderError = null;
 
-	let highlightedCode = null;
+	const HIGHLIGHT_CODE_MAX_LENGTH = 6000;
+
+	let highlightedCode = '';
+	let highlightedCodeSource = '';
+	let highlightedCodeLang = '';
+	let highlightedCodeDone = true;
+	let displayHighlightedCode = false;
 	let editingCode = false;
 	let executing = false;
 
@@ -111,6 +118,45 @@
 	const cancelEditCode = () => {
 		_code = code;
 		editingCode = false;
+	};
+
+	const escapeHtml = (value = '') => {
+		return value
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	};
+
+	const updateHighlightedCode = (nextCode: string, nextLang: string, nextDone: boolean) => {
+		const shouldHighlight = nextDone && nextCode.length <= HIGHLIGHT_CODE_MAX_LENGTH;
+		if (
+			nextCode === highlightedCodeSource &&
+			nextLang === highlightedCodeLang &&
+			nextDone === highlightedCodeDone &&
+			shouldHighlight === displayHighlightedCode
+		) {
+			return;
+		}
+
+		highlightedCodeSource = nextCode;
+		highlightedCodeLang = nextLang;
+		highlightedCodeDone = nextDone;
+		displayHighlightedCode = shouldHighlight;
+		if (!shouldHighlight) {
+			highlightedCode = '';
+			return;
+		}
+
+		try {
+			const language = hljs.getLanguage(nextLang) ? nextLang : null;
+			highlightedCode = language
+				? hljs.highlight(nextCode, { language }).value
+				: hljs.highlightAuto(nextCode).value;
+		} catch {
+			highlightedCode = escapeHtml(nextCode);
+		}
 	};
 
 	const checkPythonCode = (str) => {
@@ -410,6 +456,10 @@
 		render();
 	}
 
+	$: if (!collapsed && !editingCode) {
+		updateHighlightedCode(code, lang, done);
+	}
+
 	$: if (attributes) {
 		onAttributesUpdate();
 	}
@@ -590,8 +640,7 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
+								>{#if displayHighlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
 							></pre>
 					{/if}
 				{:else}
