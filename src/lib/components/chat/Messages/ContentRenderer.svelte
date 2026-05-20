@@ -90,10 +90,33 @@
 	let sourceIds = [];
 	$: getSourceIds(sources);
 
+	const citationMarkerRegex = /\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g;
+	const indentedCodeLineRegex = /^(?: {4}|\t)/;
+
 	const removeCitationMarkers = (content) => {
-		return replaceOutsideCode(content, (segment) =>
-			segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
-		);
+		let result = '';
+		let prose = '';
+
+		const flushProse = () => {
+			if (!prose) return;
+			result += replaceOutsideCode(prose, (segment) => segment.replace(citationMarkerRegex, ''));
+			prose = '';
+		};
+
+		for (const line of content.match(/[^\n]*(?:\n|$)/g) ?? []) {
+			if (!line) continue;
+
+			if (indentedCodeLineRegex.test(line)) {
+				flushProse();
+				result += line;
+				continue;
+			}
+
+			prose += line;
+		}
+
+		flushProse();
+		return result;
 	};
 
 	const getSourceIds = (sources) => {
