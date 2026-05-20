@@ -1,28 +1,28 @@
 # Deploy Open WebUI to Fly.io (Fly Postgres + OpenRouter)
 
-This guide uses a Fly app named `yh-openwebui` in region `sin` and Fly Postgres for production.
+This guide uses a Fly app named `open-webui-26z5ca` in region `sin` and Fly Postgres for production.
 
 ## 1) Authenticate and create app
 
 ```bash
 fly auth login
-fly apps create yh-openwebui
+fly apps create open-webui-26z5ca
 ```
 
 ## 2) Create Fly Postgres and attach it
 
 ```bash
 fly postgres create --name yh-openwebui-db --region sin
-fly postgres attach --app yh-openwebui yh-openwebui-db
+fly postgres attach --app open-webui-26z5ca yh-openwebui-db
 ```
 
 ## 3) Configure OpenRouter + production secrets
 
 ```bash
-fly secrets set OPENAI_API_BASE_URL="https://openrouter.ai/api/v1" --app yh-openwebui
-fly secrets set OPENAI_API_KEY="YOUR_OPENROUTER_API_KEY" --app yh-openwebui
-fly secrets set ENABLE_SIGNUP="False" --app yh-openwebui
-fly secrets set WEBUI_SECRET_KEY="<generate-long-random-secret>" --app yh-openwebui
+fly secrets set OPENAI_API_BASE_URL="https://openrouter.ai/api/v1" --app open-webui-26z5ca
+fly secrets set OPENAI_API_KEY="YOUR_OPENROUTER_API_KEY" --app open-webui-26z5ca
+fly secrets set ENABLE_SIGNUP="False" --app open-webui-26z5ca
+fly secrets set WEBUI_SECRET_KEY="<generate-long-random-secret>" --app open-webui-26z5ca
 ```
 
 ## 4) Create persistent runtime volume (required before first deploy)
@@ -30,14 +30,22 @@ fly secrets set WEBUI_SECRET_KEY="<generate-long-random-secret>" --app yh-openwe
 Run this once before the first production deploy so `/app/backend/data` is durable across restarts/redeploys:
 
 ```bash
-fly volumes create openwebui_data --region sin --size 5 --app yh-openwebui
+fly volumes create openwebui_data --region sin --size 5 --app open-webui-26z5ca
 ```
 
 ## 5) Deploy and open
 
 ```bash
-fly deploy --app yh-openwebui
-fly open --app yh-openwebui
+fly deploy --app open-webui-26z5ca
+fly open --app open-webui-26z5ca
+```
+
+## Troubleshooting
+
+If deployment fails with `app not found`, verify the Fly app name in `fly.toml`, `.github/workflows/fly-deploy.yml`, and all manual `fly` commands matches the actual app shown by:
+
+```bash
+fly apps list
 ```
 
 ## Notes
