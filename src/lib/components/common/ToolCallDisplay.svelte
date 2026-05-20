@@ -36,6 +36,7 @@
 	const RESULT_PREVIEW_LIMIT = 10000;
 	const TOOL_NAME_PLACEHOLDER = '__OPEN_WEBUI_TOOL_NAME__';
 	let expandedResult = false;
+	type ToolFile = string | { type?: string; content_type?: string; url?: string };
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
@@ -76,6 +77,11 @@
 		}
 	}
 
+	function parseJSONArray<T>(str: string): T[] | null {
+		const parsed = parseJSONString(str);
+		return Array.isArray(parsed) ? (parsed as T[]) : null;
+	}
+
 	function getToolLabelParts(label: string) {
 		const normalized = label.replaceAll(`**${TOOL_NAME_PLACEHOLDER}**`, TOOL_NAME_PLACEHOLDER);
 		const placeholderIndex = normalized.indexOf(TOOL_NAME_PLACEHOLDER);
@@ -90,17 +96,64 @@
 		};
 	}
 
-	$: args = decode(attributes?.arguments ?? '');
 	export let resultContent: string = '';
 
-	$: result = resultContent || decode(attributes?.result ?? '');
-	$: files = parseJSONString(decode(attributes?.files ?? ''));
-	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
-	$: parsedArgs = parseArguments(args);
-	$: parsedResult = parseJSONString(result);
+	let args = '';
+	let parsedArgs: Record<string, unknown> | null = null;
+	let files: ToolFile[] | null = null;
+	let embeds: string[] | null = null;
+	let result = '';
+	let parsedResult: unknown = '';
+
+	let lastArguments = '';
+	let lastFiles = '';
+	let lastEmbeds = '';
+	let lastResultContent = '';
+	let lastAttributeResult = '';
+
+	const updateArgs = (nextArguments: string) => {
+		if (nextArguments === lastArguments) return;
+
+		lastArguments = nextArguments;
+		args = decode(nextArguments);
+		parsedArgs = parseArguments(args);
+	};
+
+	const updateFiles = (nextFiles: string) => {
+		if (nextFiles === lastFiles) return;
+
+		lastFiles = nextFiles;
+		files = nextFiles ? parseJSONArray<ToolFile>(decode(nextFiles)) : null;
+	};
+
+	const updateEmbeds = (nextEmbeds: string) => {
+		if (nextEmbeds === lastEmbeds) return;
+
+		lastEmbeds = nextEmbeds;
+		embeds = nextEmbeds ? parseJSONArray<string>(decode(nextEmbeds)) : null;
+	};
+
+	const updateResult = (nextResultContent: string, nextAttributeResult: string) => {
+		if (nextResultContent === lastResultContent && nextAttributeResult === lastAttributeResult) {
+			return;
+		}
+
+		lastResultContent = nextResultContent;
+		lastAttributeResult = nextAttributeResult;
+
+		result = nextResultContent ? decode(nextResultContent) : decode(nextAttributeResult);
+		parsedResult = parseJSONString(result);
+	};
+
+	$: updateArgs(attributes?.arguments ?? '');
+	$: updateFiles(isDone ? (attributes?.files ?? '') : '');
+	$: updateEmbeds(!grouped ? (attributes?.embeds ?? '') : '');
+	$: if (open && isDone) {
+		updateResult(resultContent ?? '', attributes?.result ?? '');
+	}
 </script>
 
 <div {id} class={className}>
