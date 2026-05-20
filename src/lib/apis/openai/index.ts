@@ -1,4 +1,6 @@
 import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { thinkingBudget } from '$lib/stores/thinking';
+import { get } from 'svelte/store';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -204,6 +206,15 @@ export const chatCompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
+	const activeBudget = get(thinkingBudget);
+	
+	if (activeBudget !== undefined) {
+		if (!body['metadata']) {
+			body['metadata'] = {};
+		}
+		body['metadata']['thinking_budget_tokens'] = activeBudget;
+	}
+
 	const res = await fetch(`${url}/chat/completions`, {
 		signal: controller.signal,
 		method: 'POST',
@@ -231,6 +242,15 @@ export const generateOpenAIChatCompletion = async (
 	url: string = `${WEBUI_BASE_URL}/api`
 ) => {
 	let error = null;
+
+	const activeBudget = get(thinkingBudget);
+	
+	if (activeBudget !== undefined) {
+		if (!body['metadata']) {
+			body['metadata'] = {};
+		}
+		body['metadata']['thinking_budget_tokens'] = activeBudget;
+	}
 
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',

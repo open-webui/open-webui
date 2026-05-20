@@ -1201,10 +1201,14 @@ async def generate_chat_completion(
         bypass_filter = True
     bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
 
-    idx = 0
-
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
+
+    # --- REASONING INTERCEPT LINK ---
+    params = form_data.get("params", {})
+    if "thinking_budget_tokens" in params:
+        payload["thinking_budget_tokens"] = int(params["thinking_budget_tokens"])
+    # -------------------------------
 
     model_id = form_data.get('model')
     model_info = await Models.get_model_by_id(model_id)

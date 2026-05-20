@@ -17,6 +17,7 @@
 
 	import {
 		chatId,
+		chats,
 		config,
 		type Model,
 		models,
@@ -30,6 +31,7 @@
 		audioQueue,
 		showControls,
 		showCallOverlay,
+		currentChatPage,
 		temporaryChatEnabled,
 		mobile,
 		chatTitle,
@@ -41,6 +43,7 @@
 		terminalServers,
 		functions,
 		selectedFolder,
+		pinnedChats,
 		showEmbeds,
 		selectedTerminalId,
 		showFileNavPath,
@@ -49,6 +52,7 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
+	import { thinkingBudget } from '$lib/stores/thinking';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -3130,7 +3134,8 @@
 				params: {
 					...$settings?.params,
 					...params,
-					stop: getStopTokens()
+					stop: getStopTokens(),
+					thinking_budget_tokens: $thinkingBudget
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
