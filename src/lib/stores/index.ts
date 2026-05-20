@@ -98,6 +98,9 @@ export interface SubagentRun {
 	continuation?: boolean;
 	started_at?: number;
 	ended_at?: number;
+	// Status events forwarded from the inner pipeline (web search progress,
+	// errors that haven't terminated the run, etc).
+	statusHistory?: any[];
 }
 
 export const subagentLiveStates: Writable<Record<string, SubagentRun>> = writable({});

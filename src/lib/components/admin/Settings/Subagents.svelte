@@ -12,16 +12,9 @@
 
 	let enableSubagents = false;
 	let defaultModel = '';
-	let systemPrompt = '';
 	let parentPrompt = '';
 
-	// Cached defaults so the "Reset to default" buttons work without an
-	// extra round-trip. Populated on first load when the user hasn't
-	// customized the prompts yet (we can't tell apart "user set it to the
-	// default text" from "never customized" — the reset button just shows
-	// the most-recently-fetched value, which is fine since saving an
-	// unchanged value is a no-op).
-	let initialSystemPrompt = '';
+	// Cached default so the "Reset" button works without a round-trip.
 	let initialParentPrompt = '';
 
 	const submitHandler = async () => {
@@ -29,8 +22,12 @@
 			const res = await updateSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enableSubagents,
 				SUBAGENT_DEFAULT_MODEL: defaultModel,
-				SUBAGENT_SYSTEM_PROMPT: systemPrompt,
 				SUBAGENT_PARENT_PROMPT: parentPrompt
+				// Note: the subagent's INNER system prompt is intentionally the
+				// model's own admin-set system prompt verbatim (no preamble
+				// from this admin page is injected). The `SUBAGENT_SYSTEM_PROMPT`
+				// config still exists on the backend for backward compat but
+				// the runner ignores it.
 			});
 			if (res) {
 				toast.success($i18n.t('Settings saved successfully'));
@@ -47,9 +44,7 @@
 			if (res) {
 				enableSubagents = !!res.ENABLE_SUBAGENTS;
 				defaultModel = res.SUBAGENT_DEFAULT_MODEL ?? '';
-				systemPrompt = res.SUBAGENT_SYSTEM_PROMPT ?? '';
 				parentPrompt = res.SUBAGENT_PARENT_PROMPT ?? '';
-				initialSystemPrompt = systemPrompt;
 				initialParentPrompt = parentPrompt;
 			}
 		} catch (err) {
@@ -93,7 +88,7 @@
 						</div>
 						<div class=" text-xs text-gray-500 dark:text-gray-400 mb-1">
 							{$i18n.t(
-								"Empty = fall back to the parent chat's model. A per-chat override (chat.params.subagentModel) still wins when set."
+								"Empty = fall back to the parent chat's model. A per-chat override (chat.params.subagentModel) still wins when set. The subagent uses this model's own admin-set system prompt verbatim — no additional preamble is injected."
 							)}
 						</div>
 						<select
@@ -105,34 +100,6 @@
 								<option value={m.id}>{m.name ?? m.id}</option>
 							{/each}
 						</select>
-					</div>
-
-					<div class="mb-2.5 flex w-full flex-col">
-						<div class="flex w-full items-center mb-1">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Subagent system prompt')}
-							</div>
-							<button
-								type="button"
-								class="ml-auto text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-								on:click|preventDefault={() => {
-									systemPrompt = initialSystemPrompt;
-								}}
-							>
-								{$i18n.t('Reset')}
-							</button>
-						</div>
-						<div class=" text-xs text-gray-500 dark:text-gray-400 mb-1">
-							{$i18n.t(
-								"Prepended to the subagent model's own system prompt. Defines the subagent's role and its stop condition (no tool calls in the final turn = done)."
-							)}
-						</div>
-						<textarea
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-y"
-							rows="8"
-							placeholder={$i18n.t('Subagent system prompt…')}
-							bind:value={systemPrompt}
-						></textarea>
 					</div>
 
 					<div class="mb-2.5 flex w-full flex-col">

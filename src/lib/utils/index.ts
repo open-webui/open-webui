@@ -928,6 +928,17 @@ export const blocksToDisplayMarkdown = (content_blocks: any[] = []): string => {
 				const name = call?.function?.name ?? '';
 				const args = call?.function?.arguments ?? '';
 				const result = results.find((r: any) => r?.tool_call_id === id);
+				// Subagent tool calls render as their own block (live transcript
+				// card driven by $subagentLiveStates) instead of the generic
+				// tool_calls Collapsible. Must mirror what the backend's
+				// `serialize_content_blocks` does — otherwise this client-side
+				// projection clobbers the backend's HTML on reactive re-render.
+				if (name === 'subagent_launch' || name === 'subagent_continue') {
+					const saId = (result as any)?.subagent_id ?? '';
+					const doneFlag = result !== undefined ? 'true' : 'false';
+					out += `<details type="subagent_launch" done="${doneFlag}" tool_call_id="${escapeHtmlAttr(id)}" id="${escapeHtmlAttr(saId)}" name="${escapeHtmlAttr(name)}" arguments="${escapeHtmlAttr(JSON.stringify(args))}">\n<summary>Subagent</summary>\n</details>\n`;
+					continue;
+				}
 				if (result !== undefined) {
 					const resultContent = result?.content ?? null;
 					const resultFiles = result?.files ?? null;

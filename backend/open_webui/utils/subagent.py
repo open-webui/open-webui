@@ -145,16 +145,15 @@ def _resolve_subagent_model_id(
 
 
 def _compose_subagent_system_prompt(request: Request, subagent_model_id: str) -> str:
-    """Combine the admin-editable subagent preamble with the subagent model's
-    own configured system prompt (from ``Models`` table params, if any).
+    """Return the subagent's system prompt — explicitly ONLY the model's own
+    configured system prompt (the one set for that model in the admin
+    workspace UI). No admin-level subagent preamble is injected.
 
-    The preamble goes FIRST so its "you are a research subagent / no tool
-    calls in final turn means done / no clarifying questions" instructions
-    can't be drowned out by a model's verbose default prompt."""
-    preamble = (
-        getattr(request.app.state.config, "SUBAGENT_SYSTEM_PROMPT", "") or ""
-    ).strip()
-    model_system = ""
+    Rationale: the user wants the subagent to behave exactly like a regular
+    chat with that model, just spawned with the prompt they were given. Adding
+    a research-flavored preamble on top changed the model's character in ways
+    they didn't want.
+    """
     try:
         model_info = Models.get_model_by_id(subagent_model_id)
         if model_info and model_info.params:
@@ -163,12 +162,10 @@ def _compose_subagent_system_prompt(request: Request, subagent_model_id: str) ->
                 if hasattr(model_info.params, "model_dump")
                 else dict(model_info.params)
             )
-            model_system = (params.get("system") or "").strip()
-    except Exception as e:  # noqa: BLE001 - non-fatal; fall back to preamble alone
+            return (params.get("system") or "").strip()
+    except Exception as e:  # noqa: BLE001
         log.debug(f"could not load model system prompt for {subagent_model_id}: {e}")
-    if preamble and model_system:
-        return f"{preamble}\n\n{model_system}"
-    return preamble or model_system
+    return ""
 
 
 def _upsert_subagent_run(
