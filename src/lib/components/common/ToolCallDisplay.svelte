@@ -11,7 +11,6 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
-	import Markdown from '../chat/Messages/Markdown.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
@@ -35,6 +34,7 @@
 	export let className = '';
 
 	const RESULT_PREVIEW_LIMIT = 10000;
+	const TOOL_NAME_PLACEHOLDER = '__OPEN_WEBUI_TOOL_NAME__';
 	let expandedResult = false;
 
 	$: if (!open) expandedResult = false;
@@ -76,17 +76,78 @@
 		}
 	}
 
-	$: args = decode(attributes?.arguments ?? '');
+	function getToolLabelParts(label: string) {
+		const normalized = label.replaceAll(`**${TOOL_NAME_PLACEHOLDER}**`, TOOL_NAME_PLACEHOLDER);
+		const placeholderIndex = normalized.indexOf(TOOL_NAME_PLACEHOLDER);
+
+		if (placeholderIndex === -1) {
+			return { before: `${normalized} `, after: '' };
+		}
+
+		return {
+			before: normalized.slice(0, placeholderIndex),
+			after: normalized.slice(placeholderIndex + TOOL_NAME_PLACEHOLDER.length)
+		};
+	}
+
 	export let resultContent: string = '';
 
-	$: result = resultContent || decode(attributes?.result ?? '');
-	$: files = parseJSONString(decode(attributes?.files ?? ''));
-	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
-	$: parsedArgs = parseArguments(args);
-	$: parsedResult = parseJSONString(result);
+	let args = '';
+	let parsedArgs: Record<string, unknown> | null = null;
+	let files: any = null;
+	let embeds: any = null;
+	let result = '';
+	let parsedResult: unknown = '';
+
+	let lastArguments = '';
+	let lastFiles = '';
+	let lastEmbeds = '';
+	let lastResultContent = '';
+	let lastAttributeResult = '';
+
+	const updateArgs = (nextArguments: string) => {
+		if (nextArguments === lastArguments) return;
+
+		lastArguments = nextArguments;
+		args = decode(nextArguments);
+		parsedArgs = parseArguments(args);
+	};
+
+	const updateFiles = (nextFiles: string) => {
+		if (nextFiles === lastFiles) return;
+
+		lastFiles = nextFiles;
+		files = nextFiles ? parseJSONString(decode(nextFiles)) : null;
+	};
+
+	const updateEmbeds = (nextEmbeds: string) => {
+		if (nextEmbeds === lastEmbeds) return;
+
+		lastEmbeds = nextEmbeds;
+		embeds = nextEmbeds ? parseJSONString(decode(nextEmbeds)) : null;
+	};
+
+	const updateResult = (nextResultContent: string, nextAttributeResult: string) => {
+		if (nextResultContent === lastResultContent && nextAttributeResult === lastAttributeResult) {
+			return;
+		}
+
+		lastResultContent = nextResultContent;
+		lastAttributeResult = nextAttributeResult;
+
+		result = nextResultContent ? decode(nextResultContent) : decode(nextAttributeResult);
+		parsedResult = parseJSONString(result);
+	};
+
+	$: updateArgs(attributes?.arguments ?? '');
+	$: updateFiles(isDone ? (attributes?.files ?? '') : '');
+	$: updateEmbeds(!grouped ? (attributes?.embeds ?? '') : '');
+	$: if (open && isDone) {
+		updateResult(resultContent ?? '', attributes?.result ?? '');
+	}
 </script>
 
 <div {id} class={className}>
@@ -145,19 +206,15 @@
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
 						{#if isDone}
-							<Markdown
-								id={`${componentId}-tool-call-title`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
-									NAME: attributes.name
-								})}
-							/>
+							{@const label = getToolLabelParts(
+								$i18n.t('View Result from **{{NAME}}**', { NAME: TOOL_NAME_PLACEHOLDER })
+							)}
+							{label.before}<strong>{attributes.name}</strong>{label.after}
 						{:else}
-							<Markdown
-								id={`${componentId}-tool-call-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
-									NAME: attributes.name
-								})}
-							/>
+							{@const label = getToolLabelParts(
+								$i18n.t('Executing **{{NAME}}**...', { NAME: TOOL_NAME_PLACEHOLDER })
+							)}
+							{label.before}<strong>{attributes.name}</strong>{label.after}
 						{/if}
 					</span>
 				</div>
