@@ -92,6 +92,8 @@
 	};
 
 	const getDetailTextContent = (token) => {
+		if (!token) return '';
+
 		return decode(token?.text || '')
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim();
@@ -163,6 +165,7 @@
 				{attributes}
 				{save}
 				{preview}
+				{done}
 				edit={editCodeBlock}
 				stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
 				onSave={(value) => {
@@ -376,97 +379,101 @@
 		>
 			<div slot="content" class="space-y-1">
 				{#each token.items as detailToken, detailIdx}
-					{@const textContent = getDetailTextContent(detailToken)}
-
 					{#if detailToken?.attributes?.type === 'tool_calls'}
 						<ToolCallDisplay
 							id={`${id}-${tokenIdx}-${detailIdx}-tc`}
 							attributes={detailToken.attributes}
-							resultContent={getDetailTextContent(detailToken)}
+							resultContent={detailToken?.text ?? ''}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
 							className="w-full space-y-1"
 						/>
-					{:else if textContent.length > 0}
-						<Collapsible
-							title={detailToken.summary}
-							open={$settings?.expandDetails ?? false}
-							attributes={detailToken?.attributes}
-							messageDone={done}
-							className="w-full space-y-1"
-							dir="auto"
-						>
-							<div class="mb-1.5" slot="content">
-								<svelte:self
-									id={`${id}-${tokenIdx}-${detailIdx}-d`}
-									tokens={marked.lexer(decode(detailToken.text))}
-									attributes={detailToken?.attributes}
-									{done}
-									{editCodeBlock}
-									{onTaskClick}
-									{sourceIds}
-									{onSourceClick}
-								/>
-							</div>
-						</Collapsible>
 					{:else}
-						<Collapsible
-							title={detailToken.summary}
-							open={false}
-							disabled={true}
-							attributes={detailToken?.attributes}
-							messageDone={done}
-							className="w-full space-y-1"
-							dir="auto"
-						/>
+						{@const textContent = getDetailTextContent(detailToken)}
+
+						{#if textContent.length > 0}
+							<Collapsible
+								title={detailToken.summary}
+								open={$settings?.expandDetails ?? false}
+								attributes={detailToken?.attributes}
+								messageDone={done}
+								className="w-full space-y-1"
+								dir="auto"
+							>
+								<div class="mb-1.5" slot="content">
+									<svelte:self
+										id={`${id}-${tokenIdx}-${detailIdx}-d`}
+										tokens={marked.lexer(decode(detailToken.text))}
+										attributes={detailToken?.attributes}
+										{done}
+										{editCodeBlock}
+										{onTaskClick}
+										{sourceIds}
+										{onSourceClick}
+									/>
+								</div>
+							</Collapsible>
+						{:else}
+							<Collapsible
+								title={detailToken.summary}
+								open={false}
+								disabled={true}
+								attributes={detailToken?.attributes}
+								messageDone={done}
+								className="w-full space-y-1"
+								dir="auto"
+							/>
+						{/if}
 					{/if}
 				{/each}
 			</div>
 		</ConsecutiveDetailsGroup>
 	{:else if token.type === 'details'}
-		{@const textContent = getDetailTextContent(token)}
-
 		{#if token?.attributes?.type === 'tool_calls'}
 			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
 			<ToolCallDisplay
 				id={`${id}-${tokenIdx}-tc`}
 				attributes={token.attributes}
-				resultContent={getDetailTextContent(token)}
+				resultContent={token?.text ?? ''}
 				open={$settings?.expandDetails ?? false}
 				className="w-full space-y-1"
 			/>
-		{:else if textContent.length > 0}
-			<Collapsible
-				title={token.summary}
-				open={$settings?.expandDetails ?? false}
-				attributes={token?.attributes}
-				messageDone={done}
-				className="w-full space-y-1"
-				dir="auto"
-			>
-				<div class=" mb-1.5" slot="content">
-					<svelte:self
-						id={`${id}-${tokenIdx}-d`}
-						tokens={marked.lexer(decode(token.text))}
-						attributes={token?.attributes}
-						{done}
-						{editCodeBlock}
-						{onTaskClick}
-						{sourceIds}
-						{onSourceClick}
-					/>
-				</div>
-			</Collapsible>
 		{:else}
-			<Collapsible
-				title={token.summary}
-				open={false}
-				disabled={true}
-				attributes={token?.attributes}
-				messageDone={done}
-				className="w-full space-y-1"
-				dir="auto"
-			/>
+			{@const textContent = getDetailTextContent(token)}
+
+			{#if textContent.length > 0}
+				<Collapsible
+					title={token.summary}
+					open={$settings?.expandDetails ?? false}
+					attributes={token?.attributes}
+					messageDone={done}
+					className="w-full space-y-1"
+					dir="auto"
+				>
+					<div class=" mb-1.5" slot="content">
+						<svelte:self
+							id={`${id}-${tokenIdx}-d`}
+							tokens={marked.lexer(decode(token.text))}
+							attributes={token?.attributes}
+							{done}
+							{editCodeBlock}
+							{onTaskClick}
+							{sourceIds}
+							{onSourceClick}
+						/>
+					</div>
+				</Collapsible>
+			{:else}
+				<Collapsible
+					title={token.summary}
+					open={false}
+					disabled={true}
+					attributes={token?.attributes}
+					messageDone={done}
+					className="w-full space-y-1"
+					dir="auto"
+				/>
+			{/if}
 		{/if}
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
