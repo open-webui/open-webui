@@ -20,10 +20,7 @@
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
 
-	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
-	import CommandLine from '$lib/components/icons/CommandLine.svelte';
-	import Cube from '$lib/components/icons/Cube.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -66,6 +63,7 @@
 	let renderError = null;
 
 	let highlightedCode = null;
+	let editingCode = false;
 	let executing = false;
 
 	let stdout = null;
@@ -85,6 +83,7 @@
 
 		code = _code;
 		onSave(code);
+		editingCode = false;
 
 		setTimeout(() => {
 			saved = false;
@@ -101,7 +100,17 @@
 	};
 
 	const previewCode = () => {
-		onPreview(code);
+		onPreview(editingCode ? _code : code);
+	};
+
+	const editCode = () => {
+		_code = code;
+		editingCode = true;
+	};
+
+	const cancelEditCode = () => {
+		_code = code;
+		editingCode = false;
 	};
 
 	const checkPythonCode = (str) => {
@@ -505,7 +514,25 @@
 						{/if}
 					{/if}
 
-					{#if save}
+					{#if edit}
+						{#if editingCode}
+							<button
+								class="bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								on:click={cancelEditCode}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+						{:else}
+							<button
+								class="bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+								on:click={editCode}
+							>
+								{$i18n.t('Edit')}
+							</button>
+						{/if}
+					{/if}
+
+					{#if save && (!edit || editingCode)}
 						<button
 							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 							on:click={saveCode}
@@ -542,9 +569,9 @@
 				<div class=" pt-6.5 bg-white dark:bg-black"></div>
 
 				{#if !collapsed}
-					{#if edit}
+					{#if edit && editingCode}
 						<CodeEditor
-							value={code}
+							value={_code}
 							{id}
 							{lang}
 							onSave={() => {
