@@ -180,6 +180,10 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let navigationRequestId = 0;
+	let hasChatMessages = false;
+
+	$: hasChatMessages = !!history?.currentId && !!history?.messages?.[history.currentId];
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -192,14 +196,18 @@
 	}
 
 	const navigateHandler = async () => {
+		const targetChatId = chatIdProp;
+		const requestId = ++navigationRequestId;
+
 		// Mark the outgoing chat as read before loading the new one.
 		// $chatId still holds the previous chat here — loadChat() updates it.
-		if ($chatId && $chatId !== chatIdProp && !$temporaryChatEnabled) {
+		if ($chatId && $chatId !== targetChatId && !$temporaryChatEnabled) {
 			updateLastReadAt($chatId);
 		}
 
 		clearTimeout(saveControlsTimer);
 		await saveControls();
+		if (requestId !== navigationRequestId || targetChatId !== chatIdProp) return;
 		loading = true;
 
 		prompt = '';
@@ -212,10 +220,13 @@
 		imageGenerationEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+			`chat-input${targetChatId ? `-${targetChatId}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		const loaded = targetChatId ? await loadChat(targetChatId, requestId) : false;
+		if (requestId !== navigationRequestId || targetChatId !== chatIdProp) return;
+
+		if (targetChatId && loaded) {
 			await tick();
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
@@ -223,15 +234,15 @@
 			await tick();
 
 			// Mark chat read when initially loading it
-			if (chatIdProp && !$temporaryChatEnabled) {
-				updateLastReadAt(chatIdProp);
+			if (targetChatId && !$temporaryChatEnabled) {
+				updateLastReadAt(targetChatId);
 			}
 
 			// Process any queued requests if the chat is idle
 			const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 			const isIdle = !lastMessage || lastMessage.role !== 'assistant' || lastMessage.done;
 			if (isIdle) {
-				await processNextInQueue(chatIdProp);
+				await processNextInQueue(targetChatId);
 			}
 
 			if (storageChatInput) {
@@ -465,8 +476,6 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log(event);
-
 		if (event.chat_id === $chatId) {
 			await tick();
 			let message = history.messages[event.message_id];
@@ -1362,28 +1371,36 @@
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
-	const loadChat = async () => {
-		chatId.set(chatIdProp);
+	const loadChat = async (targetChatId = chatIdProp, requestId = navigationRequestId) => {
+		const isStale = () => requestId !== navigationRequestId || targetChatId !== chatIdProp;
+
+		chatId.set(targetChatId);
 
 		if ($temporaryChatEnabled) {
 			temporaryChatEnabled.set(false);
 		}
 
-		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+		const token = localStorage.token;
+		const chatPromise = getChatById(token, targetChatId).catch(() => {
 			return null;
 		});
+		const tagsPromise = getTagsById(token, targetChatId).catch(() => {
+			return [];
+		});
+		const pendingTaskIdsPromise = getTaskIdsByChatId(token, targetChatId)
+			.then((res) => res?.task_ids ?? [])
+			.catch(() => []);
+
+		chat = await chatPromise;
+		if (isStale()) return undefined;
 
 		if (chat) {
-			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-				return [];
-			});
+			tags = await tagsPromise;
+			if (isStale()) return undefined;
 
 			const chatContent = chat.chat;
 
 			if (chatContent) {
-				console.log(chatContent);
-
 				selectedModels =
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
@@ -1432,9 +1449,8 @@
 				// Reconcile active tasks with message state:
 				// If the response is already done, remaining tasks are just background
 				// work (follow-ups, title gen) that shouldn't block the input.
-				const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, $chatId)
-					.then((res) => res?.task_ids ?? [])
-					.catch(() => []);
+				const pendingTaskIds = await pendingTaskIdsPromise;
+				if (isStale()) return undefined;
 				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
 				const responseComplete = currentMessage?.role === 'assistant' && currentMessage?.done;
 
@@ -1452,9 +1468,11 @@
 
 				return true;
 			} else {
-				return null;
+				return false;
 			}
 		}
+
+		return false;
 	};
 
 	const scrollToBottom = async (behavior = 'auto') => {
@@ -3054,7 +3072,7 @@
 					/>
 
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
-						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
+						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || hasChatMessages}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id="messages-container"
