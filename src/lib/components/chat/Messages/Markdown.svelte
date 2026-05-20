@@ -9,6 +9,7 @@
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
 	import colonFenceExtension from '$lib/utils/marked/colon-fence-extension';
+	import { normalizeStructuralDetailsBlocks } from '$lib/utils/marked/details-normalization';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import footnoteExtension from '$lib/utils/marked/footnote-extension';
@@ -64,7 +65,9 @@
 		if (content === lastContent) return;
 		lastContent = content;
 
-		const processed = replaceTokens(processResponseContent(content), model?.name, $user?.name);
+		const processed = normalizeStructuralDetailsBlocks(
+			replaceTokens(processResponseContent(content), model?.name, $user?.name)
+		);
 		if (processed === lastParsedContent) return;
 		lastParsedContent = processed;
 
