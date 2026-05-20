@@ -170,6 +170,28 @@ def _search_text_column_exists(db) -> bool:
     return _search_col_exists_cache
 
 
+def _apply_subagent_filter(query, db, include_subagents: bool):
+    """Filter out chats whose ``meta`` carries ``subagent_of`` — those are
+    research subagent chats spawned by the parent chat model and are hidden
+    from the user's main chat list / search / pinned / archived views by
+    default. Pass ``include_subagents=True`` to opt a query into seeing them
+    (e.g. a future "Subagents" admin page)."""
+    if include_subagents:
+        return query
+    dialect = db.bind.dialect.name
+    if dialect == "sqlite":
+        # json_extract returns NULL when the path doesn't exist; pre-existing
+        # rows have no `subagent_of` key so they pass through cleanly.
+        return query.filter(
+            text("(json_extract(Chat.meta, '$.subagent_of') IS NULL)")
+        )
+    if dialect == "postgresql":
+        return query.filter(text("(Chat.meta->>'subagent_of' IS NULL)"))
+    raise NotImplementedError(
+        f"Unsupported dialect for subagent filter: {dialect}"
+    )
+
+
 class ChatTable:
     def _enrich_chat_data(self, chat_data: dict) -> dict:
         """
@@ -551,10 +573,12 @@ class ChatTable:
         filter: Optional[dict] = None,
         skip: int = 0,
         limit: int = 50,
+        include_subagents: bool = False,
     ) -> list[ChatModel]:
 
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+            query = _apply_subagent_filter(query, db, include_subagents)
 
             if filter:
                 query_key = filter.get("query")
@@ -589,11 +613,13 @@ class ChatTable:
         filter: Optional[dict] = None,
         skip: int = 0,
         limit: int = 50,
+        include_subagents: bool = False,
     ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
                 query = query.filter_by(archived=False)
+            query = _apply_subagent_filter(query, db, include_subagents)
 
             if filter:
                 query_key = filter.get("query")
@@ -629,6 +655,7 @@ class ChatTable:
         include_pinned: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
+        include_subagents: bool = False,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
@@ -641,6 +668,8 @@ class ChatTable:
 
             if not include_archived:
                 query = query.filter_by(archived=False)
+
+            query = _apply_subagent_filter(query, db, include_subagents)
 
             query = query.order_by(Chat.updated_at.desc()).with_entities(
                 Chat.id, Chat.title, Chat.updated_at, Chat.created_at
@@ -718,31 +747,33 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
+    def get_chats_by_user_id(
+        self, user_id: str, include_subagents: bool = False
+    ) -> list[ChatModel]:
         with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id)
-                .order_by(Chat.updated_at.desc())
-            )
+            query = db.query(Chat).filter_by(user_id=user_id)
+            query = _apply_subagent_filter(query, db, include_subagents)
+            all_chats = query.order_by(Chat.updated_at.desc())
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_pinned_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
+    def get_pinned_chats_by_user_id(
+        self, user_id: str, include_subagents: bool = False
+    ) -> list[ChatModel]:
         with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, pinned=True, archived=False)
-                .order_by(Chat.updated_at.desc())
+            query = db.query(Chat).filter_by(
+                user_id=user_id, pinned=True, archived=False
             )
+            query = _apply_subagent_filter(query, db, include_subagents)
+            all_chats = query.order_by(Chat.updated_at.desc())
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_archived_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
+    def get_archived_chats_by_user_id(
+        self, user_id: str, include_subagents: bool = False
+    ) -> list[ChatModel]:
         with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-            )
+            query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+            query = _apply_subagent_filter(query, db, include_subagents)
+            all_chats = query.order_by(Chat.updated_at.desc())
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_user_id_and_search_text(
@@ -752,6 +783,7 @@ class ChatTable:
         include_archived: bool = False,
         skip: int = 0,
         limit: int = 60,
+        include_subagents: bool = False,
     ) -> list[ChatModel]:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
@@ -760,7 +792,12 @@ class ChatTable:
 
         if not search_text:
             return self.get_chat_list_by_user_id(
-                user_id, include_archived, filter={}, skip=skip, limit=limit
+                user_id,
+                include_archived,
+                filter={},
+                skip=skip,
+                limit=limit,
+                include_subagents=include_subagents,
             )
 
         search_text_words = search_text.split(" ")
@@ -817,6 +854,7 @@ class ChatTable:
 
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
+            query = _apply_subagent_filter(query, db, include_subagents)
 
             if is_archived is not None:
                 query = query.filter(Chat.archived == is_archived)

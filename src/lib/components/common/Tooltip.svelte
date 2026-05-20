@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { mobile } from '$lib/stores';
 
 	import tippy from 'tippy.js';
@@ -21,11 +21,34 @@
 	export let allowHTML = true;
 	export let tippyOptions = {};
 	export let interactive = false;
+	export let clickToStick = false;
 
-	export let onClick = () => {};
+	export let onClick: (event?: MouseEvent) => void = () => {};
 
 	let tooltipElement;
 	let tooltipInstance;
+	let isSticky = false;
+
+	function handleClick(event) {
+		if (clickToStick && tooltipInstance) {
+			if (isSticky) {
+				isSticky = false;
+				tooltipInstance.hide();
+			} else {
+				isSticky = true;
+				tooltipInstance.show();
+			}
+		}
+		onClick(event);
+	}
+
+	function handleDocumentClick(event) {
+		if (!isSticky || !tooltipInstance) return;
+		if (tooltipElement && tooltipElement.contains(event.target)) return;
+		if (tooltipInstance.popper && tooltipInstance.popper.contains(event.target)) return;
+		isSticky = false;
+		tooltipInstance.hide();
+	}
 
 	// On mobile, tooltips intercept taps and need a second tap to dismiss —
 	// disable them by default. Callers that explicitly want long-press tooltips
@@ -59,6 +82,15 @@
 					offset: offset,
 					delay: [400, 100],
 					...(interactive ? { interactive: true } : {}),
+					...(clickToStick
+						? {
+								interactive: true,
+								hideOnClick: false,
+								onHide: () => {
+									if (isSticky) return false;
+								}
+							}
+						: {}),
 					...tippyOptions
 				});
 			}
@@ -69,7 +101,16 @@
 		}
 	}
 
+	onMount(() => {
+		if (clickToStick) {
+			document.addEventListener('click', handleDocumentClick);
+		}
+	});
+
 	onDestroy(() => {
+		if (clickToStick) {
+			document.removeEventListener('click', handleDocumentClick);
+		}
 		if (tooltipInstance) {
 			tooltipInstance.destroy();
 		}
@@ -77,7 +118,7 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<svelte:element this={as} bind:this={tooltipElement} class={className} on:click={onClick}>
+<svelte:element this={as} bind:this={tooltipElement} class={className} on:click={handleClick}>
 	<slot />
 </svelte:element>
 

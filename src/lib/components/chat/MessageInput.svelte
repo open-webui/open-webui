@@ -65,6 +65,7 @@
 	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
+	import UserGroup from '../icons/UserGroup.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
@@ -121,6 +122,7 @@
 	export let webSearchEnabled = false;
 	export let studyModeEnabled = false;
 	export let dataVizEnabled = false;
+	export let subagentsEnabled = false;
 	export let codeInterpreterEnabled = false;
 
 	// Reasoning effort functionality
@@ -348,6 +350,7 @@
 		codeInterpreterEnabled,
 		studyModeEnabled,
 		dataVizEnabled,
+		subagentsEnabled,
 		// Only include reasoning when the selected model is configured as a reasoning model.
 		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {})
 	});
@@ -719,6 +722,17 @@
 		($_user == null ||
 			$_user?.role === 'admin' ||
 			!!$_user?.permissions?.features?.web_search);
+
+	let showSubagentsButton = false;
+	// Subagents are model-agnostic (the inner subagent picks its own model
+	// from chat.params.subagentModel / config.SUBAGENT_DEFAULT_MODEL), so we
+	// don't gate the button on the parent model's capabilities the way
+	// web-search does. Just gate on the global feature flag + user permission.
+	$: showSubagentsButton =
+		($config == null || !!$config?.features?.enable_subagents) &&
+		($_user == null ||
+			$_user?.role === 'admin' ||
+			!!$_user?.permissions?.features?.subagents);
 
 	let showStudyModeButton = false;
 	$: showStudyModeButton = $config == null || !!$config?.features?.enable_study_mode;
@@ -2066,6 +2080,34 @@
 												>
 													<GlobeAlt className="size-5" strokeWidth="1.75" />
 													{#if webSearchEnabled}
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													{/if}
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if showSubagentsButton}
+											<Tooltip
+												content={$i18n.t(
+													'Subagents — let the model spawn research workers in isolated contexts'
+												)}
+												placement="top"
+											>
+												<button
+													on:click|preventDefault={() =>
+														(subagentsEnabled = !subagentsEnabled)}
+													type="button"
+													class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {subagentsEnabled
+														? ' text-gray-900 dark:text-gray-100 bg-manilla/60 hover:bg-manilla/80 dark:bg-manilla-dark dark:hover:bg-manilla-dark/80 border-hairline border-book-cloth/30 dark:border-book-cloth/40'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+													aria-label={subagentsEnabled
+														? $i18n.t('Disable Subagents')
+														: $i18n.t('Enable Subagents')}
+												>
+													<UserGroup className="size-5" strokeWidth="1.75" />
+													{#if subagentsEnabled}
 														<div class="hidden group-hover:block">
 															<XMark className="size-4" strokeWidth="1.75" />
 														</div>

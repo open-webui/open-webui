@@ -98,6 +98,7 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    subagents,
 )
 
 from open_webui.routers.retrieval import (
@@ -302,6 +303,11 @@ from open_webui.config import (
     DATA_VIZ_AUTO_REPAIR_MAX_ATTEMPTS,
     DATA_VIZ_AUTO_REPAIR_MODEL,
     DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT,
+    # Subagents
+    ENABLE_SUBAGENTS,
+    SUBAGENT_DEFAULT_MODEL,
+    SUBAGENT_SYSTEM_PROMPT,
+    SUBAGENT_PARENT_PROMPT,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
@@ -943,6 +949,12 @@ app.state.config.DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT = (
     DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT
 )
 
+# Subagents
+app.state.config.ENABLE_SUBAGENTS = ENABLE_SUBAGENTS
+app.state.config.SUBAGENT_DEFAULT_MODEL = SUBAGENT_DEFAULT_MODEL
+app.state.config.SUBAGENT_SYSTEM_PROMPT = SUBAGENT_SYSTEM_PROMPT
+app.state.config.SUBAGENT_PARENT_PROMPT = SUBAGENT_PARENT_PROMPT
+
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
 
@@ -1285,6 +1297,7 @@ app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
+app.include_router(subagents.router, prefix="/api/v1/subagents", tags=["subagents"])
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 
@@ -1757,6 +1770,7 @@ async def get_app_config(request: Request):
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
                     "enable_study_mode": app.state.config.ENABLE_STUDY_MODE,
                     "enable_data_viz": app.state.config.ENABLE_DATA_VIZ,
+                    "enable_subagents": app.state.config.ENABLE_SUBAGENTS,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,

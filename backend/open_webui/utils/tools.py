@@ -110,6 +110,14 @@ async def get_tools(
                     tools_dict[tool_name] = tool_spec
             continue
 
+        # Handle built-in subagent tools (subagent_launch, subagent_continue)
+        if tool_id == "builtin:subagent":
+            subagent_tools = get_subagent_tool_specs(extra_params)
+            if subagent_tools:
+                for tool_name, tool_spec in subagent_tools.items():
+                    tools_dict[tool_name] = tool_spec
+            continue
+
         tool = Tools.get_tool_by_id(tool_id)
         if tool is None:
 
@@ -933,6 +941,87 @@ def get_data_viz_tool_specs(extra_params: dict) -> dict:
             "name": "show_widget",
             "spec": spec_map["show_widget"],
             "callable": callable_show_widget,
+            "metadata": {"parallelizable": False},
+        }
+
+    return tools
+
+
+def get_subagent_tool_specs(extra_params: dict) -> dict:
+    """
+    Generate tool specs for the built-in subagent tools (subagent_launch +
+    subagent_continue). Returns a dict {tool_name: tool_dict}.
+
+    Args:
+        extra_params: Extra parameters to inject (__request__, __user__,
+            __metadata__, __event_emitter__, __event_call__, __model__).
+    """
+    from open_webui.utils.subagent_tool import get_subagent_tools_instance
+
+    tool_instance = get_subagent_tools_instance()
+    specs = get_tool_specs(tool_instance)
+
+    if not specs:
+        return {}
+
+    spec_map = {}
+    for spec in specs:
+        if "function" in spec:
+            name = spec["function"].get("name")
+        else:
+            name = spec.get("name")
+        if name:
+            spec_map[name] = spec
+
+    # Strip the runtime-injected __magic__ parameters from each spec's
+    # property list — the parent model doesn't fill these, the runtime does.
+    # (Mirrors the strip applied to user-installed tools in `get_tools` above
+    # at ~L260; the data_viz / web_search builtins skip the strip because
+    # langchain typically drops complex types like Request when emitting the
+    # JSON schema, but doing it explicitly here keeps the spec clean and
+    # rules out any provider that does accept the leaked field.)
+    for spec in spec_map.values():
+        target = spec.get("function", spec)
+        params = target.get("parameters", {})
+        properties = params.get("properties", {}) or {}
+        target["parameters"]["properties"] = {
+            k: v for k, v in properties.items() if not k.startswith("__")
+        }
+        if "required" in params:
+            target["parameters"]["required"] = [
+                r for r in params["required"] if not r.startswith("__")
+            ]
+
+    tools: dict = {}
+
+    if "subagent_launch" in spec_map:
+        callable_launch = get_async_tool_function_and_apply_extra_params(
+            tool_instance.subagent_launch, extra_params
+        )
+        tools["subagent_launch"] = {
+            "id": "builtin:subagent",
+            "name": "subagent_launch",
+            "spec": spec_map["subagent_launch"],
+            "callable": callable_launch,
+            # Parallel launches are explicitly OK — the user wanted to be able
+            # to fire off multiple independent research subagents in one turn.
+            "metadata": {"parallelizable": True},
+        }
+
+    if "subagent_continue" in spec_map:
+        callable_continue = get_async_tool_function_and_apply_extra_params(
+            tool_instance.subagent_continue, extra_params
+        )
+        tools["subagent_continue"] = {
+            "id": "builtin:subagent",
+            "name": "subagent_continue",
+            "spec": spec_map["subagent_continue"],
+            "callable": callable_continue,
+            # Continues mutate the named subagent's chat history — they are
+            # NOT safe to run concurrently against the same subagent. We don't
+            # have per-call dependency analysis, so mark non-parallelizable
+            # globally (the parent shouldn't be calling concurrent continues
+            # on the same subagent anyway, but this enforces it).
             "metadata": {"parallelizable": False},
         }
 

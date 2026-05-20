@@ -42,7 +42,8 @@
 		selectedFolder,
 		pinnedChats,
 		showEmbeds,
-		chatTokenStatsRefreshTrigger
+		chatTokenStatsRefreshTrigger,
+		subagentLiveStates
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -148,6 +149,8 @@
 	let lastPersistedStudyModeEnabled: boolean | null = null;
 	let dataVizEnabled = false;
 	let lastPersistedDataVizEnabled: boolean | null = null;
+	let subagentsEnabled = false;
+	let lastPersistedSubagentsEnabled: boolean | null = null;
 	let codeInterpreterEnabled = false;
 
 	// Auto-save tool preferences when they change
@@ -228,6 +231,27 @@
 
 		params = nextParams;
 		lastPersistedDataVizEnabled = dataVizEnabled;
+
+		void saveChatHandler(chatIdToPersist, history, nextParams);
+	}
+
+	// Same pattern for subagentsEnabled — per-chat toggle, persisted so it
+	// survives reloads and other devices.
+	$: if (subagentsEnabled !== params.subagentsEnabled) {
+		params = { ...params, subagentsEnabled };
+	}
+	$: if (
+		activeChatId &&
+		!loading &&
+		!$temporaryChatEnabled &&
+		lastPersistedSubagentsEnabled !== null &&
+		subagentsEnabled !== lastPersistedSubagentsEnabled
+	) {
+		const nextParams = { ...params, subagentsEnabled };
+		const chatIdToPersist = activeChatId;
+
+		params = nextParams;
+		lastPersistedSubagentsEnabled = subagentsEnabled;
 
 		void saveChatHandler(chatIdToPersist, history, nextParams);
 	}
@@ -407,10 +431,6 @@
 
 				// Don't schedule if more than 24 hours away (will be recalculated on next poll)
 				if (msUntilReset > 0 && msUntilReset < 24 * 60 * 60 * 1000) {
-					console.log(
-						`Token usage: scheduling reset for "${groupName}" in ${Math.round(msUntilReset / 1000)}s`
-					);
-
 					const timeout = setTimeout(async () => {
 						console.log(
 							`Token usage: reset time reached for "${groupName}", triggering UI update...`
@@ -523,6 +543,7 @@
 		lastPersistedWebSearchEnabled = null;
 		lastPersistedStudyModeEnabled = null;
 		lastPersistedDataVizEnabled = null;
+		lastPersistedSubagentsEnabled = null;
 
 		prompt = '';
 		messageInput?.setText('');
@@ -532,6 +553,7 @@
 		selectedToolIds = $settings?.defaultToolIds || [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
+		subagentsEnabled = false;
 		imageGenerationEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
@@ -673,6 +695,7 @@
 		webSearchEnabled = false;
 		studyModeEnabled = false;
 		dataVizEnabled = false;
+		subagentsEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -976,6 +999,87 @@
 			eventConfirmationMessage = data.message;
 			eventConfirmationInputPlaceholder = data.placeholder;
 			eventConfirmationInputValue = data?.value ?? '';
+			return;
+		}
+
+		// Subagent lifecycle events. The runner in `utils/subagent.py` emits
+		// `chat:subagent:start` once when a subagent run begins, and
+		// `chat:subagent:update` wrapping each forwarded inner-pipeline event
+		// (chat:completion, status, errors) so the parent UI's collapsible
+		// block under the parent assistant message can render live progress.
+		//
+		// Both events are keyed on `tool_call_id` (the parent's tool_call_id
+		// that triggered this subagent) — that's the same key
+		// `serialize_content_blocks` stamps onto the `<details
+		// type="subagent_launch">` placeholder, so the SubagentBlock
+		// component can look up state without any prop drilling.
+		if (type === 'chat:subagent:start') {
+			const sd = data ?? {};
+			const key = sd.tool_call_id || sd.subagent_id;
+			if (key) {
+				const now = Math.floor(Date.now() / 1000);
+				subagentLiveStates.update((s) => ({
+					...s,
+					[key]: {
+						...(s[key] ?? {}),
+						subagent_id: sd.subagent_id,
+						parent_message_id: sd.parent_message_id,
+						tool_call_id: sd.tool_call_id,
+						num: sd.num,
+						name: sd.name,
+						chat_id: sd.chat_id ?? sd.subagent_id,
+						continuation: sd.continuation === true,
+						status: 'running',
+						started_at: (s[key] && s[key].started_at) || now
+					}
+				}));
+			}
+			return;
+		}
+
+		if (type === 'chat:subagent:update') {
+			const sd = data ?? {};
+			const key = sd.tool_call_id || sd.subagent_id;
+			if (!key) return;
+			const innerEvent = sd.inner_event ?? {};
+			const innerType = innerEvent?.type;
+			const innerData = innerEvent?.data ?? {};
+			subagentLiveStates.update((s) => {
+				const cur = {
+					...(s[key] ?? {
+						subagent_id: sd.subagent_id,
+						parent_message_id: sd.parent_message_id,
+						tool_call_id: sd.tool_call_id,
+						num: sd.num,
+						name: sd.name,
+						chat_id: sd.chat_id ?? sd.subagent_id,
+						status: 'running'
+					})
+				};
+				if (innerType === 'chat:completion') {
+					if (Array.isArray(innerData.content_blocks)) {
+						cur.content_blocks = innerData.content_blocks;
+					}
+					if (typeof innerData.content === 'string') {
+						cur.content = innerData.content;
+					}
+					if (innerData.done === true) {
+						cur.status = 'done';
+						cur.ended_at = Math.floor(Date.now() / 1000);
+					}
+				} else if (innerType === 'chat:message:error') {
+					cur.status = 'error';
+					cur.error = innerData?.error ?? innerData;
+					cur.ended_at = Math.floor(Date.now() / 1000);
+				} else if (innerType === 'chat:tasks:cancel') {
+					cur.status = 'cancelled';
+					cur.ended_at = Math.floor(Date.now() / 1000);
+				} else if (innerType === 'status') {
+					const sh = cur.statusHistory ?? [];
+					cur.statusHistory = [...sh, innerData];
+				}
+				return { ...s, [key]: cur };
+			});
 			return;
 		}
 
@@ -1909,6 +2013,41 @@
 			dataVizEnabled = params.dataVizEnabled;
 		}
 		lastPersistedDataVizEnabled = dataVizEnabled;
+
+		if (params.subagentsEnabled !== undefined) {
+			subagentsEnabled = params.subagentsEnabled;
+		}
+		lastPersistedSubagentsEnabled = subagentsEnabled;
+
+		// Hydrate the subagent live-state store with anything persisted on
+		// this chat's messages. Each message's `subagent_runs` is a
+		// {key -> SubagentRun} dict (key is usually `subagent_id`, or
+		// `subagent_id#tool_call_id` for continues). Seed the store keyed by
+		// tool_call_id when present so the SubagentBlock renderer can look up
+		// state by the `tool_call_id` attribute on the markdown placeholder.
+		try {
+			const seeded: Record<string, any> = {};
+			for (const msg of Object.values(history.messages ?? {})) {
+				const runs = (msg as any)?.subagent_runs;
+				if (runs && typeof runs === 'object') {
+					for (const [, run] of Object.entries(runs)) {
+						const r = run as any;
+						const key = r?.tool_call_id || r?.subagent_id;
+						if (key) {
+							seeded[key] = {
+								...r,
+								parent_message_id: (msg as any).id
+							};
+						}
+					}
+				}
+			}
+			if (Object.keys(seeded).length > 0) {
+				subagentLiveStates.update((s) => ({ ...s, ...seeded }));
+			}
+		} catch (e) {
+			console.warn('Failed to hydrate subagentLiveStates:', e);
+		}
 
 		autoScroll = true;
 
@@ -3217,7 +3356,12 @@
 						? webSearchEnabled
 						: false,
 				study_mode: $config?.features?.enable_study_mode ? studyModeEnabled : false,
-				data_viz: $config?.features?.enable_data_viz ? dataVizEnabled : false
+				data_viz: $config?.features?.enable_data_viz ? dataVizEnabled : false,
+				subagents:
+					$config?.features?.enable_subagents &&
+					($user?.role === 'admin' || $user?.permissions?.features?.subagents)
+						? subagentsEnabled
+						: false
 			};
 
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
@@ -5092,6 +5236,7 @@
 									bind:webSearchEnabled
 									bind:studyModeEnabled
 									bind:dataVizEnabled
+									bind:subagentsEnabled
 									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands
@@ -5152,6 +5297,7 @@
 									bind:webSearchEnabled
 									bind:studyModeEnabled
 									bind:dataVizEnabled
+									bind:subagentsEnabled
 									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands

@@ -37,6 +37,7 @@
 	import Spinner from './Spinner.svelte';
 	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
+	import SubagentBlock from '../chat/Messages/Markdown/SubagentBlock.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
@@ -49,7 +50,7 @@
 
 	export let id = '';
 	export let title = null;
-	export let attributes = null;
+	export let attributes: Record<string, any> | null = null;
 
 	export let chevron = false;
 	export let grow = false;
@@ -95,7 +96,15 @@
 </script>
 
 <div {id} class={className}>
-	{#if attributes?.type === 'tool_calls'}
+	{#if attributes?.type === 'subagent_launch'}
+		<!-- Subagent block: rendered as a self-contained card with its own
+			collapsible chrome (own header/spinner/caret + recursive markdown
+			body for the inner content_blocks). Bypasses the generic
+			tool_calls / reasoning branches below — the SubagentBlock component
+			reads its state live from `$subagentLiveStates` keyed on the
+			tool_call_id attribute that `serialize_content_blocks` stamps. -->
+		<SubagentBlock attributes={attributes ?? {}} />
+	{:else if attributes?.type === 'tool_calls'}
 		{@const args = decode(attributes?.arguments)}
 		{@const result = decode(attributes?.result ?? '')}
 		{@const files = parseJSONString(decode(attributes?.files ?? ''))}

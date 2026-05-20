@@ -7,6 +7,7 @@ import textwrap
 
 import asyncio
 from aiocache import cached
+from contextvars import ContextVar
 from typing import Any, Optional
 import random
 import json
@@ -16,6 +17,22 @@ import re
 import ast
 
 from uuid import uuid4
+
+
+# Set inside `_execute_tool_call` so a tool callable can find out which
+# parent-model-issued tool_call_id triggered it. Used by the subagent tool
+# (`utils/subagent_tool.py`) to stamp the subagent_id back on the right
+# tool call's result entry so the parent UI can render a subagent block in
+# place of the generic tool_calls collapsible.
+#
+# Why a ContextVar instead of `request.state.current_tool_call_id`: when the
+# tool-call loop runs parallelizable tool calls via `asyncio.gather`, each
+# concurrent task needs its own current_tool_call_id. ContextVars do the right
+# thing here — asyncio.Task copies the context at creation, so each branch of
+# the gather sees its own value.
+current_tool_call_id_var: ContextVar[Optional[str]] = ContextVar(
+    "current_tool_call_id", default=None
+)
 
 
 from fastapi import Request, HTTPException
@@ -1117,6 +1134,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 feature_prompt_parts.append(data_viz_prompt)
             log.info("Auto-enabled data visualization tool with native function calling")
 
+        if features.get("subagents"):
+            # Subagents are isolated research workers the parent can spawn via
+            # `subagent_launch` / `subagent_continue` (see utils/subagent.py +
+            # utils/subagent_tool.py). Registering the builtin here exposes the
+            # two tools to the parent model and appends the admin-editable
+            # parent-side instructions so the model knows when to use them.
+            # The inner subagent run explicitly clears features={} so the
+            # subagent itself can NOT recursively spawn another subagent.
+            if tool_ids is None:
+                tool_ids = []
+            if "builtin:subagent" not in tool_ids:
+                tool_ids.append("builtin:subagent")
+            metadata.setdefault("params", {})["function_calling"] = "native"
+
+            subagent_parent_prompt = getattr(
+                request.app.state.config, "SUBAGENT_PARENT_PROMPT", ""
+            )
+            if subagent_parent_prompt:
+                feature_prompt_parts.append(subagent_parent_prompt)
+            log.info("Auto-enabled subagent tools with native function calling")
+
         if feature_prompt_parts:
             form_data["messages"] = add_or_update_system_message(
                 "\n\n".join(feature_prompt_parts),
@@ -1617,8 +1655,15 @@ async def process_chat_response(
         and "message_id" in metadata
         and metadata["message_id"]
     ):
-        event_emitter = get_event_emitter(metadata)
-        event_caller = get_event_call(metadata)
+        # Subagent runs install custom emitter/caller in metadata so the inner
+        # pipeline's events get forwarded to the parent UI as
+        # `chat:subagent:update` events (see utils/subagent.py). For normal
+        # chats these keys are absent and we fall back to the default
+        # socket-scoped emitter/caller.
+        event_emitter = metadata.get("event_emitter_override") or get_event_emitter(
+            metadata
+        )
+        event_caller = metadata.get("event_caller_override") or get_event_call(metadata)
 
     model_id = form_data.get("model", "")
 
@@ -1920,6 +1965,26 @@ async def process_chat_response(
                         if content and not content.endswith("\n"):
                             content += "\n"
 
+                        # Look up subagent_id either from the completed result
+                        # (set by `_execute_tool_call` after the tool returns)
+                        # or from the in-flight side channel that the subagent
+                        # tool stamps right at the start of its execution
+                        # (before it blocks on the inner chat). This way, even
+                        # during the long-running window between the parent
+                        # model emitting the tool call and the tool returning,
+                        # serialize_content_blocks renders a subagent block
+                        # instead of a generic "Executing..." tool_call.
+                        inflight_subagent_id_by_tcid = {}
+                        try:
+                            inflight_subagent_id_by_tcid = getattr(
+                                request.state, "subagent_id_by_tool_call", {}
+                            ) or {}
+                        except Exception:
+                            inflight_subagent_id_by_tcid = {}
+
+                        def _is_subagent_tool(name: str) -> bool:
+                            return name in ("subagent_launch", "subagent_continue")
+
                         if results:
 
                             tool_calls_display_content = ""
@@ -1935,13 +2000,36 @@ async def process_chat_response(
 
                                 tool_result = None
                                 tool_result_files = None
+                                result_subagent_id = None
                                 for result in results:
                                     if tool_call_id == result.get("tool_call_id", ""):
                                         tool_result = result.get("content", None)
                                         tool_result_files = result.get("files", None)
+                                        result_subagent_id = result.get("subagent_id")
                                         break
 
-                                if tool_result is not None:
+                                if _is_subagent_tool(tool_name):
+                                    # Subagent block: lives in `subagentLiveStates`
+                                    # keyed by tool_call_id on the frontend; the
+                                    # markdown projection here is just a stub the
+                                    # `Collapsible.svelte` renderer recognises.
+                                    sa_id = (
+                                        result_subagent_id
+                                        or inflight_subagent_id_by_tcid.get(tool_call_id)
+                                        or ""
+                                    )
+                                    done_flag = "true" if tool_result is not None else "false"
+                                    tool_calls_display_content = (
+                                        f'{tool_calls_display_content}'
+                                        f'<details type="subagent_launch" done="{done_flag}" '
+                                        f'tool_call_id="{html.escape(tool_call_id)}" '
+                                        f'id="{html.escape(sa_id)}" '
+                                        f'name="{html.escape(tool_name)}" '
+                                        f'arguments="{html.escape(json.dumps(tool_arguments))}">\n'
+                                        f'<summary>Subagent</summary>\n'
+                                        f'</details>\n'
+                                    )
+                                elif tool_result is not None:
                                     tool_result_embeds = result.get("embeds", "")
                                     tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}" embeds="{html.escape(json.dumps(tool_result_embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
@@ -1960,7 +2048,23 @@ async def process_chat_response(
                                     "arguments", ""
                                 )
 
-                                tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
+                                if _is_subagent_tool(tool_name):
+                                    sa_id = (
+                                        inflight_subagent_id_by_tcid.get(tool_call_id)
+                                        or ""
+                                    )
+                                    tool_calls_display_content = (
+                                        f'{tool_calls_display_content}\n'
+                                        f'<details type="subagent_launch" done="false" '
+                                        f'tool_call_id="{html.escape(tool_call_id)}" '
+                                        f'id="{html.escape(sa_id)}" '
+                                        f'name="{html.escape(tool_name)}" '
+                                        f'arguments="{html.escape(json.dumps(tool_arguments))}">\n'
+                                        f'<summary>Subagent</summary>\n'
+                                        f'</details>\n'
+                                    )
+                                else:
+                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
                             content = f"{content}{tool_calls_display_content}"
 
@@ -2856,6 +2960,12 @@ async def process_chat_response(
                         tool_function_name = tool_call.get("function", {}).get(
                             "name", ""
                         )
+                        # Pin the tool_call_id for this branch of the gather so
+                        # the tool callable can look it up via
+                        # `current_tool_call_id_var.get()` (used by the subagent
+                        # tool to wire its subagent_id back to the right
+                        # parent tool call).
+                        current_tool_call_id_var.set(tool_call_id)
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
                         tool_function_params = {}
@@ -2946,6 +3056,22 @@ async def process_chat_response(
                             )
                         )
 
+                        # If the tool was a subagent_launch / subagent_continue,
+                        # the tool callable stamped its subagent_id into
+                        # `request.state.subagent_id_by_tool_call` keyed by
+                        # tool_call_id. Surface it on the result entry so
+                        # serialize_content_blocks can render a subagent block
+                        # rather than the generic tool_calls collapsible, and
+                        # so the saved chat row carries the link to the
+                        # subagent chat after reload.
+                        subagent_id_for_call = None
+                        try:
+                            subagent_id_for_call = getattr(
+                                request.state, "subagent_id_by_tool_call", {}
+                            ).get(tool_call_id)
+                        except Exception:
+                            subagent_id_for_call = None
+
                         return {
                             "tool_call_id": tool_call_id,
                             "content": tool_result or "",
@@ -2957,6 +3083,11 @@ async def process_chat_response(
                             **(
                                 {"embeds": tool_result_embeds}
                                 if tool_result_embeds
+                                else {}
+                            ),
+                            **(
+                                {"subagent_id": subagent_id_for_call}
+                                if subagent_id_for_call
                                 else {}
                             ),
                         }

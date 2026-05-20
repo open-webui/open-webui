@@ -2987,6 +2987,80 @@ DATA_VIZ_AUTO_REPAIR_REASONING_EFFORT = PersistentConfig(
 )
 
 ####################################
+# Subagents
+####################################
+
+# Subagents let the parent chat model spawn isolated research workers via the
+# `subagent_launch` / `subagent_continue` tools. Each subagent runs in its own
+# hidden Chat row with web search + fetch, streams live progress into a
+# collapsible block under the parent assistant turn, and returns only its final
+# synthesized answer as the tool result — keeping the parent's context small.
+
+ENABLE_SUBAGENTS = PersistentConfig(
+    "ENABLE_SUBAGENTS",
+    "subagents.enable",
+    os.getenv("ENABLE_SUBAGENTS", "False").lower() == "true",
+)
+
+# Empty string = no global default; falls back to the parent chat's model.
+SUBAGENT_DEFAULT_MODEL = PersistentConfig(
+    "SUBAGENT_DEFAULT_MODEL",
+    "subagents.default_model",
+    os.getenv("SUBAGENT_DEFAULT_MODEL", ""),
+)
+
+# Prepended to the subagent model's own system prompt when running an inner
+# subagent turn. Defines the subagent's role and stop condition (no tool calls
+# in the final turn = "done"). Admin-editable.
+DEFAULT_SUBAGENT_SYSTEM_PROMPT = """You are a research subagent invoked by another model to do focused, deep research on a specific topic and return a synthesized written answer.
+
+You have access to:
+- `web_search` — find relevant pages
+- `web_fetch` — read full page content
+(Plus any additional tools the user has enabled for subagents.)
+
+How to work:
+- Call `web_search` with focused, specific queries — not the entire request as one query.
+- Read the results, pick the most relevant URLs, and `web_fetch` them. Fetch multiple in one call when you can.
+- Do as many search/fetch rounds as the task needs. There is no hard iteration limit. Don't stop prematurely — your parent expects depth.
+- Reason between rounds about what you've learned and what's still missing.
+- Cite the URLs you used in your final answer.
+
+When you have enough to answer:
+- Write a single comprehensive final response. No tool calls in that final turn — the absence of tool calls is your "I'm done" signal.
+- Structure it well: headers, lists where helpful, citations.
+- Do NOT ask clarifying questions. You don't have a user to ask — your parent already decided what to research."""
+
+SUBAGENT_SYSTEM_PROMPT = PersistentConfig(
+    "SUBAGENT_SYSTEM_PROMPT",
+    "subagents.system_prompt",
+    os.getenv("SUBAGENT_SYSTEM_PROMPT", DEFAULT_SUBAGENT_SYSTEM_PROMPT),
+)
+
+# Appended to the parent chat's system prompt when subagents are enabled.
+# Teaches the parent model when and how to use the subagent_launch /
+# subagent_continue tools. Admin-editable.
+DEFAULT_SUBAGENT_PARENT_PROMPT = """You can spawn research subagents to do deep research without polluting our conversation context.
+
+Use `subagent_launch(name, prompt, background?)` when the user asks for research, deep specifics, or up-to-date information that would otherwise take many web searches inline. The subagent will do its own multi-step search/fetch and return a synthesized written answer.
+
+- `name`: short snake_case identifier (e.g. `berkeley_dorms`, not `the_berkeley_dorms_research_subagent_for_user`). Used to label the output and to reference the subagent later via `subagent_continue`. Keep it short.
+- `prompt`: a thorough description of what to research. Be specific. "Tell me about colleges" is too vague; "What are dorm options for first-year transfer students at UC Berkeley, including costs and meal plans" is right.
+- `background` (optional): context the subagent needs but couldn't infer from the prompt alone (e.g. "User is a junior transferring from a community college in California").
+
+Use `subagent_continue(name_or_id, prompt)` to follow up with a previously-launched subagent — same research context, lets you ask for elaboration without re-priming. Reference by the short name you gave it, or by the numeric id returned in the prior tool result.
+
+You can launch multiple subagents in parallel in the same turn for independent topics.
+
+The subagent's final answer comes back as the tool result. Cite it in your reply ("According to the research, …") so the user knows where the information came from."""
+
+SUBAGENT_PARENT_PROMPT = PersistentConfig(
+    "SUBAGENT_PARENT_PROMPT",
+    "subagents.parent_prompt",
+    os.getenv("SUBAGENT_PARENT_PROMPT", DEFAULT_SUBAGENT_PARENT_PROMPT),
+)
+
+####################################
 # Images
 ####################################
 

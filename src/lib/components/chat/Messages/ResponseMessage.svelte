@@ -1244,15 +1244,14 @@
 												)}</pre>`
 											: ''}
 										placement="bottom"
+										clickToStick={true}
+										tippyOptions={{ delay: [0, 100] }}
 									>
 										<button
 											aria-hidden="true"
 											class=" {isLastMessage || ($settings?.highContrastMode ?? false)
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-											on:click={() => {
-												console.log(message);
-											}}
 											id="info-{message.id}"
 										>
 											<svg

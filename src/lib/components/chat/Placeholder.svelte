@@ -56,6 +56,7 @@
 	export let webSearchEnabled = false;
 	export let studyModeEnabled = false;
 	export let dataVizEnabled = false;
+	export let subagentsEnabled = false;
 	export let serviceTier: string = 'default';
 
 	export let onSelect = (e) => {};
@@ -253,6 +254,7 @@
 					bind:webSearchEnabled
 					bind:studyModeEnabled
 					bind:dataVizEnabled
+					bind:subagentsEnabled
 					bind:serviceTier
 					bind:atSelectedModel
 					bind:showCommands

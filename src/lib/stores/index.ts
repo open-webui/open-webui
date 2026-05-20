@@ -67,6 +67,41 @@ export const chatTokenStats: Writable<ChatTokenStatsData | null> = writable(null
 // Trigger to refresh chat token stats (increment to force refresh)
 export const chatTokenStatsRefreshTrigger = writable(0);
 
+// Live state for in-flight + completed subagent runs in the visible chat.
+//
+// Keyed by tool_call_id (the parent model's tool call id). One entry per
+// subagent invocation; subagent_continue calls get their own entry even if
+// they reference the same underlying subagent_id (chat_id). This keeps each
+// parent-message subagent block independent in the UI.
+//
+// Hydrated on chat load from the parent message's persisted
+// `subagent_runs` field, then updated live via socket events
+// `chat:subagent:start` (creates entry) and `chat:subagent:update`
+// (mutates state from forwarded inner-pipeline events).
+export interface SubagentRun {
+	subagent_id: string; // = subagent chat row id
+	parent_message_id: string;
+	tool_call_id?: string;
+	num: number;
+	name: string;
+	chat_id: string; // alias of subagent_id; used by `Open full chat` link
+	status: 'running' | 'done' | 'error' | 'cancelled';
+	// Live: latest content_blocks/content from the inner pipeline. May be
+	// undefined during the brief window between chat:subagent:start and the
+	// first chat:subagent:update.
+	content_blocks?: any[];
+	content?: string;
+	final_text?: string;
+	error?: { message?: string } | string;
+	prompt?: string;
+	background?: string;
+	continuation?: boolean;
+	started_at?: number;
+	ended_at?: number;
+}
+
+export const subagentLiveStates: Writable<Record<string, SubagentRun>> = writable({});
+
 export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);
@@ -267,6 +302,7 @@ type Config = {
 		enable_signup: boolean;
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
+		enable_subagents?: boolean;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;

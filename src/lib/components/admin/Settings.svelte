@@ -19,6 +19,7 @@
 	import WebSearch from './Settings/WebSearch.svelte';
 	import StudyMode from './Settings/StudyMode.svelte';
 	import DataViz from './Settings/DataViz.svelte';
+	import Subagents from './Settings/Subagents.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
@@ -43,6 +44,7 @@
 			'web',
 			'study',
 			'data-viz',
+			'subagents',
 			'code-execution',
 			'interface',
 			'audio',
@@ -304,6 +306,35 @@
 		</button>
 
 		<button
+			id="subagents"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'subagents'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/subagents');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.75"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="size-4"
+				>
+					<path
+						d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Subagents')}</div>
+		</button>
+
+		<button
 			id="code-execution"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'code-execution'
@@ -523,6 +554,15 @@
 			/>
 		{:else if selectedTab === 'data-viz'}
 			<DataViz
+				saveHandler={async () => {
+					toast.success($i18n.t('Settings saved successfully!'));
+
+					await tick();
+					await config.set(await getBackendConfig());
+				}}
+			/>
+		{:else if selectedTab === 'subagents'}
+			<Subagents
 				saveHandler={async () => {
 					toast.success($i18n.t('Settings saved successfully!'));
 
