@@ -1,6 +1,5 @@
 <script>
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onDestroy, tick } from 'svelte';
 
 	import Markdown from './Markdown.svelte';
 	import {
@@ -13,7 +12,7 @@
 		showEmbeds
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
-	import { createMessagesList } from '$lib/utils';
+	import { replaceOutsideCode } from '$lib/utils';
 
 	/**
 	 * Extracts all top-level <details>...</details> blocks from content,
@@ -27,7 +26,7 @@
 		const openTag = '<details';
 		const closeTag = '</details>';
 
-		while (true) {
+		while (remaining.length > 0) {
 			const start = remaining.indexOf(openTag);
 			if (start === -1) {
 				result += remaining;
@@ -69,11 +68,6 @@
 	export let id;
 	export let content;
 
-	export let history;
-	export let messageId;
-
-	export let selectedModels = [];
-
 	export let done = true;
 	export let model = null;
 	export let sources = null;
@@ -85,16 +79,22 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
-	export let onSave = (e) => {};
-	export let onSourceClick = (e) => {};
-	export let onTaskClick = (e) => {};
-	export let onSetInputText = (text) => {};
+	export let onSave = () => {};
+	export let onSourceClick = () => {};
+	export let onTaskClick = () => {};
+	export let onSetInputText = () => {};
 
 	let contentContainerElement;
 	let floatingButtonsElement;
 
 	let sourceIds = [];
 	$: getSourceIds(sources);
+
+	const removeCitationMarkers = (content) => {
+		return replaceOutsideCode(content, (segment) =>
+			segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+		);
+	};
 
 	const getSourceIds = (sources) => {
 		const result = [];
@@ -229,7 +229,7 @@
 		<Markdown
 			{id}
 			content={model?.info?.meta?.capabilities?.citations == false
-				? content.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+				? removeCitationMarkers(content)
 				: content}
 			{model}
 			{save}
