@@ -192,23 +192,34 @@
 	let saveControlsTimer;
 	$: if (!loading && !$temporaryChatEnabled && $chatId && params && chatFiles) {
 		clearTimeout(saveControlsTimer);
-		saveControlsTimer = setTimeout(saveControls, 400);
+		saveControlsTimer = setTimeout(() => saveControls(), 400);
 	}
 
 	const navigateHandler = async () => {
 		const targetChatId = chatIdProp;
 		const requestId = ++navigationRequestId;
+		const outgoingChatId = $chatId;
+		const outgoingParams = params;
+		const outgoingChatFiles = chatFiles;
 
 		// Mark the outgoing chat as read before loading the new one.
 		// $chatId still holds the previous chat here — loadChat() updates it.
-		if ($chatId && $chatId !== targetChatId && !$temporaryChatEnabled) {
-			updateLastReadAt($chatId);
+		if (outgoingChatId && outgoingChatId !== targetChatId && !$temporaryChatEnabled) {
+			updateLastReadAt(outgoingChatId);
 		}
 
 		clearTimeout(saveControlsTimer);
-		await saveControls();
-		if (requestId !== navigationRequestId || targetChatId !== chatIdProp) return;
 		loading = true;
+		chatId.set(targetChatId);
+		chatTitle.set('');
+		history = { messages: {}, currentId: null };
+
+		if (outgoingChatId && !$temporaryChatEnabled) {
+			saveControls(outgoingChatId, outgoingParams, outgoingChatFiles);
+		}
+
+		await tick();
+		if (requestId !== navigationRequestId || targetChatId !== chatIdProp) return;
 
 		prompt = '';
 		messageInput?.setText('');
@@ -2838,11 +2849,16 @@
 		}
 	};
 
-	const saveControls = async () => {
-		if (!$chatId || $temporaryChatEnabled) return;
-		await updateChatById(localStorage.token, $chatId, { params, files: chatFiles }).catch((err) =>
-			console.error('[controls autosave]', err)
-		);
+	const saveControls = async (
+		targetChatId: string = $chatId,
+		targetParams = params,
+		targetChatFiles = chatFiles
+	) => {
+		if (!targetChatId || $temporaryChatEnabled) return;
+		await updateChatById(localStorage.token, targetChatId, {
+			params: targetParams,
+			files: targetChatFiles
+		}).catch((err) => console.error('[controls autosave]', err));
 	};
 
 	const MAX_DRAFT_LENGTH = 5000;
