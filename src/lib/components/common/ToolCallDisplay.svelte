@@ -11,7 +11,6 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
-	import Markdown from '../chat/Messages/Markdown.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
@@ -35,6 +34,7 @@
 	export let className = '';
 
 	const RESULT_PREVIEW_LIMIT = 10000;
+	const TOOL_NAME_PLACEHOLDER = '__OPEN_WEBUI_TOOL_NAME__';
 	let expandedResult = false;
 
 	$: if (!open) expandedResult = false;
@@ -74,6 +74,20 @@
 		} catch {
 			return null;
 		}
+	}
+
+	function getToolLabelParts(label: string) {
+		const normalized = label.replaceAll(`**${TOOL_NAME_PLACEHOLDER}**`, TOOL_NAME_PLACEHOLDER);
+		const placeholderIndex = normalized.indexOf(TOOL_NAME_PLACEHOLDER);
+
+		if (placeholderIndex === -1) {
+			return { before: `${normalized} `, after: '' };
+		}
+
+		return {
+			before: normalized.slice(0, placeholderIndex),
+			after: normalized.slice(placeholderIndex + TOOL_NAME_PLACEHOLDER.length)
+		};
 	}
 
 	$: args = decode(attributes?.arguments ?? '');
@@ -145,19 +159,15 @@
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
 						{#if isDone}
-							<Markdown
-								id={`${componentId}-tool-call-title`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
-									NAME: attributes.name
-								})}
-							/>
+							{@const label = getToolLabelParts(
+								$i18n.t('View Result from **{{NAME}}**', { NAME: TOOL_NAME_PLACEHOLDER })
+							)}
+							{label.before}<strong>{attributes.name}</strong>{label.after}
 						{:else}
-							<Markdown
-								id={`${componentId}-tool-call-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
-									NAME: attributes.name
-								})}
-							/>
+							{@const label = getToolLabelParts(
+								$i18n.t('Executing **{{NAME}}**...', { NAME: TOOL_NAME_PLACEHOLDER })
+							)}
+							{label.before}<strong>{attributes.name}</strong>{label.after}
 						{/if}
 					</span>
 				</div>
