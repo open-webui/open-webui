@@ -2199,6 +2199,8 @@ def process_messages_with_output(
 
 
 SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)\|?[^>]*>')
+SKILL_ONLY_USER_PROMPT = 'Use the selected skill.'
+UNAVAILABLE_SKILL_ONLY_USER_PROMPT = '.'
 
 
 def _get_text_parts(message: dict) -> list[str]:
@@ -2235,6 +2237,21 @@ def strip_skill_mentions(messages: list[dict]) -> None:
                         part['text'] = strip_re.sub('', text).strip()
 
 
+def ensure_user_selected_skill_has_prompt(
+    messages: list[dict], user_skill_ids: set[str], available_skills: list[Any]
+) -> None:
+    """Avoid sending a blank user message when the user only selected a skill."""
+    if not user_skill_ids:
+        return
+
+    prompt = get_last_user_message(messages)
+    if prompt is None or prompt.strip():
+        return
+
+    active_user_skill_ids = {getattr(skill, 'id', None) for skill in available_skills} & user_skill_ids
+    fallback_prompt = SKILL_ONLY_USER_PROMPT if active_user_skill_ids else UNAVAILABLE_SKILL_ONLY_USER_PROMPT
+    set_last_user_message_content(fallback_prompt, messages)
+
 
 async def connect_mcp_server(
     request,
@@ -2249,10 +2266,7 @@ async def connect_mcp_server(
     """
     mcp_server_connection = None
     for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
-        if (
-            server_connection.get('type', '') == 'mcp'
-            and server_connection.get('info', {}).get('id') == server_id
-        ):
+        if server_connection.get('type', '') == 'mcp' and server_connection.get('info', {}).get('id') == server_id:
             mcp_server_connection = server_connection
             break
 
@@ -2265,8 +2279,12 @@ async def connect_mcp_server(
         return None
 
     headers, _ = await build_tool_server_headers(
-        mcp_server_connection, request, user,
-        server_id=server_id, metadata=metadata, extra_params=extra_params,
+        mcp_server_connection,
+        request,
+        user,
+        server_id=server_id,
+        metadata=metadata,
+        extra_params=extra_params,
     )
 
     client = MCPClient()
@@ -2275,18 +2293,13 @@ async def connect_mcp_server(
         headers=headers if headers else None,
     )
 
-    function_name_filter_list = mcp_server_connection.get('config', {}).get(
-        'function_name_filter_list', ''
-    )
+    function_name_filter_list = mcp_server_connection.get('config', {}).get('function_name_filter_list', '')
     if isinstance(function_name_filter_list, str):
         function_name_filter_list = function_name_filter_list.split(',')
 
     tool_specs = await client.list_tool_specs()
     if function_name_filter_list:
-        tool_specs = [
-            spec for spec in tool_specs
-            if is_string_allowed(spec['name'], function_name_filter_list)
-        ]
+        tool_specs = [spec for spec in tool_specs if is_string_allowed(spec['name'], function_name_filter_list)]
 
     return client, tool_specs
 
@@ -2639,6 +2652,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Strip <$skillId|label> mention tags so the model doesn't see raw markup.
     strip_skill_mentions(form_data.get('messages', []))
+    ensure_user_selected_skill_has_prompt(form_data.get('messages', []), user_skill_ids, available_skills)
 
     prompt = get_last_user_message(form_data['messages'])
     # TODO: re-enable URL extraction from prompt
@@ -2694,10 +2708,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for tool_id in tool_ids:
                 if tool_id.startswith('server:mcp:'):
                     try:
-                        server_id = tool_id[len('server:mcp:'):]
+                        server_id = tool_id[len('server:mcp:') :]
 
                         result = await connect_mcp_server(
-                            request, server_id, user, metadata, extra_params,
+                            request,
+                            server_id,
+                            user,
+                            metadata,
+                            extra_params,
                         )
                         if result is None:
                             continue
@@ -2706,6 +2724,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         mcp_clients[server_id] = client
 
                         for tool_spec in tool_specs:
+
                             async def make_tool_function(client, function_name):
                                 async def tool_function(**kwargs):
                                     return await client.call_tool(
