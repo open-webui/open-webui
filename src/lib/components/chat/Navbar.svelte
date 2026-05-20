@@ -150,6 +150,8 @@
 								</Menu>
 							{/if}
 						</div>
+					{:else if showModelSelector}
+						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} disableReasoning={false} />
 					{:else}
 						<div class="pointer-events-none invisible flex max-w-full min-w-0 items-center gap-2">
 							<div
