@@ -99,6 +99,16 @@
 			.trim();
 	};
 
+	const hasDetailTextContent = (token) => {
+		if (!token) return false;
+
+		return (token?.text || '').replace(/<summary>.*?<\/summary>/gi, '').trim().length > 0;
+	};
+
+	const isPlainTextDetailToken = (token) => {
+		return ['reasoning', 'code_interpreter'].includes(token?.attributes?.type ?? '');
+	};
+
 	$: displayTokens = getDisplayTokens(tokens);
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
@@ -389,9 +399,9 @@
 							className="w-full space-y-1"
 						/>
 					{:else}
-						{@const textContent = getDetailTextContent(detailToken)}
+						{@const hasTextContent = hasDetailTextContent(detailToken)}
 
-						{#if textContent.length > 0}
+						{#if hasTextContent}
 							<Collapsible
 								title={detailToken.summary}
 								open={$settings?.expandDetails ?? false}
@@ -401,16 +411,25 @@
 								dir="auto"
 							>
 								<div class="mb-1.5" slot="content">
-									<svelte:self
-										id={`${id}-${tokenIdx}-${detailIdx}-d`}
-										tokens={marked.lexer(decode(detailToken.text))}
-										attributes={detailToken?.attributes}
-										{done}
-										{editCodeBlock}
-										{onTaskClick}
-										{sourceIds}
-										{onSourceClick}
-									/>
+									{#if isPlainTextDetailToken(detailToken)}
+										{@const textContent = getDetailTextContent(detailToken)}
+										<div
+											class="whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300"
+										>
+											{textContent}
+										</div>
+									{:else}
+										<svelte:self
+											id={`${id}-${tokenIdx}-${detailIdx}-d`}
+											tokens={marked.lexer(decode(detailToken.text))}
+											attributes={detailToken?.attributes}
+											{done}
+											{editCodeBlock}
+											{onTaskClick}
+											{sourceIds}
+											{onSourceClick}
+										/>
+									{/if}
 								</div>
 							</Collapsible>
 						{:else}
@@ -439,9 +458,9 @@
 				className="w-full space-y-1"
 			/>
 		{:else}
-			{@const textContent = getDetailTextContent(token)}
+			{@const hasTextContent = hasDetailTextContent(token)}
 
-			{#if textContent.length > 0}
+			{#if hasTextContent}
 				<Collapsible
 					title={token.summary}
 					open={$settings?.expandDetails ?? false}
@@ -451,16 +470,23 @@
 					dir="auto"
 				>
 					<div class=" mb-1.5" slot="content">
-						<svelte:self
-							id={`${id}-${tokenIdx}-d`}
-							tokens={marked.lexer(decode(token.text))}
-							attributes={token?.attributes}
-							{done}
-							{editCodeBlock}
-							{onTaskClick}
-							{sourceIds}
-							{onSourceClick}
-						/>
+						{#if isPlainTextDetailToken(token)}
+							{@const textContent = getDetailTextContent(token)}
+							<div class="whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">
+								{textContent}
+							</div>
+						{:else}
+							<svelte:self
+								id={`${id}-${tokenIdx}-d`}
+								tokens={marked.lexer(decode(token.text))}
+								attributes={token?.attributes}
+								{done}
+								{editCodeBlock}
+								{onTaskClick}
+								{sourceIds}
+								{onSourceClick}
+							/>
+						{/if}
 					</div>
 				</Collapsible>
 			{:else}
