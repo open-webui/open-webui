@@ -40,6 +40,10 @@ fly deploy --app open-webui-26z5ca
 fly open --app open-webui-26z5ca
 ```
 
+## Build strategy
+
+This Fly deployment uses the official prebuilt Open WebUI image via `Dockerfile.fly` to avoid source-build OOM and reduce deployment time.
+
 ## Troubleshooting
 
 If deployment fails with `app not found`, verify the Fly app name in `fly.toml`, `.github/workflows/fly-deploy.yml`, and all manual `fly` commands matches the actual app shown by:
@@ -47,6 +51,8 @@ If deployment fails with `app not found`, verify the Fly app name in `fly.toml`,
 ```bash
 fly apps list
 ```
+
+If build fails with `JavaScript heap out of memory`, confirm `fly.toml` points to `Dockerfile.fly` and `Dockerfile.fly` uses `ghcr.io/open-webui/open-webui:main`.
 
 ## Notes
 
