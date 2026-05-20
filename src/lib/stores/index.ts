@@ -261,7 +261,7 @@ type Settings = {
 	pinnedNotesOrder?: string[];
 
 	defaultUploadContext?: 'full' | 'focused';
-	thinkingBudgets?: { flash: number; standard: number; extended: number; deep: number };
+	thinkingBudgets?: { flash: { value: number; systemPrompt: string }; standard: { value: number; systemPrompt: string }; extended: { value: number; systemPrompt: string }; deep: { value: number; systemPrompt: string } };
 
 	system?: string;
 	seed?: number;

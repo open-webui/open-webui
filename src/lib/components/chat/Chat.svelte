@@ -3040,11 +3040,20 @@
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
-		let messages: any[] = [
-			params?.system || $settings.system
-				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
-				: undefined
-		].filter(Boolean);
+		const thinkingLevelKeys = ['flash', 'standard', 'extended', 'deep'] as const;
+		const activeBudgetKey = thinkingLevelKeys.find(
+			(key) => $settings?.thinkingBudgets?.[key]?.value === $thinkingBudget
+		);
+		const thinkingSystemPrompt = activeBudgetKey ? $settings?.thinkingBudgets?.[activeBudgetKey]?.systemPrompt ?? '' : '';
+
+		let systemMessages: any[] = [];
+		if (thinkingSystemPrompt) {
+			systemMessages.push({ role: 'system', content: thinkingSystemPrompt });
+		}
+		if (params?.system || $settings.system) {
+			systemMessages.push({ role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` });
+		}
+		let messages = systemMessages.length > 0 ? systemMessages : [];
 
 		if ($temporaryChatEnabled) {
 			messages = [
