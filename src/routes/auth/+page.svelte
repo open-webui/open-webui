@@ -21,6 +21,7 @@
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
+	import { getOAuthAutoRedirectPath } from '$lib/utils/oauth';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -183,13 +184,44 @@
 		await oauthCallbackHandler();
 		form = $page.url.searchParams.get('form');
 
+		let authConfig = $config;
+		if (!authConfig) {
+			try {
+				authConfig = await getBackendConfig();
+				if (authConfig) {
+					await config.set(authConfig);
+				}
+			} catch (configError) {
+				if ((configError as { authRedirect?: boolean })?.authRedirect) {
+					window.location.href = '/';
+					return;
+				}
+				console.error('Error loading backend config:', configError);
+			}
+		}
+
+		const autoRedirectPath = getOAuthAutoRedirectPath(authConfig, {
+			isAuthenticated: $user !== undefined,
+			formParam: form,
+			errorParam: error,
+			hasTokenCookie: document.cookie.split('; ').some((c) => c.startsWith('token=')),
+			hasLocalStorageToken: Boolean(localStorage.token)
+		});
+		if (autoRedirectPath) {
+			window.location.href = `${WEBUI_BASE_URL}${autoRedirectPath}`;
+			return;
+		}
+
 		loaded = true;
 		setLogoImage();
 
-		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
+		if (
+			(authConfig?.features?.auth_trusted_header ?? false) ||
+			authConfig?.features?.auth === false
+		) {
 			await signInHandler();
 		} else {
-			onboarding = $config?.onboarding ?? false;
+			onboarding = authConfig?.onboarding ?? false;
 		}
 	});
 </script>
