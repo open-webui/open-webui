@@ -363,7 +363,7 @@ class ChatTable:
                 chat = self._chat_import_form_to_chat_model(user_id, form_data)
                 chats.append(Chat(**chat.model_dump()))
 
-            db.add_all(chats)
+            session.add_all(chats)
             await session.commit()
 
             # Dual-write messages to chat_message table
@@ -419,7 +419,7 @@ class ChatTable:
 
     async def update_chat_title_by_id(self, id: str, title: str) -> ChatModel | None:
         try:
-            async with get_async_db_context() as db:
+            async with get_async_db_context() as session:
                 chat_item = await session.get(Chat, id)
                 if chat_item is None:
                     return None
@@ -434,7 +434,7 @@ class ChatTable:
             return None
 
     async def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> ChatModel | None:
-        async with get_async_db_context() as db:
+        async with get_async_db_context() as session:
             chat = await session.get(Chat, id)
             if chat is None:
                 return None
@@ -459,7 +459,7 @@ class ChatTable:
             return ChatModel.model_validate(chat)
 
     async def get_chat_title_by_id(self, id: str) -> str | None:
-        async with get_async_db_context() as db:
+        async with get_async_db_context() as session:
             result = await session.execute(select(Chat.title).filter_by(id=id))
             row = result.first()
             if row is None:
@@ -634,7 +634,7 @@ class ChatTable:
         return await self.update_chat_by_id(id, chat)
 
     async def add_message_files_by_id_and_message_id(self, id: str, message_id: str, files: list[dict]) -> list[dict]:
-        async with get_async_db_context() as db:
+        async with get_async_db_context() as session:
             chat = await self.get_chat_by_id(id, db=session)
             if chat is None:
                 return None
@@ -1650,7 +1650,7 @@ class ChatTable:
 
                 results = [ChatFile(**chat_file.model_dump()) for chat_file in chat_files]
 
-                db.add_all(results)
+                session.add_all(results)
                 await session.commit()
 
                 return chat_files
@@ -1689,7 +1689,7 @@ class ChatTable:
     async def update_chat_tasks_by_id(self, id: str, tasks: list[dict]) -> ChatModel | None:
         """Update the tasks list on a chat."""
         try:
-            async with get_async_db_context() as db:
+            async with get_async_db_context() as session:
                 chat = await session.get(Chat, id)
                 if chat is None:
                     return None
@@ -1702,7 +1702,7 @@ class ChatTable:
 
     async def get_chat_tasks_by_id(self, id: str) -> list[dict]:
         """Read the tasks list from a chat (lightweight column query)."""
-        async with get_async_db_context() as db:
+        async with get_async_db_context() as session:
             result = await session.execute(select(Chat.tasks).filter_by(id=id))
             row = result.first()
             if row is None or row[0] is None:
