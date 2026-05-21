@@ -29,9 +29,6 @@ class Tag(Base):
         Index("user_id_idx", "user_id"),
     )
 
-    # Unique constraint ensuring (id, user_id) is unique, not just the `id` column
-    __table_args__ = (PrimaryKeyConstraint("id", "user_id", name="pk_id_user_id"),)
-
 
 class TagModel(BaseModel):
     id: str
