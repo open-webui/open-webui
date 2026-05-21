@@ -1866,33 +1866,18 @@ async def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
-    """Search the web using a search engine and return the results as a list of SearchResult objects.
-    Will look for a search engine API key in environment variables in the following order:
-    - SEARXNG_QUERY_URL
-    - YACY_QUERY_URL + YACY_USERNAME + YACY_PASSWORD
-    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
-    - BRAVE_SEARCH_API_KEY
-    - KAGI_SEARCH_API_KEY
-    - MOJEEK_SEARCH_API_KEY
-    - BOCHA_SEARCH_API_KEY
-    - SERPSTACK_API_KEY
-    - SERPER_API_KEY
-    - SERPLY_API_KEY
-    - TAVILY_API_KEY
-    - EXA_API_KEY
-    - PERPLEXITY_API_KEY
-    - SOUGOU_API_SID + SOUGOU_API_SK
-    - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
-    - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
-    - LINKUP_API_KEY
-    Args:
-        query (str): The query to search for
+async def search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
+    """Dispatch a web search query to the configured engine and return results.
+
+    Providers that have been migrated to async (aiohttp) are awaited natively.
+    Legacy sync providers are offloaded via ``asyncio.to_thread`` to avoid
+    blocking the event loop.
     """
 
     # TODO: add playwright to search the web
     if engine == 'ollama_cloud':
-        return search_ollama_cloud(
+        return await asyncio.to_thread(
+            search_ollama_cloud,
             'https://ollama.com',
             request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             query,
@@ -1901,7 +1886,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         )
     elif engine == 'perplexity_search':
         if request.app.state.config.PERPLEXITY_API_KEY:
-            return search_perplexity_search(
+            return await asyncio.to_thread(
+                search_perplexity_search,
                 request.app.state.config.PERPLEXITY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1914,7 +1900,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
     elif engine == 'searxng':
         if request.app.state.config.SEARXNG_QUERY_URL:
             searxng_kwargs = {'language': request.app.state.config.SEARXNG_LANGUAGE}
-            return search_searxng(
+            return await search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1925,7 +1911,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No SEARXNG_QUERY_URL found in environment variables')
     elif engine == 'yacy':
         if request.app.state.config.YACY_QUERY_URL:
-            return search_yacy(
+            return await asyncio.to_thread(
+                search_yacy,
                 request.app.state.config.YACY_QUERY_URL,
                 request.app.state.config.YACY_USERNAME,
                 request.app.state.config.YACY_PASSWORD,
@@ -1937,7 +1924,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No YACY_QUERY_URL found in environment variables')
     elif engine == 'google_pse':
         if request.app.state.config.GOOGLE_PSE_API_KEY and request.app.state.config.GOOGLE_PSE_ENGINE_ID:
-            return search_google_pse(
+            return await search_google_pse(
                 request.app.state.config.GOOGLE_PSE_API_KEY,
                 request.app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
@@ -1949,7 +1936,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables')
     elif engine == 'brave':
         if request.app.state.config.BRAVE_SEARCH_API_KEY:
-            return search_brave(
+            return await search_brave(
                 request.app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1959,7 +1946,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
     elif engine == 'brave_llm_context':
         if request.app.state.config.BRAVE_SEARCH_API_KEY:
-            return search_brave_llm_context(
+            return await asyncio.to_thread(
+                search_brave_llm_context,
                 request.app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1970,7 +1958,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
     elif engine == 'kagi':
         if request.app.state.config.KAGI_SEARCH_API_KEY:
-            return search_kagi(
+            return await asyncio.to_thread(
+                search_kagi,
                 request.app.state.config.KAGI_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1980,7 +1969,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No KAGI_SEARCH_API_KEY found in environment variables')
     elif engine == 'mojeek':
         if request.app.state.config.MOJEEK_SEARCH_API_KEY:
-            return search_mojeek(
+            return await asyncio.to_thread(
+                search_mojeek,
                 request.app.state.config.MOJEEK_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1990,7 +1980,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No MOJEEK_SEARCH_API_KEY found in environment variables')
     elif engine == 'bocha':
         if request.app.state.config.BOCHA_SEARCH_API_KEY:
-            return search_bocha(
+            return await asyncio.to_thread(
+                search_bocha,
                 request.app.state.config.BOCHA_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2000,7 +1991,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No BOCHA_SEARCH_API_KEY found in environment variables')
     elif engine == 'serpstack':
         if request.app.state.config.SERPSTACK_API_KEY:
-            return search_serpstack(
+            return await search_serpstack(
                 request.app.state.config.SERPSTACK_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2011,7 +2002,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No SERPSTACK_API_KEY found in environment variables')
     elif engine == 'serper':
         if request.app.state.config.SERPER_API_KEY:
-            return search_serper(
+            return await search_serper(
                 request.app.state.config.SERPER_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2021,7 +2012,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No SERPER_API_KEY found in environment variables')
     elif engine == 'serply':
         if request.app.state.config.SERPLY_API_KEY:
-            return search_serply(
+            return await asyncio.to_thread(
+                search_serply,
                 request.app.state.config.SERPLY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2030,7 +2022,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         else:
             raise Exception('No SERPLY_API_KEY found in environment variables')
     elif engine == 'duckduckgo':
-        return search_duckduckgo(
+        return await asyncio.to_thread(
+            search_duckduckgo,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
@@ -2039,7 +2032,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         )
     elif engine == 'tavily':
         if request.app.state.config.TAVILY_API_KEY:
-            return search_tavily(
+            return await asyncio.to_thread(
+                search_tavily,
                 request.app.state.config.TAVILY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2049,7 +2043,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No TAVILY_API_KEY found in environment variables')
     elif engine == 'exa':
         if request.app.state.config.EXA_API_KEY:
-            return search_exa(
+            return await asyncio.to_thread(
+                search_exa,
                 request.app.state.config.EXA_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2059,7 +2054,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No EXA_API_KEY found in environment variables')
     elif engine == 'searchapi':
         if request.app.state.config.SEARCHAPI_API_KEY:
-            return search_searchapi(
+            return await asyncio.to_thread(
+                search_searchapi,
                 request.app.state.config.SEARCHAPI_API_KEY,
                 request.app.state.config.SEARCHAPI_ENGINE,
                 query,
@@ -2070,7 +2066,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No SEARCHAPI_API_KEY found in environment variables')
     elif engine == 'serpapi':
         if request.app.state.config.SERPAPI_API_KEY:
-            return search_serpapi(
+            return await asyncio.to_thread(
+                search_serpapi,
                 request.app.state.config.SERPAPI_API_KEY,
                 request.app.state.config.SERPAPI_ENGINE,
                 query,
@@ -2080,14 +2077,16 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         else:
             raise Exception('No SERPAPI_API_KEY found in environment variables')
     elif engine == 'jina':
-        return search_jina(
+        return await asyncio.to_thread(
+            search_jina,
             request.app.state.config.JINA_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.JINA_API_BASE_URL,
         )
     elif engine == 'bing':
-        return search_bing(
+        return await asyncio.to_thread(
+            search_bing,
             request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             str(DEFAULT_LOCALE),
@@ -2101,7 +2100,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             and request.app.state.config.AZURE_AI_SEARCH_ENDPOINT
             and request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME
         ):
-            return search_azure(
+            return await asyncio.to_thread(
+                search_azure,
                 request.app.state.config.AZURE_AI_SEARCH_API_KEY,
                 request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
                 request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
@@ -2113,15 +2113,9 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception(
                 'AZURE_AI_SEARCH_API_KEY, AZURE_AI_SEARCH_ENDPOINT, and AZURE_AI_SEARCH_INDEX_NAME are required for Azure AI Search'
             )
-    elif engine == 'exa':
-        return search_exa(
-            request.app.state.config.EXA_API_KEY,
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
     elif engine == 'perplexity':
-        return search_perplexity(
+        return await asyncio.to_thread(
+            search_perplexity,
             request.app.state.config.PERPLEXITY_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2131,7 +2125,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         )
     elif engine == 'sougou':
         if request.app.state.config.SOUGOU_API_SID and request.app.state.config.SOUGOU_API_SK:
-            return search_sougou(
+            return await asyncio.to_thread(
+                search_sougou,
                 request.app.state.config.SOUGOU_API_SID,
                 request.app.state.config.SOUGOU_API_SK,
                 query,
@@ -2141,7 +2136,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         else:
             raise Exception('No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables')
     elif engine == 'firecrawl':
-        return search_firecrawl(
+        return await asyncio.to_thread(
+            search_firecrawl,
             request.app.state.config.FIRECRAWL_API_BASE_URL,
             request.app.state.config.FIRECRAWL_API_KEY,
             query,
@@ -2149,7 +2145,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == 'external':
-        return search_external(
+        return await asyncio.to_thread(
+            search_external,
             request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -2159,7 +2156,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             user=user,
         )
     elif engine == 'yandex':
-        return search_yandex(
+        return await asyncio.to_thread(
+            search_yandex,
             request,
             request.app.state.config.YANDEX_WEB_SEARCH_URL,
             request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
@@ -2170,7 +2168,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             user=user,
         )
     elif engine == 'youcom':
-        return search_youcom(
+        return await asyncio.to_thread(
+            search_youcom,
             request.app.state.config.YOUCOM_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2178,7 +2177,8 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
         )
     elif engine == 'linkup':
         if request.app.state.config.LINKUP_API_KEY:
-            return search_linkup(
+            return await asyncio.to_thread(
+                search_linkup,
                 api_key=request.app.state.config.LINKUP_API_KEY,
                 query=query,
                 count=request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2189,6 +2189,7 @@ def search_web(request: Request, engine: str, query: str, user=None) -> list[Sea
             raise Exception('No LINKUP_API_KEY found in environment variables')
     else:
         raise Exception('No search engine API key found in environment variables')
+
 
 
 @router.post('/process/web/search')
@@ -2224,8 +2225,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
             async def search_query_with_semaphore(query):
                 async with semaphore:
-                    return await run_in_threadpool(
-                        search_web,
+                    return await search_web(
                         request,
                         request.app.state.config.WEB_SEARCH_ENGINE,
                         query,
@@ -2234,10 +2234,9 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
             search_tasks = [search_query_with_semaphore(query) for query in form_data.queries]
         else:
-            # Unlimited parallel execution (previous behavior)
+            # Unlimited parallel execution
             search_tasks = [
-                run_in_threadpool(
-                    search_web,
+                search_web(
                     request,
                     request.app.state.config.WEB_SEARCH_ENGINE,
                     query,
