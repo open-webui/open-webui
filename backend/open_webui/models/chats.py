@@ -1,3 +1,4 @@
+import copy
 import logging
 import json
 import time
@@ -10,7 +11,7 @@ from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
+from sqlalchemy import BigInteger, Boolean, Column, Integer, String, Text, JSON, Index
 from sqlalchemy import or_, func, select, and_, text, case
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
@@ -45,6 +46,11 @@ class Chat(Base):
     # a real index instead of unpacking the (potentially 100+ MB) chat JSON.
     subagent_of = Column(String, nullable=True)
     model_id_primary = Column(String, nullable=True)
+
+    # 0 = messages still live in `chat.chat.history.messages` (legacy);
+    # 1 = messages live in the `chat_message` table and are hydrated on read.
+    # Default 0 keeps unmigrated chats on the legacy path.
+    messages_migrated = Column(Integer, nullable=False, server_default="0", default=0)
 
     __table_args__ = (
         Index("folder_id_idx", "folder_id"),
@@ -87,6 +93,57 @@ class ChatModel(BaseModel):
 
     subagent_of: Optional[str] = None
     model_id_primary: Optional[str] = None
+    messages_migrated: int = 0
+
+
+class ChatMessage(Base):
+    """One row per logical chat message, replacing the per-message entries
+    embedded inside ``chat.chat.history.messages``. Only authoritative when
+    the parent chat has ``messages_migrated = 1``.
+
+    ``content_is_json = 1`` indicates that ``content`` is a JSON-encoded
+    structure (e.g. multimodal parts list) and should be parsed on hydrate.
+    ``meta`` stores any message-level fields that don't have dedicated
+    columns (followUps, reasoning_details, error, selectedModelId, etc.) so
+    round-tripping preserves the original message shape.
+    """
+
+    __tablename__ = "chat_message"
+
+    chat_id = Column(String, primary_key=True)
+    message_id = Column(String, primary_key=True)
+    parent_id = Column(String, nullable=True)
+    role = Column(String, nullable=True)
+    content = Column(Text, nullable=True)
+    content_is_json = Column(Integer, default=0)
+    model = Column(String, nullable=True)
+    timestamp = Column(BigInteger, nullable=True)
+    sequence = Column(Integer, nullable=False)
+    status_history = Column(Text, nullable=True)
+    meta = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("chat_message_chat_seq_idx", "chat_id", "sequence"),
+        Index("chat_message_chat_parent_idx", "chat_id", "parent_id"),
+    )
+
+
+class ChatMessageModel(BaseModel):
+    """Pydantic shape that mirrors the chat_message table for API responses."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    chat_id: str
+    message_id: str
+    parent_id: Optional[str] = None
+    role: Optional[str] = None
+    content: Optional[str] = None
+    content_is_json: Optional[int] = 0
+    model: Optional[str] = None
+    timestamp: Optional[int] = None
+    sequence: int = 0
+    status_history: Optional[str] = None
+    meta: Optional[str] = None
 
 
 ####################
@@ -263,10 +320,35 @@ def _iter_chat_messages(chat_data: dict):
 
 
 def _upsert_chat_fts(db, chat_id: str, title: str, chat_data: dict) -> None:
-    """Refresh all three FTS tables for one chat. No-op when FTS isn't present."""
+    """Refresh all three FTS tables for one chat. No-op when FTS isn't present.
+
+    Dual-read aware: if the chat is migrated to the ``chat_message`` table,
+    we pull message text from there. Otherwise we fall back to iterating
+    the messages embedded in ``chat_data['history']['messages']`` (legacy
+    chats and freshly-inserted chats both go through this path)."""
     if not _fts_supported(db):
         return
-    body = _build_search_text(title, chat_data)
+
+    migrated = _is_chat_migrated(db, chat_id)
+    if migrated:
+        # Hydrate a shallow copy so _build_search_text sees the real messages.
+        try:
+            messages = _chat_messages_from_table(db, chat_id)
+            chat_for_body = dict(chat_data) if isinstance(chat_data, dict) else {}
+            history_for_body = (
+                dict(chat_for_body.get("history") or {})
+                if isinstance(chat_for_body.get("history"), dict)
+                else {}
+            )
+            history_for_body["messages"] = messages
+            chat_for_body["history"] = history_for_body
+        except Exception:
+            chat_for_body = chat_data
+    else:
+        chat_for_body = chat_data
+
+    body = _build_search_text(title, chat_for_body)
+
     try:
         db.execute(text("DELETE FROM chat_fts WHERE id = :id"), {"id": chat_id})
         db.execute(
@@ -274,7 +356,7 @@ def _upsert_chat_fts(db, chat_id: str, title: str, chat_data: dict) -> None:
             {"id": chat_id, "t": title or "", "b": body},
         )
         db.execute(text("DELETE FROM message_fts WHERE chat_id = :id"), {"id": chat_id})
-        for mid, role, content in _iter_chat_messages(chat_data):
+        for mid, role, content in _iter_chat_messages(chat_for_body):
             if not content:
                 continue
             db.execute(
@@ -300,19 +382,21 @@ def _upsert_chat_fts(db, chat_id: str, title: str, chat_data: dict) -> None:
 
 
 def _upsert_message_fts(
-    db, chat_id: str, message_id: str, role: str, content: str
+    db, chat_id: str, message_id: str, role: Optional[str], content: Optional[str]
 ) -> None:
     """Refresh JUST one message in ``message_fts``. Skips the wholesale
     chat-level FTS rebuild, which is catastrophic for chats with thousands
-    of messages being appended one token at a time."""
+    of messages being appended one token at a time. Used by the migrated
+    write-path so we don't rebuild every chat_fts/message_fts row on every
+    per-message upsert. We deliberately do NOT touch chat_fts or
+    chat_fts_tri here — those get rebuilt by ``_upsert_chat_fts`` only when
+    ``update_chat_by_id`` runs (i.e. when the underlying chat content
+    actually changes)."""
     if not _fts_supported(db):
         return
     try:
         db.execute(
-            text(
-                "DELETE FROM message_fts "
-                "WHERE chat_id = :cid AND message_id = :mid"
-            ),
+            text("DELETE FROM message_fts WHERE chat_id = :cid AND message_id = :mid"),
             {"cid": chat_id, "mid": message_id},
         )
         if content:
@@ -329,7 +413,250 @@ def _upsert_message_fts(
                 },
             )
     except Exception:
+        # Staleness is preferable to losing the underlying chat write.
         pass
+
+
+_chat_message_table_supported_cache: Optional[bool] = None
+
+
+def _chat_message_table_supported(db) -> bool:
+    """True when the new ``chat_message`` table + ``messages_migrated`` column
+    are both present. Cached after first probe."""
+    global _chat_message_table_supported_cache
+    if _chat_message_table_supported_cache is not None:
+        return _chat_message_table_supported_cache
+    try:
+        db.execute(text("SELECT messages_migrated FROM chat LIMIT 0"))
+        db.execute(text("SELECT chat_id FROM chat_message LIMIT 0"))
+        _chat_message_table_supported_cache = True
+    except Exception:
+        _chat_message_table_supported_cache = False
+    return _chat_message_table_supported_cache
+
+
+def _is_chat_migrated(db, chat_id: str) -> bool:
+    """Probe whether one chat is migrated to the chat_message table.
+
+    Cheap UPDATE/INSERT paths read this once per call; the table-presence
+    check is cached so the only DB work is the per-chat lookup."""
+    if not _chat_message_table_supported(db):
+        return False
+    try:
+        row = db.execute(
+            text("SELECT messages_migrated FROM chat WHERE id = :id"),
+            {"id": chat_id},
+        ).fetchone()
+        return bool(row and row[0])
+    except Exception:
+        return False
+
+
+# Column order used by every SELECT against chat_message — keep in sync
+# with `_row_to_message_dict`.
+_CHAT_MESSAGE_SELECT_COLS = (
+    "message_id, parent_id, role, content, content_is_json, "
+    "model, timestamp, status_history, meta"
+)
+
+
+def _row_to_message_dict(row) -> dict:
+    """Convert one chat_message row tuple (matching _CHAT_MESSAGE_SELECT_COLS)
+    into the JSON-shape message dict used by the API and the legacy
+    ``history.messages`` map."""
+    mid = row[0]
+    parent_id = row[1]
+    role = row[2]
+    content_raw = row[3]
+    is_json = row[4]
+    model = row[5]
+    ts = row[6]
+    status_history_raw = row[7]
+    meta_raw = row[8]
+
+    if is_json and isinstance(content_raw, str):
+        try:
+            content = json.loads(content_raw)
+        except Exception:
+            content = content_raw
+    else:
+        content = content_raw if content_raw is not None else ""
+
+    msg: dict = {
+        "id": mid,
+        "role": role or "",
+        "content": content,
+    }
+    if parent_id is not None:
+        msg["parentId"] = parent_id
+    if model:
+        msg["model"] = model
+    if ts is not None:
+        msg["timestamp"] = ts
+    if status_history_raw:
+        try:
+            msg["statusHistory"] = json.loads(status_history_raw)
+        except Exception:
+            pass
+    if meta_raw:
+        try:
+            extra = json.loads(meta_raw)
+            if isinstance(extra, dict):
+                # Don't let meta clobber the dedicated columns.
+                for k, v in extra.items():
+                    if k not in msg:
+                        msg[k] = v
+        except Exception:
+            pass
+    return msg
+
+
+def _chat_messages_from_table(db, chat_id: str) -> dict:
+    """Reconstruct ``{message_id: message_dict}`` from chat_message rows for
+    the given chat. Ordered by ``sequence`` so the dict iteration order
+    matches the original message order.
+
+    Returns ``{}`` if the chat has no rows (or the table isn't there)."""
+    if not _chat_message_table_supported(db):
+        return {}
+    try:
+        rows = db.execute(
+            text(
+                f"SELECT {_CHAT_MESSAGE_SELECT_COLS} "
+                "FROM chat_message WHERE chat_id = :cid ORDER BY sequence"
+            ),
+            {"cid": chat_id},
+        ).fetchall()
+    except Exception:
+        return {}
+    return {r[0]: _row_to_message_dict(r) for r in rows}
+
+
+def _hydrate_chat_messages(db, chat_obj) -> None:
+    """If ``chat_obj`` is migrated, populate
+    ``chat_obj.chat['history']['messages']`` from the chat_message table so
+    callers that read the JSON shape continue to work. No-op for unmigrated
+    chats (their JSON blob still holds the messages)."""
+    if chat_obj is None:
+        return
+    # `chat_obj` is a SQLAlchemy ORM row; the messages_migrated attribute
+    # might be missing on older sessions, so check defensively.
+    try:
+        migrated = bool(getattr(chat_obj, "messages_migrated", 0))
+    except Exception:
+        migrated = False
+    if not migrated:
+        return
+    try:
+        msgs = _chat_messages_from_table(db, chat_obj.id)
+    except Exception:
+        return
+    # Modify the dict in place. SQLAlchemy may flush this back on commit;
+    # since the messages_migrated flag will gate further writes there's no
+    # risk of stale data, but we only mutate the in-memory dict that's about
+    # to be serialized for the caller.
+    chat_dict = chat_obj.chat if isinstance(chat_obj.chat, dict) else {}
+    history = chat_dict.get("history") if isinstance(chat_dict.get("history"), dict) else {}
+    history["messages"] = msgs
+    if "currentId" not in history and msgs:
+        # Fall back to the last-inserted message_id if currentId is missing.
+        history["currentId"] = next(reversed(msgs))
+    chat_dict["history"] = history
+    chat_obj.chat = chat_dict
+
+
+def _peel_messages_off_chat_dict(
+    chat_data: dict,
+) -> tuple[dict, Optional[dict]]:
+    """If ``chat_data['history']['messages']`` is a dict, return a copy of
+    ``chat_data`` with that key removed along with the popped messages.
+    Otherwise return ``(chat_data, None)``.
+
+    Used by every write path that puts messages in the chat_message table
+    so the on-disk JSON blob stays small."""
+    if not isinstance(chat_data, dict):
+        return chat_data, None
+    history_in = chat_data.get("history") or {}
+    msgs = history_in.get("messages") if isinstance(history_in, dict) else None
+    if not isinstance(msgs, dict):
+        return chat_data, None
+    stored = dict(chat_data)
+    stored_history = dict(history_in)
+    stored_history.pop("messages", None)
+    stored["history"] = stored_history
+    return stored, msgs
+
+
+def _next_sequence_for_chat(db, chat_id: str) -> int:
+    """Return one past the current max(sequence) for the chat — the value to
+    use for an INSERTed new message."""
+    try:
+        row = db.execute(
+            text("SELECT COALESCE(MAX(sequence), -1) + 1 FROM chat_message WHERE chat_id = :cid"),
+            {"cid": chat_id},
+        ).fetchone()
+        return int(row[0]) if row else 0
+    except Exception:
+        return 0
+
+
+def _split_message_for_table(message: dict) -> dict:
+    """Slice an incoming message dict into the column shape used by
+    chat_message. Returns a kwargs dict ready for INSERT/UPDATE binds."""
+    content = message.get("content", "")
+    is_json = 0
+    if not isinstance(content, str):
+        try:
+            content = json.dumps(content)
+            is_json = 1
+        except Exception:
+            content = ""
+            is_json = 0
+
+    ts_raw = message.get("timestamp")
+    try:
+        ts = int(ts_raw) if ts_raw is not None and ts_raw != "" else None
+    except (TypeError, ValueError):
+        ts = None
+
+    parent_id = message.get("parentId")
+    if parent_id is not None:
+        parent_id = str(parent_id)
+
+    model = message.get("model")
+    model_str = str(model) if model else None
+
+    status_history = message.get("statusHistory")
+    status_history_json = (
+        json.dumps(status_history) if status_history is not None else None
+    )
+
+    meta = {
+        k: v
+        for k, v in message.items()
+        if k
+        not in (
+            "id",
+            "parentId",
+            "role",
+            "content",
+            "model",
+            "timestamp",
+            "statusHistory",
+        )
+    }
+    meta_json = json.dumps(meta) if meta else None
+
+    return {
+        "parent_id": parent_id,
+        "role": str(message.get("role", "")) or None,
+        "content": content,
+        "content_is_json": is_json,
+        "model": model_str,
+        "timestamp": ts,
+        "status_history": status_history_json,
+        "meta": meta_json,
+    }
 
 
 # FTS query characters that need to be stripped to avoid breaking the parser.
@@ -592,12 +919,21 @@ class ChatTable:
 
             title = enriched_chat.get("title", "New Chat")
             models = enriched_chat.get("models") or []
+
+            # New chats are born migrated when the new table is available so
+            # all subsequent writes go through the fast row-level path.
+            born_migrated = _chat_message_table_supported(db)
+            if born_migrated:
+                stored_chat, init_messages = _peel_messages_off_chat_dict(enriched_chat)
+            else:
+                stored_chat, init_messages = enriched_chat, None
+
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     "title": title,
-                    "chat": enriched_chat,
+                    "chat": stored_chat,
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -606,8 +942,17 @@ class ChatTable:
             )
 
             result = Chat(**chat.model_dump())
+            if born_migrated:
+                result.messages_migrated = 1
             db.add(result)
             db.commit()
+
+            if born_migrated and init_messages:
+                self._sync_messages_to_table(db, id, init_messages)
+                try:
+                    db.commit()
+                except Exception:
+                    pass
 
             # Update search_text via raw SQL (column not in ORM to avoid breaking queries before migration)
             try:
@@ -625,6 +970,7 @@ class ChatTable:
             except Exception:
                 pass
 
+            _hydrate_chat_messages(db, result)
             return ChatModel.model_validate(result) if result else None
 
     def import_chat(
@@ -634,12 +980,19 @@ class ChatTable:
             id = str(uuid.uuid4())
             import_title = form_data.chat.get("title", "New Chat")
             models = form_data.chat.get("models") or []
+
+            born_migrated = _chat_message_table_supported(db)
+            if born_migrated:
+                stored_chat, init_messages = _peel_messages_off_chat_dict(form_data.chat)
+            else:
+                stored_chat, init_messages = form_data.chat, None
+
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     "title": import_title,
-                    "chat": form_data.chat,
+                    "chat": stored_chat,
                     "meta": form_data.meta,
                     "pinned": form_data.pinned,
                     "folder_id": form_data.folder_id,
@@ -659,8 +1012,17 @@ class ChatTable:
             )
 
             result = Chat(**chat.model_dump())
+            if born_migrated:
+                result.messages_migrated = 1
             db.add(result)
             db.commit()
+
+            if born_migrated and init_messages:
+                self._sync_messages_to_table(db, id, init_messages)
+                try:
+                    db.commit()
+                except Exception:
+                    pass
 
             try:
                 db.execute(
@@ -677,6 +1039,7 @@ class ChatTable:
             except Exception:
                 pass
 
+            _hydrate_chat_messages(db, result)
             return ChatModel.model_validate(result) if result else None
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
@@ -687,9 +1050,25 @@ class ChatTable:
                 # Enrich chat data before updating
                 enriched_chat = self._enrich_chat_data(chat)
 
+                migrated = bool(
+                    _chat_message_table_supported(db)
+                    and getattr(chat_item, "messages_migrated", 0)
+                )
+
+                # For migrated chats, sync the messages dict to the
+                # chat_message table and strip them out of the on-disk JSON
+                # so the blob stays small. The hydrate path will re-attach
+                # them on read.
+                stored_chat = enriched_chat
+                if migrated:
+                    peeled_chat, peeled_msgs = _peel_messages_off_chat_dict(enriched_chat)
+                    if peeled_msgs is not None:
+                        self._sync_messages_to_table(db, id, peeled_msgs)
+                        stored_chat = peeled_chat
+
                 title = enriched_chat.get("title", "New Chat")
                 models = enriched_chat.get("models") or []
-                chat_item.chat = enriched_chat
+                chat_item.chat = stored_chat
                 chat_item.title = title
                 chat_item.updated_at = int(time.time())
                 chat_item.model_id_primary = models[0] if models else None
@@ -715,19 +1094,129 @@ class ChatTable:
                 except Exception:
                     pass
 
+                _hydrate_chat_messages(db, chat_item)
                 return ChatModel.model_validate(chat_item)
         except Exception:
             return None
 
+    def _sync_messages_to_table(
+        self, db, chat_id: str, messages: dict
+    ) -> None:
+        """Replace every chat_message row for ``chat_id`` with the given dict.
+
+        Done as: DELETE then bulk INSERT, ordered by dict iteration order so
+        ``sequence`` matches the on-disk layout. Keeping this O(N) is fine
+        because ``update_chat_by_id`` is only a hot path for legacy callers;
+        the per-message upsert path uses the fast row-level write.
+        """
+        if not _chat_message_table_supported(db):
+            return
+        try:
+            db.execute(
+                text("DELETE FROM chat_message WHERE chat_id = :cid"),
+                {"cid": chat_id},
+            )
+            for seq, (mid, msg) in enumerate(messages.items()):
+                if not isinstance(msg, dict):
+                    continue
+                cols = _split_message_for_table(msg)
+                db.execute(
+                    text(
+                        "INSERT INTO chat_message "
+                        "(chat_id, message_id, parent_id, role, content, "
+                        " content_is_json, model, timestamp, sequence, "
+                        " status_history, meta) "
+                        "VALUES (:cid, :mid, :pid, :role, :c, :ij, "
+                        ":model, :ts, :seq, :sh, :meta)"
+                    ),
+                    {
+                        "cid": chat_id,
+                        "mid": str(mid),
+                        "pid": cols["parent_id"],
+                        "role": cols["role"],
+                        "c": cols["content"],
+                        "ij": cols["content_is_json"],
+                        "model": cols["model"],
+                        "ts": cols["timestamp"],
+                        "seq": seq,
+                        "sh": cols["status_history"],
+                        "meta": cols["meta"],
+                    },
+                )
+        except Exception:
+            # If anything goes wrong, let the JSON path retain the messages —
+            # we don't disturb messages_migrated, just the table sync.
+            pass
+
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        # Targeted title-only update: doesn't touch the messages table or
+        # the on-disk JSON body beyond the title key, so it's O(1) regardless
+        # of chat size.
+        try:
+            with get_db() as db:
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                # Update the title on both the column and inside the JSON
+                # blob so old code paths reading chat.chat['title'] keep
+                # working.
+                if db.bind.dialect.name == "sqlite":
+                    db.execute(
+                        text(
+                            "UPDATE chat SET "
+                            "  title = :t, "
+                            "  chat = json_set(chat, '$.title', :t), "
+                            "  updated_at = :ts "
+                            "WHERE id = :id"
+                        ),
+                        {"t": title, "ts": int(time.time()), "id": id},
+                    )
+                    db.commit()
+                    db.refresh(chat_item)
+                else:
+                    # Fall back to the legacy round-trip on dialects without
+                    # json_set support; rare enough to not matter.
+                    cur = (
+                        copy.deepcopy(chat_item.chat)
+                        if isinstance(chat_item.chat, dict)
+                        else {}
+                    )
+                    cur["title"] = title
+                    chat_item.chat = cur
+                    chat_item.title = title
+                    chat_item.updated_at = int(time.time())
+                    db.commit()
+                    db.refresh(chat_item)
+
+                try:
+                    db.execute(
+                        text("UPDATE chat SET search_text = :st WHERE id = :id"),
+                        {
+                            "st": _build_search_text(
+                                title,
+                                chat_item.chat if isinstance(chat_item.chat, dict) else {},
+                            ),
+                            "id": id,
+                        },
+                    )
+                    db.commit()
+                except Exception:
+                    pass
+
+                # Title changes need an FTS refresh too (chat_fts.title column).
+                _upsert_chat_fts(
+                    db, id, title, chat_item.chat if isinstance(chat_item.chat, dict) else {}
+                )
+                try:
+                    db.commit()
+                except Exception:
+                    pass
+
+                _hydrate_chat_messages(db, chat_item)
+                return ChatModel.model_validate(chat_item)
+        except Exception:
             return None
-
-        chat = chat.chat
-        chat["title"] = title
-
-        return self.update_chat_by_id(id, chat)
 
     def update_chat_tags_by_id(
         self, id: str, tags: list[str], user
@@ -775,22 +1264,163 @@ class ChatTable:
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
-        # Hot path: streaming token writes hit this every chunk. We deliberately
-        # avoid ``update_chat_by_id`` here because its ``_upsert_chat_fts`` deletes
-        # and re-inserts every message in the chat — O(N) per token for an N-msg
-        # chat. Instead we patch the JSON in place and refresh only the one
-        # changed message in ``message_fts``.
-        try:
-            with get_db() as db:
-                chat_item = db.get(Chat, id)
-                if chat_item is None:
+        # Sanitize message content for null characters before upserting
+        if isinstance(message.get("content"), str):
+            message["content"] = message["content"].replace("\x00", "")
+
+        with get_db() as db:
+            chat_obj = db.get(Chat, id)
+            if chat_obj is None:
+                return None
+
+            migrated = bool(
+                _chat_message_table_supported(db)
+                and getattr(chat_obj, "messages_migrated", 0)
+            )
+
+            if migrated:
+                # Fast path: write a single row to chat_message instead of a
+                # full JSON read-modify-write. Look up the existing row (if
+                # any) so we can spread the incoming partial dict on top —
+                # same merge semantics as the legacy ``{**existing, **incoming}``.
+                existing_row = db.execute(
+                    text(
+                        f"SELECT {_CHAT_MESSAGE_SELECT_COLS} "
+                        "FROM chat_message WHERE chat_id = :cid AND message_id = :mid"
+                    ),
+                    {"cid": id, "mid": message_id},
+                ).fetchone()
+
+                if existing_row is None:
+                    merged = dict(message)
+                    merged["id"] = message_id
+                    seq = _next_sequence_for_chat(db, id)
+                    cols = _split_message_for_table(merged)
+                    db.execute(
+                        text(
+                            "INSERT INTO chat_message "
+                            "(chat_id, message_id, parent_id, role, content, "
+                            " content_is_json, model, timestamp, sequence, "
+                            " status_history, meta) "
+                            "VALUES (:cid, :mid, :pid, :role, :c, :ij, "
+                            ":model, :ts, :seq, :sh, :meta)"
+                        ),
+                        {
+                            "cid": id,
+                            "mid": message_id,
+                            "seq": seq,
+                            "pid": cols["parent_id"],
+                            "role": cols["role"],
+                            "c": cols["content"],
+                            "ij": cols["content_is_json"],
+                            "model": cols["model"],
+                            "ts": cols["timestamp"],
+                            "sh": cols["status_history"],
+                            "meta": cols["meta"],
+                        },
+                    )
+                else:
+                    existing_msg = _row_to_message_dict(existing_row)
+                    merged = {**existing_msg, **message}
+                    merged["id"] = message_id
+                    cols = _split_message_for_table(merged)
+                    db.execute(
+                        text(
+                            "UPDATE chat_message SET "
+                            "  parent_id = :pid, "
+                            "  role = :role, "
+                            "  content = :c, "
+                            "  content_is_json = :ij, "
+                            "  model = :model, "
+                            "  timestamp = :ts, "
+                            "  status_history = :sh, "
+                            "  meta = :meta "
+                            "WHERE chat_id = :cid AND message_id = :mid"
+                        ),
+                        {
+                            "cid": id,
+                            "mid": message_id,
+                            "pid": cols["parent_id"],
+                            "role": cols["role"],
+                            "c": cols["content"],
+                            "ij": cols["content_is_json"],
+                            "model": cols["model"],
+                            "ts": cols["timestamp"],
+                            "sh": cols["status_history"],
+                            "meta": cols["meta"],
+                        },
+                    )
+
+                _upsert_message_fts(
+                    db,
+                    id,
+                    message_id,
+                    merged.get("role"),
+                    _extract_content_text(merged.get("content", "")),
+                )
+
+                # Targeted JSON manipulation: only flip history.currentId so
+                # the on-disk JSON stays consistent for the unmigrated read
+                # path that might be re-enabled. Avoid touching the rest of
+                # the 100+ MB JSON blob.
+                try:
+                    if db.bind.dialect.name == "sqlite":
+                        db.execute(
+                            text(
+                                "UPDATE chat SET "
+                                "  chat = json_set(chat, '$.history.currentId', :mid), "
+                                "  updated_at = :ts "
+                                "WHERE id = :id"
+                            ),
+                            {"mid": message_id, "ts": int(time.time()), "id": id},
+                        )
+                    else:
+                        # Non-SQLite (or any dialect that doesn't support
+                        # json_set in this exact form): fall back to a
+                        # minimal read-modify-write of just the scaffolding.
+                        cur_chat = chat_obj.chat if isinstance(chat_obj.chat, dict) else {}
+                        cur_history = cur_chat.get("history") or {}
+                        if not isinstance(cur_history, dict):
+                            cur_history = {}
+                        cur_history["currentId"] = message_id
+                        # Don't pull message bodies; the source of truth is
+                        # the chat_message table and `_hydrate_chat_messages`
+                        # rebuilds the dict on read.
+                        cur_history.pop("messages", None)
+                        cur_chat["history"] = cur_history
+                        chat_obj.chat = cur_chat
+                        chat_obj.updated_at = int(time.time())
+                except Exception:
+                    # As a final fallback, just bump updated_at via UPDATE.
+                    try:
+                        db.execute(
+                            text("UPDATE chat SET updated_at = :ts WHERE id = :id"),
+                            {"ts": int(time.time()), "id": id},
+                        )
+                    except Exception:
+                        pass
+
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
                     return None
 
-                # Sanitize message content for null characters before upserting
-                if isinstance(message.get("content"), str):
-                    message["content"] = message["content"].replace("\x00", "")
+                refreshed = db.get(Chat, id)
+                _hydrate_chat_messages(db, refreshed)
+                try:
+                    return ChatModel.model_validate(refreshed)
+                except Exception:
+                    return None
 
-                chat_data = dict(chat_item.chat or {})
+            # Legacy path: unmigrated chat. Hot path for streaming token
+            # writes — we deliberately avoid ``update_chat_by_id`` here
+            # because its ``_upsert_chat_fts`` deletes and re-inserts every
+            # message in the chat — O(N) per token for an N-msg chat.
+            # Instead we patch the JSON in place and refresh only the one
+            # changed message in ``message_fts``.
+            try:
+                chat_data = dict(chat_obj.chat or {})
                 history = dict(chat_data.get("history") or {})
                 messages_map = dict(history.get("messages") or {})
 
@@ -803,8 +1433,8 @@ class ChatTable:
                 history["currentId"] = message_id
                 chat_data["history"] = history
 
-                chat_item.chat = chat_data
-                chat_item.updated_at = int(time.time())
+                chat_obj.chat = chat_data
+                chat_obj.updated_at = int(time.time())
                 db.commit()
 
                 merged = messages_map[message_id]
@@ -819,9 +1449,9 @@ class ChatTable:
                 except Exception:
                     pass
 
-                return ChatModel.model_validate(chat_item)
-        except Exception:
-            return None
+                return ChatModel.model_validate(chat_obj)
+            except Exception:
+                return None
 
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
@@ -830,11 +1460,57 @@ class ChatTable:
         # current — just patch the JSON and skip the FTS rebuild entirely.
         try:
             with get_db() as db:
-                chat_item = db.get(Chat, id)
-                if chat_item is None:
+                chat_obj = db.get(Chat, id)
+                if chat_obj is None:
                     return None
 
-                chat_data = dict(chat_item.chat or {})
+                migrated = bool(
+                    _chat_message_table_supported(db)
+                    and getattr(chat_obj, "messages_migrated", 0)
+                )
+
+                if migrated:
+                    # Update only the status_history column on the chat_message row.
+                    row = db.execute(
+                        text(
+                            "SELECT status_history FROM chat_message "
+                            "WHERE chat_id = :cid AND message_id = :mid"
+                        ),
+                        {"cid": id, "mid": message_id},
+                    ).fetchone()
+                    if row is None:
+                        # Message doesn't exist; nothing to update.
+                        return ChatModel.model_validate(chat_obj)
+                    cur_sh: list = []
+                    if row[0]:
+                        try:
+                            parsed = json.loads(row[0])
+                            if isinstance(parsed, list):
+                                cur_sh = parsed
+                        except Exception:
+                            cur_sh = []
+                    cur_sh.append(status)
+                    db.execute(
+                        text(
+                            "UPDATE chat_message SET status_history = :sh "
+                            "WHERE chat_id = :cid AND message_id = :mid"
+                        ),
+                        {"sh": json.dumps(cur_sh), "cid": id, "mid": message_id},
+                    )
+                    try:
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+                        return None
+                    refreshed = db.get(Chat, id)
+                    _hydrate_chat_messages(db, refreshed)
+                    try:
+                        return ChatModel.model_validate(refreshed)
+                    except Exception:
+                        return None
+
+                # Legacy path: patch the JSON in place; skip FTS rebuild.
+                chat_data = dict(chat_obj.chat or {})
                 history = dict(chat_data.get("history") or {})
                 messages_map = dict(history.get("messages") or {})
 
@@ -848,18 +1524,23 @@ class ChatTable:
                 history["messages"] = messages_map
                 chat_data["history"] = history
 
-                chat_item.chat = chat_data
-                chat_item.updated_at = int(time.time())
+                chat_obj.chat = chat_data
+                chat_obj.updated_at = int(time.time())
                 db.commit()
 
-                return ChatModel.model_validate(chat_item)
+                return ChatModel.model_validate(chat_obj)
         except Exception:
             return None
+
 
     def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_db() as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
+            # Hydrate before reading chat.chat so the shared clone gets the
+            # real messages (otherwise migrated chats would share an empty
+            # history because the on-disk JSON has no messages dict).
+            _hydrate_chat_messages(db, chat)
             # Check if the chat is already shared
             if chat.share_id:
                 return self.get_chat_by_id_and_user_id(chat.share_id, "shared")
@@ -895,6 +1576,7 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, chat_id)
+                _hydrate_chat_messages(db, chat)
                 shared_chat = (
                     db.query(Chat).filter_by(user_id=f"shared-{chat_id}").first()
                 )
@@ -1125,6 +1807,9 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
+                if chat is None:
+                    return None
+                _hydrate_chat_messages(db, chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1147,9 +1832,50 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
+                if chat is None:
+                    return None
+                _hydrate_chat_messages(db, chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
+
+    def get_chat_messages_paginated(
+        self, chat_id: str, skip: int = 0, limit: int = 100
+    ) -> list[dict]:
+        """Return a slice of messages for a chat, ordered by ``sequence``.
+
+        Migrated chats: direct LIMIT/OFFSET on chat_message.
+        Unmigrated chats: read the JSON blob and slice the dict's ordered
+        values, so the API shape is identical regardless of storage path.
+        """
+        with get_db() as db:
+            if _is_chat_migrated(db, chat_id):
+                try:
+                    rows = db.execute(
+                        text(
+                            f"SELECT {_CHAT_MESSAGE_SELECT_COLS} "
+                            "FROM chat_message WHERE chat_id = :cid "
+                            "ORDER BY sequence LIMIT :lim OFFSET :sk"
+                        ),
+                        {"cid": chat_id, "lim": int(limit), "sk": int(skip)},
+                    ).fetchall()
+                except Exception:
+                    rows = []
+                return [_row_to_message_dict(r) for r in rows]
+
+            # Fallback: not migrated, or table missing. Slice the JSON blob.
+            chat_obj = db.get(Chat, chat_id)
+            if chat_obj is None:
+                return []
+            chat_dict = chat_obj.chat if isinstance(chat_obj.chat, dict) else {}
+            history = chat_dict.get("history") if isinstance(chat_dict, dict) else None
+            msgs = history.get("messages") if isinstance(history, dict) else None
+            if isinstance(msgs, dict):
+                items = list(msgs.values())
+                return items[skip : skip + limit]
+            if isinstance(chat_dict.get("messages"), list):
+                return chat_dict["messages"][skip : skip + limit]
+            return []
 
     def _project_title_ids(self, rows) -> list[ChatTitleIdResponse]:
         return [
