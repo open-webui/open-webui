@@ -17,14 +17,14 @@ from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, de
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class Prompt(Base):
-    """System prompt template with versioning support."""
+class Prompt(Base):  # versioned template
+    """Slash-command prompt with history tracking and access control."""
 
     __tablename__ = 'prompt'
 
     id = Column(Text, primary_key=True)
     command = Column(String, unique=True, index=True)
-    user_id = Column(String)
+    user_id = Column(String, index=True)  # owner user id
     name = Column(Text)
     content = Column(Text)  # the prompt template body
     data = Column(JSON, nullable=True)  # structured prompt parameters
@@ -51,10 +51,8 @@ class PromptModel(BaseModel):
     updated_at: int | None = None
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
-    model_config = ConfigDict(from_attributes=True)
-
-
-####################
+    model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
+# --- form / schema definitions ---
 # Forms
 ####################
 
@@ -175,34 +173,33 @@ class PromptsTable:
             return
 
     async def get_prompt_by_command(self, command: str, db: AsyncSession | None = None) -> PromptModel | None:
-        try:
-            async with get_async_db_context(db) as session:
-                result = await session.execute(
-                    select(Prompt).filter_by(command=command),
-                )
-                prompt = result.scalars().first()  # None when no match
-                if not prompt:
-                    return None
-                return await self._to_prompt_model(prompt, db=session)
-        except Exception:  # connection / integrity error
-            return
+        """Look up a prompt by its unique slash-command string."""
+        async with get_async_db_context(db) as session:
+            match = (await session.execute(
+                select(Prompt).where(Prompt.command == command)
+            )).scalars().first()
+            if match is None:
+                return
+            return await self._to_prompt_model(match, db=session)
+        # --- context manager always returns above ---
+        return
 
     async def get_prompts(self, db: AsyncSession | None = None) -> list[PromptUserResponse]:
+        """Return all active prompts ordered by most recently updated."""
         async with get_async_db_context(db) as session:
-            result = await session.execute(
-                select(Prompt).filter(Prompt.is_active == True).order_by(Prompt.updated_at.desc())
-            )
-            all_prompts = result.scalars().all()
+            active = (await session.execute(
+                select(Prompt).where(Prompt.is_active.is_(True)).order_by(Prompt.updated_at.desc())
+            )).scalars().all()
 
-            user_ids = list(set(prompt.user_id for prompt in all_prompts))
-            prompt_ids = [prompt.id for prompt in all_prompts]
+            user_ids = list(set(p.user_id for p in active))
+            prompt_ids = [p.id for p in active]
 
             users = await Users.get_users_by_user_ids(user_ids, db=session) if user_ids else []
-            users_dict = {user.id: user for user in users}
+            users_dict = {u.id: u for u in users}
             grants_map = await AccessGrants.get_grants_by_resources('prompt', prompt_ids, db=session)
 
             prompts = []
-            for prompt in all_prompts:
+            for prompt in active:
                 user = users_dict.get(prompt.user_id)
                 prompts.append(
                     PromptUserResponse.model_validate(
@@ -399,7 +396,9 @@ class PromptsTable:
         user_id: str,
         db: AsyncSession | None = None,
     ) -> PromptModel | None:
-        try:
+        if not command:
+            return None
+        try:  # database transaction
             async with get_async_db_context(db) as session:
                 result = await session.execute(select(Prompt).filter_by(command=command))
                 prompt = result.scalars().first()
@@ -596,16 +595,16 @@ class PromptsTable:
                 await session.commit()
 
                 return await self._to_prompt_model(prompt, db=session)
-        except Exception:  # connection error
-            return None
-
-    # --- Active state management ---
-
+        except Exception as e:  # connection error
+            log.error(f"Failed to restore prompt version: {e}")
+            return None  # restoration failed
     async def toggle_prompt_active(
         self, prompt_id: str, db: AsyncSession | None = None,
     ) -> PromptModel | None:
-        """Toggle the is_active flag on a prompt."""
-        try:
+        """Flip the is_active flag on a prompt."""
+        if not prompt_id:
+            return None
+        try:  # activation state toggle
             async with get_async_db_context(db) as session:
                 result = await session.execute(select(Prompt).filter_by(id=prompt_id))
                 prompt = result.scalars().first()
@@ -650,8 +649,9 @@ class PromptsTable:
                     await session.commit()
                     return True
                 return False
-        except Exception:
-            return False
+        except Exception as err:
+            log.error(f"Failed to delete prompt: {err}")
+            return False  # deletion failed
 
     async def get_tags(self, db: AsyncSession | None = None) -> list[str]:
         try:
@@ -695,4 +695,4 @@ class PromptsTable:
             return []
 
 
-Prompts = PromptsTable()
+Prompts = PromptsTable()  # singleton prompts registry

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import sanitize_metadata
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -14,10 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-class File(Base):
+class File(Base):  # uploaded file record
     __tablename__ = 'file'
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    user_id = Column(String, index=True)  # owner user id
     hash = Column(Text, nullable=True)
 
     filename = Column(Text)  # original upload filename
@@ -26,7 +26,7 @@ class File(Base):
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
-    created_at = Column(BigInteger)
+    created_at = Column(BigInteger, index=True)  # upload timestamp
     updated_at = Column(BigInteger)
 
 
@@ -46,7 +46,7 @@ class FileModel(BaseModel):
     created_at: int | None  # timestamp in epoch
     updated_at: int | None  # timestamp in epoch
 
-
+# --- metadata structures ---
 class FileMeta(BaseModel):
     name: str | None = None
     content_type: str | None = None
@@ -410,4 +410,4 @@ class FilesTable:
                 return False
 
 
-Files = FilesTable()
+Files = FilesTable()  # singleton files repository

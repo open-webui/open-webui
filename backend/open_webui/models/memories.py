@@ -12,8 +12,8 @@ from sqlalchemy import BigInteger, Column, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class Memory(Base):
-    """Persistent user memory backed by a vector collection."""
+class Memory(Base):  # user memory store
+    """Stores user-created memory entries linked to a vector collection."""
 
     __tablename__ = 'memory'
 
@@ -32,8 +32,7 @@ class MemoryModel(BaseModel):
     content: str
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
-    model_config = ConfigDict(from_attributes=True)
-
+    model_config = ConfigDict(from_attributes=True)  # allows ORM mapping
 
 class MemoriesTable:
     async def insert_new_memory(
@@ -140,4 +139,4 @@ class MemoriesTable:
                 return False
 
 
-Memories = MemoriesTable()
+Memories = MemoriesTable()  # user memory registry

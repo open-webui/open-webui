@@ -1,4 +1,4 @@
-"""Authentication models and database operations."""
+"""Auth credential models and data-access layer."""
 
 from __future__ import annotations
 
@@ -16,19 +16,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-class Auth(Base):
-    """Credential record linking a user identity to an email + hashed password."""
+class Auth(Base):  # credential ↔ user linkage
+    """Maps a user ID to an email/password pair with an active flag."""
 
     __tablename__ = 'auth'
 
-    id = Column(String, primary_key=True, unique=True)  # same as User.id
-    email = Column(String)  # login email, kept in sync with User.email
-    password = Column(Text)  # bcrypt / argon2 hash
-    active = Column(Boolean)  # soft-disable flag
+    id = Column(String, primary_key=True, unique=True)  # mirrors User.id
+    email = Column(String)  # login address, kept in sync with User.email
+    password = Column(Text)  # argon2 / bcrypt hash
+    active = Column(Boolean)  # account soft-disable toggle
 
 
 class AuthModel(BaseModel):
-    """Pydantic mirror of the Auth table row."""
+    """Pydantic mirror of the ``auth`` table row."""
 
     id: str
     email: str
@@ -37,7 +37,7 @@ class AuthModel(BaseModel):
 
 
 class Token(BaseModel):
-    """JWT bearer token response."""
+    """JWT bearer-token response wrapper."""
 
     token: str
     token_type: str
@@ -88,7 +88,12 @@ class AddUserForm(SignupForm):
     role: str | None = 'pending'
 
 
+# --- data-access layer ---
+
+
 class AuthsTable:
+    """Provides CRUD operations for the Auth ↔ User lifecycle."""
+
     async def insert_new_auth(
         self,
         email: str,
@@ -99,130 +104,109 @@ class AuthsTable:
         oauth: dict | None = None,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Create an Auth + User pair in a single transaction."""
-        async with get_async_db_context(db) as db:
+        """Create an Auth + User pair inside a single transaction."""
+        async with get_async_db_context(db) as session:
             log.info('insert_new_auth')
 
-            user_id = str(uuid.uuid4())
+            new_id = str(uuid.uuid4())
 
-            record = Auth(
-                id=user_id,
+            credential = Auth(
+                id=new_id,
                 email=email,
                 password=password,
                 active=True,
             )
-            db.add(record)
+            session.add(credential)
 
-            user = await Users.insert_new_user(
-                user_id, name, email, profile_image_url, role, oauth=oauth, db=db,
+            created_user = await Users.insert_new_user(
+                new_id, name, email, profile_image_url, role, oauth=oauth, db=session,
             )
-
-            await db.commit()
-            await db.refresh(record)
-
-            return user if record and user else None
+            # persist both records and reload generated defaults
+            await session.commit()
+            await session.refresh(credential)
+            return created_user if credential and created_user else None
 
     async def authenticate_user(
-        self, email: str, verify_password: callable, db: AsyncSession | None = None
+        self, email: str, verify_password: callable, db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Verify a user's email + password and return the user on success."""
-        log.info(f'authenticate_user: {email}')
-
-        user = await Users.get_user_by_email(email, db=db)
-        if not user:
-            return None
-
-        try:  # load the auth row for password verification
-            async with get_async_db_context(db) as session:
-                auth = await session.get(Auth, user.id)
-                if not auth or not auth.active:
-                    return None
-                if not verify_password(auth.password):
-                    return None
-                return user
-        except Exception:
+        """Verify email + password credentials and return the matching user."""
+        log.info('authenticate_user: %s', email)
+        resolved = await Users.get_user_by_email(email, db=db)
+        if not resolved:
             return
+        # load the credential row and verify the password hash
+        async with get_async_db_context(db) as session:
+            credential = await session.get(Auth, resolved.id)
+            if not credential or not credential.active:
+                return
+            if not verify_password(credential.password):
+                return
+            return resolved
 
     async def authenticate_user_by_api_key(
         self, api_key: str, db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Resolve an API key to its owning user, returning ``None`` on miss."""
+        """Look up the user that owns the given API key."""
         log.info('authenticate_user_by_api_key')
-        if not api_key:  # empty / None key — reject immediately
+        if not api_key:
             return
-        try:
-            return await Users.get_user_by_api_key(api_key, db=db)
-        except Exception:
-            return False
+        # delegate to the Users model for the actual lookup
+        return await Users.get_user_by_api_key(api_key, db=db)
 
     async def authenticate_user_by_email(
         self,
         email: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """One-query authentication: JOIN Auth ↔ User, filter by email + active flag."""
+        """Single-query auth via JOIN on Auth ↔ User, filtered by active flag."""
         log.info('authenticate_user_by_email: %s', email)
-
-        try:
-            async with get_async_db_context(db) as session:
-                stmt = (
-                    select(Auth, User)
-                    .join(User, Auth.id == User.id)
-                    .filter(Auth.email == email, Auth.active == True)
-                )
-                row = (await session.execute(stmt)).first()
-                if not row:
-                    return
-                _auth, matched_user = row
-                return UserModel.model_validate(matched_user)
-        except Exception:
-            return
-
-    async def update_user_password_by_id(
-        self,
-        id: str,
-        new_password: str,
-        db: AsyncSession | None = None,
-    ) -> bool:
-        """Hash-swap: replace the stored password hash for a given user."""
-        try:
-            async with get_async_db_context(db) as session:
-                stmt = update(Auth).filter_by(id=id).values(password=new_password)
-                result = await session.execute(stmt)
-                await session.commit()
-                return result.rowcount == 1
-        except Exception:
-            return False
-
+        # single JOIN avoids N+1 — returns (Auth, User) tuple or None
+        async with get_async_db_context(db) as session:
+            joined_query = (
+                select(Auth, User)
+                .join(User, Auth.id == User.id)
+                .where(Auth.email == email, Auth.active.is_(True))
+            )
+            match = (await session.execute(joined_query)).first()
+            if not match:
+                return
+            _, found_user = match
+            return UserModel.model_validate(found_user)
     async def update_email_by_id(
-        self, id: str, email: str, db: AsyncSession | None = None,
+        self, user_id: str, email: str, db: AsyncSession | None = None,
     ) -> bool:
-        """Update the auth email and propagate the change to the User table."""
-        try:
-            async with get_async_db_context(db) as session:
-                stmt = update(Auth).filter_by(id=id).values(email=email)
-                result = await session.execute(stmt)
-                await session.commit()
-                if result.rowcount != 1:
-                    return False
-                await Users.update_user_by_id(id, {'email': email}, db=session)
-                return True
-        except Exception:
-            return False
+        """Set a new email on the auth record and propagate to the user row."""
+        async with get_async_db_context(db) as session:
+            auth_row = await session.get(Auth, user_id)
+            if auth_row is None:
+                return False
+            auth_row.email = email
+            await session.commit()
+            await Users.update_user_by_id(user_id, {'email': email}, db=session)
+            return True
+        # --- password modification ---
+    async def update_user_password_by_id(
+        self, user_id: str, new_password: str, db: AsyncSession | None = None,
+    ) -> bool:
+        """Set a new password hash for an existing user."""
+        async with get_async_db_context(db) as session:
+            auth_row = await session.get(Auth, user_id)
+            if auth_row is None:
+                return False
+            auth_row.password = new_password
+            await session.commit()
+            return True
 
     async def delete_auth_by_id(
         self, id: str, db: AsyncSession | None = None,
     ) -> bool:
-        """Delete a user and their auth record in a single transaction."""
-        try:  # delete user first, then auth (FK order)
-            async with get_async_db_context(db) as session:
-                if not await Users.delete_user_by_id(id, db=session):
-                    return False  # user deletion failed — abort
-                await session.execute(delete(Auth).filter_by(id=id))
-                await session.commit()
-                return True
-        except Exception:  # db / integrity error
-            return False  # partial deletion is rolled back by context manager
+        """Remove a user and their auth credential in one transaction."""
+        async with get_async_db_context(db) as session:
+            if not await Users.delete_user_by_id(id, db=session):
+                return False
+            await session.execute(delete(Auth).where(Auth.id == id))
+            await session.commit()
+            return True
 
 
-Auths = AuthsTable()
+Auths = AuthsTable()  # singleton — module-level instance

@@ -383,7 +383,7 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user), db: Asy
 
 
 @router.post('/user/info/update', response_model=dict | None)
-async def update_user_info_by_session_user(
+async def update_user_info_by_session_user(  # PATCH-style merge
     form_data: dict, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
 ):
     """Merge caller-supplied fields into the current user's info dict.
@@ -538,9 +538,8 @@ async def get_user_active_status_by_id(
 
 @router.post('/{user_id}/update', response_model=UserModel | None)
 async def update_user_by_id(
-    user_id: str,
-    form_data: UserUpdateForm,
-    session_user=Depends(get_admin_user),
+    user_id: str, form_data: UserUpdateForm,
+    session_user: UserModel = Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     # Prevent modification of the primary admin user by other admins

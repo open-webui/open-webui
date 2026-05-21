@@ -100,17 +100,17 @@ async def download_db(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-
-    from open_webui.internal.db import engine  # deferred import
-
-    if engine.name != 'sqlite':  # only SQLite DBs can be downloaded as a file
+        # --- resolve target database engine ---
+    from open_webui.internal.db import engine  # lazy — avoids circular at import time
+    if engine.name != 'sqlite':  # non-SQLite backends use pg_dump / managed exports
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DB_NOT_SQLITE,
         )
 
     return FileResponse(
-        engine.url.database,
+        str(engine.url.database),
+
         media_type='application/octet-stream',
         filename='webui.db',
     )

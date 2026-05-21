@@ -59,7 +59,7 @@ class ModelMeta(BaseModel):
         return data
 
 
-class Model(Base):
+class Model(Base):  # provider model config
     """Workspace model entry — wraps an upstream LLM with custom params and metadata."""
 
     __tablename__ = 'model'
@@ -573,4 +573,4 @@ class ModelsTable:
             return []
 
 
-Models = ModelsTable()
+Models = ModelsTable()  # singleton model registry

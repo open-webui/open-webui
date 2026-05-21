@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -16,19 +16,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-class Tool(Base):
+class Tool(Base):  # database table definition
     __tablename__ = 'tool'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    user_id = Column(String, index=True)  # owner user id
     name = Column(Text)  # human-readable label
     content = Column(Text)  # Python source code
     specs = Column(JSONField)  # OpenAPI-style function specs
     meta = Column(JSONField)  # description, manifest, etc.
     valves = Column(JSONField)  # admin-configurable runtime parameters
 
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger, nullable=False)  # modification timestamp
+    created_at = Column(BigInteger, index=True)  # creation timestamp
 
 
 class ToolMeta(BaseModel):
@@ -48,10 +48,9 @@ class ToolModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)  # enables ORM mapping
 
-
-####################
+# --- tool request forms ---
 # Forms
 ####################
 
@@ -316,4 +315,4 @@ class ToolsTable:
             return False
 
 
-Tools = ToolsTable()
+Tools = ToolsTable()  # singleton tool registry

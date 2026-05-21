@@ -117,7 +117,7 @@ extract_ssl_mode_from_url = extract_ssl_params_from_url
 reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
-class JSONField(types.TypeDecorator):
+class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
     """Store arbitrary Python objects as JSON-encoded TEXT.
 
     Used instead of native JSON columns for portability across SQLite and
@@ -125,19 +125,14 @@ class JSONField(types.TypeDecorator):
     deserialized with ``json.loads`` on read.
     """
 
-    impl = types.Text
-    cache_ok = True  # safe for statement caching (no per-instance state)
-
+    impl = types.UnicodeText
+    cache_ok = True
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
-        return json.dumps(value)
-
+        return json.dumps(value) if value is not None else None
     def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
-        if value is not None:
-            return json.loads(value)
-
-    def copy(self, **kw: Any) -> Self:
-        return JSONField(self.impl.length)
-
+        return json.loads(value) if value is not None else None
+    def copy(self, **kwargs: Any) -> Self:
+        return JSONField(length=self.impl.length)
     def db_value(self, value):
         return json.dumps(value)
 

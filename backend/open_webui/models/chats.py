@@ -6,7 +6,7 @@ import json
 import logging
 import time
 import uuid
-
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
@@ -39,16 +39,16 @@ from sqlalchemy.sql.expression import bindparam
 log = logging.getLogger(__name__)
 
 
-class Chat(Base):
+class Chat(Base):  # database table mapping for chat entity
     __tablename__ = 'chat'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    user_id = Column(String, index=True)  # owner user id
     title = Column(Text)  # user-visible conversation title
     chat = Column(JSON)
 
-    created_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger, index=True)  # conversation creation timestamp
+    updated_at = Column(BigInteger, index=True)  # conversation modification timestamp
 
     share_id = Column(Text, unique=True, nullable=True)  # public share link token
     archived = Column(Boolean, default=False)  # hidden from main chat list
@@ -73,8 +73,7 @@ class Chat(Base):
 
 
 class ChatModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+    model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
     id: str
     user_id: str
     title: str
@@ -676,22 +675,21 @@ class ChatTable:
             await session.commit()
             await session.refresh(chat)
             return ChatModel.model_validate(chat)  # return the updated original
-
+    # refresh helper
     async def update_shared_chat_by_chat_id(
         self, chat_id: str, db: AsyncSession | None = None,
     ) -> ChatModel | None:
-        """Re-snapshot the shared copy with the latest chat content."""
-        from open_webui.models.shared_chats import SharedChats  # deferred — circular
+        """Refresh the shared snapshot with current chat content."""
+        from open_webui.models.shared_chats import SharedChats
 
-        try:
-            async with get_async_db_context(db) as session:
-                chat = await session.get(Chat, chat_id)
-                if not chat or not chat.share_id:
-                    return await self.insert_shared_chat_by_chat_id(chat_id, db=session)
-                await SharedChats.update(chat.share_id, db=session)
-                return ChatModel.model_validate(chat)
-        except Exception:
-            return
+        async with get_async_db_context(db) as session:
+            record = await session.get(Chat, chat_id)
+            if not record or not record.share_id:
+                return await self.insert_shared_chat_by_chat_id(chat_id, db=session)
+            await SharedChats.update(record.share_id, db=session)
+            return ChatModel.model_validate(record)
+        # unreachable — context manager above always returns
+        return
 
     async def delete_shared_chat_by_chat_id(self, chat_id: str, db: AsyncSession | None = None) -> bool:
         """Delete shared snapshot for a chat."""
@@ -938,7 +936,7 @@ class ChatTable:
             )
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
-
+    # retrieve conversation
     async def get_chat_by_id(
         self, id: str, db: AsyncSession | None = None,
     ) -> ChatModel | None:
@@ -1019,7 +1017,7 @@ class ChatTable:
             result = await session.execute(select(Chat).order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
-
+    # list user conversations
     async def get_chats_by_user_id(
         self,
         user_id: str,
@@ -1067,7 +1065,7 @@ class ChatTable:
                     'total': total,
                 }
             )
-
+    # list pinned chats
     async def get_pinned_chats_by_user_id(
         self, user_id: str, db: AsyncSession | None = None
     ) -> list[ChatTitleIdResponse]:
@@ -1097,7 +1095,7 @@ class ChatTable:
                 select(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
-
+    # search user conversations
     async def get_chats_by_user_id_and_search_text(
         self,
         user_id: str,
@@ -1712,4 +1710,4 @@ class ChatTable:
             return row[0]
 
 
-Chats = ChatTable()
+Chats = ChatTable()  # singleton chats repository

@@ -2911,12 +2911,11 @@ async def readiness_check():
 
 
 @app.get('/health/db')
-async def healthcheck_with_db():
+async def check_db_health():
     """Verify database connectivity by issuing a lightweight ping."""
     await async_db_ping()
     return {'status': True}
-
-
+# --- static assets & files ---
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 

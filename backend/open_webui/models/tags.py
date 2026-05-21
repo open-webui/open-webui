@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, Index, PrimaryKeyConstraint, String, delete, select
@@ -14,11 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-class Tag(Base):
+class Tag(Base):  # database table mapping for tag entity
     __tablename__ = 'tag'
     id = Column(String)
-    name = Column(String)
-    user_id = Column(String)
+    name = Column(String, index=True)  # tag label
+    user_id = Column(String, index=True)  # user identifier
     meta = Column(JSON, nullable=True)
 
     __table_args__ = (
@@ -35,10 +35,9 @@ class TagModel(BaseModel):
     name: str
     user_id: str
     meta: dict | None = None
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
-
-####################
+# --- tag schema forms ---
 # Forms
 ####################
 
@@ -132,4 +131,4 @@ class TagTable:
                 await db.commit()
 
 
-Tags = TagTable()
+Tags = TagTable()  # singleton tag repository
