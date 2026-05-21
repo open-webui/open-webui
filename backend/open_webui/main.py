@@ -603,6 +603,16 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
 
+    # Fold the WAL back into the main DB file before disposing the pool so that
+    # the next start (or a server-side backup) sees a single consolidated file.
+    try:
+        if engine.dialect.name == "sqlite":
+            with engine.connect() as conn:
+                conn.exec_driver_sql("PRAGMA wal_checkpoint(TRUNCATE)")
+        engine.dispose()
+    except Exception as e:
+        log.exception(f"Error during database teardown: {e}")
+
 
 app = FastAPI(
     title="Open WebUI",
