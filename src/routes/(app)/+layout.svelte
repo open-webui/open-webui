@@ -344,12 +344,10 @@
 				checkForVersionUpdates();
 			}
 		}
-		// Persist showControls: track open/close state separately from saved size
-		// chatControlsSize always retains the last width for openPane()
+		// Restore showControls from the user's last explicit toggle.
+		// We intentionally do NOT subscribe here — programmatic changes from
+		// Artifacts or Citations must not bleed into other tabs via localStorage.
 		await showControls.set(!$mobile ? localStorage.showControls === 'true' : false);
-		showControls.subscribe((value) => {
-			localStorage.showControls = value ? 'true' : 'false';
-		});
 
 		// Persist selectedTerminalId across page loads
 		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
