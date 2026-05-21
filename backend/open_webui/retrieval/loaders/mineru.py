@@ -1,12 +1,14 @@
-import os
-import time
-import requests
 import logging
+import os
 import tempfile
+import time
 import zipfile
+from pathlib import PurePosixPath
 from typing import List, Optional
-from langchain_core.documents import Document
+
+import requests
 from fastapi import HTTPException, status
+from langchain_core.documents import Document
 
 log = logging.getLogger(__name__)
 
@@ -36,11 +38,11 @@ class MinerULoader:
 
         # Parse params dict with defaults
         self.params = params or {}
-        self.enable_ocr = params.get('enable_ocr', False)
-        self.enable_formula = params.get('enable_formula', True)
-        self.enable_table = params.get('enable_table', True)
-        self.language = params.get('language', 'en')
-        self.model_version = params.get('model_version', 'pipeline')
+        self.enable_ocr = self.params.get('enable_ocr', False)
+        self.enable_formula = self.params.get('enable_formula', True)
+        self.enable_table = self.params.get('enable_table', True)
+        self.language = self.params.get('language', 'en')
+        self.model_version = self.params.get('model_version', 'pipeline')
 
         self.page_ranges = self.params.pop('page_ranges', '')
 
@@ -434,47 +436,56 @@ class MinerULoader:
                 detail=f'Error downloading results: {str(e)}',
             )
 
-        # Save ZIP to temporary file and extract
+        tmp_zip_path = None
+        markdown_content = None
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_zip:
                 tmp_zip.write(response.content)
                 tmp_zip_path = tmp_zip.name
 
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                # Extract ZIP
-                with zipfile.ZipFile(tmp_zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(tmp_dir)
+            with zipfile.ZipFile(tmp_zip_path, 'r') as zip_ref:
+                all_files = zip_ref.namelist()
+                unsafe_md_files = []
 
-                # Find markdown file - search recursively for any .md file
-                markdown_content = None
-                found_md_path = None
+                for member in zip_ref.infolist():
+                    if member.is_dir():
+                        continue
 
-                # First, list all files in the ZIP for debugging
-                all_files = []
-                for root, dirs, files in os.walk(tmp_dir):
-                    for file in files:
-                        full_path = os.path.join(root, file)
-                        all_files.append(full_path)
-                        # Look for any .md file
-                        if file.endswith('.md'):
-                            found_md_path = full_path
-                            log.info(f'Found markdown file at: {full_path}')
-                            try:
-                                with open(full_path, 'r', encoding='utf-8') as f:
-                                    markdown_content = f.read()
-                                if markdown_content:  # Use the first non-empty markdown file
-                                    break
-                            except Exception as e:
-                                log.warning(f'Failed to read {full_path}: {e}')
-                    if markdown_content:
-                        break
+                    normalized_name = member.filename.replace('\\', '/')
+                    member_path = PurePosixPath(normalized_name)
+
+                    if member_path.is_absolute() or '..' in member_path.parts:
+                        if member_path.name.endswith('.md'):
+                            unsafe_md_files.append(member.filename)
+                        log.warning(f'Skipping unsafe ZIP member path: {member.filename}')
+                        continue
+
+                    if not member_path.name.endswith('.md'):
+                        continue
+
+                    log.info(f'Found markdown file in ZIP at: {member.filename}')
+                    try:
+                        with zip_ref.open(member) as f:
+                            markdown_content = f.read().decode('utf-8')
+                        if markdown_content:  # Use the first non-empty markdown file
+                            break
+                    except Exception as e:
+                        log.warning(f'Failed to read {member.filename}: {e}')
 
                 if markdown_content is None:
                     log.error(f'Available files in ZIP: {all_files}')
-                    # Try to provide more helpful error message
-                    md_files = [f for f in all_files if f.endswith('.md')]
-                    if md_files:
-                        error_msg = f"Found .md files but couldn't read them: {md_files}"
+                    safe_md_files = [
+                        member.filename
+                        for member in zip_ref.infolist()
+                        if not member.is_dir()
+                        and PurePosixPath(member.filename.replace('\\', '/')).name.endswith('.md')
+                        and not PurePosixPath(member.filename.replace('\\', '/')).is_absolute()
+                        and '..' not in PurePosixPath(member.filename.replace('\\', '/')).parts
+                    ]
+                    if unsafe_md_files:
+                        error_msg = f'Unsafe .md paths found in ZIP: {unsafe_md_files}'
+                    elif safe_md_files:
+                        error_msg = f"Found .md files but couldn't read them: {safe_md_files}"
                     else:
                         error_msg = f'No .md files found in ZIP. Available files: {all_files}'
                     raise HTTPException(
@@ -482,19 +493,21 @@ class MinerULoader:
                         detail=error_msg,
                     )
 
-            # Clean up temporary ZIP file
-            os.unlink(tmp_zip_path)
-
         except zipfile.BadZipFile as e:
             raise HTTPException(
                 status.HTTP_502_BAD_GATEWAY,
                 detail=f'Invalid ZIP file received: {e}',
             )
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f'Error extracting ZIP: {str(e)}',
             )
+        finally:
+            if tmp_zip_path and os.path.exists(tmp_zip_path):
+                os.unlink(tmp_zip_path)
 
         if not markdown_content:
             raise HTTPException(
