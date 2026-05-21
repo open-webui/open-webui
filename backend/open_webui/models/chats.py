@@ -338,11 +338,12 @@ def _clean_fts_token(s: str) -> str:
     return "".join(c for c in s if c not in _FTS_SPECIAL).strip()
 
 
-# Characters that FTS5's unicode61 tokenizer treats as token separators. We
-# split on them client-side too so the FTS5 query parser never sees them as
-# bare punctuation (which would raise "syntax error near '.'"). The set
-# matches the unicode61 default minus our `tokenchars='_-'` carve-outs.
-_FTS_WORD_SPLITTERS = set(".,;:!?'\"`/\\@#$%&|()[]{}<>=+~^*")
+# Characters that FTS5's query parser treats as operators or that bear special
+# meaning. We pre-split user queries on them so an innocuous user-typed string
+# like ``vast.ai`` or ``key-value`` never reaches the parser as a bare ``.``
+# or ``-`` (which would be a NOT operator). Underscore stays in — that's the
+# one tokenchar we kept in the FTS schema for ``snake_case`` identifiers.
+_FTS_WORD_SPLITTERS = set(".,;:!?'\"`/\\@#$%&|()[]{}<>=+~^*-")
 
 
 def _build_fts_queries(search_text: str) -> tuple[str, str, str]:
