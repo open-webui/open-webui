@@ -236,6 +236,50 @@ class TestSoftFail:
         _patch_client(monkeypatch, exception=httpx.ConnectError('boom'))
         assert await fetch_sidebar('fresh@example.com') is None
 
+    @pytest.mark.asyncio
+    async def test_exception_throttles_subsequent_calls_within_ttl(self, monkeypatch, configured_env):
+        # During a Workbench outage, the cache timestamp should be
+        # refreshed on every exception so subsequent calls within the
+        # TTL window short-circuit instead of repeatedly blocking on
+        # a 2s-timeout network attempt.
+        call_count = {'n': 0}
+
+        def handler(*_a, **_kw):
+            call_count['n'] += 1
+            raise httpx.ConnectError('boom')
+
+        _patch_client(monkeypatch, handler=handler)
+
+        # Three rapid-fire calls during an outage with no prior cache:
+        # only the first should attempt the network — the rest hit the
+        # negative cache.
+        await fetch_sidebar('outage@example.com')
+        await fetch_sidebar('outage@example.com')
+        await fetch_sidebar('outage@example.com')
+
+        assert call_count['n'] == 1
+
+    @pytest.mark.asyncio
+    async def test_exception_preserves_last_known_value_in_cache(self, monkeypatch, configured_env):
+        # First populate with a real value
+        _patch_client(monkeypatch, response=_mock_response(200, {'data': {'ok': True}}))
+        await fetch_sidebar('a@b')
+
+        # Expire the entry, then a network call raises
+        ts, data = _CACHE['a@b']
+        _CACHE['a@b'] = (ts - _TTL_SECONDS - 1, data)
+        _patch_client(monkeypatch, exception=httpx.ConnectError('boom'))
+
+        # The exception path should refresh the timestamp on the
+        # last-known value so the next call returns it from cache
+        # without another network attempt.
+        await fetch_sidebar('a@b')
+
+        cached_ts, cached_data = _CACHE['a@b']
+        assert cached_data == {'ok': True}
+        # Fresh timestamp — well inside the TTL window
+        assert cached_ts > ts
+
 
 class TestPrune:
     def test_prune_removes_only_expired(self):

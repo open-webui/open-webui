@@ -275,7 +275,11 @@
 	 * URL so trailing-slash differences don't cause false negatives. */
 	function safeHref(raw, allowedOrigins) {
 		if (typeof raw !== 'string' || raw.length === 0) return null;
-		if (raw.charAt(0) === '/') return raw;
+		/* Protocol-relative URLs ("//evil.example/x") are resolved by
+		 * the browser as cross-origin navigation; reject them up front
+		 * before the leading-slash fast-path. Same-origin paths still
+		 * need to start with "/" but never "//". */
+		if (raw.charAt(0) === '/' && raw.charAt(1) !== '/') return raw;
 		try {
 			var parsed = new URL(raw);
 			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
@@ -327,6 +331,28 @@
 			};
 		}
 
+		/* Built-in nav used when Workbench doesn't provide one OR when
+		 * everything Workbench provided got dropped by safeHref (a
+		 * config mismatch — workbench_url / cloud_lock_url not aligned
+		 * with what Workbench actually returns). Better to render a
+		 * known-good shell than an empty rail. */
+		function fallbackNav() {
+			var n = [
+				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
+				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
+				{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
+				{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
+				{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
+			];
+			if (cloudLockUrl) {
+				n.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+			}
+			return n;
+		}
+		function fallbackBottom() {
+			return [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+		}
+
 		if (Array.isArray(main)) {
 			/* Use the entitlement-filtered list from Workbench. The
 			 * user only sees nav items they're actually granted via
@@ -337,22 +363,23 @@
 			bottom = Array.isArray(bottomItems)
 				? bottomItems.map(itemFromWorkbench).filter(hasHref)
 				: [];
+
+			/* If Workbench gave us items but safeHref dropped them all,
+			 * that's a deployment config mismatch (mismatched origins).
+			 * Workbench returning a legitimately empty entitlement is
+			 * handled by the !main.length check — we don't override
+			 * that. */
+			if (main.length > 0 && nav.length === 0) {
+				nav = fallbackNav();
+				bottom = fallbackBottom();
+			}
 		} else {
 			/* Fallback: Workbench endpoint not configured, the user
 			 * isn't a member, or the fetch errored. Render the same
 			 * built-in shell as before this PR so OWUI keeps working
 			 * standalone. */
-			nav = [
-				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
-				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
-				{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
-				{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
-				{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
-			];
-			if (cloudLockUrl) {
-				nav.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
-			}
-			bottom = [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+			nav = fallbackNav();
+			bottom = fallbackBottom();
 		}
 
 		var aside = document.createElement('aside');

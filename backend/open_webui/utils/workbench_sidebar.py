@@ -102,4 +102,13 @@ async def fetch_sidebar(user_email: Optional[str]) -> Optional[dict]:
         )
         # Return last-known value if any so a brief outage doesn't
         # blank the shell mid-session; otherwise None.
-        return cached[1] if cached else None
+        #
+        # Refresh the cache timestamp (or write a None entry) so
+        # subsequent calls within the TTL window are served from the
+        # cache instead of hammering Workbench with a 2s-timeout
+        # network attempt each time. During an outage, this throttles
+        # retries to one per TTL — config endpoint stays fast.
+        last_known = cached[1] if cached else None
+        _prune_expired(now)
+        _CACHE[key] = (now, last_known)
+        return last_known
