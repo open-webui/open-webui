@@ -305,7 +305,11 @@ _GENERIC_TITLES = {
 def _tokenize_user_query(text: str) -> list[tuple[str, str]]:
     """Split user query into ('phrase'|'word', payload) tuples.
 
-    Quoted phrases are preserved; unquoted runs are split on whitespace.
+    Quoted phrases are preserved verbatim — FTS5's tokenizer handles
+    in-phrase punctuation correctly. Unquoted text is split on whitespace
+    *and* on FTS5's word-separator punctuation (`.`, `,`, `/`, `@`, ...), so
+    `vast.ai` becomes the two tokens [`vast`, `ai`] rather than a
+    syntactically-invalid FTS5 expression.
     """
     out: list[tuple[str, str]] = []
     cur: list[str] = []
@@ -316,7 +320,7 @@ def _tokenize_user_query(text: str) -> list[tuple[str, str]]:
                 out.append(("phrase" if in_q else "word", "".join(cur)))
                 cur = []
             in_q = not in_q
-        elif ch.isspace() and not in_q:
+        elif not in_q and (ch.isspace() or ch in _FTS_WORD_SPLITTERS):
             if cur:
                 out.append(("word", "".join(cur)))
                 cur = []
@@ -328,7 +332,17 @@ def _tokenize_user_query(text: str) -> list[tuple[str, str]]:
 
 
 def _clean_fts_token(s: str) -> str:
+    """Strip FTS5 operator chars from a token. For a *single* word; callers
+    that need to split punctuation-bearing words into multiple tokens should
+    go through _tokenize_user_query."""
     return "".join(c for c in s if c not in _FTS_SPECIAL).strip()
+
+
+# Characters that FTS5's unicode61 tokenizer treats as token separators. We
+# split on them client-side too so the FTS5 query parser never sees them as
+# bare punctuation (which would raise "syntax error near '.'"). The set
+# matches the unicode61 default minus our `tokenchars='_-'` carve-outs.
+_FTS_WORD_SPLITTERS = set(".,;:!?'\"`/\\@#$%&|()[]{}<>=+~^*")
 
 
 def _build_fts_queries(search_text: str) -> tuple[str, str, str]:

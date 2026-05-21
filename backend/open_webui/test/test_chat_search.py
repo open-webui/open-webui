@@ -539,6 +539,19 @@ def test_search_filtered_list_with_empty_query(db_session):
     assert resp.hits[0].pinned is True
 
 
+def test_search_punctuation_in_query(db_session):
+    """A user query containing FTS5 operator chars (`.`, `,`, `/`, `:`, ...)
+    must NOT crash. ``vast.ai`` should be split into ``vast`` + ``ai`` and
+    match documents containing both tokens."""
+    sess, chats = db_session
+    _insert_chat(sess, chats, title="GPU notes", user_msgs=["I ran on vast.ai with two RTX 5090"])
+    resp = chats.Chats.search_chats("u1", "vast.ai")
+    assert resp.total >= 1
+    # Also try other special-char queries that previously crashed
+    for q in ["foo.bar/baz", "name@example.com", "hello, world", "what?", "key:value-pair"]:
+        chats.Chats.search_chats("u1", q)  # must not raise
+
+
 def test_search_user_isolation(db_session):
     sess, chats = db_session
     _insert_chat(sess, chats, user_id="u1", title="Mine", user_msgs=["secret"])
