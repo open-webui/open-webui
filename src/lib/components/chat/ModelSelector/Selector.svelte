@@ -13,7 +13,13 @@
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { deleteModel, getOllamaVersion, pullModel, unloadModel } from '$lib/apis/ollama';
+	import {
+		deleteModel,
+		getOllamaCatalogue,
+		getOllamaVersion,
+		pullModel,
+		unloadModel
+	} from '$lib/apis/ollama';
 
 	import {
 		user,
@@ -91,6 +97,8 @@
 			searchValue = '';
 			listScrollTop = 0;
 			resetView();
+			setOllamaVersion();
+			loadCatalogue();
 			updatePosition();
 			window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 		} else {
@@ -121,6 +129,7 @@
 	};
 
 	let tags = [];
+	let catalogueModels = [];
 
 	let selectedModel = '';
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
@@ -254,8 +263,17 @@
 		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
 	};
 
-	const pullModelHandler = async () => {
-		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
+	const loadCatalogue = async () => {
+		try {
+			catalogueModels = await getOllamaCatalogue(localStorage.token, 0);
+		} catch (e) {
+			console.error(e);
+			catalogueModels = [];
+		}
+	};
+
+	const pullModelByName = async (rawModelTag: string) => {
+		const sanitizedModelTag = rawModelTag.trim().replace(/^ollama\s+(run|pull)\s+/, '');
 
 		console.log($MODEL_DOWNLOAD_POOL);
 		if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]) {
@@ -370,6 +388,7 @@
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);
+				await loadCatalogue();
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}
@@ -380,6 +399,10 @@
 				...$MODEL_DOWNLOAD_POOL
 			});
 		}
+	};
+
+	const pullModelHandler = async () => {
+		await pullModelByName(searchValue);
 	};
 
 	const setOllamaVersion = async () => {
@@ -395,11 +418,8 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
+		await loadCatalogue();
 	});
-
-	$: if (show) {
-		setOllamaVersion();
-	}
 
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
@@ -476,6 +496,12 @@
 
 	let listScrollTop = 0;
 	let listContainer;
+	$: downloadableCatalogue = (catalogueModels ?? []).filter((model) => {
+		if (model?.installed) return false;
+		if (!searchValue) return true;
+		const haystack = `${model?.alias ?? ''} ${model?.display_name ?? ''} ${(model?.tags ?? []).join(' ')}`.toLowerCase();
+		return haystack.includes(searchValue.toLowerCase());
+	});
 
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
@@ -750,6 +776,36 @@
 									/>
 								{/each}
 								<div style="height: {(filteredItems.length - visibleEnd) * ITEM_HEIGHT}px;" />
+							</div>
+						{/if}
+
+						{#if $user?.role === 'admin' && downloadableCatalogue.length > 0}
+							<div class="mt-2 mb-1 px-3 text-[0.7rem] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+								{$i18n.t('Downloadable')}
+							</div>
+							<div class="max-h-44 overflow-y-auto space-y-1 px-1.5">
+								{#each downloadableCatalogue.slice(0, 80) as model (model.alias)}
+									<div
+										class="flex items-center justify-between rounded-xl py-1.5 pl-2.5 pr-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+									>
+										<div class="min-w-0">
+											<div class="truncate font-medium text-gray-700 dark:text-gray-100">
+												{model.display_name ?? model.alias}
+											</div>
+											<div class="truncate text-[0.7rem] text-gray-500 dark:text-gray-400">
+												{model.alias}
+											</div>
+										</div>
+										<button
+											class="shrink-0 ml-2 rounded-lg px-2 py-1 text-xs font-medium bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+											on:click={() => {
+												pullModelByName(model.alias);
+											}}
+										>
+											{$i18n.t('Download')}
+										</button>
+									</div>
+								{/each}
 							</div>
 						{/if}
 

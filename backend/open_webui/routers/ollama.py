@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 from typing import Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 import aiohttp
 from aiocache import cached
 
@@ -443,6 +443,44 @@ async def get_ollama_tags(request: Request, url_idx: Optional[int] = None, user=
         models['models'] = await get_filtered_models(models, user)
 
     return models
+
+
+@router.get('/api/catalogue')
+@router.get('/api/catalogue/{url_idx}')
+async def get_ollama_catalogue(
+    request: Request,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    if not request.app.state.config.ENABLE_OLLAMA_API:
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
+
+    if url_idx is None:
+        url_idx = 0
+
+    url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+    return await send_request(f'{url}/api/catalogue', 'GET', key=key, user=user)
+
+
+@router.get('/api/pull/status')
+@router.get('/api/pull/status/{url_idx}')
+async def get_ollama_pull_status(
+    request: Request,
+    url_idx: Optional[int] = None,
+    model: Optional[str] = None,
+    user=Depends(get_verified_user),
+):
+    if not request.app.state.config.ENABLE_OLLAMA_API:
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
+
+    if url_idx is None:
+        url_idx = 0
+
+    url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+    suffix = f'?model={quote(model)}' if model else ''
+    return await send_request(f'{url}/api/pull/status{suffix}', 'GET', key=key, user=user)
 
 
 @router.get('/api/ps')
