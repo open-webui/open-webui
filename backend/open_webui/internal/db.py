@@ -133,12 +133,6 @@ class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
         return json.loads(value) if value is not None else None
     def copy(self, **kwargs: Any) -> Self:
         return JSONField(length=self.impl.length)
-    def db_value(self, value):
-        return json.dumps(value)
-
-    def python_value(self, value):
-        if value is not None:
-            return json.loads(value)
 
 
 # Normalize SSL params from the URL once; the sync engine needs them

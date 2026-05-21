@@ -96,21 +96,16 @@ async def download_chat_as_pdf(form_data: ChatTitleMessagesForm, user=Depends(ge
 async def download_db(user=Depends(get_admin_user)):
     """Download the raw SQLite database file (admin-only, SQLite deployments only)."""
     if not ENABLE_ADMIN_EXPORT:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-        # --- resolve target database engine ---
-    from open_webui.internal.db import engine  # lazy — avoids circular at import time
-    if engine.name != 'sqlite':  # non-SQLite backends use pg_dump / managed exports
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DB_NOT_SQLITE,
-        )
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    # Lazy import avoids circular dependency at module load time
+    from open_webui.internal.db import engine
+
+    if engine.name != 'sqlite':
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DB_NOT_SQLITE)
 
     return FileResponse(
         str(engine.url.database),
-
         media_type='application/octet-stream',
         filename='webui.db',
     )
