@@ -3,19 +3,19 @@ import json
 import logging
 import os
 import pkgutil
-import sys
+import re
 import shutil
+import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
-from pathlib import Path
-from cryptography.hazmat.primitives import serialization
-import re
-
 
 import markdown
 from bs4 import BeautifulSoup
+from cryptography.hazmat.primitives import serialization
+
 from open_webui.constants import ERROR_MESSAGES
 
 ####################################
@@ -87,7 +87,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict[str, Any] = {
-            'ts': datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(timespec='milliseconds'),
+            'ts': datetime.fromtimestamp(record.created, tz=UTC).isoformat(timespec='milliseconds'),
             'level': _LEVEL_MAP.get(record.levelname, record.levelname.lower()),
             'msg': record.getMessage(),
             'caller': record.name,
@@ -132,12 +132,20 @@ if WEBUI_NAME != 'Open WebUI':
 
 WORKBENCH_URL = os.environ.get('WORKBENCH_URL', '').rstrip('/')
 
+# Container-internal URL used by the sidebar fetcher when it differs
+# from the browser-facing WORKBENCH_URL. In production both are the
+# same (e.g. https://workbench.pioneer.example) — in local Docker dev
+# the browser reaches Workbench via http://localhost:<port> but this
+# container has to use http://host.docker.internal:<port>. Defaults
+# to WORKBENCH_URL so production deploys don't need to set it.
+WORKBENCH_INTERNAL_URL = os.environ.get('WORKBENCH_INTERNAL_URL', '').rstrip('/') or WORKBENCH_URL
+
 # Internal-tier API token + company id used by the sidebar-entitlement
-# fetcher (see utils/workbench_sidebar.py). Together with WORKBENCH_URL
-# they let this OWUI deployment ask Workbench "what should this user
-# see in the left rail?" so the embedded shell only renders nav items
-# the user is actually entitled to. When unset the fetcher short-
-# circuits and the shell falls back to its built-in nav.
+# fetcher (see utils/workbench_sidebar.py). Together with the Workbench
+# URLs above they let this OWUI deployment ask Workbench "what should
+# this user see in the left rail?" so the embedded shell only renders
+# nav items the user is actually entitled to. When unset the fetcher
+# short-circuits and the shell falls back to its built-in nav.
 WORKBENCH_API_TOKEN = os.environ.get('WORKBENCH_API_TOKEN', '')
 WORKBENCH_COMPANY_ID = os.environ.get('WORKBENCH_COMPANY_ID', '')
 
@@ -195,7 +203,7 @@ def parse_section(section):
 
 try:
     changelog_path = BASE_DIR / 'CHANGELOG.md'
-    with open(str(changelog_path.absolute()), 'r', encoding='utf8') as file:
+    with open(str(changelog_path.absolute()), encoding='utf8') as file:
         changelog_content = file.read()
 
 except Exception:
@@ -667,7 +675,7 @@ if LICENSE_PUBLIC_KEY:
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode('utf-8')
+""".encode()
     )
 
 

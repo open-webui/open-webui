@@ -32,7 +32,7 @@ def configured_env(monkeypatch):
     """Sets the three env-derived module-level constants so
     _is_configured() returns True. Module reads happen at import
     time, so we patch the module attrs directly rather than os.environ."""
-    monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb.example')
+    monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb.example')
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 'stw_test.secret')
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c-uuid')
 
@@ -91,21 +91,21 @@ def _patch_client(monkeypatch, *, response=None, exception=None, handler=None):
 class TestNotConfigured:
     @pytest.mark.asyncio
     async def test_returns_none_when_url_missing(self, monkeypatch):
-        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', '')
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', '')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 't')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c')
         assert await fetch_sidebar('user@example.com') is None
 
     @pytest.mark.asyncio
     async def test_returns_none_when_token_missing(self, monkeypatch):
-        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb')
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', '')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c')
         assert await fetch_sidebar('user@example.com') is None
 
     @pytest.mark.asyncio
     async def test_returns_none_when_company_id_missing(self, monkeypatch):
-        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb')
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 't')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', '')
         assert await fetch_sidebar('user@example.com') is None

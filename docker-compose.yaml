@@ -39,6 +39,13 @@ services:
       # sidebar and links nav items to ${WORKBENCH_URL}/<route>. Empty/unset
       # = vanilla open-webui.
       - 'WORKBENCH_URL=${WORKBENCH_URL:-}'
+      # Container-internal Workbench URL — only needed when running both
+      # apps in Docker on the same host (browser uses localhost; this
+      # container needs host.docker.internal). Falls back to WORKBENCH_URL
+      # in production where both are the same value.
+      - 'WORKBENCH_INTERNAL_URL=${WORKBENCH_INTERNAL_URL:-}'
+      - 'WORKBENCH_API_TOKEN=${WORKBENCH_API_TOKEN:-}'
+      - 'WORKBENCH_COMPANY_ID=${WORKBENCH_COMPANY_ID:-}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped

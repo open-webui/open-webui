@@ -8,9 +8,17 @@ user. The embedded shell (static/loader.js) renders only what comes
 back, so a user with limited grants in Workbench sees the same limited
 shell here.
 
-Config is via env (see env.py): WORKBENCH_URL + WORKBENCH_API_TOKEN +
-WORKBENCH_COMPANY_ID. When any of those are unset the fetcher returns
-None and the loader falls back to its built-in nav.
+Config is via env (see env.py): WORKBENCH_INTERNAL_URL (or its
+WORKBENCH_URL fallback) + WORKBENCH_API_TOKEN + WORKBENCH_COMPANY_ID.
+When any of those are unset the fetcher returns None and the loader
+falls back to its built-in nav.
+
+The fetcher uses WORKBENCH_INTERNAL_URL (container-internal) for the
+backend-to-backend call, separate from the browser-facing WORKBENCH_URL
+that /api/config exposes for loader.js to use as its safeHref allowlist
+and for link rendering. In production both URLs are typically the same;
+the split exists for local Docker dev where the browser uses
+http://localhost:<port> and this container uses http://host.docker.internal:<port>.
 
 Cache: in-process dict keyed by lowercased user_email, 60s TTL. The
 Workbench endpoint already sends `Cache-Control: private, max-age=60`;
@@ -26,7 +34,7 @@ import httpx
 from open_webui.env import (
     WORKBENCH_API_TOKEN,
     WORKBENCH_COMPANY_ID,
-    WORKBENCH_URL,
+    WORKBENCH_INTERNAL_URL,
 )
 
 log = logging.getLogger(__name__)
@@ -44,7 +52,7 @@ _CACHE: dict[str, tuple[float, dict | None]] = {}
 
 
 def _is_configured() -> bool:
-    return bool(WORKBENCH_URL and WORKBENCH_API_TOKEN and WORKBENCH_COMPANY_ID)
+    return bool(WORKBENCH_INTERNAL_URL and WORKBENCH_API_TOKEN and WORKBENCH_COMPANY_ID)
 
 
 def _prune_expired(now: float) -> None:
@@ -78,7 +86,7 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
     if cached and now - cached[0] < _TTL_SECONDS:
         return cached[1]
 
-    url = f'{WORKBENCH_URL}/v1/companies/{WORKBENCH_COMPANY_ID}/sidebar'
+    url = f'{WORKBENCH_INTERNAL_URL}/v1/companies/{WORKBENCH_COMPANY_ID}/sidebar'
     headers = {'Authorization': f'Bearer {WORKBENCH_API_TOKEN}'}
     # Send the normalized lowercase email so the request and the cache
     # key are symmetric. Workbench downcases on its end too, so this is
