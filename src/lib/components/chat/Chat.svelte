@@ -956,8 +956,14 @@
 		}
 
 		if (type === 'chat:tags') {
-			chat = await getChatById(localStorage.token, visibleChatId);
-			allTags.set(await getAllTags(localStorage.token));
+			const [chatTags, _allTags] = await Promise.all([
+				visibleChatId ? getTagsById(localStorage.token, visibleChatId).catch(() => []) : null,
+				getAllTags(localStorage.token)
+			]);
+			if (visibleChatId) {
+				tags = chatTags ?? [];
+			}
+			allTags.set(_allTags);
 			return;
 		}
 
