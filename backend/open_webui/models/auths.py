@@ -1,3 +1,5 @@
+"""Authentication models and database operations."""
+
 from __future__ import annotations
 
 import logging
@@ -13,33 +15,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# DB MODEL
-####################
-
 
 class Auth(Base):
+    """Credential record linking a user identity to an email + hashed password."""
+
     __tablename__ = 'auth'
 
-    id = Column(String, primary_key=True, unique=True)
-    email = Column(String)
-    password = Column(Text)
-    active = Column(Boolean)
+    id = Column(String, primary_key=True, unique=True)  # same as User.id
+    email = Column(String)  # login email, kept in sync with User.email
+    password = Column(Text)  # bcrypt / argon2 hash
+    active = Column(Boolean)  # soft-disable flag
 
 
 class AuthModel(BaseModel):
+    """Pydantic mirror of the Auth table row."""
+
     id: str
     email: str
     password: str
     active: bool = True
 
 
-####################
-# Forms
-####################
-
-
 class Token(BaseModel):
+    """JWT bearer token response."""
+
     token: str
     token_type: str
 
@@ -100,112 +99,130 @@ class AuthsTable:
         oauth: dict | None = None,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
+        """Create an Auth + User pair in a single transaction."""
         async with get_async_db_context(db) as db:
             log.info('insert_new_auth')
 
-            id = str(uuid.uuid4())
+            user_id = str(uuid.uuid4())
 
-            auth = AuthModel(**{'id': id, 'email': email, 'password': password, 'active': True})
-            result = Auth(**auth.model_dump())
-            db.add(result)
+            record = Auth(
+                id=user_id,
+                email=email,
+                password=password,
+                active=True,
+            )
+            db.add(record)
 
-            user = await Users.insert_new_user(id, name, email, profile_image_url, role, oauth=oauth, db=db)
+            user = await Users.insert_new_user(
+                user_id, name, email, profile_image_url, role, oauth=oauth, db=db,
+            )
 
             await db.commit()
-            await db.refresh(result)
+            await db.refresh(record)
 
-            if result and user:
-                return user
-            else:
-                return None
+            return user if record and user else None
 
     async def authenticate_user(
         self, email: str, verify_password: callable, db: AsyncSession | None = None
     ) -> UserModel | None:
+        """Verify a user's email + password and return the user on success."""
         log.info(f'authenticate_user: {email}')
 
         user = await Users.get_user_by_email(email, db=db)
         if not user:
             return None
 
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(Auth).filter_by(id=user.id, active=True))
-                auth = result.scalars().first()
-                if auth:
-                    if verify_password(auth.password):
-                        return user
-                    else:
-                        return None
-                else:
+        try:  # load the auth row for password verification
+            async with get_async_db_context(db) as session:
+                auth = await session.get(Auth, user.id)
+                if not auth or not auth.active:
                     return None
+                if not verify_password(auth.password):
+                    return None
+                return user
         except Exception:
-            return None
+            return
 
-    async def authenticate_user_by_api_key(self, api_key: str, db: AsyncSession | None = None) -> UserModel | None:
-        log.info(f'authenticate_user_by_api_key')
-        # if no api_key, return None
-        if not api_key:
-            return None
-
+    async def authenticate_user_by_api_key(
+        self, api_key: str, db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        """Resolve an API key to its owning user, returning ``None`` on miss."""
+        log.info('authenticate_user_by_api_key')
+        if not api_key:  # empty / None key — reject immediately
+            return
         try:
-            user = await Users.get_user_by_api_key(api_key, db=db)
-            return user if user else None
+            return await Users.get_user_by_api_key(api_key, db=db)
         except Exception:
             return False
 
-    async def authenticate_user_by_email(self, email: str, db: AsyncSession | None = None) -> UserModel | None:
-        log.info(f'authenticate_user_by_email: {email}')
+    async def authenticate_user_by_email(
+        self,
+        email: str,
+        db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        """One-query authentication: JOIN Auth ↔ User, filter by email + active flag."""
+        log.info('authenticate_user_by_email: %s', email)
+
         try:
-            async with get_async_db_context(db) as db:
-                # Single JOIN query instead of two separate queries
-                result = await db.execute(
-                    select(Auth, User).join(User, Auth.id == User.id).filter(Auth.email == email, Auth.active == True)
+            async with get_async_db_context(db) as session:
+                stmt = (
+                    select(Auth, User)
+                    .join(User, Auth.id == User.id)
+                    .filter(Auth.email == email, Auth.active == True)
                 )
-                row = result.first()
-                if row:
-                    _, user = row
-                    return UserModel.model_validate(user)
-                return None
+                row = (await session.execute(stmt)).first()
+                if not row:
+                    return
+                _auth, matched_user = row
+                return UserModel.model_validate(matched_user)
         except Exception:
-            return None
+            return
 
-    async def update_user_password_by_id(self, id: str, new_password: str, db: AsyncSession | None = None) -> bool:
+    async def update_user_password_by_id(
+        self,
+        id: str,
+        new_password: str,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        """Hash-swap: replace the stored password hash for a given user."""
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(update(Auth).filter_by(id=id).values(password=new_password))
-                await db.commit()
-                return True if result.rowcount == 1 else False
-        except Exception:
-            return False
-
-    async def update_email_by_id(self, id: str, email: str, db: AsyncSession | None = None) -> bool:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(update(Auth).filter_by(id=id).values(email=email))
-                await db.commit()
-                if result.rowcount == 1:
-                    await Users.update_user_by_id(id, {'email': email}, db=db)
-                    return True
-                return False
+            async with get_async_db_context(db) as session:
+                stmt = update(Auth).filter_by(id=id).values(password=new_password)
+                result = await session.execute(stmt)
+                await session.commit()
+                return result.rowcount == 1
         except Exception:
             return False
 
-    async def delete_auth_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
+    async def update_email_by_id(
+        self, id: str, email: str, db: AsyncSession | None = None,
+    ) -> bool:
+        """Update the auth email and propagate the change to the User table."""
         try:
-            async with get_async_db_context(db) as db:
-                # Delete User
-                result = await Users.delete_user_by_id(id, db=db)
-
-                if result:
-                    await db.execute(delete(Auth).filter_by(id=id))
-                    await db.commit()
-
-                    return True
-                else:
+            async with get_async_db_context(db) as session:
+                stmt = update(Auth).filter_by(id=id).values(email=email)
+                result = await session.execute(stmt)
+                await session.commit()
+                if result.rowcount != 1:
                     return False
+                await Users.update_user_by_id(id, {'email': email}, db=session)
+                return True
         except Exception:
             return False
+
+    async def delete_auth_by_id(
+        self, id: str, db: AsyncSession | None = None,
+    ) -> bool:
+        """Delete a user and their auth record in a single transaction."""
+        try:  # delete user first, then auth (FK order)
+            async with get_async_db_context(db) as session:
+                if not await Users.delete_user_by_id(id, db=session):
+                    return False  # user deletion failed — abort
+                await session.execute(delete(Auth).filter_by(id=id))
+                await session.commit()
+                return True
+        except Exception:  # db / integrity error
+            return False  # partial deletion is rolled back by context manager
 
 
 Auths = AuthsTable()

@@ -118,8 +118,15 @@ reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
 class JSONField(types.TypeDecorator):
+    """Store arbitrary Python objects as JSON-encoded TEXT.
+
+    Used instead of native JSON columns for portability across SQLite and
+    PostgreSQL.  Values are serialized with ``json.dumps`` on write and
+    deserialized with ``json.loads`` on read.
+    """
+
     impl = types.Text
-    cache_ok = True
+    cache_ok = True  # safe for statement caching (no per-instance state)
 
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
         return json.dumps(value)

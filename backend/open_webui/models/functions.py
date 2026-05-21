@@ -1,8 +1,9 @@
+"""Function (filter/action/pipe) models, forms, and database operations."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import UserModel, UserResponse, Users
@@ -11,12 +12,6 @@ from sqlalchemy import BigInteger, Boolean, Column, Index, String, Text, delete,
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
-
-####################
-# Functions DB Schema
-# Each function here is a promise made. Let no promise
-# go unkept, and let none be called who cannot answer.
-####################
 
 
 class Function(Base):
@@ -30,11 +25,11 @@ class Function(Base):
     meta = Column(JSONField)
     valves = Column(JSONField)
     is_active = Column(Boolean)
-    is_global = Column(Boolean)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    is_global = Column(Boolean)  # if True, applied to every chat automatically
+    updated_at = Column(BigInteger)  # epoch seconds
+    created_at = Column(BigInteger)  # epoch seconds
 
-    __table_args__ = (Index('is_global_idx', 'is_global'),)
+    __table_args__ = (Index('is_global_idx', 'is_global'),)  # speed up global-function lookups
 
 
 class FunctionMeta(BaseModel):

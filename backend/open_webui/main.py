@@ -2912,10 +2912,12 @@ async def readiness_check():
 
 @app.get('/health/db')
 async def healthcheck_with_db():
+    """Verify database connectivity by issuing a lightweight ping."""
     await async_db_ping()
     return {'status': True}
 
 
+# Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 
 
@@ -2924,8 +2926,13 @@ async def serve_cache_file(
     path: str,
     user=Depends(get_verified_user),
 ):
+    """Serve cached files (e.g. tool outputs) with path-traversal protection.
+
+    Only ``image/*``, ``audio/*``, and ``video/*`` MIME types are served inline;
+    everything else gets a ``Content-Disposition: attachment`` header to prevent
+    XSS from user-generated HTML stored in the cache directory.
+    """
     file_path = os.path.abspath(os.path.join(CACHE_DIR, path))
-    # prevent path traversal
     if not file_path.startswith(os.path.abspath(CACHE_DIR)):
         raise HTTPException(status_code=404, detail='File not found')
     if not os.path.isfile(file_path):

@@ -1,3 +1,5 @@
+"""Long-term memory storage for per-user context recall."""
+
 from __future__ import annotations
 
 import time
@@ -9,36 +11,28 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-####################
-# Memory DB Schema
-# What was learned at cost should not need to be paid
-# for again. Let the memory hold.
-####################
-
 
 class Memory(Base):
+    """Persistent user memory backed by a vector collection."""
+
     __tablename__ = 'memory'
 
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String, index=True)
-    content = Column(Text)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    content = Column(Text)  # free-form text learned from conversation
+    updated_at = Column(BigInteger)  # epoch seconds
+    created_at = Column(BigInteger)  # epoch seconds
 
 
 class MemoryModel(BaseModel):
+    """Pydantic mirror of the Memory table row."""
+
     id: str
     user_id: str
     content: str
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
-
     model_config = ConfigDict(from_attributes=True)
-
-
-####################
-# Forms
-####################
 
 
 class MemoriesTable:
@@ -48,26 +42,20 @@ class MemoriesTable:
         content: str,
         db: AsyncSession | None = None,
     ) -> MemoryModel | None:
+        """Persist a new memory entry and return the created model."""
         async with get_async_db_context(db) as db:
-            id = str(uuid.uuid4())
-
-            memory = MemoryModel(
-                **{
-                    'id': id,
-                    'user_id': user_id,
-                    'content': content,
-                    'created_at': int(time.time()),
-                    'updated_at': int(time.time()),
-                }
+            now = int(time.time())
+            record = Memory(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                content=content,
+                created_at=now,
+                updated_at=now,
             )
-            result = Memory(**memory.model_dump())
-            db.add(result)
+            db.add(record)
             await db.commit()
-            await db.refresh(result)
-            if result:
-                return MemoryModel.model_validate(result)
-            else:
-                return None
+            await db.refresh(record)
+            return MemoryModel.model_validate(record) if record else None
 
     async def update_memory_by_id_and_user_id(
         self,
@@ -143,12 +131,10 @@ class MemoriesTable:
             try:
                 memory = await db.get(Memory, id)
                 if not memory or memory.user_id != user_id:
-                    return None
+                    return False
 
-                # Delete the memory
                 await db.delete(memory)
                 await db.commit()
-
                 return True
             except Exception:
                 return False

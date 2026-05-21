@@ -513,25 +513,20 @@ async def delete_all_user_chats(
 
 @router.get('/list/user/{user_id}', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
-    user_id: str,
-    page: int | None = None,
-    query: str | None = None,
-    order_by: str | None = None,
-    direction: str | None = None,
-    user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
+    user_id: str, page: int | None = None, query: str | None = None,
+    order_by: str | None = None, direction: str | None = None,
+    user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session),
 ):
+    """List chat summaries for a given user (admin-only endpoint)."""
     if not ENABLE_ADMIN_CHAT_ACCESS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if page is None:
-        page = 1
-
+    effective_page = page if page is not None else 1
     limit = 60
-    skip = (page - 1) * limit
+    skip = (effective_page - 1) * limit
 
     filter = {}
     if query:

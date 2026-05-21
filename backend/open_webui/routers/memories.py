@@ -62,14 +62,14 @@ class MemoryUpdateModel(BaseModel):
 
 @router.post('/add', response_model=MemoryModel | None)
 async def add_memory(
-    request: Request,
-    form_data: AddMemoryForm,
-    user=Depends(get_verified_user),
+    request: Request, form_data: AddMemoryForm, user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations (insert_new_memory) manage their own short-lived sessions.
-    # This prevents holding a connection during EMBEDDING_FUNCTION()
-    # which makes external embedding API calls (1-5+ seconds).
+    """Persist a new memory and embed it into the user's vector collection.
+
+    Does NOT use ``Depends(get_async_session)`` — database operations manage their
+    own short-lived sessions so a connection is not held during the external
+    embedding API call (``EMBEDDING_FUNCTION``), which can take 1-5+ seconds.
+    """
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

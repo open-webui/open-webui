@@ -1,8 +1,9 @@
+"""Tool models, forms, and database operations."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -14,23 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# Tools DB Schema
-# A tool that fails silently is worse than one that
-# refuses outright. Let each one here be honest in its work.
-####################
-
 
 class Tool(Base):
     __tablename__ = 'tool'
 
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String)
-    name = Column(Text)
-    content = Column(Text)
-    specs = Column(JSONField)
-    meta = Column(JSONField)
-    valves = Column(JSONField)
+    name = Column(Text)  # human-readable label
+    content = Column(Text)  # Python source code
+    specs = Column(JSONField)  # OpenAPI-style function specs
+    meta = Column(JSONField)  # description, manifest, etc.
+    valves = Column(JSONField)  # admin-configurable runtime parameters
 
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
@@ -141,13 +136,18 @@ class ToolsTable:
                     return None
             except Exception as e:
                 log.exception(f'Error creating a new tool: {e}')
-                return None
+                return None  # creation failed
 
-    async def get_tool_by_id(self, id: str, db: AsyncSession | None = None) -> ToolModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                tool = await db.get(Tool, id)
-                return await self._to_tool_model(tool, db=db) if tool else None
+    async def get_tool_by_id(
+        self, id: str, db: AsyncSession | None = None,
+    ) -> ToolModel | None:
+        """Fetch a single tool by primary key, including access grants."""
+        try:  # single PK lookup + access grants
+            async with get_async_db_context(db) as session:
+                tool = await session.get(Tool, id)
+                if not tool:
+                    return None
+                return await self._to_tool_model(tool, db=session)
         except Exception:
             return None
 

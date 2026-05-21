@@ -1,8 +1,9 @@
+"""File upload models, forms, and database operations."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import sanitize_metadata
@@ -12,12 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# Files DB Schema
-# What is written here bears witness. Let the testimony
-# remain as it was given, and let none tamper with it.
-####################
-
 
 class File(Base):
     __tablename__ = 'file'
@@ -25,7 +20,7 @@ class File(Base):
     user_id = Column(String)
     hash = Column(Text, nullable=True)
 
-    filename = Column(Text)
+    filename = Column(Text)  # original upload filename
     path = Column(Text, nullable=True)
 
     data = Column(JSON, nullable=True)
@@ -50,11 +45,6 @@ class FileModel(BaseModel):
 
     created_at: int | None  # timestamp in epoch
     updated_at: int | None  # timestamp in epoch
-
-
-####################
-# Forms
-####################
 
 
 class FileMeta(BaseModel):
@@ -157,16 +147,18 @@ class FilesTable:
                     return None
             except Exception as e:
                 log.exception(f'Error inserting a new file: {e}')
-                return None
+                return None  # insertion failed
 
-    async def get_file_by_id(self, id: str, db: AsyncSession | None = None) -> FileModel | None:
+    async def get_file_by_id(
+        self, id: str, db: AsyncSession | None = None,
+    ) -> FileModel | None:
+        """Look up a file by its primary key."""
         try:
             async with get_async_db_context(db) as db:
-                try:
-                    file = await db.get(File, id)
-                    return FileModel.model_validate(file) if file else None
-                except Exception:
+                file = await db.get(File, id)
+                if not file:
                     return None
+                return FileModel.model_validate(file)
         except Exception:
             return None
 

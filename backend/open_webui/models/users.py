@@ -1,9 +1,10 @@
+"""User models, Pydantic schemas, and database access layer."""
+
 from __future__ import annotations
 
 import datetime
 import time
 from typing import Optional
-
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import throttle
@@ -43,37 +44,44 @@ class UserSettings(BaseModel):
 
 
 class User(Base):
+    """Core user identity and profile record."""
+
     __tablename__ = 'user'
 
+    # Identity
     id = Column(String, primary_key=True, unique=True)
     email = Column(String)
     username = Column(String(50), nullable=True)
     role = Column(String)
-
     name = Column(String)
 
-    profile_image_url = Column(Text)
+    # Profile
+    profile_image_url = Column(Text)  # data-uri, path, or external URL
     profile_banner_image_url = Column(Text, nullable=True)
-
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)
     date_of_birth = Column(Date, nullable=True)
     timezone = Column(String, nullable=True)
 
+    # Online status
     presence_state = Column(String, nullable=True)
     status_emoji = Column(String, nullable=True)
     status_message = Column(Text, nullable=True)
     status_expires_at = Column(BigInteger, nullable=True)
 
+    # Metadata
     info = Column(JSON, nullable=True)
     settings = Column(JSON, nullable=True)
-
     oauth = Column(JSON, nullable=True)
     scim = Column(JSON, nullable=True)
 
+    # Timestamps (epoch seconds)
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+
+
+_DEFAULT_PROFILE_IMAGE_URL = '/api/v1/users/{user_id}/profile/image'
 
 
 class UserModel(BaseModel):
@@ -108,13 +116,19 @@ class UserModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
 
-    @model_validator(mode='after')
-    def set_profile_image_url(self):
-        if not self.profile_image_url:
-            self.profile_image_url = f'/api/v1/users/{self.id}/profile/image'
-        return self
+    @model_validator(mode='after')  # runs after all field validators
+    def _ensure_profile_image(self) -> 'UserModel':
+        """Fall back to a generated avatar when no explicit profile image is set."""
+        if self.profile_image_url:  # explicit image — nothing to do
+            return self
+        self.profile_image_url = _DEFAULT_PROFILE_IMAGE_URL.format(
+            user_id=self.id,
+        )
+        return self  # modified in-place
 
 
 class UserStatusModel(UserModel):
@@ -269,7 +283,7 @@ class UsersTable:
         oauth: dict | None = None,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        async with get_async_db_context(db) as db:
+        async with get_async_db_context(db) as session:
             user = UserModel(
                 **{
                     'id': id,
@@ -285,89 +299,108 @@ class UsersTable:
                 }
             )
             result = User(**user.model_dump())
-            db.add(result)
-            await db.commit()
-            await db.refresh(result)
+            session.add(result)
+            await session.commit()
+            await session.refresh(result)
             if result:
                 return user
             else:
                 return None
 
-    async def get_user_by_id(self, id: str, db: AsyncSession | None = None) -> UserModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
-                user = result.scalars().first()
-                return UserModel.model_validate(user) if user else None
-        except Exception:
-            return None
-
-    async def get_user_by_api_key(self, api_key: str, db: AsyncSession | None = None) -> UserModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(
-                    select(User).join(ApiKey, User.id == ApiKey.user_id).filter(ApiKey.key == api_key)
-                )
-                user = result.scalars().first()
-                return UserModel.model_validate(user) if user else None
-        except Exception:
-            return None
-
-    async def get_user_by_email(self, email: str, db: AsyncSession | None = None) -> UserModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter(func.lower(User.email) == email.lower()))
-                user = result.scalars().first()
-                return UserModel.model_validate(user) if user else None
-        except Exception:
-            return None
-
-    async def get_user_by_oauth_sub(self, provider: str, sub: str, db: AsyncSession | None = None) -> UserModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                dialect_name = db.bind.dialect.name
-
-                stmt = select(User)
-                if dialect_name == 'sqlite':
-                    stmt = stmt.filter(User.oauth.contains({provider: {'sub': sub}}))
-                elif dialect_name == 'postgresql':
-                    stmt = stmt.filter(User.oauth[provider].cast(JSONB)['sub'].astext == sub)
-
-                result = await db.execute(stmt)
-                user = result.scalars().first()
-                return UserModel.model_validate(user) if user else None
-        except Exception as e:
-            # You may want to log the exception here
-            return None
-
-    async def get_user_by_scim_external_id(
-        self, provider: str, external_id: str, db: AsyncSession | None = None
+    async def get_user_by_id(
+        self, id: str, db: AsyncSession | None = None,
     ) -> UserModel | None:
+        """Fetch a single user by primary key."""
+        try:  # db.get is a PK lookup — very cheap
+            async with get_async_db_context(db) as session:
+                user = await session.get(User, id)
+                if not user:
+                    return None
+                return UserModel.model_validate(user)
+        except Exception:  # stale session / connection drop
+            return None  # caller treats None as "not found"
+
+    async def get_user_by_api_key(
+        self, api_key: str, db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        """Resolve a user from their API key via a JOIN on the api_key table."""
+        try:  # single JOIN instead of two round-trips
+            async with get_async_db_context(db) as session:
+                result = await session.execute(
+                    select(User)
+                    .join(ApiKey, User.id == ApiKey.user_id)
+                    .filter(ApiKey.key == api_key),
+                )  # emits: SELECT user.* FROM user JOIN api_key …
+                user = result.scalars().first()  # None when key is invalid
+                if not user:
+                    return None
+                return UserModel.model_validate(user)
+        except Exception:  # stale session / connection drop
+            return
+
+    async def get_user_by_email(
+        self, email: str, db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        """Case-insensitive email lookup using SQL ``lower()``."""
         try:
-            async with get_async_db_context(db) as db:
-                dialect_name = db.bind.dialect.name
-
-                stmt = select(User)
-                if dialect_name == 'sqlite':
-                    stmt = stmt.filter(User.scim.contains({provider: {'external_id': external_id}}))
-                elif dialect_name == 'postgresql':
-                    stmt = stmt.filter(User.scim[provider].cast(JSONB)['external_id'].astext == external_id)
-
-                result = await db.execute(stmt)
-                user = result.scalars().first()
-                return UserModel.model_validate(user) if user else None
+            async with get_async_db_context(db) as session:
+                stmt = select(User).filter(
+                    func.lower(User.email) == email.lower(),
+                )
+                row = (await session.execute(stmt)).scalars().first()
+                if not row:
+                    return
+                return UserModel.model_validate(row)
         except Exception:
-            return None
+            return
+
+    async def get_user_by_oauth_sub(
+        self, provider: str, sub: str, db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        """Look up a user by OAuth provider + subject claim (dialect-aware JSON filter)."""
+        try:
+            async with get_async_db_context(db) as session:
+                dialect = session.bind.dialect.name
+                query = select(User)
+                if dialect == 'sqlite':
+                    oauth_match = User.oauth.contains({provider: {'sub': sub}})
+                    query = query.filter(oauth_match)
+                elif dialect == 'postgresql':
+                    oauth_match = User.oauth[provider].cast(JSONB)['sub'].astext == sub
+                    query = query.filter(oauth_match)
+                row = (await session.execute(query)).scalars().first()
+                if not row:
+                    return
+                return UserModel.model_validate(row)
+        except Exception:
+            return
+
+    async def get_user_by_scim_external_id(self, provider: str, external_id: str, db: AsyncSession | None = None) -> UserModel | None:
+        """Look up a user by SCIM provider + external ID (dialect-aware JSON filter)."""
+        try:
+            async with get_async_db_context(db) as session:
+                dialect = session.bind.dialect.name
+                query = select(User)
+                if dialect == 'sqlite':
+                    scim_match = User.scim.contains({provider: {'external_id': external_id}})
+                    query = query.filter(scim_match)
+                elif dialect == 'postgresql':
+                    scim_match = User.scim[provider].cast(JSONB)['external_id'].astext == external_id
+                    query = query.filter(scim_match)
+                row = (await session.execute(query)).scalars().first()
+                if not row:
+                    return
+                return UserModel.model_validate(row)
+        except Exception:
+            return
 
     async def get_users(
-        self,
-        filter: dict | None = None,
-        skip: int | None = None,
-        limit: int | None = None,
-        db: AsyncSession | None = None,
+        self, filter: dict | None = None, skip: int | None = None,
+        limit: int | None = None, db: AsyncSession | None = None,
     ) -> dict:
-        async with get_async_db_context(db) as db:
-            # Import here to avoid circular imports
+        """Paginated user listing with optional filters for role, group, and channel."""
+        async with get_async_db_context(db) as session:
+            # Deferred imports to avoid circular dependencies
             from open_webui.models.channels import ChannelMember
             from open_webui.models.groups import GroupMember
 
@@ -487,7 +520,7 @@ class UsersTable:
                 stmt = stmt.order_by(User.created_at.desc())
 
             # Count BEFORE pagination
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            count_result = await session.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             # correct pagination logic
@@ -496,7 +529,7 @@ class UsersTable:
             if limit is not None:
                 stmt = stmt.limit(limit)
 
-            result = await db.execute(stmt)
+            result = await session.execute(stmt)
             users = result.scalars().all()
             return {
                 'users': [UserModel.model_validate(user) for user in users],
@@ -504,44 +537,47 @@ class UsersTable:
             }
 
     async def get_users_by_group_id(self, group_id: str, db: AsyncSession | None = None) -> list[UserModel]:
-        async with get_async_db_context(db) as db:
+        async with get_async_db_context(db) as session:
             from open_webui.models.groups import GroupMember
 
-            result = await db.execute(
+            result = await session.execute(
                 select(User).join(GroupMember, User.id == GroupMember.user_id).filter(GroupMember.group_id == group_id)
             )
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
     async def get_users_by_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[UserStatusModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(User).filter(User.id.in_(user_ids)))
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
     async def get_num_users(self, db: AsyncSession | None = None) -> int | None:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(func.count()).select_from(User))
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(func.count()).select_from(User))
             return result.scalar()
 
     async def has_users(self, db: AsyncSession | None = None) -> bool:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(exists(select(User))))
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(exists(select(User))))
             return result.scalar()
 
     async def get_first_user(self, db: AsyncSession | None = None) -> UserModel:
+        """Return the earliest-created user (bootstrap admin detection)."""
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).order_by(User.created_at).limit(1))
-                user = result.scalars().first()
-                return UserModel.model_validate(user) if user else None
+            async with get_async_db_context(db) as session:
+                stmt = select(User).order_by(User.created_at).limit(1)
+                row = (await session.execute(stmt)).scalars().first()
+                if not row:
+                    return
+                return UserModel.model_validate(row)
         except Exception:
-            return None
+            return
 
     async def get_user_webhook_url_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
 
                 if user.settings is None:
@@ -552,67 +588,65 @@ class UsersTable:
             return None
 
     async def get_num_users_active_today(self, db: AsyncSession | None = None) -> int | None:
-        async with get_async_db_context(db) as db:
+        async with get_async_db_context(db) as session:
             current_timestamp = int(datetime.datetime.now().timestamp())
             today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
-            result = await db.execute(
+            result = await session.execute(
                 select(func.count()).select_from(User).filter(User.last_active_at > today_midnight_timestamp)
             )
             return result.scalar()
 
     async def update_user_role_by_id(self, id: str, role: str, db: AsyncSession | None = None) -> UserModel | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
-                user = result.scalars().first()
+            async with get_async_db_context(db) as session:
+                user = (await session.execute(select(User).filter_by(id=id))).scalars().first()
                 if not user:
-                    return None
+                    return
                 user.role = role
-                await db.commit()
-                await db.refresh(user)
+                await session.commit()
+                await session.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
-            return None
+            return
 
     async def update_user_status_by_id(
         self, id: str, form_data: UserStatus, db: AsyncSession | None = None
     ) -> UserModel | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
                 if not user:
                     return None
                 for key, value in form_data.model_dump(exclude_none=True).items():
                     setattr(user, key, value)
-                await db.commit()
-                await db.refresh(user)
+                await session.commit()
+                await session.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
     async def update_user_profile_image_url_by_id(
-        self, id: str, profile_image_url: str, db: AsyncSession | None = None
+        self, id: str, profile_image_url: str, db: AsyncSession | None = None,
     ) -> UserModel | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
-                user = result.scalars().first()
-                if not user:
-                    return None
-                user.profile_image_url = profile_image_url
-                await db.commit()
-                await db.refresh(user)
-                return UserModel.model_validate(user)
+            async with get_async_db_context(db) as session:
+                row = (await session.execute(select(User).filter_by(id=id))).scalars().first()
+                if row is None:
+                    return
+                row.profile_image_url = profile_image_url
+                await session.commit()
+                await session.refresh(row)
+                return UserModel.model_validate(row)
         except Exception:
-            return None
+            return
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
     async def update_last_active_by_id(self, id: str, db: AsyncSession | None = None) -> None:
         try:
-            async with get_async_db_context(db) as db:
-                await db.execute(update(User).filter_by(id=id).values(last_active_at=int(time.time())))
-                await db.commit()
+            async with get_async_db_context(db) as session:
+                await session.execute(update(User).filter_by(id=id).values(last_active_at=int(time.time())))
+                await session.commit()
         except Exception:
             pass
 
@@ -628,8 +662,8 @@ class UsersTable:
             }
         """
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
                 if not user:
                     return None
@@ -641,8 +675,8 @@ class UsersTable:
                 oauth[provider] = {'sub': sub}
 
                 # Persist updated JSON
-                await db.execute(update(User).filter_by(id=id).values(oauth=oauth))
-                await db.commit()
+                await session.execute(update(User).filter_by(id=id).values(oauth=oauth))
+                await session.commit()
 
                 return UserModel.model_validate(user)
 
@@ -665,8 +699,8 @@ class UsersTable:
             }
         """
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
                 if not user:
                     return None
@@ -674,8 +708,8 @@ class UsersTable:
                 scim = user.scim or {}
                 scim[provider] = {'external_id': external_id}
 
-                await db.execute(update(User).filter_by(id=id).values(scim=scim))
-                await db.commit()
+                await session.execute(update(User).filter_by(id=id).values(scim=scim))
+                await session.commit()
 
                 return UserModel.model_validate(user)
 
@@ -684,15 +718,15 @@ class UsersTable:
 
     async def update_user_by_id(self, id: str, updated: dict, db: AsyncSession | None = None) -> UserModel | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
                 if not user:
                     return None
                 for key, value in updated.items():
                     setattr(user, key, value)
-                await db.commit()
-                await db.refresh(user)
+                await session.commit()
+                await session.refresh(user)
                 return UserModel.model_validate(user)
         except Exception as e:
             print(e)
@@ -702,8 +736,8 @@ class UsersTable:
         self, id: str, updated: dict, db: AsyncSession | None = None
     ) -> UserModel | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(User).filter_by(id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
                 if not user:
                     return None
@@ -715,10 +749,10 @@ class UsersTable:
 
                 user_settings.update(updated)
 
-                await db.execute(update(User).filter_by(id=id).values(settings=user_settings))
-                await db.commit()
+                await session.execute(update(User).filter_by(id=id).values(settings=user_settings))
+                await session.commit()
 
-                result = await db.execute(select(User).filter_by(id=id))
+                result = await session.execute(select(User).filter_by(id=id))
                 user = result.scalars().first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -733,12 +767,12 @@ class UsersTable:
             await Groups.remove_user_from_all_groups(id)
 
             # Delete User Chats
-            result = await Chats.delete_chats_by_user_id(id, db=db)
+            result = await Chats.delete_chats_by_user_id(id, db=session)
             if result:
-                async with get_async_db_context(db) as db:
+                async with get_async_db_context(db) as session:
                     # Delete User
-                    await db.execute(delete(User).filter_by(id=id))
-                    await db.commit()
+                    await session.execute(delete(User).filter_by(id=id))
+                    await session.commit()
 
                 return True
             else:
@@ -748,8 +782,8 @@ class UsersTable:
 
     async def get_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
         try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(ApiKey).filter_by(user_id=id))
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(ApiKey).filter_by(user_id=id))
                 api_key = result.scalars().first()
                 return api_key.key if api_key else None
         except Exception:
@@ -757,9 +791,9 @@ class UsersTable:
 
     async def update_user_api_key_by_id(self, id: str, api_key: str, db: AsyncSession | None = None) -> bool:
         try:
-            async with get_async_db_context(db) as db:
-                await db.execute(delete(ApiKey).filter_by(user_id=id))
-                await db.commit()
+            async with get_async_db_context(db) as session:
+                await session.execute(delete(ApiKey).filter_by(user_id=id))
+                await session.commit()
 
                 now = int(time.time())
                 new_api_key = ApiKey(
@@ -769,8 +803,8 @@ class UsersTable:
                     created_at=now,
                     updated_at=now,
                 )
-                db.add(new_api_key)
-                await db.commit()
+                session.add(new_api_key)
+                await session.commit()
 
                 return True
 
@@ -779,22 +813,22 @@ class UsersTable:
 
     async def delete_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
-            async with get_async_db_context(db) as db:
-                await db.execute(delete(ApiKey).filter_by(user_id=id))
-                await db.commit()
+            async with get_async_db_context(db) as session:
+                await session.execute(delete(ApiKey).filter_by(user_id=id))
+                await session.commit()
                 return True
         except Exception:
             return False
 
     async def get_valid_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[str]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(User).filter(User.id.in_(user_ids)))
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()
             return [user.id for user in users]
 
     async def get_super_admin_user(self, db: AsyncSession | None = None) -> UserModel | None:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(User).filter_by(role='admin').limit(1))
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(User).filter_by(role='admin').limit(1))
             user = result.scalars().first()
             if user:
                 return UserModel.model_validate(user)
@@ -802,10 +836,10 @@ class UsersTable:
                 return None
 
     async def get_active_user_count(self, db: AsyncSession | None = None) -> int:
-        async with get_async_db_context(db) as db:
+        async with get_async_db_context(db) as session:
             # Consider user active if last_active_at within the last 3 minutes
             three_minutes_ago = int(time.time()) - 180
-            result = await db.execute(
+            result = await session.execute(
                 select(func.count()).select_from(User).filter(User.last_active_at >= three_minutes_ago)
             )
             return result.scalar()
@@ -819,8 +853,8 @@ class UsersTable:
         return False
 
     async def is_user_active(self, user_id: str, db: AsyncSession | None = None) -> bool:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(User).filter_by(id=user_id))
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(User).filter_by(id=user_id))
             user = result.scalars().first()
             if user and user.last_active_at:
                 # Consider user active if last_active_at within the last 3 minutes

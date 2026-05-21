@@ -60,38 +60,19 @@ class ModelMeta(BaseModel):
 
 
 class Model(Base):
+    """Workspace model entry — wraps an upstream LLM with custom params and metadata."""
+
     __tablename__ = 'model'
 
-    id = Column(Text, primary_key=True, unique=True)
-    """
-        The model's id as used in the API. If set to an existing model, it will override the model.
-    """
-    user_id = Column(Text)
-
-    base_model_id = Column(Text, nullable=True)
-    """
-        An optional pointer to the actual model that should be used when proxying requests.
-    """
-
-    name = Column(Text)
-    """
-        The human-readable display name of the model.
-    """
-
-    params = Column(JSONField)
-    """
-        Holds a JSON encoded blob of parameters, see `ModelParams`.
-    """
-
-    meta = Column(JSONField)
-    """
-        Holds a JSON encoded blob of metadata, see `ModelMeta`.
-    """
-
-    is_active = Column(Boolean, default=True)
-
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    id = Column(Text, primary_key=True, unique=True)  # API model identifier; overrides built-in when matching
+    user_id = Column(Text)  # owner
+    base_model_id = Column(Text, nullable=True)  # actual upstream model for proxied requests
+    name = Column(Text)  # human-readable display name
+    params = Column(JSONField)  # see ModelParams
+    meta = Column(JSONField)  # see ModelMeta
+    is_active = Column(Boolean, default=True)  # soft-disable toggle
+    updated_at = Column(BigInteger)  # epoch seconds
+    created_at = Column(BigInteger)  # epoch seconds
 
 
 class ModelModel(BaseModel):
@@ -109,12 +90,9 @@ class ModelModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
-
-
-####################
-# Forms
-####################
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
 
 
 class ModelUserResponse(ModelModel):
