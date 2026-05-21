@@ -118,13 +118,17 @@ class TestNotConfigured:
 
 class TestHappyPath:
     @pytest.mark.asyncio
-    async def test_returns_parsed_data_field(self, monkeypatch, configured_env):
-        body = {'data': {'user': {'email': 'a@b'}, 'features': ['chat']}}
+    async def test_returns_sidebar_subtree(self, monkeypatch, configured_env):
+        # fetch_sidebar extracts and returns just the `sidebar` subtree
+        # — siblings (user, company, features) are intentionally dropped
+        # so the OWUI shell only gets what it needs.
+        sidebar = {'main': [{'label': 'Chat'}], 'bottom': [{'label': 'Settings'}]}
+        body = {'data': {'user': {'email': 'a@b'}, 'features': ['chat'], 'sidebar': sidebar}}
         _patch_client(monkeypatch, response=_mock_response(200, body))
 
         result = await fetch_sidebar('a@b')
 
-        assert result == body['data']
+        assert result == sidebar
 
     @pytest.mark.asyncio
     async def test_request_uses_token_and_url(self, monkeypatch, configured_env):
@@ -134,7 +138,7 @@ class TestHappyPath:
             captured['url'] = url
             captured['params'] = params
             captured['headers'] = headers
-            return _mock_response(200, {'data': {}})
+            return _mock_response(200, {'data': {'sidebar': {'main': [], 'bottom': []}}})
 
         _patch_client(monkeypatch, handler=handler)
         await fetch_sidebar('a@b')
@@ -142,6 +146,22 @@ class TestHappyPath:
         assert captured['url'] == 'https://wb.example/v1/companies/c-uuid/sidebar'
         assert captured['params'] == {'user_email': 'a@b'}
         assert captured['headers'] == {'Authorization': 'Bearer stw_test.secret'}
+
+    @pytest.mark.asyncio
+    async def test_request_normalizes_email_to_lowercase(self, monkeypatch, configured_env):
+        # Request params should carry the normalized lowercase email so
+        # request and cache key are symmetric (and so two callers using
+        # different cases hit the same upstream cache).
+        captured = {}
+
+        def handler(url, params, headers):
+            captured['params'] = params
+            return _mock_response(200, {'data': {'sidebar': {'main': [], 'bottom': []}}})
+
+        _patch_client(monkeypatch, handler=handler)
+        await fetch_sidebar('Alice@Example.COM')
+
+        assert captured['params'] == {'user_email': 'alice@example.com'}
 
 
 class TestCaching:
@@ -179,7 +199,9 @@ class TestCaching:
 
         def handler(*_a, **_kw):
             call_count['n'] += 1
-            return _mock_response(200, {'data': {'v': call_count['n']}})
+            return _mock_response(
+                200, {'data': {'sidebar': {'main': [{'label': f'v{call_count["n"]}'}], 'bottom': []}}}
+            )
 
         _patch_client(monkeypatch, handler=handler)
 
@@ -193,7 +215,7 @@ class TestCaching:
 
         result = await fetch_sidebar('a@b')
         assert call_count['n'] == 2
-        assert result == {'v': 2}
+        assert result == {'main': [{'label': 'v2'}], 'bottom': []}
 
 
 class TestNegativeCache:
@@ -217,9 +239,10 @@ class TestSoftFail:
     @pytest.mark.asyncio
     async def test_exception_returns_last_known_value(self, monkeypatch, configured_env):
         # First populate the cache with a real value
-        _patch_client(monkeypatch, response=_mock_response(200, {'data': {'ok': True}}))
+        good_sidebar = {'main': [{'label': 'Chat'}], 'bottom': []}
+        _patch_client(monkeypatch, response=_mock_response(200, {'data': {'sidebar': good_sidebar}}))
         first = await fetch_sidebar('a@b')
-        assert first == {'ok': True}
+        assert first == good_sidebar
 
         # Expire the entry so the next call goes back to the network,
         # but the network call raises. Last-known value should come back.
@@ -228,7 +251,7 @@ class TestSoftFail:
         _patch_client(monkeypatch, exception=httpx.ConnectError('boom'))
 
         result = await fetch_sidebar('a@b')
-        assert result == {'ok': True}
+        assert result == good_sidebar
 
     @pytest.mark.asyncio
     async def test_exception_with_no_prior_cache_returns_none(self, monkeypatch, configured_env):
@@ -261,7 +284,8 @@ class TestSoftFail:
     @pytest.mark.asyncio
     async def test_exception_preserves_last_known_value_in_cache(self, monkeypatch, configured_env):
         # First populate with a real value
-        _patch_client(monkeypatch, response=_mock_response(200, {'data': {'ok': True}}))
+        good_sidebar = {'main': [{'label': 'Chat'}], 'bottom': []}
+        _patch_client(monkeypatch, response=_mock_response(200, {'data': {'sidebar': good_sidebar}}))
         await fetch_sidebar('a@b')
 
         # Expire the entry, then a network call raises
@@ -275,7 +299,7 @@ class TestSoftFail:
         await fetch_sidebar('a@b')
 
         cached_ts, cached_data = _CACHE['a@b']
-        assert cached_data == {'ok': True}
+        assert cached_data == good_sidebar
         # Fresh timestamp — well inside the TTL window
         assert cached_ts > ts
 

@@ -310,8 +310,12 @@
 	function buildShell(base, cloudLockUrl, sidebarData) {
 		var nav;
 		var bottom;
-		var main = sidebarData && sidebarData.sidebar && sidebarData.sidebar.main;
-		var bottomItems = sidebarData && sidebarData.sidebar && sidebarData.sidebar.bottom;
+		/* sidebarData is the trimmed `sidebar` subtree from Workbench:
+		 * `{main: [...], bottom: [...]}`. The /api/config endpoint
+		 * forwards only this — siblings like user/company/features
+		 * aren't included to keep the payload minimal. */
+		var main = sidebarData && sidebarData.main;
+		var bottomItems = sidebarData && sidebarData.bottom;
 
 		/* Origins the shell is allowed to link to: Workbench itself
 		 * and CloudLock (the "Private Cloud" target). Anything else

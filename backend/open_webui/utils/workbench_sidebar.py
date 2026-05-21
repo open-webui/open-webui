@@ -21,10 +21,8 @@ a brief Workbench outage doesn't break the OWUI config endpoint.
 
 import logging
 import time
-from typing import Optional
 
 import httpx
-
 from open_webui.env import (
     WORKBENCH_API_TOKEN,
     WORKBENCH_COMPANY_ID,
@@ -37,7 +35,7 @@ _TTL_SECONDS = 60
 _TIMEOUT_SECONDS = 2.0
 # Optional[dict] in the second slot: we cache `None` on 404 so unknown
 # emails don't beat on Workbench every request within the TTL.
-_CACHE: dict[str, tuple[float, Optional[dict]]] = {}
+_CACHE: dict[str, tuple[float, dict | None]] = {}
 
 
 def _is_configured() -> bool:
@@ -55,29 +53,45 @@ def _prune_expired(now: float) -> None:
         _CACHE.pop(k, None)
 
 
-async def fetch_sidebar(user_email: Optional[str]) -> Optional[dict]:
+async def fetch_sidebar(user_email: str | None) -> dict | None:
     """
     Resolve the sidebar entitlement payload for the given user email.
 
-    Returns the `data` object from Workbench (with `user`, `company`,
-    `features`, and `sidebar` keys), or None if not configured / the
-    user is unknown / a transient error occurred.
+    Returns the `sidebar` subtree from Workbench (`{main: [...], bottom: [...]}`),
+    or None if not configured / the user is unknown / a transient error
+    occurred. Workbench's response envelope also includes `user`,
+    `company`, and `features` siblings, but the OWUI shell only renders
+    `sidebar`, so we cache + forward just that to keep the /api/config
+    payload minimal and avoid exposing extra identity data.
     """
     if not user_email or not _is_configured():
         return None
 
-    key = user_email.lower()
+    normalized_email = user_email.lower()
     now = time.time()
-    cached = _CACHE.get(key)
+    cached = _CACHE.get(normalized_email)
     if cached and now - cached[0] < _TTL_SECONDS:
         return cached[1]
 
     url = f'{WORKBENCH_URL}/v1/companies/{WORKBENCH_COMPANY_ID}/sidebar'
     headers = {'Authorization': f'Bearer {WORKBENCH_API_TOKEN}'}
-    params = {'user_email': user_email}
+    # Send the normalized lowercase email so the request and the cache
+    # key are symmetric. Workbench downcases on its end too, so this is
+    # the same semantically — but it avoids the edge case where two
+    # callers spell the same email differently and one hits cache while
+    # the other doesn't see the same response.
+    params = {'user_email': normalized_email}
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(
+            timeout=_TIMEOUT_SECONDS,
+            # Follow benign redirects (proxy normalization, trailing-slash
+            # rewrites). Without this httpx returns the 3xx as-is and
+            # raise_for_status() ignores it, so a misconfigured proxy
+            # would surface as a JSON parse error rather than a clear
+            # request failure.
+            follow_redirects=True,
+        ) as client:
             response = await client.get(url, params=params, headers=headers)
 
         if response.status_code == 404:
@@ -85,14 +99,14 @@ async def fetch_sidebar(user_email: Optional[str]) -> Optional[dict]:
             # Don't keep retrying every request; cache `None` so the
             # next call within the TTL is a no-op.
             _prune_expired(now)
-            _CACHE[key] = (now, None)
+            _CACHE[normalized_email] = (now, None)
             return None
 
         response.raise_for_status()
-        data = response.json().get('data')
+        sidebar = (response.json().get('data') or {}).get('sidebar')
         _prune_expired(now)
-        _CACHE[key] = (now, data)
-        return data
+        _CACHE[normalized_email] = (now, sidebar)
+        return sidebar
     except Exception as e:  # noqa: BLE001 — soft-fail, see docstring
         log.warning(
             'workbench sidebar fetch failed for %s: %s: %s',
@@ -110,5 +124,5 @@ async def fetch_sidebar(user_email: Optional[str]) -> Optional[dict]:
         # retries to one per TTL — config endpoint stays fast.
         last_known = cached[1] if cached else None
         _prune_expired(now)
-        _CACHE[key] = (now, last_known)
+        _CACHE[normalized_email] = (now, last_known)
         return last_known
