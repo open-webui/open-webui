@@ -16,7 +16,11 @@
 </script>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+	import { copyToClipboard } from '$lib/utils';
+	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let content: string;
 	export let displayMode: boolean = false;
@@ -29,5 +33,16 @@
 </script>
 
 {#if renderToString}
-	{@html renderToString(content, { displayMode, throwOnError: false })}
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<svelte:element
+		this={displayMode ? 'div' : 'span'}
+		class="cursor-pointer"
+		on:click={() => {
+			copyToClipboard(content);
+			toast.success($i18n.t('Copied to clipboard'));
+		}}
+	>
+		{@html renderToString(content, { displayMode, throwOnError: false })}
+	</svelte:element>
 {/if}

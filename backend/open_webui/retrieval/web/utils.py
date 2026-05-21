@@ -5,6 +5,8 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
+
+import requests
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
@@ -28,6 +30,7 @@ from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -45,7 +48,7 @@ from open_webui.config import (
     WEB_FETCH_FILTER_LIST,
 )
 from open_webui.utils.misc import is_string_allowed
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +67,14 @@ def resolve_hostname(hostname):
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        # Reject parser-confusing chars: urlparse and requests/aiohttp split
+        # on these differently, e.g. http://127.0.0.1\@1.1.1.1 → urlparse
+        # extracts 1.1.1.1 (public, passes filter) while requests connects
+        # to 127.0.0.1 (internal). Same shape with tab/CR/LF.
+        if any(ch in url for ch in ('\\', '\t', '\n', '\r')):
+            log.warning(f'Blocked URL with parser-confusing char: {url!r}')
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         parsed_url = urllib.parse.urlparse(url)
@@ -216,39 +227,20 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 
     def lazy_load(self) -> Iterator[Document]:
         try:
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.api_key}',
-            }
-
             for url in self.web_paths:
-                payload = {
-                    'url': url,
-                    'formats': ['markdown'],
-                    **self.params,
-                }
-                if self.timeout:
-                    payload['timeout'] = self.timeout * 1000
-
-                response = requests.post(
-                    f'{self.api_url}/v1/scrape',
-                    headers=headers,
-                    json=payload,
-                    timeout=self.timeout or 60,
-                    verify=self.verify_ssl,
+                doc = scrape_firecrawl_url(
+                    self.api_url,
+                    self.api_key,
+                    url,
+                    verify_ssl=self.verify_ssl,
+                    timeout=self.timeout,
+                    params=self.params,
                 )
-                response.raise_for_status()
-                data = response.json().get('data', {})
-                metadata = data.get('metadata', {})
-                source = metadata.get('url') or metadata.get('sourceURL') or url
-
-                yield Document(
-                    page_content=data.get('markdown', ''),
-                    metadata={'source': source},
-                )
+                if doc is not None:
+                    yield doc
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f'Error extracting content from URLs: {e}')
+                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
 
@@ -259,7 +251,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield doc
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(f'Error extracting content from URLs: {e}')
+                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
             else:
                 raise e
 
@@ -501,6 +493,17 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        # Prevent redirect-based SSRF on the synchronous _scrape() path.
+        # validate_url() is called once on the originally-submitted URL, but the
+        # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
+        # which by default follows redirects. Without the override below, an attacker
+        # can submit a public URL that 302-redirects to an internal address (RFC1918,
+        # 127.0.0.1, 169.254.169.254, etc.) and the redirected target is fetched without
+        # re-validation. Matches the policy enforced on the async _fetch() path below.
+        self.requests_kwargs = {
+            **(self.requests_kwargs or {}),
+            'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+        }
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
@@ -518,7 +521,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                     async with session.get(
                         url,
                         **(self.requests_kwargs | kwargs),
-                        allow_redirects=False,
+                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()

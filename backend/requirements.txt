@@ -19,13 +19,14 @@ aiocache==0.12.3
 aiofiles==25.1.0
 starlette-compress==1.7.0
 Brotli==1.2.0
+brotlicffi==1.2.0.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 
-sqlalchemy==2.0.48
+sqlalchemy[asyncio]==2.0.48
 aiosqlite==0.21.0
-asyncpg==0.30.0
+psycopg[binary]==3.2.9
 alembic==1.18.4
 peewee==3.19.0
 peewee-migrate==1.14.3
@@ -143,9 +144,6 @@ pytest-docker~=3.2.5
 
 ## LDAP
 ldap3==2.9.1
-
-## Firecrawl
-firecrawl-py==4.18.0
 
 ## Trace
 opentelemetry-api==1.40.0

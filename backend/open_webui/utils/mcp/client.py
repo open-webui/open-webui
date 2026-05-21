@@ -44,7 +44,7 @@ def create_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=True)
 
 
-async def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
+def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=False)
 
 
@@ -155,20 +155,18 @@ class MCPClient:
         self.session = None
 
         try:
-            await asyncio.wait_for(
-                asyncio.shield(exit_stack.aclose()),
-                timeout=5.0,
-            )
-        except asyncio.TimeoutError:
+            # IMPORTANT: Do NOT use asyncio.shield() or asyncio.wait_for()
+            # because they create a new asyncio task, which violates the MCP SDK's
+            # requirement that its TaskGroup be exited in the exact same task.
+            # ALSO do NOT use anyio.CancelScope(shield=True) or anyio.fail_after(),
+            # because they push a new cancel scope onto the task, violating LIFO
+            # order when aclose() attempts to exit the inner TaskGroup.
+            # We simply call aclose() directly. If the task is cancelled, the
+            # sockets will eventually be cleaned up by garbage collection.
+            await exit_stack.aclose()
+        except TimeoutError:
             log.warning('MCPClient.disconnect() timed out after 5 s')
         except RuntimeError as exc:
-            # The MCP SDK's streamable_http transport uses anyio task
-            # groups and async generators internally.  When we close
-            # a session that was interrupted mid-flight these can
-            # raise RuntimeError ("aclose(): asynchronous generator is
-            # already running" or "Attempted to exit cancel scope in a
-            # different task").  Swallowing the error here prevents the
-            # orphaned coroutines from spinning at 100 % CPU.
             log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
         except Exception as exc:
             log.debug('MCPClient.disconnect() error: %s', exc)

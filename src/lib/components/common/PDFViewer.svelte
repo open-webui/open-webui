@@ -18,6 +18,9 @@
 	let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastRenderedZoom = 1;
 
+	// Keep a reference to TextLayer instances so we can update/cancel them
+	let textLayerInstances: any[] = [];
+
 	const initPanzoom = () => {
 		if (pzInstance) {
 			pzInstance.dispose();
@@ -84,25 +87,54 @@
 	// Re-render existing canvases at a new zoom level (preserves panzoom transform)
 	const rerenderPages = async (forZoom: number) => {
 		if (!pdfDoc || !sceneElement) return;
+		const pdfjs = await import('pdfjs-dist');
 		const dpr = window.devicePixelRatio || 1;
 		const containerWidth = outerContainer?.clientWidth || 800;
 
-		const canvases = sceneElement.querySelectorAll('canvas');
+		const pageWrappers = sceneElement.querySelectorAll('.pdf-page-wrapper');
 
-		for (let i = 0; i < canvases.length; i++) {
+		// Cancel old text layers
+		for (const tl of textLayerInstances) {
+			try {
+				tl.cancel();
+			} catch (_) {}
+		}
+		textLayerInstances = [];
+
+		for (let i = 0; i < pageWrappers.length; i++) {
 			const page = await pdfDoc.getPage(i + 1);
 			const viewport = page.getViewport({ scale: 1 });
 			const cssScale = containerWidth / viewport.width;
 			const renderScale = cssScale * forZoom * dpr;
 			const scaledViewport = page.getViewport({ scale: renderScale });
+			const cssViewport = page.getViewport({ scale: cssScale });
 
-			const canvas = canvases[i];
+			const wrapper = pageWrappers[i] as HTMLElement;
+			// Update the CSS custom property so textLayer dimensions resolve correctly
+			wrapper.style.setProperty('--scale-factor', String(cssViewport.scale));
+
+			const canvas = wrapper.querySelector('canvas')!;
 			canvas.width = scaledViewport.width;
 			canvas.height = scaledViewport.height;
 
 			const ctx = canvas.getContext('2d');
 			if (ctx) {
 				await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+			}
+
+			// Rebuild text layer
+			const textLayerDiv = wrapper.querySelector('.textLayer') as HTMLElement;
+			if (textLayerDiv) {
+				textLayerDiv.innerHTML = '';
+
+				const textContent = await page.getTextContent();
+				const textLayer = new pdfjs.TextLayer({
+					textContentSource: textContent,
+					container: textLayerDiv,
+					viewport: cssViewport
+				});
+				await textLayer.render();
+				textLayerInstances.push(textLayer);
 			}
 		}
 		lastRenderedZoom = forZoom;
@@ -111,9 +143,18 @@
 	const renderAllPages = async () => {
 		if (!pdfDoc || !sceneElement) return;
 
-		// Clear previous canvases
+		// Clear previous content
 		sceneElement.innerHTML = '';
 
+		// Cancel old text layers
+		for (const tl of textLayerInstances) {
+			try {
+				tl.cancel();
+			} catch (_) {}
+		}
+		textLayerInstances = [];
+
+		const pdfjs = await import('pdfjs-dist');
 		const dpr = window.devicePixelRatio || 1;
 
 		for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -125,7 +166,24 @@
 			const cssScale = containerWidth / viewport.width;
 			const renderScale = cssScale * dpr;
 			const scaledViewport = page.getViewport({ scale: renderScale });
+			const cssViewport = page.getViewport({ scale: cssScale });
 
+			// Create page wrapper (positioned container for canvas + text layer)
+			const wrapper = document.createElement('div');
+			wrapper.className = 'pdf-page-wrapper';
+			wrapper.style.position = 'relative';
+			wrapper.style.width = `${Math.round(cssScale * viewport.width)}px`;
+			wrapper.style.height = `${Math.round(cssScale * viewport.height)}px`;
+			wrapper.style.display = 'block';
+			// pdfjs TextLayer uses --total-scale-factor (= --scale-factor * --user-unit)
+			// to position/size text spans. We must set --scale-factor so the calc resolves.
+			wrapper.style.setProperty('--scale-factor', String(cssViewport.scale));
+
+			if (i > 1) {
+				wrapper.style.marginTop = '4px';
+			}
+
+			// Create canvas
 			const canvas = document.createElement('canvas');
 			canvas.width = scaledViewport.width;
 			canvas.height = scaledViewport.height;
@@ -133,18 +191,29 @@
 			canvas.style.width = `${Math.round(cssScale * viewport.width)}px`;
 			canvas.style.height = `${Math.round(cssScale * viewport.height)}px`;
 			canvas.style.display = 'block';
-
-			if (i > 1) {
-				canvas.style.marginTop = '4px';
-			}
-
-			sceneElement.appendChild(canvas);
+			wrapper.appendChild(canvas);
 
 			const ctx = canvas.getContext('2d');
 			await page.render({
 				canvasContext: ctx,
 				viewport: scaledViewport
 			}).promise;
+
+			// Create text layer overlay — pdfjs setLayerDimensions handles its sizing
+			const textLayerDiv = document.createElement('div');
+			textLayerDiv.className = 'textLayer';
+			wrapper.appendChild(textLayerDiv);
+
+			const textContent = await page.getTextContent();
+			const textLayer = new pdfjs.TextLayer({
+				textContentSource: textContent,
+				container: textLayerDiv,
+				viewport: cssViewport
+			});
+			await textLayer.render();
+			textLayerInstances.push(textLayer);
+
+			sceneElement.appendChild(wrapper);
 		}
 
 		lastRenderedZoom = 1;
@@ -187,6 +256,12 @@
 	onDestroy(() => {
 		if (rerenderTimer) clearTimeout(rerenderTimer);
 		pzInstance?.dispose();
+		for (const tl of textLayerInstances) {
+			try {
+				tl.cancel();
+			} catch (_) {}
+		}
+		textLayerInstances = [];
 		if (pdfDoc) {
 			pdfDoc.destroy();
 			pdfDoc = null;
@@ -257,3 +332,98 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/*
+	 * Minimal textLayer styles extracted from pdfjs-dist/web/pdf_viewer.css.
+	 * These ensure the invisible text spans are positioned exactly over the
+	 * rendered canvas so that browser-native Ctrl+F search and text selection
+	 * work correctly.
+	 */
+	:global(.textLayer) {
+		position: absolute;
+		text-align: initial;
+		inset: 0;
+		overflow: clip;
+		opacity: 1;
+		line-height: 1;
+		-webkit-text-size-adjust: none;
+		-moz-text-size-adjust: none;
+		text-size-adjust: none;
+		forced-color-adjust: none;
+		transform-origin: 0 0;
+		caret-color: CanvasText;
+		z-index: 0;
+	}
+
+	:global(.textLayer :is(span, br)) {
+		color: transparent;
+		position: absolute;
+		white-space: pre;
+		cursor: text;
+		transform-origin: 0% 0%;
+	}
+
+	:global(.textLayer) {
+		/* --total-scale-factor is derived from --scale-factor (set on the wrapper)
+		   and --user-unit (defaults to 1). This mirrors the official pdf_viewer.css. */
+		--user-unit: 1;
+		--total-scale-factor: calc(var(--scale-factor) * var(--user-unit));
+		--min-font-size: 1;
+		--text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+		--min-font-size-inv: calc(1 / var(--min-font-size));
+	}
+
+	:global(.textLayer > :not(.markedContent)),
+	:global(.textLayer .markedContent span:not(.markedContent)) {
+		z-index: 1;
+		--font-height: 0;
+		font-size: calc(var(--text-scale-factor) * var(--font-height));
+		--scale-x: 1;
+		--rotate: 0deg;
+		transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+	}
+
+	:global(.textLayer .markedContent) {
+		display: contents;
+	}
+
+	:global(.textLayer span[role='img']) {
+		-webkit-user-select: none;
+		-moz-user-select: none;
+		user-select: none;
+		cursor: default;
+	}
+
+	/* Selection highlight color */
+	:global(.textLayer ::-moz-selection) {
+		background: rgba(0, 0, 255, 0.25);
+	}
+
+	:global(.textLayer ::selection) {
+		background: rgba(0, 0, 255, 0.25);
+	}
+
+	:global(.textLayer br::-moz-selection) {
+		background: transparent;
+	}
+
+	:global(.textLayer br::selection) {
+		background: transparent;
+	}
+
+	:global(.textLayer .endOfContent) {
+		display: block;
+		position: absolute;
+		inset: 100% 0 0;
+		z-index: 0;
+		cursor: default;
+		-webkit-user-select: none;
+		-moz-user-select: none;
+		user-select: none;
+	}
+
+	:global(.textLayer.selecting .endOfContent) {
+		top: 0;
+	}
+</style>

@@ -199,6 +199,7 @@ from open_webui.config import (
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
     AUDIO_STT_SUPPORTED_CONTENT_TYPES,
+    AUDIO_STT_ALLOWED_EXTENSIONS,
     AUDIO_STT_OPENAI_API_BASE_URL,
     AUDIO_STT_OPENAI_API_KEY,
     AUDIO_STT_AZURE_API_KEY,
@@ -303,6 +304,8 @@ from open_webui.config import (
     DOCUMENT_INTELLIGENCE_MODEL,
     MISTRAL_OCR_API_BASE_URL,
     MISTRAL_OCR_API_KEY,
+    PADDLEOCR_VL_BASE_URL,
+    PADDLEOCR_VL_TOKEN,
     RAG_TEXT_SPLITTER,
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
@@ -342,6 +345,7 @@ from open_webui.config import (
     BING_SEARCH_V7_ENDPOINT,
     BING_SEARCH_V7_SUBSCRIPTION_KEY,
     BRAVE_SEARCH_API_KEY,
+    BRAVE_SEARCH_CONTEXT_TOKENS,
     EXA_API_KEY,
     PERPLEXITY_API_KEY,
     PERPLEXITY_MODEL,
@@ -456,6 +460,7 @@ from open_webui.config import (
     OAUTH_PROVIDERS,
     WEBUI_URL,
     RESPONSE_WATERMARK,
+    IFRAME_CSP,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_ANALYTICS,
@@ -476,6 +481,7 @@ from open_webui.config import (
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     VOICE_MODE_PROMPT_TEMPLATE,
+    ENABLE_VOICE_MODE_PROMPT,
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
@@ -578,6 +584,8 @@ from open_webui.utils.redis import get_redis_connection
 from open_webui.tasks import (
     redis_task_command_listener,
     list_task_ids_by_item_id,
+    has_active_tasks,
+    cleanup_task,
     create_task,
     stop_task,
     stop_item_tasks,
@@ -704,30 +712,34 @@ async def lifespan(app: FastAPI):
 
     # Pre-fetch tool server specs so the first request doesn't pay the latency cost
     if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+        mock_request = Request(
+            {
+                'type': 'http',
+                'asgi.version': '3.0',
+                'asgi.spec_version': '2.0',
+                'method': 'GET',
+                'path': '/internal',
+                'query_string': b'',
+                'headers': Headers({}).raw,
+                'client': ('127.0.0.1', 12345),
+                'server': ('127.0.0.1', 80),
+                'scheme': 'http',
+                'app': app,
+            }
+        )
+
         log.info('Initializing tool servers...')
         try:
-            mock_request = Request(
-                {
-                    'type': 'http',
-                    'asgi.version': '3.0',
-                    'asgi.spec_version': '2.0',
-                    'method': 'GET',
-                    'path': '/internal',
-                    'query_string': b'',
-                    'headers': Headers({}).raw,
-                    'client': ('127.0.0.1', 12345),
-                    'server': ('127.0.0.1', 80),
-                    'scheme': 'http',
-                    'app': app,
-                }
-            )
             await set_tool_servers(mock_request)
             log.info(f'Initialized {len(app.state.TOOL_SERVERS)} tool server(s)')
+        except Exception as e:
+            log.warning(f'Failed to initialize tool servers at startup: {e}')
 
+        try:
             await set_terminal_servers(mock_request)
             log.info(f'Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)')
         except Exception as e:
-            log.warning(f'Failed to initialize tool/terminal servers at startup: {e}')
+            log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
     # Mark application as ready to accept traffic from a startup perspective.
     app.state.startup_complete = True
@@ -1023,6 +1035,8 @@ app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
 app.state.config.DOCUMENT_INTELLIGENCE_MODEL = DOCUMENT_INTELLIGENCE_MODEL
 app.state.config.MISTRAL_OCR_API_BASE_URL = MISTRAL_OCR_API_BASE_URL
 app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
+app.state.config.PADDLEOCR_VL_BASE_URL = PADDLEOCR_VL_BASE_URL
+app.state.config.PADDLEOCR_VL_TOKEN = PADDLEOCR_VL_TOKEN
 app.state.config.MINERU_API_MODE = MINERU_API_MODE
 app.state.config.MINERU_API_URL = MINERU_API_URL
 app.state.config.MINERU_API_KEY = MINERU_API_KEY
@@ -1098,6 +1112,7 @@ app.state.config.YACY_PASSWORD = YACY_PASSWORD
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
 app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
 app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
+app.state.config.BRAVE_SEARCH_CONTEXT_TOKENS = BRAVE_SEARCH_CONTEXT_TOKENS
 app.state.config.KAGI_SEARCH_API_KEY = KAGI_SEARCH_API_KEY
 app.state.config.MOJEEK_SEARCH_API_KEY = MOJEEK_SEARCH_API_KEY
 app.state.config.BOCHA_SEARCH_API_KEY = BOCHA_SEARCH_API_KEY
@@ -1285,6 +1300,7 @@ app.state.config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = IMAGES_EDIT_COMFYUI_WORKFL
 app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 app.state.config.STT_SUPPORTED_CONTENT_TYPES = AUDIO_STT_SUPPORTED_CONTENT_TYPES
+app.state.config.STT_ALLOWED_EXTENSIONS = AUDIO_STT_ALLOWED_EXTENSIONS
 
 app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
 app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
@@ -1357,6 +1373,7 @@ app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = QUERY_GENERATION_PROMPT_TEMP
 app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 app.state.config.VOICE_MODE_PROMPT_TEMPLATE = VOICE_MODE_PROMPT_TEMPLATE
+app.state.config.ENABLE_VOICE_MODE_PROMPT = ENABLE_VOICE_MODE_PROMPT
 
 
 ########################################
@@ -1520,6 +1537,108 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
     return {'data': models}
 
 
+class ModelUnloadForm(BaseModel):
+    model: str
+
+
+@app.post('/api/models/unload')
+async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depends(get_admin_user)):
+    """
+    Unified model unload endpoint.
+    Resolves the provider that owns the model and calls its native unload mechanism.
+    Supports: Ollama (keep_alive=0) and llama.cpp (/models/unload).
+    """
+    model_id = form_data.model
+
+    # --- Ollama provider ---
+    ollama_models = getattr(request.app.state, 'OLLAMA_MODELS', None) or {}
+    if model_id in ollama_models:
+        url_indices = ollama_models[model_id].get('urls', [])
+        errors = []
+        for idx in url_indices:
+            url = request.app.state.config.OLLAMA_BASE_URLS[idx]
+            api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                str(idx),
+                request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),
+            )
+            key = api_config.get('key', None)
+
+            prefix_id = api_config.get('prefix_id', None)
+            actual_model = model_id
+            if prefix_id and actual_model.startswith(f'{prefix_id}.'):
+                actual_model = actual_model[len(f'{prefix_id}.') :]
+
+            payload = json.dumps({'model': actual_model, 'keep_alive': 0, 'prompt': ''})
+
+            try:
+                timeout = aiohttp.ClientTimeout(total=30)
+                async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                    headers = {
+                        'Content-Type': 'application/json',
+                        **({'Authorization': f'Bearer {key}'} if key else {}),
+                    }
+                    async with session.post(
+                        f'{url}/api/generate',
+                        data=payload,
+                        headers=headers,
+                    ) as r:
+                        if not r.ok:
+                            errors.append({'url_idx': idx, 'error': await r.text()})
+            except Exception as e:
+                log.exception(f'Failed to unload model on Ollama node {idx}: {e}')
+                errors.append({'url_idx': idx, 'error': str(e)})
+
+        if errors:
+            raise HTTPException(
+                status_code=500,
+                detail=f'Failed to unload model on {len(errors)} node(s): {errors}',
+            )
+        return {'status': True}
+
+    # --- OpenAI-compatible providers ---
+    openai_models = getattr(request.app.state, 'OPENAI_MODELS', None) or {}
+    if model_id in openai_models:
+        model_info = openai_models[model_id]
+        idx = model_info.get('urlIdx')
+        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(str(idx), {})
+        provider = api_config.get('provider', '')
+        base_url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        key = (
+            request.app.state.config.OPENAI_API_KEYS[idx] if idx < len(request.app.state.config.OPENAI_API_KEYS) else ''
+        )
+
+        if provider == 'llama.cpp':
+            root_url = base_url.rstrip('/').removesuffix('/v1')
+            try:
+                timeout = aiohttp.ClientTimeout(total=30)
+                async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                    headers = {
+                        'Content-Type': 'application/json',
+                        **({'Authorization': f'Bearer {key}'} if key else {}),
+                    }
+                    async with session.post(
+                        f'{root_url}/models/unload',
+                        json={'model': model_id},
+                        headers=headers,
+                    ) as r:
+                        if not r.ok:
+                            detail = await r.text()
+                            raise HTTPException(status_code=r.status, detail=detail)
+                        return await r.json()
+            except HTTPException:
+                raise
+            except Exception as e:
+                log.exception(f'Failed to unload model via llama.cpp: {e}')
+                raise HTTPException(status_code=500, detail=str(e))
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f'Provider "{provider or "default"}" does not support model unloading',
+            )
+
+    raise HTTPException(status_code=404, detail=f'Model "{model_id}" not found')
+
+
 ##################################
 # Embeddings
 ##################################
@@ -1647,6 +1766,7 @@ async def chat_completion(
             'chat_id': form_data.pop('chat_id', None),
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
+            'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
@@ -1676,7 +1796,9 @@ async def chat_completion(
 
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
-            if not chat_id.startswith('local:'):  # temporary chats are not stored
+            if not chat_id.startswith('local:') and not chat_id.startswith(
+                'channel:'
+            ):  # temporary/channel chats are not stored
                 if is_new_chat:
                     # Build the full history upfront with ALL assistant placeholders
                     user_message = metadata.get('user_message') or {}
@@ -1719,6 +1841,7 @@ async def chat_completion(
                                 ]
                                 if user_message_id
                                 else [],
+                                'files': metadata.get('files') or [],
                                 'tags': [],
                                 'timestamp': int(time.time() * 1000),
                             },
@@ -1750,6 +1873,16 @@ async def chat_completion(
                             status_code=status.HTTP_404_NOT_FOUND,
                             detail=ERROR_MESSAGES.DEFAULT(),
                         )
+
+                    # Persist chat-level files (knowledge collections, docs, etc.)
+                    # The old frontend saveChatHandler did this on every message;
+                    # now the backend owns persistence.
+                    chat_files = metadata.get('files')
+                    if chat_files is not None:
+                        existing_chat = await Chats.get_chat_by_id(chat_id)
+                        if existing_chat:
+                            updated = {**existing_chat.chat, 'files': chat_files}
+                            await Chats.update_chat_by_id(chat_id, updated)
 
                     # Save user message to DB
                     user_message = metadata.get('user_message') or {}
@@ -1832,7 +1965,7 @@ async def chat_completion(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Error processing chat metadata: {e}')
+        log.warning(f'Error processing chat metadata: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -1865,24 +1998,23 @@ async def chat_completion(
         except asyncio.CancelledError:
             log.info('Chat processing was cancelled')
             try:
-                event_emitter = await get_event_emitter(metadata)
-                if event_emitter:
-                    await asyncio.shield(
-                        event_emitter(
-                            {'type': 'chat:tasks:cancel'},
-                        )
-                    )
-            except Exception as e:
+
+                async def emit_cancel_event():
+                    event_emitter = await get_event_emitter(metadata)
+                    if event_emitter:
+                        await event_emitter({'type': 'chat:tasks:cancel'})
+
+                await asyncio.shield(emit_cancel_event())
+            except Exception:
                 pass
-            finally:
-                raise  # re-raise to ensure proper task cancellation handling
+            raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
             error_detail = e.detail if isinstance(e, HTTPException) else str(e)
             log.error('Error processing chat payload: %s', error_detail)
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
-                    if not metadata['chat_id'].startswith('local:'):
+                    if not metadata['chat_id'].startswith('local:') and not metadata['chat_id'].startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -1906,37 +2038,54 @@ async def chat_completion(
 
                 except Exception:
                     pass
+            else:
+                # No chat_id/message_id → legacy/direct API path with no
+                # WebSocket error channel.  We must surface the error as
+                # a proper HTTP response; without this the function would
+                # return None which FastAPI serializes as null.  #23924
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=error_detail,
+                )
         finally:
-            # Clean up MCP clients.  Shield the entire block from
-            # CancelledError so disconnect() can finish even when the
-            # task is being stopped.  Each client is isolated so one
+            # Clean up MCP clients.  Each client is isolated so one
             # failure doesn't skip the rest.
+            #
+            # NOTE: asyncio.wait_for() / asyncio.shield() must NOT be used
+            # here — they create new asyncio Tasks, which violate anyio
+            # cancel-scope task-ownership rules when the MCPClient's
+            # exit_stack contains anyio transport resources (streamable_http).
+            # Exiting those cancel scopes from the wrong task raises
+            # "Attempted to exit a cancel scope that isn't the current
+            # task's current cancel scope", which propagates as a
+            # BaseException through the finally block, discards the response
+            # return value, and surfaces as a 500 "No response returned."
+            # MCPClient.disconnect() already catches BaseException internally.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
-
-                    async def _cleanup_mcp():
-                        for client in reversed(list(mcp_clients.values())):
-                            try:
-                                await client.disconnect()
-                            except Exception as e:
-                                log.debug(f'Error disconnecting MCP client: {e}')
-
-                    await asyncio.wait_for(
-                        asyncio.shield(_cleanup_mcp()),
-                        timeout=10.0,
-                    )
-            except asyncio.TimeoutError:
-                log.warning('MCP client cleanup timed out after 10 s')
-            except Exception as e:
+                    for client in reversed(list(mcp_clients.values())):
+                        try:
+                            await client.disconnect()
+                        except BaseException as e:
+                            log.debug(f'Error disconnecting MCP client: {e}')
+            except BaseException as e:
                 log.debug(f'Error cleaning up MCP clients: {e}')
-            # Emit chat:active=false when task completes
+
+            # Deregister this task, then emit chat:active=false if no others remain
             try:
-                if metadata.get('chat_id'):
-                    event_emitter = await get_event_emitter(metadata, update_db=False)
-                    if event_emitter:
-                        await event_emitter({'type': 'chat:active', 'data': {'active': False}})
-            except Exception as e:
-                log.debug(f'Error emitting chat:active: {e}')
+                chat_id = metadata.get('chat_id')
+                task_id = metadata.get('task_id')
+                if chat_id and task_id:
+                    await cleanup_task(request.app.state.redis, task_id, chat_id)
+                    if not await has_active_tasks(request.app.state.redis, chat_id):
+                        event_emitter = await get_event_emitter(metadata, update_db=False)
+                        if event_emitter:
+                            try:
+                                await asyncio.shield(event_emitter({'type': 'chat:active', 'data': {'active': False}}))
+                            except asyncio.CancelledError:
+                                pass
+            except Exception:
+                pass
 
     # Fan out: one task per model
     if metadata.get('session_id') and metadata.get('chat_id'):
@@ -1984,6 +2133,7 @@ async def chat_completion(
                 ),
                 id=chat_id,
             )
+            per_model_metadata['task_id'] = task_id
             task_ids.append(task_id)
 
         # Emit chat:active=true
@@ -2127,7 +2277,7 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
 
 @app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if chat_id.startswith('local:'):
+    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
         socket_id = chat_id[len('local:') :]
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
@@ -2145,7 +2295,7 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if chat_id.startswith('local:'):
+    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
         socket_id = chat_id[len('local:') :]
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
@@ -2297,6 +2447,7 @@ async def get_app_config(request: Request):
                     'pending_user_overlay_title': app.state.config.PENDING_USER_OVERLAY_TITLE,
                     'pending_user_overlay_content': app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     'response_watermark': app.state.config.RESPONSE_WATERMARK,
+                    'iframe_csp': IFRAME_CSP,
                 },
                 'license_metadata': app.state.LICENSE_METADATA,
                 **(
@@ -2690,6 +2841,14 @@ async def get_opensearch_xml():
     return Response(content=xml_content, media_type='application/xml')
 
 
+def _sync_db_ping() -> None:
+    ScopedSession.execute(text('SELECT 1;')).all()
+
+
+async def async_db_ping() -> None:
+    await asyncio.to_thread(_sync_db_ping)
+
+
 @app.get('/health')
 async def healthcheck():
     return {'status': True}
@@ -2711,7 +2870,7 @@ async def readiness_check():
 
     # Check database connectivity
     try:
-        ScopedSession.execute(text('SELECT 1;')).all()
+        await async_db_ping()
     except Exception as e:
         log.warning(f'Readiness check DB ping failed: {e!r}')
         raise HTTPException(
@@ -2738,7 +2897,7 @@ async def readiness_check():
 
 @app.get('/health/db')
 async def healthcheck_with_db():
-    ScopedSession.execute(text('SELECT 1;')).all()
+    await async_db_ping()
     return {'status': True}
 
 
@@ -2756,7 +2915,13 @@ async def serve_cache_file(
         raise HTTPException(status_code=404, detail='File not found')
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail='File not found')
-    return FileResponse(file_path)
+
+    mime, _ = mimetypes.guess_type(file_path)
+    inline_safe = mime and mime.split('/', 1)[0] in {'image', 'audio', 'video'}
+    headers = {'X-Content-Type-Options': 'nosniff'}
+    if not inline_safe:
+        headers['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+    return FileResponse(file_path, headers=headers)
 
 
 def swagger_ui_html(*args, **kwargs):

@@ -511,28 +511,32 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 	} else {
 		let result = false;
 		if (!navigator.clipboard) {
-			const textArea = document.createElement('textarea');
-			textArea.value = text;
+			const span = document.createElement('span');
+			span.textContent = text;
+			span.style.whiteSpace = 'pre';
+			span.style.position = 'fixed';
+			span.style.top = '0';
+			span.style.left = '0';
+			span.style.opacity = '0';
+			document.body.appendChild(span);
 
-			// Avoid scrolling to bottom
-			textArea.style.top = '0';
-			textArea.style.left = '0';
-			textArea.style.position = 'fixed';
-
-			document.body.appendChild(textArea);
-			textArea.focus({ preventScroll: true });
-			textArea.select();
+			const range = document.createRange();
+			range.selectNodeContents(span);
+			const selection = window.getSelection();
+			selection?.removeAllRanges();
+			selection?.addRange(range);
 
 			try {
 				const successful = document.execCommand('copy');
 				const msg = successful ? 'successful' : 'unsuccessful';
 				console.log('Fallback: Copying text command was ' + msg);
-				result = true;
+				result = successful;
 			} catch (err) {
 				console.error('Fallback: Oops, unable to copy', err);
 			}
 
-			document.body.removeChild(textArea);
+			selection?.removeAllRanges();
+			document.body.removeChild(span);
 			return result;
 		}
 
@@ -729,6 +733,7 @@ const convertOpenAIMessages = (convo) => {
 	const messages = [];
 	let currentId = '';
 	let lastId = null;
+	const uniqueModels = new Set<string>();
 
 	for (const message_id in mapping) {
 		const message = mapping[message_id];
@@ -749,16 +754,27 @@ const convertOpenAIMessages = (convo) => {
 					continue;
 				}
 
-				const new_chat = {
+				const model = message['message']?.['metadata']?.['model_slug'] || 'gpt-3.5-turbo';
+				const timestamp = message['message']?.['create_time']
+					? Math.floor(message['message']['create_time'])
+					: undefined;
+
+				const new_chat: Record<string, any> = {
 					id: message_id,
 					parentId: lastId,
 					childrenIds: message['children'] || [],
 					role: role !== 'user' ? 'assistant' : 'user',
 					content: extractOpenAIMessageContent(message['message']),
-					model: 'gpt-3.5-turbo',
+					model,
 					done: true,
-					context: null
+					context: null,
+					...(timestamp !== undefined && { timestamp })
 				};
+
+				if (role !== 'user') {
+					uniqueModels.add(model);
+				}
+
 				messages.push(new_chat);
 				lastId = currentId;
 			}
@@ -781,7 +797,7 @@ const convertOpenAIMessages = (convo) => {
 			currentId: currentId,
 			messages: history // Need to convert this to not a list and instead a json object
 		},
-		models: ['gpt-3.5-turbo'],
+		models: uniqueModels.size > 0 ? [...uniqueModels] : ['gpt-3.5-turbo'],
 		messages: messages,
 		options: {},
 		timestamp: convo['create_time'],
@@ -828,12 +844,17 @@ export const convertOpenAIChats = (_chats) => {
 		const chat = convertOpenAIMessages(convo);
 
 		if (validateChat(chat)) {
+			// Use created_at/updated_at keys so importChatsHandler passes them
+			// to the backend correctly (previously used 'timestamp' which was ignored)
+			const createdAt = convo['create_time'] ? Math.floor(convo['create_time']) : null;
+			const updatedAt = convo['update_time'] ? Math.floor(convo['update_time']) : createdAt;
 			chats.push({
 				id: convo['id'],
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['create_time']
+				created_at: createdAt,
+				updated_at: updatedAt
 			});
 		} else {
 			failed++;
@@ -1356,12 +1377,51 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 				// for primitive types (string, integer, etc.), just use as is
 				break;
 		}
+
+		// Resolve composition keywords (oneOf, anyOf, allOf) which may contain $ref
+		for (const keyword of ['oneOf', 'anyOf', 'allOf']) {
+			if (Array.isArray(schemaRef[keyword])) {
+				schemaObj[keyword] = schemaRef[keyword].map((inner) =>
+					resolveSchema(inner, components, resolvedSchemas)
+				);
+			}
+		}
+
 		return schemaObj;
+	}
+
+	// Handle schemas that only have composition keywords without an explicit type
+	const compositionObj: Record<string, any> = {};
+	let hasComposition = false;
+	for (const keyword of ['oneOf', 'anyOf', 'allOf']) {
+		if (Array.isArray(schemaRef[keyword])) {
+			compositionObj[keyword] = schemaRef[keyword].map((inner) =>
+				resolveSchema(inner, components, resolvedSchemas)
+			);
+			hasComposition = true;
+		}
+	}
+	if (hasComposition) {
+		if (schemaRef.description) compositionObj.description = schemaRef.description;
+		return compositionObj;
 	}
 
 	// fallback for schemas without explicit type
 	return {};
 }
+
+// Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
+// and non-operation path-item fields (summary, description, servers, parameters).
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
 
 // Main conversion function
 export const convertOpenApiToToolPayload = (openApiSpec) => {
@@ -1373,11 +1433,24 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 	}
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+		if (!methods || typeof methods !== 'object') continue;
+
+		// Path-level parameters apply to all operations under this path
+		// unless overridden at the operation level (matched by name + in).
+		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
+			? (methods as any).parameters
+			: [];
+
 		for (const [method, operation] of Object.entries(methods)) {
-			if (operation?.operationId) {
+			if (!OPENAPI_HTTP_METHODS.has(method)) continue;
+			if (!operation || typeof operation !== 'object') continue;
+			if ((operation as any)?.operationId) {
 				const tool = {
-					name: operation.operationId,
-					description: operation.description || operation.summary || 'No description available.',
+					name: (operation as any).operationId,
+					description:
+						(operation as any).description ||
+						(operation as any).summary ||
+						'No description available.',
 					parameters: {
 						type: 'object',
 						properties: {},
@@ -1385,30 +1458,42 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 					}
 				};
 
-				// Extract path and query parameters
-				if (operation.parameters) {
-					operation.parameters.forEach((param) => {
-						const paramName = param?.name;
-						if (!paramName) return;
-						const paramSchema = param?.schema ?? {};
-						let description = paramSchema.description || param.description || '';
-						if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
-							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
-						}
-						tool.parameters.properties[paramName] = {
-							type: paramSchema.type,
-							description: description
-						};
+				// Merge path-level and operation-level parameters.
+				// Operation-level params override path-level params with the
+				// same (name, in) pair per the OpenAPI spec.
+				const opParams: any[] = Array.isArray((operation as any).parameters)
+					? (operation as any).parameters
+					: [];
+				const mergedParams = new Map();
+				for (const param of pathLevelParams) {
+					if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+				}
+				for (const param of opParams) {
+					if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+				}
 
-						if (param.required) {
-							tool.parameters.required.push(paramName);
-						}
-					});
+				// Extract path and query parameters
+				for (const param of mergedParams.values()) {
+					const paramName = param?.name;
+					if (!paramName) continue;
+					const paramSchema = param?.schema ?? {};
+					let description = paramSchema.description || param.description || '';
+					if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
+						description += `. Possible values: ${paramSchema.enum.join(', ')}`;
+					}
+					tool.parameters.properties[paramName] = {
+						type: paramSchema.type,
+						description: description
+					};
+
+					if (param.required) {
+						tool.parameters.required.push(paramName);
+					}
 				}
 
 				// Extract and recursively resolve requestBody if available
-				if (operation.requestBody) {
-					const content = operation.requestBody.content;
+				if ((operation as any).requestBody) {
+					const content = (operation as any).requestBody.content;
 					if (content && content['application/json']) {
 						const requestSchema = content['application/json'].schema;
 						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);

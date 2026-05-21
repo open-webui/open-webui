@@ -1134,22 +1134,6 @@ wheels = [
 ]
 
 [[package]]
-name = "firecrawl-py"
-version = "1.12.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "nest-asyncio" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/18/db/e4f8ef9f0475b91b7c16a15e02fe19069d443cc5516cdefa2f9a0924a9a3/firecrawl_py-1.12.0.tar.gz", hash = "sha256:bbf883f6c774f05a5426121b85978a5f7b5ab11e614aff609f0673b097c3e553", size = 19655, upload-time = "2025-02-13T15:40:15.745Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/d8/301d829099082c606ed16ed2a9acd263c47a365d471b9636435bf5d858b3/firecrawl_py-1.12.0-py3-none-any.whl", hash = "sha256:2b9c549315027da32421aca2a7ca597cb05cdbb968cfe0a89f389c7bb20afa4a", size = 31854, upload-time = "2025-02-13T15:40:14.492Z" },
-]
-
-[[package]]
 name = "flask"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2692,7 +2676,6 @@ dependencies = [
     { name = "fake-useragent" },
     { name = "fastapi" },
     { name = "faster-whisper" },
-    { name = "firecrawl-py" },
     { name = "fpdf2" },
     { name = "ftfy" },
     { name = "gcp-storage-emulator" },
@@ -2803,7 +2786,6 @@ requires-dist = [
     { name = "fake-useragent", specifier = "==2.1.0" },
     { name = "fastapi", specifier = "==0.115.7" },
     { name = "faster-whisper", specifier = "==1.1.1" },
-    { name = "firecrawl-py", specifier = "==1.12.0" },
     { name = "fpdf2", specifier = "==2.8.2" },
     { name = "ftfy", specifier = "==6.2.3" },
     { name = "gcp-storage-emulator", specifier = ">=2024.8.3" },

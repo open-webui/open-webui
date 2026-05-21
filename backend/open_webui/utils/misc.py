@@ -129,7 +129,11 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
-def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
+def convert_output_to_messages(
+    output: list,
+    raw: bool = False,
+    reasoning_format: str | None = None,
+) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
 
@@ -139,8 +143,14 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
 
     Args:
         output: List of OR-aligned output items (Responses API format).
-        raw: If True, include reasoning blocks (with original tags) and code
-             interpreter blocks for LLM re-processing follow-ups.
+        raw: If True, include code interpreter blocks for LLM re-processing
+             follow-ups.
+        reasoning_format: How to include reasoning blocks in the output:
+            - None: skip reasoning (default, safe for strict providers).
+            - ``'think_tags'``: wrap in ``<think>`` tags inside content
+              (for Ollama, which expects reasoning as tagged content).
+            - ``'reasoning_content'``: set as ``reasoning_content`` top-level field
+              (for llama.cpp, which routes it via the chat template).
     """
     if not output or not isinstance(output, list):
         return []
@@ -148,19 +158,26 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     messages = []
     pending_tool_calls = []
     pending_content = []
+    pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls
-        if pending_content or pending_tool_calls:
-            messages.append(
-                {
-                    'role': 'assistant',
-                    'content': '\n'.join(pending_content) if pending_content else '',
-                    **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
-                }
-            )
-            pending_content = []
-            pending_tool_calls = []
+        nonlocal pending_content, pending_tool_calls, pending_reasoning
+        if not pending_content and not pending_tool_calls and not pending_reasoning:
+            return
+
+        message = {
+            'role': 'assistant',
+            'content': '\n'.join(pending_content) if pending_content else '',
+            **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
+        }
+
+        if pending_reasoning:
+            message['reasoning_content'] = '\n'.join(pending_reasoning)
+
+        messages.append(message)
+        pending_content = []
+        pending_tool_calls = []
+        pending_reasoning = []
 
     for item in output:
         item_type = item.get('type', '')
@@ -231,27 +248,26 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 )
 
         elif item_type == 'reasoning':
-            if raw:
-                # Include reasoning with original tags for LLM re-processing
-                reasoning_text = ''
-                source_list = item.get('summary', []) or item.get('content', [])
-                for part in source_list:
-                    if part.get('type') == 'output_text':
-                        reasoning_text += part.get('text', '')
-                    elif 'text' in part:
-                        reasoning_text += part.get('text', '')
+            if not reasoning_format:
+                continue
 
-                if reasoning_text:
+            reasoning_text = ''
+            source_list = item.get('summary', []) or item.get('content', [])
+            for part in source_list:
+                if part.get('type') == 'output_text':
+                    reasoning_text += part.get('text', '')
+                elif 'text' in part:
+                    reasoning_text += part.get('text', '')
+
+            if reasoning_text:
+                if reasoning_format == 'think_tags':
+                    # Ollama: embed in content with the item's original tags
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
-                    # NOTE: Some providers (e.g. Moonshot/Kimi K2.5) require
-                    # reasoning_content as a top-level field on assistant
-                    # messages.  This should be handled externally via a
-                    # pipeline filter or connection-level middleware, not
-                    # here — adding it universally breaks strict providers
-                    # (OpenAI, Vertex AI, Azure) that reject unknown fields.
-            # else: skip reasoning blocks for normal LLM messages
+                elif reasoning_format == 'reasoning_content':
+                    # llama.cpp: collect for reasoning_content field
+                    pending_reasoning.append(reasoning_text)
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows
@@ -597,6 +613,9 @@ def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
+    # Fast path: skip work when there are no null bytes (the common case)
+    if '\x00' not in text:
+        return text
     # Remove null bytes
     text = text.replace('\x00', '').replace('\u0000', '')
     # Remove invalid UTF-8 surrogate characters that can cause encoding errors
@@ -608,15 +627,36 @@ def sanitize_text_for_db(text: str) -> str:
     return text
 
 
-def sanitize_data_for_db(obj):
-    """Recursively sanitize all strings in a data structure for database storage."""
+def _strip_null_bytes_deep(obj):
+    """Inner recursive walk — only called when null bytes are known to be present."""
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     elif isinstance(obj, dict):
-        return {k: sanitize_data_for_db(v) for k, v in obj.items()}
+        return {k: _strip_null_bytes_deep(v) for k, v in obj.items()}
     elif isinstance(obj, list):
-        return [sanitize_data_for_db(v) for v in obj]
+        return [_strip_null_bytes_deep(v) for v in obj]
     return obj
+
+
+def sanitize_data_for_db(obj):
+    """Recursively sanitize all strings in a data structure for database storage.
+
+    Performs a fast pre-check: serializes the structure once and scans for
+    null bytes.  If none are found (the overwhelmingly common case), the
+    original object is returned immediately, skipping the expensive
+    recursive walk.
+    """
+    if isinstance(obj, str):
+        return sanitize_text_for_db(obj)
+    # Fast path: check for null bytes in the serialized form.
+    # json.dumps is implemented in C and much faster than a Python-level
+    # recursive walk over every leaf string.
+    try:
+        if '\x00' not in json.dumps(obj, ensure_ascii=False):
+            return obj
+    except (TypeError, ValueError):
+        pass
+    return _strip_null_bytes_deep(obj)
 
 
 def sanitize_metadata(metadata: dict) -> dict:
@@ -843,9 +883,9 @@ def throttle(interval: float = 10.0):
         last_calls = {}
         lock = threading.Lock()
 
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             if interval is None:
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
 
             key = (args, freeze(kwargs))
             now = time.time()
@@ -855,7 +895,7 @@ def throttle(interval: float = 10.0):
                 if now - last_calls.get(key, 0) < interval:
                     return None
                 last_calls[key] = now
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 

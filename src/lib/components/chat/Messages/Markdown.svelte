@@ -24,6 +24,7 @@
 	export let paragraphTag = 'p';
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowEmbeds = true;
 
 	export let sourceIds = [];
 
@@ -71,18 +72,24 @@
 	};
 
 	const updateHandler = (content) => {
-		if (content && !pendingUpdate) {
-			pendingUpdate = requestAnimationFrame(() => {
+		if (content) {
+			if (done) {
+				cancelAnimationFrame(pendingUpdate);
 				pendingUpdate = null;
 				parseTokens();
-			});
+			} else if (!pendingUpdate) {
+				pendingUpdate = requestAnimationFrame(() => {
+					pendingUpdate = null;
+					parseTokens();
+				});
+			}
 		}
 	};
 
 	$: updateHandler(content);
 
 	// Throttle parsing to once per animation frame while streaming
-	$: onDestroy(() => {
+	onDestroy(() => {
 		cancelAnimationFrame(pendingUpdate);
 	});
 </script>
@@ -98,6 +105,7 @@
 		{editCodeBlock}
 		{sourceIds}
 		{topPadding}
+		{allowEmbeds}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

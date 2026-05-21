@@ -17,9 +17,9 @@
 		deleteModel,
 		getOllamaCatalogue,
 		getOllamaVersion,
-		pullModel,
-		unloadModel
+		pullModel
 	} from '$lib/apis/ollama';
+	import { unloadModel } from '$lib/apis';
 
 	import {
 		user,

@@ -30,6 +30,7 @@
 	}> = [];
 
 	export let messageDone = true;
+	export let allowEmbeds = true;
 
 	let open = $settings?.expandDetails ?? false;
 
@@ -51,6 +52,8 @@
 
 	// Collect all embeds from tool_calls tokens
 	$: allEmbeds = (() => {
+		if (!allowEmbeds) return [];
+
 		const result: Array<{ name: string; embed: string; args: string }> = [];
 		for (const t of tokens) {
 			if (t?.attributes?.type !== 'tool_calls') continue;

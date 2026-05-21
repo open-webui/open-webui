@@ -238,9 +238,13 @@ async def fetch_url(
         content, _ = await asyncio.to_thread(get_content_from_url, __request__, url)
 
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
-        max_length = getattr(__request__.app.state.config, 'WEB_FETCH_MAX_CONTENT_LENGTH', None)
-        if max_length and max_length > 0 and len(content) > max_length:
-            content = content[:max_length] + '\n\n[Content truncated...]'
+        # Guard: content may be None if the web loader silently failed
+        if content is not None:
+            max_length = getattr(__request__.app.state.config, 'WEB_FETCH_MAX_CONTENT_LENGTH', None)
+            if max_length and max_length > 0 and len(content) > max_length:
+                content = content[:max_length] + '\n\n[Content truncated...]'
+        else:
+            content = ''
 
         return content
     except Exception as e:
@@ -467,9 +471,15 @@ async def execute_code(
 
             # Parse the output - pyodide returns dict with stdout, stderr, result
             if isinstance(output, dict):
-                stdout = output.get('stdout', '')
-                stderr = output.get('stderr', '')
-                result = output.get('result', '')
+                # Handle error responses from event_caller (e.g. session disconnected, timeout)
+                if output.get('error') and not output.get('stdout') and not output.get('result'):
+                    stderr = output['error']
+                    stdout = ''
+                    result = ''
+                else:
+                    stdout = output.get('stdout', '')
+                    stderr = output.get('stderr', '')
+                    result = output.get('result', '')
             else:
                 stdout = ''
                 stderr = ''
@@ -2568,8 +2578,11 @@ async def create_automation(
         if not user:
             return json.dumps({'error': 'User not found'})
 
-        # Always use the calling model for the automation
-        model_id = (__metadata__ or {}).get('model_id')
+        # Fall back to model dict ID since __metadata__ may predate model_id assignment
+        metadata = __metadata__ or {}
+        model_id = metadata.get('model_id') or (
+            metadata.get('model', {}).get('id') if isinstance(metadata.get('model'), dict) else None
+        )
         if not model_id:
             return json.dumps({'error': 'Could not detect current model'})
 
@@ -2671,7 +2684,7 @@ async def update_automation(
             is_active=automation.is_active,
         )
 
-        updated = await Automations.update(automation_id, form, next_run_ns(new_rrule, tz=tz))
+        updated = await Automations.update_by_id(automation_id, form, next_run_ns(new_rrule, tz=tz))
 
         return json.dumps(
             {
@@ -2888,6 +2901,9 @@ def _ns_to_dt(ns: int, tz) -> str:
 
 def _event_to_dict(event, tz) -> dict:
     """Convert a calendar event model to a human-friendly dict with local timestamps."""
+    alert_minutes = None
+    if event.meta and 'alert_minutes' in event.meta:
+        alert_minutes = event.meta['alert_minutes']
     return {
         'id': event.id,
         'calendar_id': event.calendar_id,
@@ -2897,6 +2913,7 @@ def _event_to_dict(event, tz) -> dict:
         'end': _ns_to_dt(event.end_at, tz) if event.end_at else None,
         'all_day': event.all_day,
         'location': event.location or '',
+        'reminder_minutes': alert_minutes if alert_minutes is not None else 10,
         'color': event.color,
         'is_cancelled': event.is_cancelled,
     }
@@ -2911,8 +2928,9 @@ async def search_calendar_events(
     __user__: dict = None,
 ) -> str:
     """
-    Search calendar events by text and/or date range.
-    Returns matching events across all accessible calendars.
+    Search calendar events, reminders, and scheduled items by text and/or date range.
+    Use this to check what's coming up, find a specific event or reminder, or list
+    the user's schedule for a time period.
 
     :param query: Search text to match against event title, description, or location (optional)
     :param start: Only return events starting at or after this datetime, e.g. "2026-04-20 00:00" (optional)
@@ -3003,20 +3021,24 @@ async def create_calendar_event(
     calendar_id: Optional[str] = None,
     all_day: bool = False,
     location: Optional[str] = None,
+    reminder_minutes: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
-    Create a new calendar event. If no calendar_id is provided, the event is
-    added to the user's default calendar.
+    Create a calendar event, reminder, or alarm. Use this when the user wants to
+    schedule an event, set a reminder, create an alarm, or says things like
+    "remind me", "don't let me forget", "notify me at", or "add to my calendar".
+    For simple reminders, omit end/location/all_day and set reminder_minutes to 0.
 
-    :param title: Event title
-    :param start: Start datetime string in your local time (e.g. "2026-04-20 09:00" or "2026-04-20T09:00:00")
-    :param end: End datetime string in your local time (optional, omit for point-in-time events)
-    :param description: Event description (optional)
+    :param title: Event or reminder title (e.g. "Team standup", "Take medicine", "Call mom")
+    :param start: Start datetime in the user's local time (e.g. "2026-04-20 09:00")
+    :param end: End datetime in the user's local time (optional — omit for reminders or point-in-time events)
+    :param description: Event description or notes (optional)
     :param calendar_id: Target calendar ID (optional, uses default calendar if omitted)
     :param all_day: Whether this is an all-day event (default: false)
     :param location: Event location (optional)
+    :param reminder_minutes: Minutes before the event to send a notification (optional, default: 10). Use 0 for "at time of event", -1 for no notification.
     :return: JSON with the created event details including id
     """
     if __request__ is None:
@@ -3079,6 +3101,18 @@ async def create_calendar_event(
             # Default to 1 hour duration
             end_ns = start_ns + 3_600_000_000_000
 
+        # Build meta with reminder setting
+        meta = {}
+        if reminder_minutes is not None:
+            if isinstance(reminder_minutes, str):
+                try:
+                    reminder_minutes = int(reminder_minutes)
+                except ValueError:
+                    reminder_minutes = 10
+            meta['alert_minutes'] = reminder_minutes
+        else:
+            meta['alert_minutes'] = 10
+
         form = CalendarEventForm(
             calendar_id=calendar_id,
             title=title,
@@ -3087,6 +3121,7 @@ async def create_calendar_event(
             end_at=end_ns,
             all_day=all_day,
             location=location,
+            meta=meta,
         )
 
         event = await CalendarEvents.insert_new_event(user_id, form)
@@ -3114,6 +3149,7 @@ async def update_calendar_event(
     all_day: Optional[bool] = None,
     location: Optional[str] = None,
     is_cancelled: Optional[bool] = None,
+    reminder_minutes: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -3129,6 +3165,7 @@ async def update_calendar_event(
     :param all_day: Whether this is an all-day event (optional)
     :param location: New event location (optional)
     :param is_cancelled: Set to true to cancel the event (optional)
+    :param reminder_minutes: Minutes before the event to send a reminder notification (optional). Use 0 for "at time of event", -1 for no reminder. Accepts any positive integer for custom timing (e.g. 120 for 2 hours before).
     :return: JSON with the updated event details
     """
     if __request__ is None:
@@ -3149,8 +3186,10 @@ async def update_calendar_event(
             return json.dumps({'error': 'Event not found'})
 
         # Check write access to the event's calendar
-        cal = await Calendars.get_calendar_by_id(event.calendar_id)
-        if cal and cal.user_id != user_id and __user__.get('role') != 'admin':
+        if event.user_id != user_id and __user__.get('role') != 'admin':
+            cal = await Calendars.get_calendar_by_id(event.calendar_id)
+            if not cal:
+                return json.dumps({'error': 'Access denied'})
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,
@@ -3183,6 +3222,17 @@ async def update_calendar_event(
             except (ValueError, TypeError) as e:
                 return json.dumps({'error': f'Invalid end datetime: {e}'})
 
+        # Build meta update with reminder setting if provided
+        meta = None
+        if reminder_minutes is not None:
+            if isinstance(reminder_minutes, str):
+                try:
+                    reminder_minutes = int(reminder_minutes)
+                except ValueError:
+                    reminder_minutes = None
+            if reminder_minutes is not None:
+                meta = {'alert_minutes': reminder_minutes}
+
         form = CalendarEventUpdateForm(
             title=title,
             description=description,
@@ -3191,6 +3241,7 @@ async def update_calendar_event(
             all_day=all_day,
             location=location,
             is_cancelled=is_cancelled,
+            meta=meta,
         )
 
         updated = await CalendarEvents.update_event_by_id(event_id, form)
@@ -3238,8 +3289,10 @@ async def delete_calendar_event(
             return json.dumps({'error': 'Event not found'})
 
         # Check write access
-        cal = await Calendars.get_calendar_by_id(event.calendar_id)
-        if cal and cal.user_id != user_id and __user__.get('role') != 'admin':
+        if event.user_id != user_id and __user__.get('role') != 'admin':
+            cal = await Calendars.get_calendar_by_id(event.calendar_id)
+            if not cal:
+                return json.dumps({'error': 'Access denied'})
             user_group_ids = [g.id for g in await Groups.get_groups_by_member_id(user_id)]
             if not await AccessGrants.has_access(
                 user_id=user_id,
