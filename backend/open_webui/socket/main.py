@@ -142,7 +142,7 @@ if WEBSOCKET_MANAGER == 'redis':
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name=f'{REDIS_KEY_PREFIX}:session_cleanup_lock',
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
-        redis_sentinels=redis_sentinels,
+        redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     session_aquire_func = session_cleanup_lock.aquire_lock
