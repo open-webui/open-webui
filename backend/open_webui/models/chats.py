@@ -608,7 +608,7 @@ class ChatTable:
                 if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
                     chat_item.current_message_id = self.get_current_message_id(chat)
 
-                if touch:
+                if touch and ('history' in chat or 'messages' in chat):
                     chat_item.updated_at = int(time.time())
 
                 await session.commit()
