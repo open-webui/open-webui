@@ -3078,6 +3078,22 @@ SUBAGENT_DEFAULT_REASONING_EFFORT = PersistentConfig(
     os.getenv("SUBAGENT_DEFAULT_REASONING_EFFORT", "high"),
 )
 
+# Service tier for the subagent's inner chat. Empty string = don't send a
+# `service_tier` field (the provider uses its own default). Otherwise: any
+# string the chosen provider accepts (e.g. `default`, `flex`, `priority`).
+#
+# Resolution order at run-time (lowest priority first):
+#   no field sent → SUBAGENT_DEFAULT_SERVICE_TIER → chat.params.subagentServiceTier
+#
+# Kept separate from the parent chat's per-request `service_tier` choice so a
+# user can run subagents on a cheaper/faster tier than the model they're
+# actively chatting with.
+SUBAGENT_DEFAULT_SERVICE_TIER = PersistentConfig(
+    "SUBAGENT_DEFAULT_SERVICE_TIER",
+    "subagents.default_service_tier",
+    os.getenv("SUBAGENT_DEFAULT_SERVICE_TIER", ""),
+)
+
 ####################################
 # Images
 ####################################

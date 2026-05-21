@@ -33,6 +33,7 @@ class SubagentConfigForm(BaseModel):
     SUBAGENT_SYSTEM_PROMPT: Optional[str] = None
     SUBAGENT_PARENT_PROMPT: Optional[str] = None
     SUBAGENT_DEFAULT_REASONING_EFFORT: Optional[str] = None
+    SUBAGENT_DEFAULT_SERVICE_TIER: Optional[str] = None
 
 
 def _serialize(request: Request) -> dict:
@@ -44,6 +45,7 @@ def _serialize(request: Request) -> dict:
         "SUBAGENT_SYSTEM_PROMPT": config.SUBAGENT_SYSTEM_PROMPT,
         "SUBAGENT_PARENT_PROMPT": config.SUBAGENT_PARENT_PROMPT,
         "SUBAGENT_DEFAULT_REASONING_EFFORT": config.SUBAGENT_DEFAULT_REASONING_EFFORT,
+        "SUBAGENT_DEFAULT_SERVICE_TIER": config.SUBAGENT_DEFAULT_SERVICE_TIER,
     }
 
 
@@ -69,6 +71,8 @@ async def update_subagents_config(
         config.SUBAGENT_DEFAULT_REASONING_EFFORT = (
             form_data.SUBAGENT_DEFAULT_REASONING_EFFORT
         )
+    if form_data.SUBAGENT_DEFAULT_SERVICE_TIER is not None:
+        config.SUBAGENT_DEFAULT_SERVICE_TIER = form_data.SUBAGENT_DEFAULT_SERVICE_TIER
     return _serialize(request)
 
 

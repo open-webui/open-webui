@@ -14,6 +14,7 @@
 	let defaultModel = '';
 	let parentPrompt = '';
 	let defaultReasoningEffort = '';
+	let defaultServiceTier = '';
 
 	// Cached default so the "Reset" button works without a round-trip.
 	let initialParentPrompt = '';
@@ -30,13 +31,25 @@
 		{ value: 'xhigh', label: 'xhigh' }
 	];
 
+	// Canonical OpenAI/OpenRouter service tiers. Same list MessageInput uses
+	// for the parent chat (`DEFAULT_SERVICE_TIERS`). The backend passes the
+	// string through unchanged, so an admin can drop in a provider-specific
+	// value via env / config.json if they need one not in this list.
+	const SERVICE_TIER_OPTIONS = [
+		{ value: '', label: '— Don’t send —' },
+		{ value: 'default', label: 'default' },
+		{ value: 'flex', label: 'flex' },
+		{ value: 'priority', label: 'priority' }
+	];
+
 	const submitHandler = async () => {
 		try {
 			const res = await updateSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enableSubagents,
 				SUBAGENT_DEFAULT_MODEL: defaultModel,
 				SUBAGENT_PARENT_PROMPT: parentPrompt,
-				SUBAGENT_DEFAULT_REASONING_EFFORT: defaultReasoningEffort
+				SUBAGENT_DEFAULT_REASONING_EFFORT: defaultReasoningEffort,
+				SUBAGENT_DEFAULT_SERVICE_TIER: defaultServiceTier
 				// Note: the subagent's INNER system prompt is intentionally the
 				// model's own admin-set system prompt verbatim (no preamble
 				// from this admin page is injected). The `SUBAGENT_SYSTEM_PROMPT`
@@ -61,6 +74,7 @@
 				parentPrompt = res.SUBAGENT_PARENT_PROMPT ?? '';
 				initialParentPrompt = parentPrompt;
 				defaultReasoningEffort = res.SUBAGENT_DEFAULT_REASONING_EFFORT ?? '';
+				defaultServiceTier = res.SUBAGENT_DEFAULT_SERVICE_TIER ?? '';
 			}
 		} catch (err) {
 			console.error(err);
@@ -131,6 +145,25 @@
 							bind:value={defaultReasoningEffort}
 						>
 							{#each REASONING_EFFORT_OPTIONS as opt}
+								<option value={opt.value}>{opt.label}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="mb-2.5 flex w-full flex-col">
+						<div class=" self-center text-xs font-medium mb-1 mr-auto">
+							{$i18n.t('Default service tier')}
+						</div>
+						<div class=" text-xs text-gray-500 dark:text-gray-400 mb-1">
+							{$i18n.t(
+								"Service tier the subagent's request rides on. Per-chat override (chat.params.subagentServiceTier) wins when set. Leave as “Don’t send” to let the provider use its own default — the subagent's tier is kept separate from the parent chat's per-request tier so research workers can run on a cheaper / faster lane."
+							)}
+						</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={defaultServiceTier}
+						>
+							{#each SERVICE_TIER_OPTIONS as opt}
 								<option value={opt.value}>{opt.label}</option>
 							{/each}
 						</select>

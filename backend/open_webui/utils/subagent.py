@@ -499,6 +499,21 @@ async def _run_inner_chat(
     if resolved_effort:
         inner_params["reasoning_effort"] = resolved_effort
 
+    # Service tier precedence — same shape as reasoning_effort above.
+    # NOTE: `service_tier` rides at the TOP LEVEL of form_data, not inside
+    # params. This matches how the main chat passes it from MessageInput →
+    # Chat.svelte → /api/chat/completions. `apply_model_params_to_body_openai`
+    # in utils/payload.py explicitly strips `service_tier` from params so that
+    # stale model.params can't shadow the request's tier; we obey that
+    # contract here by writing to inner_form_data directly below.
+    resolved_tier = (
+        (chat_params.get("subagentServiceTier") or "").strip()
+        or (
+            getattr(request.app.state.config, "SUBAGENT_DEFAULT_SERVICE_TIER", "")
+            or ""
+        ).strip()
+    )
+
     inner_form_data: dict = {
         "model": subagent_model_id,
         "messages": api_messages,
@@ -508,6 +523,8 @@ async def _run_inner_chat(
         "features": {},  # MUST be empty — no nesting, no image_gen, no memory
         "params": inner_params,
     }
+    if resolved_tier:
+        inner_form_data["service_tier"] = resolved_tier
     # Optional per-chat output cap (user wanted defaults to be infinite).
     max_out_tokens = chat_params.get("subagentMaxOutputTokens")
     if max_out_tokens:

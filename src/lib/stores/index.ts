@@ -315,6 +315,7 @@ type Config = {
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
 		enable_subagents?: boolean;
+		subagent_default_model?: string;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;

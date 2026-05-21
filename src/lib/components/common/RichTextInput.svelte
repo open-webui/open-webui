@@ -264,6 +264,11 @@
 	let jsonValue = '';
 	let mdValue = '';
 
+	// Set by onTransaction before it assigns `value` internally; consumed by
+	// the `$: onValueChange()` reactive on its next run to skip a redundant
+	// re-serialize + setContent round-trip. See onTransaction below.
+	let _suppressOnValueChange = false;
+
 	let provider: SocketIOCollaborationProvider | null = null;
 
 	let floatingMenuElement: Element | null = null;
@@ -769,10 +774,28 @@
 			],
 			content: collaboration ? undefined : content,
 			autofocus: messageInput && !$mobile ? true : false,
-			onTransaction: () => {
+			onTransaction: ({ transaction, appendedTransactions }) => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
 				if (!editor) return;
+
+				// We're about to drive the `value` prop ourselves; tell the
+				// `$: onValueChange()` reactive (which also fires because we
+				// just reassigned `editor`) to no-op so it doesn't re-serialize
+				// the whole doc and run Turndown a second time.
+				_suppressOnValueChange = true;
+
+				// Selection-only transactions don't change the document, so
+				// the serialized HTML/JSON/markdown can't have changed either.
+				// Skip the full getHTML + getJSON + Turndown pass — it'd
+				// otherwise run dozens of times per second during a
+				// double-click-and-drag word selection and stall the main
+				// thread enough to make the drag visually break up. Mirrors
+				// the filter TipTap's own `onUpdate` event uses internally.
+				const docChanged =
+					transaction.docChanged ||
+					(appendedTransactions && appendedTransactions.some((tr) => tr.docChanged));
+				if (!docChanged) return;
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
@@ -1095,6 +1118,15 @@
 
 	const onValueChange = () => {
 		if (!editor) return;
+
+		// onTransaction just drove `value` from inside the editor and bumped
+		// `editor` to flush Svelte reactives - this reactive then fires with
+		// nothing left to do. Bail before re-serializing the whole doc and
+		// running Turndown again.
+		if (_suppressOnValueChange) {
+			_suppressOnValueChange = false;
+			return;
+		}
 
 		const jsonValue = editor.getJSON();
 		const htmlValue = editor.getHTML();

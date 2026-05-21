@@ -156,6 +156,12 @@
 	// medium / high / xhigh (or any provider-specific value).
 	let subagentReasoningEffort: string = '';
 	let lastPersistedSubagentReasoningEffort: string | null = null;
+	// Empty string = inherit the admin SUBAGENT_DEFAULT_SERVICE_TIER (which
+	// itself may be empty, in which case no service_tier field is sent).
+	// Otherwise: any string the provider accepts (`default` / `flex` /
+	// `priority` for OpenAI; provider-specific values otherwise).
+	let subagentServiceTier: string = '';
+	let lastPersistedSubagentServiceTier: string | null = null;
 	let codeInterpreterEnabled = false;
 
 	// Auto-save tool preferences when they change
@@ -278,6 +284,27 @@
 
 		params = nextParams;
 		lastPersistedSubagentReasoningEffort = subagentReasoningEffort;
+
+		void saveChatHandler(chatIdToPersist, history, nextParams);
+	}
+
+	// Same pattern for the per-chat subagent service tier override.
+	// `chat.params.subagentServiceTier` (empty = inherit admin default).
+	$: if (subagentServiceTier !== (params.subagentServiceTier ?? '')) {
+		params = { ...params, subagentServiceTier };
+	}
+	$: if (
+		activeChatId &&
+		!loading &&
+		!$temporaryChatEnabled &&
+		lastPersistedSubagentServiceTier !== null &&
+		subagentServiceTier !== lastPersistedSubagentServiceTier
+	) {
+		const nextParams = { ...params, subagentServiceTier };
+		const chatIdToPersist = activeChatId;
+
+		params = nextParams;
+		lastPersistedSubagentServiceTier = subagentServiceTier;
 
 		void saveChatHandler(chatIdToPersist, history, nextParams);
 	}
@@ -571,6 +598,7 @@
 		lastPersistedDataVizEnabled = null;
 		lastPersistedSubagentsEnabled = null;
 		lastPersistedSubagentReasoningEffort = null;
+		lastPersistedSubagentServiceTier = null;
 
 		prompt = '';
 		messageInput?.setText('');
@@ -582,6 +610,7 @@
 		webSearchEnabled = false;
 		subagentsEnabled = false;
 		subagentReasoningEffort = '';
+		subagentServiceTier = '';
 		imageGenerationEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
@@ -725,6 +754,7 @@
 		dataVizEnabled = false;
 		subagentsEnabled = false;
 		subagentReasoningEffort = '';
+		subagentServiceTier = '';
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -2058,6 +2088,11 @@
 			subagentReasoningEffort = params.subagentReasoningEffort ?? '';
 		}
 		lastPersistedSubagentReasoningEffort = subagentReasoningEffort;
+
+		if (params.subagentServiceTier !== undefined) {
+			subagentServiceTier = params.subagentServiceTier ?? '';
+		}
+		lastPersistedSubagentServiceTier = subagentServiceTier;
 
 		// Hydrate the subagent live-state store with anything persisted on
 		// this chat's messages. Each message's `subagent_runs` is a
@@ -5278,6 +5313,7 @@
 									bind:dataVizEnabled
 									bind:subagentsEnabled
 									bind:subagentReasoningEffort
+									bind:subagentServiceTier
 									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands
@@ -5340,6 +5376,7 @@
 									bind:dataVizEnabled
 									bind:subagentsEnabled
 									bind:subagentReasoningEffort
+									bind:subagentServiceTier
 									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands

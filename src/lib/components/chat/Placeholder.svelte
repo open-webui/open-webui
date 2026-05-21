@@ -58,6 +58,7 @@
 	export let dataVizEnabled = false;
 	export let subagentsEnabled = false;
 	export let subagentReasoningEffort: string = '';
+	export let subagentServiceTier: string = '';
 	export let serviceTier: string = 'default';
 
 	export let onSelect = (e) => {};
@@ -257,6 +258,7 @@
 					bind:dataVizEnabled
 					bind:subagentsEnabled
 					bind:subagentReasoningEffort
+					bind:subagentServiceTier
 					bind:serviceTier
 					bind:atSelectedModel
 					bind:showCommands

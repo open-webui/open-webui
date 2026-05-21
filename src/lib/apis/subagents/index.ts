@@ -8,6 +8,11 @@ export type SubagentsConfig = {
 	// Empty string = let the model use its own default. Otherwise one of
 	// minimal / low / medium / high / xhigh (or any provider-specific value).
 	SUBAGENT_DEFAULT_REASONING_EFFORT: string;
+	// Empty string = don't send a `service_tier` field (provider uses its own
+	// default). Otherwise: any string the chosen provider accepts (e.g.
+	// `default`, `flex`, `priority`). Per-chat `chat.params.subagentServiceTier`
+	// overrides this when set.
+	SUBAGENT_DEFAULT_SERVICE_TIER: string;
 };
 
 export type SubagentsConfigUpdate = Partial<SubagentsConfig>;

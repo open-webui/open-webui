@@ -74,6 +74,7 @@
 	import Voice from '../icons/Voice.svelte';
 	import Terminal from '../icons/Terminal.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
+	import SubagentSettings from './MessageInput/SubagentSettings.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 
@@ -127,6 +128,11 @@
 	// Otherwise: minimal / low / medium / high / xhigh (free string; provider
 	// decides what's actually valid).
 	export let subagentReasoningEffort: string = '';
+	// Empty string = inherit the admin-set SUBAGENT_DEFAULT_SERVICE_TIER (which
+	// itself may be empty, in which case no service_tier is sent and the
+	// provider picks its own default). Otherwise: any string the provider
+	// accepts (typically `default` / `flex` / `priority`).
+	export let subagentServiceTier: string = '';
 	export let codeInterpreterEnabled = false;
 
 	// Reasoning effort functionality
@@ -356,6 +362,7 @@
 		dataVizEnabled,
 		subagentsEnabled,
 		subagentReasoningEffort,
+		subagentServiceTier,
 		// Only include reasoning when the selected model is configured as a reasoning model.
 		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {})
 	});
@@ -738,6 +745,22 @@
 		($_user == null ||
 			$_user?.role === 'admin' ||
 			!!$_user?.permissions?.features?.subagents);
+
+	// Resolves the subagent's effective model id the same way the backend
+	// (`utils/subagent._resolve_subagent_model_id`) does — admin default →
+	// parent's currently-selected model. (The third layer the backend
+	// supports — chat.params.subagentModel — isn't exposed in any UI yet, so
+	// it can't be set from here; if a power user sets it via the API the
+	// dropdown will simply show the parent-model's tier list instead of the
+	// subagent-model's, which still works because picking an invalid value
+	// is just rejected upstream.) Powers the dynamic service-tier dropdown
+	// inside the SubagentSettings popover.
+	$: resolvedSubagentModelId =
+		($config?.features?.subagent_default_model ?? '') ||
+		(atSelectedModel?.id ?? selectedModelIds?.[0]) ||
+		'';
+
+	$: allowedSubagentServiceTiers = getServiceTiersForModel(resolvedSubagentModelId);
 
 	let showStudyModeButton = false;
 	$: showStudyModeButton = $config == null || !!$config?.features?.enable_study_mode;
@@ -2121,56 +2144,16 @@
 											</Tooltip>
 
 											{#if subagentsEnabled}
-												<!-- Subagent reasoning effort override. Visible only
-													when subagents is on. Empty value = inherit the
-													admin global SUBAGENT_DEFAULT_REASONING_EFFORT. -->
-												<Tooltip
-													content={$i18n.t(
-														"Subagent reasoning effort (overrides admin default for this chat)"
-													)}
-													placement="top"
-												>
-													<div class="relative flex items-center">
-														<div
-															class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																class="size-4"
-															>
-																<path
-																	d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-																/>
-															</svg>
-															<span class="text-xs font-medium">
-																{subagentReasoningEffort || $i18n.t('default')}
-															</span>
-
-															<select
-																bind:value={subagentReasoningEffort}
-																class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-																aria-label={$i18n.t(
-																	'Subagent reasoning effort'
-																)}
-															>
-																<option value="">
-																	{$i18n.t('default (admin)')}
-																</option>
-																<option value="minimal">minimal</option>
-																<option value="low">low</option>
-																<option value="medium">medium</option>
-																<option value="high">high</option>
-																<option value="xhigh">xhigh</option>
-															</select>
-														</div>
-													</div>
-												</Tooltip>
+												<!-- Both per-chat subagent overrides (reasoning effort
+													+ service tier) live inside a single popover next
+													to the Subagents toggle. Replaces the older
+													standalone reasoning-effort pill so the input bar
+													stays uncluttered when more knobs get added later. -->
+												<SubagentSettings
+													bind:subagentReasoningEffort
+													bind:subagentServiceTier
+													allowedServiceTiers={allowedSubagentServiceTiers}
+												/>
 											{/if}
 										{/if}
 
