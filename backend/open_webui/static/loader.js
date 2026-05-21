@@ -264,33 +264,39 @@
 		}
 	}
 
-	/* Defense-in-depth: Workbench is the contract-bound source for these
-	 * URLs, but they end up directly as <a href> values. Restrict to
-	 * http(s) and same-origin paths so a compromised/misconfigured
-	 * upstream can't smuggle a `javascript:` or `data:` URL into the
-	 * DOM. Returns null for anything that doesn't look like a real link. */
-	function safeHref(raw) {
+	/* Defense-in-depth for sidebar links from Workbench: only same-origin
+	 * paths (`/...`) and absolute URLs whose origin is in the allowlist
+	 * pass through. The allowlist is `[workbench_url, cloud_lock_url]`
+	 * (filtered to non-empty) — those are the only domains the shell
+	 * should ever link to. Anything else (javascript:, data:, an
+	 * arbitrary external host) returns null and the caller drops it.
+	 *
+	 * Match by origin prefix rather than string-startswith on the full
+	 * URL so trailing-slash differences don't cause false negatives. */
+	function safeHref(raw, allowedOrigins) {
 		if (typeof raw !== 'string' || raw.length === 0) return null;
 		if (raw.charAt(0) === '/') return raw;
-		if (raw.indexOf('http://') === 0 || raw.indexOf('https://') === 0) return raw;
+		try {
+			var parsed = new URL(raw);
+			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+			for (var i = 0; i < allowedOrigins.length; i++) {
+				if (parsed.origin === allowedOrigins[i]) return raw;
+			}
+		} catch (_e) {
+			/* URL constructor throws for malformed input — treat as untrusted. */
+		}
 		return null;
 	}
 
-	/* Translate a Workbench-side sidebar item (label/url/icon/path) to
-	 * the loader's internal {label, icon, href, active} shape. Chat is
-	 * the only special case: Workbench returns Chat with an absolute
-	 * OPEN_WEBUI_URL href, but we're already IN OWUI, so rewrite it
-	 * to `/` and mark active. Items whose URL fails the safeHref check
-	 * (unexpected scheme, missing, etc.) are returned with href=null;
-	 * the caller filters those out so nothing renders for them. */
-	function itemFromWorkbench(item) {
-		var isChat = item.label === 'Chat';
-		return {
-			label: item.label,
-			icon: item.icon,
-			href: isChat ? '/' : safeHref(item.url),
-			active: isChat
-		};
+	/* Compute the origin of a base URL string for comparison in safeHref.
+	 * Returns null for empty / malformed input so the caller can filter. */
+	function originOf(urlStr) {
+		if (typeof urlStr !== 'string' || urlStr.length === 0) return null;
+		try {
+			return new URL(urlStr).origin;
+		} catch (_e) {
+			return null;
+		}
 	}
 
 	function hasHref(it) {
@@ -302,6 +308,25 @@
 		var bottom;
 		var main = sidebarData && sidebarData.sidebar && sidebarData.sidebar.main;
 		var bottomItems = sidebarData && sidebarData.sidebar && sidebarData.sidebar.bottom;
+
+		/* Origins the shell is allowed to link to: Workbench itself
+		 * and CloudLock (the "Private Cloud" target). Anything else
+		 * returned by Workbench's sidebar endpoint is dropped by
+		 * safeHref → null → hasHref filter. */
+		var allowedOrigins = [originOf(base), originOf(cloudLockUrl)].filter(Boolean);
+
+		/* Closure over allowedOrigins so itemFromWorkbench knows the
+		 * allowlist without threading it through every call site. */
+		function itemFromWorkbench(item) {
+			var isChat = item.label === 'Chat';
+			return {
+				label: item.label,
+				icon: item.icon,
+				href: isChat ? '/' : safeHref(item.url, allowedOrigins),
+				active: isChat
+			};
+		}
+
 		if (Array.isArray(main)) {
 			/* Use the entitlement-filtered list from Workbench. The
 			 * user only sees nav items they're actually granted via
