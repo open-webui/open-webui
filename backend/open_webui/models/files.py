@@ -5,7 +5,7 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Index
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -31,6 +31,11 @@ class File(Base):
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+
+    __table_args__ = (
+        # WHERE user_id = ... (Files.get_files_by_user_id)
+        Index("file_user_id_idx", "user_id"),
+    )
 
 
 class FileModel(BaseModel):
