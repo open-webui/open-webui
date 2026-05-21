@@ -40,8 +40,8 @@ from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import decode_token
 from open_webui.utils.redis import (
+    build_sentinel_url,
     get_redis_connection,
-    get_sentinel_url_from_env,
     get_sentinels_from_env,
 )
 from redis import asyncio as aioredis
@@ -58,20 +58,20 @@ REDIS = None
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
 
 if WEBSOCKET_MANAGER == 'redis':
-    if WEBSOCKET_SENTINEL_HOSTS:
-        mgr = socketio.AsyncRedisManager(
-            get_sentinel_url_from_env(WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT),
-            redis_options=WEBSOCKET_REDIS_OPTIONS,
-        )
-    else:
-        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL, redis_options=WEBSOCKET_REDIS_OPTIONS)
+    sentinel_hosts = WEBSOCKET_SENTINEL_HOSTS or ''
+    ws_redis_url = (
+        build_sentinel_url(WEBSOCKET_REDIS_URL, sentinel_hosts, WEBSOCKET_SENTINEL_PORT)
+        if sentinel_hosts
+        else WEBSOCKET_REDIS_URL
+    )
+    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
-        client_manager=mgr,
+        client_manager=redis_manager,
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
@@ -99,32 +99,31 @@ SESSION_POOL_TIMEOUT = 120  # seconds without heartbeat before session is reaped
 
 if WEBSOCKET_MANAGER == 'redis':
     log.debug('Using Redis to manage websockets.')
+    ws_sentinels = get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT)
     REDIS = get_redis_connection(
         redis_url=WEBSOCKET_REDIS_URL,
-        redis_sentinels=get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT),
+        redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
         async_mode=True,
     )
 
-    redis_sentinels = get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT)
-
     MODELS = RedisDict(
         f'{REDIS_KEY_PREFIX}:models',
         redis_url=WEBSOCKET_REDIS_URL,
-        redis_sentinels=redis_sentinels,
+        redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
 
     SESSION_POOL = RedisDict(
         f'{REDIS_KEY_PREFIX}:session_pool',
         redis_url=WEBSOCKET_REDIS_URL,
-        redis_sentinels=redis_sentinels,
+        redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     USAGE_POOL = RedisDict(
         f'{REDIS_KEY_PREFIX}:usage_pool',
         redis_url=WEBSOCKET_REDIS_URL,
-        redis_sentinels=redis_sentinels,
+        redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
 
@@ -132,7 +131,7 @@ if WEBSOCKET_MANAGER == 'redis':
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name=f'{REDIS_KEY_PREFIX}:usage_cleanup_lock',
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
-        redis_sentinels=redis_sentinels,
+        redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     aquire_func = clean_up_lock.aquire_lock

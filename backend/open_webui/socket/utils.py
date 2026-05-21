@@ -1,13 +1,18 @@
+"""Redis-backed distributed data structures for WebSocket state management."""
+
+from __future__ import annotations
+
 import json
 import uuid
-from typing import List, Optional, Tuple
 
 import pycrdt as Y
-from open_webui.env import REDIS_KEY_PREFIX
 from open_webui.utils.redis import get_redis_connection
-
+from open_webui.env import REDIS_KEY_PREFIX
+YDOC_KEY_PREFIX = f"{REDIS_KEY_PREFIX}:ydoc:documents"
 
 class RedisLock:
+    """Distributed lock backed by a Redis SET with NX/EX semantics."""
+
     def __init__(
         self,
         redis_url,
@@ -128,7 +133,7 @@ class YdocManager:
     def __init__(
         self,
         redis=None,
-        redis_key_prefix: str = f'{REDIS_KEY_PREFIX}:ydoc:documents',
+        redis_key_prefix: str = YDOC_KEY_PREFIX,
     ):
         self._updates = {}
         self._users = {}
@@ -177,7 +182,7 @@ class YdocManager:
             ydoc.apply_update(bytes(update))
         self._updates[document_id] = [ydoc.get_update()] + updates[mid:]
 
-    async def get_updates(self, document_id: str) -> List[bytes]:
+    async def get_updates(self, document_id: str) -> list[bytes]:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
@@ -196,7 +201,7 @@ class YdocManager:
         else:
             return document_id in self._updates
 
-    async def get_users(self, document_id: str) -> List[str]:
+    async def get_users(self, document_id: str) -> list[str]:
         document_id = document_id.replace(':', '_')
 
         if self._redis:

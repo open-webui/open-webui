@@ -447,10 +447,9 @@ from open_webui.env import (
     LICENSE_KEY,
     LOG_FORMAT,
     MAX_BODY_LOG_SIZE,
+    # Redis
     REDIS_CLUSTER,
     REDIS_KEY_PREFIX,
-    REDIS_SENTINEL_HOSTS,
-    REDIS_SENTINEL_PORT,
     REDIS_URL,
     RESET_CONFIG_ON_START,
     SAFE_MODE,
@@ -579,7 +578,7 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
-from open_webui.utils.redis import get_redis_connection, get_sentinels_from_env
+from open_webui.utils.redis import get_redis_client, get_redis_connection
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.session_pool import get_session
 from open_webui.utils.tools import set_terminal_servers, set_tool_servers
@@ -652,12 +651,7 @@ async def lifespan(app: FastAPI):
     log.info('Installing external dependencies of functions and tools...')
     await install_tool_and_function_dependencies()
 
-    app.state.redis = get_redis_connection(
-        redis_url=REDIS_URL,
-        redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
-        redis_cluster=REDIS_CLUSTER,
-        async_mode=True,
-    )
+    app.state.redis = get_redis_client(async_mode=True)
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
@@ -764,7 +758,6 @@ app.state.oauth_client_manager = oauth_client_manager
 app.state.instance_id = None
 app.state.config = AppConfig(
     redis_url=REDIS_URL,
-    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
     redis_cluster=REDIS_CLUSTER,
     redis_key_prefix=REDIS_KEY_PREFIX,
 )

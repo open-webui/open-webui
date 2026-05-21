@@ -193,6 +193,13 @@ class AppConfig:
         super().__setattr__('_entries', {})
         super().__setattr__('_key_prefix', redis_key_prefix)
 
+        # If sentinels weren't explicitly provided, read from env.
+        if redis_sentinels is None:
+            from open_webui.env import REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+            from open_webui.utils.redis import get_sentinels_from_env
+
+            redis_sentinels = get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT)
+
         rc: Union[redis.Redis, redis.cluster.RedisCluster, None] = None
         if redis_url:
             rc = get_redis_connection(redis_url, redis_sentinels or [], redis_cluster, decode_responses=True)
