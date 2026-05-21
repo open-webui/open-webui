@@ -42,6 +42,7 @@
 		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
 			!direct &&
 			provider === '');
+	$: azureOpenAIV1 = azure && /\/openai\/v1\/?$/.test(url.replace(/\/$/, ''));
 
 	let prefixId = '';
 	let enable = true;
@@ -103,7 +104,7 @@
 					auth_type,
 					...(provider ? { provider } : {}),
 					...(azure ? { azure: true } : {}),
-					api_version: apiVersion,
+					...(apiVersion ? { api_version: apiVersion } : {}),
 					...(_headers ? { headers: _headers } : {})
 				}
 			},
@@ -142,7 +143,7 @@
 		}
 
 		if (azure) {
-			if (!apiVersion) {
+			if (!azureOpenAIV1 && !apiVersion) {
 				loading = false;
 
 				toast.error($i18n.t('API Version is required'));
@@ -156,7 +157,7 @@
 				return;
 			}
 
-			if (modelIds.length === 0) {
+			if (!azureOpenAIV1 && modelIds.length === 0) {
 				loading = false;
 				toast.error($i18n.t('Deployment names are required for Azure OpenAI'));
 				return;
@@ -192,7 +193,7 @@
 				headers: headers ? JSON.parse(headers) : undefined,
 				...(provider ? { provider } : {}),
 				...(!ollama && azure ? { azure: true } : {}),
-				...(azure ? { api_version: apiVersion } : {}),
+				...(azure && apiVersion ? { api_version: apiVersion } : {}),
 				...(apiType ? { api_type: apiType } : {})
 			}
 		};
@@ -517,7 +518,7 @@
 							</div>
 						{/if}
 
-						{#if azure}
+						{#if azure && !azureOpenAIV1}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<label
@@ -624,10 +625,16 @@
 											url: url
 										})}
 									{:else if azure}
-										{$i18n.t('Deployment names are required for Azure OpenAI')}
-										<!-- {$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
-											url: `${url}/openai/deployments`
-										})} -->
+										{#if azureOpenAIV1}
+											{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
+												url: url
+											})}
+										{:else}
+											{$i18n.t('Deployment names are required for Azure OpenAI')}
+											<!-- {$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
+												url: `${url}/openai/deployments`
+											})} -->
+										{/if}
 									{:else}
 										{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
 											url: url

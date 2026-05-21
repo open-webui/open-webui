@@ -596,10 +596,29 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                 headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
                 if api_config.get('azure') or api_config.get('provider') == 'azure':
-                    models = {
-                        'data': api_config.get('model_ids', []) or [],
-                        'object': 'list',
-                    }
+                    if is_azure_openai_v1_url(url):
+                        async with session.get(
+                            f'{url.rstrip("/")}/models',
+                            headers=headers,
+                            cookies=cookies,
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        ) as r:
+                            if r.status != 200:
+                                error_detail = f'HTTP Error: {r.status}'
+                                try:
+                                    res = await r.json()
+                                    if 'error' in res:
+                                        error_detail = f'External Error: {res["error"]}'
+                                except Exception:
+                                    pass
+                                raise Exception(error_detail)
+
+                            models = await r.json()
+                    else:
+                        models = {
+                            'data': api_config.get('model_ids', []) or [],
+                            'object': 'list',
+                        }
                 elif is_anthropic_url(url):
                     models = await get_anthropic_models(url, key, user=user)
                     if models is None:
@@ -687,9 +706,14 @@ async def verify_connection(
                 if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                     headers['api-key'] = key
 
-                api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                if is_azure_openai_v1_url(url):
+                    models_url = f'{url.rstrip("/")}/models'
+                else:
+                    api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                    models_url = f'{url}/openai/models?api-version={api_version}'
+
                 async with session.get(
-                    url=f'{url}/openai/models?api-version={api_version}',
+                    url=models_url,
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -807,6 +831,11 @@ def _sanitize_model_for_url(model: str) -> str:
             detail='Invalid model name: must not be empty or contain path separators or traversal sequences',
         )
     return quote(model, safe='')
+
+
+def is_azure_openai_v1_url(url: str) -> bool:
+    """Return True when an Azure connection uses the OpenAI-compatible v1 API."""
+    return bool(re.search(r'/openai/v1(?:/|$)', url.rstrip('/')))
 
 
 def convert_to_azure_payload(url, payload: dict, api_version: str):
@@ -1159,7 +1188,7 @@ async def generate_chat_completion(
 
         # Azure v1 format: base URL already ends with /openai/v1,
         # model stays in the payload, no deployment URL rewriting.
-        is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+        is_azure_v1 = is_azure_openai_v1_url(url)
 
         if is_azure_v1:
             if is_responses:
@@ -1413,7 +1442,7 @@ async def responses(
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                 headers['api-key'] = key
 
-            is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+            is_azure_v1 = is_azure_openai_v1_url(url)
 
             if is_azure_v1:
                 request_url = f'{url.rstrip("/")}/responses'
@@ -1525,7 +1554,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                 headers['api-key'] = key
 
-            is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+            is_azure_v1 = is_azure_openai_v1_url(url)
 
             if is_azure_v1:
                 qs = request.url.query
