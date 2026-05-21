@@ -36,17 +36,12 @@
 	}
 
 	$: if (tooltipElement && (content || elementId)) {
-		let tooltipContent: string | Element | DocumentFragment | null = null;
+		let tooltipContent: string | Element | null = null;
 
 		if (elementId) {
 			tooltipContent = document.getElementById(elementId);
-		} else {
+		} else if (typeof content === 'string') {
 			tooltipContent = DOMPurify.sanitize(content);
-		}
-
-		// After the element changes, the old instance must be destroyed, otherwise the detached tippy floating DOM will be left behind
-		if (tooltipInstance && tooltipInstance.reference !== tooltipElement) {
-			destroyInstance();
 		}
 
 		if (tooltipInstance) {

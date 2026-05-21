@@ -29,7 +29,6 @@
 		copyToClipboard as _copyToClipboard,
 		approximateToHumanReadable,
 		getMessageContentParts,
-		sanitizeResponseContent,
 		createMessagesList,
 		formatMessageTimestamp,
 		formatMessageTimestampFull,
@@ -216,6 +215,61 @@
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
+
+	const metricLabels = {
+		predicted_per_second: 'Generation Speed',
+		prompt_per_second: 'Prompt Processing Speed',
+		predicted_ms: 'Generation Time',
+		prompt_ms: 'Prompt Processing Time',
+		cache_n: 'Cached Tokens',
+		prompt_n: 'Input Tokens',
+		input_tokens: 'Total Input Tokens',
+		predicted_n: 'Output Tokens',
+		output_tokens: 'Total Output Tokens',
+		draft_n: 'Speculative Draft Tokens',
+		draft_n_accepted: 'Accepted Draft Tokens',
+		total_tokens: 'Total Tokens'
+	};
+
+	function formatMetricValue(key, value) {
+		if (typeof value !== 'number') return value;
+		if (key.includes('per_second')) return `${value.toFixed(2)} t/s`;
+		if (key === 'predicted_ms' || key === 'prompt_ms') {
+			if (value >= 3600000) return `${(value / 3600000).toFixed(2)} h`;
+			if (value >= 60000) return `${(value / 60000).toFixed(2)} min`;
+			if (value >= 1000) return `${(value / 1000).toFixed(2)} s`;
+			return `${value.toFixed(0)} ms`;
+		}
+		if (key.includes('duration') || key.includes('_duration')) return `${(value / 1000).toFixed(2)} s`;
+		return Number.isInteger(value) ? value : value.toFixed(2);
+	}
+
+	function formatUsageTooltip(usage) {
+		const orderedKeys = Object.keys(metricLabels);
+		const entries = orderedKeys
+			.filter(k => k in usage)
+			.map(k => [k, usage[k]]);
+		const groups = [];
+		let currentGroup = [];
+		for (const entry of entries) {
+			currentGroup.push(entry);
+			const key = entry[0];
+			if (key === 'prompt_per_second' || key === 'prompt_ms') {
+				groups.push(currentGroup);
+				currentGroup = [];
+			}
+		}
+		if (currentGroup.length) groups.push(currentGroup);
+		return `<div class="flex flex-col gap-1 text-xs font-mono">${groups
+			.map((group, i) => {
+				const items = group
+					.map(([k, v]) => `<div class="flex justify-between gap-4"><span class="text-gray-400">${metricLabels[k]}:</span><span class="font-bold text-gray-200">${formatMetricValue(k, v)}</span></div>`)
+					.join('');
+				const sep = i > 0 ? `<div class="border-t border-gray-700 my-1"></div>` : '';
+				return sep + items;
+			})
+			.join('')}</div>`;
+	}
 
 	const stopAudio = () => {
 		speakAbort?.abort();
@@ -1181,22 +1235,13 @@
 
 								{#if message.usage}
 									<Tooltip
-										content={message.usage
-											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
-														.replace(/"([^(")"]+)":/g, '$1:')
-														.slice(1, -1)
-														.split('\n')
-														.map((line) => line.slice(2))
-														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-														.join('\n')
-												)}</pre>`
-											: ''}
+										content={formatUsageTooltip(message.usage)}
 										placement="bottom"
+										tippyOptions={{ className: 'usage-tooltip' }}
 									>
 										<button
 											aria-hidden="true"
-											class=" {isLastMessage || ($settings?.highContrastMode ?? false)
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
 											on:click={() => {
@@ -1616,5 +1661,9 @@
 	.buttons {
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
+	}
+
+	.usage-tooltip .tippy-box {
+		box-shadow: none !important;
 	}
 </style>
