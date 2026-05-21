@@ -405,13 +405,13 @@
 <div
 	id="sidebar-chat-group"
 	bind:this={itemElement}
-	class=" w-full {className} relative group"
+	class=" w-full {className} relative group my-[2px]"
 	draggable={!confirmEdit}
 >
 	{#if confirmEdit}
 		<div
-			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
+		id="sidebar-chat-item"
+			class=" w-full flex justify-between rounded-xl px-[10px] py-[5px] {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-800 selected'
 				: selected
@@ -445,9 +445,9 @@
 			/>
 		</div>
 	{:else}
-		<a
+<a
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex justify-between rounded-xl px-[10px] py-[5px] {id === $chatId ||
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-800 selected'
 				: selected
