@@ -56,18 +56,7 @@
 	let chat = null;
 
 	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
-
-	const loadChat = async () => {
-		if (!chat) {
-			draggable = false;
-			chat = await getChatById(localStorage.token, id);
-			draggable = true;
-		}
-	};
+	let draggable = true;
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
@@ -182,7 +171,8 @@
 
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
-		// Set the data to be transferred
+		// `item` is intentionally null — the drop target re-fetches by id, so
+		// prefetching the (potentially huge) chat body on every drag is wasteful.
 		event.dataTransfer.setData(
 			'text/plain',
 			JSON.stringify({
