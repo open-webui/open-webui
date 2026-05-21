@@ -17,28 +17,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-####################
-# Models DB Schema
-# A misconfigured model wastes the time of everyone
-# who trusts it. Let what is set here be set with care.
-####################
+# --- Models DB Schema ---
 
 
-# ModelParams is a model for the data stored in the params field of the Model table
 class ModelParams(BaseModel):
+    """Parameters for model inference (temperature, top_p, etc.)."""
+
     model_config = ConfigDict(extra='allow')
-    pass
 
 
-# ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
+    """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
+
     profile_image_url: str | None = '/static/favicon.png'
-
-    description: str | None = None
-    """
-        User-facing description of the model.
-    """
-
+    description: str | None = Field(default=None, description='User-facing description of the model.')
     capabilities: dict | None = None
 
     model_config = ConfigDict(extra='allow')
@@ -59,7 +51,8 @@ class ModelMeta(BaseModel):
         return data
 
 
-class Model(Base):  # provider model config
+class Model(Base):
+
     """Workspace model entry — wraps an upstream LLM with custom params and metadata."""
 
     __tablename__ = 'model'

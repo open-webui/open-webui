@@ -199,9 +199,7 @@ if frontend_loader.exists():
         logging.error(f'An error occurred: {e}')
 
 
-####################################
-# STORAGE PROVIDER
-####################################
+# --- Storage Provider ---
 
 STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # defaults to local, s3
 STORAGE_LOCAL_CACHE = os.getenv('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'

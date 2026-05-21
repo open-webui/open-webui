@@ -2258,12 +2258,8 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         log.debug(f'urls: {urls}')
 
     except Exception as e:
-        log.exception(e)
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
-        )
+        log.exception('Web search failed')
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e))
 
     if len(urls) == 0:
         raise HTTPException(
@@ -2343,11 +2339,8 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 'loaded_count': len(docs),
             }
     except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
+        log.exception('Web search content loading failed')
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read') -> None:

@@ -2562,9 +2562,7 @@ async def get_current_usage(user=Depends(get_verified_user)):
         raise HTTPException(status_code=500, detail='Internal Server Error')
 
 
-############################
-# OAuth Login & Callback
-############################
+# --- OAuth Login & Callback ---
 
 
 # Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
@@ -2753,12 +2751,6 @@ async def oauth_login(provider: str, request: Request):
     return await oauth_manager.handle_login(request, provider)
 
 
-# OAuth login logic is as follows:
-# 1. Attempt to find a user with matching subject ID, tied to the provider
-# 2. If OAUTH_MERGE_ACCOUNTS_BY_EMAIL is true, find a user with the email address provided via OAuth
-#    - This is considered insecure in general, as OAuth providers do not always verify email addresses
-# 3. If there is no user, and ENABLE_OAUTH_SIGNUP is true, create a user
-#    - Email addresses are considered unique, so we fail registration if the email address is already taken
 @app.get('/oauth/{provider}/login/callback')
 @app.get('/oauth/{provider}/callback')  # Legacy endpoint
 async def oauth_login_callback(
@@ -2767,6 +2759,15 @@ async def oauth_login_callback(
     response: Response,
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Handle the OAuth provider callback.
+
+    Resolution order:
+    1. Match by subject ID bound to the provider.
+    2. If ``OAUTH_MERGE_ACCOUNTS_BY_EMAIL`` is enabled, match by email
+       (note: some providers do not verify email addresses).
+    3. If no match and ``ENABLE_OAUTH_SIGNUP`` is enabled, create a new user
+       (fails if the email is already registered).
+    """
     return await oauth_manager.handle_callback(request, provider, response, db=db)
 
 

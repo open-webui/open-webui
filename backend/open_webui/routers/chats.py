@@ -519,10 +519,7 @@ async def get_user_chat_list_by_user_id(
 ):
     """List chat summaries for a given user (admin-only endpoint)."""
     if not ENABLE_ADMIN_CHAT_ACCESS:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     effective_page = page if page is not None else 1
     limit = 60
@@ -757,10 +754,7 @@ async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = 
 @router.get('/all/db', response_model=list[ChatResponse])
 async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     if not ENABLE_ADMIN_EXPORT:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     return [ChatResponse(**chat.model_dump()) for chat in await Chats.get_chats(db=db)]
 
 
@@ -1326,9 +1320,7 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: Async
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# ShareChatById
-############################
+# --- Share Chat ---
 
 
 @router.post('/{id}/share', response_model=ChatResponse | None)
@@ -1338,51 +1330,35 @@ async def share_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if (user.role != 'admin') and (
-        not await has_permission(user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS)
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS
     ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if not chat:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
-    if chat:
-        if chat.share_id:
-            # Re-snapshot existing share
-            shared = await SharedChats.update(chat.share_id, db=db)
-            if shared:
-                # Re-fetch the original chat to return
-                chat = await Chats.get_chat_by_id(id, db=db)
-                return ChatResponse(**chat.model_dump())
+    # If a share already exists, re-snapshot it
+    if chat.share_id:
+        shared = await SharedChats.update(chat.share_id, db=db)
+        if shared:
+            chat = await Chats.get_chat_by_id(id, db=db)
+            return ChatResponse(**chat.model_dump())
 
-        # Create new share
-        shared = await SharedChats.create(id, user.id, db=db)
-        if not shared:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=ERROR_MESSAGES.DEFAULT(),
-            )
-        # Set share_id on the original chat
-        chat = await Chats.update_chat_share_id_by_id(id, shared.id, db=db)
-        if not chat:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=ERROR_MESSAGES.DEFAULT(),
-            )
-        return ChatResponse(**chat.model_dump())
+    # Create a new share
+    shared = await SharedChats.create(id, user.id, db=db)
+    if not shared:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    chat = await Chats.update_chat_share_id_by_id(id, shared.id, db=db)
+    if not chat:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
+
+    return ChatResponse(**chat.model_dump())
 
 
-############################
-# DeleteSharedChatById
-############################
+# --- Delete Shared Chat ---
 
 
 @router.delete('/{id}/share', response_model=bool | None)
@@ -1390,22 +1366,17 @@ async def delete_shared_chat_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-    if chat:
-        if not chat.share_id:
-            return False
+    if not chat:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
-        await SharedChats.delete_by_chat_id(id, db=db)
-        await Chats.update_chat_share_id_by_id(id, None, db=db)
+    if not chat.share_id:
+        return False
 
-        # Revoke all access grants for this shared chat
-        await AccessGrants.set_access_grants('shared_chat', id, [], db=db)
+    await SharedChats.delete_by_chat_id(id, db=db)
+    await Chats.update_chat_share_id_by_id(id, None, db=db)
+    await AccessGrants.set_access_grants('shared_chat', id, [], db=db)
 
-        return True
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    return True
 
 
 ############################
