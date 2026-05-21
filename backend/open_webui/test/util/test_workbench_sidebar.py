@@ -44,9 +44,7 @@ def _mock_response(status_code: int, body: dict | None = None):
     response.json = MagicMock(return_value=body or {})
     response.raise_for_status = MagicMock()
     if status_code >= 400 and status_code != 404:
-        response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            'err', request=MagicMock(), response=response
-        )
+        response.raise_for_status.side_effect = httpx.HTTPStatusError('err', request=MagicMock(), response=response)
     return response
 
 
@@ -163,9 +161,7 @@ class TestCaching:
         assert call_count['n'] == 1
 
     @pytest.mark.asyncio
-    async def test_cache_is_keyed_by_lowercase_email(
-        self, monkeypatch, configured_env
-    ):
+    async def test_cache_is_keyed_by_lowercase_email(self, monkeypatch, configured_env):
         call_count = {'n': 0}
 
         def handler(*_a, **_kw):
@@ -203,9 +199,7 @@ class TestCaching:
 
 class TestNegativeCache:
     @pytest.mark.asyncio
-    async def test_404_caches_none_and_returns_none(
-        self, monkeypatch, configured_env
-    ):
+    async def test_404_caches_none_and_returns_none(self, monkeypatch, configured_env):
         call_count = {'n': 0}
 
         def handler(*_a, **_kw):
@@ -222,9 +216,7 @@ class TestNegativeCache:
 
 class TestSoftFail:
     @pytest.mark.asyncio
-    async def test_exception_returns_last_known_value(
-        self, monkeypatch, configured_env
-    ):
+    async def test_exception_returns_last_known_value(self, monkeypatch, configured_env):
         # First populate the cache with a real value
         _patch_client(monkeypatch, response=_mock_response(200, {'data': {'ok': True}}))
         first = await fetch_sidebar('a@b')
@@ -240,9 +232,7 @@ class TestSoftFail:
         assert result == {'ok': True}
 
     @pytest.mark.asyncio
-    async def test_exception_with_no_prior_cache_returns_none(
-        self, monkeypatch, configured_env
-    ):
+    async def test_exception_with_no_prior_cache_returns_none(self, monkeypatch, configured_env):
         _patch_client(monkeypatch, exception=httpx.ConnectError('boom'))
         assert await fetch_sidebar('fresh@example.com') is None
 
