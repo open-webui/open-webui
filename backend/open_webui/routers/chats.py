@@ -274,10 +274,7 @@ async def get_chat_list_by_folder_id(
 
 @router.get("/pinned", response_model=list[ChatTitleIdResponse])
 async def get_user_pinned_chats(user=Depends(get_verified_user)):
-    return [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_pinned_chats_by_user_id(user.id)
-    ]
+    return Chats.get_pinned_chats_by_user_id(user.id)
 
 
 ############################
@@ -287,9 +284,10 @@ async def get_user_pinned_chats(user=Depends(get_verified_user)):
 
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
+    # Export endpoint — needs full chat JSON.
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_user_id(user.id)
+        for chat in Chats.get_chats_with_data_by_user_id(user.id)
     ]
 
 
@@ -300,9 +298,10 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 @router.get("/all/archived", response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user)):
+    # Export endpoint — needs full chat JSON.
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_archived_chats_by_user_id(user.id)
+        for chat in Chats.get_archived_chats_with_data_by_user_id(user.id)
     ]
 
 
@@ -335,7 +334,11 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_chats()]
+    # Admin export endpoint — needs full chat JSON.
+    return [
+        ChatResponse(**chat.model_dump())
+        for chat in Chats.get_chats_with_data()
+    ]
 
 
 ############################
@@ -467,7 +470,9 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
-        return ChatResponse(**chat.model_dump())
+        # Skip the model_dump() → re-validate hop. FastAPI's response_model
+        # serialization will coerce the ChatModel directly.
+        return chat
 
     else:
         raise HTTPException(

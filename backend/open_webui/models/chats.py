@@ -41,18 +41,29 @@ class Chat(Base):
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
 
+    # Denormalized from meta.subagent_of and chat.models[0] so queries can hit
+    # a real index instead of unpacking the (potentially 100+ MB) chat JSON.
+    subagent_of = Column(String, nullable=True)
+    model_id_primary = Column(String, nullable=True)
+
     __table_args__ = (
-        # Performance indexes for common queries
-        # WHERE folder_id = ...
         Index("folder_id_idx", "folder_id"),
-        # WHERE user_id = ... AND pinned = ...
         Index("user_id_pinned_idx", "user_id", "pinned"),
-        # WHERE user_id = ... AND archived = ...
         Index("user_id_archived_idx", "user_id", "archived"),
-        # WHERE user_id = ... ORDER BY updated_at DESC
-        Index("updated_at_user_id_idx", "updated_at", "user_id"),
-        # WHERE folder_id = ... AND user_id = ...
+        # Leading column must be the equality predicate, trailing the
+        # ORDER BY, otherwise SQLite has to sort the whole filtered result.
+        Index("user_id_updated_at_idx", "user_id", "updated_at"),
         Index("folder_id_user_id_idx", "folder_id", "user_id"),
+        # Partial index for the sidebar's default chat list query.
+        Index(
+            "chat_sidebar_default_idx",
+            "user_id",
+            "updated_at",
+            sqlite_where=text(
+                "archived = 0 AND folder_id IS NULL AND "
+                "(pinned = 0 OR pinned IS NULL) AND subagent_of IS NULL"
+            ),
+        ),
     )
 
 
@@ -73,6 +84,9 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+
+    subagent_of: Optional[str] = None
+    model_id_primary: Optional[str] = None
 
 
 ####################
@@ -285,6 +299,39 @@ def _upsert_chat_fts(db, chat_id: str, title: str, chat_data: dict) -> None:
         pass
 
 
+def _upsert_message_fts(
+    db, chat_id: str, message_id: str, role: str, content: str
+) -> None:
+    """Refresh JUST one message in ``message_fts``. Skips the wholesale
+    chat-level FTS rebuild, which is catastrophic for chats with thousands
+    of messages being appended one token at a time."""
+    if not _fts_supported(db):
+        return
+    try:
+        db.execute(
+            text(
+                "DELETE FROM message_fts "
+                "WHERE chat_id = :cid AND message_id = :mid"
+            ),
+            {"cid": chat_id, "mid": message_id},
+        )
+        if content:
+            db.execute(
+                text(
+                    "INSERT INTO message_fts (chat_id, message_id, role, content) "
+                    "VALUES (:cid, :mid, :role, :c)"
+                ),
+                {
+                    "cid": chat_id,
+                    "mid": message_id,
+                    "role": role or "",
+                    "c": content[:65536],
+                },
+            )
+    except Exception:
+        pass
+
+
 # FTS query characters that need to be stripped to avoid breaking the parser.
 # Keep `"` for quoted phrases and `-` for negation - those are handled by the
 # parser below.
@@ -484,25 +531,12 @@ def _sanitize_snippet(raw: Optional[str]) -> Optional[str]:
 
 
 def _apply_subagent_filter(query, db, include_subagents: bool):
-    """Filter out chats whose ``meta`` carries ``subagent_of`` — those are
-    research subagent chats spawned by the parent chat model and are hidden
-    from the user's main chat list / search / pinned / archived views by
-    default. Pass ``include_subagents=True`` to opt a query into seeing them
-    (e.g. a future "Subagents" admin page)."""
+    """Filter out chats whose ``subagent_of`` is set — those are research
+    subagent chats spawned by the parent chat model and are hidden from the
+    user's main chat list / search / pinned / archived views by default."""
     if include_subagents:
         return query
-    dialect = db.bind.dialect.name
-    if dialect == "sqlite":
-        # json_extract returns NULL when the path doesn't exist; pre-existing
-        # rows have no `subagent_of` key so they pass through cleanly.
-        return query.filter(
-            text("(json_extract(Chat.meta, '$.subagent_of') IS NULL)")
-        )
-    if dialect == "postgresql":
-        return query.filter(text("(Chat.meta->>'subagent_of' IS NULL)"))
-    raise NotImplementedError(
-        f"Unsupported dialect for subagent filter: {dialect}"
-    )
+    return query.filter(Chat.subagent_of.is_(None))
 
 
 class ChatTable:
@@ -557,6 +591,7 @@ class ChatTable:
             enriched_chat = self._enrich_chat_data(form_data.chat)
 
             title = enriched_chat.get("title", "New Chat")
+            models = enriched_chat.get("models") or []
             chat = ChatModel(
                 **{
                     "id": id,
@@ -566,13 +601,13 @@ class ChatTable:
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "model_id_primary": models[0] if models else None,
                 }
             )
 
             result = Chat(**chat.model_dump())
             db.add(result)
             db.commit()
-            db.refresh(result)
 
             # Update search_text via raw SQL (column not in ORM to avoid breaking queries before migration)
             try:
@@ -598,6 +633,7 @@ class ChatTable:
         with get_db() as db:
             id = str(uuid.uuid4())
             import_title = form_data.chat.get("title", "New Chat")
+            models = form_data.chat.get("models") or []
             chat = ChatModel(
                 **{
                     "id": id,
@@ -617,13 +653,14 @@ class ChatTable:
                         if form_data.updated_at
                         else int(time.time())
                     ),
+                    "subagent_of": (form_data.meta or {}).get("subagent_of"),
+                    "model_id_primary": models[0] if models else None,
                 }
             )
 
             result = Chat(**chat.model_dump())
             db.add(result)
             db.commit()
-            db.refresh(result)
 
             try:
                 db.execute(
@@ -651,11 +688,17 @@ class ChatTable:
                 enriched_chat = self._enrich_chat_data(chat)
 
                 title = enriched_chat.get("title", "New Chat")
+                models = enriched_chat.get("models") or []
                 chat_item.chat = enriched_chat
                 chat_item.title = title
                 chat_item.updated_at = int(time.time())
+                chat_item.model_id_primary = models[0] if models else None
+                # Re-derive subagent_of in case the caller passed an updated meta
+                # (subagent.py does this on the metadata-patch path).
+                meta = chat.get("meta") if isinstance(chat, dict) else None
+                if isinstance(meta, dict):
+                    chat_item.subagent_of = meta.get("subagent_of")
                 db.commit()
-                db.refresh(chat_item)
 
                 try:
                     db.execute(
@@ -732,47 +775,86 @@ class ChatTable:
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        # Hot path: streaming token writes hit this every chunk. We deliberately
+        # avoid ``update_chat_by_id`` here because its ``_upsert_chat_fts`` deletes
+        # and re-inserts every message in the chat — O(N) per token for an N-msg
+        # chat. Instead we patch the JSON in place and refresh only the one
+        # changed message in ``message_fts``.
+        try:
+            with get_db() as db:
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                # Sanitize message content for null characters before upserting
+                if isinstance(message.get("content"), str):
+                    message["content"] = message["content"].replace("\x00", "")
+
+                chat_data = dict(chat_item.chat or {})
+                history = dict(chat_data.get("history") or {})
+                messages_map = dict(history.get("messages") or {})
+
+                if message_id in messages_map:
+                    messages_map[message_id] = {**messages_map[message_id], **message}
+                else:
+                    messages_map[message_id] = message
+
+                history["messages"] = messages_map
+                history["currentId"] = message_id
+                chat_data["history"] = history
+
+                chat_item.chat = chat_data
+                chat_item.updated_at = int(time.time())
+                db.commit()
+
+                merged = messages_map[message_id]
+                role = str(merged.get("role", ""))
+                content = _extract_content_text(merged.get("content", ""))
+
+                # search_text drifts slightly between message writes; per-message
+                # FTS keeps search recall correct in the meantime.
+                _upsert_message_fts(db, id, message_id, role, content)
+                try:
+                    db.commit()
+                except Exception:
+                    pass
+
+                return ChatModel.model_validate(chat_item)
+        except Exception:
             return None
-
-        # Sanitize message content for null characters before upserting
-        if isinstance(message.get("content"), str):
-            message["content"] = message["content"].replace("\x00", "")
-
-        chat = chat.chat
-        history = chat.get("history", {})
-
-        if message_id in history.get("messages", {}):
-            history["messages"][message_id] = {
-                **history["messages"][message_id],
-                **message,
-            }
-        else:
-            history["messages"][message_id] = message
-
-        history["currentId"] = message_id
-
-        chat["history"] = history
-        return self.update_chat_by_id(id, chat)
 
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
+        # Status updates don't touch message content, so message_fts is already
+        # current — just patch the JSON and skip the FTS rebuild entirely.
+        try:
+            with get_db() as db:
+                chat_item = db.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                chat_data = dict(chat_item.chat or {})
+                history = dict(chat_data.get("history") or {})
+                messages_map = dict(history.get("messages") or {})
+
+                if message_id in messages_map:
+                    msg = dict(messages_map[message_id])
+                    status_history = list(msg.get("statusHistory", []))
+                    status_history.append(status)
+                    msg["statusHistory"] = status_history
+                    messages_map[message_id] = msg
+
+                history["messages"] = messages_map
+                chat_data["history"] = history
+
+                chat_item.chat = chat_data
+                chat_item.updated_at = int(time.time())
+                db.commit()
+
+                return ChatModel.model_validate(chat_item)
+        except Exception:
             return None
-
-        chat = chat.chat
-        history = chat.get("history", {})
-
-        if message_id in history.get("messages", {}):
-            status_history = history["messages"][message_id].get("statusHistory", [])
-            status_history.append(status)
-            history["messages"][message_id]["statusHistory"] = status_history
-
-        chat["history"] = history
-        return self.update_chat_by_id(id, chat)
 
     def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_db() as db:
@@ -1069,43 +1151,97 @@ class ChatTable:
         except Exception:
             return None
 
-    def get_chats(self, skip: int = 0, limit: int = 50) -> list[ChatModel]:
-        with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                # .limit(limit).offset(skip)
-                .order_by(Chat.updated_at.desc())
+    def _project_title_ids(self, rows) -> list[ChatTitleIdResponse]:
+        return [
+            ChatTitleIdResponse(
+                id=r[0], title=r[1] or "", updated_at=r[2] or 0, created_at=r[3] or 0,
             )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            for r in rows
+        ]
+
+    def get_chats(self, skip: int = 0, limit: int = 50) -> list[ChatTitleIdResponse]:
+        with get_db() as db:
+            query = (
+                db.query(Chat)
+                .with_entities(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
+                .order_by(Chat.updated_at.desc())
+                .limit(limit)
+                .offset(skip)
+            )
+            return self._project_title_ids(query.all())
+
+    def get_chats_with_data(
+        self, skip: int = 0, limit: int = 50
+    ) -> list[ChatModel]:
+        """Heavy variant for admin export — pulls the full chat JSON."""
+        with get_db() as db:
+            query = (
+                db.query(Chat)
+                .order_by(Chat.updated_at.desc())
+                .limit(limit)
+                .offset(skip)
+            )
+            return [ChatModel.model_validate(c) for c in query.all()]
 
     def get_chats_by_user_id(
         self, user_id: str, include_subagents: bool = False
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             query = _apply_subagent_filter(query, db, include_subagents)
-            all_chats = query.order_by(Chat.updated_at.desc())
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            ).order_by(Chat.updated_at.desc())
+            return self._project_title_ids(query.all())
+
+    def get_chats_with_data_by_user_id(
+        self, user_id: str, include_subagents: bool = False
+    ) -> list[ChatModel]:
+        """Heavy variant for export — pulls the full chat JSON. Avoid in
+        sidebar / list views."""
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id)
+            query = _apply_subagent_filter(query, db, include_subagents)
+            return [
+                ChatModel.model_validate(c)
+                for c in query.order_by(Chat.updated_at.desc()).all()
+            ]
 
     def get_pinned_chats_by_user_id(
         self, user_id: str, include_subagents: bool = False
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(
                 user_id=user_id, pinned=True, archived=False
             )
             query = _apply_subagent_filter(query, db, include_subagents)
-            all_chats = query.order_by(Chat.updated_at.desc())
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            ).order_by(Chat.updated_at.desc())
+            return self._project_title_ids(query.all())
 
     def get_archived_chats_by_user_id(
         self, user_id: str, include_subagents: bool = False
-    ) -> list[ChatModel]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
             query = _apply_subagent_filter(query, db, include_subagents)
-            all_chats = query.order_by(Chat.updated_at.desc())
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            query = query.with_entities(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+            ).order_by(Chat.updated_at.desc())
+            return self._project_title_ids(query.all())
+
+    def get_archived_chats_with_data_by_user_id(
+        self, user_id: str, include_subagents: bool = False
+    ) -> list[ChatModel]:
+        """Heavy variant for archive export — pulls the full chat JSON."""
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+            query = _apply_subagent_filter(query, db, include_subagents)
+            return [
+                ChatModel.model_validate(c)
+                for c in query.order_by(Chat.updated_at.desc()).all()
+            ]
 
     def search_chats(
         self,
@@ -1231,10 +1367,7 @@ class ChatTable:
         params: dict = {"user_id": user_id}
 
         if not include_subagents:
-            if dialect == "sqlite":
-                clauses.append("(json_extract(c.meta, '$.subagent_of') IS NULL)")
-            elif dialect == "postgresql":
-                clauses.append("(c.meta->>'subagent_of' IS NULL)")
+            clauses.append("c.subagent_of IS NULL")
 
         if archived is True:
             clauses.append("c.archived = 1")
@@ -1648,7 +1781,7 @@ class ChatTable:
         try:
             model_rows = db.execute(
                 text(
-                    f"SELECT json_extract(c.chat, '$.models[0]') AS m, COUNT(*) "
+                    f"SELECT c.model_id_primary AS m, COUNT(*) "
                     f"FROM chat c WHERE c.id IN ({placeholders}) AND m IS NOT NULL "
                     f"GROUP BY m ORDER BY COUNT(*) DESC LIMIT 20"
                 ),

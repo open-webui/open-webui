@@ -132,7 +132,9 @@ def _make_isolated_db():
                 pinned INTEGER DEFAULT 0,
                 meta TEXT DEFAULT '{}',
                 folder_id TEXT,
-                search_text TEXT
+                search_text TEXT,
+                subagent_of TEXT,
+                model_id_primary TEXT
             )
             """
         )
@@ -253,10 +255,12 @@ def _insert_chat(
         "messages": msgs,
         "models": ["test-model"],
     }
+    meta_dict = meta or {}
     sess.execute(
         sql_text(
-            "INSERT INTO chat (id, user_id, title, chat, created_at, updated_at, archived, pinned, meta, folder_id) "
-            "VALUES (:id, :uid, :t, :c, :ca, :ua, :a, :p, :meta, :f)"
+            "INSERT INTO chat (id, user_id, title, chat, created_at, updated_at, "
+            "archived, pinned, meta, folder_id, subagent_of, model_id_primary) "
+            "VALUES (:id, :uid, :t, :c, :ca, :ua, :a, :p, :meta, :f, :sa, :mp)"
         ),
         {
             "id": chat_id,
@@ -267,8 +271,10 @@ def _insert_chat(
             "ua": ts,
             "a": 1 if archived else 0,
             "p": 1 if pinned else 0,
-            "meta": json.dumps(meta or {}),
+            "meta": json.dumps(meta_dict),
             "f": folder_id,
+            "sa": meta_dict.get("subagent_of"),
+            "mp": (chat_data.get("models") or [None])[0],
         },
     )
 
