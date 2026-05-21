@@ -2937,6 +2937,11 @@ ENABLE_EVALUATION_ARENA_MODELS = ConfigVar(
     'evaluation.arena.enable',
     os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true',
 )
+ENABLE_FEEDBACK_CHAT_SNAPSHOT = ConfigVar(
+    'ENABLE_FEEDBACK_CHAT_SNAPSHOT',
+    'feedback.enable_chat_snapshot',
+    os.getenv('ENABLE_FEEDBACK_CHAT_SNAPSHOT', 'True').lower() == 'true',
+)
 EVALUATION_ARENA_MODELS = ConfigVar(
     'EVALUATION_ARENA_MODELS',
     'evaluation.arena.models',
