@@ -365,6 +365,9 @@ async def create_feedback(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not request.app.state.config.ENABLE_FEEDBACK_CHAT_SNAPSHOT:
+        form_data.snapshot = None
+
     feedback = await Feedbacks.insert_new_feedback(user_id=user.id, form_data=form_data, db=db)
     if not feedback:
         raise HTTPException(
@@ -391,10 +394,14 @@ async def get_feedback_by_id(id: str, user=Depends(get_verified_user), db: Async
 @router.post('/feedback/{id}', response_model=FeedbackModel)
 async def update_feedback_by_id(
     id: str,
+    request: Request,
     form_data: FeedbackForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not request.app.state.config.ENABLE_FEEDBACK_CHAT_SNAPSHOT:
+        form_data.snapshot = None
+
     if user.role == 'admin':
         feedback = await Feedbacks.update_feedback_by_id(id=id, form_data=form_data, db=db)
     else:
