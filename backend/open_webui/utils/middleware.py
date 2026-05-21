@@ -750,27 +750,39 @@ def handle_responses_streaming_event(
         return current_output, None
 
 
-def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
+def get_source_context(
+    sources: list,
+    source_ids: dict = None,
+    include_content: bool = True,
+    reference_indexes: dict = None,
+) -> str:
     """
     Build <source> tag context string from citation sources.
     """
     context_string = ''
     if source_ids is None:
         source_ids = {}
+    if reference_indexes is None:
+        reference_indexes = {}
     for source in sources:
         for doc, meta in zip(source.get('document', []), source.get('metadata', [])):
             source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'
             if source_id not in source_ids:
                 source_ids[source_id] = len(source_ids) + 1
+            group_id = source_ids[source_id]
+            reference_index = reference_indexes.get(source_id, 0)
+            reference_indexes[source_id] = reference_index + 1
+            citation_id = f'{group_id}#{reference_index}'
             src_name = source.get('source', {}).get('name')
             src_type = source.get('source', {}).get('type')
             src_rid = source.get('source', {}).get('id')
             body = doc if include_content else ''
             context_string += (
-                f'<source id="{source_ids[source_id]}"'
+                f'<source id="{citation_id}"'
                 + (f' name="{src_name}"' if src_name else '')
                 + (f' resource-type="{src_type}"' if src_type else '')
                 + (f' resource-id="{src_rid}"' if src_rid else '')
+                + f' source-group-id="{group_id}" reference-index="{reference_index}"'
                 + f'>{body}</source>\n'
             )
     return context_string
@@ -4879,12 +4891,16 @@ async def streaming_chat_response_handler(response, ctx):
                             # Build context: file sources with content,
                             # tool sources as citation markers only.
                             source_ids = {}
+                            reference_indexes = {}
                             source_context = get_source_context(
-                                metadata.get('sources', []), source_ids
+                                metadata.get('sources', []),
+                                source_ids,
+                                reference_indexes=reference_indexes,
                             ) + get_source_context(
                                 all_tool_call_sources,
                                 source_ids,
                                 include_content=False,
+                                reference_indexes=reference_indexes,
                             )
                             source_context = source_context.strip()
                             if source_context:
