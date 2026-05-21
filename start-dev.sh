@@ -23,6 +23,8 @@ cd "$BACKEND_DIR" || exit 1
 
 # Activate virtual environment and launch uvicorn in the background using '&'
 source venv/bin/activate
+export WEBUI_SECRET_KEY="PcewH5DVsmjGb1lTEU6nzKv2SXAYp7h9J3CufiLqQRBOyN0rZo8ktFdM4WgxaI"
+export RAG_EMBEDDING_ENGINE="ollama"
 python3 -m uvicorn open_webui.main:app --port 8080 --reload --host 0.0.0.0 &
 
 # Give uvicorn 3 seconds to spin up, bind to port 8080, and print initial logs

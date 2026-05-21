@@ -5567,21 +5567,28 @@ async def streaming_chat_response_handler(response, ctx):
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
                     if save_to_chat:
+                        cancelled_usage = {**(usage or {}), 'status': 'Canceled Mid-Generation'}
                         if not ENABLE_REALTIME_CHAT_SAVE:
+                            update = {
+                                'done': True,
+                                'content': serialize_output(output),
+                                'output': output,
+                            }
+                            if cancelled_usage:
+                                update['usage'] = cancelled_usage
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
                                 metadata['message_id'],
-                                {
-                                    'done': True,
-                                    'output': output,
-                                },
+                                update,
                             )
                         else:
+                            update = {'done': True}
+                            if cancelled_usage:
+                                update['usage'] = cancelled_usage
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
                                 metadata['message_id'],
-                                {'done': True},
-                                touch=False,
+                                update,
                             )
 
                 try:

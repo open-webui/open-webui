@@ -232,6 +232,7 @@
 	};
 
 	function formatMetricValue(key, value) {
+		if (value === undefined || value === null) return 'N/A';
 		if (typeof value !== 'number') return value;
 		if (key.includes('per_second')) return `${value.toFixed(2)} t/s`;
 		if (key === 'predicted_ms' || key === 'prompt_ms') {
@@ -245,6 +246,10 @@
 	}
 
 	function formatUsageTooltip(usage) {
+		let html = '';
+		if (usage.status) {
+			html += `<div class="text-gray-300 font-bold border-b border-gray-700 pb-1 mb-1">${usage.status}</div>`;
+		}
 		const orderedKeys = Object.keys(metricLabels);
 		const entries = orderedKeys
 			.filter(k => k in usage)
@@ -260,7 +265,7 @@
 			}
 		}
 		if (currentGroup.length) groups.push(currentGroup);
-		return `<div class="flex flex-col gap-1 text-xs font-mono">${groups
+		html += groups
 			.map((group, i) => {
 				const items = group
 					.map(([k, v]) => `<div class="flex justify-between gap-4"><span class="text-gray-400">${metricLabels[k]}:</span><span class="font-bold text-gray-200">${formatMetricValue(k, v)}</span></div>`)
@@ -268,7 +273,8 @@
 				const sep = i > 0 ? `<div class="border-t border-gray-700 my-1"></div>` : '';
 				return sep + items;
 			})
-			.join('')}</div>`;
+			.join('');
+		return `<div class="flex flex-col gap-1 text-xs font-mono">${html}</div>`;
 	}
 
 	const stopAudio = () => {

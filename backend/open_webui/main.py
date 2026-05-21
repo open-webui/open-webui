@@ -2054,7 +2054,24 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         chat = await Chats.get_chat_by_id(chat_id)
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
     result = await stop_item_tasks(request.app.state.redis, chat_id)
+
+    if chat and chat.chat.get('history', {}).get('messages'):
+        messages = chat.chat['history']['messages']
+        current_id = chat.chat['history'].get('currentId')
+        if current_id and current_id in messages:
+            current_msg = messages[current_id]
+            if current_msg.get('role') == 'assistant' and not current_msg.get('done'):
+                current_msg['done'] = True
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    chat_id,
+                    current_id,
+                    {
+                        'done': True,
+                    },
+                )
+
     return result
 
 
