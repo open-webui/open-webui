@@ -132,6 +132,15 @@ if WEBUI_NAME != 'Open WebUI':
 
 WORKBENCH_URL = os.environ.get('WORKBENCH_URL', '').rstrip('/')
 
+# Internal-tier API token + company id used by the sidebar-entitlement
+# fetcher (see utils/workbench_sidebar.py). Together with WORKBENCH_URL
+# they let this OWUI deployment ask Workbench "what should this user
+# see in the left rail?" so the embedded shell only renders nav items
+# the user is actually entitled to. When unset the fetcher short-
+# circuits and the shell falls back to its built-in nav.
+WORKBENCH_API_TOKEN = os.environ.get('WORKBENCH_API_TOKEN', '')
+WORKBENCH_COMPANY_ID = os.environ.get('WORKBENCH_COMPANY_ID', '')
+
 # Sidebar shortcut to the Cloud Lock dashboard (Swept's GCP-isolation
 # control plane). When set, the frontend renders a "Private Cloud" link.
 CLOUD_LOCK_URL = os.environ.get('CLOUD_LOCK_URL', '').rstrip('/')

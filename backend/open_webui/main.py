@@ -556,6 +556,7 @@ from open_webui.utils.middleware import (
     process_chat_response,
 )
 from open_webui.utils.tools import set_tool_servers, set_terminal_servers
+from open_webui.utils.workbench_sidebar import fetch_sidebar
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -2219,11 +2220,18 @@ async def get_app_config(request: Request):
     if user is None:
         onboarding = user_count == 0
 
+    # Resolve the Workbench-side sidebar entitlement for this user so
+    # static/loader.js renders only the nav items they're entitled to.
+    # `fetch_sidebar` soft-fails to None when WORKBENCH_* env is unset
+    # or the call errors — the loader falls back to its built-in nav.
+    workbench_sidebar = await fetch_sidebar(user.email if user else None)
+
     return {
         **({'onboarding': True} if onboarding else {}),
         'status': True,
         'name': app.state.WEBUI_NAME,
         'workbench_url': WORKBENCH_URL,
+        'workbench_sidebar': workbench_sidebar,
         'cloud_lock_url': CLOUD_LOCK_URL,
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
