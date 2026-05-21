@@ -6,11 +6,10 @@ from the code alone, so they get explicit coverage here. httpx is
 mocked via a fake AsyncClient class so we don't need a network.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
-
 from open_webui.utils import workbench_sidebar
 from open_webui.utils.workbench_sidebar import (
     _CACHE,
