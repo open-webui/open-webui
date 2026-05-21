@@ -1063,6 +1063,16 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
         )
 
 
+# UUIDs, SHA-256 digests, and prefixed variants thereof all fit [A-Za-z0-9_-].
+# Anything else cannot be a real Open WebUI collection and could break out of
+# a Milvus expression literal.
+_SAFE_COLLECTION_NAME_RE = re.compile(r'^[A-Za-z0-9_-]{1,255}$')
+
+
+def _is_safe_collection_name(name: str) -> bool:
+    return isinstance(name, str) and bool(_SAFE_COLLECTION_NAME_RE.match(name))
+
+
 async def filter_accessible_collections(
     collection_names: set[str],
     user: UserModel,
@@ -1072,6 +1082,7 @@ async def filter_accessible_collections(
     Return only the collection names the user is allowed to access.
     Admins bypass all checks.  For non-admins the policy is:
 
+      - any name with characters outside [A-Za-z0-9_-] → rejected
       - file-*          → validated via has_access_to_file
       - user-memory-*   → must match user's own memory collection
       - web-search-*    → ephemeral per-query collections, always allowed
@@ -1081,11 +1092,22 @@ async def filter_accessible_collections(
                           such KB exists, the name is treated as an
                           ephemeral/legacy collection and allowed
     """
+    # Applied before the admin bypass — malformed names should never reach the vector store.
+    safe_names = {n for n in collection_names if _is_safe_collection_name(n)}
+    rejected = collection_names - safe_names
+    if rejected:
+        log.warning(
+            'filter_accessible_collections: rejected %d collection name(s) '
+            'with unsafe characters (user_id=%s)',
+            len(rejected),
+            getattr(user, 'id', '<unknown>'),
+        )
+
     if user.role == 'admin':
-        return collection_names
+        return safe_names
 
     validated = set()
-    for name in collection_names:
+    for name in safe_names:
         if name == 'knowledge-bases':
             # System meta-collection — never exposed to non-admins.
             continue
