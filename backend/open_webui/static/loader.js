@@ -353,26 +353,22 @@
 			};
 		}
 
-		/* Built-in nav used when Workbench doesn't provide one OR when
-		 * everything Workbench provided got dropped by safeHref (a
-		 * config mismatch — workbench_url / cloud_lock_url not aligned
-		 * with what Workbench actually returns). Better to render a
-		 * known-good shell than an empty rail. */
+		/* No nav items when we have no usable per-user entitlement —
+		 * unauthenticated, Workbench unreachable, user not a Workbench
+		 * member, or every URL dropped by safeHref. The shell still
+		 * mounts (so the Swept branding identifies the app), but the
+		 * lists below the logo stay empty rather than showing items
+		 * the visitor can't actually act on.
+		 *
+		 * Pre-login is the dominant trigger: the login form IS the
+		 * content, so any cross-app links would just bounce the user
+		 * to another login. After auth, /api/config is re-fetched on
+		 * the redirect and the entitled items appear. */
 		function fallbackNav() {
-			var n = [
-				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
-				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
-				{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
-				{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
-				{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
-			];
-			if (cloudLockUrl) {
-				n.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
-			}
-			return n;
+			return [];
 		}
 		function fallbackBottom() {
-			return [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+			return [];
 		}
 
 		if (Array.isArray(main)) {
