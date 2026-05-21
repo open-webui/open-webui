@@ -32,7 +32,12 @@ from open_webui.env import (
 log = logging.getLogger(__name__)
 
 _TTL_SECONDS = 60
-_TIMEOUT_SECONDS = 2.0
+# Tight enough that a slow/unreachable Workbench doesn't materially
+# delay /api/config (which awaits this on cache miss), generous enough
+# to absorb normal Workbench-side variance (DB query + serializer
+# typically <100ms). The exception branch caches `None` with a fresh
+# timestamp so repeat misses inside the TTL window short-circuit.
+_TIMEOUT_SECONDS = 1.0
 # Optional[dict] in the second slot: we cache `None` on 404 so unknown
 # emails don't beat on Workbench every request within the TTL.
 _CACHE: dict[str, tuple[float, dict | None]] = {}

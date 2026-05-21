@@ -283,8 +283,19 @@
 		try {
 			var parsed = new URL(raw);
 			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+			/* Reject userinfo (`https://user:pass@allowed/...`) — the
+			 * URL spec excludes userinfo from .origin, so the allowlist
+			 * check would otherwise let credentials through to the
+			 * allowed host. */
+			if (parsed.username || parsed.password) return null;
 			for (var i = 0; i < allowedOrigins.length; i++) {
-				if (parsed.origin === allowedOrigins[i]) return raw;
+				if (parsed.origin === allowedOrigins[i]) {
+					/* Return the URL-constructor's normalized form
+					 * rather than the raw input so any odd encoding
+					 * or whitespace gets canonicalized before it
+					 * lands in <a href>. */
+					return parsed.href;
+				}
 			}
 		} catch (_e) {
 			/* URL constructor throws for malformed input — treat as untrusted. */
