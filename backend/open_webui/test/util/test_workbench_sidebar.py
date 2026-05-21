@@ -319,7 +319,7 @@ class TestPrune:
         assert 'fresh@example.com' in _CACHE
         assert 'stale@example.com' not in _CACHE
 
-    def test_prune_keeps_entry_exactly_at_ttl_boundary_as_expired(self):
+    def test_prune_treats_entry_exactly_at_ttl_boundary_as_expired(self):
         # The implementation treats `>=` as expired, so an entry exactly
         # at the TTL boundary gets dropped. Locks in current behavior.
         now = 1000.0

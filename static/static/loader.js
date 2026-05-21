@@ -64,7 +64,16 @@
 		'panel-left-close':
 			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
 		'panel-left-open':
-			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/>'
+			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/>',
+		/* Added to cover icons that Workbench's sidebar endpoint can
+		 * return for items that may appear in this shell (Usage,
+		 * admin's API + Developer Tools when an admin signs in). */
+		'chart-bar':
+			'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16h8"/><path d="M7 11h12"/><path d="M7 6h3"/>',
+		'key-round':
+			'<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
+		wrench:
+			'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'
 	};
 
 	/* Cookie that controls collapse state. Shared with swept-workbench and
@@ -255,18 +264,127 @@
 		}
 	}
 
-	function buildShell(base, cloudLockUrl) {
-		var nav = [
-			{ label: 'Chat', icon: 'message-square', href: '/', active: true },
-			{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
-			{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
-			{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
-			{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
-		];
-		if (cloudLockUrl) {
-			nav.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+	/* Defense-in-depth for sidebar links from Workbench: only same-origin
+	 * paths (`/...`) and absolute URLs whose origin is in the allowlist
+	 * pass through. The allowlist is `[workbench_url, cloud_lock_url]`
+	 * (filtered to non-empty) — those are the only domains the shell
+	 * should ever link to. Anything else (javascript:, data:, an
+	 * arbitrary external host) returns null and the caller drops it.
+	 *
+	 * Match by origin prefix rather than string-startswith on the full
+	 * URL so trailing-slash differences don't cause false negatives. */
+	function safeHref(raw, allowedOrigins) {
+		if (typeof raw !== 'string' || raw.length === 0) return null;
+		/* Protocol-relative URLs ("//evil.example/x") are resolved by
+		 * the browser as cross-origin navigation; reject them up front
+		 * before the leading-slash fast-path. Same-origin paths still
+		 * need to start with "/" but never "//". */
+		if (raw.charAt(0) === '/' && raw.charAt(1) !== '/') return raw;
+		try {
+			var parsed = new URL(raw);
+			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+			for (var i = 0; i < allowedOrigins.length; i++) {
+				if (parsed.origin === allowedOrigins[i]) return raw;
+			}
+		} catch (_e) {
+			/* URL constructor throws for malformed input — treat as untrusted. */
 		}
-		var bottom = [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+		return null;
+	}
+
+	/* Compute the origin of a base URL string for comparison in safeHref.
+	 * Returns null for empty / malformed input so the caller can filter. */
+	function originOf(urlStr) {
+		if (typeof urlStr !== 'string' || urlStr.length === 0) return null;
+		try {
+			return new URL(urlStr).origin;
+		} catch (_e) {
+			return null;
+		}
+	}
+
+	function hasHref(it) {
+		return Boolean(it && it.href);
+	}
+
+	function buildShell(base, cloudLockUrl, sidebarData) {
+		var nav;
+		var bottom;
+		/* sidebarData is the trimmed `sidebar` subtree from Workbench:
+		 * `{main: [...], bottom: [...]}`. The /api/config endpoint
+		 * forwards only this — siblings like user/company/features
+		 * aren't included to keep the payload minimal. */
+		var main = sidebarData && sidebarData.main;
+		var bottomItems = sidebarData && sidebarData.bottom;
+
+		/* Origins the shell is allowed to link to: Workbench itself
+		 * and CloudLock (the "Private Cloud" target). Anything else
+		 * returned by Workbench's sidebar endpoint is dropped by
+		 * safeHref → null → hasHref filter. */
+		var allowedOrigins = [originOf(base), originOf(cloudLockUrl)].filter(Boolean);
+
+		/* Closure over allowedOrigins so itemFromWorkbench knows the
+		 * allowlist without threading it through every call site. */
+		function itemFromWorkbench(item) {
+			var isChat = item.label === 'Chat';
+			return {
+				label: item.label,
+				icon: item.icon,
+				href: isChat ? '/' : safeHref(item.url, allowedOrigins),
+				active: isChat
+			};
+		}
+
+		/* Built-in nav used when Workbench doesn't provide one OR when
+		 * everything Workbench provided got dropped by safeHref (a
+		 * config mismatch — workbench_url / cloud_lock_url not aligned
+		 * with what Workbench actually returns). Better to render a
+		 * known-good shell than an empty rail. */
+		function fallbackNav() {
+			var n = [
+				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
+				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
+				{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
+				{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
+				{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
+			];
+			if (cloudLockUrl) {
+				n.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+			}
+			return n;
+		}
+		function fallbackBottom() {
+			return [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+		}
+
+		if (Array.isArray(main)) {
+			/* Use the entitlement-filtered list from Workbench. The
+			 * user only sees nav items they're actually granted via
+			 * FeatureAccessGrant (OIDC) or role-based can? (non-OIDC).
+			 * Drop any item whose URL didn't pass safeHref so we never
+			 * render a link with a missing/disallowed href. */
+			nav = main.map(itemFromWorkbench).filter(hasHref);
+			bottom = Array.isArray(bottomItems)
+				? bottomItems.map(itemFromWorkbench).filter(hasHref)
+				: [];
+
+			/* If Workbench gave us items but safeHref dropped them all,
+			 * that's a deployment config mismatch (mismatched origins).
+			 * Workbench returning a legitimately empty entitlement is
+			 * handled by the !main.length check — we don't override
+			 * that. */
+			if (main.length > 0 && nav.length === 0) {
+				nav = fallbackNav();
+				bottom = fallbackBottom();
+			}
+		} else {
+			/* Fallback: Workbench endpoint not configured, the user
+			 * isn't a member, or the fetch errored. Render the same
+			 * built-in shell as before this PR so OWUI keeps working
+			 * standalone. */
+			nav = fallbackNav();
+			bottom = fallbackBottom();
+		}
 
 		var aside = document.createElement('aside');
 		aside.className = 'swept-shell';
@@ -319,10 +437,10 @@
 		return aside;
 	}
 
-	function ensureMounted(base, cloudLockUrl) {
+	function ensureMounted(base, cloudLockUrl, sidebarData) {
 		var existing = document.getElementById('swept-shell');
 		if (existing) return existing;
-		var shell = buildShell(base, cloudLockUrl);
+		var shell = buildShell(base, cloudLockUrl, sidebarData);
 		document.body.appendChild(shell);
 		return shell;
 	}
@@ -369,10 +487,15 @@
 			.then(function (cfg) {
 				var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
 				var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
+				/* Entitlement-filtered sidebar from Workbench (per-user
+				 * nav list). Null when WORKBENCH_API_TOKEN/COMPANY_ID
+				 * aren't set or the upstream call errored — buildShell
+				 * falls back to its built-in nav in that case. */
+				var sidebarData = (cfg && cfg.workbench_sidebar) || null;
 				if (!url) return;
 				return preloadShellFonts().then(function () {
 					document.documentElement.classList.add('swept-shell-active');
-					ensureMounted(url, cloudLockUrl);
+					ensureMounted(url, cloudLockUrl, sidebarData);
 					attachSync(function () {
 						return document.getElementById('swept-shell');
 					});
@@ -386,7 +509,7 @@
 							var removed = mutations[i].removedNodes;
 							for (var j = 0; j < removed.length; j++) {
 								if (removed[j].id === 'swept-shell') {
-									ensureMounted(url, cloudLockUrl);
+									ensureMounted(url, cloudLockUrl, sidebarData);
 									return;
 								}
 							}
