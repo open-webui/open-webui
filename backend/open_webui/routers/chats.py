@@ -520,8 +520,9 @@ async def get_chat_messages_paginated(
     render a window of messages. Falls back to JSON slicing for unmigrated
     chats so the response shape is identical regardless of storage path.
     """
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
-    if not chat:
+    # Lightweight ownership check — avoids hydrating the whole message tree
+    # (which would defeat the entire point of paginating).
+    if not Chats.user_owns_chat(id, user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,

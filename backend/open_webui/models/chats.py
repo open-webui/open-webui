@@ -1839,6 +1839,20 @@ class ChatTable:
         except Exception:
             return None
 
+    def user_owns_chat(self, id: str, user_id: str) -> bool:
+        """Ownership check that does NOT load the chat blob or hydrate messages.
+
+        Use this for endpoints that only need to authorize access — e.g. the
+        paginated ``/chats/{id}/messages`` route, where hydrating a 10k-message
+        chat just to authorize a 100-message page would defeat the point.
+        """
+        with get_db() as db:
+            row = db.execute(
+                text("SELECT 1 FROM chat WHERE id = :id AND user_id = :uid LIMIT 1"),
+                {"id": id, "uid": user_id},
+            ).fetchone()
+            return row is not None
+
     def get_chat_messages_paginated(
         self, chat_id: str, skip: int = 0, limit: int = 100
     ) -> list[dict]:

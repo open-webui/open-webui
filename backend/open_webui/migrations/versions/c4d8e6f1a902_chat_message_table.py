@@ -95,15 +95,19 @@ def upgrade():
         """
     )
 
+    # Cursor-based pagination via rowid so failing rows (which stay at
+    # messages_migrated=0 inside the try/except below) don't trap the loop
+    # and successful rows in earlier batches don't shift the OFFSET window.
     BATCH = 50
-    offset = 0
+    last_rowid = 0
     while True:
         rows = bind.execute(
             sa.text(
-                "SELECT id, chat FROM chat WHERE messages_migrated = 0 "
-                "ORDER BY rowid LIMIT :lim OFFSET :off"
+                "SELECT id, chat, rowid FROM chat "
+                "WHERE messages_migrated = 0 AND rowid > :last "
+                "ORDER BY rowid LIMIT :lim"
             ),
-            {"lim": BATCH, "off": offset},
+            {"lim": BATCH, "last": last_rowid},
         ).fetchall()
         if not rows:
             break
@@ -111,6 +115,7 @@ def upgrade():
         for row in rows:
             chat_id = row[0]
             chat_data_raw = row[1]
+            last_rowid = row[2]
             try:
                 if isinstance(chat_data_raw, dict):
                     chat_data = chat_data_raw
@@ -198,10 +203,9 @@ def upgrade():
                 )
             except Exception:
                 # Skip — this chat stays at messages_migrated=0 and uses the
-                # legacy JSON path until a future repair.
+                # legacy JSON path until a future repair. last_rowid was
+                # already advanced above so the loop moves past it.
                 pass
-
-        offset += BATCH
 
 
 def downgrade():
