@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
 	import { embed, showControls, showEmbeds } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import CitationModal from './Citations/CitationModal.svelte';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let id = '';
 	export let chatId = '';
@@ -22,6 +24,79 @@
 	let showCitationModal = false;
 
 	let selectedCitation: any = null;
+	let sourcePanelRequestId = 0;
+
+	// Exact ids index aligned document/metadata pairs emitted by the backend.
+	const getReferenceCount = (citation: any) =>
+		Math.min(citation?.metadata?.length ?? 0, citation?.document?.length ?? 0);
+
+	const getReferenceIndex = (citation: any, suffix: string | null) => {
+		if (!suffix || !/^\d+$/.test(suffix)) {
+			return null;
+		}
+
+		const index = Number(suffix);
+		const referenceCount = getReferenceCount(citation);
+
+		return index >= 0 && index < referenceCount ? index : null;
+	};
+
+	const getReference = (citation: any, index: number) => {
+		const metadata = citation?.metadata?.[index] ?? {};
+		const source = citation?.source ?? {};
+		const title = metadata?.name ?? source?.name ?? metadata?.source ?? 'Source';
+		const file_id = metadata?.file_id;
+		const url = source?.url?.includes('http') ? source.url : metadata?.url;
+		const page = Number.isInteger(metadata?.page) ? metadata.page : undefined;
+
+		return {
+			index,
+			title,
+			file_id,
+			url,
+			page,
+			page_label: metadata?.page_label,
+			total_pages: metadata?.total_pages,
+			metadata,
+			openInNewTabUrl: file_id
+				? `${WEBUI_API_BASE_URL}/files/${file_id}/content${
+						page !== undefined ? `#page=${page + 1}` : ''
+					}`
+				: url
+		};
+	};
+
+	const getCitationTarget = (citation: any, selectedReferenceIndex = 0, citationGroupIndex = 0) => {
+		const reference = getReference(citation, selectedReferenceIndex);
+		const source = citation?.source ?? {};
+		const contentType =
+			reference?.metadata?.content_type ?? source?.meta?.content_type ?? source?.content_type ?? '';
+		const isPdf =
+			contentType === 'application/pdf' ||
+			reference?.title?.toLowerCase?.().endsWith('.pdf') ||
+			reference?.url?.toLowerCase?.().split('?')[0]?.endsWith('.pdf');
+
+		if (!isPdf || (!reference?.file_id && !reference?.url)) {
+			return null;
+		}
+
+		return {
+			messageId: id,
+			sourceTargetKey: `${id}:${citationGroupIndex}:${selectedReferenceIndex}`,
+			// Bump for repeated clicks on the same citation so PDFViewer scrolls again.
+			scrollRequestId: ++sourcePanelRequestId,
+			citationGroupIndex,
+			selectedReferenceIndex,
+			title: reference.title,
+			file_id: reference.file_id,
+			url: reference.url,
+			page: reference.page,
+			page_label: reference.page_label,
+			total_pages: reference.total_pages,
+			metadata: reference.metadata,
+			openInNewTabUrl: reference.openInNewTabUrl
+		};
+	};
 
 	export const showSourceModal = (sourceId) => {
 		let index;
@@ -40,6 +115,19 @@
 
 		if (citations[index]) {
 			console.log('Showing citation modal for:', citations[index]);
+			const selectedReferenceIndex = getReferenceIndex(citations[index], suffix);
+
+			if (selectedReferenceIndex === null) {
+				selectedCitation = citations[index];
+				showCitationModal = true;
+				return;
+			}
+
+			const target = getCitationTarget(citations[index], selectedReferenceIndex, index);
+			if (target) {
+				dispatch('openSourcePanel', target);
+				return;
+			}
 
 			if (citations[index]?.source?.embed_url) {
 				const embedUrl = citations[index].source.embed_url;

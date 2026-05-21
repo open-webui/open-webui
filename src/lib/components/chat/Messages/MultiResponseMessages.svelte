@@ -322,6 +322,9 @@
 									{addMessages}
 									{readOnly}
 									{topPadding}
+									on:openSourcePanel={(e) => {
+										dispatch('openSourcePanel', e.detail);
+									}}
 								/>
 							{/if}
 						{/key}
@@ -379,6 +382,9 @@
 										{readOnly}
 										{editCodeBlock}
 										{topPadding}
+										on:openSourcePanel={(e) => {
+											dispatch('openSourcePanel', e.detail);
+										}}
 									/>
 								{/if}
 							{/key}

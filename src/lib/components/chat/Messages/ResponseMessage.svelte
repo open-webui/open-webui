@@ -895,6 +895,9 @@
 									{chatId}
 									sources={message?.sources ?? message?.citations}
 									{readOnly}
+									on:openSourcePanel={(e) => {
+										dispatch('openSourcePanel', e.detail);
+									}}
 								/>
 							{/if}
 
