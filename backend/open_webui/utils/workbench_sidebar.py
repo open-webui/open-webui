@@ -124,9 +124,10 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
         #
         # Refresh the cache timestamp (or write a None entry) so
         # subsequent calls within the TTL window are served from the
-        # cache instead of hammering Workbench with a 2s-timeout
-        # network attempt each time. During an outage, this throttles
-        # retries to one per TTL — config endpoint stays fast.
+        # cache instead of hammering Workbench with another
+        # _TIMEOUT_SECONDS-bounded network attempt each time. During
+        # an outage, this throttles retries to one per TTL — config
+        # endpoint stays fast.
         last_known = cached[1] if cached else None
         _prune_expired(now)
         _CACHE[normalized_email] = (now, last_known)

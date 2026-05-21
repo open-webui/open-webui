@@ -335,13 +335,20 @@
 		var allowedOrigins = [originOf(base), originOf(cloudLockUrl)].filter(Boolean);
 
 		/* Closure over allowedOrigins so itemFromWorkbench knows the
-		 * allowlist without threading it through every call site. */
+		 * allowlist without threading it through every call site.
+		 *
+		 * Workbench's V1 sidebar serializer returns `url` as the
+		 * field name (documented in swagger.yaml). `href` is accepted
+		 * as a defensive fallback so a future contract drift or an
+		 * alternate upstream variant doesn't silently null out every
+		 * non-Chat item via safeHref. */
 		function itemFromWorkbench(item) {
 			var isChat = item.label === 'Chat';
+			var rawUrl = item.url || item.href;
 			return {
 				label: item.label,
 				icon: item.icon,
-				href: isChat ? '/' : safeHref(item.url, allowedOrigins),
+				href: isChat ? '/' : safeHref(rawUrl, allowedOrigins),
 				active: isChat
 			};
 		}
@@ -375,9 +382,7 @@
 			 * Drop any item whose URL didn't pass safeHref so we never
 			 * render a link with a missing/disallowed href. */
 			nav = main.map(itemFromWorkbench).filter(hasHref);
-			bottom = Array.isArray(bottomItems)
-				? bottomItems.map(itemFromWorkbench).filter(hasHref)
-				: [];
+			bottom = Array.isArray(bottomItems) ? bottomItems.map(itemFromWorkbench).filter(hasHref) : [];
 
 			/* If Workbench gave us items but safeHref dropped them all,
 			 * that's a deployment config mismatch (mismatched origins).

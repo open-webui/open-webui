@@ -263,7 +263,7 @@ class TestSoftFail:
         # During a Workbench outage, the cache timestamp should be
         # refreshed on every exception so subsequent calls within the
         # TTL window short-circuit instead of repeatedly blocking on
-        # a 2s-timeout network attempt.
+        # a _TIMEOUT_SECONDS-bounded network attempt.
         call_count = {'n': 0}
 
         def handler(*_a, **_kw):
