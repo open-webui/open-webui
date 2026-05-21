@@ -163,7 +163,7 @@ async def get_headers_and_cookies(
                 'HTTP-Referer': 'https://openwebui.com/',
                 'X-Title': 'Open WebUI',
             }
-            if 'openrouter.ai' in url
+            if ('openrouter.ai' in url or 'orcarouter.ai' in url)
             else {}
         ),
     }
