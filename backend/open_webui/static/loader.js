@@ -264,19 +264,37 @@
 		}
 	}
 
+	/* Defense-in-depth: Workbench is the contract-bound source for these
+	 * URLs, but they end up directly as <a href> values. Restrict to
+	 * http(s) and same-origin paths so a compromised/misconfigured
+	 * upstream can't smuggle a `javascript:` or `data:` URL into the
+	 * DOM. Returns null for anything that doesn't look like a real link. */
+	function safeHref(raw) {
+		if (typeof raw !== 'string' || raw.length === 0) return null;
+		if (raw.charAt(0) === '/') return raw;
+		if (raw.indexOf('http://') === 0 || raw.indexOf('https://') === 0) return raw;
+		return null;
+	}
+
 	/* Translate a Workbench-side sidebar item (label/url/icon/path) to
 	 * the loader's internal {label, icon, href, active} shape. Chat is
 	 * the only special case: Workbench returns Chat with an absolute
 	 * OPEN_WEBUI_URL href, but we're already IN OWUI, so rewrite it
-	 * to `/` and mark active. Anything else passes through as-is. */
+	 * to `/` and mark active. Items whose URL fails the safeHref check
+	 * (unexpected scheme, missing, etc.) are returned with href=null;
+	 * the caller filters those out so nothing renders for them. */
 	function itemFromWorkbench(item) {
 		var isChat = item.label === 'Chat';
 		return {
 			label: item.label,
 			icon: item.icon,
-			href: isChat ? '/' : item.url,
+			href: isChat ? '/' : safeHref(item.url),
 			active: isChat
 		};
+	}
+
+	function hasHref(it) {
+		return Boolean(it && it.href);
 	}
 
 	function buildShell(base, cloudLockUrl, sidebarData) {
@@ -287,9 +305,13 @@
 		if (Array.isArray(main)) {
 			/* Use the entitlement-filtered list from Workbench. The
 			 * user only sees nav items they're actually granted via
-			 * FeatureAccessGrant (OIDC) or role-based can? (non-OIDC). */
-			nav = main.map(itemFromWorkbench);
-			bottom = Array.isArray(bottomItems) ? bottomItems.map(itemFromWorkbench) : [];
+			 * FeatureAccessGrant (OIDC) or role-based can? (non-OIDC).
+			 * Drop any item whose URL didn't pass safeHref so we never
+			 * render a link with a missing/disallowed href. */
+			nav = main.map(itemFromWorkbench).filter(hasHref);
+			bottom = Array.isArray(bottomItems)
+				? bottomItems.map(itemFromWorkbench).filter(hasHref)
+				: [];
 		} else {
 			/* Fallback: Workbench endpoint not configured, the user
 			 * isn't a member, or the fetch errored. Render the same
