@@ -1204,10 +1204,15 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
 
-    # --- REASONING INTERCEPT LINK ---
+ # --- REASONING INTERCEPT LINK ---
     params = form_data.get("params", {})
     if "thinking_budget_tokens" in params:
         payload["thinking_budget_tokens"] = int(params["thinking_budget_tokens"])
+    budget = payload.get("thinking_budget_tokens", 0)
+    if budget == 0:
+        if "chat_template_kwargs" not in payload:
+            payload["chat_template_kwargs"] = {}
+        payload["chat_template_kwargs"]["enable_thinking"] = False
     # -------------------------------
 
     model_id = form_data.get('model')
