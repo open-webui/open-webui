@@ -497,6 +497,34 @@ async def update_chat_by_id(
 
 
 ############################
+# GetChatMessagesPaginated
+############################
+
+
+@router.get("/{id}/messages")
+async def get_chat_messages_paginated(
+    id: str,
+    skip: int = 0,
+    limit: int = 100,
+    user=Depends(get_verified_user),
+):
+    """Paginated message list for a single chat.
+
+    Reads directly from the chat_message table for migrated chats so we
+    don't have to ship the entire 100+ MB JSON blob over the wire just to
+    render a window of messages. Falls back to JSON slicing for unmigrated
+    chats so the response shape is identical regardless of storage path.
+    """
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    return Chats.get_chat_messages_paginated(id, skip=skip, limit=limit)
+
+
+############################
 # UpdateChatMessageById
 ############################
 class MessageForm(BaseModel):

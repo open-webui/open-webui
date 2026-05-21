@@ -559,3 +559,394 @@ def test_search_user_isolation(db_session):
     resp = chats.Chats.search_chats("u1", "secret")
     assert resp.total == 1
     assert resp.hits[0].title == "Mine"
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# chat_message split (Unit 6)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def _make_db_with_chat_message_table():
+    """Like ``_make_isolated_db`` but additionally creates the chat_message
+    table + messages_migrated column so the dual-read path can be exercised."""
+    from sqlalchemy import create_engine, text as sql_text
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+    )
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    sess = SessionLocal()
+
+    sess.execute(
+        sql_text(
+            """
+            CREATE TABLE chat (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                title TEXT,
+                chat TEXT,
+                created_at INTEGER,
+                updated_at INTEGER,
+                share_id TEXT,
+                archived INTEGER DEFAULT 0,
+                pinned INTEGER DEFAULT 0,
+                meta TEXT DEFAULT '{}',
+                folder_id TEXT,
+                search_text TEXT,
+                messages_migrated INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+    )
+    sess.execute(
+        sql_text(
+            """
+            CREATE TABLE folder (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                parent_id TEXT,
+                name TEXT,
+                items TEXT,
+                meta TEXT,
+                data TEXT,
+                is_expanded INTEGER DEFAULT 0,
+                created_at INTEGER,
+                updated_at INTEGER
+            )
+            """
+        )
+    )
+    sess.execute(
+        sql_text(
+            """
+            CREATE TABLE chat_message (
+                chat_id TEXT NOT NULL,
+                message_id TEXT NOT NULL,
+                parent_id TEXT,
+                role TEXT,
+                content TEXT,
+                content_is_json INTEGER DEFAULT 0,
+                model TEXT,
+                timestamp INTEGER,
+                sequence INTEGER NOT NULL,
+                status_history TEXT,
+                meta TEXT,
+                PRIMARY KEY (chat_id, message_id)
+            )
+            """
+        )
+    )
+    sess.execute(
+        sql_text(
+            "CREATE INDEX chat_message_chat_seq_idx ON chat_message (chat_id, sequence)"
+        )
+    )
+    TOK = "porter unicode61 remove_diacritics 2 tokenchars '_-'"
+    sess.execute(
+        sql_text(
+            f"CREATE VIRTUAL TABLE chat_fts USING fts5("
+            f"  id UNINDEXED, title, body,"
+            f'  tokenize = "{TOK}", prefix = \'2 3 4\')'
+        )
+    )
+    sess.execute(
+        sql_text(
+            f"CREATE VIRTUAL TABLE message_fts USING fts5("
+            f"  chat_id UNINDEXED, message_id UNINDEXED, role UNINDEXED, content,"
+            f'  tokenize = "{TOK}", prefix = \'2 3 4\')'
+        )
+    )
+    sess.execute(
+        sql_text(
+            "CREATE VIRTUAL TABLE chat_fts_tri USING fts5("
+            "  id UNINDEXED, content,"
+            "  tokenize = 'trigram')"
+        )
+    )
+    sess.execute(
+        sql_text(
+            "CREATE TRIGGER chat_fts_delete AFTER DELETE ON chat BEGIN "
+            "  DELETE FROM chat_fts WHERE id = OLD.id; "
+            "  DELETE FROM message_fts WHERE chat_id = OLD.id; "
+            "  DELETE FROM chat_fts_tri WHERE id = OLD.id; "
+            "END"
+        )
+    )
+    sess.commit()
+    return engine, sess
+
+
+@pytest.fixture
+def db_session_with_table():
+    engine, sess = _make_db_with_chat_message_table()
+
+    @contextmanager
+    def get_db():
+        yield sess
+
+    _install_stubs(get_db)
+    chats_module = _load_chats_module()
+
+    chats_module._fts_supported_cache = None
+    chats_module._chat_message_table_supported_cache = None
+
+    yield sess, chats_module
+
+    sess.close()
+    engine.dispose()
+    chats_module._fts_supported_cache = None
+    chats_module._chat_message_table_supported_cache = None
+
+
+def _insert_migrated_chat(
+    sess,
+    chats_module,
+    *,
+    chat_id=None,
+    user_id="u1",
+    title="",
+    n_messages=50,
+):
+    """Insert a chat with messages_migrated=1 and populate chat_message rows."""
+    from sqlalchemy import text as sql_text
+
+    chat_id = chat_id or str(uuid.uuid4())
+    ts = int(time.time())
+    history_messages = {}
+    for i in range(n_messages):
+        mid = f"m{i}"
+        role = "user" if i % 2 == 0 else "assistant"
+        content = f"message-{i} body about fastapi" if i == 0 else f"message-{i} body"
+        history_messages[mid] = {
+            "id": mid,
+            "role": role,
+            "content": content,
+            "parentId": f"m{i-1}" if i > 0 else None,
+        }
+
+    # The on-disk JSON for a migrated chat must NOT include the messages
+    # (that's the whole point of the split). Keep only the scaffolding.
+    scaffolding = {
+        "title": title,
+        "history": {
+            "currentId": f"m{n_messages-1}" if n_messages else None,
+        },
+        "models": ["test-model"],
+    }
+    sess.execute(
+        sql_text(
+            "INSERT INTO chat (id, user_id, title, chat, created_at, updated_at, "
+            " archived, pinned, meta, folder_id, messages_migrated) "
+            "VALUES (:id, :uid, :t, :c, :ca, :ua, :a, :p, :meta, :f, 1)"
+        ),
+        {
+            "id": chat_id,
+            "uid": user_id,
+            "t": title,
+            "c": json.dumps(scaffolding),
+            "ca": ts,
+            "ua": ts,
+            "a": 0,
+            "p": 0,
+            "meta": json.dumps({}),
+            "f": None,
+        },
+    )
+    for seq, (mid, msg) in enumerate(history_messages.items()):
+        sess.execute(
+            sql_text(
+                "INSERT INTO chat_message "
+                "(chat_id, message_id, parent_id, role, content, "
+                " content_is_json, model, timestamp, sequence) "
+                "VALUES (:cid, :mid, :pid, :role, :c, 0, NULL, NULL, :seq)"
+            ),
+            {
+                "cid": chat_id,
+                "mid": mid,
+                "pid": msg.get("parentId"),
+                "role": msg["role"],
+                "c": msg["content"],
+                "seq": seq,
+            },
+        )
+        if msg["content"]:
+            sess.execute(
+                sql_text(
+                    "INSERT INTO message_fts (chat_id, message_id, role, content) "
+                    "VALUES (:cid, :mid, :role, :c)"
+                ),
+                {"cid": chat_id, "mid": mid, "role": msg["role"], "c": msg["content"]},
+            )
+    sess.commit()
+    return chat_id, history_messages
+
+
+def test_migrated_chat_hydrates_messages_on_read(db_session_with_table):
+    sess, chats = db_session_with_table
+    cid, msgs = _insert_migrated_chat(sess, chats, title="T", n_messages=5)
+
+    out = chats.Chats.get_chat_by_id(cid)
+    assert out is not None
+    out_msgs = out.chat.get("history", {}).get("messages", {})
+    assert len(out_msgs) == 5
+    assert out_msgs["m0"]["role"] == "user"
+    assert "fastapi" in out_msgs["m0"]["content"]
+
+
+def test_migrated_upsert_does_not_rewrite_full_chat_json(db_session_with_table):
+    """The whole point of Unit 6: per-message writes must NOT rewrite the
+    100+ MB JSON blob. After an upsert, the on-disk chat.chat JSON should
+    contain *only* the scaffolding (no messages dict)."""
+    from sqlalchemy import text as sql_text
+
+    sess, chats = db_session_with_table
+    cid, msgs = _insert_migrated_chat(sess, chats, title="T", n_messages=50)
+
+    # Snapshot the on-disk JSON before upsert.
+    pre_row = sess.execute(
+        sql_text("SELECT chat FROM chat WHERE id = :id"), {"id": cid}
+    ).fetchone()
+    pre_json = json.loads(pre_row[0])
+
+    chats.Chats.upsert_message_to_chat_by_id_and_message_id(
+        cid, "m0", {"content": "updated content for fastapi"}
+    )
+
+    # Check chat_message row was updated.
+    row = sess.execute(
+        sql_text("SELECT content FROM chat_message WHERE chat_id = :cid AND message_id = 'm0'"),
+        {"cid": cid},
+    ).fetchone()
+    assert row is not None
+    assert "updated content for fastapi" == row[0]
+
+    # Check the on-disk JSON blob still has no messages dict.
+    post_row = sess.execute(
+        sql_text("SELECT chat FROM chat WHERE id = :id"), {"id": cid}
+    ).fetchone()
+    post_json = json.loads(post_row[0])
+    history = post_json.get("history") or {}
+    # The crucial assertion: even though we upserted m0, the JSON blob's
+    # history.messages is still absent (table-stored) — only the currentId
+    # pointer changed.
+    assert "messages" not in history or not history.get("messages")
+    assert history.get("currentId") == "m0"
+    # Title and models scaffolding should be preserved.
+    assert post_json.get("models") == pre_json.get("models")
+
+
+def test_migrated_upsert_updates_message_fts(db_session_with_table):
+    from sqlalchemy import text as sql_text
+
+    sess, chats = db_session_with_table
+    cid, msgs = _insert_migrated_chat(sess, chats, title="T", n_messages=5)
+
+    # Upsert a new message
+    chats.Chats.upsert_message_to_chat_by_id_and_message_id(
+        cid, "m99", {"role": "user", "content": "freshly added needle keyword"}
+    )
+
+    rows = sess.execute(
+        sql_text(
+            "SELECT message_id, content FROM message_fts "
+            "WHERE chat_id = :cid AND message_id = 'm99'"
+        ),
+        {"cid": cid},
+    ).fetchall()
+    assert rows
+    assert "needle" in rows[0][1]
+
+
+def test_migrated_status_history_appended(db_session_with_table):
+    from sqlalchemy import text as sql_text
+
+    sess, chats = db_session_with_table
+    cid, msgs = _insert_migrated_chat(sess, chats, title="T", n_messages=3)
+
+    chats.Chats.add_message_status_to_chat_by_id_and_message_id(
+        cid, "m1", {"status": "running"}
+    )
+    chats.Chats.add_message_status_to_chat_by_id_and_message_id(
+        cid, "m1", {"status": "done"}
+    )
+
+    row = sess.execute(
+        sql_text(
+            "SELECT status_history FROM chat_message "
+            "WHERE chat_id = :cid AND message_id = 'm1'"
+        ),
+        {"cid": cid},
+    ).fetchone()
+    assert row is not None
+    sh = json.loads(row[0])
+    assert sh == [{"status": "running"}, {"status": "done"}]
+
+
+def test_migrated_paginated_messages(db_session_with_table):
+    sess, chats = db_session_with_table
+    cid, msgs = _insert_migrated_chat(sess, chats, title="T", n_messages=50)
+
+    page = chats.Chats.get_chat_messages_paginated(cid, skip=10, limit=5)
+    assert len(page) == 5
+    assert page[0]["id"] == "m10"
+    assert page[-1]["id"] == "m14"
+
+
+def test_legacy_chat_unmodified_by_migration_aware_code(db_session_with_table):
+    """Unmigrated chats (messages_migrated=0) must keep working via the
+    legacy JSON path — the dual-read shouldn't disturb them."""
+    sess, chats = db_session_with_table
+    cid = _insert_chat(sess, chats, title="Legacy", user_msgs=["hello world"])
+    # Force messages_migrated to 0
+    from sqlalchemy import text as sql_text
+
+    sess.execute(
+        sql_text("UPDATE chat SET messages_migrated = 0 WHERE id = :id"),
+        {"id": cid},
+    )
+    sess.commit()
+
+    out = chats.Chats.get_chat_by_id(cid)
+    assert out is not None
+    msgs = out.chat.get("history", {}).get("messages", {})
+    assert "m0" in msgs
+    # Upsert should fall back to legacy path (rewrites JSON).
+    chats.Chats.upsert_message_to_chat_by_id_and_message_id(
+        cid, "m0", {"content": "updated legacy content"}
+    )
+    out2 = chats.Chats.get_chat_by_id(cid)
+    assert out2.chat["history"]["messages"]["m0"]["content"] == "updated legacy content"
+    # Should still be unmigrated.
+    row = sess.execute(
+        sql_text("SELECT messages_migrated FROM chat WHERE id = :id"), {"id": cid}
+    ).fetchone()
+    assert row[0] == 0
+
+
+def test_search_still_works_with_migrated_chat(db_session_with_table):
+    """Search must continue to find messages in migrated chats."""
+    sess, chats = db_session_with_table
+    cid, _ = _insert_migrated_chat(sess, chats, title="Migrated Chat", n_messages=10)
+    # Sync the chat_fts/chat_fts_tri rows manually because _insert_migrated_chat
+    # only populates message_fts; chat-level FTS is needed for the title-match
+    # path. The real migration runs alongside the FTS migration so we mimic
+    # that ordering here for the test.
+    from sqlalchemy import text as sql_text
+
+    body = "Migrated Chat " + " ".join(
+        f"message-{i} body" for i in range(10)
+    ) + " fastapi"
+    sess.execute(
+        sql_text("INSERT INTO chat_fts (id, title, body) VALUES (:id, :t, :b)"),
+        {"id": cid, "t": "Migrated Chat", "b": body},
+    )
+    sess.execute(
+        sql_text("INSERT INTO chat_fts_tri (id, content) VALUES (:id, :c)"),
+        {"id": cid, "c": body},
+    )
+    sess.commit()
+    resp = chats.Chats.search_chats("u1", "fastapi")
+    assert resp.total >= 1
+    assert resp.hits[0].id == cid
