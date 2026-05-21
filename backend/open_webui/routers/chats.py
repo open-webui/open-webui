@@ -274,10 +274,7 @@ async def get_chat_list_by_folder_id(
 
 @router.get("/pinned", response_model=list[ChatTitleIdResponse])
 async def get_user_pinned_chats(user=Depends(get_verified_user)):
-    return [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_pinned_chats_by_user_id(user.id)
-    ]
+    return Chats.get_pinned_chats_by_user_id(user.id)
 
 
 ############################
@@ -287,9 +284,10 @@ async def get_user_pinned_chats(user=Depends(get_verified_user)):
 
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
+    # Export endpoint — needs full chat JSON.
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_user_id(user.id)
+        for chat in Chats.get_chats_with_data_by_user_id(user.id)
     ]
 
 
@@ -300,9 +298,10 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 @router.get("/all/archived", response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user)):
+    # Export endpoint — needs full chat JSON.
     return [
         ChatResponse(**chat.model_dump())
-        for chat in Chats.get_archived_chats_by_user_id(user.id)
+        for chat in Chats.get_archived_chats_with_data_by_user_id(user.id)
     ]
 
 
@@ -335,7 +334,11 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_chats()]
+    # Admin export endpoint — needs full chat JSON.
+    return [
+        ChatResponse(**chat.model_dump())
+        for chat in Chats.get_chats_with_data()
+    ]
 
 
 ############################
@@ -467,7 +470,9 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
-        return ChatResponse(**chat.model_dump())
+        # Skip the model_dump() → re-validate hop. FastAPI's response_model
+        # serialization will coerce the ChatModel directly.
+        return chat
 
     else:
         raise HTTPException(
@@ -494,6 +499,35 @@ async def update_chat_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+
+############################
+# GetChatMessagesPaginated
+############################
+
+
+@router.get("/{id}/messages")
+async def get_chat_messages_paginated(
+    id: str,
+    skip: int = 0,
+    limit: int = 100,
+    user=Depends(get_verified_user),
+):
+    """Paginated message list for a single chat.
+
+    Reads directly from the chat_message table for migrated chats so we
+    don't have to ship the entire 100+ MB JSON blob over the wire just to
+    render a window of messages. Falls back to JSON slicing for unmigrated
+    chats so the response shape is identical regardless of storage path.
+    """
+    # Lightweight ownership check — avoids hydrating the whole message tree
+    # (which would defeat the entire point of paginating).
+    if not Chats.user_owns_chat(id, user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    return Chats.get_chat_messages_paginated(id, skip=skip, limit=limit)
 
 
 ############################

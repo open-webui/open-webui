@@ -4,6 +4,8 @@
 # This script ensures the modified version uses your existing database and settings
 # It also builds the frontend if needed
 
+set -e
+
 echo "🚀 Starting Modified OpenWebUI with Token Usage Tracking"
 echo "============================================================"
 
@@ -73,4 +75,4 @@ echo "Press Ctrl+C to stop the server"
 echo "============================================================"
 echo ""
 
-python -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8081
+exec python -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8081
