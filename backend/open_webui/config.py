@@ -3060,6 +3060,24 @@ SUBAGENT_PARENT_PROMPT = PersistentConfig(
     os.getenv("SUBAGENT_PARENT_PROMPT", DEFAULT_SUBAGENT_PARENT_PROMPT),
 )
 
+# Reasoning effort for the subagent's inner chat. Empty string = let the
+# model use its own default (no `reasoning_effort` is sent). Otherwise:
+# `minimal` | `low` | `medium` | `high` | `xhigh` (or any provider-specific
+# value the chosen model accepts — we just pass the string through to
+# `apply_params_to_form_data`).
+#
+# Resolution order at run-time (lowest priority first):
+#   model default → SUBAGENT_DEFAULT_REASONING_EFFORT → chat.params.subagentReasoningEffort
+#
+# Default `high` because subagents are meant for deep research; if the
+# parent picks a reasoning-capable model, you almost always want it
+# thinking harder than the default `medium`.
+SUBAGENT_DEFAULT_REASONING_EFFORT = PersistentConfig(
+    "SUBAGENT_DEFAULT_REASONING_EFFORT",
+    "subagents.default_reasoning_effort",
+    os.getenv("SUBAGENT_DEFAULT_REASONING_EFFORT", "high"),
+)
+
 ####################################
 # Images
 ####################################

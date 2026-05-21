@@ -151,6 +151,11 @@
 	let lastPersistedDataVizEnabled: boolean | null = null;
 	let subagentsEnabled = false;
 	let lastPersistedSubagentsEnabled: boolean | null = null;
+	// Per-chat override of admin global SUBAGENT_DEFAULT_REASONING_EFFORT.
+	// Empty string = inherit the admin default. Otherwise: minimal / low /
+	// medium / high / xhigh (or any provider-specific value).
+	let subagentReasoningEffort: string = '';
+	let lastPersistedSubagentReasoningEffort: string | null = null;
 	let codeInterpreterEnabled = false;
 
 	// Auto-save tool preferences when they change
@@ -252,6 +257,27 @@
 
 		params = nextParams;
 		lastPersistedSubagentsEnabled = subagentsEnabled;
+
+		void saveChatHandler(chatIdToPersist, history, nextParams);
+	}
+
+	// Same pattern for the per-chat subagent reasoning effort override.
+	// `chat.params.subagentReasoningEffort` (empty = inherit admin default).
+	$: if (subagentReasoningEffort !== (params.subagentReasoningEffort ?? '')) {
+		params = { ...params, subagentReasoningEffort };
+	}
+	$: if (
+		activeChatId &&
+		!loading &&
+		!$temporaryChatEnabled &&
+		lastPersistedSubagentReasoningEffort !== null &&
+		subagentReasoningEffort !== lastPersistedSubagentReasoningEffort
+	) {
+		const nextParams = { ...params, subagentReasoningEffort };
+		const chatIdToPersist = activeChatId;
+
+		params = nextParams;
+		lastPersistedSubagentReasoningEffort = subagentReasoningEffort;
 
 		void saveChatHandler(chatIdToPersist, history, nextParams);
 	}
@@ -544,6 +570,7 @@
 		lastPersistedStudyModeEnabled = null;
 		lastPersistedDataVizEnabled = null;
 		lastPersistedSubagentsEnabled = null;
+		lastPersistedSubagentReasoningEffort = null;
 
 		prompt = '';
 		messageInput?.setText('');
@@ -554,6 +581,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		subagentsEnabled = false;
+		subagentReasoningEffort = '';
 		imageGenerationEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
@@ -696,6 +724,7 @@
 		studyModeEnabled = false;
 		dataVizEnabled = false;
 		subagentsEnabled = false;
+		subagentReasoningEffort = '';
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -2018,6 +2047,11 @@
 			subagentsEnabled = params.subagentsEnabled;
 		}
 		lastPersistedSubagentsEnabled = subagentsEnabled;
+
+		if (params.subagentReasoningEffort !== undefined) {
+			subagentReasoningEffort = params.subagentReasoningEffort ?? '';
+		}
+		lastPersistedSubagentReasoningEffort = subagentReasoningEffort;
 
 		// Hydrate the subagent live-state store with anything persisted on
 		// this chat's messages. Each message's `subagent_runs` is a
@@ -5237,6 +5271,7 @@
 									bind:studyModeEnabled
 									bind:dataVizEnabled
 									bind:subagentsEnabled
+									bind:subagentReasoningEffort
 									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands
@@ -5298,6 +5333,7 @@
 									bind:studyModeEnabled
 									bind:dataVizEnabled
 									bind:subagentsEnabled
+									bind:subagentReasoningEffort
 									bind:serviceTier
 									bind:atSelectedModel
 									bind:showCommands

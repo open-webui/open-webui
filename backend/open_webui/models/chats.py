@@ -122,6 +122,41 @@ class ChatTitleIdResponse(BaseModel):
     created_at: int
 
 
+class ChatSearchHit(BaseModel):
+    id: str
+    title: str
+    updated_at: int
+    created_at: int
+    archived: bool = False
+    pinned: bool = False
+    folder_id: Optional[str] = None
+    snippet: Optional[str] = None  # safe HTML, only <mark> tags allowed
+    match_count: int = 0
+    matched_message_id: Optional[str] = None
+    matched_role: Optional[str] = None
+    score: float = 0.0
+
+
+class FacetBucket(BaseModel):
+    id: str
+    name: str
+    count: int
+
+
+class ChatSearchFacets(BaseModel):
+    folders: list[FacetBucket] = []
+    tags: list[FacetBucket] = []
+    models: list[FacetBucket] = []
+
+
+class ChatSearchResponse(BaseModel):
+    total: int = 0
+    hits: list[ChatSearchHit] = []
+    facets: ChatSearchFacets = ChatSearchFacets()
+    used_fuzzy: bool = False
+    did_you_mean: Optional[str] = None
+
+
 def _extract_content_text(content) -> str:
     """Extract plain text from a message content field (string or multimodal list)."""
     if isinstance(content, str):
@@ -168,6 +203,269 @@ def _search_text_column_exists(db) -> bool:
     except Exception:
         _search_col_exists_cache = False
     return _search_col_exists_cache
+
+
+_fts_supported_cache: Optional[bool] = None
+
+
+def _fts_supported(db) -> bool:
+    """SQLite + chat_fts virtual table present. Cached after first call."""
+    global _fts_supported_cache
+    if _fts_supported_cache is not None:
+        return _fts_supported_cache
+    try:
+        if db.bind.dialect.name != "sqlite":
+            _fts_supported_cache = False
+            return False
+        db.execute(text("SELECT 1 FROM chat_fts LIMIT 0"))
+        _fts_supported_cache = True
+    except Exception:
+        _fts_supported_cache = False
+    return _fts_supported_cache
+
+
+def _iter_chat_messages(chat_data: dict):
+    """Yield (message_id, role, content_text) for every message in a chat."""
+    if not isinstance(chat_data, dict):
+        return
+    history = chat_data.get("history") or {}
+    history_messages = history.get("messages") if isinstance(history, dict) else None
+    if history_messages and isinstance(history_messages, dict):
+        for mid, msg in history_messages.items():
+            if isinstance(msg, dict):
+                yield (
+                    str(mid),
+                    str(msg.get("role", "")),
+                    _extract_content_text(msg.get("content", "")),
+                )
+    elif "messages" in chat_data:
+        for idx, msg in enumerate(chat_data.get("messages") or []):
+            if isinstance(msg, dict):
+                yield (
+                    str(msg.get("id", f"_{idx}")),
+                    str(msg.get("role", "")),
+                    _extract_content_text(msg.get("content", "")),
+                )
+
+
+def _upsert_chat_fts(db, chat_id: str, title: str, chat_data: dict) -> None:
+    """Refresh all three FTS tables for one chat. No-op when FTS isn't present."""
+    if not _fts_supported(db):
+        return
+    body = _build_search_text(title, chat_data)
+    try:
+        db.execute(text("DELETE FROM chat_fts WHERE id = :id"), {"id": chat_id})
+        db.execute(
+            text("INSERT INTO chat_fts (id, title, body) VALUES (:id, :t, :b)"),
+            {"id": chat_id, "t": title or "", "b": body},
+        )
+        db.execute(text("DELETE FROM message_fts WHERE chat_id = :id"), {"id": chat_id})
+        for mid, role, content in _iter_chat_messages(chat_data):
+            if not content:
+                continue
+            db.execute(
+                text(
+                    "INSERT INTO message_fts (chat_id, message_id, role, content) "
+                    "VALUES (:cid, :mid, :role, :content)"
+                ),
+                {
+                    "cid": chat_id,
+                    "mid": mid,
+                    "role": role,
+                    "content": content[:65536],
+                },
+            )
+        db.execute(text("DELETE FROM chat_fts_tri WHERE id = :id"), {"id": chat_id})
+        db.execute(
+            text("INSERT INTO chat_fts_tri (id, content) VALUES (:id, :c)"),
+            {"id": chat_id, "c": body},
+        )
+    except Exception:
+        # FTS staleness is preferable to losing the underlying chat write.
+        pass
+
+
+# FTS query characters that need to be stripped to avoid breaking the parser.
+# Keep `"` for quoted phrases and `-` for negation - those are handled by the
+# parser below.
+_FTS_SPECIAL = set('():\\*~^')
+
+# Words shorter than this are dropped from FTS queries (FTS5 ignores them
+# anyway but skipping client-side keeps the parser clean).
+_FTS_MIN_TOKEN_LEN = 2
+
+_GENERIC_TITLES = {
+    "",
+    "new chat",
+    "untitled",
+    "untitled chat",
+}
+
+
+def _tokenize_user_query(text: str) -> list[tuple[str, str]]:
+    """Split user query into ('phrase'|'word', payload) tuples.
+
+    Quoted phrases are preserved; unquoted runs are split on whitespace.
+    """
+    out: list[tuple[str, str]] = []
+    cur: list[str] = []
+    in_q = False
+    for ch in text:
+        if ch == '"':
+            if cur:
+                out.append(("phrase" if in_q else "word", "".join(cur)))
+                cur = []
+            in_q = not in_q
+        elif ch.isspace() and not in_q:
+            if cur:
+                out.append(("word", "".join(cur)))
+                cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        out.append(("phrase" if in_q else "word", "".join(cur)))
+    return out
+
+
+def _clean_fts_token(s: str) -> str:
+    return "".join(c for c in s if c not in _FTS_SPECIAL).strip()
+
+
+def _build_fts_queries(search_text: str) -> tuple[str, str, str]:
+    """Return (primary, prefix, fuzzy) FTS5-safe query strings.
+
+    primary  - tokens joined with implicit AND, quoted phrases preserved
+    prefix   - same but each unquoted token gets a `*` suffix
+    fuzzy    - trigrams OR'd together for the trigram-tokenized index. We
+               can't just pass the raw text because FTS5's trigram tokenizer
+               treats the query as a *phrase* of trigrams - so `fastpi`
+               (trigrams: fas, ast, stp, tpi) never matches `fastapi`
+               (trigrams: fas, ast, sta, tap, api) even though the words are
+               obviously similar. Decomposing into OR'd trigrams + BM25
+               ranking gives the "did you mean" behaviour we want.
+    """
+    tokens = _tokenize_user_query(search_text)
+    primary, prefix, fuzzy_words = [], [], []
+    for kind, t in tokens:
+        c = _clean_fts_token(t)
+        if len(c) < _FTS_MIN_TOKEN_LEN:
+            continue
+        if kind == "phrase":
+            quoted = f'"{c}"'
+            primary.append(quoted)
+            prefix.append(quoted)
+            fuzzy_words.append(c)
+        else:
+            primary.append(c)
+            prefix.append(f"{c}*")
+            fuzzy_words.append(c)
+    fuzzy_query = _build_trigram_or_query(" ".join(fuzzy_words))
+    return (" ".join(primary), " ".join(prefix), fuzzy_query)
+
+
+def _build_trigram_or_query(text: str) -> str:
+    """Decompose ``text`` into unique trigrams joined with OR.
+
+    Trigram matching in FTS5 normally requires the indexed value to contain
+    *every* trigram of the query in order. That's too strict for the
+    "did you mean" use case; OR'ing the trigrams lets BM25 rank by overlap."""
+    grams: list[str] = []
+    seen: set[str] = set()
+    for word in (text or "").lower().split():
+        # Strip FTS specials so the OR'd trigrams don't accidentally re-enter
+        # the FTS5 query parser as operators.
+        cleaned = _clean_fts_token(word)
+        if not cleaned:
+            continue
+        if len(cleaned) < 3:
+            if cleaned not in seen:
+                grams.append(cleaned)
+                seen.add(cleaned)
+            continue
+        for i in range(len(cleaned) - 2):
+            g = cleaned[i : i + 3]
+            if g not in seen:
+                grams.append(g)
+                seen.add(g)
+    return " OR ".join(grams)
+
+
+def _strip_prefix_syntax(search_text: str, user_id: str) -> tuple[
+    list[str], list[str], Optional[bool], Optional[bool], Optional[bool], str
+]:
+    """Pull out hidden `tag:` / `folder:` / `pinned:` / `archived:` / `shared:`
+    qualifiers from the raw text and return (tag_ids, folder_ids,
+    pinned, archived, shared, remaining_text)."""
+    words = search_text.split(" ")
+    tag_ids = [
+        w.replace("tag:", "").replace(" ", "_").lower()
+        for w in words
+        if w.startswith("tag:")
+    ]
+    folder_names = [w.replace("folder:", "") for w in words if w.startswith("folder:")]
+    folders = Folders.search_folders_by_names(user_id, folder_names) if folder_names else []
+    folder_ids = [f.id for f in folders]
+
+    pinned: Optional[bool] = None
+    if "pinned:true" in words:
+        pinned = True
+    elif "pinned:false" in words:
+        pinned = False
+
+    archived: Optional[bool] = None
+    if "archived:true" in words:
+        archived = True
+    elif "archived:false" in words:
+        archived = False
+
+    shared: Optional[bool] = None
+    if "shared:true" in words:
+        shared = True
+    elif "shared:false" in words:
+        shared = False
+
+    remaining = " ".join(
+        w
+        for w in words
+        if not (
+            w.startswith("tag:")
+            or w.startswith("folder:")
+            or w.startswith("pinned:")
+            or w.startswith("archived:")
+            or w.startswith("shared:")
+        )
+    ).strip()
+    return (tag_ids, folder_ids, pinned, archived, shared, remaining)
+
+
+def _escape_html_text(s: str) -> str:
+    """HTML-escape user content for safe interpolation alongside <mark>."""
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+# FTS5 emits real `<mark>` and `</mark>` tags around hits. We HTML-escape
+# everything else after the fact by splitting on the mark tags, escaping the
+# segments, then re-joining. This is XSS-safe and trivial.
+def _sanitize_snippet(raw: Optional[str]) -> Optional[str]:
+    if raw is None:
+        return None
+    parts = raw.split("<mark>")
+    out: list[str] = []
+    for i, part in enumerate(parts):
+        if i == 0:
+            out.append(_escape_html_text(part))
+            continue
+        inner, _, after = part.partition("</mark>")
+        out.append("<mark>")
+        out.append(_escape_html_text(inner))
+        out.append("</mark>")
+        out.append(_escape_html_text(after))
+    return "".join(out)
 
 
 def _apply_subagent_filter(query, db, include_subagents: bool):
@@ -271,6 +569,12 @@ class ChatTable:
             except Exception:
                 pass  # Column doesn't exist yet (migration pending)
 
+            _upsert_chat_fts(db, id, title, enriched_chat)
+            try:
+                db.commit()
+            except Exception:
+                pass
+
             return ChatModel.model_validate(result) if result else None
 
     def import_chat(
@@ -315,6 +619,12 @@ class ChatTable:
             except Exception:
                 pass
 
+            _upsert_chat_fts(db, id, import_title, form_data.chat)
+            try:
+                db.commit()
+            except Exception:
+                pass
+
             return ChatModel.model_validate(result) if result else None
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
@@ -337,6 +647,12 @@ class ChatTable:
                         text("UPDATE chat SET search_text = :st WHERE id = :id"),
                         {"st": _build_search_text(title, enriched_chat), "id": id},
                     )
+                    db.commit()
+                except Exception:
+                    pass
+
+                _upsert_chat_fts(db, id, title, enriched_chat)
+                try:
                     db.commit()
                 except Exception:
                     pass
@@ -776,6 +1092,83 @@ class ChatTable:
             all_chats = query.order_by(Chat.updated_at.desc())
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    def search_chats(
+        self,
+        user_id: str,
+        search_text: str,
+        *,
+        folder_ids: Optional[list[str]] = None,
+        tag_ids: Optional[list[str]] = None,
+        pinned: Optional[bool] = None,
+        archived: Optional[bool] = None,
+        shared: Optional[bool] = None,
+        updated_after: Optional[int] = None,
+        updated_before: Optional[int] = None,
+        sort: str = "relevance",
+        skip: int = 0,
+        limit: int = 30,
+        include_subagents: bool = False,
+    ) -> "ChatSearchResponse":
+        """GOATED chat search.
+
+        Three-tier FTS (primary AND-ish, prefix-expansion, trigram fuzzy) with
+        dual-path ranking (chat_fts + message_fts), title-quality penalty, and
+        recency decay. Returns ChatSearchResponse with snippets, match counts,
+        and facet aggregates. Falls back to LIKE on non-SQLite dialects.
+        """
+        # Lowercase the entire query: FTS5's unicode61 tokenizer folds case at
+        # index time anyway, and this lets the hidden `tag:` / `folder:` /
+        # `pinned:` / `archived:` / `shared:` prefix detection work case-blind.
+        raw_text = (search_text or "").replace("\u0000", "").strip().lower()
+
+        # Hidden power-user prefix syntax
+        extra_tags, extra_folders, p_pin, p_arc, p_shr, raw_text = _strip_prefix_syntax(
+            raw_text, user_id
+        )
+        tag_ids = list(tag_ids or []) + extra_tags
+        folder_ids = list(folder_ids or []) + extra_folders
+        if pinned is None:
+            pinned = p_pin
+        if archived is None:
+            archived = p_arc
+        if shared is None:
+            shared = p_shr
+
+        with get_db() as db:
+            if db.bind.dialect.name == "sqlite" and _fts_supported(db):
+                return self._search_chats_sqlite_fts(
+                    db,
+                    user_id=user_id,
+                    raw_text=raw_text,
+                    folder_ids=folder_ids,
+                    tag_ids=tag_ids,
+                    pinned=pinned,
+                    archived=archived,
+                    shared=shared,
+                    updated_after=updated_after,
+                    updated_before=updated_before,
+                    sort=sort,
+                    skip=skip,
+                    limit=limit,
+                    include_subagents=include_subagents,
+                )
+            return self._search_chats_like_fallback(
+                db,
+                user_id=user_id,
+                raw_text=raw_text,
+                folder_ids=folder_ids,
+                tag_ids=tag_ids,
+                pinned=pinned,
+                archived=archived,
+                shared=shared,
+                updated_after=updated_after,
+                updated_before=updated_before,
+                sort=sort,
+                skip=skip,
+                limit=limit,
+                include_subagents=include_subagents,
+            )
+
     def get_chats_by_user_id_and_search_text(
         self,
         user_id: str,
@@ -785,172 +1178,555 @@ class ChatTable:
         limit: int = 60,
         include_subagents: bool = False,
     ) -> list[ChatModel]:
-        """
-        Filters chats based on a search query using Python, allowing pagination using skip and limit.
-        """
-        search_text = search_text.replace("\u0000", "").lower().strip()
-
-        if not search_text:
-            return self.get_chat_list_by_user_id(
-                user_id,
-                include_archived,
-                filter={},
-                skip=skip,
-                limit=limit,
-                include_subagents=include_subagents,
-            )
-
-        search_text_words = search_text.split(" ")
-
-        # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
-        tag_ids = [
-            word.replace("tag:", "").replace(" ", "_").lower()
-            for word in search_text_words
-            if word.startswith("tag:")
-        ]
-
-        # Extract folder names - handle spaces and case insensitivity
-        folders = Folders.search_folders_by_names(
+        """Legacy shim: adapt ``search_chats`` results to the older list shape
+        that a few internal call sites still rely on."""
+        archived_filter: Optional[bool] = None if include_archived else False
+        resp = self.search_chats(
             user_id,
-            [
-                word.replace("folder:", "")
-                for word in search_text_words
-                if word.startswith("folder:")
-            ],
+            search_text,
+            archived=archived_filter,
+            skip=skip,
+            limit=limit,
+            include_subagents=include_subagents,
         )
-        folder_ids = [folder.id for folder in folders]
-
-        is_pinned = None
-        if "pinned:true" in search_text_words:
-            is_pinned = True
-        elif "pinned:false" in search_text_words:
-            is_pinned = False
-
-        is_archived = None
-        if "archived:true" in search_text_words:
-            is_archived = True
-        elif "archived:false" in search_text_words:
-            is_archived = False
-
-        is_shared = None
-        if "shared:true" in search_text_words:
-            is_shared = True
-        elif "shared:false" in search_text_words:
-            is_shared = False
-
-        search_text_words = [
-            word
-            for word in search_text_words
-            if (
-                not word.startswith("tag:")
-                and not word.startswith("folder:")
-                and not word.startswith("pinned:")
-                and not word.startswith("archived:")
-                and not word.startswith("shared:")
-            )
-        ]
-
-        search_text = " ".join(search_text_words)
-
+        if not resp.hits:
+            return []
         with get_db() as db:
-            query = db.query(Chat).filter(Chat.user_id == user_id)
-            query = _apply_subagent_filter(query, db, include_subagents)
+            ids = [h.id for h in resp.hits]
+            order = {cid: i for i, cid in enumerate(ids)}
+            rows = db.query(Chat).filter(Chat.id.in_(ids)).all()
+            rows.sort(key=lambda r: order.get(r.id, 0))
+            return [ChatModel.model_validate(r) for r in rows]
 
-            if is_archived is not None:
-                query = query.filter(Chat.archived == is_archived)
-            elif not include_archived:
-                query = query.filter(Chat.archived == False)
+    def _build_chat_filter_sql(
+        self,
+        *,
+        user_id: str,
+        folder_ids: Optional[list[str]],
+        tag_ids: Optional[list[str]],
+        pinned: Optional[bool],
+        archived: Optional[bool],
+        shared: Optional[bool],
+        updated_after: Optional[int],
+        updated_before: Optional[int],
+        include_subagents: bool,
+        dialect: str,
+    ) -> tuple[str, dict]:
+        clauses = ["c.user_id = :user_id"]
+        params: dict = {"user_id": user_id}
 
-            if is_pinned is not None:
-                query = query.filter(Chat.pinned == is_pinned)
+        if not include_subagents:
+            if dialect == "sqlite":
+                clauses.append("(json_extract(c.meta, '$.subagent_of') IS NULL)")
+            elif dialect == "postgresql":
+                clauses.append("(c.meta->>'subagent_of' IS NULL)")
 
-            if is_shared is not None:
-                if is_shared:
-                    query = query.filter(Chat.share_id.isnot(None))
-                else:
-                    query = query.filter(Chat.share_id.is_(None))
+        if archived is True:
+            clauses.append("c.archived = 1")
+        elif archived is False:
+            clauses.append("c.archived = 0")
 
-            if folder_ids:
-                query = query.filter(Chat.folder_id.in_(folder_ids))
+        if pinned is True:
+            clauses.append("c.pinned = 1")
+        elif pinned is False:
+            clauses.append("(c.pinned = 0 OR c.pinned IS NULL)")
 
-            query = query.order_by(
-                case(
-                    (Chat.title.ilike(f"%{search_text}%"), 0),
-                    else_=1
-                ),
-                Chat.updated_at.desc()
+        if shared is True:
+            clauses.append("c.share_id IS NOT NULL")
+        elif shared is False:
+            clauses.append("c.share_id IS NULL")
+
+        if folder_ids:
+            phs = ",".join(f":fid_{i}" for i in range(len(folder_ids)))
+            clauses.append(f"c.folder_id IN ({phs})")
+            for i, fid in enumerate(folder_ids):
+                params[f"fid_{i}"] = fid
+
+        if tag_ids:
+            for i, tid in enumerate(tag_ids):
+                if dialect == "sqlite":
+                    clauses.append(
+                        f"EXISTS (SELECT 1 FROM json_each(c.meta, '$.tags') WHERE value = :tid_{i})"
+                    )
+                elif dialect == "postgresql":
+                    clauses.append(
+                        f"EXISTS (SELECT 1 FROM json_array_elements_text(c.meta->'tags') AS t WHERE t = :tid_{i})"
+                    )
+                params[f"tid_{i}"] = tid
+
+        if updated_after:
+            clauses.append("c.updated_at >= :updated_after")
+            params["updated_after"] = updated_after
+        if updated_before:
+            clauses.append("c.updated_at <= :updated_before")
+            params["updated_before"] = updated_before
+
+        return (" AND ".join(clauses), params)
+
+    def _search_chats_sqlite_fts(
+        self,
+        db,
+        *,
+        user_id: str,
+        raw_text: str,
+        folder_ids: Optional[list[str]],
+        tag_ids: Optional[list[str]],
+        pinned: Optional[bool],
+        archived: Optional[bool],
+        shared: Optional[bool],
+        updated_after: Optional[int],
+        updated_before: Optional[int],
+        sort: str,
+        skip: int,
+        limit: int,
+        include_subagents: bool,
+    ) -> "ChatSearchResponse":
+        filter_sql, filter_params = self._build_chat_filter_sql(
+            user_id=user_id,
+            folder_ids=folder_ids,
+            tag_ids=tag_ids,
+            pinned=pinned,
+            archived=archived,
+            shared=shared,
+            updated_after=updated_after,
+            updated_before=updated_before,
+            include_subagents=include_subagents,
+            dialect="sqlite",
+        )
+
+        if not raw_text:
+            return self._sqlite_filtered_list(db, filter_sql, filter_params, skip, limit)
+
+        primary_q, prefix_q, fuzzy_q = _build_fts_queries(raw_text)
+        if not primary_q:
+            return self._sqlite_filtered_list(db, filter_sql, filter_params, skip, limit)
+
+        now = int(time.time())
+        used_fuzzy = False
+
+        # Tier 1
+        hits = self._sqlite_run_tier(
+            db, fts_q=primary_q, filter_sql=filter_sql,
+            filter_params=filter_params, now=now, msg_boost=1.2,
+        )
+
+        # Tier 2 (gated)
+        if len(hits) < 5 and prefix_q and prefix_q != primary_q:
+            t2 = self._sqlite_run_tier(
+                db, fts_q=prefix_q, filter_sql=filter_sql,
+                filter_params=filter_params, now=now, msg_boost=1.2,
+                global_scale=0.7,
+            )
+            seen = {h["id"] for h in hits}
+            hits.extend(h for h in t2 if h["id"] not in seen)
+
+        # Tier 3 (gated)
+        if len(hits) < 5 and fuzzy_q:
+            t3 = self._sqlite_run_fuzzy(
+                db, fuzzy_q=fuzzy_q, filter_sql=filter_sql,
+                filter_params=filter_params, now=now,
+            )
+            seen = {h["id"] for h in hits}
+            new_hits = [h for h in t3 if h["id"] not in seen]
+            if new_hits and not hits:
+                used_fuzzy = True
+            hits.extend(new_hits)
+
+        if sort == "recent":
+            hits.sort(key=lambda h: h["updated_at"], reverse=True)
+        else:
+            hits.sort(key=lambda h: (h["final_score"], h["updated_at"]), reverse=True)
+        total = len(hits)
+        page = hits[skip : skip + limit]
+
+        enrichment = self._sqlite_enrich_snippets(db, [h["id"] for h in page], primary_q)
+        facets = self._sqlite_facets(db, [h["id"] for h in hits])
+
+        out_hits: list[ChatSearchHit] = []
+        for h in page:
+            enrich = enrichment.get(h["id"], {})
+            out_hits.append(
+                ChatSearchHit(
+                    id=h["id"],
+                    title=h["title"] or "",
+                    updated_at=h["updated_at"],
+                    created_at=h["created_at"],
+                    archived=bool(h["archived"]),
+                    pinned=bool(h["pinned"]),
+                    folder_id=h["folder_id"],
+                    snippet=enrich.get("snippet"),
+                    match_count=enrich.get("match_count", 0),
+                    matched_message_id=enrich.get("matched_message_id"),
+                    matched_role=enrich.get("matched_role"),
+                    score=h["final_score"],
+                )
             )
 
-            # Keyword search using pre-extracted search_text column — no JSON parsing per row.
-            # Falls back to title-only for rows not yet backfilled (search_text IS NULL)
-            # or if the migration hasn't run yet.
-            _has_search_col = _search_text_column_exists(db)
-            for word in search_text_words:
-                if _has_search_col:
-                    query = query.filter(
-                        or_(
-                            text("chat.search_text LIKE :w").params(w=f"%{word}%"),
-                            and_(
-                                text("chat.search_text IS NULL"),
-                                Chat.title.ilike(f"%{word}%"),
-                            ),
-                        )
-                    )
-                else:
-                    query = query.filter(Chat.title.ilike(f"%{word}%"))
+        return ChatSearchResponse(
+            total=total, hits=out_hits, facets=facets,
+            used_fuzzy=used_fuzzy,
+            did_you_mean=raw_text if used_fuzzy else None,
+        )
 
-            # Tag filtering uses json_each on meta (small JSON, cheap compared to chat messages)
-            dialect_name = db.bind.dialect.name
-            if dialect_name == "sqlite":
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            "NOT EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') AS tag)"
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
+    def _sqlite_filtered_list(
+        self, db, filter_sql: str, filter_params: dict, skip: int, limit: int
+    ) -> "ChatSearchResponse":
+        total = db.execute(
+            text(f"SELECT COUNT(*) FROM chat c WHERE {filter_sql}"),
+            filter_params,
+        ).scalar() or 0
+        rows = db.execute(
+            text(
+                f"SELECT c.id, c.title, c.updated_at, c.created_at, c.archived, c.pinned, c.folder_id "
+                f"FROM chat c WHERE {filter_sql} "
+                f"ORDER BY c.updated_at DESC LIMIT :limit OFFSET :skip"
+            ),
+            {**filter_params, "limit": limit, "skip": skip},
+        ).fetchall()
+        hits = [
+            ChatSearchHit(
+                id=r[0], title=r[1] or "", updated_at=r[2] or 0, created_at=r[3] or 0,
+                archived=bool(r[4]), pinned=bool(r[5]), folder_id=r[6],
+            )
+            for r in rows
+        ]
+        facets = self._sqlite_facets(db, [h.id for h in hits])
+        return ChatSearchResponse(total=int(total), hits=hits, facets=facets)
+
+    def _sqlite_run_tier(
+        self,
+        db,
+        *,
+        fts_q: str,
+        filter_sql: str,
+        filter_params: dict,
+        now: int,
+        msg_boost: float,
+        global_scale: float = 1.0,
+    ) -> list[dict]:
+        # SQLite FTS5 quirk: bm25() is an auxiliary function that can only be
+        # used in a SELECT that directly evaluates `... MATCH ...`. Aggregating
+        # bm25 output inside a CTE (`MAX(-bm25(...))`) or chaining CTEs that
+        # consume bm25 results breaks the planner's "FTS context" tracking and
+        # raises "unable to use function bm25 in the requested context". So we
+        # emit raw per-message rows in SQL and aggregate per-chat in Python.
+        params = {**filter_params, "q": fts_q}
+        sql = f"""
+            WITH chat_scored AS (
+                SELECT chat_fts.id AS id,
+                       -bm25(chat_fts, 3.0, 1.0) AS s
+                FROM chat_fts WHERE chat_fts MATCH :q
+            ),
+            msg_rows AS (
+                SELECT message_fts.chat_id AS id,
+                       message_fts.message_id AS mid,
+                       -bm25(message_fts) AS s
+                FROM message_fts WHERE message_fts MATCH :q
+            )
+            SELECT c.id, c.title, c.updated_at, c.created_at,
+                   c.archived, c.pinned, c.folder_id,
+                   COALESCE(cs.s, 0.0) AS chat_s,
+                   msg_rows.s AS msg_s
+            FROM chat c
+            LEFT JOIN chat_scored cs ON cs.id = c.id
+            LEFT JOIN msg_rows ON msg_rows.id = c.id
+            WHERE {filter_sql}
+              AND (cs.s IS NOT NULL OR msg_rows.s IS NOT NULL)
+            LIMIT 1500
+        """
+        rows = db.execute(text(sql), params).fetchall()
+
+        # Aggregate per chat: take chat-level score as-is, take max msg score,
+        # and count distinct messages that matched.
+        agg: dict[str, dict] = {}
+        for r in rows:
+            cid = r[0]
+            slot = agg.get(cid)
+            if slot is None:
+                title = (r[1] or "").strip()
+                title_l = title.lower()
+                if title_l in _GENERIC_TITLES:
+                    title_penalty = 1.5
+                elif len(title) <= 3:
+                    title_penalty = 1.3
+                else:
+                    title_penalty = 1.0
+                slot = {
+                    "id": cid,
+                    "title": title,
+                    "updated_at": r[2] or 0,
+                    "created_at": r[3] or 0,
+                    "archived": r[4],
+                    "pinned": r[5],
+                    "folder_id": r[6],
+                    "chat_score": float(r[7] or 0.0),
+                    "msg_score": 0.0,
+                    "match_count": 0,
+                    "title_penalty": title_penalty,
+                }
+                agg[cid] = slot
+            if r[8] is not None:
+                msg_s = float(r[8])
+                if msg_s > slot["msg_score"]:
+                    slot["msg_score"] = msg_s
+                slot["match_count"] += 1
+
+        out: list[dict] = []
+        for slot in agg.values():
+            raw = max(slot["chat_score"], slot["msg_score"] * msg_boost)
+            age_days = max(0, (now - (slot["updated_at"] or now)) / 86400.0)
+            decay = 2.71828 ** (-age_days / 90.0)
+            final = (raw / slot["title_penalty"]) * decay * global_scale
+            out.append({
+                "id": slot["id"],
+                "title": slot["title"],
+                "updated_at": slot["updated_at"],
+                "created_at": slot["created_at"],
+                "archived": slot["archived"],
+                "pinned": slot["pinned"],
+                "folder_id": slot["folder_id"],
+                "raw_score": raw,
+                "final_score": final,
+                "match_count": slot["match_count"],
+            })
+        return out
+
+    def _sqlite_run_fuzzy(
+        self, db, *, fuzzy_q: str, filter_sql: str, filter_params: dict, now: int,
+    ) -> list[dict]:
+        params = {**filter_params, "q": fuzzy_q}
+        sql = f"""
+            SELECT c.id, c.title, c.updated_at, c.created_at,
+                   c.archived, c.pinned, c.folder_id,
+                   -bm25(chat_fts_tri) AS s
+            FROM chat_fts_tri JOIN chat c ON c.id = chat_fts_tri.id
+            WHERE chat_fts_tri MATCH :q AND {filter_sql}
+            LIMIT 100
+        """
+        rows = db.execute(text(sql), params).fetchall()
+        out: list[dict] = []
+        for r in rows:
+            raw = float(r[7] or 0.0)
+            age_days = max(0, (now - (r[2] or now)) / 86400.0)
+            decay = 2.71828 ** (-age_days / 90.0)
+            final = raw * decay * 0.4
+            out.append({
+                "id": r[0], "title": r[1] or "",
+                "updated_at": r[2] or 0, "created_at": r[3] or 0,
+                "archived": r[4], "pinned": r[5], "folder_id": r[6],
+                "raw_score": raw, "final_score": final, "match_count": 0,
+            })
+        return out
+
+    def _sqlite_enrich_snippets(
+        self, db, chat_ids: list[str], fts_q: str
+    ) -> dict[str, dict]:
+        if not chat_ids or not fts_q:
+            return {}
+        placeholders = ",".join(f":cid_{i}" for i in range(len(chat_ids)))
+        params: dict = {"q": fts_q}
+        for i, cid in enumerate(chat_ids):
+            params[f"cid_{i}"] = cid
+
+        sql = f"""
+            WITH ranked AS (
+                SELECT message_fts.chat_id AS chat_id,
+                       message_fts.message_id AS message_id,
+                       message_fts.role AS role,
+                       snippet(message_fts, 3, '<mark>', '</mark>', '…', 14) AS snip,
+                       -bm25(message_fts) AS s
+                FROM message_fts
+                WHERE message_fts MATCH :q
+                  AND message_fts.chat_id IN ({placeholders})
+            ),
+            counts AS (
+                SELECT chat_id, COUNT(*) AS cnt FROM ranked GROUP BY chat_id
+            ),
+            tops AS (
+                SELECT chat_id, message_id, role, snip, s,
+                       ROW_NUMBER() OVER (PARTITION BY chat_id ORDER BY s DESC) AS rn
+                FROM ranked
+            )
+            SELECT t.chat_id, t.message_id, t.role, t.snip, COALESCE(c.cnt, 0)
+            FROM tops t
+            LEFT JOIN counts c ON c.chat_id = t.chat_id
+            WHERE t.rn = 1
+        """
+        rows = db.execute(text(sql), params).fetchall()
+        out: dict[str, dict] = {}
+        for r in rows:
+            out[r[0]] = {
+                "matched_message_id": r[1],
+                "matched_role": r[2],
+                "snippet": _sanitize_snippet(r[3]),
+                "match_count": int(r[4] or 0),
+            }
+
+        missing = [cid for cid in chat_ids if cid not in out]
+        if missing:
+            placeholders2 = ",".join(f":cid_{i}" for i in range(len(missing)))
+            params2: dict = {"q": fts_q}
+            for i, cid in enumerate(missing):
+                params2[f"cid_{i}"] = cid
+            sql2 = f"""
+                SELECT id, snippet(chat_fts, 1, '<mark>', '</mark>', '…', 16) AS snip
+                FROM chat_fts
+                WHERE chat_fts MATCH :q AND id IN ({placeholders2})
+            """
+            try:
+                rows2 = db.execute(text(sql2), params2).fetchall()
+                for r in rows2:
+                    out[r[0]] = {
+                        "matched_message_id": None,
+                        "matched_role": None,
+                        "snippet": _sanitize_snippet(r[1]),
+                        "match_count": 0,
+                    }
+            except Exception:
+                pass
+        return out
+
+    def _sqlite_facets(self, db, chat_ids: list[str]) -> "ChatSearchFacets":
+        if not chat_ids:
+            return ChatSearchFacets()
+        placeholders = ",".join(f":cid_{i}" for i in range(len(chat_ids)))
+        params: dict = {}
+        for i, cid in enumerate(chat_ids):
+            params[f"cid_{i}"] = cid
+
+        try:
+            folder_rows = db.execute(
+                text(
+                    f"SELECT c.folder_id, f.name, COUNT(*) "
+                    f"FROM chat c LEFT JOIN folder f ON f.id = c.folder_id "
+                    f"WHERE c.id IN ({placeholders}) AND c.folder_id IS NOT NULL "
+                    f"GROUP BY c.folder_id, f.name "
+                    f"ORDER BY COUNT(*) DESC LIMIT 20"
+                ),
+                params,
+            ).fetchall()
+            folders = [
+                FacetBucket(id=r[0], name=(r[1] or r[0]), count=int(r[2]))
+                for r in folder_rows
+            ]
+        except Exception:
+            folders = []
+
+        try:
+            tag_rows = db.execute(
+                text(
+                    f"SELECT tag.value, COUNT(*) "
+                    f"FROM chat c, json_each(c.meta, '$.tags') AS tag "
+                    f"WHERE c.id IN ({placeholders}) "
+                    f"GROUP BY tag.value "
+                    f"ORDER BY COUNT(*) DESC LIMIT 20"
+                ),
+                params,
+            ).fetchall()
+            tags = [
+                FacetBucket(id=str(r[0]), name=str(r[0]), count=int(r[1]))
+                for r in tag_rows if r[0]
+            ]
+        except Exception:
+            tags = []
+
+        try:
+            model_rows = db.execute(
+                text(
+                    f"SELECT json_extract(c.chat, '$.models[0]') AS m, COUNT(*) "
+                    f"FROM chat c WHERE c.id IN ({placeholders}) AND m IS NOT NULL "
+                    f"GROUP BY m ORDER BY COUNT(*) DESC LIMIT 20"
+                ),
+                params,
+            ).fetchall()
+            models = [
+                FacetBucket(id=str(r[0]), name=str(r[0]), count=int(r[1]))
+                for r in model_rows if r[0]
+            ]
+        except Exception:
+            models = []
+
+        return ChatSearchFacets(folders=folders, tags=tags, models=models)
+
+    def _search_chats_like_fallback(
+        self,
+        db,
+        *,
+        user_id: str,
+        raw_text: str,
+        folder_ids: Optional[list[str]],
+        tag_ids: Optional[list[str]],
+        pinned: Optional[bool],
+        archived: Optional[bool],
+        shared: Optional[bool],
+        updated_after: Optional[int],
+        updated_before: Optional[int],
+        sort: str,
+        skip: int,
+        limit: int,
+        include_subagents: bool,
+    ) -> "ChatSearchResponse":
+        """Postgres/MySQL fallback: previous LIKE-based behavior. No snippets,
+        no facets, no fuzzy. Will be replaced in a follow-up migration."""
+        query = db.query(Chat).filter(Chat.user_id == user_id)
+        query = _apply_subagent_filter(query, db, include_subagents)
+
+        if archived is True:
+            query = query.filter(Chat.archived == True)
+        elif archived is False:
+            query = query.filter(Chat.archived == False)
+        if pinned is True:
+            query = query.filter(Chat.pinned == True)
+        elif pinned is False:
+            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
+        if shared is True:
+            query = query.filter(Chat.share_id.isnot(None))
+        elif shared is False:
+            query = query.filter(Chat.share_id.is_(None))
+        if folder_ids:
+            query = query.filter(Chat.folder_id.in_(folder_ids))
+        if updated_after:
+            query = query.filter(Chat.updated_at >= updated_after)
+        if updated_before:
+            query = query.filter(Chat.updated_at <= updated_before)
+
+        words = [w for w in raw_text.lower().split(" ") if w]
+        _has_search_col = _search_text_column_exists(db)
+        for word in words:
+            if _has_search_col:
+                query = query.filter(
+                    or_(
+                        text("chat.search_text LIKE :w").params(w=f"%{word}%"),
                         and_(
-                            *[
-                                text(
-                                    f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') AS tag"
-                                    f" WHERE tag.value = :tag_id_{tag_idx})"
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
+                            text("chat.search_text IS NULL"),
+                            Chat.title.ilike(f"%{word}%"),
+                        ),
                     )
-            elif dialect_name == "postgresql":
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            "NOT EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag)"
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag"
-                                    f" WHERE tag = :tag_id_{tag_idx})"
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
+                )
             else:
-                raise NotImplementedError(
-                    f"Unsupported dialect: {db.bind.dialect.name}"
+                query = query.filter(Chat.title.ilike(f"%{word}%"))
+
+        if db.bind.dialect.name == "postgresql" and tag_ids:
+            for i, tag_id in enumerate(tag_ids):
+                query = query.filter(
+                    text(
+                        f"EXISTS (SELECT 1 FROM json_array_elements_text(chat.meta->'tags') AS t WHERE t = :tagp_{i})"
+                    ).params(**{f"tagp_{i}": tag_id})
                 )
 
-            # Perform pagination at the SQL level
-            all_chats = query.offset(skip).limit(limit).all()
-
-            log.info(f"The number of chats: {len(all_chats)}")
-
-            # Validate and return chats
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+        query = query.order_by(Chat.updated_at.desc())
+        total = query.count()
+        rows = query.offset(skip).limit(limit).all()
+        hits = [
+            ChatSearchHit(
+                id=r.id, title=r.title or "",
+                updated_at=r.updated_at or 0, created_at=r.created_at or 0,
+                archived=bool(r.archived), pinned=bool(r.pinned),
+                folder_id=r.folder_id,
+            )
+            for r in rows
+        ]
+        return ChatSearchResponse(total=int(total), hits=hits)
 
     def get_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str, skip: int = 0, limit: int = 60

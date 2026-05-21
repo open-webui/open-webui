@@ -1151,6 +1151,71 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	return results.reverse().join(' ');
 };
 
+// Used by SearchModal to render server-supplied snippets safely. The backend
+// already escapes everything except `<mark>...</mark>`; this is a belt-and-
+// suspenders check before {@html} interpolation.
+const _ALLOWED_MARK_RE = /<\/?mark>/g;
+export const escapeHtml = (s: string): string =>
+	s
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;');
+
+export const sanitizeMarkSnippet = (raw: string | null | undefined): string => {
+	if (!raw) return '';
+	// Split on the only tag we allow, escape the surrounding text, then stitch
+	// the <mark>...</mark> back in.
+	const parts = raw.split(_ALLOWED_MARK_RE);
+	// parts[0] = before-first-tag, parts[1] = between first and second tag, ...
+	// We can't tell open vs close from a split alone, but the backend pairs
+	// them, so even indexes are outside-mark, odd indexes are inside-mark.
+	return parts
+		.map((part, i) => (i % 2 === 0 ? escapeHtml(part) : `<mark>${escapeHtml(part)}</mark>`))
+		.join('');
+};
+
+const SEARCH_HISTORY_KEY = 'chat-search-history';
+const SEARCH_HISTORY_MAX = 10;
+
+export type ChatSearchHistoryEntry = { query: string; timestamp: number };
+
+export const searchHistoryGet = (): ChatSearchHistoryEntry[] => {
+	if (typeof localStorage === 'undefined') return [];
+	try {
+		const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
+		if (!raw) return [];
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed.slice(0, SEARCH_HISTORY_MAX) : [];
+	} catch {
+		return [];
+	}
+};
+
+export const searchHistoryAdd = (query: string): void => {
+	const q = (query || '').trim();
+	if (!q || typeof localStorage === 'undefined') return;
+	const current = searchHistoryGet().filter((e) => e.query !== q);
+	current.unshift({ query: q, timestamp: Date.now() });
+	try {
+		localStorage.setItem(
+			SEARCH_HISTORY_KEY,
+			JSON.stringify(current.slice(0, SEARCH_HISTORY_MAX))
+		);
+	} catch {
+		// localStorage full or disabled - silently drop
+	}
+};
+
+export const searchHistoryClear = (): void => {
+	if (typeof localStorage === 'undefined') return;
+	try {
+		localStorage.removeItem(SEARCH_HISTORY_KEY);
+	} catch {
+		// noop
+	}
+};
+
 export const getTimeRange = (timestamp) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds

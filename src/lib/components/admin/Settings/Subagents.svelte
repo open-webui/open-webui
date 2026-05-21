@@ -13,16 +13,30 @@
 	let enableSubagents = false;
 	let defaultModel = '';
 	let parentPrompt = '';
+	let defaultReasoningEffort = '';
 
 	// Cached default so the "Reset" button works without a round-trip.
 	let initialParentPrompt = '';
+
+	// Common reasoning_effort values. The backend just passes the string
+	// through to the provider, so a custom value works too — admin can edit
+	// the value in env / config.json directly if they need something exotic.
+	const REASONING_EFFORT_OPTIONS = [
+		{ value: '', label: '— Model default —' },
+		{ value: 'minimal', label: 'minimal' },
+		{ value: 'low', label: 'low' },
+		{ value: 'medium', label: 'medium' },
+		{ value: 'high', label: 'high' },
+		{ value: 'xhigh', label: 'xhigh' }
+	];
 
 	const submitHandler = async () => {
 		try {
 			const res = await updateSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enableSubagents,
 				SUBAGENT_DEFAULT_MODEL: defaultModel,
-				SUBAGENT_PARENT_PROMPT: parentPrompt
+				SUBAGENT_PARENT_PROMPT: parentPrompt,
+				SUBAGENT_DEFAULT_REASONING_EFFORT: defaultReasoningEffort
 				// Note: the subagent's INNER system prompt is intentionally the
 				// model's own admin-set system prompt verbatim (no preamble
 				// from this admin page is injected). The `SUBAGENT_SYSTEM_PROMPT`
@@ -46,6 +60,7 @@
 				defaultModel = res.SUBAGENT_DEFAULT_MODEL ?? '';
 				parentPrompt = res.SUBAGENT_PARENT_PROMPT ?? '';
 				initialParentPrompt = parentPrompt;
+				defaultReasoningEffort = res.SUBAGENT_DEFAULT_REASONING_EFFORT ?? '';
 			}
 		} catch (err) {
 			console.error(err);
@@ -98,6 +113,25 @@
 							<option value="">{$i18n.t('— Use parent model —')}</option>
 							{#each $models ?? [] as m}
 								<option value={m.id}>{m.name ?? m.id}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="mb-2.5 flex w-full flex-col">
+						<div class=" self-center text-xs font-medium mb-1 mr-auto">
+							{$i18n.t('Default reasoning effort')}
+						</div>
+						<div class=" text-xs text-gray-500 dark:text-gray-400 mb-1">
+							{$i18n.t(
+								'Reasoning effort the subagent uses when its model supports it. Per-chat override (chat.params.subagentReasoningEffort) wins when set. Higher effort = deeper thinking but more tokens. Default high is appropriate for research subagents.'
+							)}
+						</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={defaultReasoningEffort}
+						>
+							{#each REASONING_EFFORT_OPTIONS as opt}
+								<option value={opt.value}>{opt.label}</option>
 							{/each}
 						</select>
 					</div>

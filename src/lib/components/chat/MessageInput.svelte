@@ -123,6 +123,10 @@
 	export let studyModeEnabled = false;
 	export let dataVizEnabled = false;
 	export let subagentsEnabled = false;
+	// Empty string = inherit the admin-set SUBAGENT_DEFAULT_REASONING_EFFORT.
+	// Otherwise: minimal / low / medium / high / xhigh (free string; provider
+	// decides what's actually valid).
+	export let subagentReasoningEffort: string = '';
 	export let codeInterpreterEnabled = false;
 
 	// Reasoning effort functionality
@@ -351,6 +355,7 @@
 		studyModeEnabled,
 		dataVizEnabled,
 		subagentsEnabled,
+		subagentReasoningEffort,
 		// Only include reasoning when the selected model is configured as a reasoning model.
 		...(showReasoningEffortSelector ? { reasoning: { effort: reasoningEffort } } : {})
 	});
@@ -2114,6 +2119,59 @@
 													{/if}
 												</button>
 											</Tooltip>
+
+											{#if subagentsEnabled}
+												<!-- Subagent reasoning effort override. Visible only
+													when subagents is on. Empty value = inherit the
+													admin global SUBAGENT_DEFAULT_REASONING_EFFORT. -->
+												<Tooltip
+													content={$i18n.t(
+														"Subagent reasoning effort (overrides admin default for this chat)"
+													)}
+													placement="top"
+												>
+													<div class="relative flex items-center">
+														<div
+															class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																class="size-4"
+															>
+																<path
+																	d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+																/>
+															</svg>
+															<span class="text-xs font-medium">
+																{subagentReasoningEffort || $i18n.t('default')}
+															</span>
+
+															<select
+																bind:value={subagentReasoningEffort}
+																class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+																aria-label={$i18n.t(
+																	'Subagent reasoning effort'
+																)}
+															>
+																<option value="">
+																	{$i18n.t('default (admin)')}
+																</option>
+																<option value="minimal">minimal</option>
+																<option value="low">low</option>
+																<option value="medium">medium</option>
+																<option value="high">high</option>
+																<option value="xhigh">xhigh</option>
+															</select>
+														</div>
+													</div>
+												</Tooltip>
+											{/if}
 										{/if}
 
 										{#if showDataVizButton && dataVizEnabled}

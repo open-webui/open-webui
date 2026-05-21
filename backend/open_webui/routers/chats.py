@@ -8,6 +8,7 @@ from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
     ChatResponse,
+    ChatSearchResponse,
     Chats,
     ChatTitleIdResponse,
 )
@@ -17,7 +18,7 @@ from open_webui.models.folders import Folders
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 
@@ -184,33 +185,44 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
 ############################
 
 
-@router.get("/search", response_model=list[ChatTitleIdResponse])
+@router.get("/search", response_model=ChatSearchResponse)
 def search_user_chats(
-    text: str, page: Optional[int] = None, user=Depends(get_verified_user)
+    text: str = "",
+    page: Optional[int] = 1,
+    folder_ids: list[str] = Query(default=[]),
+    tag_ids: list[str] = Query(default=[]),
+    pinned: Optional[bool] = None,
+    archived: Optional[bool] = None,
+    shared: Optional[bool] = None,
+    updated_after: Optional[int] = None,
+    updated_before: Optional[int] = None,
+    sort: str = "relevance",
+    limit: int = 30,
+    user=Depends(get_verified_user),
 ):
-    if page is None:
+    """GOATED chat search. Returns ranked hits with snippets + match counts +
+    facet aggregates. `archived` defaults to None (include both archived and
+    non-archived) so users can find old chats they thought were lost."""
+    if page is None or page < 1:
         page = 1
-
-    limit = 60
+    if limit < 1 or limit > 100:
+        limit = 30
     skip = (page - 1) * limit
 
-    chat_list = [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in Chats.get_chats_by_user_id_and_search_text(
-            user.id, text, skip=skip, limit=limit
-        )
-    ]
-
-    # Delete tag if no chat is found
-    words = text.strip().split(" ")
-    if page == 1 and len(words) == 1 and words[0].startswith("tag:"):
-        tag_id = words[0].replace("tag:", "")
-        if len(chat_list) == 0:
-            if Tags.get_tag_by_name_and_user_id(tag_id, user.id):
-                log.debug(f"deleting tag: {tag_id}")
-                Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
-
-    return chat_list
+    return Chats.search_chats(
+        user.id,
+        text,
+        folder_ids=folder_ids or None,
+        tag_ids=tag_ids or None,
+        pinned=pinned,
+        archived=archived,
+        shared=shared,
+        updated_after=updated_after,
+        updated_before=updated_before,
+        sort=sort,
+        skip=skip,
+        limit=limit,
+    )
 
 
 ############################

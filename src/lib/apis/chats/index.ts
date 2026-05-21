@@ -323,41 +323,104 @@ export const getAllChats = async (token: string) => {
 	return res;
 };
 
-export const getChatListBySearchText = async (token: string, text: string, page: number = 1) => {
-	let error = null;
+export type ChatSearchParams = {
+	text?: string;
+	page?: number;
+	limit?: number;
+	folder_ids?: string[];
+	tag_ids?: string[];
+	pinned?: boolean | null;
+	archived?: boolean | null;
+	shared?: boolean | null;
+	updated_after?: number | null;
+	updated_before?: number | null;
+	sort?: 'relevance' | 'recent';
+};
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('text', text);
-	searchParams.append('page', `${page}`);
+export type ChatSearchHit = {
+	id: string;
+	title: string;
+	updated_at: number;
+	created_at: number;
+	archived: boolean;
+	pinned: boolean;
+	folder_id: string | null;
+	snippet: string | null;
+	match_count: number;
+	matched_message_id: string | null;
+	matched_role: string | null;
+	score: number;
+	time_range?: string;
+};
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/search?${searchParams.toString()}`, {
+export type ChatSearchFacets = {
+	folders: { id: string; name: string; count: number }[];
+	tags: { id: string; name: string; count: number }[];
+	models: { id: string; name: string; count: number }[];
+};
+
+export type ChatSearchResponse = {
+	total: number;
+	hits: ChatSearchHit[];
+	facets: ChatSearchFacets;
+	used_fuzzy: boolean;
+	did_you_mean: string | null;
+};
+
+export const searchChats = async (
+	token: string,
+	params: ChatSearchParams,
+	signal?: AbortSignal
+): Promise<ChatSearchResponse> => {
+	const qs = new URLSearchParams();
+	qs.append('text', params.text ?? '');
+	qs.append('page', `${params.page ?? 1}`);
+	if (params.limit) qs.append('limit', `${params.limit}`);
+	if (params.sort) qs.append('sort', params.sort);
+	if (params.pinned !== undefined && params.pinned !== null) qs.append('pinned', `${params.pinned}`);
+	if (params.archived !== undefined && params.archived !== null)
+		qs.append('archived', `${params.archived}`);
+	if (params.shared !== undefined && params.shared !== null) qs.append('shared', `${params.shared}`);
+	if (params.updated_after) qs.append('updated_after', `${params.updated_after}`);
+	if (params.updated_before) qs.append('updated_before', `${params.updated_before}`);
+	for (const fid of params.folder_ids ?? []) qs.append('folder_ids', fid);
+	for (const tid of params.tag_ids ?? []) qs.append('tag_ids', tid);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/search?${qs.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
+		},
+		signal
+	});
 
-	if (error) {
-		throw error;
+	if (!res.ok) {
+		throw await res.json();
 	}
+	const json = (await res.json()) as ChatSearchResponse;
+	for (const hit of json.hits ?? []) {
+		hit.time_range = getTimeRange(hit.updated_at);
+	}
+	return json;
+};
 
-	return res.map((chat) => ({
-		...chat,
-		time_range: getTimeRange(chat.updated_at)
+// Back-compat helper: callers that only need a chat list (no snippets) can
+// keep using getChatListBySearchText. Returns a list shape compatible with
+// the old signature so legacy callers don't break.
+export const getChatListBySearchText = async (
+	token: string,
+	text: string,
+	page: number = 1
+) => {
+	const res = await searchChats(token, { text, page });
+	return res.hits.map((h) => ({
+		id: h.id,
+		title: h.title,
+		updated_at: h.updated_at,
+		created_at: h.created_at,
+		time_range: h.time_range
 	}));
 };
 

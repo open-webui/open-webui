@@ -240,6 +240,15 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 ####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
+#
+# IMPORTANT — production deployment override:
+#   On the intelserver production host, DATA_DIR is overridden via the
+#   ``start_modified.sh`` wrapper to:
+#     /home/tennisbowling/.local/lib/python3.12/site-packages/open_webui/data
+#   That is where ``webui.db`` actually lives in production (~1.9 GB).
+#   The in-repo ``backend/data/webui.db`` is a stale leftover.
+#   Any DB-touching maintenance task (backups, migrations, sqlite shells)
+#   must export ``DATA_DIR`` to the path above or it will hit the wrong file.
 
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
 

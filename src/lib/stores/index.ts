@@ -101,6 +101,15 @@ export interface SubagentRun {
 	// Status events forwarded from the inner pipeline (web search progress,
 	// errors that haven't terminated the run, etc).
 	statusHistory?: any[];
+	// Server stamps `stale: true` on a continue entry when its parent
+	// subagent has been restarted via "Redo subagent" — the underlying
+	// chat's history was wiped so this turn's `final_text` no longer
+	// reflects real subagent state. The UI greys these out.
+	stale?: boolean;
+	// Stored once the inner run appends them so "Redo this turn" can
+	// revert the right user→assistant pair from the subagent chat history.
+	user_msg_id?: string;
+	assistant_msg_id?: string;
 }
 
 export const subagentLiveStates: Writable<Record<string, SubagentRun>> = writable({});

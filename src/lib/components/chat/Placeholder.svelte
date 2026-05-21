@@ -57,6 +57,7 @@
 	export let studyModeEnabled = false;
 	export let dataVizEnabled = false;
 	export let subagentsEnabled = false;
+	export let subagentReasoningEffort: string = '';
 	export let serviceTier: string = 'default';
 
 	export let onSelect = (e) => {};
@@ -255,6 +256,7 @@
 					bind:studyModeEnabled
 					bind:dataVizEnabled
 					bind:subagentsEnabled
+					bind:subagentReasoningEffort
 					bind:serviceTier
 					bind:atSelectedModel
 					bind:showCommands

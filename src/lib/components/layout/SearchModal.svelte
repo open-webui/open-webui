@@ -1,272 +1,362 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	import { goto } from '$app/navigation';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
-	import { getChatById, getChatCount, getChatList, getChatListBySearchText } from '$lib/apis/chats';
+	import {
+		getChatById,
+		getChatCount,
+		searchChats,
+		type ChatSearchHit,
+		type ChatSearchFacets,
+		type ChatSearchResponse
+	} from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
+	import { searchHistoryAdd, sanitizeMarkSnippet } from '$lib/utils';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
-	import Loader from '../common/Loader.svelte';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	dayjs.extend(calendar);
+	dayjs.extend(relativeTime);
+
 	import { createMessagesList } from '$lib/utils';
-	import { config, user } from '$lib/stores';
+	import { chats as chatsStore, config, user } from '$lib/stores';
 	import Messages from '../chat/Messages.svelte';
-	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
-	dayjs.extend(calendar);
+	import FilterChips from './SearchModal/FilterChips.svelte';
+	import ResultRow from './SearchModal/ResultRow.svelte';
+	import RecentSearches from './SearchModal/RecentSearches.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onClose = () => {};
 
-	let actions = [
-		{
-			label: $i18n.t('Start a new conversation'),
-			onClick: async () => {
-				await goto(`/${query ? `?q=${query}` : ''}`);
-				show = false;
-				onClose();
-			},
-			icon: PencilSquare
-		}
-	];
-
+	// ── Inputs ────────────────────────────────────────────────────────────
 	let query = '';
-	let page = 1;
 
-	let chatList = null;
+	// Filter chip state
+	let archived: boolean | null = null;
+	let pinned: boolean | null = null;
+	let folderIds: string[] = [];
+	let tagIds: string[] = [];
+	let modelIds: string[] = [];
+	let datePreset: 'all' | 'today' | '7d' | '30d' | 'year' = 'all';
+	let sort: 'relevance' | 'recent' = 'relevance';
 
-	let chatListLoading = false;
-	let allChatsLoaded = false;
+	// ── Results ───────────────────────────────────────────────────────────
+	let response: ChatSearchResponse | null = null;
+	$: hits = (response?.hits ?? []) as ChatSearchHit[];
+	$: facets = (response?.facets ?? null) as ChatSearchFacets | null;
+	$: usedFuzzy = response?.used_fuzzy ?? false;
+	$: totalCount = response?.total ?? 0;
 
-	let searchDebounceTimeout;
+	let optimisticHits: ChatSearchHit[] = [];
+	$: displayHits = hits.length > 0 ? hits : optimisticHits;
 
-	let selectedIdx = null;
-	let selectedChat = null;
-
-	let selectedModels = [''];
-	let history = null;
-	let messages = null;
-
+	let loading = false;
 	let chatCount: number | null = null;
 
-	// Cache fetched chat data so re-hovering doesn't re-fetch
+	let recentSearchesRef: { reload: () => void } | undefined;
+
+	// ── Debounce / abort plumbing ──────────────────────────────────────────
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let firstCharFired = false;
+	let inFlightController: AbortController | null = null;
+
+	// ── Keyboard nav ──────────────────────────────────────────────────────
+	let actions: { label: string; onClick: () => Promise<void>; icon: any }[] = [];
+	let selectedIdx: number | null = null;
+
+	// ── Preview pane ──────────────────────────────────────────────────────
+	let selectedHit: ChatSearchHit | null = null;
+	let selectedModels = [''];
+	let history: any = null;
+	let messages: any[] | null = null;
 	let chatCache: Record<string, any> = {};
-	let previewDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let previewDebounce: ReturnType<typeof setTimeout> | null = null;
 	let previewRequestId = 0;
 
-	$: if (!chatListLoading && chatList) {
-		schedulePreview(selectedIdx);
-	}
-
-	const schedulePreview = (idx) => {
-		if (previewDebounceTimeout) {
-			clearTimeout(previewDebounceTimeout);
+	const computeDateRange = (): { updated_after: number | null; updated_before: number | null } => {
+		const now = Math.floor(Date.now() / 1000);
+		const day = 86400;
+		switch (datePreset) {
+			case 'today':
+				return { updated_after: now - day, updated_before: null };
+			case '7d':
+				return { updated_after: now - 7 * day, updated_before: null };
+			case '30d':
+				return { updated_after: now - 30 * day, updated_before: null };
+			case 'year':
+				return { updated_after: now - 365 * day, updated_before: null };
+			default:
+				return { updated_after: null, updated_before: null };
 		}
-		previewDebounceTimeout = setTimeout(() => {
-			loadChatPreview(idx);
-		}, 150);
 	};
 
-	const loadChatPreview = async (selectedIdx) => {
-		if (
-			!chatList ||
-			chatList.length === 0 ||
-			selectedIdx === null ||
-			chatList[selectedIdx] === undefined
-		) {
-			selectedChat = null;
+	const runSearch = async (immediate = false) => {
+		if (!show) return;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = null;
+		}
+		const fire = async () => {
+			if (inFlightController) inFlightController.abort();
+			inFlightController = new AbortController();
+			const { updated_after, updated_before } = computeDateRange();
+			loading = true;
+			try {
+				const res = await searchChats(
+					localStorage.token,
+					{
+						text: query,
+						page: 1,
+						limit: 30,
+						folder_ids: folderIds,
+						tag_ids: tagIds,
+						pinned,
+						archived,
+						updated_after,
+						updated_before,
+						sort
+					},
+					inFlightController.signal
+				);
+				response = res;
+				selectedIdx = res.hits.length > 0 ? actions.length : null;
+				schedulePreview(selectedIdx);
+				optimisticHits = [];
+			} catch (err: any) {
+				if (err?.name === 'AbortError') return;
+				console.error(err);
+			} finally {
+				loading = false;
+			}
+		};
+
+		// First-character optimism: render title-prefix matches from the
+		// already-loaded sidebar chats immediately, then fire backend after a
+		// short 50ms gap. Subsequent keystrokes use 150ms debounce.
+		const text = query.trim();
+		if (text.length > 0 && !firstCharFired) {
+			firstCharFired = true;
+			const loaded = ($chatsStore ?? []) as { id: string; title: string; updated_at: number }[];
+			const lower = text.toLowerCase();
+			optimisticHits = loaded
+				.filter((c) => (c.title ?? '').toLowerCase().includes(lower))
+				.slice(0, 8)
+				.map((c) => ({
+					id: c.id,
+					title: c.title ?? '',
+					updated_at: c.updated_at,
+					created_at: 0,
+					archived: false,
+					pinned: false,
+					folder_id: null,
+					snippet: null,
+					match_count: 0,
+					matched_message_id: null,
+					matched_role: null,
+					score: 0
+				}));
+			debounceTimer = setTimeout(fire, 50);
+			return;
+		}
+
+		if (text.length === 0) {
+			firstCharFired = false;
+			optimisticHits = [];
+		}
+
+		if (immediate) {
+			fire();
+		} else {
+			debounceTimer = setTimeout(fire, 150);
+		}
+	};
+
+	const schedulePreview = (idx: number | null) => {
+		if (previewDebounce) clearTimeout(previewDebounce);
+		previewDebounce = setTimeout(() => {
+			loadChatPreview(idx);
+		}, 120);
+	};
+
+	const loadChatPreview = async (idx: number | null) => {
+		if (idx === null) {
+			selectedHit = null;
 			messages = null;
 			history = null;
-			selectedModels = [''];
 			return;
 		}
-
-		const selectedChatIdx = selectedIdx - actions.length;
-		if (selectedChatIdx < 0) {
-			selectedChat = null;
+		const hitIdx = idx - actions.length;
+		if (hitIdx < 0) {
+			selectedHit = null;
 			return;
 		}
-
-		const chatId = chatList[selectedChatIdx].id;
+		const hit = displayHits[hitIdx];
+		if (!hit) return;
 		const requestId = ++previewRequestId;
 
-		// Use cache if available
-		let chat = chatCache[chatId];
+		let chat = chatCache[hit.id];
 		if (!chat) {
-			chat = await getChatById(localStorage.token, chatId).catch(() => null);
-			if (chat) {
-				chatCache[chatId] = chat;
-			}
+			chat = await getChatById(localStorage.token, hit.id).catch(() => null);
+			if (chat) chatCache[hit.id] = chat;
 		}
-
-		// Stale response guard — a newer hover already fired
-		if (requestId !== previewRequestId) {
-			return;
-		}
+		if (requestId !== previewRequestId) return;
 
 		if (chat) {
-			if (chat?.chat?.history) {
-				selectedModels =
-					(chat?.chat?.models ?? undefined) !== undefined
-						? chat?.chat?.models
-						: [chat?.chat?.models ?? ''];
+			selectedHit = hit;
+			selectedModels =
+				(chat?.chat?.models ?? undefined) !== undefined
+					? chat?.chat?.models
+					: [chat?.chat?.models ?? ''];
+			history = chat?.chat?.history;
+			messages = createMessagesList(chat?.chat?.history, chat?.chat?.history?.currentId);
 
-				history = chat?.chat?.history;
-				messages = createMessagesList(chat?.chat?.history, chat?.chat?.history?.currentId);
-
-				// scroll to the bottom of the messages container
-				await tick();
-				const messagesContainerElement = document.getElementById('chat-preview');
-				if (messagesContainerElement) {
-					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-				}
-			} else {
-				messages = [];
-			}
+			await tick();
+			scrollPreviewToMatch(hit.matched_message_id);
 		} else {
 			toast.error($i18n.t('Failed to load chat preview'));
-			selectedChat = null;
+			selectedHit = null;
 			messages = null;
 			history = null;
-			selectedModels = [''];
+		}
+	};
+
+	// Scroll the preview pane to the matched message (the "mind-reading" bit).
+	const scrollPreviewToMatch = async (messageId: string | null) => {
+		const container = document.getElementById('chat-preview');
+		if (!container) return;
+		if (!messageId) {
+			container.scrollTop = container.scrollHeight;
 			return;
 		}
-	};
-
-	const searchHandler = async () => {
-		if (!show) {
-			return;
+		// Messages render with `id={message-${id}}` in Messages.svelte's child markup.
+		// We use a broad attribute selector to be resilient to small naming shifts.
+		let target = container.querySelector(
+			`[data-message-id="${CSS.escape(messageId)}"], #message-${CSS.escape(messageId)}`
+		) as HTMLElement | null;
+		if (!target) {
+			// Fall back: try to find any element whose id contains the message id
+			target = container.querySelector(`[id*="${CSS.escape(messageId)}"]`) as HTMLElement | null;
 		}
-
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
-		page = 1;
-		chatList = null;
-		if (query === '') {
-			chatList = await getChatList(localStorage.token, page);
+		if (target) {
+			target.scrollIntoView({ block: 'center', behavior: 'instant' });
+			target.classList.add('search-match-flash');
+			setTimeout(() => target?.classList.remove('search-match-flash'), 1400);
 		} else {
-			searchDebounceTimeout = setTimeout(async () => {
-				chatList = await getChatListBySearchText(localStorage.token, query, page);
-
-				if ((chatList ?? []).length === 0) {
-					allChatsLoaded = true;
-				} else {
-					allChatsLoaded = false;
-				}
-			}, 500);
-		}
-
-		selectedChat = null;
-		messages = null;
-		history = null;
-		selectedModels = [''];
-		chatCache = {};
-
-		if ((chatList ?? []).length === 0) {
-			allChatsLoaded = true;
-		} else {
-			allChatsLoaded = false;
+			container.scrollTop = container.scrollHeight;
 		}
 	};
 
-	const loadMoreChats = async () => {
-		chatListLoading = true;
-		page += 1;
-
-		let newChatList = [];
-
-		if (query) {
-			newChatList = await getChatListBySearchText(localStorage.token, query, page);
-		} else {
-			newChatList = await getChatList(localStorage.token, page);
-		}
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-
-		if (newChatList.length > 0) {
-			chatList = [...chatList, ...newChatList];
-		}
-
-		chatListLoading = false;
-	};
-
-	$: if (show) {
-		searchHandler();
-		loadChatCount();
-	}
-
-	const loadChatCount = async () => {
-		chatCount = await getChatCount(localStorage.token).catch(() => null);
-	};
-
-	const onKeyDown = (e) => {
-		const searchOptions = document.getElementById('search-options-container');
-		if (searchOptions || !show) {
-			return;
-		}
-
+	const onKeyDown = (e: KeyboardEvent) => {
+		if (!show) return;
 		if (e.code === 'Escape') {
 			show = false;
 			onClose();
-		} else if (e.code === 'Enter') {
-			const item = document.querySelector(`[data-arrow-selected="true"]`);
-			if (item) {
-				item?.click();
+			return;
+		}
+		if (e.code === 'Enter') {
+			const el = document.querySelector(`[data-arrow-selected="true"]`) as HTMLElement | null;
+			if (el) {
+				if (query.trim()) searchHistoryAdd(query.trim());
+				el.click();
 				show = false;
 			}
-
 			return;
-		} else if (e.code === 'ArrowDown') {
-			const searchInput = document.getElementById('search-input');
-
-			if (searchInput) {
-				// check if focused on the search input
-				if (document.activeElement === searchInput) {
-					searchInput.blur();
-					selectedIdx = 0;
-					return;
-				}
-			}
-
-			selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
-		} else if (e.code === 'ArrowUp') {
-			if (selectedIdx === 0) {
-				const searchInput = document.getElementById('search-input');
-
-				if (searchInput) {
-					// check if focused on the search input
-					if (document.activeElement !== searchInput) {
-						searchInput.focus();
-						selectedIdx = 0;
-						return;
-					}
-				}
-			}
-
-			selectedIdx = Math.max(selectedIdx - 1, 0);
 		}
+		if (e.code === 'ArrowDown') {
+			const total = actions.length + displayHits.length;
+			selectedIdx = Math.min((selectedIdx ?? -1) + 1, total - 1);
+			schedulePreview(selectedIdx);
+			const el = document.querySelector(`[data-arrow-selected="true"]`) as HTMLElement | null;
+			el?.scrollIntoView({ block: 'center', behavior: 'instant' });
+		} else if (e.code === 'ArrowUp') {
+			selectedIdx = Math.max((selectedIdx ?? 0) - 1, 0);
+			schedulePreview(selectedIdx);
+			const el = document.querySelector(`[data-arrow-selected="true"]`) as HTMLElement | null;
+			el?.scrollIntoView({ block: 'center', behavior: 'instant' });
+		}
+	};
 
-		const item = document.querySelector(`[data-arrow-selected="true"]`);
-		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	const onChipsChange = () => {
+		runSearch(true);
+	};
+
+	const onSearchInput = () => {
+		runSearch(false);
+	};
+
+	const inputKeydown = (e: KeyboardEvent) => {
+		if (e.code === 'Enter' && displayHits.length > 0) {
+			const el = document.querySelector(`[data-arrow-selected="true"]`) as HTMLElement | null;
+			if (el) {
+				if (query.trim()) searchHistoryAdd(query.trim());
+				el.click();
+				show = false;
+			}
+			return;
+		}
+		if (e.code === 'ArrowDown') {
+			selectedIdx = Math.min((selectedIdx ?? -1) + 1, actions.length + displayHits.length - 1);
+		} else if (e.code === 'ArrowUp') {
+			selectedIdx = Math.max((selectedIdx ?? 0) - 1, 0);
+		} else {
+			selectedIdx = actions.length;
+		}
+		schedulePreview(selectedIdx);
+		const el = document.querySelector(`[data-arrow-selected="true"]`) as HTMLElement | null;
+		el?.scrollIntoView({ block: 'center', behavior: 'instant' });
+	};
+
+	const onRecentPick = (e: CustomEvent<string>) => {
+		query = e.detail;
+		runSearch(true);
+	};
+
+	$: if (show) {
+		void initOpen();
+	}
+
+	const initOpen = async () => {
+		await tick();
+		// Reset transient state on each open
+		response = null;
+		optimisticHits = [];
+		selectedHit = null;
+		messages = null;
+		history = null;
+		selectedIdx = null;
+		firstCharFired = false;
+		chatCount = await getChatCount(localStorage.token).catch(() => null);
+		recentSearchesRef?.reload();
+		// Initial: fetch with whatever query/filters are set (usually empty)
+		runSearch(true);
 	};
 
 	onMount(() => {
 		actions = [
-			...actions,
+			{
+				label: $i18n.t('Start a new conversation'),
+				onClick: async () => {
+					await goto(`/${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+					show = false;
+					onClose();
+				},
+				icon: PencilSquare
+			},
 			...(($config?.features?.enable_notes ?? false) &&
 			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
 				? [
 						{
 							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes${query ? `?content=${query}` : ''}`);
+								await goto(`/notes${query ? `?content=${encodeURIComponent(query)}` : ''}`);
 								show = false;
 								onClose();
 							},
@@ -275,17 +365,13 @@
 					]
 				: [])
 		];
-
 		document.addEventListener('keydown', onKeyDown);
 	});
 
 	onDestroy(() => {
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-		if (previewDebounceTimeout) {
-			clearTimeout(previewDebounceTimeout);
-		}
+		if (debounceTimer) clearTimeout(debounceTimer);
+		if (previewDebounce) clearTimeout(previewDebounce);
+		if (inFlightController) inFlightController.abort();
 		document.removeEventListener('keydown', onKeyDown);
 	});
 </script>
@@ -295,43 +381,56 @@
 		<div class="px-4 pb-1.5">
 			<SearchInput
 				bind:value={query}
-				on:input={searchHandler}
+				on:input={onSearchInput}
 				placeholder={$i18n.t('Search')}
 				showClearButton={true}
 				onFocus={() => {
 					selectedIdx = null;
 					messages = null;
 				}}
-				onKeydown={(e) => {
-					console.log('e', e);
-
-					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
-						const item = document.querySelector(`[data-arrow-selected="true"]`);
-						if (item) {
-							item?.click();
-						}
-
-						show = false;
-						return;
-					} else if (e.code === 'ArrowDown') {
-						selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
-					} else if (e.code === 'ArrowUp') {
-						selectedIdx = Math.max(selectedIdx - 1, 0);
-					} else {
-						selectedIdx = 0;
-					}
-
-					const item = document.querySelector(`[data-arrow-selected="true"]`);
-					item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
-				}}
+				onKeydown={inputKeydown}
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
+		<FilterChips
+			bind:archived
+			bind:pinned
+			bind:folderIds
+			bind:tagIds
+			bind:datePreset
+			bind:sort
+			{facets}
+			on:change={onChipsChange}
+		/>
 
-		{#if chatCount !== null}
+		{#if !query && response && hits.length === 0}
+			<RecentSearches bind:this={recentSearchesRef} on:pick={onRecentPick} />
+		{/if}
+
+		{#if usedFuzzy && response?.did_you_mean}
+			<div
+				class="mx-4 mb-2 px-3 py-1.5 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300"
+			>
+				{$i18n.t('No exact matches for')} <strong>{response.did_you_mean}</strong>.
+				{$i18n.t('Showing similar matches.')}
+			</div>
+		{/if}
+
+		{#if chatCount !== null && !query}
 			<div class="px-6 pb-2 text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('You have {{count}} chats', { count: chatCount.toLocaleString() })}
+			</div>
+		{/if}
+
+		{#if response && (query || archived !== null || pinned !== null || folderIds.length || tagIds.length || datePreset !== 'all')}
+			<div class="px-6 pb-1 text-xs text-gray-500 dark:text-gray-500">
+				{#if loading}
+					{$i18n.t('Searching...')}
+				{:else if totalCount === 0}
+					{$i18n.t('No matches')}
+				{:else}
+					{$i18n.t('{{count}} results', { count: totalCount.toLocaleString() })}
+				{/if}
 			</div>
 		{/if}
 
@@ -339,116 +438,59 @@
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2 px-2">
-					{$i18n.t('Actions')}
-				</div>
-
-				{#each actions as action, idx (action.label)}
-					<button
-						class=" w-full flex items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
-						idx
-							? 'bg-gray-50 dark:bg-gray-850'
-							: ''}"
-						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
-						dragabble="false"
-						on:mouseenter={() => {
-							selectedIdx = idx;
-						}}
-						on:click={async () => {
-							await action.onClick();
-						}}
-					>
-						<div class="pr-2">
-							<svelte:component this={action.icon} />
-						</div>
-						<div class=" flex-1 text-left">
-							<div class="text-ellipsis line-clamp-1 w-full">
-								{$i18n.t(action.label)}
-							</div>
-						</div>
-					</button>
-				{/each}
-
-				{#if chatList}
-					<hr class="border-gray-50 dark:border-gray-850 my-3" />
-
-					{#if chatList.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
-							{$i18n.t('No results found')}
-						</div>
-					{/if}
-
-					{#each chatList as chat, idx (chat.id)}
-						{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
-							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
-									? ''
-									: 'pt-5'} pb-2 px-2"
-							>
-								{$i18n.t(chat.time_range)}
-								<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
-							{$i18n.t('Today')}
-							{$i18n.t('Yesterday')}
-							{$i18n.t('Previous 7 days')}
-							{$i18n.t('Previous 30 days')}
-							{$i18n.t('January')}
-							{$i18n.t('February')}
-							{$i18n.t('March')}
-							{$i18n.t('April')}
-							{$i18n.t('May')}
-							{$i18n.t('June')}
-							{$i18n.t('July')}
-							{$i18n.t('August')}
-							{$i18n.t('September')}
-							{$i18n.t('October')}
-							{$i18n.t('November')}
-							{$i18n.t('December')}
-							-->
-							</div>
-						{/if}
-
-						<a
-							class=" w-full flex justify-between items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
-							idx + actions.length
+				{#if actions.length > 0}
+					<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2 px-2">
+						{$i18n.t('Actions')}
+					</div>
+					{#each actions as action, idx (action.label)}
+						<button
+							class="w-full flex items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+							idx
 								? 'bg-gray-50 dark:bg-gray-850'
 								: ''}"
-							href="/c/{chat.id}"
-							draggable="false"
-							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
+							data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
 							on:mouseenter={() => {
-								selectedIdx = idx + actions.length;
+								selectedIdx = idx;
+								schedulePreview(idx);
 							}}
 							on:click={async () => {
-								await goto(`/c/${chat.id}`);
-								show = false;
-								onClose();
+								await action.onClick();
 							}}
+							type="button"
 						>
-							<div class=" flex-1">
-								<div class="text-ellipsis line-clamp-1 w-full">
-									{chat?.title}
-								</div>
+							<div class="pr-2">
+								<svelte:component this={action.icon} />
 							</div>
-
-							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
-								{dayjs(chat?.updated_at * 1000).calendar()}
+							<div class="flex-1 text-left text-ellipsis line-clamp-1">
+								{action.label}
 							</div>
-						</a>
+						</button>
 					{/each}
+				{/if}
 
-					{#if !allChatsLoaded}
-						<Loader
-							on:visible={(e) => {
-								if (!chatListLoading) {
-									loadMoreChats();
-								}
-							}}
-						>
-							<div class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">{$i18n.t('Loading...')}</div>
-							</div>
-						</Loader>
+				{#if response || optimisticHits.length > 0}
+					<hr class="border-gray-50 dark:border-gray-850 my-3" />
+					{#if displayHits.length === 0 && !loading}
+						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
+							{$i18n.t('No matches')}
+						</div>
+					{:else}
+						{#each displayHits as hit, idx (hit.id)}
+							<ResultRow
+								{hit}
+								selected={selectedIdx === idx + actions.length}
+								on:mouseenter={() => {
+									selectedIdx = idx + actions.length;
+									schedulePreview(selectedIdx);
+								}}
+								on:click={async () => {
+									if (query.trim()) searchHistoryAdd(query.trim());
+									await goto(`/c/${hit.id}`);
+									show = false;
+									onClose();
+								}}
+							/>
+						{/each}
 					{/if}
 				{:else}
 					<div class="w-full h-full flex justify-center items-center">
@@ -456,6 +498,7 @@
 					</div>
 				{/if}
 			</div>
+
 			<div
 				id="chat-preview"
 				class="hidden md:flex md:flex-1 w-full overflow-y-auto h-96 md:h-[40rem] scrollbar-hidden"
@@ -470,13 +513,13 @@
 					<div class="w-full h-full flex flex-col">
 						<Messages
 							className="h-full flex pt-4 pb-8 w-full"
-							chatId={`chat-preview-${selectedChat?.id ?? ''}`}
+							chatId={`chat-preview-${selectedHit?.id ?? ''}`}
 							user={$user}
 							readOnly={true}
 							{selectedModels}
 							bind:history
 							bind:messages
-							autoScroll={true}
+							autoScroll={false}
 							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
@@ -487,3 +530,17 @@
 		</div>
 	</div>
 </Modal>
+
+<style>
+	:global(.search-match-flash) {
+		animation: search-match-flash 1.2s ease-out;
+	}
+	@keyframes search-match-flash {
+		0% {
+			background-color: rgba(250, 204, 21, 0.35);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+</style>
