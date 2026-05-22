@@ -2504,7 +2504,8 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 
 
 @app.get('/api/version')
-async def get_app_version():
+@app.get('/version')
+async def get_app_version(user=Depends(get_verified_user)):
     return {
         'version': VERSION,
         'deployment_id': DEPLOYMENT_ID,
@@ -2850,12 +2851,13 @@ async def async_db_ping() -> None:
 
 
 @app.get('/health')
-async def healthcheck():
+@app.get('/healthz')
+async def healthcheck(user=Depends(get_verified_user)):
     return {'status': True}
 
 
 @app.get('/ready')
-async def readiness_check():
+async def readiness_check(user=Depends(get_verified_user)):
     """
     Returns 200 only when the application is ready to accept traffic.
     """
@@ -2896,7 +2898,8 @@ async def readiness_check():
 
 
 @app.get('/health/db')
-async def healthcheck_with_db():
+@app.get('/healthz/db')
+async def healthcheck_with_db(user=Depends(get_verified_user)):
     await async_db_ping()
     return {'status': True}
 
