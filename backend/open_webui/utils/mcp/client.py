@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import AsyncExitStack
 from typing import Optional
 
@@ -13,6 +14,12 @@ from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER
 
+
+# Timeout (in seconds) for the MCP session.initialize() handshake.
+# The handshake performs a list-tools round-trip and can take tens of
+# seconds on cold-start servers or servers exposing many tools. Override
+# via the MCP_INITIALIZE_TIMEOUT environment variable.
+MCP_INITIALIZE_TIMEOUT = float(os.environ.get("MCP_INITIALIZE_TIMEOUT", "60"))
 
 def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
     """Create an httpx AsyncClient for MCP transport.
@@ -69,7 +76,7 @@ class MCPClient:
                 self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
 
                 self.session = await exit_stack.enter_async_context(self._session_context)
-                with anyio.fail_after(10):
+                with anyio.fail_after(MCP_INITIALIZE_TIMEOUT):
                     await self.session.initialize()
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
