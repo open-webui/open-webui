@@ -553,10 +553,16 @@
 					var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
 					var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
 					/* Entitlement-filtered sidebar from Workbench (per-
-					 * user nav list). Null when WORKBENCH_API_TOKEN /
-					 * WORKBENCH_COMPANY_ID aren't set, the upstream call
-					 * errored, or the user isn't authenticated — in any
-					 * of those cases buildShell renders an empty rail. */
+					 * user nav list). Null when the backend isn't
+					 * configured for sidebar fetching, the upstream call
+					 * errored, or the user isn't authenticated. The
+					 * empty-vs-hardcoded fallback decision is made
+					 * downstream in buildShell using `integrationEnabled`
+					 * (see comments there): when the integration IS
+					 * configured, null → empty rail (the pre-login
+					 * state); when it ISN'T, null → legacy hardcoded
+					 * nav (preserves pre-PR behavior for unconfigured
+					 * deploys). */
 					var sidebarData = (cfg && cfg.workbench_sidebar) || null;
 					/* True iff the OWUI backend has the Workbench-sidebar
 					 * integration wired (all three env vars set). When
