@@ -75,6 +75,23 @@ def _redact_email_for_log(email: str | None) -> str:
     return f'{local[:2]}***@{domain}'
 
 
+def _safe_exception_repr(e: BaseException) -> str:
+    """Stringify an exception for logging without re-leaking PII.
+
+    httpx.HTTPStatusError formats `str(e)` as something like
+    `Client error '404 Not Found' for url '<full URL>'`, and our
+    request URL carries `user_email=` as a query param — which would
+    undo the email redaction in the surrounding log line. To avoid
+    that, return only the exception class name plus, when available,
+    the HTTP status code from `e.response.status_code`. Operators
+    still get enough signal to distinguish 4xx/5xx/timeout/connect
+    failures without any URL or message content surfacing."""
+    status = getattr(getattr(e, 'response', None), 'status_code', None)
+    if status is not None:
+        return f'{type(e).__name__}(HTTP {status})'
+    return type(e).__name__
+
+
 def _prune_expired(now: float) -> None:
     """Drop expired entries. Called inline on every cache write so a
     long-running instance with many distinct user emails doesn't grow
@@ -142,10 +159,9 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
         return sidebar
     except Exception as e:  # noqa: BLE001 — soft-fail, see docstring
         log.warning(
-            'workbench sidebar fetch failed for %s: %s: %s',
+            'workbench sidebar fetch failed for %s: %s',
             _redact_email_for_log(user_email),
-            type(e).__name__,
-            e,
+            _safe_exception_repr(e),
         )
         # Return last-known value if any so a brief outage doesn't
         # blank the shell mid-session; otherwise None.

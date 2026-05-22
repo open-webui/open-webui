@@ -353,25 +353,16 @@
 			};
 		}
 
-		/* Two distinct "no data" cases drive different fallback content:
-		 *
-		 *  - Integration is configured but we have no per-user
-		 *    entitlement (unauthenticated visitor, Workbench unreachable,
-		 *    user not a Workbench member, or every URL dropped by
-		 *    safeHref): render an empty rail. The shell still mounts
-		 *    (so the Swept branding is visible), but no items appear
-		 *    until login provides a usable session. This is the
-		 *    dominant pre-login case — the login form IS the content,
-		 *    so unreachable links would only confuse.
-		 *
-		 *  - Integration is NOT configured (WORKBENCH_URL is set but
-		 *    WORKBENCH_API_TOKEN / WORKBENCH_COMPANY_ID aren't):
-		 *    render the legacy hardcoded shell. This preserves
-		 *    backward-compat for deploys that haven't adopted the
-		 *    Workbench-sidebar integration yet — without this branch,
-		 *    pulling the new image would silently empty their rail. */
-		function fallbackNav() {
-			if (integrationEnabled) return [];
+		/* Legacy hardcoded nav — the pre-integration Swept shell.
+		 * Used in two recovery cases (see the if/else below):
+		 *  (a) Integration not configured at all (preserves the
+		 *      pre-PR shell for deploys without the new env vars)
+		 *  (b) Integration configured but every URL got dropped by
+		 *      safeHref (origin allowlist mismatch — config error
+		 *      that should still render *something* navigable)
+		 * NOT used for "integration on, no per-user data" — that's
+		 * the empty-rail pre-login state. */
+		function hardcodedNav() {
 			var n = [
 				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
 				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
@@ -384,8 +375,7 @@
 			}
 			return n;
 		}
-		function fallbackBottom() {
-			if (integrationEnabled) return [];
+		function hardcodedBottom() {
 			return [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
 		}
 
@@ -398,21 +388,49 @@
 			nav = main.map(itemFromWorkbench).filter(hasHref);
 			bottom = Array.isArray(bottomItems) ? bottomItems.map(itemFromWorkbench).filter(hasHref) : [];
 
-			/* If Workbench gave us items but safeHref dropped them all,
-			 * that's a deployment config mismatch (mismatched origins).
-			 * Workbench returning a legitimately empty entitlement is
-			 * handled by the !main.length check — we don't override
-			 * that. */
+			/* Workbench gave us items but safeHref dropped them all
+			 * — deployment config mismatch (origins on /api/config
+			 * don't line up with the URLs Workbench is returning,
+			 * e.g. explicit :443, http↔https, trailing-slash
+			 * differences). Recover with the hardcoded shell so the
+			 * user isn't stranded. Logs a warning so operators have
+			 * a debugging breadcrumb.
+			 *
+			 * Workbench returning a legitimately empty entitlement
+			 * (main.length === 0) is NOT this case — we leave that
+			 * as an empty rail, which is the intended pre-login /
+			 * no-grants state. */
 			if (main.length > 0 && nav.length === 0) {
-				nav = fallbackNav();
-				bottom = fallbackBottom();
+				if (typeof console !== 'undefined' && console.warn) {
+					console.warn(
+						'[swept-shell] Workbench returned ' +
+							main.length +
+							' nav item(s) but the origin allowlist dropped all of them. ' +
+							'Check that cfg.workbench_url matches the host Workbench is serving links from. ' +
+							'Falling back to the built-in nav.'
+					);
+				}
+				nav = hardcodedNav();
+				bottom = hardcodedBottom();
 			}
+		} else if (integrationEnabled) {
+			/* Integration is configured but no per-user data: empty
+			 * rail. Pre-login is the dominant trigger — the login
+			 * form is the content, so unreachable cross-app links
+			 * would only confuse. After login, the auth watcher
+			 * re-fetches and the entitled items appear. */
+			nav = [];
+			bottom = [];
 		} else {
-			/* No sidebar data: either integration is off, or it's on
-			 * but the user has no entitlement. fallbackNav/Bottom
-			 * branch on integrationEnabled to choose the right shape. */
-			nav = fallbackNav();
-			bottom = fallbackBottom();
+			/* Integration not configured (WORKBENCH_URL set but
+			 * WORKBENCH_API_TOKEN / WORKBENCH_COMPANY_ID aren't):
+			 * render the legacy hardcoded shell. Preserves
+			 * backward-compat for deploys that haven't adopted the
+			 * Workbench-sidebar integration yet — without this
+			 * branch, pulling the new image would silently empty
+			 * their rail. */
+			nav = hardcodedNav();
+			bottom = hardcodedBottom();
 		}
 
 		var aside = document.createElement('aside');

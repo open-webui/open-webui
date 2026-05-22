@@ -30,7 +30,7 @@ def reset_cache():
 @pytest.fixture
 def configured_env(monkeypatch):
     """Sets the three env-derived module-level constants so
-    _is_configured() returns True. Module reads happen at import
+    is_configured() returns True. Module reads happen at import
     time, so we patch the module attrs directly rather than os.environ."""
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb.example')
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 'stw_test.secret')
