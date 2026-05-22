@@ -29,9 +29,10 @@ def reset_cache():
 
 @pytest.fixture
 def configured_env(monkeypatch):
-    """Sets the three env-derived module-level constants so
+    """Sets the four env-derived module-level constants so
     is_configured() returns True. Module reads happen at import
     time, so we patch the module attrs directly rather than os.environ."""
+    monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb.example')
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb.example')
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 'stw_test.secret')
     monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c-uuid')
@@ -90,14 +91,28 @@ def _patch_client(monkeypatch, *, response=None, exception=None, handler=None):
 
 class TestNotConfigured:
     @pytest.mark.asyncio
-    async def test_returns_none_when_url_missing(self, monkeypatch):
+    async def test_returns_none_when_internal_url_missing(self, monkeypatch):
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', '')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 't')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c')
         assert await fetch_sidebar('user@example.com') is None
 
     @pytest.mark.asyncio
+    async def test_returns_none_when_browser_url_missing(self, monkeypatch):
+        # WORKBENCH_URL empty + INTERNAL_URL set is a real misconfig:
+        # loader.js short-circuits on empty workbench_url and never mounts
+        # the shell, so /api/config shouldn't pay the fetch_sidebar cost.
+        # is_configured() requires both to prevent the asymmetry.
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', '')
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb')
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 't')
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c')
+        assert await fetch_sidebar('user@example.com') is None
+
+    @pytest.mark.asyncio
     async def test_returns_none_when_token_missing(self, monkeypatch):
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', '')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', 'c')
@@ -105,6 +120,7 @@ class TestNotConfigured:
 
     @pytest.mark.asyncio
     async def test_returns_none_when_company_id_missing(self, monkeypatch):
+        monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_INTERNAL_URL', 'https://wb')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_API_TOKEN', 't')
         monkeypatch.setattr(workbench_sidebar, 'WORKBENCH_COMPANY_ID', '')

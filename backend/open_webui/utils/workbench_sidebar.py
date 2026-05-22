@@ -35,6 +35,7 @@ from open_webui.env import (
     WORKBENCH_API_TOKEN,
     WORKBENCH_COMPANY_ID,
     WORKBENCH_INTERNAL_URL,
+    WORKBENCH_URL,
 )
 
 log = logging.getLogger(__name__)
@@ -56,11 +57,22 @@ _CACHE: dict[str, tuple[float, dict | None]] = {}
 
 def is_configured() -> bool:
     """True iff this OWUI deployment has the Workbench-sidebar
-    integration wired (all three env vars set). Used by /api/config to
-    tell the frontend whether to expect entitlement data — when False,
-    loader.js falls back to a hardcoded nav rather than an empty rail
-    (which is the right state for "configured but no per-user data")."""
-    return bool(WORKBENCH_INTERNAL_URL and WORKBENCH_API_TOKEN and WORKBENCH_COMPANY_ID)
+    integration wired. Used by /api/config to tell the frontend
+    whether to expect entitlement data — when False, loader.js
+    falls back to a hardcoded nav rather than an empty rail
+    (which is the right state for "configured but no per-user data").
+
+    All four signals must be set:
+      * WORKBENCH_URL — browser-facing host; loader.js short-circuits
+        and never mounts the shell when this is empty, so reporting
+        the integration as enabled here without it would have
+        /api/config awaiting fetch_sidebar for a UI that never renders
+      * WORKBENCH_INTERNAL_URL — container-internal host used for the
+        actual backend fetch (defaults to WORKBENCH_URL when unset)
+      * WORKBENCH_API_TOKEN — bearer token for Workbench's V1 API
+      * WORKBENCH_COMPANY_ID — which company's entitlement to fetch
+    """
+    return bool(WORKBENCH_URL and WORKBENCH_INTERNAL_URL and WORKBENCH_API_TOKEN and WORKBENCH_COMPANY_ID)
 
 
 def _redact_email_for_log(email: str | None) -> str:
