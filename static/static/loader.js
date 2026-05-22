@@ -64,7 +64,16 @@
 		'panel-left-close':
 			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
 		'panel-left-open':
-			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/>'
+			'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/>',
+		/* Added to cover icons that Workbench's sidebar endpoint can
+		 * return for items that may appear in this shell (Usage,
+		 * admin's API + Developer Tools when an admin signs in). */
+		'chart-bar':
+			'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16h8"/><path d="M7 11h12"/><path d="M7 6h3"/>',
+		'key-round':
+			'<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
+		wrench:
+			'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'
 	};
 
 	/* Cookie that controls collapse state. Shared with swept-workbench and
@@ -255,18 +264,193 @@
 		}
 	}
 
-	function buildShell(base, cloudLockUrl) {
-		var nav = [
-			{ label: 'Chat', icon: 'message-square', href: '/', active: true },
-			{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
-			{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
-			{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
-			{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
-		];
-		if (cloudLockUrl) {
-			nav.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+	/* Defense-in-depth for sidebar links from Workbench: only absolute
+	 * URLs whose origin EXACTLY matches the allowlist pass through.
+	 * The allowlist is `[workbench_url, cloud_lock_url]` (filtered to
+	 * non-empty) — those are the only domains the shell should ever
+	 * link to. Anything else returns null and the caller drops it,
+	 * including:
+	 *  - javascript:, data:, and other non-http(s) schemes
+	 *  - URLs with userinfo (URL spec excludes it from .origin, so
+	 *    `https://user:pass@allowed/...` would otherwise sneak through
+	 *    and leak credentials to the allowed host on click)
+	 *  - protocol-relative URLs (`//evil.example/x`) — handled by the
+	 *    URL constructor refusing them without a base
+	 *  - path-only URLs (`/audits`) — those would resolve to OWUI's
+	 *    own origin rather than Workbench, so we don't accept them
+	 *    here. Chat's `/` is rewritten before safeHref is called.
+	 *
+	 * Origin comparison is strict equality (scheme + host + port). */
+	function safeHref(raw, allowedOrigins) {
+		if (typeof raw !== 'string' || raw.length === 0) return null;
+		try {
+			var parsed = new URL(raw);
+			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+			if (parsed.username || parsed.password) return null;
+			for (var i = 0; i < allowedOrigins.length; i++) {
+				if (parsed.origin === allowedOrigins[i]) {
+					/* Return the URL-constructor's normalized form
+					 * rather than the raw input so any odd encoding
+					 * or whitespace gets canonicalized before it
+					 * lands in <a href>. */
+					return parsed.href;
+				}
+			}
+		} catch (_e) {
+			/* URL constructor throws for malformed input AND for
+			 * relative URLs (no base) — both are treated as untrusted. */
 		}
-		var bottom = [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+		return null;
+	}
+
+	/* Compute the origin of a base URL string for comparison in safeHref.
+	 * Returns null for empty / malformed input so the caller can filter. */
+	function originOf(urlStr) {
+		if (typeof urlStr !== 'string' || urlStr.length === 0) return null;
+		try {
+			return new URL(urlStr).origin;
+		} catch (_e) {
+			return null;
+		}
+	}
+
+	function hasHref(it) {
+		return Boolean(it && it.href);
+	}
+
+	function buildShell(base, cloudLockUrl, sidebarData, integrationEnabled) {
+		var nav;
+		var bottom;
+		/* sidebarData is the trimmed `sidebar` subtree from Workbench:
+		 * `{main: [...], bottom: [...]}`. The /api/config endpoint
+		 * forwards only this — siblings like user/company/features
+		 * aren't included to keep the payload minimal. */
+		var main = sidebarData && sidebarData.main;
+		var bottomItems = sidebarData && sidebarData.bottom;
+
+		/* Origins the shell is allowed to link to: Workbench itself
+		 * and CloudLock (the "Private Cloud" target). Anything else
+		 * returned by Workbench's sidebar endpoint is dropped by
+		 * safeHref → null → hasHref filter. */
+		var allowedOrigins = [originOf(base), originOf(cloudLockUrl)].filter(Boolean);
+
+		/* Closure over allowedOrigins so itemFromWorkbench knows the
+		 * allowlist without threading it through every call site.
+		 *
+		 * Workbench's V1 sidebar serializer returns `url` as the
+		 * field name (documented in swagger.yaml). `href` is accepted
+		 * as a defensive fallback so a future contract drift or an
+		 * alternate upstream variant doesn't silently null out every
+		 * non-Chat item via safeHref. */
+		function itemFromWorkbench(item) {
+			var isChat = item.label === 'Chat';
+			var rawUrl = item.url || item.href;
+			return {
+				label: item.label,
+				icon: item.icon,
+				href: isChat ? '/' : safeHref(rawUrl, allowedOrigins),
+				active: isChat
+			};
+		}
+
+		/* Legacy hardcoded nav — the pre-integration Swept shell.
+		 * Used in two recovery cases (see the if/else below):
+		 *  (a) Integration not configured at all (preserves the
+		 *      pre-PR shell for deploys without the new env vars)
+		 *  (b) Integration configured but every URL got dropped by
+		 *      safeHref (origin allowlist mismatch — config error
+		 *      that should still render *something* navigable)
+		 * NOT used for "integration on, no per-user data" — that's
+		 * the empty-rail pre-login state. */
+		function hardcodedNav() {
+			var n = [
+				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
+				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
+				{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
+				{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
+				{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
+			];
+			if (cloudLockUrl) {
+				n.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+			}
+			return n;
+		}
+		function hardcodedBottom() {
+			return [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
+		}
+
+		if (Array.isArray(main)) {
+			/* Use the entitlement-filtered list from Workbench. The
+			 * user only sees nav items they're actually granted via
+			 * FeatureAccessGrant (OIDC) or role-based can? (non-OIDC).
+			 * Drop any item whose URL didn't pass safeHref so we never
+			 * render a link with a missing/disallowed href. */
+			nav = main.map(itemFromWorkbench).filter(hasHref);
+			bottom = Array.isArray(bottomItems) ? bottomItems.map(itemFromWorkbench).filter(hasHref) : [];
+
+			/* Workbench gave us items but safeHref dropped them all
+			 * — deployment config mismatch (origins on /api/config
+			 * don't line up with the URLs Workbench is returning,
+			 * e.g. explicit :443, http↔https, trailing-slash
+			 * differences). Recover with the hardcoded shell so the
+			 * user isn't stranded. Logs a warning so operators have
+			 * a debugging breadcrumb.
+			 *
+			 * Detection excludes Chat from the in/out counts: Chat
+			 * is unconditionally rewritten to '/' in itemFromWorkbench
+			 * and never goes through safeHref, so it always survives
+			 * the filter regardless of origin alignment. Counting it
+			 * would hide the mismatch in any response that includes
+			 * Chat (i.e. nearly all of them), producing a partial
+			 * rail with no recovery and no warning.
+			 *
+			 * The bottomIn/Out check catches the case where Workbench
+			 * returned bottom items but the origin mismatch dropped
+			 * all of them too — same recovery applies.
+			 *
+			 * Workbench returning a legitimately empty entitlement
+			 * (main.length === 0 with no bottom items) is NOT this
+			 * case — we leave that as an empty rail, which is the
+			 * intended pre-login / no-grants state. */
+			function notChatItem(it) {
+				return it && it.label !== 'Chat';
+			}
+			var nonChatIn = main.filter(notChatItem).length;
+			var nonChatOut = nav.filter(notChatItem).length;
+			var bottomIn = Array.isArray(bottomItems) ? bottomItems.length : 0;
+			var bottomOut = bottom.length;
+			var allNonChatDropped = nonChatIn > 0 && nonChatOut === 0;
+			var allBottomDropped = bottomIn > 0 && bottomOut === 0;
+			if (allNonChatDropped || allBottomDropped) {
+				if (typeof console !== 'undefined' && console.warn) {
+					console.warn(
+						'[swept-shell] Workbench returned items but the origin allowlist dropped all non-Chat / bottom links. ' +
+							'Check that cfg.workbench_url matches the host Workbench is serving links from. ' +
+							'Falling back to the built-in nav.'
+					);
+				}
+				nav = hardcodedNav();
+				bottom = hardcodedBottom();
+			}
+		} else if (integrationEnabled) {
+			/* Integration is configured but no per-user data: empty
+			 * rail. Pre-login is the dominant trigger — the login
+			 * form is the content, so unreachable cross-app links
+			 * would only confuse. After login, the auth watcher
+			 * re-fetches and the entitled items appear. */
+			nav = [];
+			bottom = [];
+		} else {
+			/* Integration not configured (WORKBENCH_URL set but
+			 * WORKBENCH_API_TOKEN / WORKBENCH_COMPANY_ID aren't):
+			 * render the legacy hardcoded shell. Preserves
+			 * backward-compat for deploys that haven't adopted the
+			 * Workbench-sidebar integration yet — without this
+			 * branch, pulling the new image would silently empty
+			 * their rail. */
+			nav = hardcodedNav();
+			bottom = hardcodedBottom();
+		}
 
 		var aside = document.createElement('aside');
 		aside.className = 'swept-shell';
@@ -319,10 +503,10 @@
 		return aside;
 	}
 
-	function ensureMounted(base, cloudLockUrl) {
+	function ensureMounted(base, cloudLockUrl, sidebarData, integrationEnabled) {
 		var existing = document.getElementById('swept-shell');
 		if (existing) return existing;
-		var shell = buildShell(base, cloudLockUrl);
+		var shell = buildShell(base, cloudLockUrl, sidebarData, integrationEnabled);
 		document.body.appendChild(shell);
 		return shell;
 	}
@@ -361,18 +545,78 @@
 		});
 	}
 
+	/* Read OWUI's auth token from localStorage. OWUI stores its JWT
+	 * here (plus mirroring it in a cookie); login/logout updates this
+	 * key. Returns null when the user is signed out or the key is
+	 * unavailable (private-mode/quota errors). */
+	function readAuthToken() {
+		try {
+			return localStorage.getItem('token');
+		} catch (_e) {
+			return null;
+		}
+	}
+
 	function initShell() {
-		fetch('/api/config', { credentials: 'include' })
-			.then(function (r) {
-				return r.ok ? r.json() : null;
-			})
-			.then(function (cfg) {
-				var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
-				var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
-				if (!url) return;
+		/* Last successful config so the MutationObserver can re-mount
+		 * with cached data (no extra HTTP round-trip) and the auth
+		 * watcher knows what to diff against. */
+		var currentConfig = null;
+
+		function fetchConfig() {
+			return fetch('/api/config', { credentials: 'include' })
+				.then(function (r) {
+					return r.ok ? r.json() : null;
+				})
+				.then(function (cfg) {
+					var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
+					var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
+					/* Entitlement-filtered sidebar from Workbench (per-
+					 * user nav list). Null when the backend isn't
+					 * configured for sidebar fetching, the upstream call
+					 * errored, or the user isn't authenticated. The
+					 * empty-vs-hardcoded fallback decision is made
+					 * downstream in buildShell using `integrationEnabled`
+					 * (see comments there): when the integration IS
+					 * configured, null → empty rail (the pre-login
+					 * state); when it ISN'T, null → legacy hardcoded
+					 * nav (preserves pre-PR behavior for unconfigured
+					 * deploys). */
+					var sidebarData = (cfg && cfg.workbench_sidebar) || null;
+					/* True iff the OWUI backend has the Workbench-sidebar
+					 * integration wired (all three env vars set). When
+					 * False, buildShell's fallback uses the legacy
+					 * hardcoded nav rather than an empty rail so deploys
+					 * that haven't adopted the new env vars don't see a
+					 * silent regression. */
+					var integrationEnabled = !!(cfg && cfg.workbench_sidebar_enabled);
+					return url
+						? {
+								url: url,
+								cloudLockUrl: cloudLockUrl,
+								sidebarData: sidebarData,
+								integrationEnabled: integrationEnabled
+							}
+						: null;
+				})
+				.catch(function () {
+					return null;
+				});
+		}
+
+		function render(config) {
+			currentConfig = config;
+			var existing = document.getElementById('swept-shell');
+			if (existing) existing.remove();
+			ensureMounted(config.url, config.cloudLockUrl, config.sidebarData, config.integrationEnabled);
+		}
+
+		fetchConfig()
+			.then(function (config) {
+				if (!config) return;
 				return preloadShellFonts().then(function () {
 					document.documentElement.classList.add('swept-shell-active');
-					ensureMounted(url, cloudLockUrl);
+					render(config);
 					attachSync(function () {
 						return document.getElementById('swept-shell');
 					});
@@ -386,12 +630,47 @@
 							var removed = mutations[i].removedNodes;
 							for (var j = 0; j < removed.length; j++) {
 								if (removed[j].id === 'swept-shell') {
-									ensureMounted(url, cloudLockUrl);
+									if (currentConfig) {
+										ensureMounted(
+											currentConfig.url,
+											currentConfig.cloudLockUrl,
+											currentConfig.sidebarData,
+											currentConfig.integrationEnabled
+										);
+									}
 									return;
 								}
 							}
 						}
 					}).observe(document.body, { childList: true });
+
+					/* Auth-state watcher: OWUI's login flow is a SvelteKit
+					 * client-side `goto()` — no full page reload — so
+					 * loader.js's initial /api/config fetch never sees the
+					 * post-login session. Re-fetch and re-render whenever
+					 * the JWT in localStorage changes (login or logout), so
+					 * the rail populates without forcing a hard refresh.
+					 *
+					 * Three signals:
+					 *  - setInterval (1s) for same-tab login/logout
+					 *  - `storage` event for cross-tab updates
+					 *  - `visibilitychange` for safety when returning to
+					 *    a backgrounded tab where polling may have throttled
+					 */
+					var lastToken = readAuthToken();
+					function maybeRefresh() {
+						var current = readAuthToken();
+						if (current === lastToken) return;
+						lastToken = current;
+						fetchConfig().then(function (next) {
+							if (next) render(next);
+						});
+					}
+					setInterval(maybeRefresh, 1000);
+					window.addEventListener('storage', maybeRefresh);
+					document.addEventListener('visibilitychange', function () {
+						if (document.visibilityState === 'visible') maybeRefresh();
+					});
 				});
 			})
 			.catch(function () {
