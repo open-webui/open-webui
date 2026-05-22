@@ -34,6 +34,15 @@ class PaddleOCRVLLoader:
     def load(self) -> List[Document]:
         log.info(f'Processing with PaddleOCR-vl: {self.file_path}')
 
+        # Validate file type - PaddleOCR-vl only supports PDF and images
+        supported_extensions = {'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif', 'webp', 'pdf'}
+        ext = self.file_path.lower().split('.')[-1]
+        if ext not in supported_extensions:
+            raise ValueError(
+                f'Unsupported file type: ".{ext}". '
+                f'PaddleOCR-vl only supports: {", ".join(sorted(supported_extensions))}'
+            )
+
         try:
             with open(self.file_path, 'rb') as file:
                 file_bytes = file.read()
@@ -46,7 +55,7 @@ class PaddleOCRVLLoader:
 
         # Detect fileType based on file extension
         ext = self.file_path.lower().split('.')[-1]
-        image_extensions = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'webp']
+        image_extensions = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif', 'webp']
         file_type = 1 if ext in image_extensions else 0
 
         payload = {
