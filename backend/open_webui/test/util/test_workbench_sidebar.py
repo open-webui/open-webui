@@ -300,8 +300,14 @@ class TestSoftFail:
 
         cached_ts, cached_data = _CACHE['a@b']
         assert cached_data == good_sidebar
-        # Fresh timestamp — well inside the TTL window
-        assert cached_ts > ts
+        # Verify the refresh happened: the cached timestamp must be
+        # later than the backdated value we forced. Comparing against
+        # the backdated value (rather than the original `ts`) makes
+        # the assertion robust to clock resolution — even on systems
+        # where time.monotonic() returns the same value in rapid
+        # succession, ts - _TTL_SECONDS - 1 is unambiguously older
+        # than any refreshed timestamp.
+        assert cached_ts > ts - _TTL_SECONDS - 1
 
 
 class TestPrune:

@@ -264,29 +264,28 @@
 		}
 	}
 
-	/* Defense-in-depth for sidebar links from Workbench: only same-origin
-	 * paths (`/...`) and absolute URLs whose origin is in the allowlist
-	 * pass through. The allowlist is `[workbench_url, cloud_lock_url]`
-	 * (filtered to non-empty) — those are the only domains the shell
-	 * should ever link to. Anything else (javascript:, data:, an
-	 * arbitrary external host) returns null and the caller drops it.
+	/* Defense-in-depth for sidebar links from Workbench: only absolute
+	 * URLs whose origin EXACTLY matches the allowlist pass through.
+	 * The allowlist is `[workbench_url, cloud_lock_url]` (filtered to
+	 * non-empty) — those are the only domains the shell should ever
+	 * link to. Anything else returns null and the caller drops it,
+	 * including:
+	 *  - javascript:, data:, and other non-http(s) schemes
+	 *  - URLs with userinfo (URL spec excludes it from .origin, so
+	 *    `https://user:pass@allowed/...` would otherwise sneak through
+	 *    and leak credentials to the allowed host on click)
+	 *  - protocol-relative URLs (`//evil.example/x`) — handled by the
+	 *    URL constructor refusing them without a base
+	 *  - path-only URLs (`/audits`) — those would resolve to OWUI's
+	 *    own origin rather than Workbench, so we don't accept them
+	 *    here. Chat's `/` is rewritten before safeHref is called.
 	 *
-	 * Match by origin prefix rather than string-startswith on the full
-	 * URL so trailing-slash differences don't cause false negatives. */
+	 * Origin comparison is strict equality (scheme + host + port). */
 	function safeHref(raw, allowedOrigins) {
 		if (typeof raw !== 'string' || raw.length === 0) return null;
-		/* Protocol-relative URLs ("//evil.example/x") are resolved by
-		 * the browser as cross-origin navigation; reject them up front
-		 * before the leading-slash fast-path. Same-origin paths still
-		 * need to start with "/" but never "//". */
-		if (raw.charAt(0) === '/' && raw.charAt(1) !== '/') return raw;
 		try {
 			var parsed = new URL(raw);
 			if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-			/* Reject userinfo (`https://user:pass@allowed/...`) — the
-			 * URL spec excludes userinfo from .origin, so the allowlist
-			 * check would otherwise let credentials through to the
-			 * allowed host. */
 			if (parsed.username || parsed.password) return null;
 			for (var i = 0; i < allowedOrigins.length; i++) {
 				if (parsed.origin === allowedOrigins[i]) {
@@ -298,7 +297,8 @@
 				}
 			}
 		} catch (_e) {
-			/* URL constructor throws for malformed input — treat as untrusted. */
+			/* URL constructor throws for malformed input AND for
+			 * relative URLs (no base) — both are treated as untrusted. */
 		}
 		return null;
 	}

@@ -48,11 +48,26 @@ _TTL_SECONDS = 60
 _TIMEOUT_SECONDS = 1.0
 # Optional[dict] in the second slot: we cache `None` on 404 so unknown
 # emails don't beat on Workbench every request within the TTL.
+# Timestamps come from time.monotonic(), not time.time() — NTP/DST
+# adjustments on the host would otherwise let cache entries appear
+# to age into the past or future.
 _CACHE: dict[str, tuple[float, dict | None]] = {}
 
 
 def _is_configured() -> bool:
     return bool(WORKBENCH_INTERNAL_URL and WORKBENCH_API_TOKEN and WORKBENCH_COMPANY_ID)
+
+
+def _redact_email_for_log(email: str | None) -> str:
+    """Mask the local-part of an email so warning logs don't leak full
+    PII during upstream outages (where these warnings can fire per
+    request). Keeps the first two characters and the domain so
+    operators can still correlate "is this affecting all users or
+    just one" — `peter@swept.ai` becomes `pe***@swept.ai`."""
+    if not email or '@' not in email:
+        return '***'
+    local, _, domain = email.partition('@')
+    return f'{local[:2]}***@{domain}'
 
 
 def _prune_expired(now: float) -> None:
@@ -81,7 +96,7 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
         return None
 
     normalized_email = user_email.lower()
-    now = time.time()
+    now = time.monotonic()
     cached = _CACHE.get(normalized_email)
     if cached and now - cached[0] < _TTL_SECONDS:
         return cached[1]
@@ -123,7 +138,7 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
     except Exception as e:  # noqa: BLE001 — soft-fail, see docstring
         log.warning(
             'workbench sidebar fetch failed for %s: %s: %s',
-            user_email,
+            _redact_email_for_log(user_email),
             type(e).__name__,
             e,
         )
