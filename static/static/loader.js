@@ -318,7 +318,7 @@
 		return Boolean(it && it.href);
 	}
 
-	function buildShell(base, cloudLockUrl, sidebarData) {
+	function buildShell(base, cloudLockUrl, sidebarData, integrationEnabled) {
 		var nav;
 		var bottom;
 		/* sidebarData is the trimmed `sidebar` subtree from Workbench:
@@ -353,22 +353,40 @@
 			};
 		}
 
-		/* No nav items when we have no usable per-user entitlement —
-		 * unauthenticated, Workbench unreachable, user not a Workbench
-		 * member, or every URL dropped by safeHref. The shell still
-		 * mounts (so the Swept branding identifies the app), but the
-		 * lists below the logo stay empty rather than showing items
-		 * the visitor can't actually act on.
+		/* Two distinct "no data" cases drive different fallback content:
 		 *
-		 * Pre-login is the dominant trigger: the login form IS the
-		 * content, so any cross-app links would just bounce the user
-		 * to another login. After auth, /api/config is re-fetched on
-		 * the redirect and the entitled items appear. */
+		 *  - Integration is configured but we have no per-user
+		 *    entitlement (unauthenticated visitor, Workbench unreachable,
+		 *    user not a Workbench member, or every URL dropped by
+		 *    safeHref): render an empty rail. The shell still mounts
+		 *    (so the Swept branding is visible), but no items appear
+		 *    until login provides a usable session. This is the
+		 *    dominant pre-login case — the login form IS the content,
+		 *    so unreachable links would only confuse.
+		 *
+		 *  - Integration is NOT configured (WORKBENCH_URL is set but
+		 *    WORKBENCH_API_TOKEN / WORKBENCH_COMPANY_ID aren't):
+		 *    render the legacy hardcoded shell. This preserves
+		 *    backward-compat for deploys that haven't adopted the
+		 *    Workbench-sidebar integration yet — without this branch,
+		 *    pulling the new image would silently empty their rail. */
 		function fallbackNav() {
-			return [];
+			if (integrationEnabled) return [];
+			var n = [
+				{ label: 'Chat', icon: 'message-square', href: '/', active: true },
+				{ label: 'Governance', icon: 'shield-alert', href: base + '/governance/ai_applications' },
+				{ label: 'Evaluations', icon: 'layout-dashboard', href: base + '/audits' },
+				{ label: 'Supervision', icon: 'eye', href: base + '/supervision_policies' },
+				{ label: 'Knowledge', icon: 'book-open', href: base + '/grounding_sets' }
+			];
+			if (cloudLockUrl) {
+				n.push({ label: 'Private Cloud', icon: 'shield-check', href: cloudLockUrl });
+			}
+			return n;
 		}
 		function fallbackBottom() {
-			return [];
+			if (integrationEnabled) return [];
+			return [{ label: 'Settings', icon: 'sliders-horizontal', href: base + '/settings' }];
 		}
 
 		if (Array.isArray(main)) {
@@ -390,10 +408,9 @@
 				bottom = fallbackBottom();
 			}
 		} else {
-			/* Fallback: Workbench endpoint not configured, the user
-			 * isn't a member, or the fetch errored. Render the same
-			 * built-in shell as before this PR so OWUI keeps working
-			 * standalone. */
+			/* No sidebar data: either integration is off, or it's on
+			 * but the user has no entitlement. fallbackNav/Bottom
+			 * branch on integrationEnabled to choose the right shape. */
 			nav = fallbackNav();
 			bottom = fallbackBottom();
 		}
@@ -449,10 +466,10 @@
 		return aside;
 	}
 
-	function ensureMounted(base, cloudLockUrl, sidebarData) {
+	function ensureMounted(base, cloudLockUrl, sidebarData, integrationEnabled) {
 		var existing = document.getElementById('swept-shell');
 		if (existing) return existing;
-		var shell = buildShell(base, cloudLockUrl, sidebarData);
+		var shell = buildShell(base, cloudLockUrl, sidebarData, integrationEnabled);
 		document.body.appendChild(shell);
 		return shell;
 	}
@@ -523,7 +540,21 @@
 					 * errored, or the user isn't authenticated — in any
 					 * of those cases buildShell renders an empty rail. */
 					var sidebarData = (cfg && cfg.workbench_sidebar) || null;
-					return url ? { url: url, cloudLockUrl: cloudLockUrl, sidebarData: sidebarData } : null;
+					/* True iff the OWUI backend has the Workbench-sidebar
+					 * integration wired (all three env vars set). When
+					 * False, buildShell's fallback uses the legacy
+					 * hardcoded nav rather than an empty rail so deploys
+					 * that haven't adopted the new env vars don't see a
+					 * silent regression. */
+					var integrationEnabled = !!(cfg && cfg.workbench_sidebar_enabled);
+					return url
+						? {
+								url: url,
+								cloudLockUrl: cloudLockUrl,
+								sidebarData: sidebarData,
+								integrationEnabled: integrationEnabled
+							}
+						: null;
 				})
 				.catch(function () {
 					return null;
@@ -534,7 +565,7 @@
 			currentConfig = config;
 			var existing = document.getElementById('swept-shell');
 			if (existing) existing.remove();
-			ensureMounted(config.url, config.cloudLockUrl, config.sidebarData);
+			ensureMounted(config.url, config.cloudLockUrl, config.sidebarData, config.integrationEnabled);
 		}
 
 		fetchConfig()
@@ -560,7 +591,8 @@
 										ensureMounted(
 											currentConfig.url,
 											currentConfig.cloudLockUrl,
-											currentConfig.sidebarData
+											currentConfig.sidebarData,
+											currentConfig.integrationEnabled
 										);
 									}
 									return;

@@ -556,7 +556,7 @@ from open_webui.utils.middleware import (
     process_chat_response,
 )
 from open_webui.utils.tools import set_tool_servers, set_terminal_servers
-from open_webui.utils.workbench_sidebar import fetch_sidebar
+from open_webui.utils.workbench_sidebar import fetch_sidebar, is_configured as workbench_sidebar_is_configured
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -2223,7 +2223,13 @@ async def get_app_config(request: Request):
     # Resolve the Workbench-side sidebar entitlement for this user so
     # static/loader.js renders only the nav items they're entitled to.
     # `fetch_sidebar` soft-fails to None when WORKBENCH_* env is unset
-    # or the call errors — the loader falls back to its built-in nav.
+    # or the call errors. `workbench_sidebar_enabled` tells the loader
+    # whether to expect entitlement data: when False the loader falls
+    # back to its built-in hardcoded nav (legacy behavior for deploys
+    # that haven't adopted the new env vars yet); when True the loader
+    # treats a null sidebar as "no per-user data" and renders an empty
+    # rail.
+    workbench_sidebar_enabled = workbench_sidebar_is_configured()
     workbench_sidebar = await fetch_sidebar(user.email if user else None)
 
     return {
@@ -2231,6 +2237,7 @@ async def get_app_config(request: Request):
         'status': True,
         'name': app.state.WEBUI_NAME,
         'workbench_url': WORKBENCH_URL,
+        'workbench_sidebar_enabled': workbench_sidebar_enabled,
         'workbench_sidebar': workbench_sidebar,
         'cloud_lock_url': CLOUD_LOCK_URL,
         'version': VERSION,

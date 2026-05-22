@@ -54,7 +54,12 @@ _TIMEOUT_SECONDS = 1.0
 _CACHE: dict[str, tuple[float, dict | None]] = {}
 
 
-def _is_configured() -> bool:
+def is_configured() -> bool:
+    """True iff this OWUI deployment has the Workbench-sidebar
+    integration wired (all three env vars set). Used by /api/config to
+    tell the frontend whether to expect entitlement data — when False,
+    loader.js falls back to a hardcoded nav rather than an empty rail
+    (which is the right state for "configured but no per-user data")."""
     return bool(WORKBENCH_INTERNAL_URL and WORKBENCH_API_TOKEN and WORKBENCH_COMPANY_ID)
 
 
@@ -92,7 +97,7 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
     `sidebar`, so we cache + forward just that to keep the /api/config
     payload minimal and avoid exposing extra identity data.
     """
-    if not user_email or not _is_configured():
+    if not user_email or not is_configured():
         return None
 
     normalized_email = user_email.lower()
