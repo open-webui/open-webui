@@ -27,6 +27,7 @@ On error we soft-fail (log + return last-known if any, else None) so
 a brief Workbench outage doesn't break the OWUI config endpoint.
 """
 
+import asyncio
 import logging
 import time
 
@@ -53,6 +54,14 @@ _TIMEOUT_SECONDS = 1.0
 # adjustments on the host would otherwise let cache entries appear
 # to age into the past or future.
 _CACHE: dict[str, tuple[float, dict | None]] = {}
+
+# In-flight Tasks keyed by normalized email. When N concurrent
+# /api/config calls arrive for the same user on a cold cache (e.g.
+# user opens N tabs in quick succession), only the first one runs the
+# network fetch; the rest await its result. Without this, all N race
+# past the cache miss and fire upstream in parallel, defeating the
+# TTL cache for exactly the case it most needs to be effective.
+_INFLIGHT: dict[str, asyncio.Task] = {}
 
 
 def is_configured() -> bool:
@@ -125,16 +134,50 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
     `company`, and `features` siblings, but the OWUI shell only renders
     `sidebar`, so we cache + forward just that to keep the /api/config
     payload minimal and avoid exposing extra identity data.
+
+    Concurrent callers for the same email share a single upstream
+    fetch: the first one starts the network call and registers a Task
+    in _INFLIGHT; the rest await that Task instead of racing past the
+    cache miss in parallel. This keeps the TTL cache effective on cold
+    starts (e.g. user opens several tabs in quick succession).
     """
     if not user_email or not is_configured():
         return None
 
     normalized_email = user_email.lower()
-    now = time.monotonic()
     cached = _CACHE.get(normalized_email)
-    if cached and now - cached[0] < _TTL_SECONDS:
+    if cached and time.monotonic() - cached[0] < _TTL_SECONDS:
         return cached[1]
 
+    # Coalesce concurrent cold-cache calls for the same email onto one
+    # Task. The first caller becomes the "leader" and runs _do_fetch;
+    # everyone else awaits the same Task. asyncio.shield isn't needed
+    # here — if the leader's request times out, the failure propagates
+    # to all awaiters, which is the desired soft-fail behavior.
+    inflight = _INFLIGHT.get(normalized_email)
+    if inflight is not None:
+        return await inflight
+
+    task = asyncio.create_task(_do_fetch(normalized_email, cached))
+    _INFLIGHT[normalized_email] = task
+    try:
+        return await task
+    finally:
+        # Drop the Task reference regardless of outcome so the next
+        # cache-miss can start a fresh fetch.
+        _INFLIGHT.pop(normalized_email, None)
+
+
+async def _do_fetch(normalized_email: str, cached: tuple[float, dict | None] | None) -> dict | None:
+    """The actual upstream call + cache write. Factored out so
+    fetch_sidebar can dedup concurrent callers via _INFLIGHT without
+    duplicating the try/except/cache-update flow.
+
+    `cached` is the pre-call cache entry (may be None) — passed in so
+    the exception path can preserve the last-known value without
+    re-reading the cache (which could have been updated by another
+    coroutine between the read and the exception)."""
+    now = time.monotonic()
     url = f'{WORKBENCH_INTERNAL_URL}/v1/companies/{WORKBENCH_COMPANY_ID}/sidebar'
     headers = {'Authorization': f'Bearer {WORKBENCH_API_TOKEN}'}
     # Send the normalized lowercase email so the request and the cache
@@ -172,7 +215,7 @@ async def fetch_sidebar(user_email: str | None) -> dict | None:
     except Exception as e:  # noqa: BLE001 — soft-fail, see docstring
         log.warning(
             'workbench sidebar fetch failed for %s: %s',
-            _redact_email_for_log(user_email),
+            _redact_email_for_log(normalized_email),
             _safe_exception_repr(e),
         )
         # Return last-known value if any so a brief outage doesn't

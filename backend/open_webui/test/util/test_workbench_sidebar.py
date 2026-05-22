@@ -6,6 +6,7 @@ from the code alone, so they get explicit coverage here. httpx is
 mocked via a fake AsyncClient class so we don't need a network.
 """
 
+import asyncio
 from unittest.mock import MagicMock
 
 import httpx
@@ -13,6 +14,7 @@ import pytest
 from open_webui.utils import workbench_sidebar
 from open_webui.utils.workbench_sidebar import (
     _CACHE,
+    _INFLIGHT,
     _TTL_SECONDS,
     _prune_expired,
     fetch_sidebar,
@@ -21,10 +23,12 @@ from open_webui.utils.workbench_sidebar import (
 
 @pytest.fixture(autouse=True)
 def reset_cache():
-    """Each test starts from an empty cache."""
+    """Each test starts from an empty cache and no in-flight tasks."""
     _CACHE.clear()
+    _INFLIGHT.clear()
     yield
     _CACHE.clear()
+    _INFLIGHT.clear()
 
 
 @pytest.fixture
@@ -208,6 +212,37 @@ class TestCaching:
         await fetch_sidebar('alice@example.com')
 
         assert call_count['n'] == 1
+
+    @pytest.mark.asyncio
+    async def test_concurrent_callers_share_one_upstream_fetch(self, monkeypatch, configured_env):
+        """N concurrent fetch_sidebar calls for the same email on a
+        cold cache should produce exactly one upstream call — the
+        remaining N-1 await the in-flight Task and reuse its result.
+        Prevents thundering-herd on Workbench when many tabs / sockets
+        re-fetch /api/config simultaneously after a session boundary."""
+        call_count = {'n': 0}
+        sidebar = {'main': [{'label': 'Chat'}], 'bottom': []}
+
+        def handler(*_a, **_kw):
+            call_count['n'] += 1
+            return _mock_response(200, {'data': {'sidebar': sidebar}})
+
+        _patch_client(monkeypatch, handler=handler)
+
+        # Launch 5 concurrent callers. Python's single-threaded event
+        # loop guarantees the leader's _INFLIGHT[email] = task line
+        # runs atomically before any other coroutine resumes, so the
+        # other 4 deterministically see the in-flight Task and await it.
+        results = await asyncio.gather(
+            fetch_sidebar('concurrent@example.com'),
+            fetch_sidebar('concurrent@example.com'),
+            fetch_sidebar('concurrent@example.com'),
+            fetch_sidebar('concurrent@example.com'),
+            fetch_sidebar('concurrent@example.com'),
+        )
+
+        assert call_count['n'] == 1
+        assert all(r == sidebar for r in results)
 
     @pytest.mark.asyncio
     async def test_expired_entries_re_fetch(self, monkeypatch, configured_env):
