@@ -396,16 +396,35 @@
 			 * user isn't stranded. Logs a warning so operators have
 			 * a debugging breadcrumb.
 			 *
+			 * Detection excludes Chat from the in/out counts: Chat
+			 * is unconditionally rewritten to '/' in itemFromWorkbench
+			 * and never goes through safeHref, so it always survives
+			 * the filter regardless of origin alignment. Counting it
+			 * would hide the mismatch in any response that includes
+			 * Chat (i.e. nearly all of them), producing a partial
+			 * rail with no recovery and no warning.
+			 *
+			 * The bottomIn/Out check catches the case where Workbench
+			 * returned bottom items but the origin mismatch dropped
+			 * all of them too — same recovery applies.
+			 *
 			 * Workbench returning a legitimately empty entitlement
-			 * (main.length === 0) is NOT this case — we leave that
-			 * as an empty rail, which is the intended pre-login /
-			 * no-grants state. */
-			if (main.length > 0 && nav.length === 0) {
+			 * (main.length === 0 with no bottom items) is NOT this
+			 * case — we leave that as an empty rail, which is the
+			 * intended pre-login / no-grants state. */
+			function notChatItem(it) {
+				return it && it.label !== 'Chat';
+			}
+			var nonChatIn = main.filter(notChatItem).length;
+			var nonChatOut = nav.filter(notChatItem).length;
+			var bottomIn = Array.isArray(bottomItems) ? bottomItems.length : 0;
+			var bottomOut = bottom.length;
+			var allNonChatDropped = nonChatIn > 0 && nonChatOut === 0;
+			var allBottomDropped = bottomIn > 0 && bottomOut === 0;
+			if (allNonChatDropped || allBottomDropped) {
 				if (typeof console !== 'undefined' && console.warn) {
 					console.warn(
-						'[swept-shell] Workbench returned ' +
-							main.length +
-							' nav item(s) but the origin allowlist dropped all of them. ' +
+						'[swept-shell] Workbench returned items but the origin allowlist dropped all non-Chat / bottom links. ' +
 							'Check that cfg.workbench_url matches the host Workbench is serving links from. ' +
 							'Falling back to the built-in nav.'
 					);
