@@ -25,6 +25,37 @@ Passionate about open-source AI? [Join our team →](https://careers.openwebui.c
 
 For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
+## Fork Notes - ARCHGPU Bridge Integration
+
+This fork contains custom integration work for an Intel Arc focused bridge
+runtime (`ARCHGPU OLLAMA Bridge`) and is intentionally different from upstream
+Open WebUI behavior in model management surfaces.
+
+Why this was added:
+
+- Keep model lifecycle and downloads fully inside WebUI (no separate management UI).
+- Improve model discoverability with richer metadata and runtime recommendations.
+- Make local disk cleanup easier with direct delete actions for bridge-managed models.
+
+What was added in this fork:
+
+- Native **Model Explorer** admin tab:
+  - searchable compatible-model listing
+  - live catalogue refresh
+  - metadata (freshness/downloads/likes/publisher/pipeline)
+  - quality filters (trusted publishers + minimum popularity thresholds)
+  - runtime fit recommendation (`recommended` / `possible` / `not_recommended`)
+- Model selector enhancements:
+  - downloadable catalogue section
+  - in-place pull progress
+  - quick delete action for installed bridge/Ollama models
+- Bridge passthrough API support in Open WebUI backend:
+  - `/ollama/api/catalogue`
+  - `/ollama/api/pull/status`
+
+Implementation details and operational notes are documented in
+`ARCHGPU_BRIDGE_INTEGRATION.md`.
+
 ## Key Features of Open WebUI ⭐
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.

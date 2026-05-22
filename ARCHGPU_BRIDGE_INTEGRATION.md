@@ -1,7 +1,7 @@
 # ARCHGPU Bridge Integration (Custom Open WebUI Fork)
 
-This document describes the local customization added on top of Open WebUI to
-integrate downloadable model catalogue support directly inside the existing WebUI model selector.
+This document describes the customizations added on top of Open WebUI to
+integrate ARCHGPU bridge model management directly inside the existing WebUI.
 
 ## What Is Customized
 
@@ -13,6 +13,12 @@ The following custom behavior is added:
   - downloadable models (catalogue-backed)
   - in-place download action
   - live download progress display
+- Quick delete action for installed bridge/Ollama models
+- Admin `Model Explorer` tab for:
+  - runtime live discovery of compatible models
+  - metadata (freshness/downloads/likes/publisher/pipeline)
+  - quality filters (trusted publishers + thresholds)
+  - runtime fit recommendations (download guidance)
 
 ## Files Changed
 
@@ -24,18 +30,24 @@ The following custom behavior is added:
   - Adds frontend API helper for catalogue data.
 - `src/lib/components/chat/ModelSelector/Selector.svelte`
   - Adds downloadable model section and pull trigger in selector dropdown.
+- `src/lib/components/chat/ModelSelector/ModelItem.svelte`
+  - Adds quick delete button in model list row.
+- `src/lib/components/admin/Settings/ModelExplorer.svelte`
+  - Adds full admin explorer for metadata/filter/recommendation workflows.
+- `src/lib/components/admin/Settings.svelte`
+  - Adds Model Explorer tab and routing.
 
 ## Build and Run (Custom Image)
 
 ```bash
-cd /home/nitender-kumar/llm/open-webui-src
+cd /path/to/open-webui-src
 docker build -t openwebui:archgpu-catalogue .
 ```
 
 Run with your existing bridge stack helper:
 
 ```bash
-cd /home/nitender-kumar/PROJECTS/PERSONAL/GIT/ARCHGPU_OLLAMA_BRIDGE
+cd /path/to/ARCHGPU_OLLAMA_BRIDGE
 RECREATE_OPENWEBUI=1 OPENWEBUI_IMAGE=openwebui:archgpu-catalogue ./scripts/stack.sh up
 ```
 
@@ -61,10 +73,10 @@ Validate in your own environment before production usage.
 ## Publish This Fork To Your GitHub
 
 ```bash
-cd /home/nitender-kumar/llm/open-webui-src
+cd /path/to/open-webui-src
 git checkout -b archgpu-bridge-integration
-git add backend/open_webui/routers/ollama.py src/lib/apis/ollama/index.ts src/lib/components/chat/ModelSelector/Selector.svelte ARCHGPU_BRIDGE_INTEGRATION.md
-git commit -m "Add native WebUI catalogue integration for ARCHGPU bridge"
+git add backend/open_webui/routers/ollama.py src/lib/apis/ollama/index.ts src/lib/components/chat/ModelSelector/Selector.svelte src/lib/components/chat/ModelSelector/ModelItem.svelte src/lib/components/admin/Settings/ModelExplorer.svelte src/lib/components/admin/Settings.svelte README.md ARCHGPU_BRIDGE_INTEGRATION.md
+git commit -m "Add native WebUI model explorer and bridge integration"
 
 # set your own fork repo URL if needed
 git remote set-url origin https://github.com/<your-user>/<your-openwebui-fork>.git

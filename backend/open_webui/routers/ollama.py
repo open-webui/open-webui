@@ -461,6 +461,13 @@ async def get_ollama_tags(request: Request, url_idx: Optional[int] = None, user=
 async def get_ollama_catalogue(
     request: Request,
     url_idx: Optional[int] = None,
+    q: Optional[str] = None,
+    live: Optional[bool] = None,
+    refresh: Optional[bool] = None,
+    trusted_only: Optional[bool] = None,
+    min_downloads: Optional[int] = None,
+    min_likes: Optional[int] = None,
+    quality: Optional[str] = None,
     user=Depends(get_verified_user),
 ):
     if not request.app.state.config.ENABLE_OLLAMA_API:
@@ -471,7 +478,23 @@ async def get_ollama_catalogue(
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
-    return await send_request(f'{url}/api/catalogue', 'GET', key=key, user=user)
+    suffix_parts = []
+    if q:
+        suffix_parts.append(f'q={quote(q)}')
+    if live is not None:
+        suffix_parts.append(f'live={str(live).lower()}')
+    if refresh is not None:
+        suffix_parts.append(f'refresh={str(refresh).lower()}')
+    if trusted_only is not None:
+        suffix_parts.append(f'trusted_only={str(trusted_only).lower()}')
+    if min_downloads is not None:
+        suffix_parts.append(f'min_downloads={int(min_downloads)}')
+    if min_likes is not None:
+        suffix_parts.append(f'min_likes={int(min_likes)}')
+    if quality:
+        suffix_parts.append(f'quality={quote(quality)}')
+    suffix = f"?{'&'.join(suffix_parts)}" if suffix_parts else ''
+    return await send_request(f'{url}/api/catalogue{suffix}', 'GET', key=key, user=user)
 
 
 @router.get('/api/pull/status')

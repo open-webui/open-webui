@@ -238,11 +238,34 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 		});
 };
 
-export const getOllamaCatalogue = async (token: string = '', urlIdx: null | number = null) => {
+export const getOllamaCatalogue = async (
+	token: string = '',
+	urlIdx: null | number = null,
+	options: {
+		q?: string;
+		live?: boolean;
+		refresh?: boolean;
+		trusted_only?: boolean;
+		min_downloads?: number;
+		min_likes?: number;
+		quality?: 'off' | 'strict' | string;
+		raw?: boolean;
+	} = {}
+) => {
 	let error = null;
+	const searchParams = new URLSearchParams();
+	if (options.q) searchParams.append('q', options.q);
+	if (options.live !== undefined) searchParams.append('live', String(options.live));
+	if (options.refresh !== undefined) searchParams.append('refresh', String(options.refresh));
+	if (options.trusted_only !== undefined) searchParams.append('trusted_only', String(options.trusted_only));
+	if (options.min_downloads !== undefined)
+		searchParams.append('min_downloads', String(options.min_downloads));
+	if (options.min_likes !== undefined) searchParams.append('min_likes', String(options.min_likes));
+	if (options.quality) searchParams.append('quality', options.quality);
+	const query = searchParams.toString();
 
 	const res = await fetch(
-		`${OLLAMA_API_BASE_URL}/api/catalogue${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_URL}/api/catalogue${urlIdx !== null ? `/${urlIdx}` : ''}${query ? `?${query}` : ''}`,
 		{
 			method: 'GET',
 			headers: {
@@ -268,6 +291,10 @@ export const getOllamaCatalogue = async (token: string = '', urlIdx: null | numb
 
 	if (error) {
 		throw error;
+	}
+
+	if (options.raw) {
+		return res;
 	}
 
 	return res?.models ?? [];
