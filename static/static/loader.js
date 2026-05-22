@@ -491,23 +491,58 @@
 		});
 	}
 
+	/* Read OWUI's auth token from localStorage. OWUI stores its JWT
+	 * here (plus mirroring it in a cookie); login/logout updates this
+	 * key. Returns null when the user is signed out or the key is
+	 * unavailable (private-mode/quota errors). */
+	function readAuthToken() {
+		try {
+			return localStorage.getItem('token');
+		} catch (_e) {
+			return null;
+		}
+	}
+
 	function initShell() {
-		fetch('/api/config', { credentials: 'include' })
-			.then(function (r) {
-				return r.ok ? r.json() : null;
-			})
-			.then(function (cfg) {
-				var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
-				var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
-				/* Entitlement-filtered sidebar from Workbench (per-user
-				 * nav list). Null when WORKBENCH_API_TOKEN/COMPANY_ID
-				 * aren't set or the upstream call errored — buildShell
-				 * falls back to its built-in nav in that case. */
-				var sidebarData = (cfg && cfg.workbench_sidebar) || null;
-				if (!url) return;
+		/* Last successful config so the MutationObserver can re-mount
+		 * with cached data (no extra HTTP round-trip) and the auth
+		 * watcher knows what to diff against. */
+		var currentConfig = null;
+
+		function fetchConfig() {
+			return fetch('/api/config', { credentials: 'include' })
+				.then(function (r) {
+					return r.ok ? r.json() : null;
+				})
+				.then(function (cfg) {
+					var url = ((cfg && cfg.workbench_url) || '').replace(/\/$/, '');
+					var cloudLockUrl = ((cfg && cfg.cloud_lock_url) || '').replace(/\/$/, '');
+					/* Entitlement-filtered sidebar from Workbench (per-
+					 * user nav list). Null when WORKBENCH_API_TOKEN /
+					 * WORKBENCH_COMPANY_ID aren't set, the upstream call
+					 * errored, or the user isn't authenticated — in any
+					 * of those cases buildShell renders an empty rail. */
+					var sidebarData = (cfg && cfg.workbench_sidebar) || null;
+					return url ? { url: url, cloudLockUrl: cloudLockUrl, sidebarData: sidebarData } : null;
+				})
+				.catch(function () {
+					return null;
+				});
+		}
+
+		function render(config) {
+			currentConfig = config;
+			var existing = document.getElementById('swept-shell');
+			if (existing) existing.remove();
+			ensureMounted(config.url, config.cloudLockUrl, config.sidebarData);
+		}
+
+		fetchConfig()
+			.then(function (config) {
+				if (!config) return;
 				return preloadShellFonts().then(function () {
 					document.documentElement.classList.add('swept-shell-active');
-					ensureMounted(url, cloudLockUrl, sidebarData);
+					render(config);
 					attachSync(function () {
 						return document.getElementById('swept-shell');
 					});
@@ -521,12 +556,46 @@
 							var removed = mutations[i].removedNodes;
 							for (var j = 0; j < removed.length; j++) {
 								if (removed[j].id === 'swept-shell') {
-									ensureMounted(url, cloudLockUrl, sidebarData);
+									if (currentConfig) {
+										ensureMounted(
+											currentConfig.url,
+											currentConfig.cloudLockUrl,
+											currentConfig.sidebarData
+										);
+									}
 									return;
 								}
 							}
 						}
 					}).observe(document.body, { childList: true });
+
+					/* Auth-state watcher: OWUI's login flow is a SvelteKit
+					 * client-side `goto()` — no full page reload — so
+					 * loader.js's initial /api/config fetch never sees the
+					 * post-login session. Re-fetch and re-render whenever
+					 * the JWT in localStorage changes (login or logout), so
+					 * the rail populates without forcing a hard refresh.
+					 *
+					 * Three signals:
+					 *  - setInterval (1s) for same-tab login/logout
+					 *  - `storage` event for cross-tab updates
+					 *  - `visibilitychange` for safety when returning to
+					 *    a backgrounded tab where polling may have throttled
+					 */
+					var lastToken = readAuthToken();
+					function maybeRefresh() {
+						var current = readAuthToken();
+						if (current === lastToken) return;
+						lastToken = current;
+						fetchConfig().then(function (next) {
+							if (next) render(next);
+						});
+					}
+					setInterval(maybeRefresh, 1000);
+					window.addEventListener('storage', maybeRefresh);
+					document.addEventListener('visibilitychange', function () {
+						if (document.visibilityState === 'visible') maybeRefresh();
+					});
 				});
 			})
 			.catch(function () {
