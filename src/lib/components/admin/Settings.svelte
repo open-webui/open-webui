@@ -14,6 +14,7 @@
 	import Images from './Settings/Images.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
+	import ModelExplorer from './Settings/ModelExplorer.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
@@ -39,6 +40,7 @@
 			'general',
 			'connections',
 			'models',
+			'model-explorer',
 			'evaluations',
 			'integrations',
 			'documents',
@@ -123,6 +125,21 @@
 				'gguf',
 				'import',
 				'export'
+			]
+		},
+		{
+			id: 'model-explorer',
+			title: 'Model Explorer',
+			route: '/admin/settings/model-explorer',
+			keywords: [
+				'model explorer',
+				'catalogue',
+				'compatible models',
+				'metadata',
+				'capabilities',
+				'download',
+				'delete',
+				'storage'
 			]
 		},
 		{
@@ -310,6 +327,7 @@
 		<!-- {$i18n.t('General')} -->
 		<!-- {$i18n.t('Connections')} -->
 		<!-- {$i18n.t('Models')} -->
+		<!-- {$i18n.t('Model Explorer')} -->
 		<!-- {$i18n.t('Evaluations')} -->
 		<!-- {$i18n.t('Integrations')} -->
 		<!-- {$i18n.t('Documents')} -->
@@ -355,7 +373,7 @@
 								d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
 							/>
 						</svg>
-					{:else if tab.id === 'models'}
+					{:else if tab.id === 'models' || tab.id === 'model-explorer'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -523,6 +541,8 @@
 			/>
 		{:else if selectedTab === 'models'}
 			<Models />
+		{:else if selectedTab === 'model-explorer'}
+			<ModelExplorer />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
 		{:else if selectedTab === 'integrations'}
