@@ -85,3 +85,7 @@ git push -u target-origin fix/security/gate-version-health
 # create PR with GitHub CLI
 gh pr create --title "Require auth for version & health endpoints" --body "Fixes: https://github.com/open-webui/open-webui/issues/24992" --base main --head fix/security/gate-version-health
 ```
+
+Credit
+------
+Patch prepared by: darshitp091
