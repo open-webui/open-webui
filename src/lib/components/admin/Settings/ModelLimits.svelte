@@ -1,9 +1,85 @@
 <script>
 	import { createEventDispatcher, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models } from '$lib/stores';
+	import { config, models } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
+	import {
+		getFlexAutoFlipConfig,
+		updateFlexAutoFlipConfig
+	} from '$lib/apis/flex-auto-flip';
 
 	const dispatch = createEventDispatcher();
+
+	// Flex auto-flip admin policy. Read once on mount and on save we refresh
+	// the global $config store so Chat.svelte's auto-flip reactive picks up
+	// the new values without a page reload.
+	let flexAutoFlipLoading = true;
+	let flexAutoFlipSaving = false;
+	let flexEnabled = true;
+	let flexStartHour = 13;
+	let flexEndHour = 5;
+	let flexTimezone = 'America/Los_Angeles';
+	let flexThresholdPercent = 80; // UI: percent (0-100). Backend: ratio (0-1).
+
+	const loadFlexAutoFlipConfig = async () => {
+		try {
+			flexAutoFlipLoading = true;
+			const res = await getFlexAutoFlipConfig(localStorage.token);
+			if (res) {
+				flexEnabled = !!res.FLEX_AUTO_FLIP_ENABLED;
+				flexStartHour = res.FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR;
+				flexEndHour = res.FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR;
+				flexTimezone = res.FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE;
+				flexThresholdPercent = Math.round(res.FLEX_AUTO_FLIP_THRESHOLD_RATIO * 100);
+			}
+		} catch (err) {
+			console.error(err);
+			toast.error(`Failed to load flex auto-switch settings: ${err}`);
+		} finally {
+			flexAutoFlipLoading = false;
+		}
+	};
+
+	const saveFlexAutoFlipConfig = async () => {
+		// Light client-side validation so we surface obvious mistakes before
+		// the round trip. The backend re-validates and is authoritative.
+		if (!Number.isInteger(flexStartHour) || flexStartHour < 0 || flexStartHour > 23) {
+			toast.error('Off-peak start hour must be an integer 0..23');
+			return;
+		}
+		if (!Number.isInteger(flexEndHour) || flexEndHour < 0 || flexEndHour > 23) {
+			toast.error('Off-peak end hour must be an integer 0..23');
+			return;
+		}
+		if (flexThresholdPercent <= 0 || flexThresholdPercent > 100) {
+			toast.error('Threshold must be between 1 and 100 (%)');
+			return;
+		}
+		if (!flexTimezone?.trim()) {
+			toast.error('Timezone cannot be empty');
+			return;
+		}
+
+		try {
+			flexAutoFlipSaving = true;
+			await updateFlexAutoFlipConfig(localStorage.token, {
+				FLEX_AUTO_FLIP_ENABLED: flexEnabled,
+				FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR: flexStartHour,
+				FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR: flexEndHour,
+				FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE: flexTimezone.trim(),
+				FLEX_AUTO_FLIP_THRESHOLD_RATIO: flexThresholdPercent / 100
+			});
+			// Refresh the global config so Chat.svelte sees the new values
+			// without a hard reload.
+			await config.set(await getBackendConfig());
+			toast.success('Flex auto-switch settings saved');
+		} catch (err) {
+			console.error(err);
+			toast.error(`${err}`);
+		} finally {
+			flexAutoFlipSaving = false;
+		}
+	};
 
 	// Token Groups Data
 	let tokenGroups = [];
@@ -28,6 +104,7 @@
 
 	onMount(async () => {
 		await loadData();
+		await loadFlexAutoFlipConfig();
 	});
 
 	const loadData = async () => {
@@ -250,6 +327,130 @@
 				</button>
 			</div>
 		</div>
+	</div>
+
+	<!-- Flex Auto-Switch -->
+	<div
+		class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-100 dark:border-gray-700 mb-8"
+	>
+		<div class="flex justify-between items-start mb-2">
+			<div>
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Flex Auto-Switch</h3>
+				<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+					Automatically switch new chats to the <code>flex</code> service tier (~50%
+					cheaper, slightly slower) during off-peak hours, or when any token group
+					a chat's model belongs to is approaching its limit. Users see a toast
+					with an Undo button.
+				</p>
+			</div>
+			<div class="flex items-center gap-3 ml-4 shrink-0">
+				<span class="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
+				<input
+					type="checkbox"
+					bind:checked={flexEnabled}
+					class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+					disabled={flexAutoFlipLoading}
+				/>
+			</div>
+		</div>
+
+		{#if flexAutoFlipLoading}
+			<div class="text-sm text-gray-500 dark:text-gray-400 py-2">Loading…</div>
+		{:else}
+			<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label
+						for="flex-start-hour"
+						class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Off-peak start hour (0–23)
+					</label>
+					<input
+						id="flex-start-hour"
+						type="number"
+						min="0"
+						max="23"
+						bind:value={flexStartHour}
+						disabled={!flexEnabled}
+						class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/50 outline-none disabled:opacity-50"
+					/>
+				</div>
+				<div>
+					<label
+						for="flex-end-hour"
+						class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Off-peak end hour (0–23)
+					</label>
+					<input
+						id="flex-end-hour"
+						type="number"
+						min="0"
+						max="23"
+						bind:value={flexEndHour}
+						disabled={!flexEnabled}
+						class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/50 outline-none disabled:opacity-50"
+					/>
+				</div>
+				<div class="md:col-span-2">
+					<label
+						for="flex-timezone"
+						class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Timezone (IANA, e.g. <code>America/Los_Angeles</code>)
+					</label>
+					<input
+						id="flex-timezone"
+						type="text"
+						bind:value={flexTimezone}
+						disabled={!flexEnabled}
+						placeholder="America/Los_Angeles"
+						class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/50 outline-none disabled:opacity-50"
+					/>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						Window wraps midnight when start &gt; end. Default <code>13 → 5</code>
+						means 1pm through 5am next day.
+					</p>
+				</div>
+				<div class="md:col-span-2">
+					<label
+						for="flex-threshold"
+						class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Approaching-limit threshold (% of token group budget)
+					</label>
+					<div class="relative">
+						<input
+							id="flex-threshold"
+							type="number"
+							min="1"
+							max="100"
+							step="1"
+							bind:value={flexThresholdPercent}
+							disabled={!flexEnabled}
+							class="w-full px-3 py-2 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/50 outline-none disabled:opacity-50"
+						/>
+						<span
+							class="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 text-sm pointer-events-none"
+						>%</span>
+					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						When any token group covering the chat's model is at or above this
+						fraction of its limit, new chats default to <code>flex</code>.
+					</p>
+				</div>
+			</div>
+
+			<div class="flex justify-end mt-5">
+				<button
+					class="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg transition-colors"
+					on:click={saveFlexAutoFlipConfig}
+					disabled={flexAutoFlipSaving}
+				>
+					{flexAutoFlipSaving ? 'Saving…' : 'Save Flex Auto-Switch'}
+				</button>
+			</div>
+		{/if}
 	</div>
 
 	{#if loading}

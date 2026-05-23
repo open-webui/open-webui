@@ -822,6 +822,9 @@
 										{history}
 										{selectedModels}
 										content={messageTextContent}
+										content_blocks={Array.isArray(message?.content_blocks)
+											? message.content_blocks
+											: null}
 										sources={message.sources}
 										dataVizOverrides={message?.dataVizOverrides ?? {}}
 										floatingButtons={message?.done &&

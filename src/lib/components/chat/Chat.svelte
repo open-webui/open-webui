@@ -43,7 +43,8 @@
 		pinnedChats,
 		showEmbeds,
 		chatTokenStatsRefreshTrigger,
-		subagentLiveStates
+		subagentLiveStates,
+		isLastActiveTab
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -371,6 +372,27 @@
 	let files = [];
 	let params = {};
 
+	// Queue of follow-up messages submitted while a response was streaming.
+	// Persists into chat.chat.queue via saveChatHandler so it survives tab
+	// close / reload.
+	//
+	// Per-message fields only — text, attached files, and the optional
+	// `@`-mentioned model. The other toggles (web search, tools, reasoning
+	// effort, etc.) deliberately use the live UI state at dequeue time
+	// because the user can SEE that state in the toolbar and changes between
+	// queue-time and send-time should be respected. Snapshotting them would
+	// silently revert the user's mid-wait adjustments on auto-send.
+	type QueuedMessage = {
+		id: string;
+		prompt: string;
+		files: any[];
+		atSelectedModelId?: string | null;
+		createdAt: number;
+	};
+	let queue: QueuedMessage[] = [];
+	// Falling-edge tracker for auto-send-on-complete.
+	let _wasGenerating = false;
+
 	// Token usage tracking
 	let tokenUsageGroups = {};
 	let usagePollingInterval = null;
@@ -425,6 +447,90 @@
 			}
 		} else {
 			_serviceTierBaseline = null;
+		}
+	}
+
+	// Auto-flip to `flex` service tier when (a) wall-clock falls inside the
+	// admin-configured off-peak window where flex's latency penalty is
+	// effectively zero, or (b) any token group covering this chat's model is
+	// at/above the admin-configured threshold ratio. Policy values live on
+	// `$config.features.flex_auto_flip_*` (see `/api/config`). Fires once per
+	// chat with an "Undo" toast; resets on chat navigation.
+	//
+	// Fallback defaults match what the feature shipped with so behavior is
+	// stable if the config payload is delayed or missing the keys (e.g. older
+	// backend). The enabled-by-default fallback is `false` so we never
+	// auto-flip in the absence of explicit admin policy.
+	const isOffPeakHour = (now: Date, startHour: number, endHour: number, tz: string): boolean => {
+		let hour: number;
+		try {
+			hour = Number(
+				new Intl.DateTimeFormat('en-US', {
+					timeZone: tz,
+					hour: 'numeric',
+					hour12: false
+				}).format(now)
+			);
+		} catch {
+			// Bad timezone string — skip rather than crash the chat.
+			return false;
+		}
+		if (startHour === endHour) return false;
+		// Window wraps midnight when start > end.
+		return startHour > endHour
+			? hour >= startHour || hour < endHour
+			: hour >= startHour && hour < endHour;
+	};
+
+	const isApproachingAnyLimit = (groups: [string, any][], ratio: number): boolean => {
+		return groups.some(([, g]) => {
+			if (!g?.limit) return false;
+			const used = g?.effectiveUsage?.total ?? 0;
+			return used / g.limit >= ratio;
+		});
+	};
+
+	let flexAutoFlipUndoneForChat = false;
+	let _flexFlipNotified = false;
+	let _nowTick = Date.now();
+	let _nowTickInterval: ReturnType<typeof setInterval> | null = null;
+
+	$: {
+		const _ = _nowTick; // reactive dep so off-peak boundary crossings re-evaluate
+		const flexEnabled = $config?.features?.flex_auto_flip_enabled ?? false;
+		const startHour = $config?.features?.flex_auto_flip_off_peak_start_hour ?? 13;
+		const endHour = $config?.features?.flex_auto_flip_off_peak_end_hour ?? 5;
+		const tz = $config?.features?.flex_auto_flip_off_peak_timezone ?? 'America/Los_Angeles';
+		const thresholdRatio = $config?.features?.flex_auto_flip_threshold_ratio ?? 0.8;
+		if (
+			flexEnabled &&
+			!flexAutoFlipUndoneForChat &&
+			!_flexFlipNotified &&
+			(!taskIds || taskIds.length === 0) &&
+			serviceTier === 'default' &&
+			(isOffPeakHour(new Date(), startHour, endHour, tz) ||
+				isApproachingAnyLimit(relevantGroups, thresholdRatio))
+		) {
+			const _prevServiceTier = serviceTier;
+			const _prevSubagentTier = subagentServiceTier;
+			serviceTier = 'flex';
+			if (subagentsEnabled) subagentServiceTier = 'flex';
+			_flexFlipNotified = true;
+
+			toast(
+				'Switched to flex — flex helps keep costs low in exchange for a slightly slower response. If you need a fast response, use standard.',
+				{
+					action: {
+						label: 'Undo',
+						onClick: () => {
+							serviceTier = _prevServiceTier;
+							subagentServiceTier = _prevSubagentTier;
+							flexAutoFlipUndoneForChat = true;
+						}
+					},
+					duration: 8000
+				}
+			);
 		}
 	}
 
@@ -584,10 +690,19 @@
 		// Fetch immediately, then poll slowly to keep rate limits fresh
 		fetchTokenUsage();
 		startUsagePolling(SLOW_POLL_MS);
+		// Tick once a minute so the off-peak window check re-evaluates as the
+		// hour boundary crosses (1pm/5am PST).
+		_nowTickInterval = setInterval(() => {
+			_nowTick = Date.now();
+		}, 60_000);
 	});
 
 	onDestroy(() => {
 		stopUsagePolling();
+		if (_nowTickInterval) {
+			clearInterval(_nowTickInterval);
+			_nowTickInterval = null;
+		}
 	});
 
 	const navigateHandler = async () => {
@@ -612,6 +727,16 @@
 		subagentReasoningEffort = '';
 		subagentServiceTier = '';
 		imageGenerationEnabled = false;
+
+		// Clear the queue from the previous chat. loadChat will re-populate from
+		// chatContent.queue if there's a persisted queue on the chat we navigate to.
+		queue = [];
+		_wasGenerating = false;
+
+		// Reset auto-flip state so the new chat re-evaluates the off-peak /
+		// threshold triggers and can re-show the toast.
+		flexAutoFlipUndoneForChat = false;
+		_flexFlipNotified = false;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -757,6 +882,9 @@
 		subagentServiceTier = '';
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+
+		flexAutoFlipUndoneForChat = false;
+		_flexFlipNotified = false;
 
 		setDefaults();
 	};
@@ -1867,6 +1995,8 @@
 
 		chatFiles = [];
 		params = {};
+		queue = [];
+		_wasGenerating = false;
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -2056,6 +2186,11 @@
 
 		params = chatContent?.params ?? {};
 		chatFiles = chatContent?.files ?? [];
+		// Hydrate the queued-message strip from the persisted chat blob. Guard
+		// against malformed legacy data — older chats never had this field, so
+		// `undefined` is normal and just means an empty queue.
+		queue = Array.isArray(chatContent?.queue) ? chatContent.queue : [];
+		_wasGenerating = false;
 
 		// Restore webSearchEnabled from saved params
 		if (params.webSearchEnabled !== undefined) {
@@ -2127,6 +2262,16 @@
 		autoScroll = true;
 
 		taskIds = _taskRes?.task_ids ?? null;
+
+		// If a task is still running on the backend (we reloaded mid-stream),
+		// flip `generating` to true so the auto-send-on-natural-completion
+		// reactive can see the falling edge when the resumed stream finishes.
+		// Without this, the reactive's `_wasGenerating` would stay false and
+		// a hydrated queue would never auto-fire on reload.
+		if (taskIds && taskIds.length > 0) {
+			generating = true;
+			_wasGenerating = true;
+		}
 
 		await tick();
 
@@ -2217,7 +2362,8 @@
 						history: history,
 						params: params,
 						reasoning: reasoning,
-						files: chatFiles
+						files: chatFiles,
+						queue: queue
 					});
 
 					currentChatPage.set(1);
@@ -2294,7 +2440,8 @@
 						messages: messages,
 						history: history,
 						params: params,
-						files: chatFiles
+						files: chatFiles,
+						queue: queue
 					});
 
 					currentChatPage.set(1);
@@ -2791,7 +2938,10 @@
 		if (history?.currentId) {
 			const lastMessage = history.messages[history.currentId];
 			if (lastMessage.done != true) {
-				// Response not done
+				// Response still streaming — instead of dropping the submit on
+				// the floor, queue it. dequeueAndSend() will fire as soon as the
+				// response naturally completes (falling-edge reactive below).
+				await enqueueMessage(userPrompt);
 				return;
 			}
 
@@ -5005,6 +5155,172 @@
 		return _chatId;
 	};
 
+	// Append a queue item with the text + currently-attached files + any
+	// `@`-mention. Clears the input afterwards so the user can keep typing.
+	// `chatFiles` is NOT moved here (it gets moved during the normal send path
+	// in submitPrompt) — the queue item carries its own per-message files
+	// which dequeueAndSend hands back to `files` at flush time.
+	const enqueueMessage = async (userPrompt: string) => {
+		const item: QueuedMessage = {
+			id: uuidv4(),
+			prompt: userPrompt,
+			files: structuredClone(files),
+			atSelectedModelId: atSelectedModel?.id ?? null,
+			createdAt: Date.now()
+		};
+		queue = [...queue, item];
+
+		files = [];
+		prompt = '';
+		messageInput?.setText('');
+
+		toast.success(
+			$i18n.t('Message queued — will send when the current response finishes')
+		);
+
+		// Persist the queue change immediately so it survives reload / tab
+		// close. saveChatHandler is a no-op for temp chats / missing chat id,
+		// which is fine — in-memory state is the source of truth for those.
+		const _chatId = getVisibleChatId();
+		if (_chatId) {
+			void saveChatHandler(_chatId, history);
+		}
+	};
+
+	const editQueuedMessage = (id: string, nextText: string) => {
+		queue = queue.map((q) => (q.id === id ? { ...q, prompt: nextText } : q));
+		const _chatId = getVisibleChatId();
+		if (_chatId) {
+			void saveChatHandler(_chatId, history);
+		}
+	};
+
+	const removeQueuedMessage = (id: string) => {
+		queue = queue.filter((q) => q.id !== id);
+		const _chatId = getVisibleChatId();
+		if (_chatId) {
+			void saveChatHandler(_chatId, history);
+		}
+	};
+
+	// Pop the head of the queue and send it directly. We deliberately bypass
+	// submitPrompt here so we don't clobber the user's in-flight typing /
+	// attached files in the input bar — the queued message owns its own
+	// snapshot. If submitPrompt had been called instead, its `messageInput
+	// .setText('')` / `files = []` lines would wipe whatever the user has
+	// staged for their *next* manual send.
+	//
+	// The auto-send reactive guards entry; dequeueAndSend itself is just "send
+	// the next one." Multiple queued messages drain one at a time: the reactive
+	// fires again on each subsequent natural completion.
+	const dequeueAndSend = async () => {
+		if (queue.length === 0) return;
+		const next = queue[0];
+		queue = queue.slice(1);
+
+		const _chatId = getVisibleChatId();
+		if (_chatId) {
+			void saveChatHandler(_chatId, history);
+		}
+
+		const itemFiles = Array.isArray(next.files) ? structuredClone(next.files) : [];
+
+		// Validate model selection is still sensible. If selected models drifted
+		// to invalid ids (model deleted, etc.), drop the queued send rather than
+		// silently failing in sendMessage.
+		const _selectedModels = selectedModels.map((modelId) =>
+			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
+		if (!arraysEqual(selectedModels, _selectedModels)) {
+			selectedModels = _selectedModels;
+		}
+		if (selectedModels.includes('')) {
+			toast.error($i18n.t('Model not selected — queued message dropped'));
+			return;
+		}
+
+		// Mirror submitPrompt's chatFiles accumulation: move text-extraction
+		// kinds onto the chat-wide files list so subsequent turns see them.
+		chatFiles.push(
+			...itemFiles.filter((item) =>
+				['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)
+			)
+		);
+		chatFiles = chatFiles.filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
+
+		// Build the user message from the snapshot. Parented to the current
+		// head of the chat so the queued message lands right after the just-
+		// completed assistant turn (which is what the user expected when they
+		// pressed Enter).
+		const messages = createMessagesList(history, history.currentId);
+		const userMessageId = uuidv4();
+		// If the user @-mentioned a specific model at queue time, the user
+		// message records THAT model only — mirrors submitPrompt's normal path
+		// where `models: selectedModels` reflects atSelectedModel's effect.
+		const messageModels = next.atSelectedModelId
+			? [next.atSelectedModelId]
+			: selectedModels;
+		const userMessage = {
+			id: userMessageId,
+			parentId: messages.length !== 0 ? messages.at(-1).id : null,
+			childrenIds: [],
+			role: 'user',
+			content: next.prompt,
+			files: itemFiles.length > 0 ? itemFiles : undefined,
+			timestamp: Math.floor(Date.now() / 1000),
+			models: messageModels
+		};
+		history.messages[userMessageId] = userMessage;
+		history.currentId = userMessageId;
+		if (messages.length !== 0) {
+			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
+		}
+
+		await tick();
+
+		// `newChat: true` is fine: sendMessage only fires initChatHandler when
+		// the message has no parent, which only happens on the very first send
+		// in a chat. Queued sends always have a parent (the just-completed
+		// assistant turn).
+		//
+		// If the queued message had no @-mention, the user might have set one
+		// AFTER queueing (for their next manual send). sendMessage prefers
+		// atSelectedModel over selectedModels when modelId isn't passed, so
+		// that stale @-mention would leak in and route the queued send to the
+		// wrong model. Temporarily detach atSelectedModel for the duration of
+		// the call.
+		const restoreAtSelected = !next.atSelectedModelId ? atSelectedModel : undefined;
+		if (!next.atSelectedModelId) atSelectedModel = undefined;
+		try {
+			await sendMessage(history, userMessageId, {
+				newChat: true,
+				...(next.atSelectedModelId ? { modelId: next.atSelectedModelId } : {})
+			});
+		} finally {
+			if (restoreAtSelected !== undefined) atSelectedModel = restoreAtSelected;
+		}
+	};
+
+	// Falling-edge watcher: when `generating` transitions from true to false
+	// and the just-completed response landed cleanly (done=true, no error,
+	// not user-stopped), auto-send the head of the queue. Gated on
+	// $isLastActiveTab so that opening the same chat in two tabs doesn't fire
+	// two sends.
+	$: {
+		const justFinished = _wasGenerating && !generating;
+		_wasGenerating = generating;
+		if (justFinished && queue.length > 0 && $isLastActiveTab && !loading) {
+			const lastMsg = history?.currentId ? history.messages[history.currentId] : null;
+			const finishedCleanly = lastMsg?.done === true && !lastMsg?.error;
+			if (finishedCleanly && !userInitiatedStop) {
+				void dequeueAndSend();
+			}
+		}
+	}
+
 	const saveChatHandler = async (_chatId, history, nextParams = params) => {
 		if (isVisibleChatEvent(_chatId)) {
 			if (!$temporaryChatEnabled) {
@@ -5013,7 +5329,8 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: nextParams,
-					files: chatFiles
+					files: chatFiles,
+					queue: queue
 				});
 				currentChatPage.set(1);
 				// Refresh sidebar list in background — purely cosmetic, never gates the LLM request.
@@ -5320,6 +5637,9 @@
 									toolServers={$toolServers}
 									{generating}
 									{stopResponse}
+									{queue}
+									{editQueuedMessage}
+									{removeQueuedMessage}
 									{createMessagePair}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {

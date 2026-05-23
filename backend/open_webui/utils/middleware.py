@@ -1943,12 +1943,41 @@ async def process_chat_response(
         async def response_handler(response, events):
             nonlocal model_id
 
-            def serialize_content_blocks(content_blocks):
+            def serialize_content_blocks(content_blocks, force=False):
                 # Display-only HTML+markdown projection of the structured content_blocks.
                 # The API-bound conversion lives in `blocks_to_api_messages`; this is
                 # purely what the UI's existing Markdown renderer + native <details>
                 # collapsibles consume. Kept for older frontend builds that don't
                 # render directly from content_blocks (post-Task 5 frontends do).
+                #
+                # Hot-path short-circuits (skipped when `force=True`):
+                #
+                # 1) Subagent inner runs never read the projected `content` string —
+                #    `SubagentBlock.svelte` renders the structured `content_blocks`
+                #    array directly. Returning empty here turns the per-chunk O(N)
+                #    walk into O(1), so backend per-stream work scales linearly
+                #    with token count even with many concurrent subagents at 200+
+                #    TPS. The subagent chat row's `content` column ends up empty
+                #    but the row is hidden from the sidebar and re-renders
+                #    correctly from `content_blocks` if the user opens it directly.
+                #
+                # 2) Regular chats with `ENABLE_REALTIME_CHAT_SAVE=False` (the
+                #    default): no per-chunk DB write happens, and modern
+                #    frontends render from `content_blocks` (see
+                #    `ContentRenderer.svelte`'s per-block keyed-each). The
+                #    projected string is only needed once at end-of-stream for
+                #    the canonical DB write + legacy clients + exports — those
+                #    call sites pass `force=True` to bypass this short-circuit.
+                #
+                # When `ENABLE_REALTIME_CHAT_SAVE=True`, every per-chunk call
+                # falls through and computes normally so the per-chunk DB write
+                # at L2836 stores a coherent content column.
+                if not force:
+                    if metadata.get("subagent_inner"):
+                        return ""
+                    if not ENABLE_REALTIME_CHAT_SAVE:
+                        return ""
+
                 content = ""
 
                 for block in content_blocks:
@@ -3610,7 +3639,13 @@ async def process_chat_response(
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {
                     "done": True,
-                    "content": serialize_content_blocks(content_blocks),
+                    # force=True: end-of-stream final emit. The serialize
+                    # short-circuit (hot-path skip when realtime save is off)
+                    # is bypassed here so the canonical `content` string lands
+                    # on the wire for legacy clients + exports + the
+                    # post-stream DB write below. Modern clients render from
+                    # `content_blocks` and ignore this field.
+                    "content": serialize_content_blocks(content_blocks, force=True),
                     "content_blocks": content_blocks,
                     "title": title,
                 }
@@ -3623,7 +3658,12 @@ async def process_chat_response(
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
                     update_data = {
-                        "content": serialize_content_blocks(content_blocks),
+                        # force=True: end-of-stream DB write. Even when the
+                        # hot-path serialize is short-circuited (realtime save
+                        # off), we compute once here so the persisted row has
+                        # a usable `content` column for legacy clients,
+                        # exports, search indexing, etc.
+                        "content": serialize_content_blocks(content_blocks, force=True),
                         "content_blocks": content_blocks,
                     }
 
@@ -3686,7 +3726,11 @@ async def process_chat_response(
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
                     update_data = {
-                        "content": serialize_content_blocks(content_blocks),
+                        # force=True: cancellation DB write. Same reasoning
+                        # as the success-path end-of-stream save — we want
+                        # the persisted row to have the partial canonical
+                        # content even when realtime-save is off.
+                        "content": serialize_content_blocks(content_blocks, force=True),
                         "content_blocks": content_blocks,
                     }
 

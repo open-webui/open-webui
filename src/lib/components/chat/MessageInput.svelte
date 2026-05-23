@@ -54,6 +54,7 @@
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
+	import QueuedMessages from './MessageInput/QueuedMessages.svelte';
 	import ToolServersModal from './ToolServersModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -105,6 +106,15 @@
 
 	export let prompt = '';
 	export let files = [];
+
+	// Queue of messages submitted while a response was streaming. The chip
+	// strip above the input shows these and lets the user edit / unqueue
+	// before they auto-send. Queue mutation handlers are owned by Chat.svelte
+	// because that's where persistence lives.
+	export let queue: any[] = [];
+	export let editQueuedMessage: (id: string, text: string) => void = () => {};
+	export let removeQueuedMessage: (id: string) => void = () => {};
+
 	const canceledImageUploads = new Set<string>();
 	const imageUploadAbortControllers = new Map<string, AbortController>();
 
@@ -264,10 +274,17 @@
 			// this, a stored value from when the model used different tiers
 			// (e.g. switching from OpenAI's "default" to Gemini's "standard")
 			// leaks into the payload.
-			serviceTier =
-				stored && allowedServiceTiers.includes(stored)
-					? stored
-					: (allowedServiceTiers[0] ?? 'default');
+			//
+			// Don't clobber the current `serviceTier` when there's no stored
+			// preference but the current value is already valid for this model —
+			// otherwise an auto-flipped tier (e.g. 'flex' set by Chat.svelte's
+			// off-peak / threshold reactive) gets reset to the first allowed
+			// tier on every model-change reactive run.
+			if (stored && allowedServiceTiers.includes(stored)) {
+				serviceTier = stored;
+			} else if (!allowedServiceTiers.includes(serviceTier)) {
+				serviceTier = allowedServiceTiers[0] ?? 'default';
+			}
 		} else {
 			serviceTier = 'default';
 		}
@@ -1641,6 +1658,8 @@
 							}}
 						/>
 					{:else}
+						<QueuedMessages {queue} {editQueuedMessage} {removeQueuedMessage} />
+
 						<form
 							class="w-full flex flex-col gap-1.5"
 							on:submit|preventDefault={() => {
@@ -2518,10 +2537,39 @@
 										{/if}
 
 										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
-											<div class=" flex items-center">
+											<div class=" flex items-center gap-1">
+												{#if !sendDisabled}
+													<!-- Queue button: while a response is streaming, pressing
+													     Enter or clicking here adds the typed message to the
+													     queue (handled in Chat.svelte's submitPrompt). Only
+													     visible when the user has something to queue. -->
+													<Tooltip content={$i18n.t('Queue message')}>
+														<button
+															id="queue-message-button"
+															class="bg-book-cloth/90 hover:bg-kraft text-white transition-colors duration-200 ease-paper rounded-full p-1.5"
+															type="submit"
+															aria-label={$i18n.t('Queue message')}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 20 20"
+																fill="currentColor"
+																class="size-5"
+																aria-hidden="true"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</button>
+													</Tooltip>
+												{/if}
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition-colors duration-200 ease-paper rounded-full p-1.5 border-hairline border-gray-300 dark:border-gray-700"
+														type="button"
 														on:click={() => {
 															stopResponse();
 														}}

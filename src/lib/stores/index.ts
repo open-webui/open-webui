@@ -316,6 +316,11 @@ type Config = {
 		enable_web_search?: boolean;
 		enable_subagents?: boolean;
 		subagent_default_model?: string;
+		flex_auto_flip_enabled?: boolean;
+		flex_auto_flip_off_peak_start_hour?: number;
+		flex_auto_flip_off_peak_end_hour?: number;
+		flex_auto_flip_off_peak_timezone?: string;
+		flex_auto_flip_threshold_ratio?: number;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;

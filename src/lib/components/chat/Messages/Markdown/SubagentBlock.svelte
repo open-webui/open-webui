@@ -4,7 +4,6 @@
 	import { quintOut } from 'svelte/easing';
 	import { toast } from 'svelte-sonner';
 
-	import { blocksToDisplayMarkdown } from '$lib/utils';
 	import { chatId, socket, subagentLiveStates } from '$lib/stores';
 	import { rerunSubagent, type SubagentRerunScope } from '$lib/apis/subagents';
 	import Markdown from '../Markdown.svelte';
@@ -44,25 +43,24 @@
 	$: continuation = run?.continuation === true;
 	$: stale = run?.stale === true;
 
-	// Render the subagent's content_blocks via the SAME projection used for
-	// regular assistant messages — that produces a markdown string with
-	// nested `<details type="tool_calls">`, `<details type="reasoning">`,
-	// etc. The recursive Markdown render then turns those into Collapsibles.
-	// Note: there will never be a nested `<details type="subagent_launch">`
-	// here because subagents don't get the subagent tools (enforced server-
-	// side in run_subagent.py / get_tools).
-	$: innerMarkdown = (() => {
-		if (run?.content_blocks && Array.isArray(run.content_blocks) && run.content_blocks.length) {
-			return blocksToDisplayMarkdown(run.content_blocks);
-		}
-		if (typeof run?.content === 'string' && run.content.length > 0) {
-			return run.content;
-		}
-		if (typeof run?.final_text === 'string' && run.final_text.length > 0) {
-			return run.final_text;
-		}
-		return '';
-	})();
+	// Subagent body renders the structured `content_blocks` directly via a
+	// keyed `{#each}` (see template below). We deliberately do NOT compute a
+	// flat markdown projection here: it would re-walk + re-stringify the
+	// whole array on every store update, and the parent `<Markdown>` would
+	// re-tokenise + {@html}-wipe the DOM on every chunk. That's the O(N²)
+	// pattern that made the UI feel like 1-2 TPS while OpenRouter was happily
+	// streaming at 20+. Structural rendering with keyed each lets Svelte
+	// reuse component instances for unchanged blocks and apply O(diff) text
+	// node updates for the one growing block, so per-event cost is O(1) and
+	// the UI tracks upstream as fast as the model can produce.
+	//
+	// During streaming we render text blocks as plain pre-wrapped text — no
+	// `marked.parse` per chunk. Once the run is complete we swap each text
+	// block to a full `<Markdown>` render so the final answer gets headings,
+	// lists, code blocks, etc. (one parse, total).
+	$: contentBlocks = (run?.content_blocks ?? []) as any[];
+	$: hasContent = contentBlocks.length > 0;
+	$: doneRendering = status !== 'running';
 
 	// Default collapsed in every state (running / done / error / cancelled).
 	// The user clicks the header (or the redo button) to expand and watch
@@ -73,6 +71,13 @@
 	const toggle = () => {
 		open = !open;
 	};
+
+	// Used by the tool_calls per-block render to look up the matching result
+	// entry. Lives outside the template so the typed callback doesn't trip
+	// Svelte's template parser (which doesn't accept TS annotations inside
+	// `{@const}` expressions).
+	const findToolResult = (results: any[] | undefined, callId: string | undefined) =>
+		(results ?? []).find((r: any) => r?.tool_call_id === callId);
 
 	const statusBadgeText = (s: typeof status) => {
 		switch (s) {
@@ -392,18 +397,83 @@
 				</div>
 			{/if}
 
-			{#if innerMarkdown}
-				<div class="subagent-inner-markdown markdown-prose">
-					<Markdown
-						id={`subagent-${stateKey}`}
-						content={innerMarkdown}
-						done={status !== 'running'}
-						editCodeBlock={false}
-					/>
+			{#if hasContent}
+				<div class="subagent-inner space-y-2">
+					{#each contentBlocks as block, i (i)}
+						{#if block?.type === 'text'}
+							{#if doneRendering}
+								<div class="markdown-prose">
+									<Markdown
+										id={`subagent-${stateKey}-text-${i}`}
+										content={block.content ?? ''}
+										done={true}
+										editCodeBlock={false}
+									/>
+								</div>
+							{:else}
+								<div
+									class="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
+								>{block.content ?? ''}</div>
+							{/if}
+						{:else if block?.type === 'reasoning'}
+							<details class="rounded-lg bg-gray-50 dark:bg-gray-850 px-3 py-1.5">
+								<summary
+									class="text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+								>
+									{#if block.duration != null}
+										{$i18n.t('Thought for {{n}}s', { n: block.duration })}
+									{:else}
+										{$i18n.t('Thinking…')}
+									{/if}
+								</summary>
+								<div
+									class="mt-2 whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400 leading-relaxed"
+								>{block.content ?? ''}</div>
+							</details>
+						{:else if block?.type === 'tool_calls'}
+							<div class="space-y-1">
+								{#each block.content ?? [] as call, j (call?.id ?? `tc-${i}-${j}`)}
+									{@const result = findToolResult(block.results, call?.id)}
+									<div
+										class="flex items-baseline gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono"
+									>
+										<span class="shrink-0 w-3 text-center">
+											{result !== undefined ? '✓' : '·'}
+										</span>
+										<span class="font-medium text-gray-800 dark:text-gray-300">
+											{call?.function?.name ?? 'tool'}
+										</span>
+										<span class="truncate text-gray-500 dark:text-gray-500">
+											{call?.function?.arguments ?? ''}
+										</span>
+									</div>
+								{/each}
+							</div>
+						{:else if block?.type === 'code_interpreter'}
+							<div class="rounded-lg bg-gray-50 dark:bg-gray-850 px-3 py-2 text-xs">
+								<div
+									class="font-medium text-gray-700 dark:text-gray-300 mb-1 font-mono"
+								>
+									{block.attributes?.lang ?? 'code'}
+								</div>
+								<pre
+									class="whitespace-pre-wrap font-mono text-gray-600 dark:text-gray-400">{block.content ?? ''}</pre>
+							</div>
+						{/if}
+					{/each}
 				</div>
 			{:else if status === 'running'}
 				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
 					{$i18n.t('Subagent is starting up…')}
+				</div>
+			{:else if status === 'done' && run?.final_text}
+				<div class="markdown-prose">
+					<Markdown
+						id={`subagent-${stateKey}-final`}
+						content={run.final_text}
+						done={true}
+						editCodeBlock={false}
+					/>
 				</div>
 			{/if}
 

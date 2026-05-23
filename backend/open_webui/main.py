@@ -99,6 +99,7 @@ from open_webui.routers import (
     utils,
     scim,
     subagents,
+    flex_auto_flip,
 )
 
 from open_webui.routers.retrieval import (
@@ -310,6 +311,12 @@ from open_webui.config import (
     SUBAGENT_PARENT_PROMPT,
     SUBAGENT_DEFAULT_REASONING_EFFORT,
     SUBAGENT_DEFAULT_SERVICE_TIER,
+    # Flex auto-flip
+    FLEX_AUTO_FLIP_ENABLED,
+    FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR,
+    FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR,
+    FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE,
+    FLEX_AUTO_FLIP_THRESHOLD_RATIO,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
@@ -969,6 +976,13 @@ app.state.config.SUBAGENT_PARENT_PROMPT = SUBAGENT_PARENT_PROMPT
 app.state.config.SUBAGENT_DEFAULT_REASONING_EFFORT = SUBAGENT_DEFAULT_REASONING_EFFORT
 app.state.config.SUBAGENT_DEFAULT_SERVICE_TIER = SUBAGENT_DEFAULT_SERVICE_TIER
 
+# Flex auto-flip
+app.state.config.FLEX_AUTO_FLIP_ENABLED = FLEX_AUTO_FLIP_ENABLED
+app.state.config.FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR = FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR
+app.state.config.FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR = FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR
+app.state.config.FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE = FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE
+app.state.config.FLEX_AUTO_FLIP_THRESHOLD_RATIO = FLEX_AUTO_FLIP_THRESHOLD_RATIO
+
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
 
@@ -1312,6 +1326,11 @@ app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 app.include_router(subagents.router, prefix="/api/v1/subagents", tags=["subagents"])
+app.include_router(
+    flex_auto_flip.router,
+    prefix="/api/v1/flex-auto-flip",
+    tags=["flex-auto-flip"],
+)
 
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 
@@ -1790,6 +1809,14 @@ async def get_app_config(request: Request):
                     # model and pick the right `service_tiers` list for its
                     # dropdown without needing an admin-only round trip.
                     "subagent_default_model": app.state.config.SUBAGENT_DEFAULT_MODEL,
+                    # Flex auto-flip policy — read by Chat.svelte's auto-flip
+                    # reactive. Surfaced (non-secret) so admins can tune the
+                    # off-peak window and threshold without touching code.
+                    "flex_auto_flip_enabled": app.state.config.FLEX_AUTO_FLIP_ENABLED,
+                    "flex_auto_flip_off_peak_start_hour": app.state.config.FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR,
+                    "flex_auto_flip_off_peak_end_hour": app.state.config.FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR,
+                    "flex_auto_flip_off_peak_timezone": app.state.config.FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE,
+                    "flex_auto_flip_threshold_ratio": app.state.config.FLEX_AUTO_FLIP_THRESHOLD_RATIO,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,

@@ -3095,6 +3095,46 @@ SUBAGENT_DEFAULT_SERVICE_TIER = PersistentConfig(
 )
 
 ####################################
+# Flex auto-flip
+####################################
+# Admin-tunable policy for the client-side reactive in `Chat.svelte` that
+# auto-switches `service_tier` from `default` to `flex` when (a) the current
+# wall-clock is inside an off-peak window or (b) any token group covering the
+# active model is at >= `threshold_ratio` of its limit. Surfaced via
+# `/api/config` so the frontend doesn't need an admin-only round trip.
+
+FLEX_AUTO_FLIP_ENABLED = PersistentConfig(
+    "FLEX_AUTO_FLIP_ENABLED",
+    "flex_auto_flip.enabled",
+    os.environ.get("FLEX_AUTO_FLIP_ENABLED", "true").lower() == "true",
+)
+
+# Hour-of-day window in `FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE`. Wraps midnight when
+# `start > end` (the default 13 -> 5 means 1pm through 5am next day).
+FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR = PersistentConfig(
+    "FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR",
+    "flex_auto_flip.off_peak_start_hour",
+    int(os.getenv("FLEX_AUTO_FLIP_OFF_PEAK_START_HOUR", "13")),
+)
+FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR = PersistentConfig(
+    "FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR",
+    "flex_auto_flip.off_peak_end_hour",
+    int(os.getenv("FLEX_AUTO_FLIP_OFF_PEAK_END_HOUR", "5")),
+)
+FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE = PersistentConfig(
+    "FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE",
+    "flex_auto_flip.off_peak_timezone",
+    os.getenv("FLEX_AUTO_FLIP_OFF_PEAK_TIMEZONE", "America/Los_Angeles"),
+)
+
+# Fraction of a token group's limit at which the auto-flip fires. 0.8 = 80%.
+FLEX_AUTO_FLIP_THRESHOLD_RATIO = PersistentConfig(
+    "FLEX_AUTO_FLIP_THRESHOLD_RATIO",
+    "flex_auto_flip.threshold_ratio",
+    float(os.getenv("FLEX_AUTO_FLIP_THRESHOLD_RATIO", "0.8")),
+)
+
+####################################
 # Images
 ####################################
 
