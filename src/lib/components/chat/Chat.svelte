@@ -516,21 +516,6 @@
 			serviceTier = 'flex';
 			if (subagentsEnabled) subagentServiceTier = 'flex';
 			_flexFlipNotified = true;
-
-			toast(
-				'Switched to flex — flex helps keep costs low in exchange for a slightly slower response. If you need a fast response, use standard.',
-				{
-					action: {
-						label: 'Undo',
-						onClick: () => {
-							serviceTier = _prevServiceTier;
-							subagentServiceTier = _prevSubagentTier;
-							flexAutoFlipUndoneForChat = true;
-						}
-					},
-					duration: 8000
-				}
-			);
 		}
 	}
 
@@ -814,24 +799,27 @@
 
 	// When models load after initNewChat ran with an empty $models list,
 	// apply the saved default (or first available) if nothing is selected yet.
-	$: if ($models.length > 0 && !chatIdProp && (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === ''))) {
+	$: if ($models.length > 0 && !chatIdProp) {
 		const _availableModels = $models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
-		if ($settings?.models) {
-			const filtered = $settings.models.filter((id) => _availableModels.includes(id));
-			if (filtered.length > 0) {
-				selectedModels = filtered;
+		const hasValidSelection = selectedModels.length > 0 && selectedModels.every((id) => id !== '' && _availableModels.includes(id));
+		if (!hasValidSelection) {
+			if ($settings?.models) {
+				const filtered = $settings.models.filter((id) => _availableModels.includes(id));
+				if (filtered.length > 0) {
+					selectedModels = filtered;
+				} else {
+					selectedModels = [_availableModels[0] ?? ''];
+				}
+			} else if ($config?.default_models) {
+				const filtered = $config.default_models.split(',').filter((id) => _availableModels.includes(id));
+				if (filtered.length > 0) {
+					selectedModels = filtered;
+				} else {
+					selectedModels = [_availableModels[0] ?? ''];
+				}
 			} else {
 				selectedModels = [_availableModels[0] ?? ''];
 			}
-		} else if ($config?.default_models) {
-			const filtered = $config.default_models.split(',').filter((id) => _availableModels.includes(id));
-			if (filtered.length > 0) {
-				selectedModels = filtered;
-			} else {
-				selectedModels = [_availableModels[0] ?? ''];
-			}
-		} else {
-			selectedModels = [_availableModels[0] ?? ''];
 		}
 	}
 
@@ -2058,9 +2046,11 @@
 			}
 		}
 
-		selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
-		);
+		if ($models.length > 0) {
+			selectedModels = selectedModels.map((modelId) =>
+				$models.map((m) => m.id).includes(modelId) ? modelId : ''
+			);
+		}
 
 		// Load persistent tool preferences from already-loaded settings store
 		if ($settings?.defaultToolIds) {
