@@ -103,11 +103,11 @@
 				const result = await updateCalendarEvent(localStorage.token, event.id, {
 					calendar_id: calendarId,
 					title: title.trim(),
-					description: description.trim() || undefined,
+					description: description.trim() || null,
 					start_at: startNs,
 					end_at: endNs,
 					all_day: allDay,
-					location: location.trim() || undefined,
+					location: location.trim() || null,
 					meta: { alert_minutes: alertMinutes }
 				});
 				if (result) {
