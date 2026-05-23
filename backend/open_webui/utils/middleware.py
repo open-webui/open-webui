@@ -2180,7 +2180,8 @@ def get_reasoning_format(model: dict) -> str | None:
         return 'think_tags'
     if provider == 'llama.cpp':
         return 'reasoning_content'
-    return None
+    # Default is 'reasoning_content'
+    return 'reasoning_content'
 
 
 def process_messages_with_output(
