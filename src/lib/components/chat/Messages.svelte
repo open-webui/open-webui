@@ -66,15 +66,28 @@
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
 
+	$: if (chatId) {
+		messagesCount = 20;
+	}
+
 	const loadMoreMessages = async () => {
-		// scroll slightly down to disable continuous loading
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		let previousScrollHeight = 0;
+		let previousScrollTop = 0;
+
+		if (element) {
+			previousScrollHeight = element.scrollHeight;
+			previousScrollTop = element.scrollTop;
+		}
 
 		messagesLoading = true;
 		messagesCount += 20;
 
 		await tick();
+
+		if (element) {
+			element.scrollTop = previousScrollTop + (element.scrollHeight - previousScrollHeight);
+		}
 
 		messagesLoading = false;
 	};
@@ -413,7 +426,7 @@
 			{#key chatId}
 				<section class="w-full" aria-labelledby="chat-conversation">
 					<h2 class="sr-only" id="chat-conversation">{$i18n.t('Chat Conversation')}</h2>
-					{#if messages.at(0)?.parentId !== null}
+					{#if messages.length > 0 && messages[0].parentId !== null && history.messages[messages[0].parentId] !== undefined}
 						<Loader
 							on:visible={(e) => {
 								console.log('visible');

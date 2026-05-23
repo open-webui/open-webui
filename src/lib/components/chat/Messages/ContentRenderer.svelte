@@ -72,7 +72,10 @@
 			if (blockProjections.length !== 0) blockProjections = [];
 		} else {
 			/** @type {string[]} */
-			const next = blockProjections.slice(0, blocks.length - 1);
+			const next = blockProjections.slice(
+				0,
+				Math.min(blocks.length - 1, Math.max(0, blockProjections.length - 1))
+			);
 			// Backfill projections for any newly-finalized blocks (we may have
 			// jumped multiple blocks in one update — e.g. tool_calls round
 			// completed and a fresh text block was appended in the same tick).

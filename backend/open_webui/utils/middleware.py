@@ -2773,10 +2773,6 @@ async def process_chat_response(
                                             content_blocks
                                             and content_blocks[-1]["type"]
                                             == "reasoning"
-                                            and content_blocks[-1]
-                                            .get("attributes", {})
-                                            .get("type")
-                                            == "reasoning_content"
                                         ):
                                             reasoning_block = content_blocks[-1]
                                             reasoning_block["ended_at"] = time.time()
