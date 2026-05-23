@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5-fork1] - 2026-05-23
+
+### Fixed
+
+- 🐛 **Update default return value in get_reasoning_format function.** The function now returns `'reasoning_content'` instead of `None`. [Commit](https://github.com/sweetbrulee/open-webui/commit/5cb525b871763f5fabb25b6b6e4836e7c0395979)
+
 ## [0.9.5] - 2026-05-09
 
 ### Added
