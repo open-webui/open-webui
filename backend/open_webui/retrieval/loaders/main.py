@@ -1,10 +1,10 @@
 import asyncio
-import requests
-import logging
-import ftfy
-import sys
 import json
+import logging
+import sys
 
+import ftfy
+import requests
 from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -13,19 +13,15 @@ from langchain_community.document_loaders import (
     Docx2txtLoader,
     OutlookMessageLoader,
     PyPDFLoader,
-    TextLoader,
-    YoutubeLoader,
 )
 from langchain_core.documents import Document
-
-from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
-
-from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
+from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
+from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
-
-from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY, AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.retrieval.loaders.text import read_text_file
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -131,6 +127,21 @@ class PptxLoader:
             Document(
                 page_content='\n\n'.join(text_parts),
                 metadata={'source': self.file_path},
+            )
+        ]
+
+
+class RobustTextLoader:
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    def load(self) -> list[Document]:
+        text, encoding = read_text_file(self.file_path)
+
+        return [
+            Document(
+                page_content=text,
+                metadata={'source': self.file_path, 'encoding': encoding},
             )
         ]
 
@@ -277,7 +288,7 @@ class Loader:
             )
         elif self.engine == 'tika' and self.kwargs.get('TIKA_SERVER_URL'):
             if self._is_text_file(file_ext, file_content_type):
-                loader = TextLoader(file_path, autodetect_encoding=True)
+                loader = RobustTextLoader(file_path)
             else:
                 loader = TikaLoader(
                     url=self.kwargs.get('TIKA_SERVER_URL'),
@@ -329,7 +340,7 @@ class Loader:
             )
         elif self.engine == 'docling' and self.kwargs.get('DOCLING_SERVER_URL'):
             if self._is_text_file(file_ext, file_content_type):
-                loader = TextLoader(file_path, autodetect_encoding=True)
+                loader = RobustTextLoader(file_path)
             else:
                 # Build params for DoclingLoader
                 params = self.kwargs.get('DOCLING_PARAMS', {})
@@ -426,7 +437,7 @@ class Loader:
                         'Falling back to plain text loading for .rst file. '
                         'Install it with: pip install unstructured'
                     )
-                    loader = TextLoader(file_path, autodetect_encoding=True)
+                    loader = RobustTextLoader(file_path)
             elif file_ext == 'xml':
                 try:
                     from langchain_community.document_loaders import UnstructuredXMLLoader
@@ -438,11 +449,11 @@ class Loader:
                         'Falling back to plain text loading for .xml file. '
                         'Install it with: pip install unstructured'
                     )
-                    loader = TextLoader(file_path, autodetect_encoding=True)
+                    loader = RobustTextLoader(file_path)
             elif file_ext in ['htm', 'html']:
                 loader = BSHTMLLoader(file_path, open_encoding='unicode_escape')
             elif file_ext == 'md':
-                loader = TextLoader(file_path, autodetect_encoding=True)
+                loader = RobustTextLoader(file_path)
             elif file_content_type == 'application/epub+zip':
                 try:
                     from langchain_community.document_loaders import UnstructuredEPubLoader
@@ -501,8 +512,8 @@ class Loader:
                         'Install it with: pip install unstructured'
                     )
             elif self._is_text_file(file_ext, file_content_type):
-                loader = TextLoader(file_path, autodetect_encoding=True)
+                loader = RobustTextLoader(file_path)
             else:
-                loader = TextLoader(file_path, autodetect_encoding=True)
+                loader = RobustTextLoader(file_path)
 
         return loader
