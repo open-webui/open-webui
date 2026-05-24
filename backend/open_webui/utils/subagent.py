@@ -672,7 +672,9 @@ async def run_subagent_launch(
     user-visible error string on retry exhaustion. Propagates
     ``asyncio.CancelledError`` so parent cancellation tears down cleanly.
     """
+    print(f"!! run_subagent_launch ENTERED name={name!r}", flush=True)
     if request is None or user_dict is None or parent_metadata is None or parent_event_emitter is None:
+        print(f"!! run_subagent_launch MISSING CONTEXT", flush=True)
         log.warning(
             "run_subagent_launch: missing required context — "
             f"request={request is not None} user={user_dict is not None} "
