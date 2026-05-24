@@ -13,11 +13,13 @@
 	let enableSubagents = false;
 	let defaultModel = '';
 	let parentPrompt = '';
+	let systemPromptAppend = '';
 	let defaultReasoningEffort = '';
 	let defaultServiceTier = '';
 
 	// Cached default so the "Reset" button works without a round-trip.
 	let initialParentPrompt = '';
+	let initialSystemPromptAppend = '';
 
 	// Common reasoning_effort values. The backend just passes the string
 	// through to the provider, so a custom value works too — admin can edit
@@ -47,6 +49,7 @@
 			const res = await updateSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enableSubagents,
 				SUBAGENT_DEFAULT_MODEL: defaultModel,
+				SUBAGENT_SYSTEM_PROMPT_APPEND: systemPromptAppend,
 				SUBAGENT_PARENT_PROMPT: parentPrompt,
 				SUBAGENT_DEFAULT_REASONING_EFFORT: defaultReasoningEffort,
 				SUBAGENT_DEFAULT_SERVICE_TIER: defaultServiceTier
@@ -73,6 +76,8 @@
 				defaultModel = res.SUBAGENT_DEFAULT_MODEL ?? '';
 				parentPrompt = res.SUBAGENT_PARENT_PROMPT ?? '';
 				initialParentPrompt = parentPrompt;
+				systemPromptAppend = res.SUBAGENT_SYSTEM_PROMPT_APPEND ?? '';
+				initialSystemPromptAppend = systemPromptAppend;
 				defaultReasoningEffort = res.SUBAGENT_DEFAULT_REASONING_EFFORT ?? '';
 				defaultServiceTier = res.SUBAGENT_DEFAULT_SERVICE_TIER ?? '';
 			}
@@ -167,6 +172,34 @@
 								<option value={opt.value}>{opt.label}</option>
 							{/each}
 						</select>
+					</div>
+
+					<div class="mb-2.5 flex w-full flex-col">
+						<div class="flex w-full items-center mb-1">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Subagent system prompt append')}
+							</div>
+							<button
+								type="button"
+								class="ml-auto text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+								on:click|preventDefault={() => {
+									systemPromptAppend = initialSystemPromptAppend;
+								}}
+							>
+								{$i18n.t('Reset')}
+							</button>
+						</div>
+						<div class=" text-xs text-gray-500 dark:text-gray-400 mb-1">
+							{$i18n.t(
+								'Appended to every subagent\'s system prompt after the model\'s own prompt. Use this for global instructions like citation style, output format, or domain rules you want ALL subagents to follow. Leave empty to skip.'
+							)}
+						</div>
+						<textarea
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-y"
+							rows="6"
+							placeholder={$i18n.t('Append to subagent system prompt…')}
+							bind:value={systemPromptAppend}
+						></textarea>
 					</div>
 
 					<div class="mb-2.5 flex w-full flex-col">

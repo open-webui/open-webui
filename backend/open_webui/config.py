@@ -3094,6 +3094,16 @@ SUBAGENT_DEFAULT_SERVICE_TIER = PersistentConfig(
     os.getenv("SUBAGENT_DEFAULT_SERVICE_TIER", ""),
 )
 
+# Appended to the subagent model's own system prompt on every inner subagent
+# turn. Lets the admin inject instructions (e.g. citation style, output format,
+# domain rules) without replacing the model's persona. Optional — empty string
+# = no append is injected.
+SUBAGENT_SYSTEM_PROMPT_APPEND = PersistentConfig(
+    "SUBAGENT_SYSTEM_PROMPT_APPEND",
+    "subagents.system_prompt_append",
+    os.getenv("SUBAGENT_SYSTEM_PROMPT_APPEND", ""),
+)
+
 ####################################
 # Flex auto-flip
 ####################################

@@ -145,15 +145,10 @@ def _resolve_subagent_model_id(
 
 
 def _compose_subagent_system_prompt(request: Request, subagent_model_id: str) -> str:
-    """Return the subagent's system prompt — explicitly ONLY the model's own
-    configured system prompt (the one set for that model in the admin
-    workspace UI). No admin-level subagent preamble is injected.
-
-    Rationale: the user wants the subagent to behave exactly like a regular
-    chat with that model, just spawned with the prompt they were given. Adding
-    a research-flavored preamble on top changed the model's character in ways
-    they didn't want.
-    """
+    """Return the subagent's system prompt: the model's own admin-set system
+    prompt with the optional SUBAGENT_SYSTEM_PROMPT_APPEND appended after a
+    blank line. No admin-level preamble replaces the model's persona."""
+    model_prompt = ""
     try:
         model_info = Models.get_model_by_id(subagent_model_id)
         if model_info and model_info.params:
@@ -162,10 +157,19 @@ def _compose_subagent_system_prompt(request: Request, subagent_model_id: str) ->
                 if hasattr(model_info.params, "model_dump")
                 else dict(model_info.params)
             )
-            return (params.get("system") or "").strip()
+            model_prompt = (params.get("system") or "").strip()
     except Exception as e:  # noqa: BLE001
         log.debug(f"could not load model system prompt for {subagent_model_id}: {e}")
-    return ""
+
+    # If the admin set a system-prompt append, tack it on after the model's
+    # own prompt (separated by a blank line so the model sees them as two
+    # distinct sections).
+    append = (
+        getattr(request.app.state.config, "SUBAGENT_SYSTEM_PROMPT_APPEND", "") or ""
+    ).strip()
+    if append:
+        return f"{model_prompt}\n\n{append}".strip()
+    return model_prompt
 
 
 def _upsert_subagent_run(
@@ -365,9 +369,11 @@ def _extract_final_text(subagent_chat_id: str, assistant_msg_id: str) -> str:
             text = blocks_to_plain_text(last_text_blocks).strip()
             if text:
                 return text
-        # Fallback: full plain text projection (includes reasoning quotes,
-        # tool markers). Still better than nothing.
-        return blocks_to_plain_text(blocks).strip()
+        # No trailing text after the last tool_calls — the subagent never
+        # produced a final synthesis.  Return empty string so the caller
+        # treats this as an error (prevents leaking reasoning/tool markers
+        # back to the parent model as if they were the answer).
+        return ""
     content = msg.get("content")
     if isinstance(content, str):
         return content.strip()

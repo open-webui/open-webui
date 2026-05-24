@@ -1019,10 +1019,10 @@ def get_subagent_tool_specs(extra_params: dict) -> dict:
             "callable": callable_continue,
             # Continues mutate the named subagent's chat history — they are
             # NOT safe to run concurrently against the same subagent. We don't
-            # have per-call dependency analysis, so mark non-parallelizable
-            # globally (the parent shouldn't be calling concurrent continues
-            # on the same subagent anyway, but this enforces it).
-            "metadata": {"parallelizable": False},
+            # have per-call dependency analysis, but we mark parallelizable
+            # here because the parent generally continues different subagents
+            # in parallel, rather than the same subagent.
+            "metadata": {"parallelizable": True},
         }
 
     return tools

@@ -4,6 +4,7 @@ export type SubagentsConfig = {
 	ENABLE_SUBAGENTS: boolean;
 	SUBAGENT_DEFAULT_MODEL: string;
 	SUBAGENT_SYSTEM_PROMPT: string;
+	SUBAGENT_SYSTEM_PROMPT_APPEND: string;
 	SUBAGENT_PARENT_PROMPT: string;
 	// Empty string = let the model use its own default. Otherwise one of
 	// minimal / low / medium / high / xhigh (or any provider-specific value).

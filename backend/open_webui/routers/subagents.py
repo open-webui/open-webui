@@ -31,6 +31,7 @@ class SubagentConfigForm(BaseModel):
     ENABLE_SUBAGENTS: Optional[bool] = None
     SUBAGENT_DEFAULT_MODEL: Optional[str] = None
     SUBAGENT_SYSTEM_PROMPT: Optional[str] = None
+    SUBAGENT_SYSTEM_PROMPT_APPEND: Optional[str] = None
     SUBAGENT_PARENT_PROMPT: Optional[str] = None
     SUBAGENT_DEFAULT_REASONING_EFFORT: Optional[str] = None
     SUBAGENT_DEFAULT_SERVICE_TIER: Optional[str] = None
@@ -43,6 +44,7 @@ def _serialize(request: Request) -> dict:
         "ENABLE_SUBAGENTS": config.ENABLE_SUBAGENTS,
         "SUBAGENT_DEFAULT_MODEL": config.SUBAGENT_DEFAULT_MODEL,
         "SUBAGENT_SYSTEM_PROMPT": config.SUBAGENT_SYSTEM_PROMPT,
+        "SUBAGENT_SYSTEM_PROMPT_APPEND": config.SUBAGENT_SYSTEM_PROMPT_APPEND,
         "SUBAGENT_PARENT_PROMPT": config.SUBAGENT_PARENT_PROMPT,
         "SUBAGENT_DEFAULT_REASONING_EFFORT": config.SUBAGENT_DEFAULT_REASONING_EFFORT,
         "SUBAGENT_DEFAULT_SERVICE_TIER": config.SUBAGENT_DEFAULT_SERVICE_TIER,
@@ -65,6 +67,10 @@ async def update_subagents_config(
         config.SUBAGENT_DEFAULT_MODEL = form_data.SUBAGENT_DEFAULT_MODEL
     if form_data.SUBAGENT_SYSTEM_PROMPT is not None:
         config.SUBAGENT_SYSTEM_PROMPT = form_data.SUBAGENT_SYSTEM_PROMPT
+    if form_data.SUBAGENT_SYSTEM_PROMPT_APPEND is not None:
+        config.SUBAGENT_SYSTEM_PROMPT_APPEND = (
+            form_data.SUBAGENT_SYSTEM_PROMPT_APPEND
+        )
     if form_data.SUBAGENT_PARENT_PROMPT is not None:
         config.SUBAGENT_PARENT_PROMPT = form_data.SUBAGENT_PARENT_PROMPT
     if form_data.SUBAGENT_DEFAULT_REASONING_EFFORT is not None:
