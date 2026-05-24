@@ -611,6 +611,41 @@ async def image_generations(
                 images.append({'url': url})
             return images
 
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == 'pollinations':
+            images = []
+
+            base_url = "https://gen.pollinations.ai/image"
+
+            for _ in range(form_data.n):
+                encoded_prompt = quote(form_data.prompt)
+
+                url = (
+                    f"{base_url}/{encoded_prompt}"
+                    f"?model=qwen-image"
+                    f"&width={width}"
+                    f"&height={height}"
+                    f"&seed=0"
+                    f"&enhance=true"
+                )
+
+                # optional edit-style input (if provided via metadata)
+                if metadata and metadata.get("image"):
+                    url += f"&image={quote(metadata['image'])}"
+
+                image_data, content_type = await get_image_data(url)
+
+                _, url = await upload_image(
+                    request,
+                    image_data,
+                    content_type,
+                    {**{"prompt": form_data.prompt}, **metadata},
+                    user,
+                )
+
+                images.append({'url': url})
+
+            return images
+
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == 'gemini':
             headers = {
                 'Content-Type': 'application/json',
@@ -720,6 +755,7 @@ async def image_generations(
                 )
                 images.append({'url': url})
             return images
+
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == 'automatic1111'
             or request.app.state.config.IMAGE_GENERATION_ENGINE == ''
