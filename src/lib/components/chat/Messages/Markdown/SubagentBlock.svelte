@@ -1,5 +1,3 @@
-<svelte:options immutable />
-
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { slide } from 'svelte/transition';
