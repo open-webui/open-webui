@@ -5,6 +5,7 @@ Source-controlled "pipe" Functions that ship with this fork. Functions are runti
 ## Files
 
 - `vertex_chat.py` — manifold pipe exposing Google **Gemini** (via `google-genai`) and **Anthropic Claude on Vertex** (via `anthropic.AsyncAnthropicVertex`). Both auth via `GOOGLE_APPLICATION_CREDENTIALS`.
+- `supervision_filter.py` — filter that forwards every user/assistant exchange to a Swept Workbench instance (`POST /v1/supervision_events`). Fires from the `outlet` hook, fire-and-forget (schedules the send as a background task so the chat response is never blocked; bounded by `max_inflight` so a slow Workbench can't pile up tasks). Valves: `workbench_base_url`, `workbench_token`, `agent_name` (required); `enabled`, `event_type`, `timeout_seconds`, `max_inflight` (optional, sensible defaults). This is the **outbound** side of the bridge (Open WebUI -> Workbench); the matching **inbound** receiver (`POST /api/v1/supervision/callback`, Workbench -> Open WebUI) lives at [`backend/open_webui/routers/supervision.py`](../../backend/open_webui/routers/supervision.py).
 
 ## Install (manual, one-off)
 
