@@ -73,7 +73,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.utils.webhook import post_webhook
+from open_webui.utils.webhook import post_webhook, post_webhook_event
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.groups import apply_default_group_assignment
 
@@ -523,7 +523,7 @@ async def ldap_auth(
                     )
 
                     if request.app.state.config.WEBHOOK_URL:
-                        await post_webhook(
+                        await post_webhook_event(
                             request.app.state.WEBUI_NAME,
                             request.app.state.config.WEBHOOK_URL,
                             WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
@@ -532,6 +532,7 @@ async def ldap_auth(
                                 'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                                 'user': user.model_dump_json(exclude_none=True),
                             },
+                            event='signup',
                         )
 
                 except HTTPException:
@@ -720,7 +721,7 @@ async def signup_handler(
         request.app.state.config.ENABLE_SIGNUP = False
 
     if request.app.state.config.WEBHOOK_URL:
-        await post_webhook(
+        await post_webhook_event(
             request.app.state.WEBUI_NAME,
             request.app.state.config.WEBHOOK_URL,
             WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
@@ -729,6 +730,7 @@ async def signup_handler(
                 'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                 'user': user.model_dump_json(exclude_none=True),
             },
+            event='signup',
         )
 
     await apply_default_group_assignment(
