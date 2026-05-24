@@ -121,9 +121,7 @@
 	// Send button disable: blocks while any attached file is still in flight
 	// (browser upload) or having its text extracted on the backend. The chip's
 	// own spinner is the explanation for the disabled state, so no extra banner.
-	$: hasInFlightFiles = files.some(
-		(f) => f?.status === 'uploading' || f?.status === 'processing'
-	);
+	$: hasInFlightFiles = files.some((f) => f?.status === 'uploading' || f?.status === 'processing');
 	$: sendDisabled = (prompt === '' && files.length === 0) || hasInFlightFiles;
 
 	export let selectedToolIds = [];
@@ -162,6 +160,7 @@
 	let serviceTierByModel: Record<string, ServiceTier> = {};
 	let showServiceTierSelector = false;
 	let allowedServiceTiers: readonly string[] = DEFAULT_SERVICE_TIERS;
+	let _lastServiceTierModelId = '';
 
 	const getServiceTiersForModel = (modelId: string): readonly string[] => {
 		const m = $models.find((mm) => mm.id === modelId);
@@ -262,6 +261,11 @@
 	// UI is hidden.
 	$: if (selectedModelIds.length === 1 && preferencesLoaded) {
 		const _modelId = selectedModelIds[0];
+		const _modelChanged = _modelId !== _lastServiceTierModelId;
+		if (_modelChanged) {
+			_lastServiceTierModelId = _modelId;
+		}
+
 		const _m = $models.find((m) => m.id === _modelId);
 		const _supportsServiceTier =
 			_m?.owned_by !== 'ollama' && (_m?.info?.meta as any)?.service_tier?.enabled !== false;
@@ -270,17 +274,11 @@
 			: DEFAULT_SERVICE_TIERS;
 		if (_supportsServiceTier) {
 			const stored = serviceTierByModel[_modelId];
-			// Clamp the persisted tier against the model's allowed list. Without
-			// this, a stored value from when the model used different tiers
-			// (e.g. switching from OpenAI's "default" to Gemini's "standard")
-			// leaks into the payload.
-			//
-			// Don't clobber the current `serviceTier` when there's no stored
-			// preference but the current value is already valid for this model —
-			// otherwise an auto-flipped tier (e.g. 'flex' set by Chat.svelte's
-			// off-peak / threshold reactive) gets reset to the first allowed
-			// tier on every model-change reactive run.
-			if (stored && allowedServiceTiers.includes(stored)) {
+			// Only restore the persisted tier when the user actually switches
+			// models.  When `serviceTier` changes for any other reason — e.g.
+			// Chat.svelte's off-peak / threshold auto-flip sets it to 'flex' —
+			// leave the value alone so the flip actually sticks.
+			if (_modelChanged && stored && allowedServiceTiers.includes(stored)) {
 				serviceTier = stored;
 			} else if (!allowedServiceTiers.includes(serviceTier)) {
 				serviceTier = allowedServiceTiers[0] ?? 'default';
@@ -748,9 +746,7 @@
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			webSearchCapableModels.length &&
 		($config == null || !!$config?.features?.enable_web_search) &&
-		($_user == null ||
-			$_user?.role === 'admin' ||
-			!!$_user?.permissions?.features?.web_search);
+		($_user == null || $_user?.role === 'admin' || !!$_user?.permissions?.features?.web_search);
 
 	let showSubagentsButton = false;
 	// Subagents are model-agnostic (the inner subagent picks its own model
@@ -759,9 +755,7 @@
 	// web-search does. Just gate on the global feature flag + user permission.
 	$: showSubagentsButton =
 		($config == null || !!$config?.features?.enable_subagents) &&
-		($_user == null ||
-			$_user?.role === 'admin' ||
-			!!$_user?.permissions?.features?.subagents);
+		($_user == null || $_user?.role === 'admin' || !!$_user?.permissions?.features?.subagents);
 
 	// Resolves the subagent's effective model id the same way the backend
 	// (`utils/subagent._resolve_subagent_model_id`) does — admin default →
@@ -2143,8 +2137,7 @@
 												placement="top"
 											>
 												<button
-													on:click|preventDefault={() =>
-														(subagentsEnabled = !subagentsEnabled)}
+													on:click|preventDefault={() => (subagentsEnabled = !subagentsEnabled)}
 													type="button"
 													class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {subagentsEnabled
 														? ' text-gray-900 dark:text-gray-100 bg-manilla/60 hover:bg-manilla/80 dark:bg-manilla-dark dark:hover:bg-manilla-dark/80 border-hairline border-book-cloth/30 dark:border-book-cloth/40'
