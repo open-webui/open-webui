@@ -207,7 +207,9 @@ def _upsert_subagent_run(
         Chats.upsert_message_to_chat_by_id_and_message_id(
             parent_chat_id, parent_message_id, {"subagent_runs": new_runs}
         )
+        print(f"!! _upsert_subagent_run COMMITTED sa={subagent_id} runs={len(new_runs)}", flush=True)
     except Exception as e:  # noqa: BLE001
+        print(f"!! _upsert_subagent_run FAILED: {e}", flush=True)
         log.warning(
             f"failed to upsert subagent_run {subagent_id} on "
             f"{parent_chat_id}/{parent_message_id}: {e}"
