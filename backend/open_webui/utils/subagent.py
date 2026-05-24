@@ -236,18 +236,20 @@ def _build_forwarding_emitter(
     }
 
     async def forwarding_emitter(event: dict) -> None:
-        # Always persist to subagent's chat row + emit on subagent scope first.
-        # We swallow errors from the base emitter so a hiccup persisting one
-        # chunk doesn't break the forward (the parent UI is the source of
-        # truth for live display; the subagent row is a backup for replay).
-        try:
-            await base_emitter(event)
-        except Exception as e:  # noqa: BLE001
-            log.debug(f"subagent base emitter raised: {e}")
+        etype = event.get("type") if isinstance(event, dict) else None
 
-        if not isinstance(event, dict):
-            return
-        etype = event.get("type")
+        # Persist to the subagent's own chat row + emit on subagent scope.
+        # Skip for `chat:completion` deltas: nobody is watching the hidden
+        # subagent chat, and these events don't trigger DB writes anyway.
+        # Status/source/citation/etc. still flow through base_emitter for
+        # persistence. We swallow errors so one hiccup doesn't break the
+        # forward to the parent UI.
+        if etype != "chat:completion":
+            try:
+                await base_emitter(event)
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"subagent base emitter raised: {e}")
+
         if etype not in FORWARDED_TYPES:
             return
         try:
@@ -566,7 +568,13 @@ async def _run_inner_chat(
         "timezone": parent_metadata.get("timezone"),
         "model": subagent_model,
         "direct": False,
-        "params": {"function_calling": "native"},
+        "params": {
+            "function_calling": "native",
+            # Batch 200 content-delta chunks per socket emission for subagents.
+            # Regular chats still use the global CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+            # (default 1); this only affects the subagent's inner pipeline.
+            "stream_delta_chunk_size": 200,
+        },
         # Override hooks — process_chat_response in middleware respects these
         # in place of the default get_event_emitter(metadata) lookup.
         "event_emitter_override": forwarding_emitter,

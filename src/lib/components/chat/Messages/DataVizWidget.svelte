@@ -61,7 +61,8 @@
 	let pendingResolve: ((res: WidgetRenderResponse) => void) | null = null;
 	let pendingHardTimeout: ReturnType<typeof setTimeout> | null = null;
 	let loadGraceTimer: ReturnType<typeof setTimeout> | null = null;
-	const LOAD_GRACE_MS = 300; // window for async errors to surface after onload
+	let rAFGraceId: number | null = null;
+	let rAFGraceTimeout: ReturnType<typeof setTimeout> | null = null;
 	const HARD_TIMEOUT_MS = 12_000; // upper bound; longer than typical repair latency
 
 	// When the parent passes a different widgetCode (e.g., new tool call in a
@@ -311,6 +312,14 @@ ${fragment}
 			clearTimeout(loadGraceTimer);
 			loadGraceTimer = null;
 		}
+		if (rAFGraceId) {
+			cancelAnimationFrame(rAFGraceId);
+			rAFGraceId = null;
+		}
+		if (rAFGraceTimeout) {
+			clearTimeout(rAFGraceTimeout);
+			rAFGraceTimeout = null;
+		}
 		if (pendingResolve) {
 			const r = pendingResolve;
 			pendingResolve = null;
@@ -379,17 +388,55 @@ ${fragment}
 
 	const handleIframeLoad = () => {
 		if (!pendingResolve) return;
-		// Schedule "ok" for after the grace window. If an error postMessage
-		// arrives before then, handleIframeError will preempt this.
-		if (loadGraceTimer) clearTimeout(loadGraceTimer);
-		loadGraceTimer = setTimeout(() => {
-			loadGraceTimer = null;
-			if (pendingResolve) {
-				const r = pendingResolve;
-				pendingResolve = null;
-				r({ status: 'ok' });
+
+		// Wait for the browser to complete rendering by counting consecutive
+		// animation frames. Chart.js, D3, etc. schedule their first paint via
+		// rAF or ResizeObserver (which fires before rAF). After 5 stable
+		// frames the browser has fully painted; then add a short grace window
+		// for any async errors to surface via postMessage.
+		const RENDER_FRAMES = 5;
+		let stableFrames = 0;
+		let rafId: number | null = null;
+		let rafTimeout: ReturnType<typeof setTimeout> | null = null;
+
+		const checkFrame = () => {
+			if (!pendingResolve) {
+				if (rafId) cancelAnimationFrame(rafId);
+				if (rafTimeout) clearTimeout(rafTimeout);
+				return;
 			}
-		}, LOAD_GRACE_MS);
+			stableFrames++;
+			if (stableFrames >= RENDER_FRAMES) {
+				if (loadGraceTimer) clearTimeout(loadGraceTimer);
+				loadGraceTimer = setTimeout(() => {
+					loadGraceTimer = null;
+					if (pendingResolve) {
+						const r = pendingResolve;
+						pendingResolve = null;
+						r({ status: 'ok' });
+					}
+				}, 500);
+			} else {
+				rafId = requestAnimationFrame(checkFrame);
+			}
+		};
+		rafId = requestAnimationFrame(checkFrame);
+
+		// Safety: if rAF is throttled (e.g. hidden tab at 1fps),
+		// don't wait forever. Fall through to the grace window.
+		rafTimeout = setTimeout(() => {
+			if (!pendingResolve || stableFrames >= RENDER_FRAMES) return;
+			if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+			if (loadGraceTimer) clearTimeout(loadGraceTimer);
+			loadGraceTimer = setTimeout(() => {
+				loadGraceTimer = null;
+				if (pendingResolve) {
+					const r = pendingResolve;
+					pendingResolve = null;
+					r({ status: 'ok' });
+				}
+			}, 500);
+		}, 5000);
 	};
 
 	const handleIframeError = (data: { msg: string; stack?: string }) => {

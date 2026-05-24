@@ -585,6 +585,22 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Persistent HTTP session with connection pooling — avoids the cost of
+    # creating a new aiohttp.ClientSession (TLS handshake, DNS, connector
+    # init) for every outgoing LLM request. Shared across all routes.
+    app.state.http_session = aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(
+            limit=500,
+            limit_per_host=200,
+            ttl_dns_cache=600,
+            use_dns_cache=True,
+            keepalive_timeout=60,
+            enable_cleanup_closed=True,
+        ),
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        trust_env=True,
+    )
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
@@ -607,6 +623,9 @@ async def lifespan(app: FastAPI):
         )
 
     yield
+
+    if hasattr(app.state, "http_session"):
+        await app.state.http_session.close()
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()

@@ -29,7 +29,6 @@ export type WidgetRenderResponse = {
 	error_stack?: string;
 };
 
-const LOAD_GRACE_MS = 300;
 const HARD_TIMEOUT_MS = 12_000;
 
 const escapeForJsString = (s: string) => JSON.stringify(s);
@@ -151,6 +150,8 @@ export function liveRenderWidget(req: WidgetRenderRequest): Promise<WidgetRender
 		let resolved = false;
 		let loadGrace: ReturnType<typeof setTimeout> | null = null;
 		let hardTimeout: ReturnType<typeof setTimeout> | null = null;
+		let rAFId: ReturnType<typeof requestAnimationFrame> | null = null;
+		let rAFTimeout: ReturnType<typeof setTimeout> | null = null;
 
 		const cleanup = () => {
 			window.removeEventListener('message', onMessage);
@@ -161,6 +162,14 @@ export function liveRenderWidget(req: WidgetRenderRequest): Promise<WidgetRender
 			if (hardTimeout) {
 				clearTimeout(hardTimeout);
 				hardTimeout = null;
+			}
+			if (rAFId) {
+				cancelAnimationFrame(rAFId);
+				rAFId = null;
+			}
+			if (rAFTimeout) {
+				clearTimeout(rAFTimeout);
+				rAFTimeout = null;
 			}
 			try {
 				if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
@@ -188,12 +197,39 @@ export function liveRenderWidget(req: WidgetRenderRequest): Promise<WidgetRender
 
 		iframe.addEventListener('load', () => {
 			if (resolved) return;
-			// Grace period for async errors that fire after onload (e.g. inside
-			// setTimeout, Promise.then, or DOMContentLoaded handlers).
-			if (loadGrace) clearTimeout(loadGrace);
-			loadGrace = setTimeout(() => {
-				finish({ status: 'ok' });
-			}, LOAD_GRACE_MS);
+
+			// Wait for the browser to complete rendering by counting consecutive
+			// animation frames. Chart.js, D3, etc. schedule their first paint via
+			// rAF or ResizeObserver (which fires before rAF). After 5 stable
+			// frames the browser has fully painted; then add a short grace window
+			// for any async errors to surface via postMessage.
+			const RENDER_FRAMES = 5;
+			let stableFrames = 0;
+
+			const checkFrame = () => {
+				if (resolved) return;
+				stableFrames++;
+				if (stableFrames >= RENDER_FRAMES) {
+					if (loadGrace) clearTimeout(loadGrace);
+					loadGrace = setTimeout(() => {
+						finish({ status: 'ok' });
+					}, 500);
+				} else {
+					rAFId = requestAnimationFrame(checkFrame);
+				}
+			};
+			rAFId = requestAnimationFrame(checkFrame);
+
+			// Safety: if rAF is throttled (e.g. hidden tab at 1fps),
+			// don't wait forever. Fall through to the grace window.
+			rAFTimeout = setTimeout(() => {
+				if (resolved || stableFrames >= RENDER_FRAMES) return;
+				if (rAFId) { cancelAnimationFrame(rAFId); rAFId = null; }
+				if (loadGrace) clearTimeout(loadGrace);
+				loadGrace = setTimeout(() => {
+					finish({ status: 'ok' });
+				}, 500);
+			}, 5000);
 		});
 
 		iframe.addEventListener('error', () => {

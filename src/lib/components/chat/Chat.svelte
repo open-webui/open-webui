@@ -1081,10 +1081,6 @@
 
 	const chatEventHandler = async (event, cb) => {
 		if (!isVisibleChatEvent(event.chat_id)) {
-			console.log('❌ Chat ID mismatch - event ignored', {
-				eventChatId: event.chat_id,
-				visibleChatId: getVisibleChatId()
-			});
 			return;
 		}
 

@@ -1594,11 +1594,7 @@ async def generate_chat_completion(
     response = None
 
     try:
-        session = aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-            read_bufsize=4 * 1024 * 1024,  # 4MB to handle large SSE lines from reasoning models
-        )
+        session = request.app.state.http_session
 
         r = await session.request(
             method="POST",
@@ -1680,7 +1676,7 @@ async def generate_chat_completion(
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
-                    cleanup_response, response=r, session=session
+                    cleanup_response, response=r, session=None
                 ),
             )
         else:
@@ -1722,7 +1718,8 @@ async def generate_chat_completion(
         )
     finally:
         if not streaming:
-            await cleanup_response(r, session)
+            if r:
+                r.close()
 
 
 async def embeddings(request: Request, form_data: dict, user):
