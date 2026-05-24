@@ -180,6 +180,10 @@ def _upsert_subagent_run(
     multiple times. Skips silently if either id is missing or the chat row is
     a temp/local chat (those never persist)."""
     if not parent_chat_id or not parent_message_id or not subagent_id:
+        log.info(
+            "_upsert_subagent_run SKIP: missing id(s) — "
+            f"chat={parent_chat_id!r} msg={parent_message_id!r} sa={subagent_id!r}"
+        )
         return
     if parent_chat_id.startswith("local:"):
         return
@@ -196,6 +200,10 @@ def _upsert_subagent_run(
             prior = {}
         merged_run = {**prior, **patch}
         new_runs = {**existing_runs, subagent_id: merged_run}
+        log.info(
+            f"_upsert_subagent_run: chat={parent_chat_id} msg={parent_message_id} "
+            f"sa={subagent_id} status={patch.get('status')} runs_count={len(new_runs)}"
+        )
         Chats.upsert_message_to_chat_by_id_and_message_id(
             parent_chat_id, parent_message_id, {"subagent_runs": new_runs}
         )
