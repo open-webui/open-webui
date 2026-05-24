@@ -180,7 +180,7 @@ def _upsert_subagent_run(
     multiple times. Skips silently if either id is missing or the chat row is
     a temp/local chat (those never persist)."""
     if not parent_chat_id or not parent_message_id or not subagent_id:
-        log.info(
+        log.warning(
             "_upsert_subagent_run SKIP: missing id(s) — "
             f"chat={parent_chat_id!r} msg={parent_message_id!r} sa={subagent_id!r}"
         )
@@ -673,6 +673,11 @@ async def run_subagent_launch(
     ``asyncio.CancelledError`` so parent cancellation tears down cleanly.
     """
     if request is None or user_dict is None or parent_metadata is None or parent_event_emitter is None:
+        log.warning(
+            "run_subagent_launch: missing required context — "
+            f"request={request is not None} user={user_dict is not None} "
+            f"meta={parent_metadata is not None} emitter={parent_event_emitter is not None}"
+        )
         return "Subagent ERROR: tool was invoked without required runtime context"
 
     user = Users.get_user_by_id(user_dict.get("id"))
@@ -687,6 +692,11 @@ async def run_subagent_launch(
     parent_chat = Chats.get_chat_by_id_and_user_id(parent_chat_id, user.id)
     if parent_chat is None:
         return "Subagent ERROR: parent chat not accessible"
+
+    log.warning(
+        f"run_subagent_launch START: name={name!r} "
+        f"chat={parent_chat_id} msg={parent_message_id}"
+    )
 
     # Disambiguate name + assign num.
     all_runs = _gather_all_subagent_runs(parent_chat)

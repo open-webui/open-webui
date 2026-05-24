@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { toast } from 'svelte-sonner';
 
 	import { chatId, socket, subagentLiveStates } from '$lib/stores';
 	import { rerunSubagent, type SubagentRerunScope } from '$lib/apis/subagents';
+	import { getChatById } from '$lib/apis/chats';
 	import Markdown from '../Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -67,6 +68,45 @@
 	// the subagent's current work. The status badge + spinner in the header
 	// still convey progress at a glance without forcing the body open.
 	let open = false;
+
+	// Fallback: when the store has no entry for this subagent after reload,
+	// fetch the subagent chat's content directly from the API.
+	let fallbackFetching = false;
+	let fallbackContent = '';
+	let fallbackError = '';
+
+	async function fetchFallbackContent() {
+		if (fallbackFetching || fallbackContent) return;
+		const chatId = subagentChatId;
+		if (!chatId) return;
+		fallbackFetching = true;
+		try {
+			const chat = await getChatById(localStorage.token, chatId);
+			if (chat?.chat?.history) {
+				const msgs = chat.chat.history.messages ?? {};
+				// Find the last assistant message
+				let lastContent = '';
+				for (const msg of Object.values(msgs)) {
+					if ((msg as any).role === 'assistant') {
+						lastContent = (msg as any).content ?? '';
+					}
+				}
+				fallbackContent = lastContent || $i18n.t('(empty response)');
+			} else {
+				fallbackError = $i18n.t('Could not load subagent results.');
+			}
+		} catch (e) {
+			console.error('Failed to fetch subagent fallback:', e);
+			fallbackError = $i18n.t('Could not load subagent results.');
+		} finally {
+			fallbackFetching = false;
+		}
+	}
+
+	// Trigger fallback fetch when user expands and content is missing
+	$: if (open && !run && status === 'done' && !fallbackFetching && !fallbackContent && !fallbackError) {
+		fetchFallbackContent();
+	}
 
 	const toggle = () => {
 		open = !open;
@@ -474,6 +514,21 @@
 						editCodeBlock={false}
 					/>
 				</div>
+			{:else if status === 'done' && fallbackContent}
+				<div class="markdown-prose">
+					<Markdown
+						id={`subagent-${stateKey}-fallback`}
+						content={fallbackContent}
+						done={true}
+						editCodeBlock={false}
+					/>
+				</div>
+			{:else if status === 'done' && fallbackFetching}
+				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
+					{$i18n.t('Loading subagent results…')}
+				</div>
+			{:else if status === 'done' && fallbackError}
+				<div class="text-sm text-red-500 italic">{fallbackError}</div>
 			{/if}
 
 			{#if subagentChatId}
