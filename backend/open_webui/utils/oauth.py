@@ -81,11 +81,15 @@ from open_webui.models.auths import Auths
 from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
+from open_webui.utils.misc import parse_duration
+from open_webui.utils.auth import get_password_hash, create_token
+from open_webui.utils.webhook import post_webhook, post_webhook_event
+from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.webhook import post_webhook
+
 from starlette.responses import RedirectResponse
 
 
@@ -1724,7 +1728,7 @@ class OAuthManager:
                         user = await Users.get_user_by_id(user.id, db=db)
 
                     if auth_manager_config.WEBHOOK_URL:
-                        await post_webhook(
+                        await post_webhook_event(
                             WEBUI_NAME,
                             auth_manager_config.WEBHOOK_URL,
                             WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
@@ -1732,7 +1736,9 @@ class OAuthManager:
                                 'action': 'signup',
                                 'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                                 'user': user.model_dump_json(exclude_none=True),
+                                'provider': provider,
                             },
+                            event='oauth_signup',
                         )
 
                     await apply_default_group_assignment(request.app.state.config.DEFAULT_GROUP_ID, user.id, db=db)
