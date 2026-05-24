@@ -28,6 +28,9 @@
 	$: stateKey = (attributes?.tool_call_id || attributes?.id || '') as string;
 	$: run = stateKey ? $subagentLiveStates[stateKey] : undefined;
 
+	// Debug: trace subagent hydration
+	$: console.debug('[subagent] stateKey:', stateKey, 'attributes:', JSON.stringify({ tcId: attributes?.tool_call_id, id: attributes?.id, done: attributes?.done }), 'run:', run ? { status: run.status, name: run.name, hasFinalText: !!run.final_text, hasContentBlocks: Array.isArray(run.content_blocks) && run.content_blocks.length > 0 } : null, 'storeSize:', Object.keys($subagentLiveStates).length, 'storeKeys:', Object.keys($subagentLiveStates).slice(0, 5));
+
 	// Header status the user sees. Prefer the store entry (live + final);
 	// fall back to the markdown attribute when the store hasn't been
 	// hydrated yet for some reason (e.g. mid-stream race).

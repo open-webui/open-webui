@@ -2228,8 +2228,13 @@
 				if (runs && typeof runs === 'object') {
 					for (const [, run] of Object.entries(runs)) {
 						const r = run as any;
-						const key = r?.tool_call_id || r?.subagent_id;
-						if (key) {
+						// Seed under every available key so SubagentBlock
+						// can find the run regardless of which HTML attribute
+						// the markdown parser preserves (tool_call_id vs id).
+						const keys: string[] = [];
+						if (r?.tool_call_id) keys.push(r.tool_call_id);
+						if (r?.subagent_id && r.subagent_id !== r?.tool_call_id) keys.push(r.subagent_id);
+						for (const key of keys) {
 							seeded[key] = {
 								...r,
 								parent_message_id: (msg as any).id
