@@ -581,6 +581,19 @@ async def import_chats(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
+        # Exported chats carry the source instance's folder_id values, but the
+        # export does not include the folders themselves. On a fresh instance
+        # (or after the folders were deleted) those references dangle: the chat
+        # list query hides any chat with a non-null folder_id, and there is no
+        # matching folder to surface it from, so the import reports success yet
+        # the chats are nowhere to be seen. Drop folder references the user does
+        # not own so imported chats land in the main chat list; references that
+        # are still valid (re-importing on the same instance) are preserved.
+        owned_folder_ids = {folder.id for folder in await Folders.get_folders_by_user_id(user.id, db=db)}
+        for chat in form_data.chats:
+            if chat.folder_id is not None and chat.folder_id not in owned_folder_ids:
+                chat.folder_id = None
+
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
         return chats
     except Exception as e:
