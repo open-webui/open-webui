@@ -35,7 +35,9 @@ from open_webui.models.models import (
     ModelResponse,
     Models,
 )
+from open_webui.models.files import Files
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -191,6 +193,23 @@ async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Dep
 ############################
 
 
+async def _verify_knowledge_items_file_access(knowledge_items, user, db) -> None:
+    # Reject model knowledge referencing files the caller cannot read (blocks forged meta.knowledge file IDOR).
+    for item in knowledge_items or []:
+        if not isinstance(item, dict) or item.get('type') != 'file' or not item.get('id'):
+            continue
+        file = await Files.get_file_by_id(item['id'], db=db)
+        if file and (
+            file.user_id == user.id or user.role == 'admin' or await has_access_to_file(item['id'], 'read', user, db=db)
+        ):
+            continue
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
+async def _verify_model_knowledge_file_access(form_data, user, db) -> None:
+    await _verify_knowledge_items_file_access(getattr(form_data.meta, 'knowledge', None), user, db)
+
+
 @router.post('/create', response_model=ModelModel | None)
 async def create_new_model(
     request: Request, form_data: ModelForm,
@@ -204,6 +223,8 @@ async def create_new_model(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    await _verify_model_knowledge_file_access(form_data, user, db)
 
     model = await Models.get_model_by_id(form_data.id, db=db)
     if model:
@@ -291,6 +312,13 @@ async def import_models(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    # Validate up here: the try below would mask a 403 as a 500.
+    if isinstance(form_data.models, list):
+        for model_data in form_data.models:
+            if isinstance(model_data, dict):
+                await _verify_knowledge_items_file_access((model_data.get('meta') or {}).get('knowledge'), user, db)
+
     try:
         data = form_data.models
         if isinstance(data, list):
@@ -613,6 +641,8 @@ async def update_model_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    await _verify_model_knowledge_file_access(form_data, user, db)
 
     form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
