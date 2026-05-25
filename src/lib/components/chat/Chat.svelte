@@ -365,6 +365,42 @@
 	};
 
 	let taskIds = null;
+	let resumeTaskPollInterval: ReturnType<typeof setInterval> | null = null;
+	let resumeTaskPollInFlight = false;
+
+	const stopResumeTaskPolling = () => {
+		if (resumeTaskPollInterval) {
+			clearInterval(resumeTaskPollInterval);
+			resumeTaskPollInterval = null;
+		}
+		resumeTaskPollInFlight = false;
+	};
+
+	const startResumeTaskPolling = (chatIdToWatch: string) => {
+		if (!chatIdToWatch || $temporaryChatEnabled) return;
+		if (resumeTaskPollInterval) return;
+		resumeTaskPollInterval = setInterval(async () => {
+			if (resumeTaskPollInFlight) return;
+			resumeTaskPollInFlight = true;
+			try {
+				const res = await getTaskIdsByChatId(localStorage.token, chatIdToWatch).catch(() => null);
+				const activeTaskIds = res?.task_ids ?? [];
+				if (activeTaskIds.length === 0) {
+					stopResumeTaskPolling();
+					taskIds = null;
+					generating = false;
+					generationController = null;
+					if (getVisibleChatId() === chatIdToWatch) {
+						await loadChat();
+					}
+				} else {
+					taskIds = activeTaskIds;
+				}
+			} finally {
+				resumeTaskPollInFlight = false;
+			}
+		}, 2000);
+	};
 
 	// Chat Input
 	let prompt = '';
@@ -684,6 +720,7 @@
 
 	onDestroy(() => {
 		stopUsagePolling();
+		stopResumeTaskPolling();
 		if (_nowTickInterval) {
 			clearInterval(_nowTickInterval);
 			_nowTickInterval = null;
@@ -693,6 +730,7 @@
 	const navigateHandler = async () => {
 		const myGeneration = ++navigateGeneration;
 		loading = true;
+		stopResumeTaskPolling();
 		lastPersistedWebSearchEnabled = null;
 		lastPersistedStudyModeEnabled = null;
 		lastPersistedDataVizEnabled = null;
@@ -868,6 +906,7 @@
 		subagentsEnabled = false;
 		subagentReasoningEffort = '';
 		subagentServiceTier = '';
+		subagentLiveStates.set({});
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 
@@ -1079,6 +1118,42 @@
 		saveChatHandler(_chatId, history);
 	};
 
+	const extractSubagentFinalText = (contentBlocks: any[] | undefined, content = '') => {
+		if (typeof content === 'string' && content.trim()) return content.trim();
+		if (!Array.isArray(contentBlocks)) return '';
+		const textBlocks: string[] = [];
+		for (const block of contentBlocks) {
+			if (block?.type === 'text' && typeof block?.content === 'string' && block.content.trim()) {
+				textBlocks.push(block.content.trim());
+			}
+		}
+		return textBlocks.join('\n\n').trim();
+	};
+
+	const patchParentSubagentRun = (run: any) => {
+		const parentMessageId = run?.parent_message_id;
+		const entryKey = run?.entry_key || run?.subagent_id || run?.chat_id || run?.tool_call_id;
+		if (!parentMessageId || !entryKey || !history.messages?.[parentMessageId]) return;
+		const parentMessage = history.messages[parentMessageId];
+		const existingRuns =
+			parentMessage.subagent_runs && typeof parentMessage.subagent_runs === 'object'
+				? parentMessage.subagent_runs
+				: {};
+		const prior = existingRuns[entryKey] && typeof existingRuns[entryKey] === 'object' ? existingRuns[entryKey] : {};
+		history.messages[parentMessageId] = {
+			...parentMessage,
+			subagent_runs: {
+				...existingRuns,
+				[entryKey]: {
+					...prior,
+					...run,
+					entry_key: entryKey
+				}
+			}
+		};
+		history = { ...history };
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		if (!isVisibleChatEvent(event.chat_id)) {
 			return;
@@ -1192,39 +1267,50 @@
 		// component can look up state without any prop drilling.
 		if (type === 'chat:subagent:start') {
 			const sd = data ?? {};
-			const key = sd.tool_call_id || sd.subagent_id;
-			if (key) {
+			const keys = [sd.tool_call_id, sd.subagent_id, sd.chat_id, sd.entry_key].filter(Boolean);
+			if (keys.length > 0) {
 				const now = Math.floor(Date.now() / 1000);
-				subagentLiveStates.update((s) => ({
-					...s,
-					[key]: {
-						...(s[key] ?? {}),
+				let persistedRun: any = null;
+				subagentLiveStates.update((s) => {
+					const existing: any = keys.map((key) => s[key]).find(Boolean) ?? {};
+					const next: any = {
+						...existing,
 						subagent_id: sd.subagent_id,
+						entry_key: sd.entry_key ?? existing.entry_key ?? sd.subagent_id,
 						parent_message_id: sd.parent_message_id,
 						tool_call_id: sd.tool_call_id,
 						num: sd.num,
 						name: sd.name,
 						chat_id: sd.chat_id ?? sd.subagent_id,
+						prompt: sd.prompt ?? existing.prompt,
+						background: sd.background ?? existing.background,
 						continuation: sd.continuation === true,
 						status: 'running',
-						started_at: (s[key] && s[key].started_at) || now
-					}
-				}));
+						started_at: existing.started_at || now
+					};
+					persistedRun = next;
+					const out = { ...s };
+					for (const key of keys) out[key] = next;
+					return out;
+				});
+				patchParentSubagentRun(persistedRun);
 			}
 			return;
 		}
 
 		if (type === 'chat:subagent:update') {
 			const sd = data ?? {};
-			const key = sd.tool_call_id || sd.subagent_id;
-			if (!key) return;
+			const keys = [sd.tool_call_id, sd.subagent_id, sd.chat_id, sd.entry_key].filter(Boolean);
+			if (keys.length === 0) return;
 			const innerEvent = sd.inner_event ?? {};
 			const innerType = innerEvent?.type;
 			const innerData = innerEvent?.data ?? {};
+			let persistedRun: any = null;
 			subagentLiveStates.update((s) => {
-				const cur = {
-					...(s[key] ?? {
+				const cur: any = {
+					...(keys.map((key) => s[key]).find(Boolean) ?? {
 						subagent_id: sd.subagent_id,
+						entry_key: sd.entry_key ?? sd.subagent_id,
 						parent_message_id: sd.parent_message_id,
 						tool_call_id: sd.tool_call_id,
 						num: sd.num,
@@ -1233,6 +1319,13 @@
 						status: 'running'
 					})
 				};
+				cur.subagent_id = cur.subagent_id ?? sd.subagent_id;
+				cur.entry_key = cur.entry_key ?? sd.entry_key ?? sd.subagent_id;
+				cur.parent_message_id = cur.parent_message_id ?? sd.parent_message_id;
+				cur.tool_call_id = cur.tool_call_id ?? sd.tool_call_id;
+				cur.num = cur.num ?? sd.num;
+				cur.name = cur.name ?? sd.name;
+				cur.chat_id = cur.chat_id ?? sd.chat_id ?? sd.subagent_id;
 				if (innerType === 'chat:completion') {
 					if (Array.isArray(innerData.content_blocks)) {
 						cur.content_blocks = innerData.content_blocks;
@@ -1243,6 +1336,8 @@
 					if (innerData.done === true) {
 						cur.status = 'done';
 						cur.ended_at = Math.floor(Date.now() / 1000);
+						cur.final_text =
+							cur.final_text || extractSubagentFinalText(cur.content_blocks, cur.content);
 					}
 				} else if (innerType === 'chat:message:error') {
 					cur.status = 'error';
@@ -1255,8 +1350,12 @@
 					const sh = cur.statusHistory ?? [];
 					cur.statusHistory = [...sh, innerData];
 				}
-				return { ...s, [key]: cur };
+				persistedRun = cur;
+				const out = { ...s };
+				for (const key of keys) out[key] = cur;
+				return out;
 			});
+			patchParentSubagentRun(persistedRun);
 			return;
 		}
 
@@ -1976,6 +2075,7 @@
 			messages: {},
 			currentId: null
 		};
+		subagentLiveStates.set({});
 
 		chatFiles = [];
 		params = {};
@@ -2216,38 +2316,111 @@
 		lastPersistedSubagentServiceTier = subagentServiceTier;
 
 		// Hydrate the subagent live-state store with anything persisted on
-		// this chat's messages. Each message's `subagent_runs` is a
-		// {key -> SubagentRun} dict (key is usually `subagent_id`, or
-		// `subagent_id#tool_call_id` for continues). Seed the store keyed by
-		// tool_call_id when present so the SubagentBlock renderer can look up
-		// state by the `tool_call_id` attribute on the markdown placeholder.
+		// this chat's messages. This must be self-contained: after a full tab
+		// reload there are no live socket events left, and the parent message's
+		// content/content_blocks/subagent_runs can be from slightly different
+		// write moments. Seed from every source and key every run by every stable
+		// identifier (tool_call_id, subagent_id/chat_id, entry_key) so the
+		// SubagentBlock can always find it regardless of which HTML attribute the
+		// markdown projection preserved.
 		try {
 			const seeded: Record<string, any> = {};
+
+			const decodeHtmlAttr = (value: unknown) => {
+				if (typeof value !== 'string') return value ?? '';
+				if (typeof document === 'undefined') return value;
+				const textarea = document.createElement('textarea');
+				textarea.innerHTML = value;
+				return textarea.value;
+			};
+
+			const parseToolArgs = (raw: unknown): Record<string, any> => {
+				try {
+					let value: any = decodeHtmlAttr(raw);
+					if (typeof value === 'string') value = JSON.parse(value);
+					if (typeof value === 'string') value = JSON.parse(value);
+					return value && typeof value === 'object' ? value : {};
+				} catch {
+					return {};
+				}
+			};
+
+			const seedRun = (run: any, parentMsg: any, explicitEntryKey?: string) => {
+				if (!run || typeof run !== 'object') return;
+				const entryKey = run.entry_key || explicitEntryKey || run.subagent_id || run.chat_id;
+				const subagentId = run.subagent_id || run.chat_id || '';
+				const normalized = {
+					...run,
+					entry_key: entryKey,
+					subagent_id: subagentId,
+					chat_id: run.chat_id || subagentId,
+					parent_message_id: run.parent_message_id || parentMsg?.id
+				};
+				const keys = [run.tool_call_id, subagentId, normalized.chat_id, entryKey].filter(Boolean);
+				for (const key of keys) {
+					seeded[key] = {
+						...(seeded[key] ?? {}),
+						...normalized
+					};
+				}
+			};
+
 			for (const msg of Object.values(history.messages ?? {})) {
-				const runs = (msg as any)?.subagent_runs;
+				const m = msg as any;
+				const runs = m?.subagent_runs;
 				if (runs && typeof runs === 'object') {
-					for (const [, run] of Object.entries(runs)) {
-						const r = run as any;
-						// Seed under every available key so SubagentBlock
-						// can find the run regardless of which HTML attribute
-						// the markdown parser preserves (tool_call_id vs id).
-						const keys: string[] = [];
-						if (r?.tool_call_id) keys.push(r.tool_call_id);
-						if (r?.subagent_id && r.subagent_id !== r?.tool_call_id) keys.push(r.subagent_id);
-						for (const key of keys) {
-							seeded[key] = {
-								...r,
-								parent_message_id: (msg as any).id
-							};
-						}
+					for (const [entryKey, run] of Object.entries(runs)) {
+						seedRun(run as any, m, entryKey);
+					}
+				}
+
+				for (const block of Array.isArray(m?.content_blocks) ? m.content_blocks : []) {
+					if (block?.type !== 'tool_calls') continue;
+					const calls = Array.isArray(block?.content) ? block.content : [];
+					const results = Array.isArray(block?.results) ? block.results : [];
+					for (const call of calls) {
+						const callId = call?.id || '';
+						const toolName = call?.function?.name || '';
+						if (toolName !== 'subagent_launch' && toolName !== 'subagent_continue') continue;
+						const args = parseToolArgs(call?.function?.arguments ?? '');
+						const result = results.find((r: any) => r?.tool_call_id === callId);
+						const subagentId = result?.subagent_id || '';
+						const existing =
+							(callId && seeded[callId]) ||
+							(toolName === 'subagent_launch' && subagentId && seeded[subagentId]) ||
+							{};
+						const inferredEntryKey =
+							existing.entry_key ||
+							(toolName === 'subagent_continue' && subagentId && callId
+								? `${subagentId}#${callId}`
+								: subagentId || callId);
+						seedRun(
+							{
+								...existing,
+								subagent_id: existing.subagent_id || subagentId,
+								chat_id: existing.chat_id || subagentId,
+								tool_call_id: existing.tool_call_id || callId,
+								name: existing.name || args?.name || args?.name_or_id || '',
+								prompt: existing.prompt || args?.prompt || '',
+								background: existing.background || args?.background || '',
+								continuation: existing.continuation || toolName === 'subagent_continue',
+								status: result ? (existing.status === 'error' ? 'error' : 'done') : existing.status || 'running',
+								final_text: existing.final_text || result?.content || undefined
+							},
+							m,
+							inferredEntryKey
+						);
 					}
 				}
 			}
-			if (Object.keys(seeded).length > 0) {
-				subagentLiveStates.update((s) => ({ ...s, ...seeded }));
-			}
+
+			// Replace, don't merge. Merging keeps stale subagent rows from a prior
+			// chat/navigation alive and makes reload behavior depend on browsing
+			// history instead of the current chat's persisted state.
+			subagentLiveStates.set(seeded);
 		} catch (e) {
 			console.warn('Failed to hydrate subagentLiveStates:', e);
+			subagentLiveStates.set({});
 		}
 
 		autoScroll = true;
@@ -2255,13 +2428,15 @@
 		taskIds = _taskRes?.task_ids ?? null;
 
 		// If a task is still running on the backend (we reloaded mid-stream),
-		// flip `generating` to true so the auto-send-on-natural-completion
-		// reactive can see the falling edge when the resumed stream finishes.
-		// Without this, the reactive's `_wasGenerating` would stay false and
-		// a hydrated queue would never auto-fire on reload.
+		// flip `generating` to true and poll task status. The original socket
+		// stream was bound to the old tab's session_id, so the new tab will not
+		// receive its terminal event; polling reloads the chat as soon as the task
+		// disappears, closing the reload-during-subagent gap without user refreshes.
+		stopResumeTaskPolling();
 		if (taskIds && taskIds.length > 0) {
 			generating = true;
 			_wasGenerating = true;
+			startResumeTaskPolling(currentChatId);
 		}
 
 		await tick();
@@ -3094,9 +3269,18 @@
 		// to serialize a request body, and the LLM request is fired in parallel
 		// below, so the save no longer gates the upstream call.
 		_history = history;
-		void saveChatHandler(_chatId, _history).catch((err) => {
+		const initialSavePromise = saveChatHandler(_chatId, _history).catch((err) => {
 			console.error('saveChatHandler failed:', err);
 		});
+		// Subagents persist side-channel state (`subagent_runs`) directly onto the
+		// parent assistant message as soon as the tool starts. If the user reloads
+		// before this initial chat save lands, the backend can create a partial
+		// orphan row with no parent/role metadata. Pay the small save latency only
+		// when subagents are enabled so reloads during a launch have a fully-linked
+		// parent message to patch.
+		if (subagentsEnabled && !_chatId?.startsWith('local:') && !$temporaryChatEnabled) {
+			await initialSavePromise;
+		}
 
 		try {
 			if (!generating) {

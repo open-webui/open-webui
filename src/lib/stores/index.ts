@@ -80,6 +80,11 @@ export const chatTokenStatsRefreshTrigger = writable(0);
 // (mutates state from forwarded inner-pipeline events).
 export interface SubagentRun {
 	subagent_id: string; // = subagent chat row id
+	// Key of the persisted parent-message `subagent_runs` entry. Launches use
+	// subagent_id; continuations use subagent_id#tool_call_id. The UI may also
+	// be keyed by tool_call_id, so keep this canonical persistence key around
+	// for reruns after reload.
+	entry_key?: string;
 	parent_message_id: string;
 	tool_call_id?: string;
 	num: number;

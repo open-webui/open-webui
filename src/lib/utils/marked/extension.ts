@@ -60,7 +60,11 @@ function detailsTokenizer(src: string) {
 }
 
 function detailsStart(src: string) {
-	return src.match(/^<details>/) ? 0 : -1;
+	// Must match attributed details tags too (e.g.
+	// <details type="subagent_launch" ...>). Returning -1 here lets marked's
+	// generic HTML tokenizer consume the tag, which bypasses Collapsible.svelte
+	// and renders only the raw <summary>Subagent</summary> after reload.
+	return src.match(/<details\b/)?.index ?? -1;
 }
 
 function detailsRenderer(token: any) {
@@ -89,6 +93,6 @@ function detailsExtension() {
 
 export default function (options = {}) {
 	return {
-		extensions: [detailsExtension(options)]
+		extensions: [detailsExtension()]
 	};
 }

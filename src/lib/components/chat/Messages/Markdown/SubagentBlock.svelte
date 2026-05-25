@@ -7,6 +7,7 @@
 	import { chatId, socket, subagentLiveStates } from '$lib/stores';
 	import { rerunSubagent, type SubagentRerunScope } from '$lib/apis/subagents';
 	import { getChatById } from '$lib/apis/chats';
+	import { blocksToDisplayMarkdown } from '$lib/utils';
 	import Markdown from '../Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -26,22 +27,63 @@
 	//   done         — "true" once the parent tool result lands
 	export let attributes: Record<string, any> = {};
 
-	$: stateKey = (attributes?.tool_call_id || attributes?.id || '') as string;
-	$: run = stateKey ? $subagentLiveStates[stateKey] : undefined;
+	const decodeHtml = (value: unknown) => {
+		if (typeof value !== 'string') return value ?? '';
+		if (typeof document === 'undefined') return value;
+		const textarea = document.createElement('textarea');
+		textarea.innerHTML = value;
+		return textarea.value;
+	};
 
-	// Header status the user sees. Prefer the store entry (live + final);
-	// fall back to the markdown attribute when the store hasn't been
-	// hydrated yet for some reason (e.g. mid-stream race).
-	$: status = (run?.status ?? (attributes?.done === 'true' ? 'done' : 'running')) as
-		| 'running'
-		| 'done'
-		| 'error'
-		| 'cancelled';
+	const parseArgs = (raw: unknown): Record<string, any> => {
+		try {
+			let value: any = decodeHtml(raw);
+			if (typeof value === 'string') value = JSON.parse(value);
+			// Backend/client projections double-encode OpenAI function.arguments.
+			if (typeof value === 'string') value = JSON.parse(value);
+			return value && typeof value === 'object' ? value : {};
+		} catch {
+			return {};
+		}
+	};
 
-	$: displayName = run?.name ?? '';
+	$: attrToolCallId = (attributes?.tool_call_id || '') as string;
+	$: attrSubagentId = (attributes?.id || '') as string;
+	$: attrArgs = parseArgs(attributes?.arguments);
+	$: candidateKeys = [
+		attrToolCallId,
+		attrSubagentId,
+		...Object.entries($subagentLiveStates)
+			.filter(([, r]: any) => {
+				if (!r) return false;
+				return (
+					(attrToolCallId && r.tool_call_id === attrToolCallId) ||
+					(attrSubagentId && (r.subagent_id === attrSubagentId || r.chat_id === attrSubagentId))
+				);
+			})
+			.map(([key]) => key)
+	].filter(Boolean) as string[];
+	$: stateKey = candidateKeys[0] || '';
+	$: run =
+		candidateKeys.map((key) => $subagentLiveStates[key]).find((value) => value !== undefined) ??
+		undefined;
+
+	// Header status the user sees. Prefer the store entry, but let terminal
+	// evidence from the persisted placeholder/final_text win over a stale
+	// `running` row left behind by a reload while the old socket session owned
+	// the stream.
+	$: status = (
+		run?.status && run.status !== 'running'
+			? run.status
+			: run?.final_text || attributes?.done === 'true'
+				? 'done'
+				: (run?.status ?? 'running')
+	) as 'running' | 'done' | 'error' | 'cancelled';
+
+	$: displayName = run?.name || attrArgs?.name || '';
 	$: displayNum = run?.num ?? null;
-	$: subagentChatId = run?.chat_id ?? attributes?.id ?? '';
-	$: continuation = run?.continuation === true;
+	$: subagentChatId = run?.chat_id || run?.subagent_id || attrSubagentId || '';
+	$: continuation = run?.continuation === true || attributes?.name === 'subagent_continue';
 	$: stale = run?.stale === true;
 
 	// Subagent body renders the structured `content_blocks` directly via a
@@ -88,7 +130,12 @@
 				let lastContent = '';
 				for (const msg of Object.values(msgs)) {
 					if ((msg as any).role === 'assistant') {
-						lastContent = (msg as any).content ?? '';
+						lastContent =
+							(typeof (msg as any).content === 'string' && (msg as any).content.trim()) ||
+							(Array.isArray((msg as any).content_blocks)
+								? blocksToDisplayMarkdown((msg as any).content_blocks)
+								: '') ||
+							'';
 					}
 				}
 				fallbackContent = lastContent || $i18n.t('(empty response)');
@@ -103,8 +150,18 @@
 		}
 	}
 
-	// Trigger fallback fetch when user expands and content is missing
-	$: if (open && !run && status === 'done' && !fallbackFetching && !fallbackContent && !fallbackError) {
+	// Trigger fallback fetch when user expands and content is missing. This is a
+	// reload safety net: if the parent run row/placeholder is stale, the hidden
+	// subagent chat itself is still the source of truth for the answer.
+	$: if (
+		open &&
+		subagentChatId &&
+		!hasContent &&
+		!run?.final_text &&
+		!fallbackFetching &&
+		!fallbackContent &&
+		!fallbackError
+	) {
 		fetchFallbackContent();
 	}
 
@@ -189,7 +246,8 @@
 		const parentChatId = $chatId;
 		const parentMessageId = run?.parent_message_id;
 		const sessionId = $socket?.id;
-		if (!parentChatId || !parentMessageId || !sessionId || !stateKey) {
+		const entryKey = run?.entry_key || stateKey;
+		if (!parentChatId || !parentMessageId || !sessionId || !entryKey) {
 			toast.error(
 				$i18n.t('Cannot redo subagent: missing chat / message / session context.')
 			);
@@ -202,28 +260,30 @@
 				parent_chat_id: parentChatId,
 				parent_message_id: parentMessageId,
 				session_id: sessionId,
-				entry_key: stateKey,
+				entry_key: entryKey,
 				scope
 			});
 			// Optimistically flip status so the spinner shows while the
 			// backend's `chat:subagent:start` event is in flight. The store
 			// entry will fully refresh once that event arrives.
 			subagentLiveStates.update((s) => {
-				const cur = s[stateKey];
+				const cur = s[stateKey] || s[entryKey];
 				if (!cur) return s;
+				const next: any = {
+					...cur,
+					status: 'running',
+					content_blocks: [],
+					content: '',
+					final_text: undefined,
+					error: undefined,
+					stale: false,
+					started_at: Math.floor(Date.now() / 1000),
+					ended_at: undefined
+				};
 				return {
 					...s,
-					[stateKey]: {
-						...cur,
-						status: 'running',
-						content_blocks: [],
-						content: '',
-						final_text: undefined,
-						error: undefined,
-						stale: false,
-						started_at: Math.floor(Date.now() / 1000),
-						ended_at: undefined
-					}
+					[stateKey]: next,
+					[entryKey]: next
 				};
 			});
 			// Note: we don't auto-expand the body on rerun. The default is
@@ -501,11 +561,7 @@
 						{/if}
 					{/each}
 				</div>
-			{:else if status === 'running'}
-				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
-					{$i18n.t('Subagent is starting up…')}
-				</div>
-			{:else if status === 'done' && run?.final_text}
+			{:else if run?.final_text}
 				<div class="markdown-prose">
 					<Markdown
 						id={`subagent-${stateKey}-final`}
@@ -514,7 +570,7 @@
 						editCodeBlock={false}
 					/>
 				</div>
-			{:else if status === 'done' && fallbackContent}
+			{:else if fallbackContent}
 				<div class="markdown-prose">
 					<Markdown
 						id={`subagent-${stateKey}-fallback`}
@@ -523,12 +579,16 @@
 						editCodeBlock={false}
 					/>
 				</div>
-			{:else if status === 'done' && fallbackFetching}
+			{:else if fallbackFetching}
 				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
 					{$i18n.t('Loading subagent results…')}
 				</div>
-			{:else if status === 'done' && fallbackError}
+			{:else if fallbackError}
 				<div class="text-sm text-red-500 italic">{fallbackError}</div>
+			{:else if status === 'running'}
+				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
+					{$i18n.t('Subagent is starting up…')}
+				</div>
 			{/if}
 
 			{#if subagentChatId}
