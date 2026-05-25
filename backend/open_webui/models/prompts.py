@@ -577,7 +577,8 @@ class PromptsTable:
 
                 history_entry = await PromptHistories.get_history_entry_by_id(version_id, db=session)
 
-                if not history_entry:
+                # Reject a version_id from another prompt; restoring it would copy a foreign snapshot in.
+                if not history_entry or history_entry.prompt_id != prompt_id:
                     return None
 
                 # Restore prompt content from the snapshot
