@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.6] - 2026-05-19
+## [0.9.6] - 2026-05-26
 
 ### Added
 
@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔎 **Access preview for users and groups.** Administrators can now preview exactly which models, knowledge bases, and tools a given user or group can access, making it easier to audit and verify permission setups. [Commit](https://github.com/open-webui/open-webui/commit/9c14740ffb009d550dcbd5d6c599dac57053f112)
 - ⚡ **Faster initial page loads.** The configuration endpoint that loads on every page visit no longer runs an unnecessary user-count query, making the initial application load lighter on the database, especially on instances with many users. [Commit](https://github.com/open-webui/open-webui/commit/0adc090dcbe636c9c9645d8ec7f6b89ea514870b)
 - 🚀 **Faster tool-enabled chat completions.** Chat completions that use multiple tools now start faster because the tools they reference are fetched from the database in a single batch query instead of one query per tool. [#24808](https://github.com/open-webui/open-webui/pull/24808), [Commit](https://github.com/open-webui/open-webui/commit/cc94a90b4d4d690bc7cb9f7124f2d6e552973970)
+- 🏎️ **More responsive web search under load.** Web search through SearXNG, Google PSE, Brave, Serper, and Serpstack now uses non-blocking network calls, so the server stays responsive to other users while a search is in flight, and concurrent multi-query searches complete faster. [Commit](https://github.com/open-webui/open-webui/commit/b94245d2ee191e8ef118bf9de1ff7539503bfec9)
+- 🐎 **Lighter Ollama backend connections.** Requests to Ollama backends now reuse a shared connection pool instead of opening a fresh session each time, reducing TCP and TLS handshake overhead for installs that poll Ollama frequently or have multiple backends configured. [Commit](https://github.com/open-webui/open-webui/commit/5d9a09a88a9094ebfcd249340be3aaee544b34d0)
 - 📝 **Frontmatter auto-fill for tools, functions, and skills.** Opening a tool, function, or skill editor now auto-fills the name, id, and description fields from the file's frontmatter, saving you from re-entering metadata already declared in the source. [#24649](https://github.com/open-webui/open-webui/pull/24649), [Commit](https://github.com/open-webui/open-webui/commit/ef975649b26d3e7cd589c49be2fc77cee80fad8f)
 - 🪪 **More user placeholders in custom headers.** Custom-header templates for direct connections and tool servers now support "{{USER_EMAIL}}" and "{{USER_ROLE}}" alongside the existing user and session placeholders. [Commit](https://github.com/open-webui/open-webui/commit/ed73ef3d8df988b0e9646b82df5b1a453202ef8d)
 - 🌎 **Linkup web search provider.** Administrators can now select Linkup as the web search provider from the admin settings, with options to configure the API key and search depth. [#24752](https://github.com/open-webui/open-webui/pull/24752), [Commit](https://github.com/open-webui/open-webui/commit/56c0d00e13c74d665124ec9f1cae78e83ca60b6a)
