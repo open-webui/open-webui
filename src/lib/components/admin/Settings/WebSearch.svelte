@@ -3,28 +3,53 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 
 	import { onMount, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let saveHandler: Function;
 
-	// Exa-only configuration
 	let enableWebSearch = false;
+
+	// Exa powers search result discovery.
 	let exaApiKey = '';
 	let exaNumResults = 10;
 	let exaSearchType = 'auto';
 	let exaIncludeDomains = '';
 	let exaExcludeDomains = '';
-	let exaMaxCharacters = 10000;
-	let exaLivecrawl = 'fallback';
+
+	// Jina Reader powers full-content fetches from URLs.
+	let jinaApiKey = '';
+	let jinaReaderTokenUsage = 0;
+	let jinaReaderViewportWidth = 1280;
+	let jinaReaderViewportHeight = 12000;
+	let jinaReaderTimeout = 30;
+	let loadedJinaApiKey = '';
+	let loadedJinaReaderTokenUsage = 0;
+	let lastObservedJinaApiKey = '';
+	let jinaConfigLoaded = false;
+
 	let webSearchSystemPrompt = '';
 
 	// YouTube loader settings (kept for compatibility)
 	let youtubeLoaderLanguage = '';
 	let youtubeLoaderProxyUrl = '';
+
+	$: if (jinaConfigLoaded && jinaApiKey !== lastObservedJinaApiKey) {
+		// Default to a fresh meter for a new key. Admins can still type an existing
+		// usage value after changing the key if they are migrating an already-used key.
+		jinaReaderTokenUsage = jinaApiKey === loadedJinaApiKey ? loadedJinaReaderTokenUsage : 0;
+		lastObservedJinaApiKey = jinaApiKey;
+	}
+
+	const toNumber = (value: unknown, fallback: number) => {
+		const parsed = Number(value);
+		return Number.isFinite(parsed) ? parsed : fallback;
+	};
 
 	const submitHandler = async () => {
 		// Convert domain strings to arrays
@@ -45,12 +70,21 @@
 			web: {
 				ENABLE_WEB_SEARCH: enableWebSearch,
 				EXA_API_KEY: exaApiKey,
-				EXA_SEARCH_NUM_RESULTS: exaNumResults,
+				EXA_SEARCH_NUM_RESULTS: toNumber(exaNumResults, 10),
 				EXA_SEARCH_TYPE: exaSearchType,
 				EXA_INCLUDE_DOMAINS: includeDomains,
 				EXA_EXCLUDE_DOMAINS: excludeDomains,
-				EXA_CONTENTS_MAX_CHARACTERS: exaMaxCharacters,
-				EXA_CONTENTS_LIVECRAWL: exaLivecrawl,
+				JINA_API_KEY: jinaApiKey,
+				JINA_READER_TOKEN_USAGE: Math.max(0, Math.floor(toNumber(jinaReaderTokenUsage, 0))),
+				JINA_READER_VIEWPORT_WIDTH: Math.max(
+					320,
+					Math.floor(toNumber(jinaReaderViewportWidth, 1280))
+				),
+				JINA_READER_VIEWPORT_HEIGHT: Math.max(
+					1000,
+					Math.floor(toNumber(jinaReaderViewportHeight, 12000))
+				),
+				JINA_READER_TIMEOUT: Math.max(1, Math.floor(toNumber(jinaReaderTimeout, 30))),
 				WEB_SEARCH_SYSTEM_PROMPT: webSearchSystemPrompt,
 				YOUTUBE_LOADER_LANGUAGE: youtubeLanguages,
 				YOUTUBE_LOADER_PROXY_URL: youtubeLoaderProxyUrl
@@ -58,6 +92,9 @@
 		});
 
 		if (res) {
+			loadedJinaApiKey = jinaApiKey;
+			loadedJinaReaderTokenUsage = Math.max(0, Math.floor(toNumber(jinaReaderTokenUsage, 0)));
+			lastObservedJinaApiKey = jinaApiKey;
 			toast.success($i18n.t('Settings saved successfully'));
 		}
 	};
@@ -72,8 +109,15 @@
 			exaSearchType = res.web.EXA_SEARCH_TYPE ?? 'auto';
 			exaIncludeDomains = (res.web.EXA_INCLUDE_DOMAINS ?? []).join(', ');
 			exaExcludeDomains = (res.web.EXA_EXCLUDE_DOMAINS ?? []).join(', ');
-			exaMaxCharacters = res.web.EXA_CONTENTS_MAX_CHARACTERS ?? 10000;
-			exaLivecrawl = res.web.EXA_CONTENTS_LIVECRAWL ?? 'fallback';
+			jinaApiKey = res.web.JINA_API_KEY ?? '';
+			jinaReaderTokenUsage = res.web.JINA_READER_TOKEN_USAGE ?? 0;
+			jinaReaderViewportWidth = res.web.JINA_READER_VIEWPORT_WIDTH ?? 1280;
+			jinaReaderViewportHeight = res.web.JINA_READER_VIEWPORT_HEIGHT ?? 12000;
+			jinaReaderTimeout = res.web.JINA_READER_TIMEOUT ?? 30;
+			loadedJinaApiKey = jinaApiKey;
+			loadedJinaReaderTokenUsage = jinaReaderTokenUsage;
+			lastObservedJinaApiKey = jinaApiKey;
+			jinaConfigLoaded = true;
 			webSearchSystemPrompt = res.web.WEB_SEARCH_SYSTEM_PROMPT ?? '';
 			youtubeLoaderLanguage = (res.web.YOUTUBE_LOADER_LANGUAGE ?? []).join(', ');
 			youtubeLoaderProxyUrl = res.web.YOUTUBE_LOADER_PROXY_URL ?? '';
@@ -105,10 +149,13 @@
 				</div>
 
 				{#if enableWebSearch}
-					<div class="mb-2.5 flex w-full flex-col">
-						<div>
+					<div class="rounded-xl border border-gray-100 dark:border-gray-850 p-3 mb-3">
+						<div class="mb-2 text-sm font-medium">{$i18n.t('Search Provider: Exa')}</div>
+						<div class="mb-2.5 flex w-full flex-col">
 							<div class=" self-center text-xs font-medium mb-1">
-								{$i18n.t('Exa API Key')}
+								<Tooltip content={$i18n.t('Used by web_search to discover pages and snippets')}>
+									{$i18n.t('Exa API Key')}
+								</Tooltip>
 							</div>
 
 							<SensitiveInput
@@ -117,114 +164,161 @@
 								required
 							/>
 						</div>
-					</div>
 
-					<div class="mb-2.5 flex w-full flex-col">
-						<div class="flex gap-2">
-							<div class="w-full">
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class="flex gap-2">
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Search Results Count')}
+									</div>
+
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="number"
+										placeholder={$i18n.t('Number of results')}
+										bind:value={exaNumResults}
+										min="1"
+										max="50"
+									/>
+								</div>
+
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Search Type')}
+									</div>
+
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={exaSearchType}
+									>
+										<option value="auto">{$i18n.t('Auto')}</option>
+										<option value="neural">{$i18n.t('Neural')}</option>
+										<option value="keyword">{$i18n.t('Keyword')}</option>
+									</select>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
 								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Search Results Count')}
+									<Tooltip
+										content={$i18n.t('Only search results from these domains will be included')}
+									>
+										{$i18n.t('Include Domains')}
+									</Tooltip>
 								</div>
 
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									type="number"
-									placeholder={$i18n.t('Number of results')}
-									bind:value={exaNumResults}
-									min="1"
-									max="50"
+									type="text"
+									placeholder={$i18n.t(
+										'Enter domains separated by commas (e.g., example.com, site.org)'
+									)}
+									bind:value={exaIncludeDomains}
 								/>
 							</div>
+						</div>
 
-							<div class="w-full">
+						<div class="flex w-full flex-col">
+							<div>
 								<div class=" self-center text-xs font-medium mb-1">
-									{$i18n.t('Search Type')}
+									<Tooltip content={$i18n.t('Search results from these domains will be excluded')}>
+										{$i18n.t('Exclude Domains')}
+									</Tooltip>
 								</div>
 
-								<select
+								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									bind:value={exaSearchType}
-								>
-									<option value="auto">{$i18n.t('Auto')}</option>
-									<option value="neural">{$i18n.t('Neural')}</option>
-									<option value="keyword">{$i18n.t('Keyword')}</option>
-								</select>
+									type="text"
+									placeholder={$i18n.t('Enter domains separated by commas')}
+									bind:value={exaExcludeDomains}
+								/>
 							</div>
 						</div>
 					</div>
 
-					<div class="mb-2.5 flex w-full flex-col">
-						<div>
+					<div class="rounded-xl border border-gray-100 dark:border-gray-850 p-3 mb-3">
+						<div class="mb-1 text-sm font-medium">
+							{$i18n.t('Content Fetch Provider: Jina Reader')}
+						</div>
+						<div class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t(
+								'Used by web_fetch to read full page content. Requests use Jina Reader browser mode with retained links, images, media links, ATX headings, and a final 1280×12000 viewport by default.'
+							)}
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
 							<div class=" self-center text-xs font-medium mb-1">
 								<Tooltip
-									content={$i18n.t('Only search results from these domains will be included')}
+									content={$i18n.t('Sent as Authorization: Bearer <key> to https://r.jina.ai/')}
 								>
-									{$i18n.t('Include Domains')}
+									{$i18n.t('Jina API Key')}
 								</Tooltip>
 							</div>
 
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={$i18n.t(
-									'Enter domains separated by commas (e.g., example.com, site.org)'
-								)}
-								bind:value={exaIncludeDomains}
+							<SensitiveInput
+								placeholder={$i18n.t('Enter Jina API Key')}
+								bind:value={jinaApiKey}
+								required
 							/>
 						</div>
-					</div>
 
-					<div class="mb-2.5 flex w-full flex-col">
-						<div>
+						<div class="mb-2.5 flex w-full flex-col">
 							<div class=" self-center text-xs font-medium mb-1">
-								<Tooltip content={$i18n.t('Search results from these domains will be excluded')}>
-									{$i18n.t('Exclude Domains')}
+								<Tooltip
+									content={$i18n.t(
+										'Automatically increments from Jina Reader response usage.tokens. Changing the API key resets this value to 0 unless you set it manually before saving.'
+									)}
+								>
+									{$i18n.t('Jina Token Usage')}
 								</Tooltip>
 							</div>
 
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={$i18n.t('Enter domains separated by commas')}
-								bind:value={exaExcludeDomains}
+								type="number"
+								placeholder="0"
+								bind:value={jinaReaderTokenUsage}
+								min="0"
 							/>
 						</div>
-					</div>
 
-					<div class="mb-2.5 flex w-full flex-col">
-						<div class="flex gap-2">
-							<div class="w-full">
+						<div class="mb-2.5 grid grid-cols-1 gap-2 md:grid-cols-3">
+							<div>
 								<div class=" self-center text-xs font-medium mb-1">
-									<Tooltip content={$i18n.t('Maximum characters to fetch from each page')}>
-										{$i18n.t('Max Characters per Page')}
-									</Tooltip>
+									{$i18n.t('Viewport Width')}
 								</div>
-
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="number"
-									placeholder="10000"
-									bind:value={exaMaxCharacters}
-									min="1000"
-									max="50000"
+									bind:value={jinaReaderViewportWidth}
+									min="320"
 								/>
 							</div>
-
-							<div class="w-full">
+							<div>
 								<div class=" self-center text-xs font-medium mb-1">
-									<Tooltip content={$i18n.t('How to handle fetching fresh content from URLs')}>
-										{$i18n.t('Live Crawl Mode')}
+									{$i18n.t('Viewport Height')}
+								</div>
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="number"
+									bind:value={jinaReaderViewportHeight}
+									min="1000"
+								/>
+							</div>
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									<Tooltip content={$i18n.t('Sent as X-Timeout in seconds')}>
+										{$i18n.t('Timeout')}
 									</Tooltip>
 								</div>
-
-								<select
+								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									bind:value={exaLivecrawl}
-								>
-									<option value="never">{$i18n.t('Never (cached only)')}</option>
-									<option value="fallback">{$i18n.t('Fallback (try cache first)')}</option>
-									<option value="always">{$i18n.t('Always (live crawl)')}</option>
-								</select>
+									type="number"
+									bind:value={jinaReaderTimeout}
+									min="1"
+								/>
 							</div>
 						</div>
 					</div>

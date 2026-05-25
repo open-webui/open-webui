@@ -28,8 +28,10 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import {
 		getChatList,
@@ -42,6 +44,11 @@
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import {
+		clearLocalStorageCache,
+		readLocalStorageCache,
+		writeLocalStorageCache
+	} from '$lib/utils/cache';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
@@ -86,17 +93,32 @@
 
 	let newFolderId = null;
 
-	const initFolders = async () => {
-		const folderList = await getFolders(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return [];
+	const SIDEBAR_CACHE_VERSION = 1;
+	const SIDEBAR_CACHE_TTL = 60 * 1000;
+	const SIDEBAR_CHANNELS_CACHE_KEY = 'sidebar:channels';
+	const SIDEBAR_FOLDERS_CACHE_KEY = 'sidebar:folders';
+	const SIDEBAR_TAGS_CACHE_KEY = 'sidebar:tags';
+	const SIDEBAR_PINNED_CHATS_CACHE_KEY = 'sidebar:pinned-chats';
+	const SIDEBAR_CHATS_CACHE_KEY = 'sidebar:chats:first-page';
+
+	let channelsRefreshPromise: Promise<void> | null = null;
+	let chatListRefreshPromise: Promise<void> | null = null;
+
+	const getSidebarCacheKey = (name: string) =>
+		JSON.stringify({
+			version: SIDEBAR_CACHE_VERSION,
+			userId: $user?.id ?? null,
+			name
 		});
-		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
+
+	const applyFolderList = (folderList: any[]) => {
+		const sortedFolderList = [...folderList].sort((a, b) => b.updated_at - a.updated_at);
+		_folders.set(sortedFolderList);
 
 		folders = {};
 
 		// First pass: Initialize all folder entries
-		for (const folder of folderList) {
+		for (const folder of sortedFolderList) {
 			// Ensure folder is added to folders with its data
 			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
 
@@ -107,7 +129,7 @@
 		}
 
 		// Second pass: Tie child folders to their parents
-		for (const folder of folderList) {
+		for (const folder of sortedFolderList) {
 			if (folder.parent_id) {
 				// Ensure the parent folder is initialized if it doesn't exist
 				if (!folders[folder.parent_id]) {
@@ -125,6 +147,64 @@
 				});
 			}
 		}
+	};
+
+	const hydrateSidebarDataFromCache = () => {
+		const cachedChannels = readLocalStorageCache<any[]>(
+			SIDEBAR_CHANNELS_CACHE_KEY,
+			getSidebarCacheKey('channels')
+		);
+		if (Array.isArray(cachedChannels)) {
+			channels.set(cachedChannels);
+		}
+
+		const cachedFolders = readLocalStorageCache<any[]>(
+			SIDEBAR_FOLDERS_CACHE_KEY,
+			getSidebarCacheKey('folders')
+		);
+		if (Array.isArray(cachedFolders)) {
+			applyFolderList(cachedFolders);
+		}
+
+		const cachedTags = readLocalStorageCache<any[]>(
+			SIDEBAR_TAGS_CACHE_KEY,
+			getSidebarCacheKey('tags')
+		);
+		if (Array.isArray(cachedTags)) {
+			tags.set(cachedTags);
+		}
+
+		const cachedPinnedChats = readLocalStorageCache<any[]>(
+			SIDEBAR_PINNED_CHATS_CACHE_KEY,
+			getSidebarCacheKey('pinned-chats')
+		);
+		if (Array.isArray(cachedPinnedChats)) {
+			pinnedChats.set(cachedPinnedChats);
+		}
+
+		const cachedChats = readLocalStorageCache<any[]>(
+			SIDEBAR_CHATS_CACHE_KEY,
+			getSidebarCacheKey('chats:first-page')
+		);
+		if (Array.isArray(cachedChats)) {
+			chats.set(cachedChats);
+		}
+	};
+
+	const initFolders = async () => {
+		clearLocalStorageCache(SIDEBAR_FOLDERS_CACHE_KEY);
+		const folderList = await getFolders(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+
+		applyFolderList(folderList);
+		writeLocalStorageCache(
+			SIDEBAR_FOLDERS_CACHE_KEY,
+			getSidebarCacheKey('folders'),
+			folderList,
+			SIDEBAR_CACHE_TTL
+		);
 	};
 
 	const createFolder = async ({ name, data }) => {
@@ -173,36 +253,90 @@
 	};
 
 	const initChannels = async () => {
-		await channels.set(await getChannels(localStorage.token));
+		if (channelsRefreshPromise) {
+			return channelsRefreshPromise;
+		}
+
+		channelsRefreshPromise = (async () => {
+			clearLocalStorageCache(SIDEBAR_CHANNELS_CACHE_KEY);
+			const channelList = await getChannels(localStorage.token);
+			await channels.set(channelList);
+			writeLocalStorageCache(
+				SIDEBAR_CHANNELS_CACHE_KEY,
+				getSidebarCacheKey('channels'),
+				channelList,
+				SIDEBAR_CACHE_TTL
+			);
+		})();
+
+		try {
+			return await channelsRefreshPromise;
+		} finally {
+			channelsRefreshPromise = null;
+		}
 	};
 
 	const initChatList = async () => {
-		// Reset pagination variables
-		console.log('initChatList');
-		currentChatPage.set(1);
-		allChatsLoaded = false;
+		if (chatListRefreshPromise) {
+			return chatListRefreshPromise;
+		}
 
-		initFolders();
-		await Promise.all([
-			(async () => {
-				console.log('Init tags');
-				const _tags = await getAllTags(localStorage.token);
-				tags.set(_tags);
-			})(),
-			(async () => {
-				console.log('Init pinned chats');
-				const _pinnedChats = await getPinnedChatList(localStorage.token);
-				pinnedChats.set(_pinnedChats);
-			})(),
-			(async () => {
-				console.log('Init chat list');
-				const _chats = await getChatList(localStorage.token, $currentChatPage);
-				await chats.set(_chats);
-			})()
-		]);
+		chatListRefreshPromise = (async () => {
+			// Reset pagination variables
+			console.log('initChatList');
+			const firstPage = 1;
+			currentChatPage.set(firstPage);
+			allChatsLoaded = false;
+			clearLocalStorageCache(SIDEBAR_TAGS_CACHE_KEY);
+			clearLocalStorageCache(SIDEBAR_PINNED_CHATS_CACHE_KEY);
+			clearLocalStorageCache(SIDEBAR_CHATS_CACHE_KEY);
 
-		// Enable pagination
-		scrollPaginationEnabled.set(true);
+			await initFolders();
+			await Promise.all([
+				(async () => {
+					console.log('Init tags');
+					const _tags = await getAllTags(localStorage.token);
+					tags.set(_tags);
+					writeLocalStorageCache(
+						SIDEBAR_TAGS_CACHE_KEY,
+						getSidebarCacheKey('tags'),
+						_tags,
+						SIDEBAR_CACHE_TTL
+					);
+				})(),
+				(async () => {
+					console.log('Init pinned chats');
+					const _pinnedChats = await getPinnedChatList(localStorage.token);
+					pinnedChats.set(_pinnedChats);
+					writeLocalStorageCache(
+						SIDEBAR_PINNED_CHATS_CACHE_KEY,
+						getSidebarCacheKey('pinned-chats'),
+						_pinnedChats,
+						SIDEBAR_CACHE_TTL
+					);
+				})(),
+				(async () => {
+					console.log('Init chat list');
+					const _chats = await getChatList(localStorage.token, firstPage);
+					await chats.set(_chats);
+					writeLocalStorageCache(
+						SIDEBAR_CHATS_CACHE_KEY,
+						getSidebarCacheKey('chats:first-page'),
+						_chats,
+						SIDEBAR_CACHE_TTL
+					);
+				})()
+			]);
+
+			// Enable pagination
+			scrollPaginationEnabled.set(true);
+		})();
+
+		try {
+			return await chatListRefreshPromise;
+		} finally {
+			chatListRefreshPromise = null;
+		}
 	};
 
 	const loadMoreChats = async () => {
@@ -363,6 +497,13 @@
 	let unsubscribers = [];
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
+		channels.set([]);
+		_folders.set([]);
+		tags.set([]);
+		pinnedChats.set([]);
+		chats.set(null);
+		folders = {};
+		hydrateSidebarDataFromCache();
 		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
 		unsubscribers = [

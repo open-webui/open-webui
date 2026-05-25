@@ -180,6 +180,18 @@ class ModelsTable:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
+    def get_models_by_ids(self, ids: list[str]) -> dict[str, ModelModel]:
+        if not ids:
+            return {}
+
+        try:
+            with get_db() as db:
+                models = db.query(Model).filter(Model.id.in_(ids)).all()
+                return {model.id: ModelModel.model_validate(model) for model in models}
+        except Exception as e:
+            log.exception(f"Failed to get models by ids: {e}")
+            return {}
+
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
             all_models = db.query(Model).filter(Model.base_model_id != None).all()

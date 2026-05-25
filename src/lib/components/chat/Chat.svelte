@@ -57,6 +57,7 @@
 		removeAllDetails,
 		renderPdfToImageDataUrls
 	} from '$lib/utils';
+	import { loadToolServers } from '$lib/utils/toolServers';
 
 	import {
 		createNewChat,
@@ -349,6 +350,131 @@
 		} catch {
 			// localStorage access can throw in some contexts (e.g. disabled cookies)
 		}
+	};
+
+	type StreamFlushState = {
+		animationFrame: number | null;
+		runTTS: boolean;
+		ownerId?: string | null;
+	};
+	const streamFlushes = new Map<string, StreamFlushState>();
+	const streamTTSPartCounts = new Map<string, number>();
+
+	const emitPendingTTSParts = (message: any, { done = false }: { done?: boolean } = {}) => {
+		if (!message?.content) {
+			return;
+		}
+
+		const messageContentParts = getMessageContentParts(
+			removeAllDetails(message.content),
+			($config as any)?.audio?.tts?.split_on ?? 'punctuation'
+		);
+		if (!done) {
+			messageContentParts.pop();
+		}
+
+		let dispatchedCount = streamTTSPartCounts.get(message.id) ?? 0;
+		if (dispatchedCount > messageContentParts.length) {
+			dispatchedCount = 0;
+		}
+
+		for (const content of messageContentParts.slice(dispatchedCount)) {
+			if (!content || content === message.lastSentence) {
+				continue;
+			}
+
+			message.lastSentence = content;
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: {
+						id: message.id,
+						content
+					}
+				})
+			);
+		}
+
+		streamTTSPartCounts.set(message.id, messageContentParts.length);
+	};
+
+	const cancelStreamingMessageFlush = (messageId: string) => {
+		const state = streamFlushes.get(messageId);
+		if (!state) {
+			return;
+		}
+
+		if (state.animationFrame !== null) {
+			cancelAnimationFrame(state.animationFrame);
+		}
+		streamFlushes.delete(messageId);
+		streamTTSPartCounts.delete(messageId);
+	};
+
+	const flushStreamingMessage = (messageId: string, force = false) => {
+		const state = streamFlushes.get(messageId);
+		if (!state) {
+			return;
+		}
+
+		if (state.animationFrame !== null) {
+			cancelAnimationFrame(state.animationFrame);
+			state.animationFrame = null;
+		}
+
+		const message = (history.messages as Record<string, any>)?.[messageId];
+		if (!message) {
+			streamFlushes.delete(messageId);
+			streamTTSPartCounts.delete(messageId);
+			return;
+		}
+
+		if (
+			!force &&
+			state.ownerId &&
+			(generationController == null || generationController.id !== state.ownerId)
+		) {
+			streamFlushes.delete(messageId);
+			streamTTSPartCounts.delete(messageId);
+			return;
+		}
+
+		if (state.runTTS) {
+			emitPendingTTSParts(message);
+		}
+
+		(history.messages as Record<string, any>)[messageId] = { ...message };
+		history = { ...history };
+		streamFlushes.delete(messageId);
+
+		if (autoScroll) {
+			scrollToBottom();
+		}
+	};
+
+	const scheduleStreamingMessageFlush = (
+		messageId: string,
+		{ runTTS = false, ownerId = null }: { runTTS?: boolean; ownerId?: string | null } = {}
+	) => {
+		let state = streamFlushes.get(messageId);
+		if (!state) {
+			state = {
+				animationFrame: null,
+				runTTS: false,
+				ownerId
+			};
+			streamFlushes.set(messageId, state);
+		}
+
+		state.runTTS = state.runTTS || runTTS;
+		state.ownerId = ownerId ?? state.ownerId;
+
+		if (state.animationFrame !== null) {
+			return;
+		}
+
+		state.animationFrame = requestAnimationFrame(() => {
+			flushStreamingMessage(messageId);
+		});
 	};
 
 	const skipRemainingRetriesSet = new Set();
@@ -838,8 +964,12 @@
 	// When models load after initNewChat ran with an empty $models list,
 	// apply the saved default (or first available) if nothing is selected yet.
 	$: if ($models.length > 0 && !chatIdProp) {
-		const _availableModels = $models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
-		const hasValidSelection = selectedModels.length > 0 && selectedModels.every((id) => id !== '' && _availableModels.includes(id));
+		const _availableModels = $models
+			.filter((m) => !(m?.info?.meta?.hidden ?? false))
+			.map((m) => m.id);
+		const hasValidSelection =
+			selectedModels.length > 0 &&
+			selectedModels.every((id) => id !== '' && _availableModels.includes(id));
 		if (!hasValidSelection) {
 			if ($settings?.models) {
 				const filtered = $settings.models.filter((id) => _availableModels.includes(id));
@@ -849,7 +979,9 @@
 					selectedModels = [_availableModels[0] ?? ''];
 				}
 			} else if ($config?.default_models) {
-				const filtered = $config.default_models.split(',').filter((id) => _availableModels.includes(id));
+				const filtered = $config.default_models
+					.split(',')
+					.filter((id) => _availableModels.includes(id));
 				if (filtered.length > 0) {
 					selectedModels = filtered;
 				} else {
@@ -1139,7 +1271,10 @@
 			parentMessage.subagent_runs && typeof parentMessage.subagent_runs === 'object'
 				? parentMessage.subagent_runs
 				: {};
-		const prior = existingRuns[entryKey] && typeof existingRuns[entryKey] === 'object' ? existingRuns[entryKey] : {};
+		const prior =
+			existingRuns[entryKey] && typeof existingRuns[entryKey] === 'object'
+				? existingRuns[entryKey]
+				: {};
 		history.messages[parentMessageId] = {
 			...parentMessage,
 			subagent_runs: {
@@ -1768,6 +1903,9 @@
 
 	onDestroy(() => {
 		try {
+			for (const messageId of streamFlushes.keys()) {
+				cancelStreamingMessageFlush(messageId);
+			}
 			pageSubscribe();
 			showControlsSubscribe();
 			selectedFolderSubscribe();
@@ -2045,7 +2183,10 @@
 			}
 		}
 
-		if (availableModels.length > 0 && (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === ''))) {
+		if (
+			availableModels.length > 0 &&
+			(selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === ''))
+		) {
 			selectedModels = [availableModels?.at(0) ?? ''];
 		}
 
@@ -2404,7 +2545,11 @@
 								prompt: existing.prompt || args?.prompt || '',
 								background: existing.background || args?.background || '',
 								continuation: existing.continuation || toolName === 'subagent_continue',
-								status: result ? (existing.status === 'error' ? 'error' : 'done') : existing.status || 'running',
+								status: result
+									? existing.status === 'error'
+										? 'error'
+										: 'done'
+									: existing.status || 'running',
 								final_text: existing.final_text || result?.content || undefined
 							},
 							m,
@@ -2775,6 +2920,8 @@
 			reasoning_details,
 			reasoning_details_per_round
 		} = data;
+		let shouldRunTTS = false;
+		let shouldFlushStreamingUpdate = false;
 
 		if (error) {
 			await handleOpenAIError(error, message, 'chatCompletionEventHandler:data.error');
@@ -2795,15 +2942,19 @@
 
 		if (sources && !message?.sources) {
 			message.sources = sources;
+			shouldFlushStreamingUpdate = true;
 		}
 
 		if (choices) {
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
+				shouldFlushStreamingUpdate = true;
+				shouldRunTTS = true;
 
 				if (choices[0]?.message?.reasoning_details) {
 					message.reasoning_details = choices[0].message.reasoning_details;
+					shouldFlushStreamingUpdate = true;
 				}
 			} else {
 				// Stream response
@@ -2856,40 +3007,17 @@
 							message.reasoning_details.push({ ...detail });
 						}
 					}
+					shouldFlushStreamingUpdate = true;
 				}
 
 				let value = choices[0]?.delta?.content ?? '';
 				if (!(message.content == '' && value == '\n')) {
 					message.content += value;
-					message = { ...message };
-					history.messages[message.id] = message;
-					history = { ...history };
+					shouldFlushStreamingUpdate = true;
+					shouldRunTTS = true;
 
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
-					}
-
-					// Emit chat event for TTS
-					const messageContentParts = getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					);
-					messageContentParts.pop();
-
-					// dispatch only last sentence and make sure it hasn't been dispatched before
-					if (
-						messageContentParts.length > 0 &&
-						messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-					) {
-						message.lastSentence = messageContentParts[messageContentParts.length - 1];
-						eventTarget.dispatchEvent(
-							new CustomEvent('chat', {
-								detail: {
-									id: message.id,
-									content: messageContentParts[messageContentParts.length - 1]
-								}
-							})
-						);
 					}
 				}
 			}
@@ -2899,20 +3027,20 @@
 		if (Array.isArray(reasoning_details)) {
 			if (reasoning_details.length > 0) {
 				message.reasoning_details = reasoning_details;
+				shouldFlushStreamingUpdate = true;
 			}
 		} else if (reasoning_details) {
 			message.reasoning_details = reasoning_details;
+			shouldFlushStreamingUpdate = true;
 		}
 
 		// Per-round reasoning_details (one array per stream round / tool-call
 		// round) lets the chat replay attach the correct round's reasoning to
 		// each tool_calls assistant message in multi-turn follow-ups. Without
 		// this, only the last round's reasoning survives in `reasoning_details`.
-		if (
-			Array.isArray(reasoning_details_per_round) &&
-			reasoning_details_per_round.length > 0
-		) {
+		if (Array.isArray(reasoning_details_per_round) && reasoning_details_per_round.length > 0) {
 			message.reasoning_details_per_round = reasoning_details_per_round;
+			shouldFlushStreamingUpdate = true;
 		}
 
 		if (Array.isArray(content_blocks)) {
@@ -2920,59 +3048,36 @@
 			// alongside the legacy `content` HTML projection for backwards compat
 			// and keep the API replay byte-stable with the live tool-call loop.
 			message.content_blocks = content_blocks;
+			shouldFlushStreamingUpdate = true;
 		}
 
 		if (content) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
-			message = { ...message };
-			history.messages[message.id] = message;
-			history = { ...history };
+			shouldFlushStreamingUpdate = true;
+			shouldRunTTS = true;
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
-			}
-
-			// Emit chat event for TTS
-			const messageContentParts = getMessageContentParts(
-				removeAllDetails(message.content),
-				$config?.audio?.tts?.split_on ?? 'punctuation'
-			);
-			messageContentParts.pop();
-
-			// dispatch only last sentence and make sure it hasn't been dispatched before
-			if (
-				messageContentParts.length > 0 &&
-				messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-			) {
-				message.lastSentence = messageContentParts[messageContentParts.length - 1];
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: {
-							id: message.id,
-							content: messageContentParts[messageContentParts.length - 1]
-						}
-					})
-				);
 			}
 		}
 
 		if (selected_model_id) {
 			message.selectedModelId = selected_model_id;
 			message.arena = true;
+			shouldFlushStreamingUpdate = true;
 		}
 
 		if (usage) {
 			message.usage = usage;
+			shouldFlushStreamingUpdate = true;
 		}
 
-		message = { ...message };
-		history.messages[message.id] = message;
-		history = { ...history };
-
 		if (done) {
-			message.done = true;
 			message = { ...message };
+			emitPendingTTSParts(message, { done: true });
+			cancelStreamingMessageFlush(message.id);
+			message.done = true;
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -2983,19 +3088,6 @@
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
 
-			// Emit chat event for TTS
-			let lastMessageContentPart =
-				getMessageContentParts(
-					removeAllDetails(message.content),
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				)?.at(-1) ?? '';
-			if (lastMessageContentPart) {
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: { id: message.id, content: lastMessageContentPart }
-					})
-				);
-			}
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat:finish', {
 					detail: {
@@ -3024,12 +3116,9 @@
 			if (message.usage) {
 				chatTokenStatsRefreshTrigger.update((n) => n + 1);
 			}
-		}
-
-		await tick();
-
-		if (autoScroll) {
-			scrollToBottom();
+		} else if (shouldFlushStreamingUpdate) {
+			history.messages[message.id] = message;
+			scheduleStreamingMessageFlush(message.id, { runTTS: shouldRunTTS, ownerId: message.id });
 		}
 	};
 
@@ -3059,8 +3148,7 @@
 
 		if (
 			files.length > 0 &&
-			files.filter((file) => file.status === 'uploading' || file.status === 'processing')
-				.length > 0
+			files.filter((file) => file.status === 'uploading' || file.status === 'processing').length > 0
 		) {
 			const inFlightFiles = files.filter(
 				(file) => file.status === 'uploading' || file.status === 'processing'
@@ -3073,10 +3161,9 @@
 
 			toast.error(
 				processingFiles.length > 0
-					? $i18n.t(
-							`Open WebUI is still extracting content from {{count}} file(s). Please wait.`,
-							{ count: processingFiles.length }
-						)
+					? $i18n.t(`Open WebUI is still extracting content from {{count}} file(s). Please wait.`, {
+							count: processingFiles.length
+						})
 					: allSentWaitingForServer
 						? $i18n.t(
 								`Uploads have finished sending ({{count}} file(s)); waiting for the server to finish processing.`,
@@ -3576,8 +3663,7 @@
 										responseMessage.reasoning_details = savedReasoningDetails;
 									}
 									if (savedReasoningDetailsPerRound) {
-										responseMessage.reasoning_details_per_round =
-											savedReasoningDetailsPerRound;
+										responseMessage.reasoning_details_per_round = savedReasoningDetailsPerRound;
 									}
 								} else {
 									responseMessage.content = '';
@@ -3631,8 +3717,7 @@
 							if (failedToolContext?.hasCompletedToolCall) {
 								savedToolContent = failedToolContext.content;
 								savedReasoningDetails = responseMessage.reasoning_details || null;
-								savedReasoningDetailsPerRound =
-									responseMessage.reasoning_details_per_round || null;
+								savedReasoningDetailsPerRound = responseMessage.reasoning_details_per_round || null;
 							}
 
 							if (attempt < MAX_RETRIES && !skipRemainingRetriesSet.has(responseMessageId)) {
@@ -3686,8 +3771,7 @@
 									responseMessage.reasoning_details = savedReasoningDetails;
 								}
 								if (savedReasoningDetailsPerRound) {
-									responseMessage.reasoning_details_per_round =
-										savedReasoningDetailsPerRound;
+									responseMessage.reasoning_details_per_round = savedReasoningDetailsPerRound;
 								}
 							}
 
@@ -3782,7 +3866,14 @@
 		return features;
 	};
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId, opts = {}) => {
+	const sendMessageSocket = async (
+		model,
+		_messages,
+		_history,
+		responseMessageId,
+		_chatId,
+		opts = {}
+	) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -3847,16 +3938,96 @@
 		].filter((message) => message);
 
 		const TEXT_FILE_EXTS = new Set([
-			'txt', 'md', 'markdown', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson',
-			'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env', 'log', 'xml', 'svg',
-			'py', 'pyi', 'ipynb', 'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'vue',
-			'svelte', 'java', 'kt', 'kts', 'scala', 'groovy', 'c', 'cc', 'cpp',
-			'cxx', 'h', 'hpp', 'hxx', 'rs', 'go', 'rb', 'php', 'pl', 'pm', 'lua',
-			'r', 'jl', 'dart', 'swift', 'm', 'mm', 'cs', 'fs', 'fsx', 'ex', 'exs',
-			'erl', 'hs', 'ml', 'mli', 'clj', 'cljs', 'sh', 'bash', 'zsh', 'fish',
-			'ps1', 'bat', 'cmd', 'sql', 'graphql', 'gql', 'proto', 'css', 'scss',
-			'sass', 'less', 'tex', 'bib', 'srt', 'vtt', 'patch', 'diff',
-			'gitignore', 'dockerignore', 'editorconfig'
+			'txt',
+			'md',
+			'markdown',
+			'rst',
+			'csv',
+			'tsv',
+			'json',
+			'jsonl',
+			'ndjson',
+			'yaml',
+			'yml',
+			'toml',
+			'ini',
+			'cfg',
+			'conf',
+			'env',
+			'log',
+			'xml',
+			'svg',
+			'py',
+			'pyi',
+			'ipynb',
+			'js',
+			'mjs',
+			'cjs',
+			'ts',
+			'tsx',
+			'jsx',
+			'vue',
+			'svelte',
+			'java',
+			'kt',
+			'kts',
+			'scala',
+			'groovy',
+			'c',
+			'cc',
+			'cpp',
+			'cxx',
+			'h',
+			'hpp',
+			'hxx',
+			'rs',
+			'go',
+			'rb',
+			'php',
+			'pl',
+			'pm',
+			'lua',
+			'r',
+			'jl',
+			'dart',
+			'swift',
+			'm',
+			'mm',
+			'cs',
+			'fs',
+			'fsx',
+			'ex',
+			'exs',
+			'erl',
+			'hs',
+			'ml',
+			'mli',
+			'clj',
+			'cljs',
+			'sh',
+			'bash',
+			'zsh',
+			'fish',
+			'ps1',
+			'bat',
+			'cmd',
+			'sql',
+			'graphql',
+			'gql',
+			'proto',
+			'css',
+			'scss',
+			'sass',
+			'less',
+			'tex',
+			'bib',
+			'srt',
+			'vtt',
+			'patch',
+			'diff',
+			'gitignore',
+			'dockerignore',
+			'editorconfig'
 		]);
 
 		const isTextFile = (file) => {
@@ -3866,11 +4037,7 @@
 			const dot = name.lastIndexOf('.');
 			const ext = dot >= 0 ? name.slice(dot + 1) : name;
 			if (ext && TEXT_FILE_EXTS.has(ext)) return true;
-			const ct = (
-				file.content_type ||
-				file.file?.meta?.content_type ||
-				''
-			).toLowerCase();
+			const ct = (file.content_type || file.file?.meta?.content_type || '').toLowerCase();
 			if (ct.startsWith('text/') && !ct.includes('html')) return true;
 			return false;
 		};
@@ -3881,10 +4048,16 @@
 		// (openai.py file-part loop: text mode → <document> text part;
 		// pdf mode → LibreOffice → existing PDF + file-parser plugin path).
 		const EXTRACTABLE_EXTS = new Set([
-			'docx', 'doc', 'odt', 'rtf',
-			'pptx', 'ppt',
-			'xlsx', 'xls',
-			'html', 'htm',
+			'docx',
+			'doc',
+			'odt',
+			'rtf',
+			'pptx',
+			'ppt',
+			'xlsx',
+			'xls',
+			'html',
+			'htm',
 			'epub'
 		]);
 
@@ -3948,9 +4121,7 @@
 							...(message.reasoning_details_per_round
 								? { reasoning_details_per_round: message.reasoning_details_per_round }
 								: {}),
-							...(message.reasoning_details
-								? { reasoning_details: message.reasoning_details }
-								: {})
+							...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 						};
 					}
 
@@ -3984,9 +4155,7 @@
 							// led to a function_call to be preserved on the assistant message
 							// in follow-up requests. Dropping it breaks the reasoning chain on
 							// multi-turn tool-call conversations.
-							...(message.reasoning_details
-								? { reasoning_details: message.reasoning_details }
-								: {})
+							...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {})
 						};
 					}
 
@@ -4047,8 +4216,7 @@
 												type: 'file',
 												file: {
 													filename: file.name || file.file?.filename || 'document.pdf',
-													file_data:
-														file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
+													file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`
 												}
 											}))
 									: []),
@@ -4061,7 +4229,7 @@
 									file: {
 										filename: file.name || file.file?.filename || 'document',
 										file_data: file.url || `${WEBUI_API_BASE_URL}/files/${file.id}/content`,
-										processing_mode: (file.processing_mode === 'pdf' ? 'pdf' : 'text')
+										processing_mode: file.processing_mode === 'pdf' ? 'pdf' : 'text'
 									}
 								}))
 							]
@@ -4102,6 +4270,24 @@
 			}
 		}
 
+		let selectedToolServers = [];
+		if (toolServerIds.length > 0) {
+			await loadToolServers().catch((error) => {
+				toast.error(`${error}`);
+				throw error;
+			});
+
+			selectedToolServers = ($toolServers ?? []).filter(
+				(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+			);
+
+			if (selectedToolServers.length < toolServerIds.length) {
+				const error = $i18n.t('Failed to load selected tool servers.');
+				toast.error(error);
+				throw new Error(error);
+			}
+		}
+
 		const [res, controller] = await chatCompletion(
 			localStorage.token,
 			{
@@ -4123,9 +4309,7 @@
 
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
-				tool_servers: ($toolServers ?? []).filter(
-					(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-				),
+				tool_servers: selectedToolServers,
 				features: getFeatures(),
 				variables: {
 					...getPromptVariables($user?.name, $settings?.userLocation ? userLocation : undefined)
@@ -4171,7 +4355,7 @@
 				// disabled in its meta — some providers (e.g. Gemini via OpenRouter)
 				// don't support it and including a stale value from localStorage
 				// can confuse them.
-				...(((model?.info?.meta as any)?.service_tier?.enabled === false)
+				...((model?.info?.meta as any)?.service_tier?.enabled === false
 					? {}
 					: { service_tier: serviceTier }),
 
@@ -4259,6 +4443,7 @@
 										contentLen: responseMessage.content?.length ?? 0,
 										userInitiatedStop
 									});
+									cancelStreamingMessageFlush(responseMessageId);
 									responseMessage.done = true;
 									history.messages[responseMessageId] = responseMessage;
 									history = { ...history };
@@ -4267,10 +4452,7 @@
 
 								// Bail if THIS stream's controller has been swapped out for a
 								// different message's controller (concurrent request).
-								if (
-									generationController != null &&
-									generationController.id !== responseMessageId
-								) {
+								if (generationController != null && generationController.id !== responseMessageId) {
 									chatStreamDebug('[chat-stream] for-await bailing — controller owner changed', {
 										responseMessageId,
 										currentOwner: generationController?.id
@@ -4279,7 +4461,11 @@
 								}
 
 								if (error) {
-									chatStreamDebug('[chat-stream] direct stream error', { responseMessageId, error });
+									chatStreamDebug('[chat-stream] direct stream error', {
+										responseMessageId,
+										error
+									});
+									cancelStreamingMessageFlush(responseMessageId);
 									await handleOpenAIError(error, responseMessage, 'direct-stream-error');
 									break;
 								}
@@ -4298,6 +4484,7 @@
 								}
 
 								if (done) {
+									cancelStreamingMessageFlush(responseMessageId);
 									responseMessage.done = true;
 									history.messages[responseMessageId] = responseMessage;
 									history = { ...history };
@@ -4317,17 +4504,13 @@
 								if (!(responseMessage.content == '' && value == '\n')) {
 									responseMessage.content += value;
 									history.messages[responseMessageId] = responseMessage;
-									history = { ...history };
+									scheduleStreamingMessageFlush(responseMessageId, {
+										ownerId: responseMessageId
+									});
 
 									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 										navigator.vibrate(5);
 									}
-								}
-
-								await tick();
-
-								if (autoScroll) {
-									scrollToBottom();
 								}
 							}
 						} catch (e: any) {
@@ -4340,6 +4523,7 @@
 								message: e?.message
 							});
 							if (e?.name === 'AbortError') {
+								cancelStreamingMessageFlush(responseMessageId);
 								responseMessage.done = true;
 								history.messages[responseMessageId] = responseMessage;
 								history = { ...history };
@@ -4420,7 +4604,8 @@
 		chatStreamDebug('[chat-stream] handleOpenAIError', {
 			source,
 			responseMessageId: responseMessage?.id,
-			errorShape: innerError && typeof innerError === 'object' ? Object.keys(innerError) : typeof innerError,
+			errorShape:
+				innerError && typeof innerError === 'object' ? Object.keys(innerError) : typeof innerError,
 			error: innerError
 		});
 
@@ -4517,6 +4702,7 @@
 		};
 		responseMessage.done = true;
 
+		cancelStreamingMessageFlush(responseMessage.id);
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
@@ -4538,11 +4724,15 @@
 			if (responseMessage.parentId !== null && history.messages[responseMessage.parentId]) {
 				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
 					if (history.messages[messageId]) {
+						cancelStreamingMessageFlush(messageId);
 						history.messages[messageId].done = true;
 						history.messages[messageId] = { ...history.messages[messageId] };
 					}
 				}
 			} else {
+				if (history.currentId) {
+					cancelStreamingMessageFlush(history.currentId);
+				}
 				responseMessage.done = true;
 				history.messages[history.currentId] = { ...responseMessage };
 			}
@@ -4641,8 +4831,7 @@
 							responseMessage.reasoning_details = savedReasoningDetails;
 						}
 						if (savedReasoningDetailsPerRound) {
-							responseMessage.reasoning_details_per_round =
-								savedReasoningDetailsPerRound;
+							responseMessage.reasoning_details_per_round = savedReasoningDetailsPerRound;
 						}
 					} else {
 						responseMessage.content = '';
@@ -4694,8 +4883,7 @@
 				if (failedToolContext?.hasCompletedToolCall) {
 					savedToolContent = failedToolContext.content;
 					savedReasoningDetails = responseMessage.reasoning_details || null;
-					savedReasoningDetailsPerRound =
-						responseMessage.reasoning_details_per_round || null;
+					savedReasoningDetailsPerRound = responseMessage.reasoning_details_per_round || null;
 				}
 
 				if (attempt < MAX_RETRIES && !skipRemainingRetriesSet.has(message.id)) {
@@ -4752,9 +4940,12 @@
 				}
 			}
 		} finally {
-			chatStreamDebug('[chat-stream] retryWithoutProviderRestrictions finally — clearing controller', {
-				messageId: message?.id
-			});
+			chatStreamDebug(
+				'[chat-stream] retryWithoutProviderRestrictions finally — clearing controller',
+				{
+					messageId: message?.id
+				}
+			);
 			generating = false;
 			clearGenerationControllerIfOwned(message?.id);
 		}
@@ -5349,9 +5540,7 @@
 		prompt = '';
 		messageInput?.setText('');
 
-		toast.success(
-			$i18n.t('Message queued — will send when the current response finishes')
-		);
+		toast.success($i18n.t('Message queued — will send when the current response finishes'));
 
 		// Persist the queue change immediately so it survives reload / tab
 		// close. saveChatHandler is a no-op for temp chats / missing chat id,
@@ -5435,9 +5624,7 @@
 		// If the user @-mentioned a specific model at queue time, the user
 		// message records THAT model only — mirrors submitPrompt's normal path
 		// where `models: selectedModels` reflects atSelectedModel's effect.
-		const messageModels = next.atSelectedModelId
-			? [next.atSelectedModelId]
-			: selectedModels;
+		const messageModels = next.atSelectedModelId ? [next.atSelectedModelId] : selectedModels;
 		const userMessage = {
 			id: userMessageId,
 			parentId: messages.length !== 0 ? messages.at(-1).id : null,
@@ -5616,8 +5803,7 @@
 		} catch (error) {
 			console.error('Error saving conversation:', error);
 			const detail =
-				(error && (error.detail || error.message)) ||
-				(typeof error === 'string' ? error : null);
+				(error && (error.detail || error.message)) || (typeof error === 'string' ? error : null);
 			toast.error(
 				detail
 					? `${$i18n.t('Failed to save conversation')}: ${detail}`
@@ -5754,37 +5940,41 @@
 							<!-- Token Usage Display -->
 							{#if relevantGroups.length > 0}
 								<div class="mx-auto inset-x-0 flex justify-center w-full">
-									<div class="px-3 pb-2 w-full {($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'}">
+									<div
+										class="px-3 pb-2 w-full {($settings?.widescreenMode ?? null)
+											? 'max-w-full'
+											: 'max-w-6xl'}"
+									>
 										<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
-										{#each relevantGroups as [groupName, groupData]}
-											{@const effectiveUsage = groupData.effectiveUsage}
-											{@const isOverLimit =
-												groupData.limit && effectiveUsage.total > groupData.limit}
-											<div class="flex items-center justify-between mb-1 last:mb-0">
-												<span
-													class="font-medium {isOverLimit
-														? 'text-red-600 dark:text-red-400'
-														: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
-												>
-												<div
-													class="flex items-center space-x-2 {isOverLimit
-														? 'text-red-600 dark:text-red-400'
-														: 'text-gray-600 dark:text-gray-400'}"
-												>
-													<span>{effectiveUsage.in.toLocaleString()} IN</span>
-													<span>·</span>
-													<span>{effectiveUsage.out.toLocaleString()} OUT</span>
-													<span>·</span>
-													<span>{effectiveUsage.total.toLocaleString()} TOTAL</span>
-													{#if groupData.limit}
-														<span>/ {groupData.limit.toLocaleString()}</span>
-													{/if}
+											{#each relevantGroups as [groupName, groupData]}
+												{@const effectiveUsage = groupData.effectiveUsage}
+												{@const isOverLimit =
+													groupData.limit && effectiveUsage.total > groupData.limit}
+												<div class="flex items-center justify-between mb-1 last:mb-0">
+													<span
+														class="font-medium {isOverLimit
+															? 'text-red-600 dark:text-red-400'
+															: 'text-gray-700 dark:text-gray-300'}">{groupName}</span
+													>
+													<div
+														class="flex items-center space-x-2 {isOverLimit
+															? 'text-red-600 dark:text-red-400'
+															: 'text-gray-600 dark:text-gray-400'}"
+													>
+														<span>{effectiveUsage.in.toLocaleString()} IN</span>
+														<span>·</span>
+														<span>{effectiveUsage.out.toLocaleString()} OUT</span>
+														<span>·</span>
+														<span>{effectiveUsage.total.toLocaleString()} TOTAL</span>
+														{#if groupData.limit}
+															<span>/ {groupData.limit.toLocaleString()}</span>
+														{/if}
+													</div>
 												</div>
-											</div>
-										{/each}
+											{/each}
+										</div>
 									</div>
 								</div>
-							</div>
 							{/if}
 
 							<div class=" pb-safe">
@@ -5938,11 +6128,22 @@
 				{#each Array(3) as _, i}
 					<div class="flex gap-3 {i % 2 === 1 ? 'justify-end' : ''}">
 						{#if i % 2 === 0}
-							<div class="size-7 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse flex-shrink-0"></div>
+							<div
+								class="size-7 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse flex-shrink-0"
+							></div>
 						{/if}
-						<div class="flex flex-col gap-1.5 {i % 2 === 1 ? 'items-end' : ''}" style="max-width: 65%;">
-							<div class="h-3.5 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" style="width: {120 + i * 40}px"></div>
-							<div class="h-3.5 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" style="width: {180 + i * 20}px"></div>
+						<div
+							class="flex flex-col gap-1.5 {i % 2 === 1 ? 'items-end' : ''}"
+							style="max-width: 65%;"
+						>
+							<div
+								class="h-3.5 rounded bg-gray-200 dark:bg-gray-800 animate-pulse"
+								style="width: {120 + i * 40}px"
+							></div>
+							<div
+								class="h-3.5 rounded bg-gray-200 dark:bg-gray-800 animate-pulse"
+								style="width: {180 + i * 20}px"
+							></div>
 						</div>
 					</div>
 				{/each}

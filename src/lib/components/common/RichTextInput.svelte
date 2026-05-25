@@ -261,8 +261,20 @@
 
 	let content = null;
 	let htmlValue = '';
-	let jsonValue = '';
+	let jsonValue: any = '';
 	let mdValue = '';
+
+	// Above this size the chat composer switches away from ProseMirror/TipTap
+	// into a native textarea. TipTap is excellent for rich, short prompts, but
+	// very large pasted logs make every keystroke pay for DOM parsing,
+	// getHTML/getJSON serialization, and Turndown conversion. The model/backend
+	// can handle the text; the hot path that must stay fast is local editing.
+	const LONG_TEXT_INPUT_CHARACTER_THRESHOLD = 20000;
+
+	let plainTextMode = false;
+	let plainTextValue = '';
+	let plainTextareaElement: HTMLTextAreaElement | null = null;
+	let pendingPlainSelection: { start: number; end: number } | null = null;
 
 	// Set by onTransaction before it assigns `value` internally; consumed by
 	// the `$: onValueChange()` reactive on its next run to skip a redundant
@@ -279,6 +291,146 @@
 		throwOnError: false
 	};
 
+	const shouldUsePlainTextModeForLength = (length: number) =>
+		messageInput && length > LONG_TEXT_INPUT_CHARACTER_THRESHOLD;
+
+	const shouldUsePlainTextMode = (text: string = '') =>
+		shouldUsePlainTextModeForLength(text.length);
+
+	const setRichEditorInputId = (enabled: boolean) => {
+		if (!editor?.view?.dom || !id) return;
+
+		if (enabled) {
+			editor.view.dom.setAttribute('id', id);
+		} else if (editor.view.dom.getAttribute('id') === id) {
+			editor.view.dom.setAttribute('id', `${id}-rich-editor`);
+		}
+	};
+
+	const focusPlainTextarea = async () => {
+		await tick();
+
+		if (!plainTextareaElement) return;
+
+		plainTextareaElement.focus();
+		if (pendingPlainSelection) {
+			const { start, end } = pendingPlainSelection;
+			pendingPlainSelection = null;
+			plainTextareaElement.setSelectionRange(start, end);
+		}
+	};
+
+	const emitPlainTextChange = () => {
+		mdValue = plainTextValue;
+		htmlValue = '';
+		jsonValue = null;
+		value = plainTextValue;
+
+		onChange({
+			html: htmlValue,
+			json: jsonValue,
+			md: mdValue
+		});
+	};
+
+	const activatePlainTextMode = (
+		text: string,
+		selectionStart: number = text.length,
+		selectionEnd: number = selectionStart,
+		clearRichEditor: boolean = true
+	) => {
+		plainTextMode = true;
+		plainTextValue = text;
+		pendingPlainSelection = {
+			start: Math.max(0, Math.min(selectionStart, text.length)),
+			end: Math.max(0, Math.min(selectionEnd, text.length))
+		};
+		setRichEditorInputId(false);
+
+		if (clearRichEditor && editor) {
+			setTimeout(() => {
+				if (plainTextMode && editor && !editor.isDestroyed) {
+					editor.commands.clearContent();
+				}
+			}, 0);
+		}
+
+		void focusPlainTextarea();
+	};
+
+	const deactivatePlainTextMode = () => {
+		plainTextMode = false;
+		plainTextValue = '';
+		pendingPlainSelection = null;
+		setRichEditorInputId(true);
+	};
+
+	const getWordBoundsInText = (text: string, offset: number) => {
+		let wordStart = offset;
+		let wordEnd = offset;
+		while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) wordStart--;
+		while (wordEnd < text.length && !/\s/.test(text[wordEnd])) wordEnd++;
+		return { start: wordStart, end: wordEnd };
+	};
+
+	const replacePlainTextRange = async (start: number, end: number, text: string) => {
+		plainTextValue = `${plainTextValue.slice(0, start)}${text}${plainTextValue.slice(end)}`;
+		pendingPlainSelection = { start: start + text.length, end: start + text.length };
+		emitPlainTextChange();
+		await focusPlainTextarea();
+	};
+
+	const handlePlainTextareaInput = (event: Event) => {
+		plainTextValue = (event.currentTarget as HTMLTextAreaElement).value;
+
+		if (plainTextValue.length === 0) {
+			deactivatePlainTextMode();
+			emitPlainTextChange();
+			editor?.commands.clearContent();
+			focus();
+			return;
+		}
+
+		emitPlainTextChange();
+	};
+
+	const handlePlainTextareaPaste = (event: ClipboardEvent) => {
+		const clipboardData = event.clipboardData;
+		if (!clipboardData) return;
+
+		const plainText = clipboardData.getData('text/plain');
+		if (largeTextAsFile && plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
+			eventDispatch('paste', { event });
+			event.preventDefault();
+			return;
+		}
+
+		const hasImageFile = Array.from(clipboardData.files).some((file) =>
+			file.type.startsWith('image/')
+		);
+		const hasImageItem = Array.from(clipboardData.items).some((item) =>
+			item.type.startsWith('image/')
+		);
+		const hasFile = Array.from(clipboardData.files).length > 0;
+
+		if (hasImageFile || hasImageItem || hasFile) {
+			eventDispatch('paste', { event });
+			event.preventDefault();
+		}
+	};
+
+	const handlePlainTextareaKeydown = (event: KeyboardEvent) => {
+		if (event.key === 'Tab') {
+			event.preventDefault();
+			const start = plainTextareaElement?.selectionStart ?? plainTextValue.length;
+			const end = plainTextareaElement?.selectionEnd ?? start;
+			void replacePlainTextRange(start, end, '\t');
+			return;
+		}
+
+		eventDispatch('keydown', { event });
+	};
+
 	$: if (editor) {
 		editor.setOptions({
 			editable: editable
@@ -290,6 +442,12 @@
 	}
 
 	export const getWordAtDocPos = () => {
+		if (plainTextMode) {
+			const offset = plainTextareaElement?.selectionStart ?? plainTextValue.length;
+			const { start, end } = getWordBoundsInText(plainTextValue, offset);
+			return plainTextValue.slice(start, end);
+		}
+
 		if (!editor) return '';
 		const { state } = editor.view;
 		const pos = state.selection.from;
@@ -329,6 +487,13 @@
 	}
 
 	export const replaceCommandWithText = async (text) => {
+		if (plainTextMode) {
+			const offset = plainTextareaElement?.selectionStart ?? plainTextValue.length;
+			const { start, end } = getWordBoundsInText(plainTextValue, offset);
+			await replacePlainTextRange(start, end, text);
+			return;
+		}
+
 		const { state, dispatch } = editor.view;
 		const { selection } = state;
 		const pos = selection.from;
@@ -417,9 +582,20 @@
 		// selectNextTemplate(state, dispatch);
 	};
 
-	export const setText = (text: string) => {
+	export const setText = (text: string = '') => {
+		text = (text ?? '').replaceAll('\n\n', '\n');
+
+		if (shouldUsePlainTextMode(text)) {
+			activatePlainTextMode(text);
+			emitPlainTextChange();
+			return;
+		}
+
+		if (plainTextMode) {
+			deactivatePlainTextMode();
+		}
+
 		if (!editor) return;
-		text = text.replaceAll('\n\n', '\n');
 
 		// reset the editor content
 		editor.commands.clearContent();
@@ -453,7 +629,14 @@
 		focus();
 	};
 
-	export const insertContent = (content) => {
+	export const insertContent = async (content) => {
+		if (plainTextMode) {
+			const start = plainTextareaElement?.selectionStart ?? plainTextValue.length;
+			const end = plainTextareaElement?.selectionEnd ?? start;
+			await replacePlainTextRange(start, end, String(content ?? ''));
+			return;
+		}
+
 		if (!editor) return;
 		const { state, view } = editor;
 		const { schema, tr } = state;
@@ -468,6 +651,25 @@
 	};
 
 	export const replaceVariables = (variables) => {
+		if (plainTextMode) {
+			const nextText = plainTextValue.replace(
+				/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g,
+				(match, varName) => {
+					const trimmedVarName = varName.trim();
+					return variables.hasOwnProperty(trimmedVarName)
+						? String(variables[trimmedVarName])
+						: match;
+				}
+			);
+
+			if (nextText !== plainTextValue) {
+				const cursor = plainTextareaElement?.selectionStart ?? nextText.length;
+				activatePlainTextMode(nextText, cursor, cursor, false);
+				emitPlainTextChange();
+			}
+			return;
+		}
+
 		if (!editor) return;
 		const { state, view } = editor;
 		const { doc } = state;
@@ -511,6 +713,11 @@
 	};
 
 	export const focus = () => {
+		if (plainTextMode) {
+			void focusPlainTextarea();
+			return;
+		}
+
 		if (editor) {
 			try {
 				editor.view?.focus();
@@ -582,6 +789,12 @@
 	}
 
 	export const setContent = (content) => {
+		if (plainTextMode && typeof content === 'string') {
+			plainTextValue = content;
+			emitPlainTextChange();
+			return;
+		}
+
 		editor.commands.setContent(content);
 	};
 
@@ -718,7 +931,7 @@
 						]
 					: []),
 
-				CharacterCount.configure({}),
+				...(messageInput ? [] : [CharacterCount.configure({})]),
 				...(image ? [Image] : []),
 				...(fileHandler
 					? [
@@ -779,6 +992,11 @@
 				editor = editor;
 				if (!editor) return;
 
+				// In long-text mode the native textarea is the source of truth.
+				// Hidden TipTap cleanup transactions must not emit an empty prompt
+				// over the top of the long text the user is editing.
+				if (plainTextMode) return;
+
 				// We're about to drive the `value` prop ourselves; tell the
 				// `$: onValueChange()` reactive (which also fires because we
 				// just reassigned `editor`) to no-op so it doesn't re-serialize
@@ -823,6 +1041,16 @@
 						.replace(/\u00a0/g, ' ');
 				}
 
+				if (!preserveBreaks) {
+					mdValue = mdValue.replace(/<br\/>/g, '');
+				}
+
+				if (shouldUsePlainTextMode(mdValue)) {
+					activatePlainTextMode(mdValue);
+					emitPlainTextChange();
+					return;
+				}
+
 				onChange({
 					html: htmlValue,
 					json: jsonValue,
@@ -855,6 +1083,31 @@
 			editorProps: {
 				attributes: { id },
 				handlePaste: (view, event) => {
+					const pastedPlainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
+						/\r\n/g,
+						'\n'
+					);
+
+					if (pastedPlainText && !largeTextAsFile) {
+						const { state } = view;
+						const { from, to } = state.selection;
+						const projectedLength = Math.max(
+							0,
+							state.doc.textContent.length - (to - from) + pastedPlainText.length
+						);
+
+						if (shouldUsePlainTextModeForLength(projectedLength)) {
+							event.preventDefault();
+							const before = state.doc.textBetween(0, from, '\n', '\n');
+							const after = state.doc.textBetween(to, state.doc.content.size, '\n', '\n');
+							const nextText = `${before}${pastedPlainText}${after}`;
+							const cursor = before.length + pastedPlainText.length;
+							activatePlainTextMode(nextText, cursor, cursor);
+							emitPlainTextChange();
+							return true;
+						}
+					}
+
 					// Force plain-text pasting when richText === false
 					if (!richText) {
 						// swallow HTML completely
@@ -1003,6 +1256,25 @@
 									return true;
 								}
 
+								if (!largeTextAsFile) {
+									const { state } = view;
+									const { from, to } = state.selection;
+									const projectedLength = Math.max(
+										0,
+										state.doc.textContent.length - (to - from) + plainText.length
+									);
+									if (shouldUsePlainTextModeForLength(projectedLength)) {
+										const before = state.doc.textBetween(0, from, '\n', '\n');
+										const after = state.doc.textBetween(to, state.doc.content.size, '\n', '\n');
+										const nextText = `${before}${plainText}${after}`;
+										const cursor = before.length + plainText.length;
+										activatePlainTextMode(nextText, cursor, cursor);
+										emitPlainTextChange();
+										event.preventDefault();
+										return true;
+									}
+								}
+
 								// Workaround for mobile WebViews that strip line breaks when pasting from
 								// clipboard suggestions (e.g., Gboard clipboard history).
 								const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(
@@ -1095,6 +1367,10 @@
 			enablePasteRules: richText
 		});
 
+		if (plainTextMode) {
+			setRichEditorInputId(false);
+		}
+
 		provider?.setEditor(editor, () => ({ md: mdValue, html: htmlValue, json: jsonValue }));
 
 		if (messageInput) {
@@ -1112,7 +1388,7 @@
 		}
 	});
 
-	$: if (value !== null && editor && !collaboration) {
+	$: if (value !== null && editor && !collaboration && !plainTextMode) {
 		onValueChange();
 	}
 
@@ -1125,6 +1401,12 @@
 		// running Turndown again.
 		if (_suppressOnValueChange) {
 			_suppressOnValueChange = false;
+			return;
+		}
+
+		if (typeof value === 'string' && shouldUsePlainTextMode(value)) {
+			activatePlainTextMode(value);
+			emitPlainTextChange();
 			return;
 		}
 
@@ -1174,7 +1456,29 @@
 	};
 </script>
 
-{#if richText && showFormattingToolbar}
+{#if plainTextMode}
+	<textarea
+		bind:this={plainTextareaElement}
+		{id}
+		class="w-full min-w-full h-64 max-h-80 min-h-24 bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-hidden resize-none overflow-auto whitespace-pre-wrap font-mono text-sm leading-5 {!editable
+			? 'cursor-not-allowed'
+			: ''}"
+		value={plainTextValue}
+		spellcheck="false"
+		placeholder={placeholder}
+		aria-label={placeholder}
+		disabled={!editable}
+		on:input={handlePlainTextareaInput}
+		on:paste={handlePlainTextareaPaste}
+		on:keydown={handlePlainTextareaKeydown}
+		on:keyup={(event) => eventDispatch('keyup', { event })}
+		on:compositionstart={(event) => oncompositionstart(event)}
+		on:compositionend={(event) => oncompositionend(event)}
+		on:focus={(event) => eventDispatch('focus', { event })}
+	/>
+{/if}
+
+{#if richText && showFormattingToolbar && !plainTextMode}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
@@ -1186,7 +1490,7 @@
 
 <div
 	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
-		? 'cursor-not-allowed'
-		: ''}"
+	class="relative w-full min-w-full h-full min-h-fit {plainTextMode
+		? 'hidden'
+		: ''} {className} {!editable ? 'cursor-not-allowed' : ''}"
 />

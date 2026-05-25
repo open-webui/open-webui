@@ -1,161 +1,241 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
+import { readLocalStorageCache, writeLocalStorageCache } from '$lib/utils/cache';
 import { getOpenAIModelsDirect } from './openai';
 
 import { parse } from 'yaml';
 import { toast } from 'svelte-sonner';
 
-export const getModels = async (
+type DirectConnections = {
+	OPENAI_API_BASE_URLS?: string[];
+	OPENAI_API_KEYS?: string[];
+	OPENAI_API_CONFIGS?: Record<
+		string,
+		{
+			enable?: boolean;
+			model_ids?: string[];
+			prefix_id?: string;
+			tags?: { name: string }[];
+		}
+	>;
+};
+
+type ModelResponse = any;
+
+const pendingModelRequests = new Map<string, Promise<ModelResponse[]>>();
+const pendingToolServerRequests = new Map<string, Promise<any[]>>();
+const TOOL_SERVERS_CACHE_KEY = 'toolServers';
+const TOOL_SERVERS_CACHE_VERSION = 1;
+const TOOL_SERVERS_CACHE_TTL = 60 * 1000;
+
+const getModelRequestKey = (
 	token: string = '',
-	connections: object | null = null,
+	connections: DirectConnections | null | false = null,
 	base: boolean = false,
 	refresh: boolean = false
 ) => {
-	const searchParams = new URLSearchParams();
-	if (refresh) {
-		searchParams.append('refresh', 'true');
+	return JSON.stringify({
+		token,
+		base,
+		refresh,
+		connections: connections
+			? {
+					OPENAI_API_BASE_URLS: connections.OPENAI_API_BASE_URLS ?? [],
+					OPENAI_API_KEYS: (connections.OPENAI_API_KEYS ?? []).map((key) => Boolean(key)),
+					OPENAI_API_CONFIGS: connections.OPENAI_API_CONFIGS ?? {}
+				}
+			: null
+	});
+};
+
+const getToolServerRequestKey = (servers: any[] = [], cacheUserId: string | null = null) =>
+	JSON.stringify({
+		version: TOOL_SERVERS_CACHE_VERSION,
+		userId: cacheUserId,
+		servers: servers
+			.filter((server) => server?.config?.enable)
+			.map((server) => ({
+				id: server?.id ?? '',
+				url: server?.url ?? '',
+				path: server?.path ?? '',
+				spec_type: server?.spec_type ?? 'url',
+				spec: server?.spec_type === 'json' ? (server?.spec ?? '') : '',
+				auth_type: server?.auth_type ?? 'bearer',
+				has_key: Boolean(server?.key)
+			}))
+	});
+
+export const getModels = async (
+	token: string = '',
+	connections: DirectConnections | null | false = null,
+	base: boolean = false,
+	refresh: boolean = false
+) => {
+	const requestKey = getModelRequestKey(token, connections, base, refresh);
+	const pendingRequest = pendingModelRequests.get(requestKey);
+	if (pendingRequest) {
+		return pendingRequest;
 	}
 
-	let error = null;
-	const res = await fetch(
-		`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}?${searchParams.toString()}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				...(token && { authorization: `Bearer ${token}` })
-			}
+	const request = (async () => {
+		const searchParams = new URLSearchParams();
+		if (refresh) {
+			searchParams.append('refresh', 'true');
 		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
 
-	if (error) {
-		throw error;
-	}
+		let error = null;
+		const res = await fetch(
+			`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}?${searchParams.toString()}`,
+			{
+				method: 'GET',
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json',
+					...(token && { authorization: `Bearer ${token}` })
+				}
+			}
+		)
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				error = err;
+				console.error(err);
+				return null;
+			});
 
-	let models = res?.data ?? [];
+		if (error) {
+			throw error;
+		}
 
-	if (connections && !base) {
-		let localModels = [];
+		let models: ModelResponse[] = res?.data ?? [];
 
-		if (connections) {
-			const OPENAI_API_BASE_URLS = connections.OPENAI_API_BASE_URLS;
-			const OPENAI_API_KEYS = connections.OPENAI_API_KEYS;
-			const OPENAI_API_CONFIGS = connections.OPENAI_API_CONFIGS;
+		if (connections && !base) {
+			let localModels: ModelResponse[] = [];
 
-			const requests = [];
-			for (const idx in OPENAI_API_BASE_URLS) {
-				const url = OPENAI_API_BASE_URLS[idx];
+			if (connections) {
+				const OPENAI_API_BASE_URLS = connections.OPENAI_API_BASE_URLS ?? [];
+				const OPENAI_API_KEYS = connections.OPENAI_API_KEYS ?? [];
+				const OPENAI_API_CONFIGS = connections.OPENAI_API_CONFIGS ?? {};
 
-				if (idx.toString() in OPENAI_API_CONFIGS) {
-					const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
+				const requests = [];
+				for (const idx in OPENAI_API_BASE_URLS) {
+					const url = OPENAI_API_BASE_URLS[idx];
 
-					const enable = apiConfig?.enable ?? true;
-					const modelIds = apiConfig?.model_ids ?? [];
+					if (idx.toString() in OPENAI_API_CONFIGS) {
+						const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
 
-					if (enable) {
-						if (modelIds.length > 0) {
-							const modelList = {
-								object: 'list',
-								data: modelIds.map((modelId) => ({
-									id: modelId,
-									name: modelId,
-									owned_by: 'openai',
-									openai: { id: modelId },
-									urlIdx: idx
-								}))
-							};
+						const enable = apiConfig?.enable ?? true;
+						const modelIds = apiConfig?.model_ids ?? [];
 
-							requests.push(
-								(async () => {
-									return modelList;
-								})()
-							);
+						if (enable) {
+							if (modelIds.length > 0) {
+								const modelList = {
+									object: 'list',
+									data: modelIds.map((modelId: string) => ({
+										id: modelId,
+										name: modelId,
+										owned_by: 'openai',
+										openai: { id: modelId },
+										urlIdx: idx
+									}))
+								};
+
+								requests.push(
+									(async () => {
+										return modelList;
+									})()
+								);
+							} else {
+								requests.push(
+									(async () => {
+										return await getOpenAIModelsDirect(url, OPENAI_API_KEYS[idx])
+											.then((res) => {
+												return res;
+											})
+											.catch((err) => {
+												return {
+													object: 'list',
+													data: [],
+													urlIdx: idx
+												};
+											});
+									})()
+								);
+							}
 						} else {
 							requests.push(
 								(async () => {
-									return await getOpenAIModelsDirect(url, OPENAI_API_KEYS[idx])
-										.then((res) => {
-											return res;
-										})
-										.catch((err) => {
-											return {
-												object: 'list',
-												data: [],
-												urlIdx: idx
-											};
-										});
+									return {
+										object: 'list',
+										data: [],
+										urlIdx: idx
+									};
 								})()
 							);
 						}
-					} else {
-						requests.push(
-							(async () => {
-								return {
-									object: 'list',
-									data: [],
-									urlIdx: idx
-								};
-							})()
-						);
 					}
+				}
+
+				const responses = await Promise.all(requests);
+
+				for (const idx in responses) {
+					const response = responses[idx];
+					const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
+
+					let models: ModelResponse[] = Array.isArray(response) ? response : (response?.data ?? []);
+					models = models.map((model: ModelResponse) => ({
+						...model,
+						openai: { id: model.id },
+						urlIdx: idx
+					}));
+
+					const prefixId = apiConfig.prefix_id;
+					if (prefixId) {
+						for (const model of models) {
+							model.id = `${prefixId}.${model.id}`;
+						}
+					}
+
+					const tags = apiConfig.tags;
+					if (tags) {
+						for (const model of models) {
+							model.tags = tags;
+						}
+					}
+
+					localModels = localModels.concat(models);
 				}
 			}
 
-			const responses = await Promise.all(requests);
+			models = models.concat(
+				localModels.map((model) => ({
+					...model,
+					name: model?.name ?? model?.id,
+					direct: true
+				}))
+			);
 
-			for (const idx in responses) {
-				const response = responses[idx];
-				const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
-
-				let models = Array.isArray(response) ? response : (response?.data ?? []);
-				models = models.map((model) => ({ ...model, openai: { id: model.id }, urlIdx: idx }));
-
-				const prefixId = apiConfig.prefix_id;
-				if (prefixId) {
-					for (const model of models) {
-						model.id = `${prefixId}.${model.id}`;
-					}
-				}
-
-				const tags = apiConfig.tags;
-				if (tags) {
-					for (const model of models) {
-						model.tags = tags;
-					}
-				}
-
-				localModels = localModels.concat(models);
+			// Remove duplicates
+			const modelsMap: Record<string, ModelResponse> = {};
+			for (const model of models) {
+				modelsMap[model.id] = model;
 			}
+
+			models = Object.values(modelsMap);
 		}
 
-		models = models.concat(
-			localModels.map((model) => ({
-				...model,
-				name: model?.name ?? model?.id,
-				direct: true
-			}))
-		);
+		return models;
+	})();
 
-		// Remove duplicates
-		const modelsMap = {};
-		for (const model of models) {
-			modelsMap[model.id] = model;
-		}
+	pendingModelRequests.set(requestKey, request);
+	request.then(
+		() => pendingModelRequests.delete(requestKey),
+		() => pendingModelRequests.delete(requestKey)
+	);
 
-		models = Object.values(modelsMap);
-	}
-
-	return models;
+	return request;
 };
 
 type ChatCompletedForm = {
@@ -341,70 +421,117 @@ export const getToolServerData = async (token: string, url: string) => {
 	return res;
 };
 
-export const getToolServersData = async (servers: object[]) => {
-	return (
-		await Promise.all(
-			servers
-				.filter((server) => server?.config?.enable)
-				.map(async (server) => {
-					let error = null;
+export const getToolServersData = async (
+	servers: any[] = [],
+	options: {
+		cacheUserId?: string | null;
+		force?: boolean;
+		useCache?: boolean;
+		ttlMs?: number;
+	} = {}
+) => {
+	const cacheKey = getToolServerRequestKey(servers, options.cacheUserId ?? null);
+	const useCache = options.useCache ?? true;
 
-					let toolServerToken = null;
+	if (useCache && !options.force) {
+		const cachedToolServers = readLocalStorageCache<any[]>(TOOL_SERVERS_CACHE_KEY, cacheKey);
+		if (Array.isArray(cachedToolServers)) {
+			return cachedToolServers;
+		}
+	}
 
-					const auth_type = server?.auth_type ?? 'bearer';
-					if (auth_type === 'bearer') {
-						toolServerToken = server?.key;
-					} else if (auth_type === 'none') {
-						// No authentication
-					} else if (auth_type === 'session') {
-						toolServerToken = localStorage.token;
-					}
+	const pendingRequest = pendingToolServerRequests.get(cacheKey);
+	if (pendingRequest && !options.force) {
+		return pendingRequest;
+	}
 
-					let res = null;
-					const specType = server?.spec_type ?? 'url';
+	const request = (async () => {
+		const toolServersData = (
+			await Promise.all(
+				servers
+					.filter((server) => server?.config?.enable)
+					.map(async (server) => {
+						let error = null;
 
-					if (specType === 'url') {
-						res = await getToolServerData(
-							toolServerToken,
-							(server?.path ?? '').includes('://')
-								? server?.path
-								: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
-						).catch((err) => {
-							error = err;
-							return null;
-						});
-					} else if ((specType === 'json' && server?.spec) ?? null) {
-						try {
-							res = JSON.parse(server?.spec);
-						} catch (e) {
-							error = 'Failed to parse JSON spec';
+						let toolServerToken = null;
+
+						const auth_type = server?.auth_type ?? 'bearer';
+						if (auth_type === 'bearer') {
+							toolServerToken = server?.key;
+						} else if (auth_type === 'none') {
+							// No authentication
+						} else if (auth_type === 'session') {
+							toolServerToken = localStorage.token;
 						}
-					}
 
-					if (res) {
-						const { openapi, info, specs } = {
-							openapi: res,
-							info: res.info,
-							specs: convertOpenApiToToolPayload(res)
-						};
+						let res = null;
+						const specType = server?.spec_type ?? 'url';
 
-						return {
-							url: server?.url,
-							openapi: openapi,
-							info: info,
-							specs: specs
-						};
-					} else if (error) {
-						return {
-							error,
-							url: server?.url
-						};
-					} else {
-						return null;
-					}
-				})
-		)
-	).filter((server) => server);
+						if (specType === 'url') {
+							res = await getToolServerData(
+								toolServerToken,
+								(server?.path ?? '').includes('://')
+									? server?.path
+									: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
+							).catch((err) => {
+								error = err;
+								return null;
+							});
+						} else if ((specType === 'json' && server?.spec) ?? null) {
+							try {
+								res = JSON.parse(server?.spec);
+							} catch (e) {
+								error = 'Failed to parse JSON spec';
+							}
+						}
+
+						if (res) {
+							const { openapi, info, specs } = {
+								openapi: res,
+								info: res.info,
+								specs: convertOpenApiToToolPayload(res)
+							};
+
+							return {
+								id: server?.id,
+								url: server?.url,
+								openapi: openapi,
+								info: info,
+								specs: specs
+							};
+						} else if (error) {
+							return {
+								error,
+								url: server?.url
+							};
+						} else {
+							return null;
+						}
+					})
+			)
+		).filter((server) => server);
+
+		const cacheableToolServers = toolServersData.filter((server) => !server?.error);
+		if (cacheableToolServers.length > 0) {
+			writeLocalStorageCache(
+				TOOL_SERVERS_CACHE_KEY,
+				cacheKey,
+				cacheableToolServers,
+				options.ttlMs ?? TOOL_SERVERS_CACHE_TTL
+			);
+		}
+
+		return toolServersData;
+	})();
+
+	pendingToolServerRequests.set(cacheKey, request);
+	try {
+		return await request;
+	} finally {
+		if (pendingToolServerRequests.get(cacheKey) === request) {
+			pendingToolServerRequests.delete(cacheKey);
+		}
+	}
 };
 
 export const executeToolServer = async (

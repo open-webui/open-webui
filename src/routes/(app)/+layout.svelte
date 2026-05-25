@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -9,15 +10,15 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getFunctions } from '$lib/apis/functions';
-	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
+	import { getModels, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
+	import type { Banner } from '$lib/types';
+	import { readLocalStorageCache, writeLocalStorageCache } from '$lib/utils/cache';
+	import { loadToolServers } from '$lib/utils/toolServers';
 	import { compareVersion } from '$lib/utils';
 
 	import {
@@ -25,16 +26,15 @@
 		user,
 		settings,
 		models,
-		prompts,
+		modelsLoaded,
 		tools,
-		functions,
-		tags,
 		banners,
 		showSettings,
 		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
+		toolServersLoaded,
 		showSearch,
 		showSidebar
 	} from '$lib/stores';
@@ -46,13 +46,42 @@
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let loaded = false;
 	let DB = null;
 	let localDBChats = [];
 
 	let version;
+	const MODELS_CACHE_KEY = 'models';
+	const STARTUP_CACHE_VERSION = 1;
+	const STARTUP_BANNERS_CACHE_KEY = 'startup:banners';
+	const STARTUP_TOOLS_CACHE_KEY = 'startup:tools';
+	const LEGACY_CHAT_DB_EMPTY_KEY = 'legacy-chat-db-empty';
+	const BANNERS_CACHE_TTL = 5 * 60 * 1000;
+	const TOOLS_CACHE_TTL = 60 * 1000;
+	let toolServersLoadScheduled = false;
+
+	type DirectConnections = {
+		OPENAI_API_BASE_URLS?: string[];
+		OPENAI_API_KEYS?: string[];
+		OPENAI_API_CONFIGS?: Record<
+			string,
+			{
+				enable?: boolean;
+				model_ids?: string[];
+				prefix_id?: string;
+				tags?: { name: string }[];
+			}
+		>;
+	};
+
+	const getUserCacheKey = (name: string) =>
+		JSON.stringify({
+			version: STARTUP_CACHE_VERSION,
+			userId: $user?.id ?? null,
+			name
+		});
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
@@ -63,12 +92,23 @@
 		}
 	};
 
+	const getLegacyChatDBCheckCacheKey = () => getUserCacheKey('legacy-chat-db-empty');
+
+	const markLegacyChatDBEmptyChecked = () => {
+		localStorage.setItem(LEGACY_CHAT_DB_EMPTY_KEY, getLegacyChatDBCheckCacheKey());
+	};
+
 	const checkLocalDBChats = async () => {
+		if (localStorage.getItem(LEGACY_CHAT_DB_EMPTY_KEY) === getLegacyChatDBCheckCacheKey()) {
+			return;
+		}
+
 		try {
 			// Check if IndexedDB exists
 			DB = await openDB('Chats', 1);
 
 			if (!DB) {
+				markLegacyChatDBEmptyChecked();
 				return;
 			}
 
@@ -77,46 +117,152 @@
 
 			if (localDBChats.length === 0) {
 				await deleteDB('Chats');
+				markLegacyChatDBEmptyChecked();
 			}
 		} catch (error) {
-			// IndexedDB Not Found
+			if (error instanceof DOMException && error.name === 'NotFoundError') {
+				await deleteDB('Chats').catch((e) => {
+					console.error('Failed to delete empty legacy Chats DB', e);
+				});
+				markLegacyChatDBEmptyChecked();
+				return;
+			}
+
+			console.error('Failed to check legacy local DB chats', error);
 		}
 	};
 
+	const getModelRequestDirectConnections = (): DirectConnections | null =>
+		$config?.features?.enable_direct_connections
+			? (($settings?.directConnections as DirectConnections | null) ?? null)
+			: null;
 
-	const setModels = async () => {
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
+	const getDirectConnectionsCacheKey = (directConnections: DirectConnections | null) => {
+		if (!directConnections) {
+			return null;
+		}
+
+		return {
+			OPENAI_API_BASE_URLS: directConnections.OPENAI_API_BASE_URLS ?? [],
+			OPENAI_API_CONFIGS: directConnections.OPENAI_API_CONFIGS ?? {},
+			OPENAI_API_KEYS: (directConnections.OPENAI_API_KEYS ?? []).map((key) => Boolean(key))
+		};
 	};
 
-	const setToolServers = async () => {
-		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-		toolServersData = toolServersData.filter((data) => {
-			if (!data || data.error) {
-				toast.error(
-					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-						URL: data?.url
+	const getModelsCacheKey = (
+		directConnections: DirectConnections | null = getModelRequestDirectConnections()
+	) =>
+		JSON.stringify({
+			version: 1,
+			userId: $user?.id ?? null,
+			directConnections: getDirectConnectionsCacheKey(directConnections)
+		});
+
+	const hydrateModelsFromCache = () => {
+		try {
+			const cachedModels = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) ?? 'null');
+			if (cachedModels?.cacheKey === getModelsCacheKey() && Array.isArray(cachedModels?.models)) {
+				models.set(cachedModels.models);
+				modelsLoaded.set(true);
+			}
+		} catch (e) {
+			console.error('Failed to parse cached models', e);
+			localStorage.removeItem(MODELS_CACHE_KEY);
+		}
+	};
+
+	const hydrateStartupDataFromCache = () => {
+		const cachedBanners = readLocalStorageCache<Banner[]>(
+			STARTUP_BANNERS_CACHE_KEY,
+			getUserCacheKey('banners')
+		);
+		if (Array.isArray(cachedBanners)) {
+			banners.set(cachedBanners);
+		}
+
+		const cachedTools = readLocalStorageCache<any[]>(
+			STARTUP_TOOLS_CACHE_KEY,
+			getUserCacheKey('tools')
+		);
+		if (Array.isArray(cachedTools)) {
+			tools.set(cachedTools);
+		}
+	};
+
+	const setModels = async () => {
+		const directConnections = getModelRequestDirectConnections();
+		const cacheKey = getModelsCacheKey(directConnections);
+
+		try {
+			const modelData = await getModels(localStorage.token, directConnections);
+
+			models.set(modelData);
+			try {
+				localStorage.setItem(
+					MODELS_CACHE_KEY,
+					JSON.stringify({
+						cacheKey,
+						models: modelData
 					})
 				);
-				return false;
+			} catch (e) {
+				console.error('Failed to cache models', e);
 			}
-			return true;
-		});
-		toolServers.set(toolServersData);
+		} catch (e) {
+			console.error('Failed to fetch models', e);
+		} finally {
+			modelsLoaded.set(true);
+		}
 	};
 
 	const setBanners = async () => {
-		const bannersData = await getBanners(localStorage.token);
-		banners.set(bannersData);
+		try {
+			const bannersData = await getBanners(localStorage.token);
+			banners.set(bannersData);
+			writeLocalStorageCache(
+				STARTUP_BANNERS_CACHE_KEY,
+				getUserCacheKey('banners'),
+				bannersData,
+				BANNERS_CACHE_TTL
+			);
+		} catch (e) {
+			console.error('Failed to fetch banners', e);
+		}
+	};
+
+	const scheduleToolServersLoad = () => {
+		if (toolServersLoadScheduled) {
+			return;
+		}
+
+		toolServersLoadScheduled = true;
+		const load = () => {
+			toolServersLoadScheduled = false;
+			loadToolServers().catch((e) => {
+				console.error('Failed to load tool servers', e);
+			});
+		};
+
+		if ('requestIdleCallback' in window) {
+			(window as any).requestIdleCallback(load, { timeout: 2000 });
+		} else {
+			setTimeout(load, 250);
+		}
 	};
 
 	const setTools = async () => {
-		const toolsData = await getTools(localStorage.token);
-		tools.set(toolsData);
+		try {
+			const toolsData = await getTools(localStorage.token);
+			tools.set(toolsData);
+			writeLocalStorageCache(
+				STARTUP_TOOLS_CACHE_KEY,
+				getUserCacheKey('tools'),
+				toolsData,
+				TOOLS_CACHE_TTL
+			);
+		} catch (e) {
+			console.error('Failed to fetch tools', e);
+		}
 	};
 
 	onMount(async () => {
@@ -129,6 +275,12 @@
 		}
 
 		clearChatInputStorage();
+		models.set([]);
+		modelsLoaded.set(false);
+		tools.set(null);
+		banners.set([]);
+		toolServers.set([]);
+		toolServersLoaded.set(false);
 
 		// SWR: Apply cached settings immediately so <slot/> renders without delay
 		try {
@@ -137,6 +289,9 @@
 				settings.set(cachedSettings.ui);
 			}
 		} catch (e) {}
+
+		hydrateStartupDataFromCache();
+		hydrateModelsFromCache();
 
 		loaded = true;
 
@@ -147,14 +302,14 @@
 					if (userSettings?.ui) {
 						settings.set(userSettings.ui);
 						localStorage.setItem('settings', JSON.stringify(userSettings));
+						scheduleToolServersLoad();
 					}
 				})
 				.catch((e) => console.error('Failed to fetch user settings', e)),
 			checkLocalDBChats(),
 			setBanners(),
 			setTools(),
-			setModels(),
-			setToolServers()
+			setModels()
 		]);
 
 		const setupKeyboardShortcuts = () => {
@@ -366,6 +521,7 @@
 												const tx = DB.transaction('chats', 'readwrite');
 												await Promise.all([tx.store.clear(), tx.done]);
 												await deleteDB('Chats');
+												markLegacyChatDBEmptyChecked();
 
 												localDBChats = [];
 											}}

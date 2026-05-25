@@ -1,24 +1,40 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
-	import { models, config, toolServers, tools } from '$lib/stores';
+	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import { toolServers, toolServersLoaded, tools } from '$lib/stores';
+	import { loadToolServers } from '$lib/utils/toolServers';
 
 	import { toast } from 'svelte-sonner';
-	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
-	import { copyToClipboard } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
-	import Link from '../icons/Link.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
+	import Spinner from '../common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let show = false;
-	export let selectedToolIds = [];
+	export let selectedToolIds: string[] = [];
 
-	let selectedTools = [];
+	let selectedTools: any[] = [];
 
 	$: selectedTools = ($tools ?? []).filter((tool) => selectedToolIds.includes(tool.id));
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
+
+	let loadPromise: Promise<any[]> | null = null;
+	$: if (show && !$toolServersLoaded && !loadPromise) {
+		loadPromise = loadToolServers({
+			onError: (data) => {
+				toast.error(
+					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+						URL: data?.url
+					})
+				);
+			}
+		}).finally(() => {
+			loadPromise = null;
+		});
+	}
 </script>
 
 <Modal bind:show size="md">
@@ -67,7 +83,11 @@
 			</div>
 		{/if}
 
-		{#if $toolServers.length > 0}
+		{#if !$toolServersLoaded}
+			<div class="px-5 pb-5 w-full flex justify-center">
+				<Spinner className="size-5" />
+			</div>
+		{:else if $toolServers.length > 0}
 			<div class=" flex justify-between dark:text-gray-300 px-5 pb-0.5">
 				<div class=" text-base font-medium self-center">{$i18n.t('Tool Servers')}</div>
 			</div>

@@ -3,7 +3,9 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -41,6 +43,7 @@
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
+	import { getToolCallSummary, isWebToolName } from '$lib/utils/toolResults';
 
 	export let open = false;
 
@@ -69,6 +72,7 @@
 	}
 
 	const collapsibleId = uuidv4();
+	const loadToolCallResult = () => import('../chat/Messages/ToolCallResult.svelte');
 
 	function parseJSONString(str) {
 		try {
@@ -106,9 +110,11 @@
 		<SubagentBlock attributes={attributes ?? {}} />
 	{:else if attributes?.type === 'tool_calls'}
 		{@const args = decode(attributes?.arguments)}
-		{@const result = decode(attributes?.result ?? '')}
-		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
+		{@const rawResult = attributes?.result ?? ''}
+		{@const rawFiles = attributes?.files ?? ''}
 		{@const embeds = parseJSONString(decode(attributes?.embeds ?? ''))}
+		{@const toolDone = attributes?.done === 'true'}
+		{@const toolSummary = getToolCallSummary(attributes?.name ?? '', args, rawResult, toolDone)}
 
 		{#if embeds && Array.isArray(embeds) && embeds.length > 0}
 			<div class="py-1 w-full cursor-pointer">
@@ -153,8 +159,24 @@
 						</div>
 					{/if}
 
-					<div class="">
-						{#if attributes?.done === 'true'}
+					<div class="min-w-0">
+						{#if isWebToolName(attributes?.name)}
+							<div class="min-w-0 text-left">
+								<div class="flex min-w-0 items-center gap-1.5">
+									<span class="truncate text-gray-700 dark:text-gray-300">{toolSummary.title}</span>
+									<span
+										class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+									>
+										web
+									</span>
+								</div>
+								{#if toolSummary.subtitle}
+									<div class="mt-0.5 truncate text-xs font-normal text-gray-500 dark:text-gray-500">
+										{toolSummary.subtitle}
+									</div>
+								{/if}
+							</div>
+						{:else if attributes?.done === 'true'}
 							<Markdown
 								id={`${collapsibleId}-tool-calls-${attributes?.id}`}
 								content={$i18n.t('View Result from **{{NAME}}**', {
@@ -185,7 +207,20 @@
 				{#if open && !hide}
 					<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 						{#if attributes?.type === 'tool_calls'}
-							{#if attributes?.done === 'true'}
+							{#if isWebToolName(attributes?.name)}
+								{@const decodedResult = decode(rawResult)}
+								{#await loadToolCallResult() then ToolCallResult}
+									<svelte:component
+										this={ToolCallResult.default}
+										id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
+										name={attributes.name}
+										argsRaw={args}
+										resultRaw={decodedResult}
+										done={toolDone}
+									/>
+								{/await}
+							{:else if attributes?.done === 'true'}
+								{@const result = decode(rawResult)}
 								<Markdown
 									id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
 									content={`> \`\`\`json
@@ -210,6 +245,7 @@
 		{/if}
 
 		{#if attributes?.done === 'true'}
+			{@const files = parseJSONString(decode(rawFiles))}
 			{#if typeof files === 'object'}
 				{#each files ?? [] as file, idx}
 					{#if typeof file === 'string'}

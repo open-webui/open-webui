@@ -5,7 +5,7 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, modelsLoaded, config } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
@@ -60,6 +60,8 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
+		modelsLoaded.set(false);
+
 		// Try to load user settings if logged in, otherwise use local storage
 		if (localStorage.token) {
 			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
@@ -81,12 +83,16 @@
 				settings.set(localStorageSettings);
 			}
 
-			await models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
+			try {
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
+			} finally {
+				modelsLoaded.set(true);
+			}
 		} else {
 			// Anonymous user - use default/local settings
 			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
@@ -98,6 +104,7 @@
 			}
 
 			settings.set(localStorageSettings);
+			modelsLoaded.set(true);
 		}
 
 		await chatId.set($page.params.id);

@@ -2776,7 +2776,7 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
 
 
 ####################################
-# Web Search (Exa-only, simplified)
+# Web Search (Exa search + Jina Reader fetch)
 ####################################
 
 ENABLE_WEB_SEARCH = PersistentConfig(
@@ -2817,7 +2817,38 @@ EXA_EXCLUDE_DOMAINS = PersistentConfig(
     [],  # List of domains to exclude
 )
 
-# Exa Contents/Fetch Settings
+# Jina Reader Contents/Fetch Settings
+JINA_API_KEY = PersistentConfig(
+    "JINA_API_KEY",
+    "rag.web.search.jina_api_key",
+    os.getenv("JINA_API_KEY", ""),
+)
+
+JINA_READER_TOKEN_USAGE = PersistentConfig(
+    "JINA_READER_TOKEN_USAGE",
+    "rag.web.search.jina_reader_token_usage",
+    int(os.getenv("JINA_READER_TOKEN_USAGE", "0")),
+)
+
+JINA_READER_VIEWPORT_WIDTH = PersistentConfig(
+    "JINA_READER_VIEWPORT_WIDTH",
+    "rag.web.search.jina_reader_viewport_width",
+    int(os.getenv("JINA_READER_VIEWPORT_WIDTH", "1280")),
+)
+
+JINA_READER_VIEWPORT_HEIGHT = PersistentConfig(
+    "JINA_READER_VIEWPORT_HEIGHT",
+    "rag.web.search.jina_reader_viewport_height",
+    int(os.getenv("JINA_READER_VIEWPORT_HEIGHT", "12000")),
+)
+
+JINA_READER_TIMEOUT = PersistentConfig(
+    "JINA_READER_TIMEOUT",
+    "rag.web.search.jina_reader_timeout",
+    int(os.getenv("JINA_READER_TIMEOUT", "30")),
+)
+
+# Legacy Exa Contents/Fetch Settings (kept for older persisted configs; web_fetch uses Jina Reader)
 EXA_CONTENTS_MAX_CHARACTERS = PersistentConfig(
     "EXA_CONTENTS_MAX_CHARACTERS",
     "rag.web.search.exa_contents_max_chars",

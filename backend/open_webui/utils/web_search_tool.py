@@ -1,15 +1,17 @@
 """
 Built-in Web Search Tools for Open WebUI
 Provides web search and fetch capabilities as native tools that models can call directly.
-Uses Exa API for both search and content fetching.
+Uses Exa API for search and Jina Reader for content fetching.
 """
 
+import asyncio
 import logging
 from typing import Optional, List
 from pydantic import BaseModel
 from fastapi import Request
 
-from open_webui.retrieval.web.exa import search_exa, fetch_exa_contents
+from open_webui.retrieval.web.exa import search_exa
+from open_webui.retrieval.web.jina import fetch_jina_contents
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ class WebSearchTools:
 
     def __init__(self):
         self.valves = self.Valves()
+        self._jina_usage_lock = asyncio.Lock()
 
     async def web_search(
         self,
@@ -136,8 +139,8 @@ class WebSearchTools:
         try:
             config = __request__.app.state.config
             
-            if not config.EXA_API_KEY:
-                return "Error: Exa API key not configured. Please set it in Admin Settings > Web Search."
+            if not config.JINA_API_KEY:
+                return "Error: Jina API key not configured. Please set it in Admin Settings > Web Search."
 
             # Parse URLs from the input string
             url_list = self._parse_urls(urls)
@@ -151,17 +154,24 @@ class WebSearchTools:
                 log.warning(f"WEB FETCH: Limiting from {len(url_list)} to {max_urls} URLs")
                 url_list = url_list[:max_urls]
 
-            # Get fetch settings from config
-            max_characters = getattr(config, 'EXA_CONTENTS_MAX_CHARACTERS', 10000)
-            livecrawl = getattr(config, 'EXA_CONTENTS_LIVECRAWL', 'fallback')
+            # Get Jina Reader settings from config
+            viewport_width = getattr(config, 'JINA_READER_VIEWPORT_WIDTH', 1280)
+            viewport_height = getattr(config, 'JINA_READER_VIEWPORT_HEIGHT', 12000)
+            timeout_seconds = getattr(config, 'JINA_READER_TIMEOUT', 30)
 
             # Fetch content
-            results = fetch_exa_contents(
-                api_key=config.EXA_API_KEY,
+            results = await fetch_jina_contents(
+                api_key=config.JINA_API_KEY,
                 urls=url_list,
-                max_characters=max_characters,
-                livecrawl=livecrawl,
+                viewport_width=viewport_width,
+                viewport_height=viewport_height,
+                timeout_seconds=timeout_seconds,
+                max_concurrency=max_urls,
             )
+
+            total_usage_tokens = sum(getattr(result, 'usage_tokens', 0) for result in results)
+            if total_usage_tokens > 0:
+                await self._increment_jina_token_usage(config, total_usage_tokens)
 
             if not results:
                 return f"Could not fetch content from the provided URLs."
@@ -179,7 +189,13 @@ class WebSearchTools:
                     formatted_results.append(f"**Published:** {result.published_date}\n")
                 if result.author:
                     formatted_results.append(f"**Author:** {result.author}\n")
+                if result.description:
+                    formatted_results.append(f"**Description:** {result.description}\n")
                 formatted_results.append(f"\n**Content:**\n\n{result.text}\n")
+                if result.images:
+                    formatted_results.append("\n**Images:**\n")
+                    for label, image_url in result.images.items():
+                        formatted_results.append(f"- {label}: {image_url}\n")
                 formatted_results.append("\n---\n\n")
 
             return "".join(formatted_results)
@@ -201,6 +217,15 @@ class WebSearchTools:
                 url_list.append(url)
         
         return url_list
+
+    async def _increment_jina_token_usage(self, config, tokens: int) -> None:
+        """Persistently add Jina Reader token usage for the configured API key."""
+        async with self._jina_usage_lock:
+            try:
+                current_usage = int(getattr(config, 'JINA_READER_TOKEN_USAGE', 0) or 0)
+            except Exception:
+                current_usage = 0
+            config.JINA_READER_TOKEN_USAGE = current_usage + int(tokens)
 
 
 # Singleton instance

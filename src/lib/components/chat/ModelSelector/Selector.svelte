@@ -21,7 +21,8 @@
 		mobile,
 		temporaryChatEnabled,
 		settings,
-		config
+		config,
+		modelsLoaded
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -389,19 +390,13 @@
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
-			on:mouseenter={async () => {
-				if (!$mobile) {
-					models.set(
-						await getModels(
-							localStorage.token,
-							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-						)
-					);
-				}
-			}}
 		>
 			{#if selectedModel}
 				{selectedModel.label}
+			{:else if value}
+				{value}
+			{:else if !$modelsLoaded}
+				{$i18n.t('Loading...')}
 			{:else}
 				{placeholder}
 			{/if}

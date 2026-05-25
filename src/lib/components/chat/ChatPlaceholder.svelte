@@ -2,7 +2,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { marked } from 'marked';
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, modelsLoaded, models as _models, temporaryChatEnabled } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -87,6 +87,8 @@
 				<div class="line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
+					{:else if !$modelsLoaded}
+						{$i18n.t('Loading...')}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}

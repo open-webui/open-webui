@@ -34,6 +34,8 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+_pending_base_model_requests: dict[tuple[str | None, str | None, bool], asyncio.Task] = {}
+
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
@@ -77,6 +79,27 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     return function_models + openai_models + ollama_models
 
 
+async def get_all_base_models_deduped(
+    request: Request, refresh: bool = False, user: UserModel = None
+):
+    key = (
+        getattr(user, "id", None),
+        getattr(user, "role", None),
+        refresh,
+    )
+
+    task = _pending_base_model_requests.get(key)
+    if task is None or task.done():
+        task = asyncio.create_task(get_all_base_models(request, user=user))
+        _pending_base_model_requests[key] = task
+
+    try:
+        return await asyncio.shield(task)
+    finally:
+        if _pending_base_model_requests.get(key) is task and task.done():
+            _pending_base_model_requests.pop(key, None)
+
+
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
     if (
         request.app.state.MODELS
@@ -85,7 +108,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     ):
         base_models = request.app.state.BASE_MODELS
     else:
-        base_models = await get_all_base_models(request, user=user)
+        base_models = await get_all_base_models_deduped(
+            request, refresh=refresh, user=user
+        )
         request.app.state.BASE_MODELS = base_models
 
     # deep copy the base models to avoid modifying the original list
@@ -343,6 +368,14 @@ def get_filtered_models(models, user):
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []
+        model_infos = Models.get_models_by_ids(
+            [
+                model["id"]
+                for model in models
+                if not model.get("arena") and model.get("id")
+            ]
+        )
+
         for model in models:
             if model.get("arena"):
                 if has_access(
@@ -355,7 +388,7 @@ def get_filtered_models(models, user):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = model_infos.get(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)

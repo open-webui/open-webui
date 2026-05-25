@@ -14,6 +14,7 @@
 		config,
 		settings,
 		user,
+		modelsLoaded,
 		models as _models,
 		temporaryChatEnabled,
 		selectedFolder,
@@ -158,6 +159,8 @@
 									{models[selectedModelIdx]?.name}
 								</span>
 							</Tooltip>
+						{:else if !$modelsLoaded}
+							{$i18n.t('Loading...')}
 						{:else}
 							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 						{/if}
@@ -213,8 +216,7 @@
 					<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
 						{#each relevantGroups as [groupName, groupData]}
 							{@const effectiveUsage = groupData.effectiveUsage}
-							{@const isOverLimit =
-								groupData.limit && effectiveUsage.total > groupData.limit}
+							{@const isOverLimit = groupData.limit && effectiveUsage.total > groupData.limit}
 							<div class="flex items-center justify-between mb-1 last:mb-0">
 								<span
 									class="font-medium {isOverLimit

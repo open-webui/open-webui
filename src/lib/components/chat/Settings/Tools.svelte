@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
-	import { getModels as _getModels, getToolServersData } from '$lib/apis';
+	import { onMount, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import { loadToolServers } from '$lib/utils/toolServers';
 
-	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
-	import { models, settings, toolServers, user } from '$lib/stores';
+	import { settings } from '$lib/stores';
 
-	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -31,20 +31,16 @@
 			toolServers: servers
 		});
 
-		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-		toolServersData = toolServersData.filter((data) => {
-			if (data.error) {
+		await loadToolServers({
+			force: true,
+			onError: (data) => {
 				toast.error(
 					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
 						URL: data?.url
 					})
 				);
-				return false;
 			}
-
-			return true;
 		});
-		toolServers.set(toolServersData);
 	};
 
 	onMount(async () => {

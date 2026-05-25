@@ -119,21 +119,23 @@ export interface SubagentRun {
 
 export const subagentLiveStates: Writable<Record<string, SubagentRun>> = writable({});
 
-export const channels = writable([]);
-export const chats = writable(null);
-export const pinnedChats = writable([]);
-export const tags = writable([]);
-export const folders = writable([]);
+export const channels: Writable<any[]> = writable([]);
+export const chats: Writable<any[] | null> = writable(null);
+export const pinnedChats: Writable<any[]> = writable([]);
+export const tags: Writable<any[]> = writable([]);
+export const folders: Writable<any[]> = writable([]);
 
 export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
+export const modelsLoaded = writable(false);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);
-export const tools = writable(null);
-export const functions = writable(null);
+export const tools: Writable<any[] | null> = writable(null);
+export const functions: Writable<any[] | null> = writable(null);
 
-export const toolServers = writable([]);
+export const toolServers: Writable<any[]> = writable([]);
+export const toolServersLoaded = writable(false);
 
 export const banners: Writable<Banner[]> = writable([]);
 

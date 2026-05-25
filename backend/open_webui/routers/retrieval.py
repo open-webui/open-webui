@@ -467,7 +467,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
-        # Web search settings (Exa-only)
+        # Web search settings (Exa search + Jina Reader fetch)
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
@@ -475,6 +475,11 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "EXA_SEARCH_TYPE": request.app.state.config.EXA_SEARCH_TYPE,
             "EXA_INCLUDE_DOMAINS": request.app.state.config.EXA_INCLUDE_DOMAINS,
             "EXA_EXCLUDE_DOMAINS": request.app.state.config.EXA_EXCLUDE_DOMAINS,
+            "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
+            "JINA_READER_TOKEN_USAGE": request.app.state.config.JINA_READER_TOKEN_USAGE,
+            "JINA_READER_VIEWPORT_WIDTH": request.app.state.config.JINA_READER_VIEWPORT_WIDTH,
+            "JINA_READER_VIEWPORT_HEIGHT": request.app.state.config.JINA_READER_VIEWPORT_HEIGHT,
+            "JINA_READER_TIMEOUT": request.app.state.config.JINA_READER_TIMEOUT,
             "EXA_CONTENTS_MAX_CHARACTERS": request.app.state.config.EXA_CONTENTS_MAX_CHARACTERS,
             "EXA_CONTENTS_LIVECRAWL": request.app.state.config.EXA_CONTENTS_LIVECRAWL,
             "WEB_SEARCH_SYSTEM_PROMPT": request.app.state.config.WEB_SEARCH_SYSTEM_PROMPT,
@@ -491,6 +496,11 @@ class WebConfig(BaseModel):
     EXA_SEARCH_TYPE: Optional[str] = None
     EXA_INCLUDE_DOMAINS: Optional[List[str]] = None
     EXA_EXCLUDE_DOMAINS: Optional[List[str]] = None
+    JINA_API_KEY: Optional[str] = None
+    JINA_READER_TOKEN_USAGE: Optional[int] = None
+    JINA_READER_VIEWPORT_WIDTH: Optional[int] = None
+    JINA_READER_VIEWPORT_HEIGHT: Optional[int] = None
+    JINA_READER_TIMEOUT: Optional[int] = None
     EXA_CONTENTS_MAX_CHARACTERS: Optional[int] = None
     EXA_CONTENTS_LIVECRAWL: Optional[str] = None
     WEB_SEARCH_SYSTEM_PROMPT: Optional[str] = None
@@ -929,55 +939,104 @@ async def update_rag_config(
     )
 
     if form_data.web is not None:
-        # Web search settings (Exa-only)
-        request.app.state.config.ENABLE_WEB_SEARCH = form_data.web.ENABLE_WEB_SEARCH
-        request.app.state.config.EXA_API_KEY = form_data.web.EXA_API_KEY
+        # Web search settings (Exa search + Jina Reader fetch)
+        web_config = form_data.web
+        old_jina_api_key = request.app.state.config.JINA_API_KEY
+
+        request.app.state.config.ENABLE_WEB_SEARCH = (
+            web_config.ENABLE_WEB_SEARCH
+            if web_config.ENABLE_WEB_SEARCH is not None
+            else request.app.state.config.ENABLE_WEB_SEARCH
+        )
+        request.app.state.config.EXA_API_KEY = (
+            web_config.EXA_API_KEY
+            if web_config.EXA_API_KEY is not None
+            else request.app.state.config.EXA_API_KEY
+        )
         request.app.state.config.EXA_SEARCH_NUM_RESULTS = (
-            form_data.web.EXA_SEARCH_NUM_RESULTS
+            web_config.EXA_SEARCH_NUM_RESULTS
+            if web_config.EXA_SEARCH_NUM_RESULTS is not None
+            else request.app.state.config.EXA_SEARCH_NUM_RESULTS
         )
-        request.app.state.config.EXA_SEARCH_TYPE = form_data.web.EXA_SEARCH_TYPE
+        request.app.state.config.EXA_SEARCH_TYPE = (
+            web_config.EXA_SEARCH_TYPE
+            if web_config.EXA_SEARCH_TYPE is not None
+            else request.app.state.config.EXA_SEARCH_TYPE
+        )
         request.app.state.config.EXA_INCLUDE_DOMAINS = (
-            form_data.web.EXA_INCLUDE_DOMAINS
+            web_config.EXA_INCLUDE_DOMAINS
+            if web_config.EXA_INCLUDE_DOMAINS is not None
+            else request.app.state.config.EXA_INCLUDE_DOMAINS
         )
         request.app.state.config.EXA_EXCLUDE_DOMAINS = (
-            form_data.web.EXA_EXCLUDE_DOMAINS
+            web_config.EXA_EXCLUDE_DOMAINS
+            if web_config.EXA_EXCLUDE_DOMAINS is not None
+            else request.app.state.config.EXA_EXCLUDE_DOMAINS
         )
+
+        new_jina_api_key = (
+            web_config.JINA_API_KEY
+            if web_config.JINA_API_KEY is not None
+            else request.app.state.config.JINA_API_KEY
+        )
+        request.app.state.config.JINA_API_KEY = new_jina_api_key
+
+        if web_config.JINA_READER_TOKEN_USAGE is not None:
+            request.app.state.config.JINA_READER_TOKEN_USAGE = max(
+                0, int(web_config.JINA_READER_TOKEN_USAGE)
+            )
+        elif new_jina_api_key != old_jina_api_key:
+            request.app.state.config.JINA_READER_TOKEN_USAGE = 0
+
+        request.app.state.config.JINA_READER_VIEWPORT_WIDTH = max(
+            320,
+            int(
+                web_config.JINA_READER_VIEWPORT_WIDTH
+                if web_config.JINA_READER_VIEWPORT_WIDTH is not None
+                else request.app.state.config.JINA_READER_VIEWPORT_WIDTH
+            ),
+        )
+        request.app.state.config.JINA_READER_VIEWPORT_HEIGHT = max(
+            1000,
+            int(
+                web_config.JINA_READER_VIEWPORT_HEIGHT
+                if web_config.JINA_READER_VIEWPORT_HEIGHT is not None
+                else request.app.state.config.JINA_READER_VIEWPORT_HEIGHT
+            ),
+        )
+        request.app.state.config.JINA_READER_TIMEOUT = max(
+            1,
+            int(
+                web_config.JINA_READER_TIMEOUT
+                if web_config.JINA_READER_TIMEOUT is not None
+                else request.app.state.config.JINA_READER_TIMEOUT
+            ),
+        )
+
         request.app.state.config.EXA_CONTENTS_MAX_CHARACTERS = (
-            form_data.web.EXA_CONTENTS_MAX_CHARACTERS
+            web_config.EXA_CONTENTS_MAX_CHARACTERS
+            if web_config.EXA_CONTENTS_MAX_CHARACTERS is not None
+            else request.app.state.config.EXA_CONTENTS_MAX_CHARACTERS
         )
         request.app.state.config.EXA_CONTENTS_LIVECRAWL = (
-            form_data.web.EXA_CONTENTS_LIVECRAWL
+            web_config.EXA_CONTENTS_LIVECRAWL
+            if web_config.EXA_CONTENTS_LIVECRAWL is not None
+            else request.app.state.config.EXA_CONTENTS_LIVECRAWL
         )
         request.app.state.config.WEB_SEARCH_SYSTEM_PROMPT = (
-            form_data.web.WEB_SEARCH_SYSTEM_PROMPT
+            web_config.WEB_SEARCH_SYSTEM_PROMPT
+            if web_config.WEB_SEARCH_SYSTEM_PROMPT is not None
+            else request.app.state.config.WEB_SEARCH_SYSTEM_PROMPT
         )
         request.app.state.config.YOUTUBE_LOADER_LANGUAGE = (
-            form_data.web.YOUTUBE_LOADER_LANGUAGE
+            web_config.YOUTUBE_LOADER_LANGUAGE
+            if web_config.YOUTUBE_LOADER_LANGUAGE is not None
+            else request.app.state.config.YOUTUBE_LOADER_LANGUAGE
         )
         request.app.state.config.YOUTUBE_LOADER_PROXY_URL = (
-            form_data.web.YOUTUBE_LOADER_PROXY_URL
-        )
-        request.app.state.config.EXA_SEARCH_TYPE = form_data.web.EXA_SEARCH_TYPE
-        request.app.state.config.EXA_INCLUDE_DOMAINS = (
-            form_data.web.EXA_INCLUDE_DOMAINS
-        )
-        request.app.state.config.EXA_EXCLUDE_DOMAINS = (
-            form_data.web.EXA_EXCLUDE_DOMAINS
-        )
-        request.app.state.config.EXA_CONTENTS_MAX_CHARACTERS = (
-            form_data.web.EXA_CONTENTS_MAX_CHARACTERS
-        )
-        request.app.state.config.EXA_CONTENTS_LIVECRAWL = (
-            form_data.web.EXA_CONTENTS_LIVECRAWL
-        )
-        request.app.state.config.WEB_SEARCH_SYSTEM_PROMPT = (
-            form_data.web.WEB_SEARCH_SYSTEM_PROMPT
-        )
-        request.app.state.config.YOUTUBE_LOADER_LANGUAGE = (
-            form_data.web.YOUTUBE_LOADER_LANGUAGE
-        )
-        request.app.state.config.YOUTUBE_LOADER_PROXY_URL = (
-            form_data.web.YOUTUBE_LOADER_PROXY_URL
+            web_config.YOUTUBE_LOADER_PROXY_URL
+            if web_config.YOUTUBE_LOADER_PROXY_URL is not None
+            else request.app.state.config.YOUTUBE_LOADER_PROXY_URL
         )
 
     return {
@@ -1047,7 +1106,7 @@ async def update_rag_config(
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
-        # Web search settings (Exa-only)
+        # Web search settings (Exa search + Jina Reader fetch)
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
@@ -1055,6 +1114,11 @@ async def update_rag_config(
             "EXA_SEARCH_TYPE": request.app.state.config.EXA_SEARCH_TYPE,
             "EXA_INCLUDE_DOMAINS": request.app.state.config.EXA_INCLUDE_DOMAINS,
             "EXA_EXCLUDE_DOMAINS": request.app.state.config.EXA_EXCLUDE_DOMAINS,
+            "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
+            "JINA_READER_TOKEN_USAGE": request.app.state.config.JINA_READER_TOKEN_USAGE,
+            "JINA_READER_VIEWPORT_WIDTH": request.app.state.config.JINA_READER_VIEWPORT_WIDTH,
+            "JINA_READER_VIEWPORT_HEIGHT": request.app.state.config.JINA_READER_VIEWPORT_HEIGHT,
+            "JINA_READER_TIMEOUT": request.app.state.config.JINA_READER_TIMEOUT,
             "EXA_CONTENTS_MAX_CHARACTERS": request.app.state.config.EXA_CONTENTS_MAX_CHARACTERS,
             "EXA_CONTENTS_LIVECRAWL": request.app.state.config.EXA_CONTENTS_LIVECRAWL,
             "WEB_SEARCH_SYSTEM_PROMPT": request.app.state.config.WEB_SEARCH_SYSTEM_PROMPT,
@@ -1569,12 +1633,12 @@ def search_web(request: Request, query: str) -> list[SearchResult]:
     """
     if request.app.state.config.EXA_API_KEY:
         return search_exa(
-            request.app.state.config.EXA_API_KEY,
-            query,
-            request.app.state.config.EXA_SEARCH_NUM_RESULTS,
-            request.app.state.config.EXA_INCLUDE_DOMAINS,
-            request.app.state.config.EXA_EXCLUDE_DOMAINS,
-            request.app.state.config.EXA_SEARCH_TYPE,
+            api_key=request.app.state.config.EXA_API_KEY,
+            query=query,
+            num_results=request.app.state.config.EXA_SEARCH_NUM_RESULTS,
+            search_type=request.app.state.config.EXA_SEARCH_TYPE,
+            include_domains=request.app.state.config.EXA_INCLUDE_DOMAINS,
+            exclude_domains=request.app.state.config.EXA_EXCLUDE_DOMAINS,
         )
     else:
         raise Exception("No EXA_API_KEY found in environment variables")

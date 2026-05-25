@@ -20,6 +20,7 @@
 		showCallOverlay,
 		tools,
 		toolServers,
+		toolServersLoaded,
 		user as _user,
 		showControls,
 		TTSWorker,
@@ -40,6 +41,7 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
+	import { hasEnabledToolServers, loadToolServers } from '$lib/utils/toolServers';
 	import { uploadFile, getFileById } from '$lib/apis/files';
 	import type { ReasoningEffort } from '$lib/apis';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -730,7 +732,12 @@
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	let showToolsButton = false;
-	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
+	let directToolServersConfigured = false;
+	$: directToolServersConfigured = hasEnabledToolServers($settings?.toolServers ?? []);
+	$: showToolsButton =
+		($tools ?? []).length > 0 ||
+		($toolServers ?? []).length > 0 ||
+		(directToolServersConfigured && !$toolServersLoaded);
 
 	// $config and $_user start as undefined and populate asynchronously (cache
 	// hits resolve fast, but on first visits and slow mobile networks they
@@ -1499,8 +1506,16 @@
 		// Load tool list then sanitize selectedToolIds before rendering any "active tool" UI.
 		// This prevents a brief "1 available tool" flicker when a previously-selected
 		// tool server/tool has been deleted in admin settings.
-		const fetchedTools = await getTools(localStorage.token);
-		await tools.set(fetchedTools);
+		const fetchedTools = $tools ?? (await getTools(localStorage.token));
+		if ($tools === null) {
+			await tools.set(fetchedTools);
+		}
+
+		if ((selectedToolIds ?? []).some((id) => id.startsWith('direct_server:'))) {
+			await loadToolServers().catch((e) => {
+				console.error('Failed to load selected direct tool servers', e);
+			});
+		}
 
 		const fetchedToolIdSet = new Set((fetchedTools ?? []).map((t) => t?.id).filter(Boolean));
 		selectedToolIds = (selectedToolIds ?? []).filter((id) => {

@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { fly } from 'svelte/transition';
+	import { toast } from 'svelte-sonner';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { hasEnabledToolServers, loadToolServers } from '$lib/utils/toolServers';
 
 	import { config, user, tools as _tools, mobile, settings, toolServers } from '$lib/stores';
 
@@ -22,15 +26,20 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let selectedToolIds: string[] = [];
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
 
-	export let toggleFilters: { id: string; name: string; description?: string; icon?: string }[] =
-		[];
+	export let toggleFilters: {
+		id: string;
+		name: string;
+		description?: string;
+		icon?: string;
+		has_user_valves?: boolean;
+	}[] = [];
 	export let selectedFilterIds: string[] = [];
 
 	export let showWebSearchButton = false;
@@ -51,7 +60,9 @@
 	let show = false;
 	let tab = '';
 
-	let tools = null;
+	let tools: Record<string, any> = {};
+	let toolsReady = false;
+	let initPromise: Promise<void> | null = null;
 
 	$: if (show) {
 		init();
@@ -62,37 +73,64 @@
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
+	const notifyToolServerError = (data: any) => {
+		toast.error(
+			$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+				URL: data?.url
+			})
+		);
+	};
+
 	const init = async () => {
-		if ($_tools === null) {
-			await _tools.set(await getTools(localStorage.token));
+		if (initPromise) {
+			return initPromise;
 		}
 
-		if ($_tools) {
-			tools = $_tools.reduce((a, tool, i, arr) => {
-				a[tool.id] = {
-					name: tool.name,
-					description: tool.meta.description,
-					enabled: selectedToolIds.includes(tool.id),
-					...tool
-				};
-				return a;
-			}, {});
-		}
+		initPromise = (async () => {
+			if ($_tools === null) {
+				await _tools.set(await getTools(localStorage.token));
+			}
 
-		if ($toolServers) {
-			for (const serverIdx in $toolServers) {
-				const server = $toolServers[serverIdx];
-				if (server.info) {
-					tools[`direct_server:${serverIdx}`] = {
-						name: server?.info?.title ?? server.url,
-						description: server.info.description ?? '',
-						enabled: selectedToolIds.includes(`direct_server:${serverIdx}`)
+			if (hasEnabledToolServers($settings?.toolServers ?? [])) {
+				await loadToolServers({ onError: notifyToolServerError });
+			}
+
+			const availableTools: Record<string, any> = {};
+			if ($_tools) {
+				$_tools.reduce((a: Record<string, any>, tool: any) => {
+					a[tool.id] = {
+						name: tool.name,
+						description: tool.meta.description,
+						enabled: selectedToolIds.includes(tool.id),
+						...tool
 					};
+					return a;
+				}, availableTools);
+			}
+
+			if ($toolServers) {
+				for (const serverIdx in $toolServers) {
+					const server = $toolServers[serverIdx];
+					if (server.info) {
+						availableTools[`direct_server:${serverIdx}`] = {
+							name: server?.info?.title ?? server.url,
+							description: server.info.description ?? '',
+							enabled: selectedToolIds.includes(`direct_server:${serverIdx}`)
+						};
+					}
 				}
 			}
-		}
 
-		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+			tools = availableTools;
+			toolsReady = true;
+			selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+		})();
+
+		try {
+			return await initPromise;
+		} finally {
+			initPromise = null;
+		}
 	};
 </script>
 
@@ -119,7 +157,7 @@
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
-					{#if tools}
+					{#if toolsReady}
 						{#if Object.keys(tools).length > 0}
 							<button
 								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -402,7 +440,7 @@
 						</Tooltip>
 					{/if}
 				</div>
-			{:else if tab === 'tools' && tools}
+			{:else if tab === 'tools' && toolsReady}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
