@@ -24,13 +24,19 @@
 		? $models.find((m) => m.id === model_id)?.name || model_id
 		: $i18n.t('Select model');
 
+	// Hidden base models are returned by the API for resolving Workspace Models,
+	// but should not be user-selectable here (consistent with the chat, notes and
+	// pinned-model selectors). The label above intentionally still resolves a
+	// hidden model so existing automations keep showing the correct name.
+	$: selectableModels = $models.filter((m) => !(m?.info?.meta?.hidden ?? false));
+
 	$: filteredModels = modelSearch
-		? $models.filter(
+		? selectableModels.filter(
 				(m) =>
 					m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
 					m.id.toLowerCase().includes(modelSearch.toLowerCase())
 			)
-		: $models;
+		: selectableModels;
 </script>
 
 <Dropdown bind:show={showDropdown} {side} {align}>
