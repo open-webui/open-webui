@@ -1270,7 +1270,7 @@ class OAuthManager:
             if oauth_roles:
                 matched = False
                 for allowed_role in oauth_allowed_roles:
-                    if allowed_role in oauth_roles:
+                    if allowed_role == '*' or allowed_role in oauth_roles:
                         log.debug('Assigned user the user role')
                         role = 'user'
                         matched = True
