@@ -34,6 +34,7 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_pe
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.middleware import serialize_output
 from open_webui.utils.misc import get_message_list
+from open_webui.tasks import stop_item_tasks
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -502,6 +503,11 @@ async def delete_all_user_chats(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # Stop background tasks (streaming, title/tags generation) before deleting
+    chat_list = await Chats.get_chats_by_user_id(user.id, db=db)
+    for chat in chat_list.items:
+        await stop_item_tasks(request.app.state.redis, chat.id)
+
     result = await Chats.delete_chats_by_user_id(user.id, db=db)
     return result
 
@@ -801,7 +807,11 @@ async def get_archived_session_user_chat_list(
 
 
 @router.post('/archive/all', response_model=bool)
-async def archive_all_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def archive_all_chats(request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    # Stop background tasks (streaming, title/tags generation) before archiving
+    chat_list = await Chats.get_chats_by_user_id(user.id, db=db)
+    for chat in chat_list.items:
+        await stop_item_tasks(request.app.state.redis, chat.id)
     return await Chats.archive_all_chats_by_user_id(user.id, db=db)
 
 
@@ -1120,6 +1130,8 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
+        # Stop background tasks (streaming, title/tags generation) before deleting
+        await stop_item_tasks(request.app.state.redis, id)
         await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
 
         result = await Chats.delete_chat_by_id(id, db=db)
@@ -1138,6 +1150,8 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
+        # Stop background tasks (streaming, title/tags generation) before deleting
+        await stop_item_tasks(request.app.state.redis, id)
         await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
 
         result = await Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
@@ -1302,9 +1316,11 @@ async def clone_shared_chat_by_id(
 
 
 @router.post('/{id}/archive', response_model=ChatResponse | None)
-async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def archive_chat_by_id(request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        # Stop background tasks (streaming, title/tags generation) before archiving
+        await stop_item_tasks(request.app.state.redis, id)
         chat = await Chats.toggle_chat_archive_by_id(id, db=db)
 
         tag_ids = chat.meta.get('tags', [])

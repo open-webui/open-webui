@@ -1,5 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
+import { stopTasksByChatId } from '..';
 
 export const createNewChat = async (token: string, chat: object, folderId: string | null) => {
 	let error = null;
@@ -1076,6 +1077,14 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 
 export const deleteChatById = async (token: string, id: string) => {
 	let error = null;
+
+	// Stop any background tasks (e.g., streaming generation) before deleting the chat
+	// to prevent orphaned LLM requests that continue running after the chat is removed
+	try {
+		await stopTasksByChatId(token, id);
+	} catch {
+		// Ignore errors from stopTasksByChatId — the chat may already be done or not exist
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
 		method: 'DELETE',
