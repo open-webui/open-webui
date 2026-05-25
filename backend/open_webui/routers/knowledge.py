@@ -847,10 +847,7 @@ async def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-    # Only the file owner or an admin may permanently delete the underlying
-    # file.  Collaborators with KB write access can unlink a file from the
-    # knowledge base but must not be able to destroy files they do not own,
-    # as the same file may be referenced by other KBs and chats.
+    # Anyone with write permission or higher can delete files
     if delete_file and (file.user_id == user.id or user.role == 'admin'):
         try:
             # Remove the file's collection from vector database
