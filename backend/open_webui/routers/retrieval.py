@@ -1367,25 +1367,17 @@ def save_docs_to_vector_db(
     log.debug(f'save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}')
 
     # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and 'hash' in metadata:
-        result = VECTOR_DB_CLIENT.query(
+    if (
+        metadata
+        and 'hash' in metadata
+        and vector_collection_has_hash_for_other_file(
             collection_name=collection_name,
-            filter={'hash': metadata['hash']},
+            content_hash=metadata['hash'],
+            file_id=metadata.get('file_id'),
         )
-
-        if result is not None and result.ids and len(result.ids) > 0:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                # Check if the existing document belongs to the same file
-                # If same file_id, this is a re-add/reindex - allow it
-                # If different file_id, this is a duplicate - block it
-                existing_file_id = None
-                if result.metadatas and result.metadatas[0]:
-                    existing_file_id = result.metadatas[0][0].get('file_id')
-
-                if existing_file_id != metadata.get('file_id'):
-                    log.info(f'Document with hash {metadata["hash"]} already exists')
-                    raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+    ):
+        log.info(f'Document with hash {metadata["hash"]} already exists')
+        raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
@@ -2606,6 +2598,48 @@ class BatchProcessFilesResponse(BaseModel):
     errors: list[BatchProcessFilesResult]
 
 
+def _vector_result_has_ids(result) -> bool:
+    ids_batches = getattr(result, 'ids', None) or []
+    return any(bool(ids) for ids in ids_batches)
+
+
+def vector_result_has_hash_for_other_file(result, file_id: str | None) -> bool:
+    if result is None or not _vector_result_has_ids(result):
+        return False
+
+    metadata_batches = getattr(result, 'metadatas', None) or []
+    ids_batches = getattr(result, 'ids', None) or []
+
+    for batch_index, ids in enumerate(ids_batches):
+        if not ids:
+            continue
+
+        batch_metadatas = []
+        if batch_index < len(metadata_batches) and metadata_batches[batch_index]:
+            batch_metadatas = metadata_batches[batch_index]
+
+        for item_index, _ in enumerate(ids):
+            metadata = {}
+            if item_index < len(batch_metadatas) and isinstance(batch_metadatas[item_index], dict):
+                metadata = batch_metadatas[item_index]
+
+            if metadata.get('file_id') != file_id:
+                return True
+
+    return False
+
+
+def vector_collection_has_hash_for_other_file(collection_name: str, content_hash: str, file_id: str | None) -> bool:
+    if not VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        return False
+
+    result = VECTOR_DB_CLIENT.query(
+        collection_name=collection_name,
+        filter={'hash': content_hash},
+    )
+    return vector_result_has_hash_for_other_file(result, file_id)
+
+
 @router.post('/process/files/batch')
 async def process_files_batch(
     request: Request,
@@ -2629,7 +2663,8 @@ async def process_files_batch(
 
     file_results: list[BatchProcessFilesResult] = []
     file_errors: list[BatchProcessFilesResult] = []
-    file_updates: list[FileUpdateForm] = []
+    file_updates: list[tuple[str, FileUpdateForm]] = []
+    prepared_hashes: dict[str, str] = {}
 
     # Prepare all documents first
     all_docs: list[Document] = []
@@ -2658,6 +2693,35 @@ async def process_files_batch(
                 continue
 
             text_content = file.data.get('content', '')
+            content_hash = calculate_sha256_string(text_content)
+
+            existing_batch_file_id = prepared_hashes.get(content_hash)
+            if existing_batch_file_id and existing_batch_file_id != file.id:
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status='failed',
+                        error=ERROR_MESSAGES.DUPLICATE_CONTENT,
+                    )
+                )
+                continue
+
+            is_duplicate = await run_in_threadpool(
+                vector_collection_has_hash_for_other_file,
+                collection_name,
+                content_hash,
+                file.id,
+            )
+            if is_duplicate:
+                file_errors.append(
+                    BatchProcessFilesResult(
+                        file_id=file.id,
+                        status='failed',
+                        error=ERROR_MESSAGES.DUPLICATE_CONTENT,
+                    )
+                )
+                continue
+
             docs: list[Document] = [
                 Document(
                     page_content=text_content.replace('<br/>', '\n'),
@@ -2667,16 +2731,21 @@ async def process_files_batch(
                         'created_by': file.user_id,
                         'file_id': file.id,
                         'source': file.filename,
+                        'hash': content_hash,
                     },
                 )
             ]
 
             all_docs.extend(docs)
+            prepared_hashes[content_hash] = file.id
 
             file_updates.append(
-                FileUpdateForm(
-                    hash=calculate_sha256_string(text_content),
-                    data={'content': text_content},
+                (
+                    file.id,
+                    FileUpdateForm(
+                        hash=content_hash,
+                        data={'content': text_content},
+                    ),
                 )
             )
             file_results.append(BatchProcessFilesResult(file_id=file.id, status='prepared'))
@@ -2698,7 +2767,12 @@ async def process_files_batch(
             )
 
             # Update all files with collection name
-            for file_update, file_result in zip(file_updates, file_results):
+            file_updates_by_id = dict(file_updates)
+            for file_result in file_results:
+                file_update = file_updates_by_id.get(file_result.file_id)
+                if not file_update:
+                    continue
+
                 await Files.update_file_by_id(id=file_result.file_id, form_data=file_update, db=db)
                 file_result.status = 'completed'
 

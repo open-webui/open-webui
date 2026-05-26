@@ -151,6 +151,7 @@ class KnowledgeUserModel(KnowledgeModel):
 
 class KnowledgeResponse(KnowledgeModel):
     files: Optional[list[FileMetadataResponse | dict]] = None
+    warnings: Optional[dict] = None
 
 
 class KnowledgeUserResponse(KnowledgeUserModel):
@@ -627,6 +628,14 @@ class KnowledgeTable:
                 return [FileModel.model_validate(file) for file in files]
         except Exception:
             return []
+
+    async def get_file_ids_by_id(self, knowledge_id: str, db: Optional[AsyncSession] = None) -> set[str]:
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(KnowledgeFile.file_id).filter_by(knowledge_id=knowledge_id))
+                return set(result.scalars().all())
+        except Exception:
+            return set()
 
     async def get_file_metadatas_by_id(
         self, knowledge_id: str, db: Optional[AsyncSession] = None

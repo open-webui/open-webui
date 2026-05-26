@@ -28,6 +28,8 @@ from open_webui.models.models import ModelForm, Models
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
+    BatchProcessFilesResponse,
+    BatchProcessFilesResult,
     ProcessFileForm,
     process_file,
     process_files_batch,
@@ -662,6 +664,11 @@ async def add_file_to_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
+    if await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.FILE_EXISTS,
+        )
 
     # KB write-access alone is not enough — caller must also be able to read the file.
     if file.user_id != user.id and user.role != 'admin':
@@ -1169,6 +1176,9 @@ async def sync_knowledge_cleanup(
     return {'status': True}
 
 
+
+
+
 ############################
 # AddFilesToKnowledge
 ############################
@@ -1210,7 +1220,18 @@ async def add_files_to_knowledge_batch(
 
     # Batch-fetch all files to avoid N+1 queries
     log.info(f'files/batch/add - {len(form_data)} files')
-    file_ids = [form.file_id for form in form_data]
+    directory_by_file_id: dict[str, str | None] = {}
+    duplicate_request_ids: set[str] = set()
+    file_ids: list[str] = []
+
+    for form in form_data:
+        if form.file_id in directory_by_file_id:
+            duplicate_request_ids.add(form.file_id)
+            continue
+
+        directory_by_file_id[form.file_id] = form.directory_id
+        file_ids.append(form.file_id)
+
     files = await Files.get_files_by_ids(file_ids, db=db)
 
     # Verify all requested files were found
@@ -1231,22 +1252,54 @@ async def add_files_to_knowledge_batch(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
-    # Process files
-    try:
-        result = await process_files_batch(
-            request=request,
-            form_data=BatchProcessFilesForm(files=files, collection_name=id),
-            user=user,
-            db=db,
+    existing_file_ids = await Knowledges.get_file_ids_by_id(id, db=db)
+    skipped_results = [
+        BatchProcessFilesResult(
+            file_id=file_id,
+            status='failed',
+            error=ERROR_MESSAGES.FILE_EXISTS,
         )
-    except Exception as e:
-        log.error(f'add_files_to_knowledge_batch: Exception occurred: {e}', exc_info=True)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        for file_id in sorted(existing_file_ids.intersection(found_ids))
+    ]
+    skipped_results.extend(
+        BatchProcessFilesResult(
+            file_id=file_id,
+            status='failed',
+            error=ERROR_MESSAGES.FILE_EXISTS,
+        )
+        for file_id in sorted(duplicate_request_ids)
+    )
+
+    skipped_file_ids = {result.file_id for result in skipped_results}
+    files_to_process = [file for file in files if file.id not in skipped_file_ids]
+
+    # Process files
+    if files_to_process:
+        try:
+            result = await process_files_batch(
+                request=request,
+                form_data=BatchProcessFilesForm(files=files_to_process, collection_name=id),
+                user=user,
+                db=db,
+            )
+        except Exception as e:
+            log.error(f'add_files_to_knowledge_batch: Exception occurred: {e}', exc_info=True)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    else:
+        result = BatchProcessFilesResponse(results=[], errors=[])
+
+    result.errors.extend(skipped_results)
 
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
     for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+        await Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id,
+            file_id=file_id,
+            user_id=user.id,
+            directory_id=directory_by_file_id.get(file_id),
+            db=db,
+        )
 
     # If there were any errors, include them in the response
     if result.errors:
@@ -1489,4 +1542,3 @@ async def move_file_in_knowledge(
             detail='Failed to move file.',
         )
     return {'status': True}
-
