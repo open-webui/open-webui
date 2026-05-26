@@ -1077,9 +1077,12 @@ async def filter_accessible_collections(
       - web-search-*    → ephemeral per-query collections, always allowed
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
-                          via Knowledges.check_access_by_user_id; if no
-                          such KB exists, the name is treated as an
-                          ephemeral/legacy collection and allowed
+                          via Knowledges.check_access_by_user_id; otherwise
+                          denied.  The historical "if no such KB exists,
+                          treat as ephemeral/legacy and allow" branch is
+                          gone — web uploads are now stored as owned
+                          Files (gated via has_access_to_file) and the
+                          legacy non-KB namespace is no longer trusted.
     """
     if user.role == 'admin':
         return collection_names
@@ -1102,14 +1105,10 @@ async def filter_accessible_collections(
             # results scoped to the requesting user's session.
             validated.add(name)
         else:
-            # May be a knowledge-base ID or a legacy/ephemeral collection.
-            # If it IS a KB, enforce access control.  If no such KB
-            # exists, treat it as a non-sensitive collection (e.g. legacy
-            # model knowledge, process_text SHA256 collections) and allow.
+            # Only knowledge-base IDs are accepted here; any other unknown
+            # name is denied. Web uploads now register an owned File and
+            # route through the file-* branch above.
             if await Knowledges.check_access_by_user_id(name, user.id, permission=access_type):
-                validated.add(name)
-            elif not await Knowledges.get_knowledge_by_id(name):
-                # Not a KB at all — legacy/ephemeral collection, allow
                 validated.add(name)
     return validated
 

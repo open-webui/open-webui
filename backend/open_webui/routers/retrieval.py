@@ -56,7 +56,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
 )
 from open_webui.internal.db import get_async_db, get_async_session
-from open_webui.models.files import FileModel, Files, FileUpdateForm
+from open_webui.models.files import FileForm, FileModel, Files, FileUpdateForm
 from open_webui.models.knowledge import Knowledges
 
 # Document loaders
@@ -1765,47 +1765,6 @@ async def process_file(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
-class ProcessTextForm(BaseModel):
-    name: str
-    content: str
-    collection_name: str | None = None
-
-
-@router.post('/process/text')
-async def process_text(
-    request: Request,
-    form_data: ProcessTextForm,
-    user=Depends(get_verified_user),
-):
-    collection_name = form_data.collection_name
-    if collection_name is None:
-        collection_name = calculate_sha256_string(form_data.content)
-    else:
-        await _validate_collection_access([collection_name], user, access_type='write')
-
-    docs = [
-        Document(
-            page_content=form_data.content,
-            metadata={'name': form_data.name, 'created_by': user.id},
-        )
-    ]
-    text_content = form_data.content
-    log.debug(f'text_content: {text_content}')
-
-    result = await run_in_threadpool(save_docs_to_vector_db, request, docs, collection_name, user=user)
-    if result:
-        return {
-            'status': True,
-            'collection_name': collection_name,
-            'content': text_content,
-        }
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT(),
-        )
-
-
 @router.post('/process/youtube')
 @router.post('/process/web')
 async def process_web(
@@ -1821,12 +1780,33 @@ async def process_web(
 
         if process:
             collection_name = form_data.collection_name
-            if not collection_name:
-                collection_name = calculate_sha256_string(form_data.url)[:63]
-            else:
-                await _validate_collection_access([collection_name], user, access_type='write')
+            new_file: Optional[FileModel] = None
+            bypass = request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 
-            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            if collection_name:
+                await _validate_collection_access([collection_name], user, access_type='write')
+            elif not bypass:
+                # No caller-supplied name: register the fetched URL as an owned File so retrieval gates via
+                # has_access_to_file (owner + shared-chat / KB / channel / workspace-model paths) instead of
+                # the legacy unscoped non-KB namespace.
+                file_id = str(uuid.uuid4())
+                collection_name = f'file-{file_id}'
+                new_file = await Files.insert_new_file(
+                    user.id,
+                    FileForm(
+                        id=file_id,
+                        filename=form_data.url,
+                        path='',  # fetched content lives in data.content, no on-disk file
+                        data={'content': content},
+                        meta={
+                            'name': form_data.url,
+                            'source': form_data.url,
+                            'collection_name': collection_name,
+                        },
+                    ),
+                )
+
+            if not bypass:
                 await run_in_threadpool(
                     save_docs_to_vector_db,
                     request,
@@ -1839,19 +1819,20 @@ async def process_web(
             else:
                 collection_name = None
 
+            file_payload = (
+                new_file.model_dump()
+                if new_file is not None
+                else {
+                    'data': {'content': content},
+                    'meta': {'name': form_data.url, 'source': form_data.url},
+                }
+            )
+
             return {
                 'status': True,
                 'collection_name': collection_name,
                 'filename': form_data.url,
-                'file': {
-                    'data': {
-                        'content': content,
-                    },
-                    'meta': {
-                        'name': form_data.url,
-                        'source': form_data.url,
-                    },
-                },
+                'file': file_payload,
             }
         else:
             return {

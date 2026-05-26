@@ -1034,6 +1034,11 @@
 				if (res) {
 					fileItem.status = 'uploaded';
 					fileItem.collection_name = res.collection_name;
+					// Backend now registers web uploads as owned Files; carry the file id
+					// so chat-save populates ChatFile (drives shared-chat access on clone).
+					if (res.file?.id) {
+						fileItem.id = res.file.id;
+					}
 					fileItem.file = {
 						...res.file,
 						...fileItem.file
