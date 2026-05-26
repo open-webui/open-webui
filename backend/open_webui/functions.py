@@ -1,10 +1,11 @@
-import asyncio
-import inspect
-import json
 import logging
 import sys
-from typing import AsyncGenerator, Generator, Iterator
+import inspect
+import json
+import asyncio
 
+from pydantic import BaseModel
+from typing import AsyncGenerator, Generator, Iterator
 from fastapi import (
     Depends,
     FastAPI,
@@ -15,34 +16,39 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import BaseModel
 from starlette.responses import Response, StreamingResponse
 
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.users import UserModel
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
+
+
+from open_webui.models.users import UserModel
+from open_webui.models.functions import Functions
+from open_webui.models.models import Models
+
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.access_control import check_model_access
+
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+
 from open_webui.utils.misc import (
     add_or_update_system_message,
     get_last_user_message,
+    prepend_to_first_user_message_content,
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
-    prepend_to_first_user_message_content,
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
-)
-from open_webui.utils.plugin import (
-    get_function_module_from_cache,
-    load_function_module_by_id,
 )
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -318,10 +324,11 @@ async def generate_function_chat_completion(request, form_data, user, models: di
                 async for line in res:
                     yield process_line(form_data, line)
 
-            finish_message = openai_chat_chunk_message_template(form_data['model'], '')
-            finish_message['choices'][0]['finish_reason'] = 'stop'
-            yield f'data: {json.dumps(finish_message)}\n\n'
-            yield 'data: [DONE]'
+            if isinstance(res, str) or isinstance(res, Generator):
+                finish_message = openai_chat_chunk_message_template(form_data['model'], '')
+                finish_message['choices'][0]['finish_reason'] = 'stop'
+                yield f'data: {json.dumps(finish_message)}\n\n'
+                yield 'data: [DONE]'
 
         return StreamingResponse(stream_content(), media_type='text/event-stream')
     else:
@@ -339,3 +346,45 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         message = await get_message_content(res)
         return openai_chat_completion_message_template(form_data['model'], message)
+
+
+async def populate_default_functions(db=None):
+    """
+    Populate default functions (like the Content Moderation filter) in the database.
+    """
+    from open_webui.models.functions import Functions, FunctionForm, FunctionMeta
+    import pathlib
+
+    try:
+        current_file = pathlib.Path(__file__).parent
+        file_path = current_file / "utils" / "content_moderation.py"
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        log.exception(f"Error loading content_moderation.py file: {e}")
+        return
+
+    # Check if the content moderation function already exists in database
+    existing = await Functions.get_function_by_id("content_moderation", db=db)
+    if existing is None:
+        try:
+            # Parse frontmatter manifest
+            from open_webui.utils.plugin import extract_frontmatter
+            frontmatter = extract_frontmatter(content)
+
+            form_data = FunctionForm(
+                id="content_moderation",
+                name="Content Moderation",
+                content=content,
+                meta=FunctionMeta(
+                    description="Configurable content moderation supporting keyword matching, regex patterns, and OpenAI-compatible Moderation API.",
+                    manifest=frontmatter
+                )
+            )
+
+            function = await Functions.insert_new_function("system", "filter", form_data, db=db)
+            if function:
+                log.info("Successfully populated default Content Moderation filter in the database.")
+        except Exception as e:
+            log.exception(f"Failed to populate default content moderation filter: {e}")
+
