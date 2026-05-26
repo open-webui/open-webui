@@ -387,7 +387,11 @@ RESET_CONFIG_ON_START = (
 )
 
 ENABLE_REALTIME_CHAT_SAVE = (
-    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
+    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "True").lower() == "true"
+)
+
+DISABLE_STREAM_SNAPSHOT_DB_WRITES = (
+    os.environ.get("DISABLE_STREAM_SNAPSHOT_DB_WRITES", "False").lower() == "true"
 )
 
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
