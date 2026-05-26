@@ -1,9 +1,9 @@
 import json
 import uuid
-from open_webui.utils.redis import get_redis_connection
-from open_webui.env import REDIS_KEY_PREFIX
-from typing import Optional, List, Tuple
+
 import pycrdt as Y
+from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.utils.redis import get_redis_connection
 
 
 class RedisLock:
@@ -134,10 +134,19 @@ class YdocManager:
         self._redis = redis
         self._redis_key_prefix = redis_key_prefix
 
+    def _updates_key(self, document_id: str) -> str:
+        return f'{self._redis_key_prefix}:{document_id}:updates'
+
+    def _users_key(self, document_id: str) -> str:
+        return f'{self._redis_key_prefix}:{document_id}:users'
+
+    def _user_documents_key(self, user_id: str) -> str:
+        return f'{self._redis_key_prefix}:users:{user_id}:documents'
+
     async def append_to_updates(self, document_id: str, update: bytes):
         document_id = document_id.replace(':', '_')
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
+            redis_key = self._updates_key(document_id)
             await self._redis.rpush(redis_key, json.dumps(list(update)))
             list_len = await self._redis.llen(redis_key)
             if list_len >= self.COMPACTION_THRESHOLD:
@@ -151,7 +160,7 @@ class YdocManager:
 
     async def _compact_updates_redis(self, document_id: str):
         """Rolling compaction: squash oldest half into one snapshot."""
-        redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
+        redis_key = self._updates_key(document_id)
         all_updates = await self._redis.lrange(redis_key, 0, -1)
         if len(all_updates) <= 1:
             return
@@ -176,11 +185,11 @@ class YdocManager:
             ydoc.apply_update(bytes(update))
         self._updates[document_id] = [ydoc.get_update()] + updates[mid:]
 
-    async def get_updates(self, document_id: str) -> List[bytes]:
+    async def get_updates(self, document_id: str) -> list[bytes]:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
+            redis_key = self._updates_key(document_id)
             updates = await self._redis.lrange(redis_key, 0, -1)
             return [bytes(json.loads(update)) for update in updates]
         else:
@@ -190,16 +199,16 @@ class YdocManager:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
+            redis_key = self._updates_key(document_id)
             return await self._redis.exists(redis_key) > 0
         else:
             return document_id in self._updates
 
-    async def get_users(self, document_id: str) -> List[str]:
+    async def get_users(self, document_id: str) -> list[str]:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:users'
+            redis_key = self._users_key(document_id)
             users = await self._redis.smembers(redis_key)
             return list(users)
         else:
@@ -209,8 +218,8 @@ class YdocManager:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:users'
-            await self._redis.sadd(redis_key, user_id)
+            await self._redis.sadd(self._users_key(document_id), user_id)
+            await self._redis.sadd(self._user_documents_key(user_id), document_id)
         else:
             if document_id not in self._users:
                 self._users[document_id] = set()
@@ -220,24 +229,26 @@ class YdocManager:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:users'
-            await self._redis.srem(redis_key, user_id)
+            await self._redis.srem(self._users_key(document_id), user_id)
+            await self._redis.srem(self._user_documents_key(user_id), document_id)
         else:
             if document_id in self._users and user_id in self._users[document_id]:
                 self._users[document_id].remove(user_id)
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            keys = []
-            async for key in self._redis.scan_iter(match=f'{self._redis_key_prefix}:*', count=100):
-                keys.append(key)
-            for key in keys:
-                if key.endswith(':users'):
-                    await self._redis.srem(key, user_id)
+            user_documents_key = self._user_documents_key(user_id)
+            document_ids = await self._redis.smembers(user_documents_key)
+            if not document_ids:
+                document_ids = await self._find_documents_for_user(user_id)
 
-                    document_id = key.split(':')[-2]
-                    if len(await self.get_users(document_id)) == 0:
-                        await self.clear_document(document_id)
+            for document_id in document_ids:
+                await self._redis.srem(self._users_key(document_id), user_id)
+
+                if await self._redis.scard(self._users_key(document_id)) == 0:
+                    await self.clear_document(document_id)
+
+            await self._redis.delete(user_documents_key)
 
         else:
             for document_id in list(self._users.keys()):
@@ -252,12 +263,22 @@ class YdocManager:
         document_id = document_id.replace(':', '_')
 
         if self._redis:
-            redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
-            await self._redis.delete(redis_key)
-            redis_users_key = f'{self._redis_key_prefix}:{document_id}:users'
+            redis_users_key = self._users_key(document_id)
+            users = await self._redis.smembers(redis_users_key)
+            for user_id in users:
+                await self._redis.srem(self._user_documents_key(user_id), document_id)
+
+            await self._redis.delete(self._updates_key(document_id))
             await self._redis.delete(redis_users_key)
         else:
             if document_id in self._updates:
                 del self._updates[document_id]
             if document_id in self._users:
                 del self._users[document_id]
+
+    async def _find_documents_for_user(self, user_id: str) -> set[str]:
+        document_ids = set()
+        async for key in self._redis.scan_iter(match=f'{self._redis_key_prefix}:*:users', count=100):
+            if user_id in await self._redis.smembers(key):
+                document_ids.add(key.split(':')[-2])
+        return document_ids
