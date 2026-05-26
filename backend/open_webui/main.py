@@ -657,6 +657,12 @@ async def lifespan(app: FastAPI):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
 
+    try:
+        from open_webui.functions import populate_default_functions
+        await populate_default_functions()
+    except Exception as e:
+        log.warning(f"Failed to populate default functions: {e}")
+
     if SAFE_MODE:
         await Functions.deactivate_all_functions()
 

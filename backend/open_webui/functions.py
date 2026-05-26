@@ -346,3 +346,45 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         message = await get_message_content(res)
         return openai_chat_completion_message_template(form_data['model'], message)
+
+
+async def populate_default_functions(db=None):
+    """
+    Populate default functions (like the Content Moderation filter) in the database.
+    """
+    from open_webui.models.functions import Functions, FunctionForm, FunctionMeta
+    import pathlib
+
+    try:
+        current_file = pathlib.Path(__file__).parent
+        file_path = current_file / "utils" / "content_moderation.py"
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        log.exception(f"Error loading content_moderation.py file: {e}")
+        return
+
+    # Check if the content moderation function already exists in database
+    existing = await Functions.get_function_by_id("content_moderation", db=db)
+    if existing is None:
+        try:
+            # Parse frontmatter manifest
+            from open_webui.utils.plugin import extract_frontmatter
+            frontmatter = extract_frontmatter(content)
+
+            form_data = FunctionForm(
+                id="content_moderation",
+                name="Content Moderation",
+                content=content,
+                meta=FunctionMeta(
+                    description="Configurable content moderation supporting keyword matching, regex patterns, and OpenAI-compatible Moderation API.",
+                    manifest=frontmatter
+                )
+            )
+
+            function = await Functions.insert_new_function("system", "filter", form_data, db=db)
+            if function:
+                log.info("Successfully populated default Content Moderation filter in the database.")
+        except Exception as e:
+            log.exception(f"Failed to populate default content moderation filter: {e}")
+
