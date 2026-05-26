@@ -74,8 +74,8 @@ class WebSearchTools:
             include_domains = getattr(config, 'EXA_INCLUDE_DOMAINS', [])
             exclude_domains = getattr(config, 'EXA_EXCLUDE_DOMAINS', [])
 
-            # Perform the search
-            results = search_exa(
+            # Perform the search with async HTTP I/O.
+            results = await search_exa(
                 api_key=config.EXA_API_KEY,
                 query=query,
                 num_results=num_results,

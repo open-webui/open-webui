@@ -17,6 +17,7 @@ from open_webui.models.folders import (
 )
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
+from open_webui.socket.main import broadcast_sidebar_event
 
 
 from open_webui.config import UPLOAD_DIR
@@ -37,6 +38,24 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
+
+
+def _skip_sid(request: Request) -> Optional[str]:
+    return request.headers.get("x-session-id") if request else None
+
+
+def _folder_payload(folder) -> dict:
+    return {
+        "id": folder.id,
+        "parent_id": folder.parent_id,
+        "name": folder.name,
+        "items": getattr(folder, "items", None),
+        "meta": getattr(folder, "meta", None),
+        "data": getattr(folder, "data", None),
+        "is_expanded": getattr(folder, "is_expanded", None),
+        "created_at": getattr(folder, "created_at", None),
+        "updated_at": getattr(folder, "updated_at", None),
+    }
 
 
 ############################
@@ -90,7 +109,9 @@ async def get_folders(user=Depends(get_verified_user)):
 
 
 @router.post("/")
-def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
+async def create_folder(
+    request: Request, form_data: FolderForm, user=Depends(get_verified_user)
+):
     folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
         None, user.id, form_data.name
     )
@@ -103,6 +124,12 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
 
     try:
         folder = Folders.insert_new_folder(user.id, form_data)
+        if folder:
+            await broadcast_sidebar_event(
+                user.id,
+                {"type": "folder:created", "data": _folder_payload(folder)},
+                skip_sid=_skip_sid(request),
+            )
         return folder
     except Exception as e:
         log.exception(e)
@@ -137,7 +164,10 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update")
 async def update_folder_name_by_id(
-    id: str, form_data: FolderUpdateForm, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    form_data: FolderUpdateForm,
+    user=Depends(get_verified_user),
 ):
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
@@ -155,6 +185,12 @@ async def update_folder_name_by_id(
 
         try:
             folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
+            if folder:
+                await broadcast_sidebar_event(
+                    user.id,
+                    {"type": "folder:updated", "data": _folder_payload(folder)},
+                    skip_sid=_skip_sid(request),
+                )
             return folder
         except Exception as e:
             log.exception(e)
@@ -181,7 +217,10 @@ class FolderParentIdForm(BaseModel):
 
 @router.post("/{id}/update/parent")
 async def update_folder_parent_id_by_id(
-    id: str, form_data: FolderParentIdForm, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    form_data: FolderParentIdForm,
+    user=Depends(get_verified_user),
 ):
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
@@ -199,6 +238,12 @@ async def update_folder_parent_id_by_id(
             folder = Folders.update_folder_parent_id_by_id_and_user_id(
                 id, user.id, form_data.parent_id
             )
+            if folder:
+                await broadcast_sidebar_event(
+                    user.id,
+                    {"type": "folder:updated", "data": _folder_payload(folder)},
+                    skip_sid=_skip_sid(request),
+                )
             return folder
         except Exception as e:
             log.exception(e)
@@ -276,6 +321,15 @@ async def delete_folder_by_id(
                 folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
                 for folder_id in folder_ids:
                     Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+
+                await broadcast_sidebar_event(
+                    user.id,
+                    {
+                        "type": "folder:deleted",
+                        "data": {"id": id, "cascade": True},
+                    },
+                    skip_sid=_skip_sid(request),
+                )
 
                 return True
             except Exception as e:

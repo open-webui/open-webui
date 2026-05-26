@@ -1103,6 +1103,35 @@ def get_event_emitter(request_info, update_db=True):
     return __event_emitter__
 
 
+async def broadcast_sidebar_event(user_id, event_data, skip_sid=None):
+    """Fan out a sidebar-affecting event to every active session of `user_id`,
+    excluding `skip_sid` (the originating tab's socket.id). Sent on the same
+    "events" channel the frontend already listens on; the envelope's chat_id
+    is null because these events are not chat-scoped — they update the
+    sidebar list, pinned/folder/tag state, etc."""
+    session_ids = [
+        sid for sid in USER_POOL.get(user_id, []) if sid and sid != skip_sid
+    ]
+
+    if not session_ids:
+        return
+
+    await asyncio.gather(
+        *[
+            sio.emit(
+                "events",
+                {
+                    "chat_id": None,
+                    "message_id": None,
+                    "data": event_data,
+                },
+                to=sid,
+            )
+            for sid in session_ids
+        ]
+    )
+
+
 def get_event_call(request_info):
     async def __event_caller__(event_data):
         try:

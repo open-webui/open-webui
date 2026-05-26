@@ -49,6 +49,15 @@
 		readLocalStorageCache,
 		writeLocalStorageCache
 	} from '$lib/utils/cache';
+	import {
+		SIDEBAR_CACHE_TTL,
+		SIDEBAR_CHANNELS_CACHE_KEY,
+		SIDEBAR_FOLDERS_CACHE_KEY,
+		SIDEBAR_TAGS_CACHE_KEY,
+		SIDEBAR_PINNED_CHATS_CACHE_KEY,
+		SIDEBAR_CHATS_CACHE_KEY,
+		getSidebarCacheKey as buildSidebarCacheKey
+	} from '$lib/constants/cache';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
@@ -93,23 +102,10 @@
 
 	let newFolderId = null;
 
-	const SIDEBAR_CACHE_VERSION = 1;
-	const SIDEBAR_CACHE_TTL = 60 * 1000;
-	const SIDEBAR_CHANNELS_CACHE_KEY = 'sidebar:channels';
-	const SIDEBAR_FOLDERS_CACHE_KEY = 'sidebar:folders';
-	const SIDEBAR_TAGS_CACHE_KEY = 'sidebar:tags';
-	const SIDEBAR_PINNED_CHATS_CACHE_KEY = 'sidebar:pinned-chats';
-	const SIDEBAR_CHATS_CACHE_KEY = 'sidebar:chats:first-page';
-
 	let channelsRefreshPromise: Promise<void> | null = null;
 	let chatListRefreshPromise: Promise<void> | null = null;
 
-	const getSidebarCacheKey = (name: string) =>
-		JSON.stringify({
-			version: SIDEBAR_CACHE_VERSION,
-			userId: $user?.id ?? null,
-			name
-		});
+	const getSidebarCacheKey = (name: string) => buildSidebarCacheKey($user?.id, name);
 
 	const applyFolderList = (folderList: any[]) => {
 		const sortedFolderList = [...folderList].sort((a, b) => b.updated_at - a.updated_at);

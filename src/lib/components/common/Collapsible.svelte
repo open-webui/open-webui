@@ -1,8 +1,14 @@
+<script lang="ts" context="module">
+	let toolCallResultModulePromise: Promise<any> | null = null;
+	const loadToolCallResultModule = () =>
+		(toolCallResultModulePromise ??= import('../chat/Messages/ToolCallResult.svelte'));
+</script>
+
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	const i18n = getContext<Writable<i18nType>>('i18n');
@@ -72,7 +78,26 @@
 	}
 
 	const collapsibleId = uuidv4();
-	const loadToolCallResult = () => import('../chat/Messages/ToolCallResult.svelte');
+	const loadToolCallResult = loadToolCallResultModule;
+
+	function preloadToolCallResult() {
+		if (isWebToolName(attributes?.name)) {
+			void loadToolCallResult();
+		}
+	}
+
+	onMount(() => {
+		if (!isWebToolName(attributes?.name)) return;
+
+		const idleWindow = window as any;
+		if (typeof idleWindow.requestIdleCallback === 'function') {
+			const idleId = idleWindow.requestIdleCallback(preloadToolCallResult, { timeout: 2000 });
+			return () => idleWindow.cancelIdleCallback?.(idleId);
+		}
+
+		const timeout = window.setTimeout(preloadToolCallResult, 1200);
+		return () => window.clearTimeout(timeout);
+	});
 
 	function parseJSONString(str) {
 		try {
@@ -140,6 +165,8 @@
 		{:else}
 			<div
 				class="{buttonClassName} cursor-pointer"
+				on:pointerenter={preloadToolCallResult}
+				on:pointerdown={preloadToolCallResult}
 				on:pointerup={() => {
 					if (!disabled) {
 						open = !open;
@@ -164,11 +191,6 @@
 							<div class="min-w-0 text-left">
 								<div class="flex min-w-0 items-center gap-1.5">
 									<span class="truncate text-gray-700 dark:text-gray-300">{toolSummary.title}</span>
-									<span
-										class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-									>
-										web
-									</span>
 								</div>
 								{#if toolSummary.subtitle}
 									<div class="mt-0.5 truncate text-xs font-normal text-gray-500 dark:text-gray-500">
@@ -208,14 +230,28 @@
 					<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 						{#if attributes?.type === 'tool_calls'}
 							{#if isWebToolName(attributes?.name)}
-								{@const decodedResult = decode(rawResult)}
-								{#await loadToolCallResult() then ToolCallResult}
+								{#await loadToolCallResult()}
+									<div
+										class="my-2 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/70 text-sm dark:border-gray-800 dark:bg-gray-950/40"
+									>
+										<div
+											class="flex items-center gap-2 border-b border-gray-100 bg-white px-2.5 py-2 dark:border-gray-800 dark:bg-gray-900"
+										>
+											<div class="h-6 w-36 rounded-lg bg-gray-100 dark:bg-gray-800"></div>
+											<div class="h-6 w-20 rounded-lg bg-gray-100 dark:bg-gray-800"></div>
+										</div>
+										<div class="space-y-2 p-3">
+											<div class="h-4 w-1/3 rounded bg-gray-100 dark:bg-gray-800"></div>
+											<div class="h-16 rounded-xl bg-gray-100 dark:bg-gray-800"></div>
+										</div>
+									</div>
+								{:then ToolCallResult}
 									<svelte:component
 										this={ToolCallResult.default}
 										id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
 										name={attributes.name}
 										argsRaw={args}
-										resultRaw={decodedResult}
+										resultRaw={rawResult}
 										done={toolDone}
 									/>
 								{/await}

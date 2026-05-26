@@ -75,19 +75,32 @@ const looksLikeJSON = (value: string) => {
 	return JSON_START_CHARS.has(first) || first === 't' || first === 'f' || first === 'n';
 };
 
+const decodeHtmlAttributeEntities = (value: string) => {
+	if (!value.includes('&')) return value;
+	return value
+		.replace(/&quot;/g, '"')
+		.replace(/&#34;/g, '"')
+		.replace(/&#x27;/gi, "'")
+		.replace(/&#39;/g, "'")
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&');
+};
+
 export const decodePossiblyNestedJSON = (input: unknown, maxDepth = 4): unknown => {
 	let value = input;
 
 	for (let i = 0; i < maxDepth; i += 1) {
 		if (typeof value !== 'string') break;
 
-		const trimmed = value.trim();
-		if (!looksLikeJSON(trimmed)) break;
+		const decoded = decodeHtmlAttributeEntities(value);
+		const trimmed = decoded.trim();
+		if (!looksLikeJSON(trimmed)) return decoded;
 
 		try {
 			value = JSON.parse(trimmed);
 		} catch {
-			break;
+			return decoded;
 		}
 	}
 
@@ -319,11 +332,7 @@ export const getToolCallSummary = (
 		return {
 			kind: 'web_search',
 			title: query ? `Search: “${truncateEnd(query, 72)}”` : 'web_search',
-			subtitle: done
-				? count != null
-					? formatCount(count, 'result')
-					: 'Search complete'
-				: 'Searching…',
+			subtitle: done && count != null ? formatCount(count, 'result') : undefined,
 			badge: 'web'
 		};
 	}
@@ -337,15 +346,13 @@ export const getToolCallSummary = (
 			.map((url) => url.trim())
 			.filter(Boolean);
 		const count = done ? parseDeclaredFetchCount(rawResultString) : null;
-		const charCount =
-			rawResultString.length > 0 ? formatCharacterCount(rawResultString.length) : '';
 
 		return {
 			kind: 'web_fetch',
 			title: done
 				? `Fetched ${count != null ? formatCount(count, 'page') : 'web pages'}`
 				: `Fetching ${requestedUrls.length ? formatCount(requestedUrls.length, 'URL') : 'web pages'}…`,
-			subtitle: done ? charCount : requestedUrls.map((url) => getDomain(url) || url).join(', '),
+			subtitle: done ? undefined : requestedUrls.map((url) => getDomain(url) || url).join(', '),
 			badge: 'web'
 		};
 	}

@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 
-from open_webui.socket.main import get_event_emitter
+from open_webui.socket.main import broadcast_sidebar_event, get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
@@ -29,6 +29,25 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+
+def _chat_row_payload(chat) -> dict:
+    """Minimal row data the sidebar needs to render a chat entry without a
+    refetch. Returned for chat:created / chat:renamed / chat:pinned /
+    chat:archived / chat:folder events."""
+    return {
+        "id": chat.id,
+        "title": chat.title,
+        "updated_at": chat.updated_at,
+        "created_at": chat.created_at,
+        "pinned": bool(getattr(chat, "pinned", False) or False),
+        "archived": bool(getattr(chat, "archived", False) or False),
+        "folder_id": getattr(chat, "folder_id", None),
+    }
+
+
+def _skip_sid(request: Request) -> Optional[str]:
+    return request.headers.get("x-session-id") if request else None
 
 ############################
 # GetChatList
@@ -93,6 +112,12 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
         )
 
     result = Chats.delete_chats_by_user_id(user.id)
+    if result:
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chats:bulk", "data": {"operation": "delete_all"}},
+            skip_sid=_skip_sid(request),
+        )
     return result
 
 
@@ -141,9 +166,16 @@ async def get_user_chat_list_by_user_id(
 
 
 @router.post("/new", response_model=Optional[ChatResponse])
-async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
+async def create_new_chat(
+    request: Request, form_data: ChatForm, user=Depends(get_verified_user)
+):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chat:created", "data": _chat_row_payload(chat)},
+            skip_sid=_skip_sid(request),
+        )
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)
@@ -158,7 +190,9 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 
 
 @router.post("/import", response_model=Optional[ChatResponse])
-async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)):
+async def import_chat(
+    request: Request, form_data: ChatImportForm, user=Depends(get_verified_user)
+):
     try:
         chat = Chats.import_chat(user.id, form_data)
         if chat:
@@ -171,6 +205,12 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
                     and Tags.get_tag_by_name_and_user_id(tag_name, user.id) is None
                 ):
                     Tags.insert_new_tag(tag_name, user.id)
+
+            await broadcast_sidebar_event(
+                user.id,
+                {"type": "chat:created", "data": _chat_row_payload(chat)},
+                skip_sid=_skip_sid(request),
+            )
 
         return ChatResponse(**chat.model_dump())
     except Exception as e:
@@ -387,8 +427,15 @@ async def get_archived_session_user_chat_list(
 
 
 @router.post("/archive/all", response_model=bool)
-async def archive_all_chats(user=Depends(get_verified_user)):
-    return Chats.archive_all_chats_by_user_id(user.id)
+async def archive_all_chats(request: Request, user=Depends(get_verified_user)):
+    result = Chats.archive_all_chats_by_user_id(user.id)
+    if result:
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chats:bulk", "data": {"operation": "archive_all"}},
+            skip_sid=_skip_sid(request),
+        )
+    return result
 
 
 ############################
@@ -397,8 +444,15 @@ async def archive_all_chats(user=Depends(get_verified_user)):
 
 
 @router.post("/unarchive/all", response_model=bool)
-async def unarchive_all_chats(user=Depends(get_verified_user)):
-    return Chats.unarchive_all_chats_by_user_id(user.id)
+async def unarchive_all_chats(request: Request, user=Depends(get_verified_user)):
+    result = Chats.unarchive_all_chats_by_user_id(user.id)
+    if result:
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chats:bulk", "data": {"operation": "unarchive_all"}},
+            skip_sid=_skip_sid(request),
+        )
+    return result
 
 
 ############################
@@ -487,12 +541,26 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}", response_model=Optional[ChatResponse])
 async def update_chat_by_id(
-    id: str, form_data: ChatForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: ChatForm, user=Depends(get_verified_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
+        prior_title = chat.title
         updated_chat = {**chat.chat, **form_data.chat}
         chat = Chats.update_chat_by_id(id, updated_chat)
+        if chat and chat.title != prior_title:
+            await broadcast_sidebar_event(
+                user.id,
+                {
+                    "type": "chat:renamed",
+                    "data": {
+                        "id": chat.id,
+                        "title": chat.title,
+                        "updated_at": chat.updated_at,
+                    },
+                },
+                skip_sid=_skip_sid(request),
+            )
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -646,6 +714,13 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
 
         result = Chats.delete_chat_by_id(id)
 
+        if result:
+            await broadcast_sidebar_event(
+                user.id,
+                {"type": "chat:deleted", "data": {"id": id}},
+                skip_sid=_skip_sid(request),
+            )
+
         return result
     else:
         if not has_permission(
@@ -662,6 +737,12 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
+        if result:
+            await broadcast_sidebar_event(
+                user.id,
+                {"type": "chat:deleted", "data": {"id": id}},
+                skip_sid=_skip_sid(request),
+            )
         return result
 
 
@@ -687,10 +768,19 @@ async def get_pinned_status_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/pin", response_model=Optional[ChatResponse])
-async def pin_chat_by_id(id: str, user=Depends(get_verified_user)):
+async def pin_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.toggle_chat_pinned_by_id(id)
+        if chat:
+            await broadcast_sidebar_event(
+                user.id,
+                {
+                    "type": "chat:pinned",
+                    "data": {"id": chat.id, "pinned": bool(chat.pinned)},
+                },
+                skip_sid=_skip_sid(request),
+            )
         return chat
     else:
         raise HTTPException(
@@ -709,7 +799,7 @@ class CloneForm(BaseModel):
 
 @router.post("/{id}/clone", response_model=Optional[ChatResponse])
 async def clone_chat_by_id(
-    form_data: CloneForm, id: str, user=Depends(get_verified_user)
+    request: Request, form_data: CloneForm, id: str, user=Depends(get_verified_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
@@ -732,6 +822,13 @@ async def clone_chat_by_id(
             ),
         )
 
+        if chat:
+            await broadcast_sidebar_event(
+                user.id,
+                {"type": "chat:created", "data": _chat_row_payload(chat)},
+                skip_sid=_skip_sid(request),
+            )
+
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -745,7 +842,9 @@ async def clone_chat_by_id(
 
 
 @router.post("/{id}/clone/shared", response_model=Optional[ChatResponse])
-async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
+async def clone_shared_chat_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
 
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id)
@@ -771,6 +870,12 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
                 }
             ),
         )
+        if chat:
+            await broadcast_sidebar_event(
+                user.id,
+                {"type": "chat:created", "data": _chat_row_payload(chat)},
+                skip_sid=_skip_sid(request),
+            )
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -784,7 +889,9 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/archive", response_model=Optional[ChatResponse])
-async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
+async def archive_chat_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id)
@@ -801,6 +908,15 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
                 if tag is None:
                     log.debug(f"inserting tag: {tag_id}")
                     tag = Tags.insert_new_tag(tag_id, user.id)
+
+        await broadcast_sidebar_event(
+            user.id,
+            {
+                "type": "chat:archived",
+                "data": _chat_row_payload(chat),
+            },
+            skip_sid=_skip_sid(request),
+        )
 
         return ChatResponse(**chat.model_dump())
     else:
@@ -882,13 +998,25 @@ class ChatFolderIdForm(BaseModel):
 
 @router.post("/{id}/folder", response_model=Optional[ChatResponse])
 async def update_chat_folder_id_by_id(
-    id: str, form_data: ChatFolderIdForm, user=Depends(get_verified_user)
+    request: Request,
+    id: str,
+    form_data: ChatFolderIdForm,
+    user=Depends(get_verified_user),
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.update_chat_folder_id_by_id_and_user_id(
             id, user.id, form_data.folder_id
         )
+        if chat:
+            await broadcast_sidebar_event(
+                user.id,
+                {
+                    "type": "chat:folder",
+                    "data": {"id": chat.id, "folder_id": chat.folder_id},
+                },
+                skip_sid=_skip_sid(request),
+            )
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -920,7 +1048,7 @@ async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/tags", response_model=list[TagModel])
 async def add_tag_by_id_and_tag_name(
-    id: str, form_data: TagForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: TagForm, user=Depends(get_verified_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
@@ -940,6 +1068,11 @@ async def add_tag_by_id_and_tag_name(
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id)
         tags = chat.meta.get("tags", [])
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chat:tags", "data": {"id": id}},
+            skip_sid=_skip_sid(request),
+        )
         return Tags.get_tags_by_ids_and_user_id(tags, user.id)
     else:
         raise HTTPException(
@@ -954,7 +1087,7 @@ async def add_tag_by_id_and_tag_name(
 
 @router.delete("/{id}/tags", response_model=list[TagModel])
 async def delete_tag_by_id_and_tag_name(
-    id: str, form_data: TagForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: TagForm, user=Depends(get_verified_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
@@ -965,6 +1098,11 @@ async def delete_tag_by_id_and_tag_name(
 
         chat = Chats.get_chat_by_id_and_user_id(id, user.id)
         tags = chat.meta.get("tags", [])
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chat:tags", "data": {"id": id}},
+            skip_sid=_skip_sid(request),
+        )
         return Tags.get_tags_by_ids_and_user_id(tags, user.id)
     else:
         raise HTTPException(
@@ -978,7 +1116,9 @@ async def delete_tag_by_id_and_tag_name(
 
 
 @router.delete("/{id}/tags/all", response_model=Optional[bool])
-async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_all_tags_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         Chats.delete_all_tags_by_id_and_user_id(id, user.id)
@@ -986,6 +1126,12 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
+
+        await broadcast_sidebar_event(
+            user.id,
+            {"type": "chat:tags", "data": {"id": id}},
+            skip_sid=_skip_sid(request),
+        )
 
         return True
     else:

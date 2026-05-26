@@ -43,6 +43,7 @@
 	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
+	import { applySidebarEvent, SIDEBAR_EVENT_TYPES } from '$lib/utils/sidebarSync';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
@@ -305,6 +306,19 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
+		// Sidebar-affecting events ALWAYS apply, regardless of which chat is
+		// visible or whether the window is focused. The original handler
+		// gated chat:title and chat:tags behind the visible-chat check, which
+		// meant renaming/tagging the currently-open chat from another tab
+		// would silently fail to update the sidebar row in the receiving tab.
+		if (type && SIDEBAR_EVENT_TYPES.has(type)) {
+			try {
+				await applySidebarEvent(type, data, localStorage.token);
+			} catch (err) {
+				console.error('applySidebarEvent failed', type, err);
+			}
+		}
+
 		if (!isCurrentChatEvent || !windowFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
@@ -341,11 +355,6 @@
 						unstyled: true
 					});
 				}
-			} else if (type === 'chat:title') {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			} else if (type === 'chat:tags') {
-				tags.set(await getAllTags(localStorage.token));
 			}
 		} else if (data?.session_id === $socket.id) {
 			if (type === 'execute:python') {

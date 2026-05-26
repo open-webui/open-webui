@@ -1,13 +1,15 @@
 """
-Exa Search API Integration for Open WebUI
-Provides search and content fetching capabilities via Exa's API.
+Exa Search API Integration for Open WebUI.
+
+Search remains Exa-backed, but all HTTP I/O in this module is async via
+aiohttp so tool calls and subagent runs never block the event loop.
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Optional, List
 
-import requests
+import aiohttp
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.web.main import SearchResult
 
@@ -20,6 +22,7 @@ EXA_API_BASE = "https://api.exa.ai"
 @dataclass
 class ExaSearchResult:
     """Result from Exa search API"""
+
     url: str
     title: str
     snippet: str
@@ -30,6 +33,7 @@ class ExaSearchResult:
 @dataclass
 class ExaContentResult:
     """Result from Exa contents API"""
+
     url: str
     title: str
     text: str
@@ -37,7 +41,39 @@ class ExaContentResult:
     author: Optional[str] = None
 
 
-def search_exa(
+async def _post_exa_json(
+    api_key: str,
+    path: str,
+    payload: dict,
+    timeout_seconds: int,
+) -> dict:
+    """POST JSON to Exa and return decoded JSON with good error context."""
+    headers = {
+        "x-api-key": api_key,
+        "Content-Type": "application/json",
+    }
+
+    timeout = aiohttp.ClientTimeout(total=timeout_seconds)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(
+            f"{EXA_API_BASE}{path}",
+            headers=headers,
+            json=payload,
+        ) as response:
+            response_text = await response.text()
+
+            if response.status >= 400:
+                raise Exception(
+                    f"Exa API {path} failed: HTTP {response.status} {response_text[:500]}"
+                )
+
+            try:
+                return await response.json(content_type=None)
+            except Exception as e:
+                raise Exception(f"Exa API {path} returned invalid JSON: {e}")
+
+
+async def search_exa(
     api_key: str,
     query: str,
     num_results: int = 10,
@@ -62,11 +98,6 @@ def search_exa(
     """
     log.info(f"Exa search for query: {query}")
 
-    headers = {
-        "x-api-key": api_key,
-        "Content-Type": "application/json"
-    }
-
     payload = {
         "query": query,
         "numResults": min(num_results, 100),
@@ -75,9 +106,9 @@ def search_exa(
         "contents": {
             "highlights": {
                 "numSentences": 2,
-                "highlightsPerUrl": 1
+                "highlightsPerUrl": 1,
             }
-        }
+        },
     }
 
     # Add domain filters if provided
@@ -87,14 +118,12 @@ def search_exa(
         payload["excludeDomains"] = exclude_domains
 
     try:
-        response = requests.post(
-            f"{EXA_API_BASE}/search",
-            headers=headers,
-            json=payload,
-            timeout=30
+        data = await _post_exa_json(
+            api_key=api_key,
+            path="/search",
+            payload=payload,
+            timeout_seconds=30,
         )
-        response.raise_for_status()
-        data = response.json()
 
         results = []
         for result in data.get("results", []):
@@ -113,12 +142,15 @@ def search_exa(
         log.info(f"Exa search found {len(results)} results")
         return results
 
-    except requests.exceptions.RequestException as e:
-        log.error(f"Exa search error: {e}")
+    except aiohttp.ClientError as e:
+        log.error(f"Exa search client error: {e}")
         raise Exception(f"Exa search failed: {e}")
+    except TimeoutError as e:
+        log.error(f"Exa search timeout: {e}")
+        raise Exception(f"Exa search timed out: {e}")
 
 
-def fetch_exa_contents(
+async def fetch_exa_contents(
     api_key: str,
     urls: List[str],
     max_characters: int = 10000,
@@ -126,6 +158,9 @@ def fetch_exa_contents(
 ) -> List[ExaContentResult]:
     """
     Fetch full content from URLs using Exa Contents API.
+
+    Deprecated for built-in web_fetch: web_fetch now uses Jina Reader. This
+    remains async for compatibility with any older code that still imports it.
 
     Args:
         api_key: Exa API key
@@ -141,30 +176,23 @@ def fetch_exa_contents(
 
     log.info(f"Exa fetch contents for {len(urls)} URLs")
 
-    headers = {
-        "x-api-key": api_key,
-        "Content-Type": "application/json"
-    }
-
     payload = {
         "urls": urls,
         "text": {
             "maxCharacters": max_characters,
-            "includeHtmlTags": False
+            "includeHtmlTags": False,
         },
         "livecrawl": livecrawl,
         "livecrawlTimeout": 10000,
     }
 
     try:
-        response = requests.post(
-            f"{EXA_API_BASE}/contents",
-            headers=headers,
-            json=payload,
-            timeout=60
+        data = await _post_exa_json(
+            api_key=api_key,
+            path="/contents",
+            payload=payload,
+            timeout_seconds=60,
         )
-        response.raise_for_status()
-        data = response.json()
 
         results = []
         for result in data.get("results", []):
@@ -182,11 +210,16 @@ def fetch_exa_contents(
         statuses = data.get("statuses", [])
         for status in statuses:
             if status.get("status") != "success":
-                log.warning(f"Exa fetch failed for {status.get('id')}: {status.get('error')}")
+                log.warning(
+                    f"Exa fetch failed for {status.get('id')}: {status.get('error')}"
+                )
 
         log.info(f"Exa fetch returned content for {len(results)} URLs")
         return results
 
-    except requests.exceptions.RequestException as e:
-        log.error(f"Exa contents fetch error: {e}")
+    except aiohttp.ClientError as e:
+        log.error(f"Exa contents fetch client error: {e}")
         raise Exception(f"Exa contents fetch failed: {e}")
+    except TimeoutError as e:
+        log.error(f"Exa contents fetch timeout: {e}")
+        raise Exception(f"Exa contents fetch timed out: {e}")

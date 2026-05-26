@@ -6,6 +6,8 @@
 
 	import { copyToClipboard } from '$lib/utils';
 	import { decodeToolResultText, formatToolValue } from '$lib/utils/toolResults';
+	import WebFetchResult from './ToolResults/WebFetchResult.svelte';
+	import WebSearchResult from './ToolResults/WebSearchResult.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -18,8 +20,6 @@
 	type Tab = 'result' | 'request' | 'raw';
 
 	const tabs: Tab[] = ['result', 'request', 'raw'];
-	const loadWebSearchResult = () => import('./ToolResults/WebSearchResult.svelte');
-	const loadWebFetchResult = () => import('./ToolResults/WebFetchResult.svelte');
 
 	let activeTab: Tab = 'result';
 
@@ -73,29 +73,23 @@
 			type="button"
 			on:click={copyActive}
 		>
-			{$i18n.t('Copy')} {labelForTab(activeTab)}
+			{$i18n.t('Copy')}
+			{labelForTab(activeTab)}
 		</button>
 	</div>
 
 	<div class="p-3">
 		{#if activeTab === 'result'}
 			{#if !done}
-				<div class="rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+				<div
+					class="rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400"
+				>
 					{$i18n.t('The tool is still running. The result will appear here when it finishes.')}
 				</div>
 			{:else if name === 'web_search'}
-				{#await loadWebSearchResult() then WebSearchResult}
-					<svelte:component
-						this={WebSearchResult.default}
-						id={`${id}-web-search`}
-						{resultRaw}
-						{argsRaw}
-					/>
-				{/await}
+				<WebSearchResult id={`${id}-web-search`} {resultRaw} {argsRaw} />
 			{:else if name === 'web_fetch'}
-				{#await loadWebFetchResult() then WebFetchResult}
-					<svelte:component this={WebFetchResult.default} id={`${id}-web-fetch`} {resultRaw} />
-				{/await}
+				<WebFetchResult id={`${id}-web-fetch`} {resultRaw} />
 			{/if}
 		{:else if activeTab === 'request'}
 			<div class="max-h-[48vh] overflow-y-auto rounded-xl bg-gray-950 p-3 text-xs text-gray-100">

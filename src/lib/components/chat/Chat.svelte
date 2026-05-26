@@ -856,6 +856,7 @@
 	const navigateHandler = async () => {
 		const myGeneration = ++navigateGeneration;
 		loading = true;
+		stopSubagentUpdateBatching();
 		stopResumeTaskPolling();
 		lastPersistedWebSearchEnabled = null;
 		lastPersistedStudyModeEnabled = null;
@@ -1262,31 +1263,240 @@
 		return textBlocks.join('\n\n').trim();
 	};
 
-	const patchParentSubagentRun = (run: any) => {
-		const parentMessageId = run?.parent_message_id;
-		const entryKey = run?.entry_key || run?.subagent_id || run?.chat_id || run?.tool_call_id;
-		if (!parentMessageId || !entryKey || !history.messages?.[parentMessageId]) return;
-		const parentMessage = history.messages[parentMessageId];
-		const existingRuns =
-			parentMessage.subagent_runs && typeof parentMessage.subagent_runs === 'object'
-				? parentMessage.subagent_runs
-				: {};
-		const prior =
-			existingRuns[entryKey] && typeof existingRuns[entryKey] === 'object'
-				? existingRuns[entryKey]
-				: {};
-		history.messages[parentMessageId] = {
-			...parentMessage,
-			subagent_runs: {
-				...existingRuns,
-				[entryKey]: {
-					...prior,
-					...run,
-					entry_key: entryKey
+	const patchParentSubagentRuns = (runs: any[] = []) => {
+		if (!Array.isArray(runs) || runs.length === 0 || !history.messages) return;
+
+		let changed = false;
+		const nextMessages: Record<string, any> = { ...(history.messages ?? {}) };
+
+		for (const run of runs) {
+			const parentMessageId = run?.parent_message_id as string | undefined;
+			const entryKey = (run?.entry_key || run?.subagent_id || run?.chat_id || run?.tool_call_id) as
+				| string
+				| undefined;
+			if (!parentMessageId || !entryKey || !nextMessages[parentMessageId]) continue;
+
+			const parentMessage = nextMessages[parentMessageId];
+			const existingRuns =
+				parentMessage.subagent_runs && typeof parentMessage.subagent_runs === 'object'
+					? parentMessage.subagent_runs
+					: {};
+			const prior =
+				existingRuns[entryKey] && typeof existingRuns[entryKey] === 'object'
+					? existingRuns[entryKey]
+					: {};
+
+			nextMessages[parentMessageId] = {
+				...parentMessage,
+				subagent_runs: {
+					...existingRuns,
+					[entryKey]: {
+						...prior,
+						...run,
+						entry_key: entryKey
+					}
 				}
-			}
+			};
+			changed = true;
+		}
+
+		if (changed) {
+			history = { ...history, messages: nextMessages };
+		}
+	};
+
+	const patchParentSubagentRun = (run: any) => {
+		patchParentSubagentRuns([run]);
+	};
+
+	const SUBAGENT_UI_FLUSH_MS = 500;
+	const SUBAGENT_STATUS_HISTORY_LIMIT = 20;
+	const SUBAGENT_PARENT_PATCH_INTERVAL_MS = 5000;
+
+	type PendingSubagentUpdate = {
+		keys: string[];
+		sd: any;
+		latestCompletion?: any;
+		terminalEvent?: any;
+		statuses: any[];
+		hasTerminal: boolean;
+	};
+
+	let pendingSubagentUpdates = new Map<string, PendingSubagentUpdate>();
+	let subagentUpdateFlushTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastSubagentParentPatchAt = 0;
+
+	const getSubagentKeys = (sd: any) =>
+		[sd?.tool_call_id, sd?.subagent_id, sd?.chat_id, sd?.entry_key].filter(Boolean) as string[];
+
+	const getSubagentBatchKey = (sd: any, keys = getSubagentKeys(sd)) =>
+		(sd?.entry_key ||
+			sd?.tool_call_id ||
+			sd?.subagent_id ||
+			sd?.chat_id ||
+			keys[0] ||
+			'') as string;
+
+	const isTerminalSubagentInnerEvent = (innerEvent: any) => {
+		const innerType = innerEvent?.type;
+		const innerData = innerEvent?.data ?? {};
+		return (
+			(innerType === 'chat:completion' && innerData?.done === true) ||
+			innerType === 'chat:message:error' ||
+			innerType === 'chat:tasks:cancel'
+		);
+	};
+
+	const mergeSubagentPendingIntoRun = (existing: any, pending: PendingSubagentUpdate) => {
+		const sd = pending.sd ?? {};
+		const cur: any = {
+			...(existing ?? {
+				subagent_id: sd.subagent_id,
+				entry_key: sd.entry_key ?? sd.subagent_id,
+				parent_message_id: sd.parent_message_id,
+				tool_call_id: sd.tool_call_id,
+				num: sd.num,
+				name: sd.name,
+				chat_id: sd.chat_id ?? sd.subagent_id,
+				status: 'running'
+			})
 		};
-		history = { ...history };
+
+		cur.subagent_id = cur.subagent_id ?? sd.subagent_id;
+		cur.entry_key = cur.entry_key ?? sd.entry_key ?? sd.subagent_id;
+		cur.parent_message_id = cur.parent_message_id ?? sd.parent_message_id;
+		cur.tool_call_id = cur.tool_call_id ?? sd.tool_call_id;
+		cur.num = cur.num ?? sd.num;
+		cur.name = cur.name ?? sd.name;
+		cur.chat_id = cur.chat_id ?? sd.chat_id ?? sd.subagent_id;
+
+		if (pending.statuses.length > 0) {
+			const sh = Array.isArray(cur.statusHistory) ? cur.statusHistory : [];
+			cur.statusHistory = [...sh, ...pending.statuses].slice(-SUBAGENT_STATUS_HISTORY_LIMIT);
+		}
+
+		if (pending.latestCompletion) {
+			const innerData = pending.latestCompletion?.data ?? {};
+			if (Array.isArray(innerData.content_blocks)) {
+				cur.content_blocks = innerData.content_blocks;
+			}
+			if (typeof innerData.content === 'string') {
+				cur.content = innerData.content;
+			}
+			if (innerData.done === true) {
+				cur.status = 'done';
+				cur.ended_at = Math.floor(Date.now() / 1000);
+				cur.final_text =
+					cur.final_text || extractSubagentFinalText(cur.content_blocks, cur.content);
+			}
+		}
+
+		const terminalType = pending.terminalEvent?.type;
+		const terminalData = pending.terminalEvent?.data ?? {};
+		if (terminalType === 'chat:message:error') {
+			cur.status = 'error';
+			cur.error = terminalData?.error ?? terminalData;
+			cur.ended_at = Math.floor(Date.now() / 1000);
+		} else if (terminalType === 'chat:tasks:cancel') {
+			cur.status = 'cancelled';
+			cur.ended_at = Math.floor(Date.now() / 1000);
+		}
+
+		return cur;
+	};
+
+	const flushPendingSubagentUpdates = (forcePatchAll = false) => {
+		if (subagentUpdateFlushTimer) {
+			clearTimeout(subagentUpdateFlushTimer);
+			subagentUpdateFlushTimer = null;
+		}
+		if (pendingSubagentUpdates.size === 0) return;
+
+		const batch = Array.from(pendingSubagentUpdates.values());
+		pendingSubagentUpdates.clear();
+
+		const persistedRuns: { run: any; terminal: boolean }[] = [];
+		subagentLiveStates.update((s) => {
+			const out = { ...s };
+			for (const pending of batch) {
+				const existing = pending.keys.map((key) => out[key]).find(Boolean);
+				const next = mergeSubagentPendingIntoRun(existing, pending);
+				persistedRuns.push({ run: next, terminal: pending.hasTerminal });
+				for (const key of pending.keys) out[key] = next;
+			}
+			return out;
+		});
+
+		const now = Date.now();
+		const shouldPatchPeriodic =
+			now - lastSubagentParentPatchAt >= SUBAGENT_PARENT_PATCH_INTERVAL_MS;
+		const runsToPatch = persistedRuns
+			.filter(({ terminal }) => forcePatchAll || terminal || shouldPatchPeriodic)
+			.map(({ run }) => run);
+		if (runsToPatch.length > 0) {
+			patchParentSubagentRuns(runsToPatch);
+			if (shouldPatchPeriodic) lastSubagentParentPatchAt = now;
+		}
+	};
+
+	const scheduleSubagentUpdateFlush = () => {
+		if (subagentUpdateFlushTimer) return;
+		subagentUpdateFlushTimer = setTimeout(() => {
+			subagentUpdateFlushTimer = null;
+			flushPendingSubagentUpdates();
+		}, SUBAGENT_UI_FLUSH_MS);
+	};
+
+	const queueSubagentUpdate = (sd: any, innerEvent: any) => {
+		const keys = getSubagentKeys(sd);
+		if (keys.length === 0) return;
+		const key = getSubagentBatchKey(sd, keys);
+		if (!key) return;
+		const pending = pendingSubagentUpdates.get(key) ?? {
+			keys: [],
+			sd,
+			statuses: [],
+			hasTerminal: false
+		};
+
+		pending.keys = Array.from(new Set([...pending.keys, ...keys]));
+		pending.sd = { ...pending.sd, ...sd };
+		const innerType = innerEvent?.type;
+		const innerData = innerEvent?.data ?? {};
+		if (
+			innerType !== 'chat:completion' &&
+			innerType !== 'status' &&
+			innerType !== 'chat:message:error' &&
+			innerType !== 'chat:tasks:cancel'
+		) {
+			return;
+		}
+
+		if (innerType === 'chat:completion') {
+			pending.latestCompletion = innerEvent;
+		} else if (innerType === 'status') {
+			pending.statuses = [...pending.statuses, innerData].slice(-SUBAGENT_STATUS_HISTORY_LIMIT);
+		} else if (innerType === 'chat:message:error' || innerType === 'chat:tasks:cancel') {
+			pending.terminalEvent = innerEvent;
+		}
+
+		pending.hasTerminal = pending.hasTerminal || isTerminalSubagentInnerEvent(innerEvent);
+		pendingSubagentUpdates.set(key, pending);
+
+		if (pending.hasTerminal) {
+			flushPendingSubagentUpdates();
+		} else {
+			scheduleSubagentUpdateFlush();
+		}
+	};
+
+	const stopSubagentUpdateBatching = () => {
+		flushPendingSubagentUpdates(true);
+		if (subagentUpdateFlushTimer) {
+			clearTimeout(subagentUpdateFlushTimer);
+			subagentUpdateFlushTimer = null;
+		}
+		pendingSubagentUpdates.clear();
 	};
 
 	const chatEventHandler = async (event, cb) => {
@@ -1435,62 +1645,8 @@
 
 		if (type === 'chat:subagent:update') {
 			const sd = data ?? {};
-			const keys = [sd.tool_call_id, sd.subagent_id, sd.chat_id, sd.entry_key].filter(Boolean);
-			if (keys.length === 0) return;
 			const innerEvent = sd.inner_event ?? {};
-			const innerType = innerEvent?.type;
-			const innerData = innerEvent?.data ?? {};
-			let persistedRun: any = null;
-			subagentLiveStates.update((s) => {
-				const cur: any = {
-					...(keys.map((key) => s[key]).find(Boolean) ?? {
-						subagent_id: sd.subagent_id,
-						entry_key: sd.entry_key ?? sd.subagent_id,
-						parent_message_id: sd.parent_message_id,
-						tool_call_id: sd.tool_call_id,
-						num: sd.num,
-						name: sd.name,
-						chat_id: sd.chat_id ?? sd.subagent_id,
-						status: 'running'
-					})
-				};
-				cur.subagent_id = cur.subagent_id ?? sd.subagent_id;
-				cur.entry_key = cur.entry_key ?? sd.entry_key ?? sd.subagent_id;
-				cur.parent_message_id = cur.parent_message_id ?? sd.parent_message_id;
-				cur.tool_call_id = cur.tool_call_id ?? sd.tool_call_id;
-				cur.num = cur.num ?? sd.num;
-				cur.name = cur.name ?? sd.name;
-				cur.chat_id = cur.chat_id ?? sd.chat_id ?? sd.subagent_id;
-				if (innerType === 'chat:completion') {
-					if (Array.isArray(innerData.content_blocks)) {
-						cur.content_blocks = innerData.content_blocks;
-					}
-					if (typeof innerData.content === 'string') {
-						cur.content = innerData.content;
-					}
-					if (innerData.done === true) {
-						cur.status = 'done';
-						cur.ended_at = Math.floor(Date.now() / 1000);
-						cur.final_text =
-							cur.final_text || extractSubagentFinalText(cur.content_blocks, cur.content);
-					}
-				} else if (innerType === 'chat:message:error') {
-					cur.status = 'error';
-					cur.error = innerData?.error ?? innerData;
-					cur.ended_at = Math.floor(Date.now() / 1000);
-				} else if (innerType === 'chat:tasks:cancel') {
-					cur.status = 'cancelled';
-					cur.ended_at = Math.floor(Date.now() / 1000);
-				} else if (innerType === 'status') {
-					const sh = cur.statusHistory ?? [];
-					cur.statusHistory = [...sh, innerData];
-				}
-				persistedRun = cur;
-				const out = { ...s };
-				for (const key of keys) out[key] = cur;
-				return out;
-			});
-			patchParentSubagentRun(persistedRun);
+			queueSubagentUpdate(sd, innerEvent);
 			return;
 		}
 
@@ -1903,6 +2059,7 @@
 
 	onDestroy(() => {
 		try {
+			stopSubagentUpdateBatching();
 			for (const messageId of streamFlushes.keys()) {
 				cancelStreamingMessageFlush(messageId);
 			}
@@ -4707,13 +4864,28 @@
 	};
 
 	const stopResponse = async () => {
-		if (taskIds) {
-			for (const taskId of taskIds) {
-				const res = await stopTask(localStorage.token, taskId).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
+		const taskIdsToStop = new Set<string>(taskIds ?? []);
+		const visibleChatId = getVisibleChatId();
+
+		// Stop all tasks associated with this chat, not only the IDs this tab
+		// remembers. This catches active subagent reruns/background tasks and
+		// reload-resumed generations so Escape/Stop is authoritative.
+		if (visibleChatId && !visibleChatId.startsWith('local:')) {
+			const taskRes = await getTaskIdsByChatId(localStorage.token, visibleChatId).catch(() => null);
+			for (const taskId of taskRes?.task_ids ?? []) {
+				if (taskId) taskIdsToStop.add(taskId);
 			}
+		}
+
+		if (taskIdsToStop.size > 0) {
+			await Promise.all(
+				Array.from(taskIdsToStop).map((taskId) =>
+					stopTask(localStorage.token, taskId).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					})
+				)
+			);
 
 			taskIds = null;
 		}

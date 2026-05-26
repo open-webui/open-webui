@@ -442,45 +442,132 @@ def _upsert_subagent_run(
         )
 
 
+async def _emit_subagent_cancel(
+    parent_event_emitter: Optional[Callable[[dict], Awaitable[None]]],
+    subagent_meta: dict,
+) -> None:
+    """Best-effort live cancellation update for a parent-visible subagent row."""
+    if parent_event_emitter is None:
+        return
+    try:
+        await parent_event_emitter(
+            {
+                "type": "chat:subagent:update",
+                "data": {
+                    **subagent_meta,
+                    "inner_event": {"type": "chat:tasks:cancel"},
+                },
+            }
+        )
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"subagent cancel emit failed: {e}")
+
+
 def _build_forwarding_emitter(
     subagent_socket_info: dict,
     parent_event_emitter: Callable[[dict], Awaitable[None]],
     subagent_meta: dict,
 ) -> Callable[[dict], Awaitable[None]]:
-    """Wraps the inner pipeline's event_emitter so each emitted event both:
+    """Wrap the inner event_emitter and throttle parent-facing live updates.
 
-    1. Goes through the subagent's own ``get_event_emitter`` (which persists
-       fields like ``status``/``message``/``replace``/``files``/``sources``
-       to the subagent chat row, exactly the same as a top-level chat).
-    2. Is forwarded to the parent UI as ``chat:subagent:update`` so the
-       parent message's collapsible block updates live.
-
-    Only whitelisted event types are forwarded — we want content/status/error
-    flow to reach the parent UI, not internal control events like cancel
-    triggers (those are surfaced separately if and when they happen).
+    The hidden subagent chat still gets its own non-completion events through
+    the normal emitter for persistence. The parent UI, however, only needs a
+    live-ish latest content snapshot. With dozens of research subagents running,
+    raw forwarding turns every inner chunk into a socket event + store
+    invalidation. We coalesce non-terminal parent updates to 2Hz per subagent
+    and always flush terminal/error/cancel events immediately.
     """
     base_emitter = get_event_emitter(subagent_socket_info)
 
     FORWARDED_TYPES = {
         "chat:completion",
         "chat:message:error",
+        "chat:tasks:cancel",
+    }
+    # These are high-volume/transient for research-heavy subagents. The hidden
+    # subagent chat's final assistant row is persisted by the normal middleware
+    # save path; persisting every status/source/citation event here creates DB
+    # and socket fanout pressure with 50 concurrent workers.
+    SKIP_BASE_EMIT_TYPES = {
+        "chat:completion",
         "chat:message:delta",
         "status",
         "source",
         "citation",
-        "chat:tasks:cancel",
     }
+    FORWARD_FLUSH_INTERVAL_SECONDS = 0.5
+
+    lock = asyncio.Lock()
+    latest_completion_event: Optional[dict] = None
+    latest_status_event: Optional[dict] = None
+    flush_task: Optional[asyncio.Task] = None
+
+    def _is_terminal_event(event: dict) -> bool:
+        etype = event.get("type") if isinstance(event, dict) else None
+        data = event.get("data") if isinstance(event, dict) else None
+        return bool(
+            (etype == "chat:completion" and isinstance(data, dict) and data.get("done") is True)
+            or etype in {"chat:message:error", "chat:tasks:cancel"}
+        )
+
+    async def _emit_parent(inner_event: dict) -> None:
+        try:
+            await parent_event_emitter(
+                {
+                    "type": "chat:subagent:update",
+                    "data": {
+                        **subagent_meta,
+                        "inner_event": inner_event,
+                    },
+                }
+            )
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"forwarding to parent UI failed: {e}")
+
+    async def _flush_pending() -> None:
+        nonlocal latest_completion_event, latest_status_event, flush_task
+        async with lock:
+            status_event = latest_status_event
+            completion_event = latest_completion_event
+            latest_status_event = None
+            latest_completion_event = None
+            flush_task = None
+
+        # Preserve useful ordering: latest status first, then latest content.
+        if status_event is not None:
+            await _emit_parent(status_event)
+        if completion_event is not None:
+            await _emit_parent(completion_event)
+
+    async def _delayed_flush() -> None:
+        await asyncio.sleep(FORWARD_FLUSH_INTERVAL_SECONDS)
+        await _flush_pending()
+
+    async def _schedule_flush() -> None:
+        nonlocal flush_task
+        async with lock:
+            if flush_task is None or flush_task.done():
+                flush_task = asyncio.create_task(_delayed_flush())
+
+    async def _queue_parent_event(event: dict) -> None:
+        nonlocal latest_completion_event, latest_status_event
+        etype = event.get("type") if isinstance(event, dict) else None
+
+        async with lock:
+            if etype == "chat:completion":
+                latest_completion_event = event
+            elif etype == "status":
+                latest_status_event = event
+
+        await _schedule_flush()
 
     async def forwarding_emitter(event: dict) -> None:
         etype = event.get("type") if isinstance(event, dict) else None
 
-        # Persist to the subagent's own chat row + emit on subagent scope.
-        # Skip for `chat:completion` deltas: nobody is watching the hidden
-        # subagent chat, and these events don't trigger DB writes anyway.
-        # Status/source/citation/etc. still flow through base_emitter for
-        # persistence. We swallow errors so one hiccup doesn't break the
-        # forward to the parent UI.
-        if etype != "chat:completion":
+        # Persist/emit only non-noisy events to the hidden subagent chat scope.
+        # The final assistant content is saved by middleware; status/source/citation
+        # are expensive fanout/DB-write noise at high concurrency.
+        if etype not in SKIP_BASE_EMIT_TYPES:
             try:
                 await base_emitter(event)
             except Exception as e:  # noqa: BLE001
@@ -488,18 +575,16 @@ def _build_forwarding_emitter(
 
         if etype not in FORWARDED_TYPES:
             return
-        try:
-            await parent_event_emitter(
-                {
-                    "type": "chat:subagent:update",
-                    "data": {
-                        **subagent_meta,
-                        "inner_event": event,
-                    },
-                }
-            )
-        except Exception as e:  # noqa: BLE001
-            log.debug(f"forwarding to parent UI failed: {e}")
+
+        if _is_terminal_event(event):
+            # Ship any queued snapshot first, then the terminal event. This
+            # keeps final state immediate while preserving the latest content
+            # seen before an error/cancel.
+            await _flush_pending()
+            await _emit_parent(event)
+            return
+
+        await _queue_parent_event(event)
 
     return forwarding_emitter
 
@@ -855,6 +940,14 @@ async def _run_inner_chat(
             events,
             tasks=None,  # no title/tag/follow-up generation for subagents
         )
+        # process_chat_response intentionally catches CancelledError to persist
+        # partial chat state and emit chat:tasks:cancel. For subagents we still
+        # need cancellation to propagate back to the parent tool call; otherwise
+        # pressing Stop/Escape can leave the parent task waiting for/retrying a
+        # subagent after the inner response handler swallowed the cancellation.
+        current_task = asyncio.current_task()
+        if current_task is not None and current_task.cancelling():
+            raise asyncio.CancelledError()
     finally:
         # Restore parent's request.state so the rest of the parent's pipeline
         # sees what it expected.
@@ -1118,6 +1211,7 @@ async def run_subagent_launch(
                     "ended_at": int(time.time()),
                 },
             )
+            await _emit_subagent_cancel(parent_event_emitter, subagent_meta)
             raise
         except Exception as e:  # noqa: BLE001
             last_error = str(e)
@@ -1354,6 +1448,7 @@ async def run_subagent_continue(
                     "ended_at": int(time.time()),
                 },
             )
+            await _emit_subagent_cancel(parent_event_emitter, subagent_meta)
             raise
         except Exception as e:  # noqa: BLE001
             last_error = str(e)
@@ -1734,6 +1829,7 @@ async def rerun_subagent_turn(
                     "ended_at": int(time.time()),
                 },
             )
+            await _emit_subagent_cancel(parent_event_emitter, subagent_meta)
             raise
         except Exception as e:  # noqa: BLE001
             last_error = str(e)

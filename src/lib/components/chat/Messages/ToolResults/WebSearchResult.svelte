@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
@@ -10,6 +10,7 @@
 		parseWebSearchResult,
 		previewText,
 		truncateMiddle,
+		type ParsedWebSearchResult,
 		type WebSearchItem
 	} from '$lib/utils/toolResults';
 
@@ -23,13 +24,62 @@
 
 	let filter = '';
 	let visibleCount = PAGE_SIZE;
+	let parsed: ParsedWebSearchResult | null = null;
+	let parseGeneration = 0;
+	let parseFrame: number | null = null;
+	let parseTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	$: parsed = parseWebSearchResult(resultRaw, argsRaw);
+	const clearScheduledParse = () => {
+		if (parseFrame !== null) {
+			window.cancelAnimationFrame(parseFrame);
+			parseFrame = null;
+		}
+		if (parseTimeout !== null) {
+			clearTimeout(parseTimeout);
+			parseTimeout = null;
+		}
+	};
+
+	const scheduleParse = () => {
+		clearScheduledParse();
+		parsed = null;
+		const generation = ++parseGeneration;
+
+		if (typeof window === 'undefined') {
+			parsed = parseWebSearchResult(resultRaw, argsRaw);
+			return;
+		}
+
+		// Let the expand click paint first. The parse is usually quick, but doing
+		// it in the same frame as the pointerup makes the row feel sticky.
+		parseFrame = window.requestAnimationFrame(() => {
+			parseFrame = null;
+			parseTimeout = setTimeout(() => {
+				parseTimeout = null;
+				if (generation === parseGeneration) {
+					parsed = parseWebSearchResult(resultRaw, argsRaw);
+				}
+			}, 0);
+		});
+	};
+
+	$: {
+		resultRaw;
+		argsRaw;
+		scheduleParse();
+	}
 	$: normalizedFilter = filter.trim().toLowerCase();
-	$: filteredResults = normalizedFilter
-		? parsed.results.filter((result) => searchResultMatches(result, normalizedFilter))
-		: parsed.results;
+	$: filteredResults = parsed
+		? normalizedFilter
+			? parsed.results.filter((result) => searchResultMatches(result, normalizedFilter))
+			: parsed.results
+		: [];
 	$: visibleResults = filteredResults.slice(0, visibleCount);
+
+	onDestroy(() => {
+		clearScheduledParse();
+		parseGeneration += 1;
+	});
 
 	const searchResultMatches = (result: WebSearchItem, query: string) => {
 		return [result.title, result.url, result.domain, result.snippet]
@@ -52,8 +102,21 @@
 	};
 </script>
 
-{#if parsed.ok}
-	<div class="space-y-3" id={id}>
+{#if parsed === null}
+	<div class="space-y-3" {id}>
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+			<div class="min-w-0 space-y-2">
+				<div class="h-4 w-32 rounded bg-gray-100 dark:bg-gray-800"></div>
+				<div class="h-3 w-56 rounded bg-gray-100 dark:bg-gray-800"></div>
+			</div>
+		</div>
+		<div class="space-y-2">
+			<div class="h-20 rounded-2xl bg-gray-100 dark:bg-gray-800"></div>
+			<div class="h-20 rounded-2xl bg-gray-100 dark:bg-gray-800"></div>
+		</div>
+	</div>
+{:else if parsed.ok}
+	<div class="space-y-3" {id}>
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 			<div class="min-w-0">
 				<div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -70,7 +133,10 @@
 
 			{#if parsed.results.length > PAGE_SIZE}
 				<div class="shrink-0 text-xs text-gray-500 dark:text-gray-400">
-					{$i18n.t('Showing')} {visibleResults.length} {$i18n.t('of')} {filteredResults.length}
+					{$i18n.t('Showing')}
+					{visibleResults.length}
+					{$i18n.t('of')}
+					{filteredResults.length}
 				</div>
 			{/if}
 		</div>
@@ -107,7 +173,9 @@
 							</div>
 
 							<div class="min-w-0 flex-1">
-								<div class="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+								<div
+									class="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between"
+								>
 									<div class="min-w-0">
 										<div class="break-words text-sm font-semibold text-gray-900 dark:text-gray-100">
 											{result.title}
@@ -120,7 +188,9 @@
 									</div>
 
 									{#if result.url}
-										<div class="flex shrink-0 gap-1.5 sm:opacity-70 sm:transition sm:group-hover:opacity-100">
+										<div
+											class="flex shrink-0 gap-1.5 sm:opacity-70 sm:transition sm:group-hover:opacity-100"
+										>
 											<a
 												class="rounded-lg border border-gray-100 px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
 												href={result.url}
@@ -157,7 +227,10 @@
 					type="button"
 					on:click={showMore}
 				>
-					{$i18n.t('Show more results')} ({Math.min(PAGE_SIZE, filteredResults.length - visibleResults.length)})
+					{$i18n.t('Show more results')} ({Math.min(
+						PAGE_SIZE,
+						filteredResults.length - visibleResults.length
+					)})
 				</button>
 			{/if}
 		{/if}

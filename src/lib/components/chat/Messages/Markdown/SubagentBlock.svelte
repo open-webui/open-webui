@@ -50,23 +50,27 @@
 	$: attrToolCallId = (attributes?.tool_call_id || '') as string;
 	$: attrSubagentId = (attributes?.id || '') as string;
 	$: attrArgs = parseArgs(attributes?.arguments);
-	$: candidateKeys = [
-		attrToolCallId,
-		attrSubagentId,
-		...Object.entries($subagentLiveStates)
-			.filter(([, r]: any) => {
-				if (!r) return false;
-				return (
-					(attrToolCallId && r.tool_call_id === attrToolCallId) ||
-					(attrSubagentId && (r.subagent_id === attrSubagentId || r.chat_id === attrSubagentId))
-				);
-			})
-			.map(([key]) => key)
-	].filter(Boolean) as string[];
-	$: stateKey = candidateKeys[0] || '';
-	$: run =
-		candidateKeys.map((key) => $subagentLiveStates[key]).find((value) => value !== undefined) ??
-		undefined;
+	$: directRunEntry =
+		attrToolCallId && $subagentLiveStates[attrToolCallId]
+			? ([attrToolCallId, $subagentLiveStates[attrToolCallId]] as [string, any])
+			: attrSubagentId && $subagentLiveStates[attrSubagentId]
+				? ([attrSubagentId, $subagentLiveStates[attrSubagentId]] as [string, any])
+				: null;
+	// Hot path is collapsed. Avoid scanning every subagent store entry unless the
+	// user expands a block whose direct keys somehow missed after reload.
+	$: scannedRunEntry =
+		!directRunEntry && open
+			? (Object.entries($subagentLiveStates).find(([, r]: any) => {
+					if (!r) return false;
+					return (
+						(attrToolCallId && r.tool_call_id === attrToolCallId) ||
+						(attrSubagentId && (r.subagent_id === attrSubagentId || r.chat_id === attrSubagentId))
+					);
+				}) as [string, any] | undefined)
+			: undefined;
+	$: runEntry = directRunEntry ?? scannedRunEntry ?? null;
+	$: stateKey = runEntry?.[0] || attrToolCallId || attrSubagentId || '';
+	$: run = runEntry?.[1];
 
 	// Header status the user sees. Prefer the store entry, but let terminal
 	// evidence from the persisted placeholder/final_text win over a stale
@@ -101,7 +105,7 @@
 	// `marked.parse` per chunk. Once the run is complete we swap each text
 	// block to a full `<Markdown>` render so the final answer gets headings,
 	// lists, code blocks, etc. (one parse, total).
-	$: contentBlocks = (run?.content_blocks ?? []) as any[];
+	$: contentBlocks = (open ? (run?.content_blocks ?? []) : []) as any[];
 	$: hasContent = contentBlocks.length > 0;
 	$: doneRendering = status !== 'running';
 
@@ -111,11 +115,132 @@
 	// still convey progress at a glance without forcing the body open.
 	let open = false;
 
+	// Expansion should feel instant even for finished subagents with a long
+	// transcript. Mount a cheap shell first, then progressively hydrate the
+	// heavy body/Markdown work after the click frame has painted.
+	const INITIAL_DONE_BLOCK_LIMIT = 12;
+	const BLOCK_HYDRATION_BATCH = 12;
+	const RICH_MARKDOWN_BATCH = 1;
+
+	let bodyReady = false;
+	let bodyBlockLimit = INITIAL_DONE_BLOCK_LIMIT;
+	let richBlockLimit = 0;
+	let bodyFrame: number | null = null;
+	let bodyTimeout: ReturnType<typeof setTimeout> | null = null;
+	let blockHydrationScheduled = false;
+	let richHydrationScheduled = false;
+	let idleHandle: number | null = null;
+
+	const cancelIdle = () => {
+		const idleWindow = typeof window !== 'undefined' ? (window as any) : null;
+		if (idleHandle !== null && idleWindow?.cancelIdleCallback) {
+			idleWindow.cancelIdleCallback(idleHandle);
+		}
+		idleHandle = null;
+	};
+
+	const runAfterPaint = (fn: () => void) => {
+		if (typeof window === 'undefined') {
+			fn();
+			return;
+		}
+		if (bodyFrame !== null) window.cancelAnimationFrame(bodyFrame);
+		if (bodyTimeout !== null) clearTimeout(bodyTimeout);
+		bodyFrame = window.requestAnimationFrame(() => {
+			bodyFrame = null;
+			bodyTimeout = setTimeout(() => {
+				bodyTimeout = null;
+				fn();
+			}, 0);
+		});
+	};
+
+	const runWhenIdle = (fn: () => void, timeout = 500) => {
+		if (typeof window === 'undefined') {
+			fn();
+			return;
+		}
+		const idleWindow = window as any;
+		if (typeof idleWindow.requestIdleCallback === 'function') {
+			idleHandle = idleWindow.requestIdleCallback(
+				() => {
+					idleHandle = null;
+					fn();
+				},
+				{ timeout }
+			);
+		} else {
+			bodyTimeout = setTimeout(() => {
+				bodyTimeout = null;
+				fn();
+			}, 32);
+		}
+	};
+
+	const resetHydration = () => {
+		if (typeof window !== 'undefined' && bodyFrame !== null) window.cancelAnimationFrame(bodyFrame);
+		if (bodyTimeout !== null) clearTimeout(bodyTimeout);
+		cancelIdle();
+		bodyFrame = null;
+		bodyTimeout = null;
+		blockHydrationScheduled = false;
+		richHydrationScheduled = false;
+		bodyReady = false;
+		bodyBlockLimit = INITIAL_DONE_BLOCK_LIMIT;
+		richBlockLimit = 0;
+	};
+
+	const scheduleBodyReady = () => {
+		resetHydration();
+		runAfterPaint(() => {
+			if (!open) return;
+			bodyReady = true;
+		});
+	};
+
 	// Fallback: when the store has no entry for this subagent after reload,
 	// fetch the subagent chat's content directly from the API.
 	let fallbackFetching = false;
 	let fallbackContent = '';
 	let fallbackError = '';
+
+	$: visibleContentBlocks = doneRendering
+		? contentBlocks.slice(0, Math.min(bodyBlockLimit, contentBlocks.length))
+		: contentBlocks;
+	$: hasMoreContentBlocks = doneRendering && bodyBlockLimit < contentBlocks.length;
+	$: richTarget = hasContent
+		? Math.min(bodyBlockLimit, contentBlocks.length)
+		: run?.final_text || fallbackContent
+			? 1
+			: 0;
+
+	const scheduleMoreContentBlocks = () => {
+		if (blockHydrationScheduled) return;
+		blockHydrationScheduled = true;
+		runWhenIdle(() => {
+			blockHydrationScheduled = false;
+			if (!open || !bodyReady || !doneRendering) return;
+			bodyBlockLimit = Math.min(contentBlocks.length, bodyBlockLimit + BLOCK_HYDRATION_BATCH);
+		}, 350);
+	};
+
+	const scheduleMoreRichMarkdown = () => {
+		if (richHydrationScheduled) return;
+		richHydrationScheduled = true;
+		runWhenIdle(() => {
+			richHydrationScheduled = false;
+			if (!open || !bodyReady || !doneRendering) return;
+			richBlockLimit = Math.min(richTarget, richBlockLimit + RICH_MARKDOWN_BATCH);
+		}, 700);
+	};
+
+	$: if (open && bodyReady && hasMoreContentBlocks) {
+		scheduleMoreContentBlocks();
+	}
+
+	$: if (open && bodyReady && doneRendering && richBlockLimit < richTarget) {
+		scheduleMoreRichMarkdown();
+	}
 
 	async function fetchFallbackContent() {
 		if (fallbackFetching || fallbackContent) return;
@@ -167,6 +292,11 @@
 
 	const toggle = () => {
 		open = !open;
+		if (open) {
+			scheduleBodyReady();
+		} else {
+			resetHydration();
+		}
 	};
 
 	// Used by the tool_calls per-block render to look up the matching result
@@ -175,6 +305,11 @@
 	// `{@const}` expressions).
 	const findToolResult = (results: any[] | undefined, callId: string | undefined) =>
 		(results ?? []).find((r: any) => r?.tool_call_id === callId);
+
+	const previewText = (value: unknown, max = 6000) => {
+		const text = `${value ?? ''}`;
+		return text.length > max ? `${text.slice(0, max).trimEnd()}\n\n…` : text;
+	};
 
 	const statusBadgeText = (s: typeof status) => {
 		switch (s) {
@@ -219,6 +354,7 @@
 		document.addEventListener('keydown', onDocKey);
 	}
 	onDestroy(() => {
+		resetHydration();
 		if (typeof document !== 'undefined') {
 			document.removeEventListener('click', onDocClick);
 			document.removeEventListener('keydown', onDocKey);
@@ -248,9 +384,7 @@
 		const sessionId = $socket?.id;
 		const entryKey = run?.entry_key || stateKey;
 		if (!parentChatId || !parentMessageId || !sessionId || !entryKey) {
-			toast.error(
-				$i18n.t('Cannot redo subagent: missing chat / message / session context.')
-			);
+			toast.error($i18n.t('Cannot redo subagent: missing chat / message / session context.'));
 			return;
 		}
 
@@ -467,151 +601,177 @@
 
 	{#if open}
 		<div transition:slide={{ duration: 250, easing: quintOut }} class="px-3 pb-3">
-			{#if run?.prompt}
-				<div
-					class="mb-2 text-xs text-gray-500 dark:text-gray-500 border-l-2 border-gray-200 dark:border-gray-700 pl-2"
-				>
-					<span class="font-semibold text-gray-700 dark:text-gray-400">
-						{$i18n.t('Prompt')}:
-					</span>
-					{run.prompt}
-					{#if run?.background}
-						<div class="mt-1">
-							<span class="font-semibold text-gray-700 dark:text-gray-400">
-								{$i18n.t('Background')}:
-							</span>
-							{run.background}
-						</div>
-					{/if}
+			{#if !bodyReady}
+				<div class="space-y-2 py-1">
+					<div class="h-4 w-1/3 rounded bg-gray-100 dark:bg-gray-800"></div>
+					<div class="h-20 rounded-xl bg-gray-100 dark:bg-gray-800"></div>
 				</div>
-			{/if}
-
-			{#if status === 'error' && run?.error}
-				<div
-					class="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-700 dark:text-red-300"
-				>
-					{typeof run.error === 'string'
-						? run.error
-						: (run.error?.message ?? $i18n.t('Subagent failed without details.'))}
-				</div>
-			{/if}
-
-			{#if hasContent}
-				<div class="subagent-inner space-y-2">
-					{#each contentBlocks as block, i (i)}
-						{#if block?.type === 'text'}
-							{#if doneRendering}
-								<div class="markdown-prose">
-									<Markdown
-										id={`subagent-${stateKey}-text-${i}`}
-										content={block.content ?? ''}
-										done={true}
-										editCodeBlock={false}
-									/>
-								</div>
-							{:else}
-								<div
-									class="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
-								>{block.content ?? ''}</div>
-							{/if}
-						{:else if block?.type === 'reasoning'}
-							<details class="rounded-lg bg-gray-50 dark:bg-gray-850 px-3 py-1.5">
-								<summary
-									class="text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer select-none"
-								>
-									{#if block.duration != null}
-										{$i18n.t('Thought for {{n}}s', { n: block.duration })}
-									{:else}
-										{$i18n.t('Thinking…')}
-									{/if}
-								</summary>
-								<div
-									class="mt-2 whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400 leading-relaxed"
-								>{block.content ?? ''}</div>
-							</details>
-						{:else if block?.type === 'tool_calls'}
-							<div class="space-y-1">
-								{#each block.content ?? [] as call, j (call?.id ?? `tc-${i}-${j}`)}
-									{@const result = findToolResult(block.results, call?.id)}
-									<div
-										class="flex items-baseline gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono"
-									>
-										<span class="shrink-0 w-3 text-center">
-											{result !== undefined ? '✓' : '·'}
-										</span>
-										<span class="font-medium text-gray-800 dark:text-gray-300">
-											{call?.function?.name ?? 'tool'}
-										</span>
-										<span class="truncate text-gray-500 dark:text-gray-500">
-											{call?.function?.arguments ?? ''}
-										</span>
-									</div>
-								{/each}
-							</div>
-						{:else if block?.type === 'code_interpreter'}
-							<div class="rounded-lg bg-gray-50 dark:bg-gray-850 px-3 py-2 text-xs">
-								<div
-									class="font-medium text-gray-700 dark:text-gray-300 mb-1 font-mono"
-								>
-									{block.attributes?.lang ?? 'code'}
-								</div>
-								<pre
-									class="whitespace-pre-wrap font-mono text-gray-600 dark:text-gray-400">{block.content ?? ''}</pre>
+			{:else}
+				{#if run?.prompt}
+					<div
+						class="mb-2 text-xs text-gray-500 dark:text-gray-500 border-l-2 border-gray-200 dark:border-gray-700 pl-2"
+					>
+						<span class="font-semibold text-gray-700 dark:text-gray-400">
+							{$i18n.t('Prompt')}:
+						</span>
+						{run.prompt}
+						{#if run?.background}
+							<div class="mt-1">
+								<span class="font-semibold text-gray-700 dark:text-gray-400">
+									{$i18n.t('Background')}:
+								</span>
+								{run.background}
 							</div>
 						{/if}
-					{/each}
-				</div>
-			{:else if run?.final_text}
-				<div class="markdown-prose">
-					<Markdown
-						id={`subagent-${stateKey}-final`}
-						content={run.final_text}
-						done={true}
-						editCodeBlock={false}
-					/>
-				</div>
-			{:else if fallbackContent}
-				<div class="markdown-prose">
-					<Markdown
-						id={`subagent-${stateKey}-fallback`}
-						content={fallbackContent}
-						done={true}
-						editCodeBlock={false}
-					/>
-				</div>
-			{:else if fallbackFetching}
-				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
-					{$i18n.t('Loading subagent results…')}
-				</div>
-			{:else if fallbackError}
-				<div class="text-sm text-red-500 italic">{fallbackError}</div>
-			{:else if status === 'running'}
-				<div class="text-sm text-gray-500 dark:text-gray-400 italic">
-					{$i18n.t('Subagent is starting up…')}
-				</div>
-			{/if}
+					</div>
+				{/if}
 
-			{#if subagentChatId}
-				<div class="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-					<a
-						href={`/c/${subagentChatId}`}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 inline-flex items-center gap-1"
+				{#if status === 'error' && run?.error}
+					<div
+						class="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-3 py-2 text-sm text-red-700 dark:text-red-300"
 					>
-						{$i18n.t('Open full subagent chat')}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.5"
-							class="size-3"
+						{typeof run.error === 'string'
+							? run.error
+							: (run.error?.message ?? $i18n.t('Subagent failed without details.'))}
+					</div>
+				{/if}
+
+				{#if hasContent}
+					<div class="subagent-inner space-y-2">
+						{#each visibleContentBlocks as block, i (i)}
+							{#if block?.type === 'text'}
+								{#if doneRendering && i < richBlockLimit}
+									<div class="markdown-prose">
+										<Markdown
+											id={`subagent-${stateKey}-text-${i}`}
+											content={block.content ?? ''}
+											done={true}
+											editCodeBlock={false}
+										/>
+									</div>
+								{:else}
+									<div
+										class="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
+									>
+										{doneRendering ? previewText(block.content) : (block.content ?? '')}
+									</div>
+								{/if}
+							{:else if block?.type === 'reasoning'}
+								<details class="rounded-lg bg-gray-50 dark:bg-gray-850 px-3 py-1.5">
+									<summary
+										class="text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+									>
+										{#if block.duration != null}
+											{$i18n.t('Thought for {{n}}s', { n: block.duration })}
+										{:else}
+											{$i18n.t('Thinking…')}
+										{/if}
+									</summary>
+									<div
+										class="mt-2 whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400 leading-relaxed"
+									>
+										{block.content ?? ''}
+									</div>
+								</details>
+							{:else if block?.type === 'tool_calls'}
+								<div class="space-y-1">
+									{#each block.content ?? [] as call, j (call?.id ?? `tc-${i}-${j}`)}
+										{@const result = findToolResult(block.results, call?.id)}
+										<div
+											class="flex items-baseline gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono"
+										>
+											<span class="shrink-0 w-3 text-center">
+												{result !== undefined ? '✓' : '·'}
+											</span>
+											<span class="font-medium text-gray-800 dark:text-gray-300">
+												{call?.function?.name ?? 'tool'}
+											</span>
+											<span class="truncate text-gray-500 dark:text-gray-500">
+												{call?.function?.arguments ?? ''}
+											</span>
+										</div>
+									{/each}
+								</div>
+							{:else if block?.type === 'code_interpreter'}
+								<div class="rounded-lg bg-gray-50 dark:bg-gray-850 px-3 py-2 text-xs">
+									<div class="font-medium text-gray-700 dark:text-gray-300 mb-1 font-mono">
+										{block.attributes?.lang ?? 'code'}
+									</div>
+									<pre
+										class="whitespace-pre-wrap font-mono text-gray-600 dark:text-gray-400">{block.content ??
+											''}</pre>
+								</div>
+							{/if}
+						{/each}
+					</div>
+				{:else if run?.final_text}
+					{#if richBlockLimit >= 1}
+						<div class="markdown-prose">
+							<Markdown
+								id={`subagent-${stateKey}-final`}
+								content={run.final_text}
+								done={true}
+								editCodeBlock={false}
+							/>
+						</div>
+					{:else}
+						<div
+							class="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
 						>
-							<path d="M7 17L17 7M17 7H9M17 7v8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-					</a>
-				</div>
+							{previewText(run.final_text)}
+						</div>
+					{/if}
+				{:else if fallbackContent}
+					{#if richBlockLimit >= 1}
+						<div class="markdown-prose">
+							<Markdown
+								id={`subagent-${stateKey}-fallback`}
+								content={fallbackContent}
+								done={true}
+								editCodeBlock={false}
+							/>
+						</div>
+					{:else}
+						<div
+							class="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed"
+						>
+							{previewText(fallbackContent)}
+						</div>
+					{/if}
+				{:else if fallbackFetching}
+					<div class="text-sm text-gray-500 dark:text-gray-400 italic">
+						{$i18n.t('Loading subagent results…')}
+					</div>
+				{:else if fallbackError}
+					<div class="text-sm text-red-500 italic">{fallbackError}</div>
+				{:else if status === 'running'}
+					<div class="text-sm text-gray-500 dark:text-gray-400 italic">
+						{$i18n.t('Subagent is starting up…')}
+					</div>
+				{/if}
+
+				{#if subagentChatId}
+					<div class="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+						<a
+							href={`/c/${subagentChatId}`}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 inline-flex items-center gap-1"
+						>
+							{$i18n.t('Open full subagent chat')}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								class="size-3"
+							>
+								<path d="M7 17L17 7M17 7H9M17 7v8" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+						</a>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
@@ -11,6 +11,7 @@
 		parseWebFetchResult,
 		previewText,
 		truncateMiddle,
+		type ParsedWebFetchResult,
 		type WebFetchPage
 	} from '$lib/utils/toolResults';
 
@@ -23,6 +24,64 @@
 
 	let filter = '';
 	let expandedPage: number | null = null;
+	let parsed: ParsedWebFetchResult | null = null;
+	let parseGeneration = 0;
+	let parseFrame: number | null = null;
+	let parseTimeout: ReturnType<typeof setTimeout> | null = null;
+	let parseIdle: number | null = null;
+
+	const clearScheduledParse = () => {
+		const idleWindow = typeof window !== 'undefined' ? (window as any) : null;
+		if (parseFrame !== null) {
+			window.cancelAnimationFrame(parseFrame);
+			parseFrame = null;
+		}
+		if (parseTimeout !== null) {
+			clearTimeout(parseTimeout);
+			parseTimeout = null;
+		}
+		if (parseIdle !== null && idleWindow?.cancelIdleCallback) {
+			idleWindow.cancelIdleCallback(parseIdle);
+			parseIdle = null;
+		}
+	};
+
+	const scheduleParse = () => {
+		clearScheduledParse();
+		parsed = null;
+		expandedPage = null;
+		const generation = ++parseGeneration;
+
+		if (typeof window === 'undefined') {
+			parsed = parseWebFetchResult(resultRaw);
+			return;
+		}
+
+		// web_fetch can be very large. Paint the opened shell first, then parse
+		// during idle time so the click/expand interaction stays smooth.
+		parseFrame = window.requestAnimationFrame(() => {
+			parseFrame = null;
+			const idleWindow = window as any;
+			const run = () => {
+				parseIdle = null;
+				parseTimeout = null;
+				if (generation === parseGeneration) {
+					parsed = parseWebFetchResult(resultRaw);
+				}
+			};
+
+			if (typeof idleWindow.requestIdleCallback === 'function') {
+				parseIdle = idleWindow.requestIdleCallback(run, { timeout: 450 });
+			} else {
+				parseTimeout = setTimeout(run, 0);
+			}
+		});
+	};
+
+	$: {
+		resultRaw;
+		scheduleParse();
+	}
 
 	const pageMatches = (page: WebFetchPage, query: string) => {
 		const preview = previewText(page.content, 2200);
@@ -49,14 +108,33 @@
 		}
 	};
 
-	$: parsed = parseWebFetchResult(resultRaw);
 	$: normalizedFilter = filter.trim().toLowerCase();
-	$: filteredPages = normalizedFilter
-		? parsed.pages.filter((page) => pageMatches(page, normalizedFilter))
-		: parsed.pages;
+	$: filteredPages = parsed
+		? normalizedFilter
+			? parsed.pages.filter((page) => pageMatches(page, normalizedFilter))
+			: parsed.pages
+		: [];
+
+	onDestroy(() => {
+		clearScheduledParse();
+		parseGeneration += 1;
+	});
 </script>
 
-{#if parsed.ok}
+{#if parsed === null}
+	<div class="space-y-3" {id}>
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+			<div class="min-w-0 space-y-2">
+				<div class="h-4 w-32 rounded bg-gray-100 dark:bg-gray-800"></div>
+				<div class="h-3 w-44 rounded bg-gray-100 dark:bg-gray-800"></div>
+			</div>
+		</div>
+		<div class="space-y-2">
+			<div class="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800"></div>
+			<div class="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800"></div>
+		</div>
+	</div>
+{:else if parsed.ok}
 	<div class="space-y-3" {id}>
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 			<div class="min-w-0">

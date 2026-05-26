@@ -1625,14 +1625,14 @@ def process_web(
         )
 
 
-def search_web(request: Request, query: str) -> list[SearchResult]:
+async def search_web(request: Request, query: str) -> list[SearchResult]:
     """Search the web using Exa.
 
     Args:
         query (str): The query to search for
     """
     if request.app.state.config.EXA_API_KEY:
-        return search_exa(
+        return await search_exa(
             api_key=request.app.state.config.EXA_API_KEY,
             query=query,
             num_results=request.app.state.config.EXA_SEARCH_NUM_RESULTS,
@@ -1655,14 +1655,7 @@ async def process_web_search(
     try:
         logging.debug(f"trying to web search with exa: {form_data.queries}")
 
-        search_tasks = [
-            run_in_threadpool(
-                search_web,
-                request,
-                query,
-            )
-            for query in form_data.queries
-        ]
+        search_tasks = [search_web(request, query) for query in form_data.queries]
 
         search_results = await asyncio.gather(*search_tasks)
 

@@ -1,5 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
+import { get } from 'svelte/store';
+import { socket } from '$lib/stores';
+
+// Tag every mutating chat/folder request with the originating tab's socket id
+// so the backend's broadcast_sidebar_event helper can skip it — the originating
+// tab already updates optimistically (or refetches) on its own; receiving its
+// own event back would cause double work and possible duplicate inserts.
+const sessionHeader = (): Record<string, string> => {
+	const sid = get(socket)?.id;
+	return sid ? { 'X-Session-Id': sid } : {};
+};
 
 export const createNewChat = async (token: string, chat: object, folderId: string | null) => {
 	let error = null;
@@ -9,7 +20,8 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			chat: chat,
@@ -41,7 +53,8 @@ export const unarchiveAllChats = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -81,7 +94,8 @@ export const importChat = async (
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			chat: chat,
@@ -135,7 +149,8 @@ export const getChatList = async (
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -169,7 +184,8 @@ export const getChatCount = async (token: string = '') => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -216,7 +232,8 @@ export const getChatListByUserId = async (
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
-				...(token && { authorization: `Bearer ${token}` })
+				...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 			}
 		}
 	)
@@ -266,7 +283,8 @@ export const getArchivedChatList = async (
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -300,7 +318,8 @@ export const getAllChats = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -391,7 +410,8 @@ export const searchChats = async (
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		signal
 	});
@@ -432,7 +452,8 @@ export const getChatsByFolderId = async (token: string, folderId: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -470,7 +491,8 @@ export const getChatListByFolderId = async (token: string, folderId: string, pag
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
-				...(token && { authorization: `Bearer ${token}` })
+				...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 			}
 		}
 	)
@@ -502,7 +524,8 @@ export const getAllArchivedChats = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -533,7 +556,8 @@ export const getAllUserChats = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -564,7 +588,8 @@ export const getAllTags = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -595,7 +620,8 @@ export const getPinnedChatList = async (token: string = '') => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -629,7 +655,8 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			name: tagName
@@ -666,7 +693,8 @@ export const getChatById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -698,7 +726,8 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -730,7 +759,8 @@ export const getChatPinnedStatusById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -768,7 +798,8 @@ export const toggleChatPinnedStatusById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -806,7 +837,8 @@ export const cloneChatById = async (token: string, id: string, title?: string) =
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			...(title && { title: title })
@@ -847,7 +879,8 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -885,7 +918,8 @@ export const shareChatById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -917,7 +951,8 @@ export const updateChatFolderIdById = async (token: string, id: string, folderId
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			folder_id: folderId
@@ -952,7 +987,8 @@ export const archiveChatById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -984,7 +1020,8 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -1016,7 +1053,8 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			chat: chat
@@ -1051,7 +1089,8 @@ export const deleteChatById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -1083,7 +1122,8 @@ export const getTagsById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -1115,7 +1155,8 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			name: tagName
@@ -1149,7 +1190,8 @@ export const deleteTagById = async (token: string, id: string, tagName: string) 
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			name: tagName
@@ -1183,7 +1225,8 @@ export const deleteTagsById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -1215,7 +1258,8 @@ export const deleteAllChats = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -1247,7 +1291,8 @@ export const archiveAllChats = async (token: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {

@@ -1,4 +1,11 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { get } from 'svelte/store';
+import { socket } from '$lib/stores';
+
+const sessionHeader = (): Record<string, string> => {
+	const sid = get(socket)?.id;
+	return sid ? { 'X-Session-Id': sid } : {};
+};
 
 type FolderForm = {
 	name?: string;
@@ -14,7 +21,8 @@ export const createNewFolder = async (token: string, folderForm: FolderForm) => 
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify(folderForm)
 	})
@@ -42,7 +50,8 @@ export const getFolders = async (token: string = '') => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -73,7 +82,8 @@ export const getFolderById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {
@@ -104,7 +114,8 @@ export const updateFolderById = async (token: string, id: string, folderForm: Fo
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify(folderForm)
 	})
@@ -140,7 +151,8 @@ export const updateFolderIsExpandedById = async (
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			is_expanded: isExpanded
@@ -174,7 +186,8 @@ export const updateFolderParentIdById = async (token: string, id: string, parent
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			parent_id: parentId
@@ -213,7 +226,8 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		},
 		body: JSON.stringify({
 			items: items
@@ -247,7 +261,8 @@ export const deleteFolderById = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
+			...sessionHeader()
 		}
 	})
 		.then(async (res) => {

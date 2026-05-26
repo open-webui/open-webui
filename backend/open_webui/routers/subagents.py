@@ -9,7 +9,6 @@ to the user via the same ``chat:subagent:update`` socket events the original
 launch used.
 """
 
-import asyncio
 import logging
 from typing import Literal, Optional
 
@@ -17,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.tasks import create_task
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
@@ -142,5 +142,9 @@ async def rerun_subagent(
         except Exception as e:
             log.exception(f"subagent rerun task failed: {e}")
 
-    asyncio.create_task(_run())
-    return {"status": True}
+    task_id, _ = await create_task(
+        request.app.state.redis,
+        _run(),
+        id=form_data.parent_chat_id,
+    )
+    return {"status": True, "task_id": task_id}
