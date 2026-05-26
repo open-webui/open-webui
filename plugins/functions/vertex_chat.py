@@ -30,14 +30,16 @@ class Pipe:
             description='Vertex region. Use "global" for broadest Gemini availability.',
         )
         GEMINI_MODELS: str = Field(
-            default='gemini-2.5-pro,gemini-2.5-flash,gemini-2.5-flash-lite',
+            default='gemini-3.1-pro,gemini-3.5-flash,gemini-3.1-flash-lite',
             description='Comma-separated Gemini model ids visible in the picker.',
         )
         CLAUDE_MODELS: str = Field(
-            default='claude-opus-4@20250514,claude-sonnet-4-5@20251001,claude-haiku-4-5@20251001',
+            default='claude-opus-4-7,claude-sonnet-4-6,claude-haiku-4-5@20251001',
             description=(
-                'Comma-separated Claude-on-Vertex model ids (publisher@version). '
-                'Each must be enabled in GCP > Vertex AI > Model Garden.'
+                'Comma-separated Claude-on-Vertex model ids. Newer models '
+                '(Opus 4.6+/Sonnet 4.6+) use a bare id; older ones use '
+                'publisher@version. Each must be enabled in GCP > Vertex AI > '
+                'Model Garden and available in CLAUDE_LOCATION.'
             ),
         )
         CLAUDE_LOCATION: str = Field(
