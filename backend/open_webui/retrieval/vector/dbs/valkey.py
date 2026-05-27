@@ -152,6 +152,7 @@ class ValkeyClient(VectorDBBase):
             addresses=[NodeAddress(host=host, port=port)],
             database_id=db if db else None,
             request_timeout=5000,
+            client_name="open_webui_vector_store_client",
         )
         try:
             self.client: GlideClient = GlideClient.create(config)
@@ -164,6 +165,7 @@ class ValkeyClient(VectorDBBase):
             addresses=[NodeAddress(host=host, port=port)],
             database_id=db if db else None,
             request_timeout=10000,  # 10s — HNSW indexing can take 1-4s per vector
+            client_name="open_webui_vector_store_batch_client",
         )
         try:
             self.batch_client: GlideClient = GlideClient.create(batch_config)
