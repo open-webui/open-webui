@@ -432,6 +432,17 @@ export const getToolServersData = async (servers: object[]) => {
 			servers
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
+					if (server?.type === 'mcp') {
+						return {
+							...server,
+							info: {
+								...(server?.info ?? {}),
+								title: server?.info?.title ?? server?.info?.name ?? server?.url
+							},
+							specs: []
+						};
+					}
+
 					let error = null;
 
 					let toolServerToken = null;

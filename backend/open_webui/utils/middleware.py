@@ -2236,6 +2236,65 @@ def strip_skill_mentions(messages: list[dict]) -> None:
 
 
 
+async def _open_mcp_connection(
+    connection: dict,
+    *,
+    request,
+    user,
+    server_id: str,
+    metadata: dict,
+    extra_params: dict,
+) -> tuple[MCPClient, list[dict]]:
+    headers, _ = await build_tool_server_headers(
+        connection, request, user,
+        server_id=server_id, metadata=metadata, extra_params=extra_params,
+    )
+
+    client = MCPClient()
+    await client.connect(
+        url=connection.get('url', ''),
+        headers=headers if headers else None,
+    )
+
+    function_name_filter_list = connection.get('config', {}).get('function_name_filter_list', '')
+    if isinstance(function_name_filter_list, str):
+        function_name_filter_list = function_name_filter_list.split(',')
+
+    tool_specs = await client.list_tool_specs()
+    if function_name_filter_list:
+        tool_specs = [
+            spec for spec in tool_specs
+            if is_string_allowed(spec['name'], function_name_filter_list)
+        ]
+    return client, tool_specs
+
+
+def _make_mcp_tool_callable(client: MCPClient, function_name: str):
+    async def tool_function(**kwargs):
+        return await client.call_tool(function_name, function_args=kwargs)
+    return tool_function
+
+
+def _register_mcp_tools(
+    *,
+    client: MCPClient,
+    tool_specs: list[dict],
+    registration_key: str,
+    mcp_clients: dict,
+    tools_dict: dict,
+) -> None:
+    mcp_clients[registration_key] = client
+    for tool_spec in tool_specs:
+        spec_name = f'{registration_key}_{tool_spec["name"]}'
+        tools_dict[spec_name] = {
+            'spec': {**tool_spec, 'name': spec_name},
+            'callable': _make_mcp_tool_callable(client, tool_spec['name']),
+            'type': 'mcp',
+            'client': client,
+            'direct': False,
+        }
+
+
 async def connect_mcp_server(
     request,
     server_id: str,
@@ -2243,7 +2302,7 @@ async def connect_mcp_server(
     metadata: dict,
     extra_params: dict,
 ) -> tuple[MCPClient, list[dict]] | None:
-    """Resolve an MCP server connection, authenticate, and return (client, tool_specs).
+    """Look up an admin MCP server by id, access-check, connect, and return (client, tool_specs).
 
     Returns None if the server is not found or access is denied.
     """
@@ -2264,31 +2323,11 @@ async def connect_mcp_server(
         log.warning(f'Access denied to MCP server {server_id} for user {user.id}')
         return None
 
-    headers, _ = await build_tool_server_headers(
-        mcp_server_connection, request, user,
-        server_id=server_id, metadata=metadata, extra_params=extra_params,
+    return await _open_mcp_connection(
+        mcp_server_connection,
+        request=request, user=user, server_id=server_id,
+        metadata=metadata, extra_params=extra_params,
     )
-
-    client = MCPClient()
-    await client.connect(
-        url=mcp_server_connection.get('url', ''),
-        headers=headers if headers else None,
-    )
-
-    function_name_filter_list = mcp_server_connection.get('config', {}).get(
-        'function_name_filter_list', ''
-    )
-    if isinstance(function_name_filter_list, str):
-        function_name_filter_list = function_name_filter_list.split(',')
-
-    tool_specs = await client.list_tool_specs()
-    if function_name_filter_list:
-        tool_specs = [
-            spec for spec in tool_specs
-            if is_string_allowed(spec['name'], function_name_filter_list)
-        ]
-
-    return client, tool_specs
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
@@ -2693,40 +2732,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if tool_ids:
             for tool_id in tool_ids:
                 if tool_id.startswith('server:mcp:'):
+                    server_id = tool_id[len('server:mcp:'):]
                     try:
-                        server_id = tool_id[len('server:mcp:'):]
-
                         result = await connect_mcp_server(
                             request, server_id, user, metadata, extra_params,
                         )
                         if result is None:
                             continue
-
                         client, tool_specs = result
-                        mcp_clients[server_id] = client
-
-                        for tool_spec in tool_specs:
-                            async def make_tool_function(client, function_name):
-                                async def tool_function(**kwargs):
-                                    return await client.call_tool(
-                                        function_name,
-                                        function_args=kwargs,
-                                    )
-
-                                return tool_function
-
-                            tool_function = await make_tool_function(client, tool_spec['name'])
-
-                            mcp_tools_dict[f'{server_id}_{tool_spec["name"]}'] = {
-                                'spec': {
-                                    **tool_spec,
-                                    'name': f'{server_id}_{tool_spec["name"]}',
-                                },
-                                'callable': tool_function,
-                                'type': 'mcp',
-                                'client': client,
-                                'direct': False,
-                            }
+                        _register_mcp_tools(
+                            client=client, tool_specs=tool_specs,
+                            registration_key=server_id,
+                            mcp_clients=mcp_clients, tools_dict=mcp_tools_dict,
+                        )
                     except Exception as e:
                         log.debug(e)
                         if event_emitter:
@@ -2782,6 +2800,41 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
+                if tool_server.get('type') == 'mcp':
+                    user_mcp_id = tool_server.get('info', {}).get('id', '')
+                    if not user_mcp_id:
+                        log.warning('skipping user MCP tool server: missing info.id')
+                        if event_emitter:
+                            await event_emitter(
+                                {
+                                    'type': 'chat:message:error',
+                                    'data': {'error': {'content': 'MCP tool server requires an id'}},
+                                }
+                            )
+                        continue
+                    registration_key = f'direct_mcp_{user_mcp_id}'
+                    try:
+                        client, tool_specs = await _open_mcp_connection(
+                            tool_server,
+                            request=request, user=user, server_id=registration_key,
+                            metadata=metadata, extra_params=extra_params,
+                        )
+                        _register_mcp_tools(
+                            client=client, tool_specs=tool_specs,
+                            registration_key=registration_key,
+                            mcp_clients=mcp_clients, tools_dict=tools_dict,
+                        )
+                    except Exception as e:
+                        log.debug(e)
+                        if event_emitter:
+                            await event_emitter(
+                                {
+                                    'type': 'chat:message:error',
+                                    'data': {'error': {'content': f"Failed to connect to MCP server '{user_mcp_id}'"}},
+                                }
+                            )
+                    continue
+
                 system_prompt = tool_server.pop('system_prompt', None)
                 if system_prompt:
                     form_data['messages'] = add_or_update_system_message(
