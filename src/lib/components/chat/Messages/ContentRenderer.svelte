@@ -15,6 +15,57 @@
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 
+	/**
+	 * Extracts all top-level <details>...</details> blocks from content,
+	 * handling nested <details> via depth tracking.
+	 * Returns { detailsContent, plainContent }.
+	 */
+	const extractDetailsBlocks = (text) => {
+		const blocks = [];
+		let remaining = text;
+		let result = '';
+		const openTag = '<details';
+		const closeTag = '</details>';
+
+		while (true) {
+			const start = remaining.indexOf(openTag);
+			if (start === -1) {
+				result += remaining;
+				break;
+			}
+
+			result += remaining.slice(0, start);
+
+			// Find matching closing tag with depth tracking
+			let depth = 1;
+			let idx = start + openTag.length;
+			while (depth > 0 && idx < remaining.length) {
+				if (remaining.startsWith(openTag, idx)) {
+					depth++;
+				} else if (remaining.startsWith(closeTag, idx)) {
+					depth--;
+				}
+				if (depth > 0) idx++;
+			}
+
+			if (depth === 0) {
+				const end = idx + closeTag.length;
+				blocks.push(remaining.slice(start, end));
+				remaining = remaining.slice(end);
+			} else {
+				// Unmatched opening tag, treat as plain text
+				result += remaining.slice(start);
+				remaining = '';
+				break;
+			}
+		}
+
+		return {
+			detailsContent: blocks.join('\n'),
+			plainContent: result.trim()
+		};
+	};
+
 	export let id;
 	export let content;
 
@@ -174,43 +225,55 @@
 </script>
 
 <div bind:this={contentContainerElement}>
-	<Markdown
-		{id}
-		content={model?.info?.meta?.capabilities?.citations == false
-			? content.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
-			: content}
-		{model}
-		{save}
-		{preview}
-		{done}
-		{editCodeBlock}
-		{topPadding}
-		{sourceIds}
-		{onSourceClick}
-		{onTaskClick}
-		{onSave}
-		onUpdate={async (token) => {
-			const { lang, text: code } = token;
+	{#if $settings?.renderMarkdownInAssistantMessages ?? true}
+		<Markdown
+			{id}
+			content={model?.info?.meta?.capabilities?.citations == false
+				? content.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+				: content}
+			{model}
+			{save}
+			{preview}
+			{done}
+			{editCodeBlock}
+			{topPadding}
+			{sourceIds}
+			{onSourceClick}
+			{onTaskClick}
+			{onSave}
+			onUpdate={async (token) => {
+				const { lang, text: code } = token;
 
-			if (
-				($settings?.detectArtifacts ?? true) &&
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-				!$mobile &&
-				$chatId
-			) {
-				await tick();
-				showArtifacts.set(true);
-				showControls.set(true);
-			}
-		}}
-		onPreview={async (value) => {
-			console.log('Preview', value);
-			await artifactCode.set(value);
-			await showControls.set(true);
-			await showArtifacts.set(true);
-			await showEmbeds.set(false);
-		}}
-	/>
+				if (
+					($settings?.detectArtifacts ?? true) &&
+					(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+					!$mobile &&
+					$chatId
+				) {
+					await tick();
+					showArtifacts.set(true);
+					showControls.set(true);
+				}
+			}}
+			onPreview={async (value) => {
+				console.log('Preview', value);
+				await artifactCode.set(value);
+				await showControls.set(true);
+				await showArtifacts.set(true);
+				await showEmbeds.set(false);
+			}}
+		/>
+	{:else}
+		{@const extracted = extractDetailsBlocks(content)}
+
+		{#if extracted.detailsContent}
+			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
+			<Markdown {id} content={extracted.detailsContent} {done} />
+		{/if}
+		{#if extracted.plainContent}
+			<div class="whitespace-pre-wrap">{extracted.plainContent}</div>
+		{/if}
+	{/if}
 </div>
 
 {#if floatingButtons}

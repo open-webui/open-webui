@@ -47,6 +47,7 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
             'created': int(time.time()),
             'owned_by': 'ollama',
             'ollama': model,
+            'loaded': 'expires_at' in model,
             'connection_type': model.get('connection_type', 'local'),
             'tags': model.get('tags', []),
         }
@@ -199,6 +200,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 'connection_type': connection_type,
                 'preset': True,
                 **({'pipe': pipe} if pipe is not None else {}),
+                **({'provider': base_model.get('provider')} if base_model and base_model.get('provider') else {}),
+                **({'loaded': base_model.get('loaded')} if base_model and base_model.get('loaded') is not None else {}),
             }
 
             info = custom_model.model_dump()

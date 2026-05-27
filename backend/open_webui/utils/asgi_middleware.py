@@ -88,6 +88,13 @@ class CommitSessionMiddleware:
             await self.app(scope, receive, send)
             return
 
+        path = scope.get('path', '')
+        # Keep health probes independent from sync session commit/remove
+        # so DB pressure cannot delay or fail probe responses.
+        if path in {'/health', '/ready', '/health/db'}:
+            await self.app(scope, receive, send)
+            return
+
         try:
             await self.app(scope, receive, send)
         except BaseException:

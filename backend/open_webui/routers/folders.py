@@ -16,8 +16,6 @@ from open_webui.models.folders import (
     Folders,
 )
 from open_webui.models.chats import Chats
-from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
 
 
 from open_webui.config import UPLOAD_DIR
@@ -32,6 +30,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.files import get_accessible_folder_files
 
 log = logging.getLogger(__name__)
 
@@ -75,20 +74,10 @@ async def get_folders(
         if folder.parent_id and not await Folders.get_folder_by_id_and_user_id(folder.parent_id, user.id, db=db):
             folder = await Folders.update_folder_parent_id_by_id_and_user_id(folder.id, user.id, None, db=db)
 
-        if folder.data:
-            if 'files' in folder.data:
-                valid_files = []
-                for file in folder.data['files']:
-                    if file.get('type') == 'file':
-                        if await Files.check_access_by_user_id(file.get('id'), user.id, 'read', db=db):
-                            valid_files.append(file)
-                    elif file.get('type') == 'collection':
-                        if await Knowledges.check_access_by_user_id(file.get('id'), user.id, 'read', db=db):
-                            valid_files.append(file)
-                    else:
-                        valid_files.append(file)
-
-                folder.data['files'] = valid_files
+        if folder.data and 'files' in folder.data:
+            accessible_files = await get_accessible_folder_files(folder.data['files'], user, db=db)
+            if len(accessible_files) != len(folder.data.get('files', [])):
+                folder.data['files'] = accessible_files
                 await Folders.update_folder_by_id_and_user_id(
                     folder.id, user.id, FolderUpdateForm(data=folder.data), db=db
                 )
@@ -171,6 +160,16 @@ async def update_folder_name_by_id(
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+                )
+
+        # Validate read access to every file/collection being attached.
+        # Folder files are consumed by chat middleware as RAG context.
+        if form_data.data and isinstance(form_data.data.get('files'), list):
+            accessible_files = await get_accessible_folder_files(form_data.data['files'], user, db=db)
+            if len(accessible_files) != len(form_data.data['files']):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
         try:

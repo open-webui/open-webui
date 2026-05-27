@@ -20,6 +20,8 @@ log = logging.getLogger(__name__)
 
 
 def xml_element_contents_to_string(element: Element) -> str:
+    if element is None:
+        return ''
     buffer = [element.text if element.text else '']
 
     for child in element:

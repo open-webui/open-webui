@@ -6,6 +6,7 @@
 	import FilePlusAlt from '../../icons/FilePlusAlt.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +21,11 @@
 	export let onUploadFiles: (files: File[]) => void = () => {};
 	export let onDownloadDir: () => void = () => {};
 	export let onMove: (source: string, destFolder: string) => void = () => {};
+
+	// Sort controls
+	export let sortBy: 'name' | 'date' = 'name';
+	export let sortAsc: boolean = true;
+	export let onSort: (mode: 'name' | 'date') => void = () => {};
 
 	// Back / forward navigation
 	export let canGoBack = false;
@@ -161,6 +167,78 @@
 	</Tooltip>
 
 	{#if !selectedFile}
+		<Dropdown align="end" sideOffset={4}>
+			<Tooltip content={$i18n.t('Sort')}>
+				<button
+					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+					aria-label={$i18n.t('Sort')}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-3.5"
+					>
+						<path
+							d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.69l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
+						/>
+					</svg>
+				</button>
+			</Tooltip>
+
+			<div slot="content">
+				<div
+					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
+				>
+					<button
+						type="button"
+						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						on:click={() => onSort('name')}
+					>
+						<span class="flex-1 text-left">{$i18n.t('Name')}</span>
+						{#if sortBy === 'name'}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="size-3 text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+									? ''
+									: 'rotate-180'}"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
+					</button>
+					<button
+						type="button"
+						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						on:click={() => onSort('date')}
+					>
+						<span class="flex-1 text-left">{$i18n.t('Date Modified')}</span>
+						{#if sortBy === 'date'}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="size-3 text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+									? ''
+									: 'rotate-180'}"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
+					</button>
+				</div>
+			</div>
+		</Dropdown>
 		<Tooltip content={$i18n.t('New Folder')}>
 			<button
 				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"

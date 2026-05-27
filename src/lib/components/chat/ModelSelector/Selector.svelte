@@ -13,7 +13,8 @@
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { deleteModel, getOllamaVersion, pullModel, unloadModel } from '$lib/apis/ollama';
+	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
+	import { unloadModel } from '$lib/apis';
 
 	import {
 		user,

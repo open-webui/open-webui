@@ -302,6 +302,8 @@
 	let bubbleMenuElement: Element | null = null;
 	let element: Element | null = null;
 
+	let pendingUpdate = null;
+
 	const options = {
 		throwOnError: false
 	};
@@ -866,9 +868,18 @@
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
 			onTransaction: () => {
-				// force re-render so `editor.isActive` works as expected
-				editor = editor;
 				if (!editor) return;
+
+				// Defer Svelte reactivity trigger to rAF so we don't interleave
+				// DOM reads/writes with ProseMirror's updateStateInner.
+				if (!pendingUpdate) {
+					pendingUpdate = requestAnimationFrame(() => {
+						pendingUpdate = null;
+						if (editor && !editor.isDestroyed) {
+							editor = editor;
+						}
+					});
+				}
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
@@ -1234,6 +1245,10 @@
 	});
 
 	onDestroy(() => {
+		if (pendingUpdate) {
+			cancelAnimationFrame(pendingUpdate);
+		}
+
 		if (provider) {
 			provider.destroy();
 		}

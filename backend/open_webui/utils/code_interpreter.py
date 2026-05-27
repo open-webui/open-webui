@@ -8,6 +8,8 @@ import aiohttp
 import websockets
 from pydantic import BaseModel
 
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,7 +90,7 @@ class JupyterCodeExecuter:
             async with self.session.post(
                 'login',
                 data={'_xsrf': xsrf_token, 'password': self.password},
-                allow_redirects=False,
+                allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
             ) as response:
                 response.raise_for_status()
                 self.session.cookie_jar.update_cookies(response.cookies)

@@ -395,14 +395,16 @@ class CalendarTable:
                 # Delete events
                 await db.execute(delete(CalendarEvent).filter(CalendarEvent.calendar_id == id))
 
-                # Delete access grants
-                await AccessGrants.revoke_all_access('calendar', id, db=db)
-
                 # Delete calendar
                 await db.execute(delete(Calendar).filter(Calendar.id == id))
                 await db.commit()
-                return True
-        except Exception:
+
+            # Revoke access grants in a separate transaction to avoid
+            # write-lock contention on SQLite when session sharing is off.
+            await AccessGrants.revoke_all_access('calendar', id)
+            return True
+        except Exception as e:
+            log.exception(f'Failed to delete calendar {id}: {e}')
             return False
 
 

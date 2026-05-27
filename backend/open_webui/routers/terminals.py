@@ -17,6 +17,7 @@ from starlette.background import BackgroundTask
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_connection_access
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 
@@ -151,6 +152,8 @@ async def proxy_terminal(
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
         }
+        if TERMINAL_PROXY_HEADERS:
+            filtered_headers.update(TERMINAL_PROXY_HEADERS)
 
         # Stream binary responses directly
         if any(t in upstream_content_type for t in STREAMING_CONTENT_TYPES):

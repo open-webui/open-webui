@@ -41,6 +41,7 @@
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowEmbeds = true;
 
 	export let onSave: Function = () => {};
 	export let onUpdate: Function = () => {};
@@ -371,6 +372,7 @@
 			id={`${id}-${tokenIdx}-detail-group`}
 			tokens={token.items}
 			messageDone={done}
+			{allowEmbeds}
 		>
 			<div slot="content" class="space-y-1">
 				{#each token.items as detailToken, detailIdx}

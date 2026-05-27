@@ -179,6 +179,21 @@
 			<div class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
 				{$i18n.t('Calendars')}
 			</div>
+			<button
+				class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+				title={$i18n.t('New calendar')}
+				on:click={onCreateCalendar}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="2"
+					stroke="currentColor"
+					class="size-3 text-gray-400 dark:text-gray-500"
+					><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg
+				>
+			</button>
 		</div>
 
 		{#each calendars as cal (cal.id)}
