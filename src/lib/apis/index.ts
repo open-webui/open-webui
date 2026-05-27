@@ -4,6 +4,19 @@ import { getOpenAIModelsDirect } from './openai';
 
 const TOOL_SERVER_FETCH_TIMEOUT = 10000;
 
+// Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
+// and non-operation path-item fields (summary, description, servers, parameters).
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
+
 // Every request sent from here is a petition. May it reach
 // the one for whom it was intended, and return answered.
 export const getModels = async (
@@ -157,6 +170,39 @@ export const getModels = async (
 	}
 
 	return models;
+};
+
+export const unloadModel = async (token: string, model: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/models/unload`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ model })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 type ChatCompletedForm = {
@@ -495,9 +541,15 @@ export const executeToolServer = async (
 	let error = null;
 
 	try {
-		// Find the matching operationId in the OpenAPI spec
+		// Find the matching operationId in the OpenAPI spec (only valid HTTP methods)
 		const matchingRoute = Object.entries(serverData.openapi.paths).find(([_, methods]) =>
-			Object.entries(methods as any).some(([__, operation]: any) => operation.operationId === name)
+			Object.entries(methods as any).some(
+				([method, operation]: any) =>
+					OPENAPI_HTTP_METHODS.has(method) &&
+					operation &&
+					typeof operation === 'object' &&
+					operation.operationId === name
+			)
 		);
 
 		if (!matchingRoute) {
@@ -507,7 +559,11 @@ export const executeToolServer = async (
 		const [routePath, methods] = matchingRoute;
 
 		const methodEntry = Object.entries(methods as any).find(
-			([_, operation]: any) => operation.operationId === name
+			([method, operation]: any) =>
+				OPENAPI_HTTP_METHODS.has(method) &&
+				operation &&
+				typeof operation === 'object' &&
+				operation.operationId === name
 		);
 
 		if (!methodEntry) {
@@ -516,24 +572,36 @@ export const executeToolServer = async (
 
 		const [httpMethod, operation]: [string, any] = methodEntry;
 
+		// Merge path-level and operation-level parameters.
+		// Operation-level params override path-level params with the same (name, in).
+		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
+			? (methods as any).parameters
+			: [];
+		const opParams: any[] = Array.isArray(operation.parameters) ? operation.parameters : [];
+		const mergedParams = new Map();
+		for (const param of pathLevelParams) {
+			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+		}
+		for (const param of opParams) {
+			if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+		}
+
 		// Split parameters by type
 		const pathParams: Record<string, any> = {};
 		const queryParams: Record<string, any> = {};
 		let bodyParams: any = {};
 
-		if (operation.parameters) {
-			operation.parameters.forEach((param: any) => {
-				const paramName = param?.name;
-				if (!paramName) return;
-				const paramIn = param?.in;
-				if (params.hasOwnProperty(paramName)) {
-					if (paramIn === 'path') {
-						pathParams[paramName] = params[paramName];
-					} else if (paramIn === 'query') {
-						queryParams[paramName] = params[paramName];
-					}
+		for (const param of mergedParams.values()) {
+			const paramName = param?.name;
+			if (!paramName) continue;
+			const paramIn = param?.in;
+			if (params.hasOwnProperty(paramName)) {
+				if (paramIn === 'path') {
+					pathParams[paramName] = params[paramName];
+				} else if (paramIn === 'query') {
+					queryParams[paramName] = params[paramName];
 				}
-			});
+			}
 		}
 
 		let finalUrl = `${url}${routePath}`;

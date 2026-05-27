@@ -4987,10 +4987,10 @@
     },
     "pathspec": {
       "name": "pathspec",
-      "version": "1.1.0",
-      "file_name": "pathspec-1.1.0-py3-none-any.whl",
+      "version": "1.1.1",
+      "file_name": "pathspec-1.1.1-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "574b128f7456bd899045ccd142dd446af7e6cfd0072d63ad73fbc55fbb4aaa42",
+      "sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
       "package_type": "package",
       "imports": [
         "pathspec"
@@ -5006,6 +5006,18 @@
       "package_type": "package",
       "imports": [
         "mypy_extensions"
+      ],
+      "depends": []
+    },
+    "pytokens": {
+      "name": "pytokens",
+      "version": "0.4.1",
+      "file_name": "pytokens-0.4.1-py3-none-any.whl",
+      "install_dir": "site",
+      "sha256": "26cef14744a8385f35d0e095dc8b3a7583f6c953c2e3d269c7f82484bf5ad2de",
+      "package_type": "package",
+      "imports": [
+        "pytokens"
       ],
       "depends": []
     }

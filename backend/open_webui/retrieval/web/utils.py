@@ -48,7 +48,7 @@ from open_webui.config import (
     WEB_FETCH_FILTER_LIST,
 )
 from open_webui.utils.misc import is_string_allowed
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +67,14 @@ def resolve_hostname(hostname):
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+        # Reject parser-confusing chars: urlparse and requests/aiohttp split
+        # on these differently, e.g. http://127.0.0.1\@1.1.1.1 → urlparse
+        # extracts 1.1.1.1 (public, passes filter) while requests connects
+        # to 127.0.0.1 (internal). Same shape with tab/CR/LF.
+        if any(ch in url for ch in ('\\', '\t', '\n', '\r')):
+            log.warning(f'Blocked URL with parser-confusing char: {url!r}')
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         parsed_url = urllib.parse.urlparse(url)
@@ -485,6 +493,17 @@ class SafeWebBaseLoader(WebBaseLoader):
         """
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
+        # Prevent redirect-based SSRF on the synchronous _scrape() path.
+        # validate_url() is called once on the originally-submitted URL, but the
+        # parent WebBaseLoader's _scrape() invokes self.session.get(url, **self.requests_kwargs)
+        # which by default follows redirects. Without the override below, an attacker
+        # can submit a public URL that 302-redirects to an internal address (RFC1918,
+        # 127.0.0.1, 169.254.169.254, etc.) and the redirected target is fetched without
+        # re-validation. Matches the policy enforced on the async _fetch() path below.
+        self.requests_kwargs = {
+            **(self.requests_kwargs or {}),
+            'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+        }
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
         async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
@@ -502,7 +521,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                     async with session.get(
                         url,
                         **(self.requests_kwargs | kwargs),
-                        allow_redirects=False,
+                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()

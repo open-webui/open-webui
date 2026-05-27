@@ -3,17 +3,13 @@
 import re
 from urllib.parse import urlparse
 
-# Matches the OWUI-generated profile image route.  ``[^/?#]+`` accepts
-# any user-ID without allowing path-traversal or query/fragment injection,
-# and the ``$`` anchor rejects trailing path components.
+from open_webui.env import PROFILE_IMAGE_ALLOWED_MIME_TYPES
+
 _USER_PROFILE_IMAGE_RE = re.compile(r'^/api/v1/users/[^/?#]+/profile/image$')
 
-# Validates MIME type and structure of base64 data URIs.  Only the prefix
-# is checked — validating the full base64 payload would mean running a
-# regex across megabytes of data on every Pydantic instantiation for zero
-# security benefit (corrupt base64 simply renders a broken image, same as
-# a 404 URL).  SVG is intentionally excluded: it can carry embedded scripts.
-_SAFE_DATA_URI_RE = re.compile(r'^data:image/(png|jpeg|gif|webp);base64,', re.IGNORECASE)
+# Data-URI prefix validator derived from PROFILE_IMAGE_ALLOWED_MIME_TYPES.
+_mime_suffixes = '|'.join(re.escape(t.split('/')[-1]) for t in sorted(PROFILE_IMAGE_ALLOWED_MIME_TYPES))
+_SAFE_DATA_URI_RE = re.compile(rf'^data:image/({_mime_suffixes});base64,', re.IGNORECASE)
 
 # Exact relative paths accepted as profile images.  These are the only
 # static-asset paths OWUI itself assigns; no prefix/wildcard matching is

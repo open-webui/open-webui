@@ -2,7 +2,8 @@
 	import { getContext, tick } from 'svelte';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	import { settings } from '$lib/stores';
+	import { settings, config } from '$lib/stores';
+	import { injectCsp } from '$lib/utils/csp';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { initMermaid, renderMermaidDiagram } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
@@ -411,7 +412,7 @@
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}
 			<iframe
-				srcdoc={fileContent}
+				srcdoc={injectCsp(fileContent, $config?.ui?.iframe_csp ?? '')}
 				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"

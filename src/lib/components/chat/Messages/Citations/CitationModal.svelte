@@ -4,7 +4,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { settings } from '$lib/stores';
+	import { settings, config } from '$lib/stores';
+	import { injectCsp } from '$lib/utils/csp';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -218,7 +219,7 @@
 									false)
 										? ' allow-same-origin'
 										: ''}"
-									srcdoc={document.document}
+									srcdoc={injectCsp(document.document, $config?.ui?.iframe_csp ?? '')}
 									title={$i18n.t('Content')}
 								></iframe>
 							{:else}
