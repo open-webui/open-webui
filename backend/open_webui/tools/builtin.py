@@ -1932,15 +1932,26 @@ async def view_knowledge_file(
 
 
 async def list_knowledge(
+    knowledge_id: Optional[str] = None,
+    offset: int = 0,
+    limit: int = 50,
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    List all knowledge bases, files, and notes attached to the current model.
-    Use this first to discover what knowledge is available before querying or reading files.
+    List knowledge bases, files, and notes attached to the current model.
 
-    :return: JSON with knowledge_bases, files, and notes attached to this model
+    Without knowledge_id: returns KB summaries (name, description, file_count)
+    plus standalone files and notes — no file listing inside KBs.
+
+    With knowledge_id: includes paginated file listing for that specific KB.
+    Use offset/limit to page through large KBs.
+
+    :param knowledge_id: Optional KB ID to get file listing for
+    :param offset: File listing pagination offset (default 0)
+    :param limit: Max files per page (default 50, max 200)
+    :return: JSON with knowledge_bases, files, and notes
     """
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
@@ -1992,10 +2003,17 @@ async def list_knowledge(
                         'file_count': file_count,
                     }
 
-                    # Include file listing for each KB
-                    if kb_files:
-                        kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in kb_files]
-
+                    # Include file listing only when this KB is targeted
+                    if knowledge_id and knowledge_id == knowledge.id:
+                        if kb_files:
+                            total_files = len(kb_files)
+                            page_limit = min(limit, 200)
+                            sliced = kb_files[offset : offset + page_limit]
+                            kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in sliced]
+                            kb_entry['files_offset'] = offset
+                            kb_entry['files_limit'] = page_limit
+                            kb_entry['files_total'] = total_files
+                            kb_entry['files_truncated'] = offset + page_limit < total_files
                     knowledge_bases.append(kb_entry)
 
             elif item_type == 'file':
