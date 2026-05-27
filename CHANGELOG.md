@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.6] - 2026-05-26
+## [0.9.6] - 2026-05-27
 
 ### Added
 
@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛡️ **Security Advisory**: This release includes security and access-control fixes. We recommend updating production deployments at your earliest convenience. Not all security fixes in this version may be enumerated in the fixed section — some may be withheld for a short time to give administrators time to upgrade. [Advisories](https://github.com/open-webui/open-webui/security)
 - 🛡️ **Tool server permission enforcement.** The per-user permission for inline tool servers is now enforced on chat-completion requests, so users without that permission can no longer bypass the admin setting by supplying tool servers directly in their requests. [Commit](https://github.com/open-webui/open-webui/commit/5cc1eb517094e3507915664817285f1e6e37a16d)
 - 🔓 **Cross-user file exfiltration via image URLs.** When a chat message references a file by id in an "image_url" field, the server now resolves that file only for its owner, an administrator, or a user with an explicit read grant, preventing other authenticated users from extracting a file's contents by routing it through the model. [#24625](https://github.com/open-webui/open-webui/pull/24625), [Commit](https://github.com/open-webui/open-webui/commit/c75fe8e74b72617c51282cc3ea0a2e8d9cdd9140)
 - 📅 **Calendar event move authorization.** Updating a calendar event to move it into a different calendar now requires write access on the destination calendar, preventing users from injecting events into calendars they cannot write to. [#24764](https://github.com/open-webui/open-webui/pull/24764)
