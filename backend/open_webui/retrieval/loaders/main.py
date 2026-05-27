@@ -487,6 +487,16 @@ class Loader:
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
                 loader = OutlookMessageLoader(file_path)
+            elif file_ext == 'doc':
+                try:
+                    from langchain_community.document_loaders import UnstructuredWordDocumentLoader
+
+                    loader = UnstructuredWordDocumentLoader(file_path)
+                except ImportError:
+                    raise ValueError(
+                        "Processing .doc files requires the 'unstructured' package. "
+                        'Install it with: pip install unstructured'
+                    )
             elif file_ext == 'odt':
                 try:
                     from langchain_community.document_loaders import UnstructuredODTLoader
