@@ -202,7 +202,8 @@ export const searchKnowledgeFilesById = async (
 	orderBy?: string | null = null,
 	direction?: string | null = null,
 	page: number = 1,
-	directoryId?: string | null = undefined
+	directoryId?: string | null = undefined,
+	searchFileContent: boolean = false
 ) => {
 	let error = null;
 
@@ -216,7 +217,7 @@ export const searchKnowledgeFilesById = async (
 	if (directoryId !== undefined) {
 		searchParams.append('directory_id', directoryId ?? '');
 	}
-
+	if (searchFileContent) searchParams.append('search_file_content', searchFileContent.toString());
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/knowledge/${id}/files?${searchParams.toString()}`,
 		{
@@ -545,7 +546,6 @@ export const syncKnowledgeCleanup = async (
 
 export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
-
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
 		method: 'DELETE',

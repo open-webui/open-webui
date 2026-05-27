@@ -112,6 +112,7 @@
 	let viewOption = null;
 	let sortKey = null;
 	let direction = null;
+	let searchFileContent = false;
 
 	let currentPage = 1;
 	let fileItems = null;
@@ -150,7 +151,8 @@
 		viewOption !== undefined &&
 		sortKey !== undefined &&
 		direction !== undefined &&
-		currentPage !== undefined
+		currentPage !== undefined &&
+		searchFileContent !== undefined
 	) {
 		getItemsPage();
 	}
@@ -159,7 +161,8 @@
 		query !== undefined &&
 		viewOption !== undefined &&
 		sortKey !== undefined &&
-		direction !== undefined
+		direction !== undefined &&
+		searchFileContent !== undefined
 	) {
 		reset();
 	}
@@ -182,7 +185,8 @@
 			sortKey,
 			direction,
 			currentPage,
-			currentDirectoryId
+			currentDirectoryId,
+			searchFileContent
 		).catch(() => {
 			return null;
 		});
@@ -1293,11 +1297,11 @@
 									if (pendingSyncFiles?.length) {
 										showSyncConfirmModal = true;
 									}
-							}}
-							onReset={() => {
-								showResetConfirm = true;
-							}}
-						/>
+								}}
+								onReset={() => {
+									showResetConfirm = true;
+								}}
+							/>
 						</div>
 					{/if}
 				</div>
@@ -1367,6 +1371,14 @@
 								]}
 							/>
 						{/if}
+
+						<div class="flex items-center gap-1.5">
+							<input type="checkbox" bind:checked={searchFileContent} id="searchFileContent" />
+
+							<label for="searchFileContent" class="text-xs text-gray-500">
+								{$i18n.t('Search file content')}
+							</label>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1543,6 +1555,8 @@
 	}}
 >
 	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
-		{$i18n.t('This will remove all files and directories from this knowledge base. This action cannot be undone.')}
+		{$i18n.t(
+			'This will remove all files and directories from this knowledge base. This action cannot be undone.'
+		)}
 	</div>
 </ConfirmDialog>
