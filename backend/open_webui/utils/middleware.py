@@ -2176,6 +2176,14 @@ def process_messages_with_output(
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+
+    Drops degenerate assistant messages that have no usable payload (empty
+    content, no output that produced messages, no tool_calls). Such rows are
+    persisted when a stream fails before any token is committed (e.g. upstream
+    5xx, connection drop, user-side abort). Forwarding them poisons every
+    subsequent completion on the chat because strict OpenAI-compatible
+    providers reject assistant messages whose content is an empty string and
+    that have no tool_calls.
     """
     processed = []
 
@@ -2189,6 +2197,12 @@ def process_messages_with_output(
             )
             if output_messages:
                 processed.extend(output_messages)
+                continue
+
+        # Drop degenerate assistant messages with no usable payload
+        if message.get('role') == 'assistant' and not message.get('tool_calls'):
+            content = message.get('content')
+            if not content or (isinstance(content, str) and not content.strip()):
                 continue
 
         # Strip 'output' field before adding (LLM shouldn't see it)
