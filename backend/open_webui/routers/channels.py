@@ -57,7 +57,6 @@ from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
-from open_webui.utils.chat import generate_chat_completion
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -979,57 +978,48 @@ async def model_response_handler(request, channel, message, user, db=None):
                         ],
                     ]
 
+                # Resolve model config (same helpers automations use)
+                from open_webui.utils.automations import (
+                    _resolve_model_tool_ids,
+                    _resolve_model_features,
+                    _resolve_model_filter_ids,
+                )
+
+                tool_ids = _resolve_model_tool_ids(request.app, model_id)
+                features = _resolve_model_features(request.app, model_id)
+                filter_ids = _resolve_model_filter_ids(request.app, model_id)
+
+                # Build full form_data — same shape as frontend POST.
+                # The channel: prefix routes pipeline events to the
+                # channel emitter in socket/main.py instead of the
+                # default chat emitter.
                 form_data = {
                     'model': model_id,
                     'messages': [
                         system_message,
                         {'role': 'user', 'content': content},
                     ],
-                    'stream': False,
+                    'stream': True,
+                    'chat_id': f'channel:{channel.id}',
+                    'id': response_message.id,
+                    'session_id': f'channel:{channel.id}',
+                    'background_tasks': {},
                 }
+                if tool_ids:
+                    form_data['tool_ids'] = tool_ids
+                if features:
+                    form_data['features'] = features
+                if filter_ids:
+                    form_data['filter_ids'] = filter_ids
 
-                res = await generate_chat_completion(
-                    request,
-                    form_data=form_data,
-                    user=user,
-                )
+                # Call the full chat completion pipeline — streaming,
+                # tools, filters, RAG — everything. The pipeline runs as
+                # an async task; the channel emitter handles progressive
+                # message updates via socket events.
+                await request.app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
-                if res:
-                    if res.get('choices', []) and len(res['choices']) > 0:
-                        await update_message_by_id(
-                            request,
-                            channel.id,
-                            response_message.id,
-                            MessageForm(
-                                **{
-                                    'content': res['choices'][0]['message']['content'],
-                                    'meta': {
-                                        'done': True,
-                                    },
-                                }
-                            ),
-                            user,
-                            db,
-                        )
-                    elif res.get('error', None):
-                        await update_message_by_id(
-                            request,
-                            channel.id,
-                            response_message.id,
-                            MessageForm(
-                                **{
-                                    'content': f'Error: {res["error"]}',
-                                    'meta': {
-                                        'done': True,
-                                    },
-                                }
-                            ),
-                            user,
-                            db,
-                        )
             except Exception as e:
-                log.info(e)
-                pass
+                log.exception(e)
 
     return True
 
@@ -1256,7 +1246,8 @@ async def pin_channel_message(
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
-        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='read', db=db):
+        # Pin/unpin mutates is_pinned/pinned_by/pinned_at — require write.
+        if user.role != 'admin' and not await channel_has_access(user.id, channel, permission='write', db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     message = await Messages.get_message_by_id(message_id, db=db)
@@ -1367,6 +1358,9 @@ async def update_message_by_id(
 
     if channel.type in ['group', 'dm']:
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+        # Membership is not authorship — block cross-member edits.
+        if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
         if (
@@ -1568,6 +1562,9 @@ async def delete_message_by_id(
 
     if channel.type in ['group', 'dm']:
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+        # Membership is not authorship — block cross-member deletes.
+        if user.role != 'admin' and message.user_id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     else:
         if (

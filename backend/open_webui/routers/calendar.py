@@ -22,7 +22,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.calendar import expand_recurring_event
 from open_webui.constants import ERROR_MESSAGES
 
@@ -112,6 +112,17 @@ async def get_calendars(request: Request, user: UserModel = Depends(get_verified
 async def create_calendar(request: Request, form_data: CalendarForm, user: UserModel = Depends(get_verified_user)):
     """Create a new user calendar."""
     await check_calendar_permission(request, user)
+    # Strip public/user grants the requesting user is not permitted to assign
+    # (matches the channel/notes/models pattern). Without this, any verified user
+    # could create a calendar with `principal_id='*' permission='read'|'write'`,
+    # making their events readable or writable by any other verified user.
+    form_data.access_grants = await filter_allowed_access_grants(
+        request.app.state.config.USER_PERMISSIONS,
+        user.id,
+        user.role,
+        form_data.access_grants,
+        'sharing.public_calendars',
+    )
     return await Calendars.insert_new_calendar(user.id, form_data)
 
 
@@ -349,6 +360,20 @@ async def update_calendar(
     # Only owner/admin can change access grants
     if form_data.access_grants is not None and cal.user_id != user.id and user.role != 'admin':
         raise HTTPException(status_code=403, detail='Only owner can manage sharing')
+
+    # Strip public/user grants the requesting user is not permitted to assign
+    # (matches the channel/notes/models pattern). The owner-only check above
+    # only restricts WHO can set grants; this filter restricts WHICH grants
+    # they may set, so a non-admin owner cannot make their calendar
+    # publicly readable/writable without the corresponding sharing permission.
+    if form_data.access_grants is not None:
+        form_data.access_grants = await filter_allowed_access_grants(
+            request.app.state.config.USER_PERMISSIONS,
+            user.id,
+            user.role,
+            form_data.access_grants,
+            'sharing.public_calendars',
+        )
 
     updated = await Calendars.update_calendar_by_id(calendar_id, form_data)
     if not updated:

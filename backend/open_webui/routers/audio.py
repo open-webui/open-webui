@@ -1,3 +1,5 @@
+import asyncio
+import io
 import hashlib
 import json
 import logging
@@ -127,6 +129,54 @@ def convert_audio_to_mp3(file_path):
         return None
 
 
+def transcode_audio_to_mp3(audio_data: bytes, content_type_header: str, output_path: str) -> bool:
+    """
+    Transcode audio bytes to MP3 if the Content-Type indicates a non-MP3 format.
+
+    Handles raw PCM audio (e.g. Gemini-TTS via OpenRouter/LiteLLM) by parsing
+    optional rate/channels from the Content-Type params, defaulting to 24kHz,
+    16-bit, mono. For other non-MP3 formats, uses pydub auto-detection.
+
+    Returns True if transcoding was performed, False if the data is already MP3.
+    Respects BYPASS_PYDUB_PREPROCESSING — when set, writes raw bytes and logs a warning.
+    """
+    mime_type = content_type_header.split(';')[0].strip().lower()
+
+    if mime_type in ('audio/mpeg', 'audio/mp3'):
+        return False
+
+    if BYPASS_PYDUB_PREPROCESSING:
+        log.warning(
+            f'TTS returned {mime_type} but BYPASS_PYDUB_PREPROCESSING is set; writing raw audio without transcoding'
+        )
+        return False
+
+    if mime_type in ('audio/pcm', 'audio/l16', 'audio/raw'):
+        # Parse optional rate/channels from Content-Type params,
+        # default: 24kHz, 16-bit, mono (standard for Gemini TTS).
+        ct_params = {}
+        for part in content_type_header.split(';')[1:]:
+            key_val = part.strip().split('=')
+            if len(key_val) == 2:
+                ct_params[key_val[0].strip().lower()] = key_val[1].strip()
+
+        sample_rate = int(ct_params.get('rate', 24000))
+        channels = int(ct_params.get('channels', 1))
+
+        audio_segment = AudioSegment.from_raw(
+            io.BytesIO(audio_data),
+            sample_width=2,
+            frame_rate=sample_rate,
+            channels=channels,
+        )
+    else:
+        audio_segment = AudioSegment.from_file(io.BytesIO(audio_data))
+
+    audio_segment.export(str(output_path), format='mp3')
+    log.info(f'Transcoded {mime_type} audio to MP3: {output_path}')
+    return True
+
+
 def set_faster_whisper_model(model: str, auto_update: bool = False):
     whisper_model = None
     if model:
@@ -178,6 +228,7 @@ class STTConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
     SUPPORTED_CONTENT_TYPES: list[str] = []
+    ALLOWED_EXTENSIONS: list[str] = []
     WHISPER_MODEL: str
     DEEPGRAM_API_KEY: str
     AZURE_API_KEY: str
@@ -219,6 +270,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             'ENGINE': request.app.state.config.STT_ENGINE,
             'MODEL': request.app.state.config.STT_MODEL,
             'SUPPORTED_CONTENT_TYPES': request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
+            'ALLOWED_EXTENSIONS': request.app.state.config.STT_ALLOWED_EXTENSIONS,
             'WHISPER_MODEL': request.app.state.config.WHISPER_MODEL,
             'DEEPGRAM_API_KEY': request.app.state.config.DEEPGRAM_API_KEY,
             'AZURE_API_KEY': request.app.state.config.AUDIO_STT_AZURE_API_KEY,
@@ -254,6 +306,7 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.STT_SUPPORTED_CONTENT_TYPES = form_data.stt.SUPPORTED_CONTENT_TYPES
+    request.app.state.config.STT_ALLOWED_EXTENSIONS = form_data.stt.ALLOWED_EXTENSIONS
 
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
@@ -295,6 +348,7 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
             'ENGINE': request.app.state.config.STT_ENGINE,
             'MODEL': request.app.state.config.STT_MODEL,
             'SUPPORTED_CONTENT_TYPES': request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
+            'ALLOWED_EXTENSIONS': request.app.state.config.STT_ALLOWED_EXTENSIONS,
             'WHISPER_MODEL': request.app.state.config.WHISPER_MODEL,
             'DEEPGRAM_API_KEY': request.app.state.config.DEEPGRAM_API_KEY,
             'AZURE_API_KEY': request.app.state.config.AUDIO_STT_AZURE_API_KEY,
@@ -387,8 +441,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
                 r.raise_for_status()
 
-                async with aiofiles.open(file_path, 'wb') as f:
-                    await f.write(await r.read())
+                audio_data = await r.read()
+                content_type_header = r.headers.get('Content-Type', 'audio/mpeg')
+
+                if not transcode_audio_to_mp3(audio_data, content_type_header, file_path):
+                    async with aiofiles.open(file_path, 'wb') as f:
+                        await f.write(audio_data)
 
                 async with aiofiles.open(file_body_path, 'w') as f:
                     await f.write(json.dumps(payload))
@@ -1107,6 +1165,11 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
     else:
         if is_audio_conversion_required(file_path):
             file_path = convert_audio_to_mp3(file_path)
+            if not file_path:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail='Audio conversion failed. The audio file may be corrupted or empty.',
+                )
 
         try:
             file_path = compress_audio(file_path)
@@ -1126,7 +1189,12 @@ def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None
 
     results = []
     try:
-        with ThreadPoolExecutor() as executor:
+        if getattr(request.app.state.config, 'STT_ENGINE', '') == '':
+            max_workers = 1
+        else:
+            max_workers = None
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit tasks for each chunk_path
             futures = [
                 executor.submit(transcription_handler, request, chunk_path, metadata, user)
@@ -1242,12 +1310,19 @@ async def transcription(
 
     try:
         safe_name = os.path.basename(file.filename) if file.filename else ''
-        ext = safe_name.rsplit('.', 1)[-1] if '.' in safe_name else ''
+        ext = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+
+        allowed_extensions = getattr(request.app.state.config, 'STT_ALLOWED_EXTENSIONS', [])
+        if allowed_extensions and ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid audio file extension',
+            )
 
         id = uuid.uuid4()
 
         filename = f'{id}.{ext}'
-        contents = file.file.read()
+        contents = await file.read()
 
         file_dir = os.path.join(CACHE_DIR, 'audio', 'transcriptions')
         os.makedirs(file_dir, exist_ok=True)
@@ -1266,7 +1341,7 @@ async def transcription(
             if language:
                 metadata = {'language': language}
 
-            result = transcribe(request, file_path, metadata, user)
+            result = await asyncio.to_thread(transcribe, request, file_path, metadata, user)
 
             return {
                 **result,

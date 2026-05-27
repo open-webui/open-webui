@@ -26,7 +26,11 @@ import base64
 import io
 import re
 
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK
+from open_webui.env import (
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+    ENABLE_IMAGE_CONTENT_TYPE_EXTENSION_FALLBACK,
+)
 from open_webui.utils.session_pool import get_session
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
@@ -53,11 +57,17 @@ _IMAGE_MIME_FALLBACK = {
 async def get_image_base64_from_url(url: str) -> Optional[str]:
     try:
         if url.startswith('http'):
-            # Validate URL to prevent SSRF attacks against local/private networks
+            # Validate URL to prevent SSRF attacks against local/private networks.
+            # allow_redirects=False prevents redirect-based SSRF: validate_url() is
+            # called only on the originally-submitted URL; following 3xx redirects
+            # without re-validation would let an attacker reach private IPs via a
+            # public host that redirects internally (e.g. cloud-metadata exfil).
             validate_url(url)
             # Download the image from the URL
             session = await get_session()
-            async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
+            async with session.get(
+                url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+            ) as response:
                 response.raise_for_status()
                 image_data = await response.read()
                 encoded_string = base64.b64encode(image_data).decode('utf-8')

@@ -13,7 +13,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Column, Text, JSON
+from sqlalchemy import BigInteger, Column, Text, JSON, ForeignKey
 
 ####################
 # Note DB Schema
@@ -29,7 +29,6 @@ class Note(Base):
     title = Column(Text)
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
-    is_pinned = Column(Boolean, default=False, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -50,6 +49,15 @@ class NoteModel(BaseModel):
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
+
+
+class PinnedNote(Base):
+    __tablename__ = 'pinned_note'
+
+    id = Column(Text, primary_key=True)
+    user_id = Column(Text, nullable=False)
+    note_id = Column(Text, ForeignKey('note.id', ondelete='CASCADE'), nullable=False)
+    created_at = Column(BigInteger, nullable=False)
 
 
 ####################
@@ -100,6 +108,7 @@ class NoteTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> NoteModel:
+        # We exclude access_grants to inject them
         note_data = NoteModel.model_validate(note).model_dump(exclude={'access_grants'})
         note_data['access_grants'] = (
             access_grants if access_grants is not None else await self._get_access_grants(note_data['id'], db=db)
@@ -131,7 +140,7 @@ class NoteTable:
                 }
             )
 
-            new_note = Note(**note.model_dump(exclude={'access_grants'}))
+            new_note = Note(**note.model_dump(exclude={'access_grants', 'is_pinned'}))
 
             db.add(new_note)
             await db.commit()
@@ -314,15 +323,28 @@ class NoteTable:
             await db.commit()
             return await self._to_note_model(note, db=db) if note else None
 
-    async def toggle_note_pinned_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[NoteModel]:
+    async def toggle_note_pinned_by_id(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[NoteModel]:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Note).filter(Note.id == id))
                 note = result.scalars().first()
                 if not note:
                     return None
-                note.is_pinned = not note.is_pinned
-                note.updated_at = int(time.time_ns())
+
+                # Check if already pinned
+                pin_result = await db.execute(select(PinnedNote).filter_by(user_id=user_id, note_id=id))
+                pinned_note = pin_result.scalars().first()
+
+                if pinned_note:
+                    await db.execute(delete(PinnedNote).filter_by(user_id=user_id, note_id=id))
+                else:
+                    new_pin = PinnedNote(
+                        id=str(uuid.uuid4()), user_id=user_id, note_id=id, created_at=int(time.time_ns())
+                    )
+                    db.add(new_pin)
+
                 await db.commit()
                 return await self._to_note_model(note, db=db)
         except Exception:
@@ -338,7 +360,12 @@ class NoteTable:
             user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
             user_group_ids = [group.id for group in user_groups]
 
-            stmt = select(Note).filter(Note.is_pinned == True).order_by(Note.updated_at.desc())
+            stmt = (
+                select(Note)
+                .join(PinnedNote, PinnedNote.note_id == Note.id)
+                .filter(PinnedNote.user_id == user_id)
+                .order_by(PinnedNote.created_at.desc())
+            )
             stmt = self._has_permission(db, stmt, {'user_id': user_id, 'group_ids': user_group_ids}, permission)
 
             result = await db.execute(stmt)
@@ -351,11 +378,17 @@ class NoteTable:
         try:
             async with get_async_db_context(db) as db:
                 await AccessGrants.revoke_all_access('note', id, db=db)
+                await db.execute(delete(PinnedNote).filter(PinnedNote.note_id == id))
                 await db.execute(delete(Note).filter(Note.id == id))
                 await db.commit()
                 return True
         except Exception:
             return False
+
+    async def get_pinned_note_ids(self, user_id: str, db: Optional[AsyncSession] = None) -> list[str]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(PinnedNote.note_id).filter_by(user_id=user_id))
+            return result.scalars().all()
 
 
 Notes = NoteTable()

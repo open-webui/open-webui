@@ -5,7 +5,6 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 
@@ -16,7 +15,6 @@
 	export let onDisable: () => void = () => {};
 
 	let showConfigModal = false;
-	let showDeleteConfirmDialog = false;
 </script>
 
 <AddTerminalServerModal
@@ -25,19 +23,12 @@
 	bind:show={showConfigModal}
 	{connection}
 	onDelete={() => {
-		showDeleteConfirmDialog = true;
+		onDelete();
+		showConfigModal = false;
 	}}
 	onSubmit={(c) => {
 		connection = c;
 		onSubmit(c);
-	}}
-/>
-
-<ConfirmDialog
-	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		onDelete();
-		showConfigModal = false;
 	}}
 />
 

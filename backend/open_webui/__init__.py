@@ -1,6 +1,7 @@
 import base64
 import os
 import random
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -68,12 +69,18 @@ def serve(
     import open_webui.main  # noqa: F401
     from open_webui.env import UVICORN_WORKERS  # Import the workers setting
 
+    # On Windows, uvicorn's default loop factory hardcodes ProactorEventLoop,
+    # which is incompatible with psycopg v3 async.  Setting loop='none' lets
+    # asyncio.run() respect the WindowsSelectorEventLoopPolicy set in db.py.
+    loop = 'none' if sys.platform == 'win32' else 'auto'
+
     uvicorn.run(
         'open_webui.main:app',
         host=host,
         port=port,
         forwarded_allow_ips='*',
         workers=UVICORN_WORKERS,
+        loop=loop,
     )
 
 

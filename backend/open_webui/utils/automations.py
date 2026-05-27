@@ -360,7 +360,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await _record_run(automation.id, 'error', error='User not found')
             return
 
-        prompt = prompt_template(automation.data['prompt'], user)
+        prompt = await prompt_template(automation.data['prompt'], user)
         model_id = automation.data['model_id']
         terminal_config = automation.data.get('terminal')
 

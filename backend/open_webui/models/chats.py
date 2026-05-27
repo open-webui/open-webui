@@ -366,20 +366,20 @@ class ChatTable:
             await db.commit()
 
             # Dual-write messages to chat_message table
-            try:
-                for form_data, chat_obj in zip(chat_import_forms, chats):
-                    history = form_data.chat.get('history', {})
-                    messages = history.get('messages', {})
-                    for message_id, message in messages.items():
-                        if isinstance(message, dict) and message.get('role'):
+            for form_data, chat_obj in zip(chat_import_forms, chats):
+                history = form_data.chat.get('history', {})
+                messages = history.get('messages', {})
+                for message_id, message in messages.items():
+                    if isinstance(message, dict) and message.get('role'):
+                        try:
                             await ChatMessages.upsert_message(
                                 message_id=message_id,
                                 chat_id=chat_obj.id,
                                 user_id=user_id,
                                 data=message,
                             )
-            except Exception as e:
-                log.warning(f'Failed to write imported messages to chat_message table: {e}')
+                        except Exception as e:
+                            log.warning(f'Failed to write imported message {message_id} for chat {chat_obj.id}: {e}')
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
@@ -459,12 +459,87 @@ class ChatTable:
                 return None
             return row[0] or 'New Chat'
 
+    @staticmethod
+    def get_unresolved_parent_ids(messages_map: dict) -> set[str]:
+        """Return parent IDs referenced by messages but absent from the map.
+
+        An empty set means the message graph is fully connected.
+        """
+        return {
+            msg['parentId']
+            for msg in messages_map.values()
+            if msg.get('parentId') and msg['parentId'] not in messages_map
+        }
+
+    async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
+        """Write messages to the ``chat_message`` table so future lookups
+        use the fast path.  Errors are logged but never raised.
+        """
+        for message_id, message in messages.items():
+            if not isinstance(message, dict) or not message.get('role'):
+                continue
+            try:
+                await ChatMessages.upsert_message(
+                    message_id=message_id,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    data=message,
+                )
+            except Exception as e:
+                log.warning('Backfill failed for message %s in chat %s: %s', message_id, chat_id, e)
+
     async def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
+        """Message map for walking history (see ``get_message_list``).
+
+        Prefer ``chat_message`` rows to avoid loading the large embedded
+        history; fall back to the legacy JSON when no rows exist.
+        When rows exist but the parent-link graph has gaps (e.g. migration
+        failures), missing messages are merged from the legacy history
+        and backfilled so future requests self-heal.
+        """
+        # Fast path: build from normalized chat_message rows.
+        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
+
+        if messages_map is not None:
+            unresolved_ids = self.get_unresolved_parent_ids(messages_map)
+            if not unresolved_ids:
+                return messages_map
+
+            # Graph has gaps — enrich from the legacy embedded history.
+            log.info(
+                'Chat %s: %d unresolved parent reference(s) in chat_message — enriching from legacy history',
+                id,
+                len(unresolved_ids),
+            )
+            chat = await self.get_chat_by_id(id)
+            if chat:
+                history_messages = chat.chat.get('history', {}).get('messages', {}) or {}
+                missing_messages = {
+                    message_id: history_messages[message_id]
+                    for message_id in unresolved_ids
+                    if message_id in history_messages
+                }
+
+                if missing_messages:
+                    messages_map.update(missing_messages)
+
+                    # Backfill so future requests use the fast path.
+                    await self.backfill_messages_by_chat_id(id, chat.user_id, missing_messages)
+
+            return messages_map
+
+        # No rows — fall back to the legacy embedded history.
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None
 
-        return chat.chat.get('history', {}).get('messages', {}) or {}
+        history_messages = chat.chat.get('history', {}).get('messages', {}) or {}
+
+        # Backfill so future requests use the fast path.
+        if history_messages:
+            await self.backfill_messages_by_chat_id(id, chat.user_id, history_messages)
+
+        return history_messages
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> Optional[dict]:
         chat = await self.get_chat_by_id(id)

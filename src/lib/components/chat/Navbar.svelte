@@ -45,6 +45,7 @@
 	export let initNewChat: Function;
 	export let shareEnabled: boolean = false;
 	export let scrollTop = 0;
+	export let scrollToTop: (() => void) | null = null;
 
 	export let chat;
 	export let history;
@@ -53,6 +54,7 @@
 
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
+	export let deleteChatHandler: (id: string) => void;
 	export let moveChatHandler: (id: string, folderId: string) => void;
 
 	let closedBannerIds = [];
@@ -193,11 +195,15 @@
 						<Menu
 							{chat}
 							{shareEnabled}
+							{scrollToTop}
 							shareHandler={() => {
 								showShareChatModal = !showShareChatModal;
 							}}
 							archiveChatHandler={() => {
 								archiveChatHandler(chat.id);
+							}}
+							deleteChatHandler={() => {
+								deleteChatHandler(chat.id);
 							}}
 							{moveChatHandler}
 						>

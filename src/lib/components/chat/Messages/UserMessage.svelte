@@ -376,12 +376,18 @@
 								: ' w-full'}"
 						>
 							{#if message.content}
-								<Markdown
-									id={`${chatId}-${message.id}`}
-									content={message.content}
-									{editCodeBlock}
-									{topPadding}
-								/>
+								{#if $settings?.renderMarkdownInUserMessages ?? true}
+									<Markdown
+										id={`${chatId}-${message.id}`}
+										content={message.content}
+										{editCodeBlock}
+										{topPadding}
+									/>
+								{:else}
+									<div class="whitespace-pre-wrap" dir={$settings?.chatDirection ?? 'auto'}>
+										{message.content}
+									</div>
+								{/if}
 							{/if}
 						</div>
 					</div>

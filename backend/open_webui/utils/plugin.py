@@ -383,7 +383,11 @@ async def get_function_module_from_cache(
     return function_module, function_type, frontmatter
 
 
+_installed_requirements = set()
+
+
 def install_frontmatter_requirements(requirements: str):
+    global _installed_requirements
     if not ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS:
         log.info('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS is disabled, skipping installation of requirements.')
         return
@@ -395,12 +399,18 @@ def install_frontmatter_requirements(requirements: str):
     if requirements:
         try:
             req_list = [req.strip() for req in requirements.split(',')]
-            log.info(f'Installing requirements: {" ".join(req_list)}')
+            new_reqs = [req for req in req_list if req and req not in _installed_requirements]
+
+            if not new_reqs:
+                return
+
+            log.info(f'Installing requirements: {" ".join(new_reqs)}')
             subprocess.check_call(
-                [sys.executable, '-m', 'pip', 'install'] + PIP_OPTIONS + req_list + PIP_PACKAGE_INDEX_OPTIONS
+                [sys.executable, '-m', 'pip', 'install'] + PIP_OPTIONS + new_reqs + PIP_PACKAGE_INDEX_OPTIONS
             )
+            _installed_requirements.update(new_reqs)
         except Exception as e:
-            log.error(f'Error installing packages: {" ".join(req_list)}')
+            log.error(f'Error installing packages: {" ".join(new_reqs)}')
             raise e
 
     else:

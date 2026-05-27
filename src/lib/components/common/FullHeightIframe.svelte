@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
+	import { config } from '$lib/stores';
+	import { injectCsp } from '$lib/utils/csp';
 
 	// Props
 	export let src: string | null = null; // URL or raw HTML (auto-detected)
@@ -192,7 +194,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 {#if iframeDoc}
 	<iframe
 		bind:this={iframe}
-		srcdoc={iframeDoc}
+		srcdoc={injectCsp(iframeDoc, $config?.ui?.iframe_csp ?? '')}
 		{title}
 		class={iframeClassName}
 		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}

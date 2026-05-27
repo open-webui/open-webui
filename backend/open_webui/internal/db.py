@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 from contextlib import asynccontextmanager, contextmanager
@@ -331,6 +332,15 @@ get_db = contextmanager(get_session)
 # through as-is.  SSL params, ``options``, ``target_session_attrs``, etc.
 # all work without any stripping or translation.
 ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
+
+# psycopg v3 cannot run in async mode under Windows' default
+# ProactorEventLoop — switch to SelectorEventLoop before creating
+# the async engine.  This runs at import time, which is early enough
+# to cover every entry point (workers, reload, direct invocations).
+if sys.platform == 'win32' and _is_postgres_url(DATABASE_URL):
+    import asyncio
+
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     # Generous default — async coroutines + no session sharing = high connection demand.
