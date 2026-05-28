@@ -24,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🪪 **More user placeholders in custom headers.** Custom-header templates for direct connections and tool servers now support "{{USER_EMAIL}}" and "{{USER_ROLE}}" alongside the existing user and session placeholders. [Commit](https://github.com/open-webui/open-webui/commit/ed73ef3d8df988b0e9646b82df5b1a453202ef8d)
 - 🌎 **Linkup web search provider.** Administrators can now select Linkup as the web search provider from the admin settings, with options to configure the API key and search depth. [#24752](https://github.com/open-webui/open-webui/pull/24752), [Commit](https://github.com/open-webui/open-webui/commit/56c0d00e13c74d665124ec9f1cae78e83ca60b6a)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Spanish (Spain), Swedish, German, Korean, Catalan, Russian, Irish, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
