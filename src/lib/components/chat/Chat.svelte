@@ -2400,6 +2400,7 @@
 
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+		const features = getFeatures();
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -2426,7 +2427,12 @@
 					// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
 					...($terminalServers ?? []).filter((t) => !t.id)
 				],
-				features: getFeatures(),
+				...(features?.image_generation &&
+				$config?.features?.enable_direct_connections &&
+				($settings?.directConnections ?? null)
+					? { direct_connections: $settings.directConnections }
+					: {}),
+				features,
 				variables: {
 					...getPromptVariables(
 						$user?.name,

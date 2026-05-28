@@ -196,7 +196,11 @@ export const getImageGenerationModels = async (token: string = '') => {
 	return res;
 };
 
-export const imageGenerations = async (token: string = '', prompt: string) => {
+export const imageGenerations = async (
+	token: string = '',
+	prompt: string,
+	directConnections: object | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(`${IMAGES_API_BASE_URL}/generations`, {
@@ -207,7 +211,8 @@ export const imageGenerations = async (token: string = '', prompt: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			prompt: prompt
+			prompt: prompt,
+			...(directConnections ? { direct_connections: directConnections } : {})
 		})
 	})
 		.then(async (res) => {
@@ -242,7 +247,8 @@ export const imageEdits = async (
 	model?: string,
 	size?: string,
 	n?: number,
-	background?: string
+	background?: string,
+	directConnections: object | null = null
 ) => {
 	let error = null;
 
@@ -260,7 +266,8 @@ export const imageEdits = async (
 				...(model && { model }),
 				...(size && { size }),
 				...(n && { n }),
-				...(background && { background })
+				...(background && { background }),
+				...(directConnections ? { direct_connections: directConnections } : {})
 			}
 		})
 	})

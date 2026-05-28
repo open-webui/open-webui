@@ -2158,6 +2158,12 @@ except json.JSONDecodeError:
 
 IMAGES_OPENAI_API_PARAMS = ConfigVar('IMAGES_OPENAI_API_PARAMS', 'image_generation.openai.params', images_openai_params)
 
+IMAGE_GENERATION_DIRECT_CONNECTION_MODE = ConfigVar(
+    'IMAGE_GENERATION_DIRECT_CONNECTION_MODE',
+    'image_generation.direct_connection.mode',
+    os.getenv('IMAGE_GENERATION_DIRECT_CONNECTION_MODE', 'disabled'),
+)
+
 
 IMAGES_GEMINI_API_BASE_URL = ConfigVar(
     'IMAGES_GEMINI_API_BASE_URL',

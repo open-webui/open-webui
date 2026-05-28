@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { user } from '$lib/stores';
+	import { config, settings, user } from '$lib/stores';
 	import { imageGenerations, imageEdits } from '$lib/apis/images';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -73,16 +73,25 @@
 		loading = true;
 		try {
 			let result;
+			const directConnections =
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					? $settings.directConnections
+					: null;
 			if (sourceImages.length > 0) {
 				console.log('Calling imageEdits with', sourceImages.length, 'images');
 				result = await imageEdits(
 					localStorage.token,
 					sourceImages.length === 1 ? sourceImages[0] : sourceImages,
-					prompt
+					prompt,
+					undefined,
+					undefined,
+					undefined,
+					undefined,
+					directConnections
 				);
 			} else {
 				console.log('Calling imageGenerations');
-				result = await imageGenerations(localStorage.token, prompt);
+				result = await imageGenerations(localStorage.token, prompt, directConnections);
 			}
 
 			console.log('Result:', result);

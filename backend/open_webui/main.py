@@ -1769,6 +1769,7 @@ async def chat_completion(
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
             'tool_servers': tool_servers,
+            'direct_connections': form_data.pop('direct_connections', None),
             'files': form_data.get('files', None),
             'features': form_data.get('features', {}),
             'variables': form_data.get('variables', {}),
