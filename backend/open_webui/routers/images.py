@@ -393,7 +393,12 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
             model_node_id = None
 
             for node in image_config.COMFYUI_WORKFLOW_NODES:
-                if node['type'] == 'model':
+                # Support both old ('model') and new ('ClassName::key') type formats.
+                # A node is a model-loader if its key ends with '_name' (e.g. ckpt_name, unet_name).
+                node_type = node.get('type', '')
+                node_key = node.get('key', '')
+                is_model_node = node_type == 'model' or node_key.endswith('_name')
+                if is_model_node:
                     if node['node_ids']:
                         model_node_id = node['node_ids'][0]
                     break
@@ -764,6 +769,15 @@ async def image_generations(
             )
             log.debug('res: %s', res)
 
+            if res is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        'ComfyUI image generation failed. Check that ComfyUI is running, '
+                        'the Base URL is correct, and the workflow is valid.'
+                    ),
+                )
+
             images = []
 
             for image in res['data']:
@@ -833,6 +847,7 @@ async def image_generations(
                 images.append({'url': url})
             return images
     except Exception as e:
+        log.exception(f'[image_generations] Unhandled exception: {e}')
         error = e
         if isinstance(e, aiohttp.ClientResponseError):
             error = e.message
@@ -1149,6 +1164,15 @@ async def image_edits(
                 image_config.IMAGES_EDIT_COMFYUI_API_KEY,
             )
             log.debug('res: %s', res)
+
+            if res is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        'ComfyUI image edit failed. Check that ComfyUI is running, '
+                        'the Base URL is correct, and the workflow is valid.'
+                    ),
+                )
 
             image_urls = set()
             for image in res['data']:
