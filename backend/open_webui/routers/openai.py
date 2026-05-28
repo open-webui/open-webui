@@ -1,10 +1,12 @@
 import asyncio
+import base64
 import hashlib
 import json
 import logging
 import re
+import time
 from typing import Optional
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlencode, urlparse
 
 import aiohttp
 from aiocache import cached
@@ -25,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.internal.db import get_async_session
 
+from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
@@ -118,6 +121,12 @@ async def send_get_request(
                 return await response.json()
     except Exception as e:
         # Handle connection error here
+        if is_openai_codex_web_auth_config(config):
+            log.warning(
+                'OpenAI web auth model request failed for host=%s error=%s',
+                urlparse(url).hostname if url else None,
+                e,
+            )
         log.error(f'Connection error: {e}')
         return None
 
@@ -131,7 +140,31 @@ async def get_models_request(
 ):
     if is_anthropic_url(url):
         return await get_anthropic_models(url, key, user=user)
-    return await send_get_request(request, f'{url}/models', key, user=user, config=config)
+    try:
+        return await send_get_request(request, f'{url}/models', key, user=user, config=config)
+    except HTTPException as e:
+        if is_openai_codex_web_auth_config(config):
+            log.warning(
+                'OpenAI web auth model request failed for host=%s status=%s detail=%s',
+                urlparse(url).hostname,
+                e.status_code,
+                e.detail,
+            )
+        raise
+
+
+def is_empty_native_openai_bearer_connection(
+    url: str,
+    key: str = '',
+    config: Optional[dict] = None,
+) -> bool:
+    config = config or {}
+    auth_type = config.get('auth_type')
+    return (
+        urlparse(url).hostname == 'api.openai.com'
+        and not key
+        and (auth_type == 'bearer' or auth_type is None)
+    )
 
 
 def openai_reasoning_model_handler(payload):
@@ -208,6 +241,14 @@ async def get_headers_and_cookies(
         if oauth_token:
             token = f'{oauth_token.get("access_token", "")}'
 
+    elif is_openai_codex_web_auth_config(config):
+        token = await get_openai_web_auth_access_token()
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='OpenAI web auth credential is not connected or requires reconnection',
+            )
+
     elif auth_type in ('azure_ad', 'microsoft_entra_id'):
         token = get_microsoft_entra_id_access_token()
 
@@ -217,6 +258,15 @@ async def get_headers_and_cookies(
     if config.get('headers') and isinstance(config.get('headers'), dict):
         custom_headers = get_custom_headers(config.get('headers'), user, metadata)
         headers.update(custom_headers)
+
+    if is_openai_codex_web_auth_config(config) and token:
+        headers['Authorization'] = f'Bearer {token}'
+        session = await get_openai_web_auth_session()
+        apply_openai_codex_web_auth_headers(
+            headers,
+            account_id=(session.token or {}).get('account_id') if session else None,
+            metadata=metadata,
+        )
 
     return headers, cookies
 
@@ -243,6 +293,568 @@ def get_microsoft_entra_id_access_token():
 ##########################################
 
 router = APIRouter()
+
+OPENAI_WEB_AUTH_DEVICE_SESSION_PROVIDER = 'openai_web_auth_device'
+OPENAI_WEB_AUTH_CREDENTIAL_PROVIDER = 'openai_web_auth_credential'
+OPENAI_WEB_AUTH_STORAGE_USER_ID = '__openai_web_auth__'
+OPENAI_WEB_AUTH_ISSUER = 'https://auth.openai.com'
+OPENAI_WEB_AUTH_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
+OPENAI_WEB_AUTH_VERIFICATION_URL = f'{OPENAI_WEB_AUTH_ISSUER}/codex/device'
+OPENAI_WEB_AUTH_REDIRECT_URI = f'{OPENAI_WEB_AUTH_ISSUER}/deviceauth/callback'
+OPENAI_WEB_AUTH_DEFAULT_EXPIRES_IN = 3600
+OPENAI_WEB_AUTH_REFRESH_SKEW_SECONDS = 300
+OPENAI_CODEX_WEB_AUTH_TYPE = 'openai_codex_web_auth'
+OPENAI_CODEX_WEB_AUTH_LEGACY_TYPE = 'openai_web_auth'
+OPENAI_CODEX_API_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses'
+OPENAI_CODEX_WEB_AUTH_MODEL_IDS = [
+    'gpt-5.5',
+    'gpt-5.2',
+    'gpt-5.3-codex',
+    'gpt-5.3-codex-spark',
+    'gpt-5.4',
+    'gpt-5.4-mini',
+]
+
+
+class OpenAIWebAuthStartResponse(BaseModel):
+    verification_url: str
+    user_code: str
+    session_id: str
+    interval: int
+    expires_at: int
+
+
+class OpenAIWebAuthCompleteForm(BaseModel):
+    session_id: str
+
+
+class OpenAIWebAuthStatusResponse(BaseModel):
+    credential_type: str
+    connected: bool
+    has_credential: bool
+    status: str
+    expires_at: Optional[int] = None
+
+
+def is_openai_codex_web_auth_config(config: Optional[dict] = None) -> bool:
+    return (config or {}).get('auth_type') in (
+        OPENAI_CODEX_WEB_AUTH_TYPE,
+        OPENAI_CODEX_WEB_AUTH_LEGACY_TYPE,
+    )
+
+
+def build_openai_codex_web_auth_models(url_idx: int) -> dict:
+    return {
+        'object': 'list',
+        'data': [
+            {
+                'id': model_id,
+                'name': model_id,
+                'owned_by': 'openai',
+                'openai': {'id': model_id},
+                'urlIdx': url_idx,
+                'connection_type': 'external',
+                'provider': 'OpenAI Account Auth',
+            }
+            for model_id in OPENAI_CODEX_WEB_AUTH_MODEL_IDS
+        ],
+    }
+
+
+async def build_openai_codex_web_auth_models_if_connected(url_idx: int) -> Optional[dict]:
+    token = await get_openai_web_auth_access_token()
+    if not token:
+        return None
+    return build_openai_codex_web_auth_models(url_idx)
+
+
+def apply_openai_codex_web_auth_headers(headers: dict, account_id: Optional[str] = None, metadata: Optional[dict] = None):
+    if account_id:
+        headers['ChatGPT-Account-Id'] = account_id
+    headers['originator'] = 'open-webui'
+    headers['User-Agent'] = 'Open WebUI'
+    session_id = metadata.get('chat_id') if metadata else None
+    if session_id:
+        headers['session_id'] = str(session_id)
+
+
+def prepare_openai_codex_web_auth_request(
+    payload: dict,
+    is_responses: bool = False,
+) -> tuple[str, dict, bool]:
+    """Return the Codex account-auth endpoint and Responses-compatible payload."""
+
+    responses_payload = payload if is_responses else convert_to_responses_payload(payload)
+    if not responses_payload.get('instructions'):
+        responses_payload['instructions'] = 'You are ChatGPT, a helpful assistant.'
+    responses_payload['store'] = False
+    responses_payload['stream'] = True
+
+    return (
+        OPENAI_CODEX_API_ENDPOINT,
+        responses_payload,
+        True,
+    )
+
+
+def iter_openai_codex_sse_payloads(text: str):
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith('data:'):
+            continue
+        data = line.removeprefix('data:').strip()
+        if not data or data == '[DONE]':
+            continue
+        try:
+            yield json.loads(data)
+        except Exception:
+            continue
+
+
+def parse_openai_codex_sse_response(text: str):
+    last_payload = None
+    for payload in iter_openai_codex_sse_payloads(text):
+        last_payload = payload
+    return last_payload
+
+
+def build_openai_codex_error_payload(payload: Optional[dict]) -> dict:
+    payload = payload or {}
+    details = payload.get('error') or payload.get('status_details') or payload.get('response') or payload
+
+    if isinstance(details, dict):
+        message = details.get('message') or details.get('error') or details.get('detail') or 'OpenAI account auth request failed'
+        code = details.get('code') or payload.get('type') or 'openai_codex_web_auth_error'
+        error_type = details.get('type') or payload.get('type') or 'upstream_error'
+    else:
+        message = str(details) if details else 'OpenAI account auth request failed'
+        code = payload.get('type') or 'openai_codex_web_auth_error'
+        error_type = payload.get('type') or 'upstream_error'
+
+    return {
+        'error': {
+            'message': message,
+            'type': error_type,
+            'code': code,
+        }
+    }
+
+
+def convert_openai_codex_sse_payload(payload: dict) -> Optional[bytes]:
+    event_type = payload.get('type')
+    if event_type == 'response.output_text.delta':
+        delta = payload.get('delta') or payload.get('text') or ''
+        chunk = {
+            'id': payload.get('response_id') or payload.get('id') or '',
+            'object': 'chat.completion.chunk',
+            'model': payload.get('model') or '',
+            'choices': [
+                {
+                    'index': 0,
+                    'delta': {'content': delta},
+                    'finish_reason': None,
+                }
+            ],
+        }
+        return f'data: {json.dumps(chunk)}\n\n'.encode()
+
+    if event_type in ('response.failed', 'response.incomplete'):
+        return (
+            f'data: {json.dumps(build_openai_codex_error_payload(payload))}\n\n'
+            'data: [DONE]\n\n'
+        ).encode()
+
+    if event_type == 'response.completed':
+        return b'data: [DONE]\n\n'
+
+    return None
+
+
+async def openai_codex_stream_chunks_handler(stream: aiohttp.StreamReader):
+    buffer = b''
+    async for data, _ in stream.iter_chunks():
+        if not data:
+            continue
+        lines = (buffer + data).split(b'\n')
+        buffer = lines[-1]
+        for raw_line in lines[:-1]:
+            line = raw_line.decode('utf-8', 'replace').strip()
+            if not line.startswith('data:'):
+                continue
+            event_data = line.removeprefix('data:').strip()
+            if not event_data:
+                continue
+            if event_data == '[DONE]':
+                yield b'data: [DONE]\n\n'
+                continue
+            try:
+                converted = convert_openai_codex_sse_payload(json.loads(event_data))
+            except Exception:
+                converted = None
+            if converted:
+                yield converted
+
+    if buffer:
+        line = buffer.decode('utf-8', 'replace').strip()
+        if line.startswith('data:'):
+            event_data = line.removeprefix('data:').strip()
+            try:
+                converted = convert_openai_codex_sse_payload(json.loads(event_data))
+            except Exception:
+                converted = None
+            if converted:
+                yield converted
+
+
+def _parse_openai_web_auth_positive_int(value, default: int, field_name: str) -> int:
+    if value is None:
+        return default
+
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=502,
+            detail=f'OpenAI web auth response contained an invalid {field_name}',
+        )
+
+    if parsed < 1:
+        raise HTTPException(
+            status_code=502,
+            detail=f'OpenAI web auth response contained an invalid {field_name}',
+        )
+    return parsed
+
+
+def _decode_jwt_payload(token: str) -> dict:
+    try:
+        payload = token.split('.')[1]
+        payload += '=' * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload.encode()).decode())
+    except Exception:
+        return {}
+
+
+def _extract_openai_account_id(tokens: dict) -> Optional[str]:
+    claims = _decode_jwt_payload(tokens.get('id_token') or tokens.get('access_token') or '')
+    if not claims:
+        return None
+
+    api_auth = claims.get('https://api.openai.com/auth')
+    if isinstance(claims.get('chatgpt_account_id'), str):
+        return claims['chatgpt_account_id']
+    if isinstance(api_auth, dict) and isinstance(api_auth.get('chatgpt_account_id'), str):
+        return api_auth['chatgpt_account_id']
+
+    organizations = claims.get('organizations')
+    if isinstance(organizations, list):
+        for organization in organizations:
+            if isinstance(organization, dict) and isinstance(organization.get('id'), str):
+                return organization['id']
+    return None
+
+
+def _openai_web_auth_status_from_session(session) -> OpenAIWebAuthStatusResponse:
+    if not session:
+        return OpenAIWebAuthStatusResponse(
+            credential_type='none',
+            connected=False,
+            has_credential=False,
+            status='not_configured',
+        )
+
+    status_value = 'connected' if session.expires_at > int(time.time()) else 'reconnect_required'
+    return OpenAIWebAuthStatusResponse(
+        credential_type='web_auth',
+        connected=status_value == 'connected',
+        has_credential=True,
+        status=status_value,
+        expires_at=session.expires_at,
+    )
+
+
+async def _post_openai_web_auth_json(url: str, json_payload: dict) -> tuple[int, dict]:
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+    ) as session:
+        async with session.post(
+            url,
+            json=json_payload,
+            headers={
+                'Content-Type': 'application/json',
+                'User-Agent': 'Open WebUI',
+            },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as response:
+            try:
+                payload = await response.json()
+            except Exception:
+                payload = {}
+            return response.status, payload
+
+
+async def _post_openai_web_auth_form(url: str, form_payload: dict) -> tuple[int, dict]:
+    async with aiohttp.ClientSession(
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+    ) as session:
+        async with session.post(
+            url,
+            data=urlencode(form_payload),
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as response:
+            try:
+                payload = await response.json()
+            except Exception:
+                payload = {}
+            return response.status, payload
+
+
+async def start_openai_web_auth_device_flow() -> dict:
+    status_code, data = await _post_openai_web_auth_json(
+        f'{OPENAI_WEB_AUTH_ISSUER}/api/accounts/deviceauth/usercode',
+        {'client_id': OPENAI_WEB_AUTH_CLIENT_ID},
+    )
+    if status_code >= 400:
+        raise HTTPException(status_code=502, detail='OpenAI web auth start failed')
+
+    device_auth_id = data.get('device_auth_id')
+    user_code = data.get('user_code')
+    if not isinstance(device_auth_id, str) or not isinstance(user_code, str):
+        raise HTTPException(status_code=502, detail='OpenAI web auth start response was incomplete')
+
+    interval = _parse_openai_web_auth_positive_int(data.get('interval'), 5, 'interval')
+    expires_in = _parse_openai_web_auth_positive_int(data.get('expires_in'), 600, 'expiration')
+    return {
+        'device_auth_id': device_auth_id,
+        'user_code': user_code,
+        'interval': interval,
+        'expires_at': int(time.time()) + expires_in,
+    }
+
+
+async def complete_openai_web_auth_device_flow(device_auth_id: str, user_code: str) -> dict:
+    device_status, device_data = await _post_openai_web_auth_json(
+        f'{OPENAI_WEB_AUTH_ISSUER}/api/accounts/deviceauth/token',
+        {
+            'device_auth_id': device_auth_id,
+            'user_code': user_code,
+        },
+    )
+    if device_status in (403, 404):
+        raise HTTPException(status_code=409, detail='OpenAI authorization is not complete yet')
+    if device_status >= 400:
+        raise HTTPException(status_code=502, detail='OpenAI web auth completion failed')
+
+    authorization_code = device_data.get('authorization_code')
+    code_verifier = device_data.get('code_verifier')
+    if not isinstance(authorization_code, str) or not isinstance(code_verifier, str):
+        raise HTTPException(status_code=502, detail='OpenAI web auth completion response was incomplete')
+
+    token_status, tokens = await _post_openai_web_auth_form(
+        f'{OPENAI_WEB_AUTH_ISSUER}/oauth/token',
+        {
+            'grant_type': 'authorization_code',
+            'code': authorization_code,
+            'redirect_uri': OPENAI_WEB_AUTH_REDIRECT_URI,
+            'client_id': OPENAI_WEB_AUTH_CLIENT_ID,
+            'code_verifier': code_verifier,
+        },
+    )
+    if token_status >= 400:
+        raise HTTPException(status_code=502, detail='OpenAI web auth token exchange failed')
+    if not tokens.get('access_token') or not tokens.get('refresh_token'):
+        raise HTTPException(status_code=502, detail='OpenAI web auth token response was incomplete')
+
+    expires_in = _parse_openai_web_auth_positive_int(
+        tokens.get('expires_in'),
+        OPENAI_WEB_AUTH_DEFAULT_EXPIRES_IN,
+        'expiration',
+    )
+    return {
+        'access_token': tokens['access_token'],
+        'refresh_token': tokens['refresh_token'],
+        'id_token': tokens.get('id_token'),
+        'expires_at': int(time.time()) + expires_in,
+        # Stored server-side only. Not exposed in public status DTOs until product confirms it is safe metadata.
+        'account_id': _extract_openai_account_id(tokens),
+    }
+
+
+async def refresh_openai_web_auth_credential(token: dict) -> Optional[dict]:
+    refresh_token = token.get('refresh_token')
+    if not refresh_token:
+        return None
+
+    token_status, tokens = await _post_openai_web_auth_form(
+        f'{OPENAI_WEB_AUTH_ISSUER}/oauth/token',
+        {
+            'grant_type': 'refresh_token',
+            'refresh_token': refresh_token,
+            'client_id': OPENAI_WEB_AUTH_CLIENT_ID,
+        },
+    )
+    if token_status >= 400 or not tokens.get('access_token'):
+        return None
+
+    try:
+        expires_in = _parse_openai_web_auth_positive_int(
+            tokens.get('expires_in'),
+            OPENAI_WEB_AUTH_DEFAULT_EXPIRES_IN,
+            'expiration',
+        )
+        merged = {
+            **token,
+            'access_token': tokens['access_token'],
+            'refresh_token': tokens.get('refresh_token') or refresh_token,
+            'id_token': tokens.get('id_token') or token.get('id_token'),
+            'expires_at': int(time.time()) + expires_in,
+        }
+    except HTTPException:
+        return None
+    merged['account_id'] = _extract_openai_account_id(merged) or token.get('account_id')
+    return merged
+
+
+async def get_openai_web_auth_session():
+    return await OAuthSessions.get_session_by_provider_and_user_id(
+        OPENAI_WEB_AUTH_CREDENTIAL_PROVIDER,
+        OPENAI_WEB_AUTH_STORAGE_USER_ID,
+    )
+
+
+async def get_openai_web_auth_access_token() -> Optional[str]:
+    session = await get_openai_web_auth_session()
+    if not session:
+        return None
+
+    if session.expires_at <= int(time.time()) + OPENAI_WEB_AUTH_REFRESH_SKEW_SECONDS:
+        refreshed_token = await refresh_openai_web_auth_credential(session.token)
+        if not refreshed_token:
+            return None
+        session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
+        if not session:
+            return None
+
+    return session.token.get('access_token')
+
+
+async def has_connected_openai_web_auth_credential() -> bool:
+    try:
+        return bool(await get_openai_web_auth_access_token())
+    except HTTPException:
+        return False
+
+
+async def build_openai_web_auth_status() -> OpenAIWebAuthStatusResponse:
+    return _openai_web_auth_status_from_session(await get_openai_web_auth_session())
+
+
+async def invalidate_openai_models_cache(request: Optional[Request] = None, user: Optional[UserModel] = None):
+    """Clear OpenAI model caches after provider credentials or config change.
+
+    The route-level model list is cached per user by ``get_all_models`` and the
+    merged model lookup is also held in ``request.app.state.OPENAI_MODELS`` for
+    routing.  Both can otherwise keep an empty/stale model list after an admin
+    adds, removes, or switches the native OpenAI credential path.
+    """
+
+    cache_keys = ['openai_all_models']
+    if user and getattr(user, 'id', None):
+        cache_keys.append(f'openai_all_models_{user.id}')
+
+    for cache_key in cache_keys:
+        try:
+            await get_all_models.cache.delete(cache_key)
+        except Exception as e:
+            log.debug(f'Failed to invalidate OpenAI models cache key {cache_key}: {e}')
+
+    if request is not None:
+        try:
+            request.app.state.OPENAI_MODELS = {}
+        except Exception as e:
+            log.debug(f'Failed to reset OpenAI app-state model cache: {e}')
+
+
+@router.get('/web-auth/status', response_model=OpenAIWebAuthStatusResponse)
+async def get_web_auth_status(user=Depends(get_admin_user)):
+    return await build_openai_web_auth_status()
+
+
+@router.post('/web-auth/start', response_model=OpenAIWebAuthStartResponse)
+async def start_web_auth(user=Depends(get_admin_user)):
+    started = await start_openai_web_auth_device_flow()
+    created = await OAuthSessions.create_session(
+        user_id=OPENAI_WEB_AUTH_STORAGE_USER_ID,
+        provider=OPENAI_WEB_AUTH_DEVICE_SESSION_PROVIDER,
+        token={
+            'device_auth_id': started['device_auth_id'],
+            'user_code': started['user_code'],
+            'expires_at': started['expires_at'],
+        },
+    )
+    if not created:
+        raise HTTPException(status_code=500, detail='Failed to store OpenAI web auth session')
+
+    return OpenAIWebAuthStartResponse(
+        verification_url=OPENAI_WEB_AUTH_VERIFICATION_URL,
+        user_code=started['user_code'],
+        session_id=created.id,
+        interval=started['interval'],
+        expires_at=started['expires_at'],
+    )
+
+
+@router.post('/web-auth/complete', response_model=OpenAIWebAuthStatusResponse)
+async def complete_web_auth(
+    form_data: OpenAIWebAuthCompleteForm,
+    request: Request,
+    user=Depends(get_admin_user),
+):
+    device_session = await OAuthSessions.get_session_by_id(form_data.session_id)
+    if not device_session or device_session.provider != OPENAI_WEB_AUTH_DEVICE_SESSION_PROVIDER:
+        raise HTTPException(status_code=404, detail='OpenAI web auth session not found')
+    if device_session.expires_at <= int(time.time()):
+        await OAuthSessions.delete_session_by_id(device_session.id)
+        raise HTTPException(status_code=409, detail='OpenAI web auth session expired')
+
+    credential = await complete_openai_web_auth_device_flow(
+        device_session.token.get('device_auth_id', ''),
+        device_session.token.get('user_code', ''),
+    )
+
+    await OAuthSessions.delete_sessions_by_user_id_and_provider(
+        OPENAI_WEB_AUTH_STORAGE_USER_ID,
+        OPENAI_WEB_AUTH_CREDENTIAL_PROVIDER,
+    )
+    created = await OAuthSessions.create_session(
+        user_id=OPENAI_WEB_AUTH_STORAGE_USER_ID,
+        provider=OPENAI_WEB_AUTH_CREDENTIAL_PROVIDER,
+        token=credential,
+    )
+    await OAuthSessions.delete_session_by_id(device_session.id)
+    if not created:
+        raise HTTPException(status_code=500, detail='Failed to store OpenAI web auth credential')
+
+    await invalidate_openai_models_cache(request, user)
+
+    return _openai_web_auth_status_from_session(created)
+
+
+@router.post('/web-auth/disconnect', response_model=OpenAIWebAuthStatusResponse)
+async def disconnect_web_auth(request: Request, user=Depends(get_admin_user)):
+    await OAuthSessions.delete_sessions_by_user_id_and_provider(
+        OPENAI_WEB_AUTH_STORAGE_USER_ID,
+        OPENAI_WEB_AUTH_CREDENTIAL_PROVIDER,
+    )
+    await OAuthSessions.delete_sessions_by_user_id_and_provider(
+        OPENAI_WEB_AUTH_STORAGE_USER_ID,
+        OPENAI_WEB_AUTH_DEVICE_SESSION_PROVIDER,
+    )
+    await invalidate_openai_models_cache(request, user)
+    return await build_openai_web_auth_status()
 
 
 @router.get('/config')
@@ -286,6 +898,8 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
     request.app.state.config.OPENAI_API_CONFIGS = {
         key: value for key, value in request.app.state.config.OPENAI_API_CONFIGS.items() if key in keys
     }
+
+    await invalidate_openai_models_cache(request, user)
 
     return {
         'ENABLE_OPENAI_API': request.app.state.config.ENABLE_OPENAI_API,
@@ -395,6 +1009,10 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     request_tasks = []
     for idx, url in enumerate(api_base_urls):
         if (str(idx) not in api_configs) and (url not in api_configs):  # Legacy support
+            if is_empty_native_openai_bearer_connection(url, api_keys[idx]):
+                log.info('Skipping empty native OpenAI bearer connection at index %s during model listing', idx)
+                request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+                continue
             request_tasks.append(get_models_request(request, url, api_keys[idx], user=user))
         else:
             api_config = api_configs.get(
@@ -406,6 +1024,15 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             model_ids = api_config.get('model_ids', [])
 
             if enable:
+                if is_openai_codex_web_auth_config(api_config):
+                    request_tasks.append(
+                        asyncio.ensure_future(build_openai_codex_web_auth_models_if_connected(idx))
+                    )
+                    continue
+                if is_empty_native_openai_bearer_connection(url, api_keys[idx], api_config):
+                    log.info('Skipping empty native OpenAI bearer connection at index %s during model listing', idx)
+                    request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+                    continue
                 if len(model_ids) == 0:
                     request_tasks.append(get_models_request(request, url, api_keys[idx], user=user, config=api_config))
                 else:
@@ -623,6 +1250,14 @@ async def get_models(request: Request, url_idx: Optional[int] = None, user=Depen
             request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
         )
 
+        if is_empty_native_openai_bearer_connection(url, key, api_config):
+            log.info('Skipping empty native OpenAI bearer connection at index %s during direct model listing', url_idx)
+            return models
+
+        if is_openai_codex_web_auth_config(api_config):
+            models = await build_openai_codex_web_auth_models_if_connected(url_idx)
+            return models or {'data': []}
+
         r = None
         async with aiohttp.ClientSession(
             trust_env=True,
@@ -655,6 +1290,14 @@ async def get_models(request: Request, url_idx: Optional[int] = None, user=Depen
                                     error_detail = f'External Error: {res["error"]}'
                             except Exception:
                                 pass
+
+                            if is_openai_codex_web_auth_config(api_config):
+                                log.warning(
+                                    'OpenAI web auth model request failed for host=%s status=%s detail=%s',
+                                    urlparse(url).hostname,
+                                    r.status,
+                                    error_detail,
+                                )
                             raise Exception(error_detail)
 
                         response_data = await r.json()
@@ -1183,11 +1826,15 @@ async def generate_chat_completion(
         if logit_bias:
             payload['logit_bias'] = json.loads(logit_bias)
 
+    requested_stream = bool(payload.get('stream'))
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
     is_responses = api_config.get('api_type') == 'responses'
+    is_codex_web_auth = is_openai_codex_web_auth_config(api_config)
 
-    if api_config.get('azure', False):
+    if is_codex_web_auth:
+        request_url, payload, is_responses = prepare_openai_codex_web_auth_request(payload, is_responses)
+    elif api_config.get('azure', False):
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get('auth_type', 'bearer')
         if auth_type not in ('azure_ad', 'microsoft_entra_id'):
@@ -1247,6 +1894,41 @@ async def generate_chat_completion(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
+        if is_codex_web_auth and 'text/event-stream' in r.headers.get('Content-Type', ''):
+            if r.status >= 400:
+                error_body = await r.text()
+                log.error(
+                    'OpenAI account auth returned HTTP %d with SSE content-type: %s',
+                    r.status,
+                    error_body[:1000],
+                )
+                parsed_error = parse_openai_codex_sse_response(error_body)
+                error_content = build_openai_codex_error_payload(parsed_error)
+                return JSONResponse(status_code=r.status, content=error_content)
+
+            if requested_stream:
+                streaming = True
+                return StreamingResponse(
+                    stream_wrapper(r, content_handler=openai_codex_stream_chunks_handler),
+                    status_code=r.status,
+                    media_type='text/event-stream',
+                    headers=_clean_proxy_headers(r.headers),
+                )
+
+            response_text = await r.text()
+            parsed_response = parse_openai_codex_sse_response(response_text)
+            if parsed_response is None:
+                raise HTTPException(status_code=502, detail='OpenAI account auth response could not be parsed')
+
+            if parsed_response.get('type') in ('response.failed', 'response.incomplete'):
+                return JSONResponse(
+                    status_code=502,
+                    content=build_openai_codex_error_payload(parsed_response),
+                )
+
+            response = convert_responses_result(parsed_response)
+            return response
+
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             # If the provider returned an error status with SSE content-type,
@@ -1278,8 +1960,20 @@ async def generate_chat_completion(
             try:
                 response = await r.json()
             except Exception as e:
-                log.error(e)
-                response = await r.text()
+                response_text = await r.text()
+                if is_codex_web_auth:
+                    parsed_response = parse_openai_codex_sse_response(response_text)
+                    if parsed_response is not None:
+                        if parsed_response.get('type') in ('response.failed', 'response.incomplete'):
+                            response = build_openai_codex_error_payload(parsed_response)
+                        else:
+                            response = parsed_response
+                    else:
+                        log.error(e)
+                        response = response_text
+                else:
+                    log.error(e)
+                    response = response_text
 
             if r.status >= 400:
                 if isinstance(response, (dict, list)):
@@ -1444,7 +2138,9 @@ async def responses(
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if is_openai_codex_web_auth_config(api_config):
+            request_url = OPENAI_CODEX_API_ENDPOINT
+        elif api_config.get('azure', False):
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                 headers['api-key'] = key
