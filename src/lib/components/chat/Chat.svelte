@@ -541,6 +541,14 @@
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
 					message.favorite = data.favorite;
+				} else if (type === 'chat:generate') {
+					// Trigger real LLM generation from an action function.
+					// If data.prompt is a non-empty string, submit it directly.
+					// If data.prompt is empty/omitted, submit whatever the user
+					// currently has in the message input box (equivalent to pressing
+					// the Send button on the current input content).
+					const actionPrompt = data?.prompt ?? '';
+					await submitHandler(actionPrompt || prompt);
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
