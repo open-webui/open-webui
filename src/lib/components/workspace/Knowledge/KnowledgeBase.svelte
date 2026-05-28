@@ -23,7 +23,8 @@
 		uploadFile,
 		deleteFileById,
 		getFileById,
-		renameFileById
+		renameFileById,
+		getFileProcessStatus
 	} from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
@@ -43,7 +44,7 @@
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { blobToFile, isYoutubeUrl, copyToClipboard, splitStream } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -130,6 +131,123 @@
 		currentPage = 1;
 	};
 
+	let processingFileStatusStreams = new Set<string>();
+	let failedFileCleanupIds = new Set<string>();
+	let processingFileStatusControllers = new Map<string, AbortController>();
+	let processingFileStatusReaders = new Map<string, ReadableStreamDefaultReader<string>>();
+
+	const isFailedFile = (file: any) => file?.data?.status === 'failed' || file?.status === 'failed';
+
+	const isProcessingFile = (file: any) =>
+		file?.status === 'uploading' ||
+		(file?.data?.status &&
+			!['completed', 'failed', 'not_found'].includes(file.data.status));
+
+	const updateFileItemStatus = (fileId: string, status: string, error: string | null = null) => {
+		fileItems = fileItems?.map((item) =>
+			item.id === fileId
+				? {
+						...item,
+						data: {
+							...(item.data ?? {}),
+							status,
+							...(error ? { error } : {})
+						}
+					}
+				: item
+		);
+	};
+
+	const removeFailedFileFromKnowledge = async (fileId: string, message: string | null = null) => {
+		if (failedFileCleanupIds.has(fileId)) return;
+		failedFileCleanupIds.add(fileId);
+
+		toast.error(message ?? $i18n.t('Failed to upload file.'));
+		fileItems = fileItems?.filter((file) => file.id !== fileId);
+
+		if (selectedFileId === fileId) {
+			selectedFileId = null;
+			selectedFile = null;
+			selectedFileContent = '';
+		}
+
+		await removeFileFromKnowledgeById(localStorage.token, id, fileId).catch((e) => {
+			console.error(e);
+			return null;
+		});
+
+		await getItemsPage({ preserveItems: true });
+	};
+
+	const watchProcessingFile = async (fileId: string) => {
+		if (processingFileStatusStreams.has(fileId)) return;
+
+		const controller = new AbortController();
+		processingFileStatusStreams.add(fileId);
+		processingFileStatusControllers.set(fileId, controller);
+
+		try {
+			const status = await getFileProcessStatus(localStorage.token, fileId, controller.signal);
+			if (status && status.ok && status.body) {
+				const reader = status.body
+					.pipeThrough(new TextDecoderStream())
+					.pipeThrough(splitStream('\n'))
+					.getReader();
+				processingFileStatusReaders.set(fileId, reader);
+
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+
+					for (const line of value.split('\n')) {
+						if (!line || line === 'data: [DONE]') continue;
+
+						let data = null;
+						try {
+							data = JSON.parse(line.replace(/^data: /, ''));
+						} catch (e) {
+							console.error(e);
+							continue;
+						}
+
+						if (data?.status) {
+							updateFileItemStatus(fileId, data.status, data?.error ?? null);
+
+							if (data.status === 'failed') {
+								await removeFailedFileFromKnowledge(fileId, data?.error ?? null);
+								return;
+							}
+
+							if (['completed', 'not_found'].includes(data.status)) {
+								await getItemsPage({ preserveItems: true });
+								return;
+							}
+						}
+					}
+				}
+			}
+		} catch (e) {
+			if ((e as Error)?.name !== 'AbortError') {
+				console.error(e);
+			}
+		} finally {
+			processingFileStatusReaders.delete(fileId);
+			processingFileStatusControllers.delete(fileId);
+			processingFileStatusStreams.delete(fileId);
+		}
+	};
+
+	onDestroy(() => {
+		processingFileStatusControllers.forEach((controller) => controller.abort());
+		processingFileStatusControllers.clear();
+
+		processingFileStatusReaders.forEach((reader) => {
+			reader.cancel().catch((e) => console.error(e));
+		});
+		processingFileStatusReaders.clear();
+		processingFileStatusStreams.clear();
+	});
+
 	const init = async () => {
 		reset();
 		await getItemsPage();
@@ -164,11 +282,13 @@
 		reset();
 	}
 
-	const getItemsPage = async () => {
+	const getItemsPage = async ({ preserveItems = false }: { preserveItems?: boolean } = {}) => {
 		if (knowledgeId === null) return;
 
-		fileItems = null;
-		fileItemsTotal = null;
+		if (!preserveItems) {
+			fileItems = null;
+			fileItemsTotal = null;
+		}
 
 		if (sortKey === null) {
 			direction = null;
@@ -190,6 +310,13 @@
 		if (res) {
 			fileItems = res.items;
 			fileItemsTotal = res.total;
+			fileItems.forEach((file) => {
+				if (isFailedFile(file)) {
+					void removeFailedFileFromKnowledge(file.id, file?.data?.error ?? null);
+				} else if (isProcessingFile(file)) {
+					void watchProcessingFile(file.id);
+				}
+			});
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
 		}
@@ -252,9 +379,15 @@
 						res.content
 					);
 
-					const uploadedFile = await uploadFile(localStorage.token, file, {
-						knowledge_id: knowledge.id
-					}).catch((e) => {
+					const uploadedFile = await uploadFile(
+						localStorage.token,
+						file,
+						{
+							knowledge_id: knowledge.id
+						},
+						undefined,
+						false
+					).catch((e) => {
 						toast.error(`${e}`);
 						return null;
 					});
@@ -270,10 +403,9 @@
 
 						if (uploadedFile.error) {
 							console.warn('File upload warning:', uploadedFile.error);
-							toast.warning(uploadedFile.error);
-							fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
+							await removeFailedFileFromKnowledge(uploadedFile.id, uploadedFile.error);
 						} else {
-							toast.success($i18n.t('File added successfully.'));
+							toast.success($i18n.t('File added and processing started.'));
 							init();
 						}
 					} else {
@@ -341,7 +473,13 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				undefined,
+				false
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
@@ -357,10 +495,9 @@
 
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
-					toast.warning(uploadedFile.error);
-					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
+					await removeFailedFileFromKnowledge(uploadedFile.id, uploadedFile.error);
 				} else {
-					toast.success($i18n.t('File added successfully.'));
+					toast.success($i18n.t('File added and processing started.'));
 					init();
 				}
 			} else {

@@ -95,7 +95,11 @@ export const uploadFile = async (
 	return res;
 };
 
-export const getFileProcessStatus = async (token: string, id: string) => {
+export const getFileProcessStatus = async (
+	token: string,
+	id: string,
+	signal: AbortSignal | null = null
+) => {
 	const queryParams = new URLSearchParams();
 	queryParams.append('stream', 'true');
 
@@ -105,10 +109,13 @@ export const getFileProcessStatus = async (token: string, id: string) => {
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		signal: signal ?? undefined
 	}).catch((err) => {
-		error = err.detail;
-		console.error(err);
+		if (err?.name !== 'AbortError') {
+			error = err.detail;
+			console.error(err);
+		}
 		return null;
 	});
 

@@ -47,6 +47,11 @@
 		setTimeout(() => editInput?.select(), 0);
 	};
 
+	const isProcessing = (file: any) =>
+		file?.status === 'uploading' ||
+		(file?.data?.status &&
+			!['completed', 'failed', 'not_found'].includes(file.data.status));
+
 	const submitRename = () => {
 		if (editingFileId && editName.trim()) {
 			onRename(editingFileId, editName.trim());
@@ -91,7 +96,7 @@
 			}}
 		>
 			<div class="flex items-center">
-				{#if file?.status !== 'uploading'}
+				{#if !isProcessing(file)}
 					<button
 						class="p-1 rounded-full transition"
 						type="button"

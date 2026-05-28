@@ -175,12 +175,18 @@ async def process_uploaded_file(
             knowledge_id = file_metadata.get('knowledge_id')
             if knowledge_id:
                 try:
-                    await Knowledges.add_file_to_knowledge_by_id(
+                    if not await Knowledges.has_file(
                         knowledge_id=knowledge_id,
                         file_id=file_item.id,
-                        user_id=user.id,
-                        directory_id=file_metadata.get('directory_id'),
-                    )
+                        db=db_session,
+                    ):
+                        await Knowledges.add_file_to_knowledge_by_id(
+                            knowledge_id=knowledge_id,
+                            file_id=file_item.id,
+                            user_id=user.id,
+                            directory_id=file_metadata.get('directory_id'),
+                            db=db_session,
+                        )
                     await process_file(
                         request,
                         ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
@@ -201,6 +207,13 @@ async def process_uploaded_file(
                 },
                 db=db_session,
             )
+            knowledge_id = file_metadata.get('knowledge_id')
+            if knowledge_id:
+                await Knowledges.remove_file_from_knowledge_by_id(
+                    knowledge_id=knowledge_id,
+                    file_id=file_item.id,
+                    db=db_session,
+                )
 
     try:
         if db:
@@ -317,6 +330,24 @@ async def upload_file_handler(
             ),
             db=db,
         )
+
+        if process and file_metadata.get('knowledge_id'):
+            # Link the uploaded file to the Knowledge Collection before slow
+            # processing starts. This lets the Knowledge UI restore an
+            # in-progress row after a reload/remount instead of showing an
+            # empty collection while background processing continues.
+            if not await Knowledges.has_file(
+                knowledge_id=file_metadata['knowledge_id'],
+                file_id=file_item.id,
+                db=db,
+            ):
+                await Knowledges.add_file_to_knowledge_by_id(
+                    knowledge_id=file_metadata['knowledge_id'],
+                    file_id=file_item.id,
+                    user_id=user.id,
+                    directory_id=file_metadata.get('directory_id'),
+                    db=db,
+                )
 
         if 'channel_id' in file_metadata:
             channel = await Channels.get_channel_by_id_and_user_id(file_metadata['channel_id'], user.id, db=db)
