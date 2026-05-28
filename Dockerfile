@@ -162,6 +162,16 @@ RUN set -e; \
     fi; \
     fi; \
     mkdir -p /app/backend/data; chown -R $UID:$GID /app/backend/data/; \
+\
+    # Install company data-analysis/reporting dependencies for code execution workflows.
+    # Required for Excel/CSV analysis, chart generation, and PowerPoint export.
+    uv pip install --system --no-cache-dir \
+        pandas \
+        matplotlib \
+        python-pptx \
+        openpyxl \
+        numpy \
+        xlsxwriter; \
     rm -rf /var/lib/apt/lists/*;
 
 # Install Ollama if requested
