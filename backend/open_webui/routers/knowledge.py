@@ -563,6 +563,7 @@ async def get_knowledge_files_by_id(
     direction: str | None = None,
     directory_id: str | None = Query(None, description='Filter by directory ID. Pass empty string for root.'),
     page: int | None = 1,
+    limit: int | None = Query(None, description='Page size (admin only). Defaults to 30.'),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -591,7 +592,11 @@ async def get_knowledge_files_by_id(
 
     page = max(page, 1)
 
-    limit = 30
+    # Allow admins to configure page size; non-admins always get the default
+    if user.role == 'admin' and limit is not None:
+        limit = max(1, limit)
+    else:
+        limit = PAGE_ITEM_COUNT
     skip = (page - 1) * limit
 
     filter = {}
