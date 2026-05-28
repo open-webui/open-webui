@@ -38,67 +38,251 @@
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
 	let showComfyUIWorkflowEditor = false;
-	let REQUIRED_WORKFLOW_NODES = [
-		{
-			type: 'prompt',
-			key: 'text',
-			node_ids: ''
-		},
-		{
-			type: 'model',
-			key: 'ckpt_name',
-			node_ids: ''
-		},
-		{
-			type: 'width',
-			key: 'width',
-			node_ids: ''
-		},
-		{
-			type: 'height',
-			key: 'height',
-			node_ids: ''
-		},
-		{
-			type: 'steps',
-			key: 'steps',
-			node_ids: ''
-		},
-		{
-			type: 'seed',
-			key: 'seed',
-			node_ids: ''
+
+	// Dynamic workflow node config — populated automatically by parseAndPopulateWorkflowNodes()
+	let workflowNodesConfig: { type: string; key: string; node_ids: string; class_type: string }[] =
+		[];
+	let lastKnownWorkflowString: string | null = null;
+
+	/**
+	 * Scans every node in the parsed ComfyUI API workflow object and builds a configurable
+	 * row for each primitive input (string / number / boolean). Array-valued inputs are
+	 * wires/links and are intentionally skipped.
+	 *
+	 * @param workflow       - Parsed JSON object (ComfyUI API format).
+	 * @param savedNodes     - Previously-saved node configs used for reconciliation on load.
+	 * @param showToast      - Whether to surface success/warning toasts to the user.
+	 */
+	function parseAndPopulateWorkflowNodes(
+		workflow: Record<string, any>,
+		savedNodes: { type: string; key: string; node_ids: string[] | string }[] = [],
+		showToast = false
+	): boolean {
+		if (!workflow || typeof workflow !== 'object') {
+			if (showToast) toast.error($i18n.t('Invalid workflow data provided for parsing.'));
+			workflowNodesConfig = [];
+			return false;
 		}
-	];
+
+		// Each entry is keyed by "nodeId::class_type::inputKey" so that nodes
+		// sharing the same class and input (e.g. positive vs negative CLIPTextEncode)
+		// are always kept as separate rows rather than merged together.
+		const nodeGroups = new Map<
+			string,
+			{ type: string; key: string; node_ids: string[]; class_type: string }
+		>();
+		let discoveredPrimitiveCount = 0;
+
+		try {
+			for (const nodeId of Object.keys(workflow)) {
+				const node = workflow[nodeId];
+				if (!node || typeof node !== 'object' || !node.inputs || typeof node.inputs !== 'object')
+					continue;
+
+				for (const inputKey of Object.keys(node.inputs)) {
+					const val = node.inputs[inputKey];
+					const valType = typeof val;
+
+					// Only expose primitive (non-link) inputs
+					if (valType !== 'string' && valType !== 'number' && valType !== 'boolean') continue;
+
+					discoveredPrimitiveCount++;
+
+					// Unique key per node+input — never merges across different node IDs
+					const entryKey = `${nodeId}::${node.class_type}::${inputKey}`;
+					// The "type" stored in COMFYUI_WORKFLOW_NODES uses class_type::inputKey
+					const semanticType = `${node.class_type}::${inputKey}`;
+
+					// Check if this entry had saved node IDs the user configured
+					const saved = savedNodes.find(
+						(s) =>
+							s.type === semanticType &&
+							s.key === inputKey &&
+							Array.isArray(s.node_ids) &&
+							s.node_ids.length > 0 &&
+							(s.node_ids as string[]).includes(nodeId)
+					);
+
+					if (!nodeGroups.has(entryKey)) {
+						nodeGroups.set(entryKey, {
+							type: semanticType,
+							key: inputKey,
+							node_ids: [nodeId],
+							class_type: node.class_type
+						});
+					}
+				}
+			}
+		} catch (err) {
+			console.error('Error parsing workflow nodes:', err);
+			if (showToast) toast.error($i18n.t('Error occurred during workflow parsing.'));
+			workflowNodesConfig = [];
+			return false;
+		}
+
+		// Convert map → array, joining node_ids to comma-separated string for the UI input fields
+		workflowNodesConfig = Array.from(nodeGroups.values()).map((n) => ({
+			...n,
+			node_ids: n.node_ids.join(',')
+		}));
+
+		if (showToast) {
+			if (workflowNodesConfig.length > 0) {
+				toast.success(
+					$i18n.t(
+						`Workflow parsed. {{count}} configurable input(s) found. Please review the Node IDs.`,
+						{ count: workflowNodesConfig.length }
+					)
+				);
+			} else if (discoveredPrimitiveCount === 0 && Object.keys(workflow).length > 0) {
+				toast.info(
+					$i18n.t(
+						'Workflow parsed, but no configurable primitive inputs were found. Ensure you exported in API format.'
+					)
+				);
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Reads config.COMFYUI_WORKFLOW, validates it, and triggers node auto-detection.
+	 * @param showToast   - Surface toasts to the user.
+	 * @param isNewImport - When true, ignore previously-saved node IDs (fresh import).
+	 */
+	const parseWorkflowAndUpdateNodes = (showToast = false, isNewImport = false) => {
+		const wfString: string = config.COMFYUI_WORKFLOW ?? '';
+
+		// Skip if nothing changed (unless it's an explicit new import)
+		if (showToast && wfString === lastKnownWorkflowString && !isNewImport) return;
+
+		if (wfString.trim() === '') {
+			workflowNodesConfig = [];
+			lastKnownWorkflowString = wfString;
+			return;
+		}
+
+		try {
+			const parsed = JSON.parse(wfString);
+			const isValidApiFormat = Object.values(parsed).some(
+				(n: any) => n && typeof n === 'object' && n.class_type && n.inputs
+			);
+
+			if (!isValidApiFormat) {
+				workflowNodesConfig = [];
+				if (showToast)
+					toast.warning(
+						$i18n.t(
+							'Not a valid ComfyUI API Workflow JSON format. Make sure to export as API format from ComfyUI.'
+						)
+					);
+				return;
+			}
+
+			const reconcileWith = isNewImport ? [] : (config.COMFYUI_WORKFLOW_NODES ?? []);
+			const ok = parseAndPopulateWorkflowNodes(parsed, reconcileWith, showToast);
+			if (ok) lastKnownWorkflowString = wfString;
+		} catch {
+			workflowNodesConfig = [];
+			if (showToast) toast.error($i18n.t('Invalid JSON syntax in ComfyUI Workflow.'));
+		}
+	};
 
 	let showComfyUIEditWorkflowEditor = false;
-	let REQUIRED_EDIT_WORKFLOW_NODES = [
-		{
-			type: 'image',
-			key: 'image',
-			node_ids: ''
-		},
-		{
-			type: 'prompt',
-			key: 'prompt',
-			node_ids: ''
-		},
-		{
-			type: 'model',
-			key: 'unet_name',
-			node_ids: ''
-		},
-		{
-			type: 'width',
-			key: 'width',
-			node_ids: ''
-		},
-		{
-			type: 'height',
-			key: 'height',
-			node_ids: ''
+
+	// Dynamic edit-workflow node config
+	let editWorkflowNodesConfig: {
+		type: string;
+		key: string;
+		node_ids: string;
+		class_type: string;
+	}[] = [];
+	let lastKnownEditWorkflowString: string | null = null;
+
+	/**
+	 * Same as parseWorkflowAndUpdateNodes but operates on the edit-workflow config.
+	 */
+	const parseEditWorkflowAndUpdateNodes = (showToast = false, isNewImport = false) => {
+		const wfString: string = config.IMAGES_EDIT_COMFYUI_WORKFLOW ?? '';
+
+		if (showToast && wfString === lastKnownEditWorkflowString && !isNewImport) return;
+
+		if (wfString.trim() === '') {
+			editWorkflowNodesConfig = [];
+			lastKnownEditWorkflowString = wfString;
+			return;
 		}
-	];
+
+		try {
+			const parsed = JSON.parse(wfString);
+			const isValidApiFormat = Object.values(parsed).some(
+				(n: any) => n && typeof n === 'object' && n.class_type && n.inputs
+			);
+
+			if (!isValidApiFormat) {
+				editWorkflowNodesConfig = [];
+				if (showToast)
+					toast.warning(
+						$i18n.t(
+							'Not a valid ComfyUI API Workflow JSON format. Make sure to export as API format from ComfyUI.'
+						)
+					);
+				return;
+			}
+
+			const reconcileWith = isNewImport ? [] : (config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES ?? []);
+			// Re-use the same parsing function, writing to editWorkflowNodesConfig
+			const savedNodes = reconcileWith;
+			if (!parsed || typeof parsed !== 'object') {
+				editWorkflowNodesConfig = [];
+				return;
+			}
+			const nodeGroups = new Map<
+				string,
+				{ type: string; key: string; node_ids: string[]; class_type: string }
+			>();
+			for (const nodeId of Object.keys(parsed)) {
+				const node = parsed[nodeId];
+				if (!node || typeof node !== 'object' || !node.inputs || typeof node.inputs !== 'object')
+					continue;
+				for (const inputKey of Object.keys(node.inputs)) {
+					const val = node.inputs[inputKey];
+					const valType = typeof val;
+					if (valType !== 'string' && valType !== 'number' && valType !== 'boolean') continue;
+
+					// Unique key per node+input — never merges across different node IDs
+					const entryKey = `${nodeId}::${node.class_type}::${inputKey}`;
+					const semanticType = `${node.class_type}::${inputKey}`;
+
+					if (!nodeGroups.has(entryKey)) {
+						nodeGroups.set(entryKey, {
+							type: semanticType,
+							key: inputKey,
+							node_ids: [nodeId],
+							class_type: node.class_type
+						});
+					}
+				}
+			}
+			editWorkflowNodesConfig = Array.from(nodeGroups.values()).map((n) => ({
+				...n,
+				node_ids: n.node_ids.join(',')
+			}));
+
+			if (showToast && editWorkflowNodesConfig.length > 0) {
+				toast.success(
+					$i18n.t(
+						`Workflow parsed. {{count}} configurable input(s) found. Please review the Node IDs.`,
+						{ count: editWorkflowNodesConfig.length }
+					)
+				);
+			}
+			lastKnownEditWorkflowString = wfString;
+		} catch {
+			editWorkflowNodesConfig = [];
+			if (showToast) toast.error($i18n.t('Invalid JSON syntax in ComfyUI Workflow.'));
+		}
+	};
 
 	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
@@ -175,21 +359,18 @@
 	const saveHandler = async () => {
 		loading = true;
 
+		// Serialize dynamic workflow node configs before saving
 		if (config?.COMFYUI_WORKFLOW) {
 			if (!validateJSON(config?.COMFYUI_WORKFLOW)) {
 				toast.error($i18n.t('Invalid JSON format for ComfyUI Workflow.'));
 				loading = false;
 				return;
 			}
-
-			config.COMFYUI_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
-				return {
-					type: node.type,
-					key: node.key,
-					node_ids:
-						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
-				};
-			});
+			config.COMFYUI_WORKFLOW_NODES = workflowNodesConfig.map((node) => ({
+				type: node.type,
+				key: node.key,
+				node_ids: node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+			}));
 		}
 
 		if (config?.IMAGES_EDIT_COMFYUI_WORKFLOW) {
@@ -198,15 +379,11 @@
 				loading = false;
 				return;
 			}
-
-			config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
-				return {
-					type: node.type,
-					key: node.key,
-					node_ids:
-						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
-				};
-			});
+			config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = editWorkflowNodesConfig.map((node) => ({
+				type: node.type,
+				key: node.key,
+				node_ids: node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+			}));
 		}
 
 		const res = await updateConfigHandler();
@@ -236,24 +413,16 @@
 				getModels();
 			}
 
+			// Pretty-print stored workflow JSON for the code editor
 			if (config.COMFYUI_WORKFLOW) {
 				try {
 					config.COMFYUI_WORKFLOW = JSON.stringify(JSON.parse(config.COMFYUI_WORKFLOW), null, 2);
 				} catch (e) {
 					console.error(e);
 				}
+				// Auto-parse on load, reconciling with any saved node configs
+				parseWorkflowAndUpdateNodes(false, false);
 			}
-
-			REQUIRED_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
-				const n = config.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
-				console.debug(n);
-
-				return {
-					type: n.type,
-					key: n.key,
-					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
-				};
-			});
 
 			if (config.IMAGES_EDIT_COMFYUI_WORKFLOW) {
 				try {
@@ -265,6 +434,7 @@
 				} catch (e) {
 					console.error(e);
 				}
+				parseEditWorkflowAndUpdateNodes(false, false);
 			}
 
 			config.IMAGES_OPENAI_API_PARAMS =
@@ -276,18 +446,6 @@
 				typeof config.AUTOMATIC1111_PARAMS === 'object'
 					? JSON.stringify(config.AUTOMATIC1111_PARAMS ?? {}, null, 2)
 					: config.AUTOMATIC1111_PARAMS;
-
-			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
-				const n =
-					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
-				console.debug(n);
-
-				return {
-					type: n.type,
-					key: n.key,
-					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
-				};
-			});
 		}
 	});
 </script>
@@ -546,13 +704,14 @@
 								accept=".json"
 								on:change={(e) => {
 									const file = e.target.files[0];
+									if (!file) return;
 									const reader = new FileReader();
-
-									reader.onload = (e) => {
-										config.COMFYUI_WORKFLOW = e.target.result;
-										e.target.value = null;
+									reader.onload = (ev) => {
+										config.COMFYUI_WORKFLOW = ev.target.result as string;
+										// Auto-detect nodes from fresh import
+										parseWorkflowAndUpdateNodes(true, true);
+										(e.target as HTMLInputElement).value = '';
 									};
-
 									reader.readAsText(file);
 								}}
 							/>
@@ -599,9 +758,11 @@
 									lang="json"
 									onChange={(e) => {
 										config.COMFYUI_WORKFLOW = e;
+										// Re-detect nodes as the user edits JSON
+										parseWorkflowAndUpdateNodes(false, false);
 									}}
 									onSave={() => {
-										console.log('Saved');
+										parseWorkflowAndUpdateNodes(true, false);
 									}}
 								/>
 								<!-- {#if config.COMFYUI_WORKFLOW}
@@ -618,51 +779,63 @@
 						{#if config.COMFYUI_WORKFLOW}
 							<AdminSettingField
 								label={$i18n.t('ComfyUI Workflow Nodes')}
-								description={$i18n.t('Map workflow node inputs used for image generation.')}
+								description={$i18n.t(
+									'Node IDs are auto-detected from your workflow. Adjust them if needed.'
+								)}
 							>
-								<div class="flex flex-col gap-1.5 text-xs">
-									{#each REQUIRED_WORKFLOW_NODES as node}
-										<div class="flex w-full flex-col">
-											<div class="shrink-0">
-												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
-													{node.type}{node.type === 'prompt' ? '*' : ''}
-												</div>
-											</div>
+								{#if workflowNodesConfig.length > 0}
+									<div class="flex items-center gap-1 text-xs text-green-500 dark:text-green-400">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-3 h-3"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+										{$i18n.t('Auto-detected')}
+									</div>
 
-											<div class="flex mt-0.5 items-center">
-												<div class="">
-													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
-														<input
-															class="{inputClass} w-24"
-															placeholder={$i18n.t('Key')}
-															bind:value={node.key}
-															required
-														/>
-													</Tooltip>
-												</div>
-
-												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
-
-												<div class="w-full">
-													<Tooltip
-														content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
-														placement="top-start"
+									<div class="mt-1 flex flex-col gap-1.5 text-xs">
+										{#each workflowNodesConfig as node}
+											<div class="flex w-full flex-col">
+												<div class="shrink-0">
+													<div
+														class="line-clamp-1 text-gray-400 dark:text-gray-500"
+														title={node.type}
 													>
-														<input
-															class={inputClass}
-															placeholder={$i18n.t('Node Ids')}
-															bind:value={node.node_ids}
-														/>
-													</Tooltip>
+														<span class="font-medium">{node.class_type}</span><span
+															class="opacity-60">::{node.key}</span
+														>
+													</div>
+												</div>
+
+												<div class="mt-0.5 flex items-center">
+													<div class="w-full">
+														<Tooltip
+															content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
+															placement="top-start"
+														>
+															<input
+																class={inputClass}
+																placeholder={$i18n.t('Node Ids')}
+																bind:value={node.node_ids}
+															/>
+														</Tooltip>
+													</div>
 												</div>
 											</div>
-										</div>
-									{/each}
-								</div>
-
-								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-									{$i18n.t('*Prompt node ID(s) are required for image generation')}
-								</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+										{$i18n.t('No configurable inputs detected. Upload a workflow in API format.')}
+									</div>
+								{/if}
 							</AdminSettingField>
 						{/if}
 					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
@@ -843,13 +1016,14 @@
 								accept=".json"
 								on:change={(e) => {
 									const file = e.target.files[0];
+									if (!file) return;
 									const reader = new FileReader();
-
-									reader.onload = (e) => {
-										config.IMAGES_EDIT_COMFYUI_WORKFLOW = e.target.result;
-										e.target.value = null;
+									reader.onload = (ev) => {
+										config.IMAGES_EDIT_COMFYUI_WORKFLOW = ev.target.result as string;
+										// Auto-detect nodes from fresh import
+										parseEditWorkflowAndUpdateNodes(true, true);
+										(e.target as HTMLInputElement).value = '';
 									};
-
 									reader.readAsText(file);
 								}}
 							/>
@@ -895,9 +1069,11 @@
 								lang="json"
 								onChange={(e) => {
 									config.IMAGES_EDIT_COMFYUI_WORKFLOW = e;
+									// Re-detect nodes as the user edits JSON
+									parseEditWorkflowAndUpdateNodes(false, false);
 								}}
 								onSave={() => {
-									console.log('Saved');
+									parseEditWorkflowAndUpdateNodes(true, false);
 								}}
 							/>
 						</div>
@@ -905,51 +1081,63 @@
 						{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 							<AdminSettingField
 								label={$i18n.t('ComfyUI Workflow Nodes')}
-								description={$i18n.t('Map workflow node inputs used for image edits.')}
+								description={$i18n.t(
+									'Node IDs are auto-detected from your workflow. Adjust them if needed.'
+								)}
 							>
-								<div class="flex flex-col gap-1.5 text-xs">
-									{#each REQUIRED_EDIT_WORKFLOW_NODES as node}
-										<div class="flex w-full flex-col">
-											<div class="shrink-0">
-												<div class=" capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500">
-													{node.type}{['prompt', 'image'].includes(node.type) ? '*' : ''}
-												</div>
-											</div>
+								{#if editWorkflowNodesConfig.length > 0}
+									<div class="flex items-center gap-1 text-xs text-green-500 dark:text-green-400">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-3 h-3"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+										{$i18n.t('Auto-detected')}
+									</div>
 
-											<div class="flex mt-0.5 items-center">
-												<div class="">
-													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
-														<input
-															class="{inputClass} w-24"
-															placeholder={$i18n.t('Key')}
-															bind:value={node.key}
-															required
-														/>
-													</Tooltip>
-												</div>
-
-												<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
-
-												<div class="w-full">
-													<Tooltip
-														content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
-														placement="top-start"
+									<div class="mt-1 flex flex-col gap-1.5 text-xs">
+										{#each editWorkflowNodesConfig as node}
+											<div class="flex w-full flex-col">
+												<div class="shrink-0">
+													<div
+														class="line-clamp-1 text-gray-400 dark:text-gray-500"
+														title={node.type}
 													>
-														<input
-															class={inputClass}
-															placeholder={$i18n.t('Node Ids')}
-															bind:value={node.node_ids}
-														/>
-													</Tooltip>
+														<span class="font-medium">{node.class_type}</span><span
+															class="opacity-60">::{node.key}</span
+														>
+													</div>
+												</div>
+
+												<div class="mt-0.5 flex items-center">
+													<div class="w-full">
+														<Tooltip
+															content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
+															placement="top-start"
+														>
+															<input
+																class={inputClass}
+																placeholder={$i18n.t('Node Ids')}
+																bind:value={node.node_ids}
+															/>
+														</Tooltip>
+													</div>
 												</div>
 											</div>
-										</div>
-									{/each}
-								</div>
-
-								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-									{$i18n.t('*Prompt node ID(s) are required for image generation')}
-								</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+										{$i18n.t('No configurable inputs detected. Upload a workflow in API format.')}
+									</div>
+								{/if}
 							</AdminSettingField>
 						{/if}
 					{:else if config?.IMAGE_EDIT_ENGINE === 'gemini'}
