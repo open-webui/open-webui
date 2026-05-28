@@ -20,7 +20,7 @@ from fastapi import (
 from fastapi.responses import RedirectResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
@@ -503,9 +503,19 @@ async def get_model_profile_image(
                 header, base64_data = profile_image_url.split(',', 1)
                 image_data = base64.b64decode(base64_data)
                 image_buffer = io.BytesIO(image_data)
-                media_type = header.split(';')[0].lstrip('data:')
+                media_type = header.split(';')[0].lstrip('data:').lower()
 
-                headers = {'Content-Disposition': 'inline'}
+                # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
+                if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                    return RedirectResponse(
+                        url='/static/favicon.png',
+                        status_code=status.HTTP_302_FOUND,
+                    )
+
+                headers = {
+                    'Content-Disposition': 'inline',
+                    'X-Content-Type-Options': 'nosniff',
+                }
                 if updated_at:
                     headers['ETag'] = f'"{updated_at}"'
 
