@@ -646,7 +646,12 @@ class ChatTable:
 
             if message_id in history.get('messages', {}):
                 message_files = history['messages'][message_id].get('files', [])
-                message_files = message_files + files
+                # Dedupe by url to avoid double-attaching the same file when
+                # the frontend optimistically persists files via a parallel
+                # POST /chats/{id} before this writer runs. See #19518.
+                existing_urls = {f.get('url') for f in message_files if f.get('url')}
+                new_files = [f for f in files if f.get('url') not in existing_urls]
+                message_files = message_files + new_files
                 history['messages'][message_id]['files'] = message_files
 
             chat['history'] = history
