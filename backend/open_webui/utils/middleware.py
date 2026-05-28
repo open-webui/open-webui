@@ -1332,7 +1332,19 @@ async def chat_completion_tools_handler(
 
                 tool_function_name = tool_call.get('name', None)
                 if tool_function_name not in tools:
-                    return body, {}
+                    available_keys = sorted(tools.keys())
+                    available = ', '.join(available_keys) if available_keys else '(none)'
+                    error_msg = f'Tool "{tool_function_name}" not found. Available tools: {available}'
+                    log.warning(error_msg)
+                    sources.append(
+                        {
+                            'source': {'name': str(tool_function_name)},
+                            'document': [error_msg],
+                            'metadata': [{'source': str(tool_function_name), 'parameters': {}}],
+                            'tool_result': True,
+                        }
+                    )
+                    return
 
                 tool_function_params = tool_call.get('parameters', {})
 
