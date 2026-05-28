@@ -985,25 +985,36 @@ async def image_edits(
             model = f'{model}:generateContent'
             data = {'contents': [{'parts': [{'text': form_data.prompt}]}]}
 
+            def _parse_data_url(s: str):
+                # Accept "data:image/<type>;base64,<payload>" or a bare base64
+                # payload. Returns (mime_type, base64_payload).
+                if s.startswith('data:') and ',' in s:
+                    header, payload = s.split(',', 1)
+                    mt = header[5:].split(';', 1)[0] or 'image/png'
+                    return mt, payload
+                return 'image/png', s
+
             if isinstance(form_data.image, str):
+                mime_type, payload = _parse_data_url(form_data.image)
                 data['contents'][0]['parts'].append(
                     {
                         'inline_data': {
-                            'mime_type': 'image/png',
-                            'data': form_data.image.split(',', 1)[1],
+                            'mime_type': mime_type,
+                            'data': payload,
                         }
                     }
                 )
             elif isinstance(form_data.image, list):
+                parsed = [_parse_data_url(image) for image in form_data.image]
                 data['contents'][0]['parts'].extend(
                     [
                         {
                             'inline_data': {
-                                'mime_type': 'image/png',
-                                'data': image.split(',', 1)[1],
+                                'mime_type': mime_type,
+                                'data': payload,
                             }
                         }
-                        for image in form_data.image
+                        for (mime_type, payload) in parsed
                     ]
                 )
 
