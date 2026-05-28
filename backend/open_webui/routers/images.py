@@ -32,6 +32,7 @@ from open_webui.utils.access_control import has_permission
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.routers.openai import get_headers_and_cookies
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
@@ -123,6 +124,7 @@ class ImagesConfig(BaseModel):
     IMAGE_GENERATION_MODEL: str
     IMAGE_SIZE: Optional[str]
     IMAGE_STEPS: Optional[int]
+    IMAGE_GENERATION_DIRECT_CONNECTION_MODE: str
 
     IMAGES_OPENAI_API_BASE_URL: str
     IMAGES_OPENAI_API_KEY: str
@@ -158,6 +160,94 @@ class ImagesConfig(BaseModel):
     IMAGES_EDIT_COMFYUI_WORKFLOW_NODES: list[dict]
 
 
+class DirectConnectionsForm(BaseModel):
+    OPENAI_API_BASE_URLS: list[str] = []
+    OPENAI_API_KEYS: list[str] = []
+    OPENAI_API_CONFIGS: dict = {}
+
+
+def get_direct_connections_from_payload(form_data=None, metadata=None) -> Optional[DirectConnectionsForm]:
+    direct_connections = None
+    if form_data is not None:
+        direct_connections = getattr(form_data, 'direct_connections', None)
+    if direct_connections is None and metadata:
+        direct_connections = metadata.get('direct_connections')
+
+    if not direct_connections:
+        return None
+
+    if isinstance(direct_connections, DirectConnectionsForm):
+        return direct_connections
+
+    try:
+        return DirectConnectionsForm(**direct_connections)
+    except Exception:
+        return None
+
+
+def get_direct_openai_connection(
+    request: Request,
+    model: str,
+    direct_connections: Optional[DirectConnectionsForm],
+):
+    if not request.app.state.config.ENABLE_DIRECT_CONNECTIONS or not direct_connections:
+        return None
+
+    urls = direct_connections.OPENAI_API_BASE_URLS or []
+    keys = direct_connections.OPENAI_API_KEYS or []
+    configs = direct_connections.OPENAI_API_CONFIGS or {}
+
+    for idx, url in enumerate(urls):
+        if not url:
+            continue
+
+        api_config = configs.get(str(idx), configs.get(url, {})) or {}
+        if api_config.get('enable', True) is False:
+            continue
+
+        prefix_id = api_config.get('prefix_id')
+        connection_model = model
+        if prefix_id and connection_model.startswith(f'{prefix_id}.'):
+            connection_model = connection_model.replace(f'{prefix_id}.', '', 1)
+
+        model_ids = api_config.get('model_ids') or []
+        if model_ids and connection_model not in model_ids:
+            continue
+
+        key = keys[idx] if idx < len(keys) else ''
+        return {
+            'url': url.rstrip('/'),
+            'key': key,
+            'config': api_config,
+            'model': connection_model,
+        }
+
+    return None
+
+
+def should_use_direct_connections(request: Request) -> bool:
+    return (
+        request.app.state.config.ENABLE_DIRECT_CONNECTIONS
+        and request.app.state.config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE in ['optional', 'required']
+    )
+
+
+def should_require_direct_connections(request: Request, user) -> bool:
+    return (
+        request.app.state.config.ENABLE_DIRECT_CONNECTIONS
+        and request.app.state.config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE == 'required'
+        and user
+        and user.role != 'admin'
+    )
+
+
+def raise_direct_connection_required():
+    raise HTTPException(
+        status_code=400,
+        detail=ERROR_MESSAGES.DEFAULT('User direct connection is required for image generation.'),
+    )
+
+
 @router.get('/config', response_model=ImagesConfig)
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
@@ -167,6 +257,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         'IMAGE_GENERATION_MODEL': request.app.state.config.IMAGE_GENERATION_MODEL,
         'IMAGE_SIZE': request.app.state.config.IMAGE_SIZE,
         'IMAGE_STEPS': request.app.state.config.IMAGE_STEPS,
+        'IMAGE_GENERATION_DIRECT_CONNECTION_MODE': request.app.state.config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE,
         'IMAGES_OPENAI_API_BASE_URL': request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
         'IMAGES_OPENAI_API_KEY': request.app.state.config.IMAGES_OPENAI_API_KEY,
         'IMAGES_OPENAI_API_VERSION': request.app.state.config.IMAGES_OPENAI_API_VERSION,
@@ -233,6 +324,13 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
             detail=ERROR_MESSAGES.INCORRECT_FORMAT('  (e.g., 50).'),
         )
 
+    if form_data.IMAGE_GENERATION_DIRECT_CONNECTION_MODE not in ['disabled', 'optional', 'required']:
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.INCORRECT_FORMAT('  (disabled, optional, required).'),
+        )
+    request.app.state.config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE = form_data.IMAGE_GENERATION_DIRECT_CONNECTION_MODE
+
     request.app.state.config.IMAGES_OPENAI_API_BASE_URL = form_data.IMAGES_OPENAI_API_BASE_URL
     request.app.state.config.IMAGES_OPENAI_API_KEY = form_data.IMAGES_OPENAI_API_KEY
     request.app.state.config.IMAGES_OPENAI_API_VERSION = form_data.IMAGES_OPENAI_API_VERSION
@@ -276,6 +374,7 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
         'IMAGE_GENERATION_MODEL': request.app.state.config.IMAGE_GENERATION_MODEL,
         'IMAGE_SIZE': request.app.state.config.IMAGE_SIZE,
         'IMAGE_STEPS': request.app.state.config.IMAGE_STEPS,
+        'IMAGE_GENERATION_DIRECT_CONNECTION_MODE': request.app.state.config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE,
         'IMAGES_OPENAI_API_BASE_URL': request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
         'IMAGES_OPENAI_API_KEY': request.app.state.config.IMAGES_OPENAI_API_KEY,
         'IMAGES_OPENAI_API_VERSION': request.app.state.config.IMAGES_OPENAI_API_VERSION,
@@ -434,6 +533,7 @@ class CreateImageForm(BaseModel):
     n: int = 1
     steps: Optional[int] = None
     negative_prompt: Optional[str] = None
+    direct_connections: Optional[DirectConnectionsForm] = None
 
 
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
@@ -545,22 +645,53 @@ async def image_generations(
     width, height = tuple(map(int, size.split('x')))
 
     metadata = metadata or {}
+    upload_metadata = {k: v for k, v in metadata.items() if k != 'direct_connections'}
 
-    model = await get_image_model(request)
+    model = form_data.model if form_data.model else await get_image_model(request)
 
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == 'openai':
-            headers = {
-                'Authorization': f'Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}',
-                'Content-Type': 'application/json',
-            }
+            direct_connection = (
+                get_direct_openai_connection(
+                    request,
+                    model,
+                    get_direct_connections_from_payload(form_data, metadata),
+                )
+                if should_use_direct_connections(request)
+                else None
+            )
 
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers = include_user_info_headers(headers, user)
+            if direct_connection:
+                model = direct_connection['model']
+                api_config = direct_connection['config']
+                headers, cookies = await get_headers_and_cookies(
+                    request,
+                    direct_connection['url'],
+                    direct_connection['key'],
+                    api_config,
+                    metadata=metadata,
+                    user=user,
+                )
 
-            url = f'{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
-            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
-                url = f'{url}?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}'
+                url = f'{direct_connection["url"]}/images/generations'
+                if api_config.get('api_version'):
+                    url = f'{url}?api-version={api_config.get("api_version")}'
+            else:
+                if should_require_direct_connections(request, user):
+                    raise_direct_connection_required()
+
+                cookies = None
+                headers = {
+                    'Authorization': f'Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}',
+                    'Content-Type': 'application/json',
+                }
+
+                if ENABLE_FORWARD_USER_INFO_HEADERS:
+                    headers = include_user_info_headers(headers, user)
+
+                url = f'{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
+                if request.app.state.config.IMAGES_OPENAI_API_VERSION:
+                    url = f'{url}?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}'
 
             data = {
                 'model': model,
@@ -575,7 +706,7 @@ async def image_generations(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        request.app.state.config.IMAGE_GENERATION_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),
@@ -591,6 +722,7 @@ async def image_generations(
                 url=url,
                 json=data,
                 headers=headers,
+                cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
@@ -607,7 +739,7 @@ async def image_generations(
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
 
-                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                _, url = await upload_image(request, image_data, content_type, {**data, **upload_metadata}, user)
                 images.append({'url': url})
             return images
 
@@ -651,7 +783,7 @@ async def image_generations(
             if model.endswith(':predict'):
                 for image in res['predictions']:
                     image_data, content_type = await get_image_data(image['bytesBase64Encoded'])
-                    _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                    _, url = await upload_image(request, image_data, content_type, {**data, **upload_metadata}, user)
                     images.append({'url': url})
             elif model.endswith(':generateContent'):
                 for image in res['candidates']:
@@ -662,7 +794,7 @@ async def image_generations(
                                 request,
                                 image_data,
                                 content_type,
-                                {**data, **metadata},
+                                {**data, **upload_metadata},
                                 user,
                             )
                             images.append({'url': url})
@@ -715,7 +847,7 @@ async def image_generations(
                     request,
                     image_data,
                     content_type,
-                    {**form_data.model_dump(exclude_none=True), **metadata},
+                    {**form_data.model_dump(exclude_none=True), **upload_metadata},
                     user,
                 )
                 images.append({'url': url})
@@ -761,7 +893,7 @@ async def image_generations(
                     request,
                     image_data,
                     content_type,
-                    {**data, 'info': res['info'], **metadata},
+                    {**data, 'info': res['info'], **upload_metadata},
                     user,
                 )
                 images.append({'url': url})
@@ -781,6 +913,7 @@ class EditImageForm(BaseModel):
     n: Optional[int] = None
     negative_prompt: Optional[str] = None
     background: Optional[str] = None
+    direct_connections: Optional[DirectConnectionsForm] = None
 
 
 @router.post('/edit')
@@ -868,12 +1001,42 @@ async def image_edits(
 
     try:
         if request.app.state.config.IMAGE_EDIT_ENGINE == 'openai':
-            headers = {
-                'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY}',
-            }
+            direct_connection = (
+                get_direct_openai_connection(
+                    request,
+                    model,
+                    get_direct_connections_from_payload(form_data, metadata),
+                )
+                if should_use_direct_connections(request)
+                else None
+            )
 
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers = include_user_info_headers(headers, user)
+            if direct_connection:
+                model = direct_connection['model']
+                api_config = direct_connection['config']
+                headers, cookies = await get_headers_and_cookies(
+                    request,
+                    direct_connection['url'],
+                    direct_connection['key'],
+                    api_config,
+                    metadata=metadata,
+                    user=user,
+                )
+                base_url = direct_connection['url']
+                api_version = api_config.get('api_version')
+            else:
+                if should_require_direct_connections(request, user):
+                    raise_direct_connection_required()
+
+                cookies = None
+                headers = {
+                    'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY}',
+                }
+
+                if ENABLE_FORWARD_USER_INFO_HEADERS:
+                    headers = include_user_info_headers(headers, user)
+                base_url = request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL
+                api_version = request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION
 
             data = {
                 'model': model,
@@ -885,7 +1048,7 @@ async def image_edits(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        request.app.state.config.IMAGE_EDIT_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),
@@ -899,8 +1062,8 @@ async def image_edits(
                     files.append(get_image_file_item(img, 'image[]'))
 
             url_search_params = ''
-            if request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION:
-                url_search_params += f'?api-version={request.app.state.config.IMAGES_EDIT_OPENAI_API_VERSION}'
+            if api_version:
+                url_search_params += f'?api-version={api_version}'
 
             # Build multipart form data for aiohttp
             form = aiohttp.FormData()
@@ -919,8 +1082,9 @@ async def image_edits(
 
             session = await get_session()
             async with session.post(
-                url=f'{request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL}/images/edits{url_search_params}',
+                url=f'{base_url}/images/edits{url_search_params}',
                 headers=headers,
+                cookies=cookies,
                 data=form,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
@@ -937,7 +1101,7 @@ async def image_edits(
                 else:
                     image_data, content_type = await get_image_data(image['b64_json'])
 
-                _, url = await upload_image(request, image_data, content_type, {**data, **metadata}, user)
+                _, url = await upload_image(request, image_data, content_type, {**data, **upload_metadata}, user)
                 images.append({'url': url})
             return images
 
@@ -991,7 +1155,7 @@ async def image_edits(
                             request,
                             image_data,
                             content_type,
-                            {**data, **metadata},
+                            {**data, **upload_metadata},
                             user,
                         )
                         images.append({'url': url})
@@ -1071,7 +1235,7 @@ async def image_edits(
                     request,
                     image_data,
                     content_type,
-                    {**form_data.model_dump(exclude_none=True), **metadata},
+                    {**form_data.model_dump(exclude_none=True), **upload_metadata},
                     user,
                 )
                 images.append({'url': url})

@@ -112,7 +112,11 @@
 			config.ENABLE_IMAGE_GENERATION = false;
 
 			return null;
-		} else if (config.IMAGE_GENERATION_ENGINE === 'openai' && config.IMAGES_OPENAI_API_KEY === '') {
+		} else if (
+			config.IMAGE_GENERATION_ENGINE === 'openai' &&
+			config.IMAGES_OPENAI_API_KEY === '' &&
+			(config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE ?? 'disabled') === 'disabled'
+		) {
 			toast.error($i18n.t('OpenAI API Key is required.'));
 			config.ENABLE_IMAGE_GENERATION = false;
 
@@ -302,6 +306,28 @@
 							</div>
 
 							<Switch bind:state={config.ENABLE_IMAGE_GENERATION} />
+						</div>
+					</div>
+
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs pr-2">
+								<div class="">
+									{$i18n.t('User Direct Connections')}
+								</div>
+							</div>
+
+							<select
+								class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={config.IMAGE_GENERATION_DIRECT_CONNECTION_MODE}
+							>
+								<option value="disabled">{$i18n.t('Disabled')}</option>
+								<option value="optional">{$i18n.t('Use when available')}</option>
+								<option value="required">{$i18n.t('Required for users')}</option>
+							</select>
+						</div>
+						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t("When enabled, OpenAI image generation can use each user's Direct Connections API key for billing.")}
 						</div>
 					</div>
 				</div>

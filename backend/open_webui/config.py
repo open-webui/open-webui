@@ -3841,6 +3841,12 @@ IMAGES_OPENAI_API_PARAMS = PersistentConfig(
     'IMAGES_OPENAI_API_PARAMS', 'image_generation.openai.params', images_openai_params
 )
 
+IMAGE_GENERATION_DIRECT_CONNECTION_MODE = PersistentConfig(
+    'IMAGE_GENERATION_DIRECT_CONNECTION_MODE',
+    'image_generation.direct_connection.mode',
+    os.getenv('IMAGE_GENERATION_DIRECT_CONNECTION_MODE', 'disabled'),
+)
+
 
 IMAGES_GEMINI_API_BASE_URL = PersistentConfig(
     'IMAGES_GEMINI_API_BASE_URL',

@@ -1804,6 +1804,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 metadata={
                     'chat_id': metadata.get('chat_id', None),
                     'message_id': metadata.get('message_id', None),
+                    'direct_connections': metadata.get('direct_connections', None),
                 },
                 user=user,
             )
@@ -1893,6 +1894,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 metadata={
                     'chat_id': metadata.get('chat_id', None),
                     'message_id': metadata.get('message_id', None),
+                    'direct_connections': metadata.get('direct_connections', None),
                 },
                 user=user,
             )

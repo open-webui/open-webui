@@ -280,6 +280,7 @@ async def generate_image(
         images = await image_generations(
             request=__request__,
             form_data=CreateImageForm(prompt=prompt),
+            metadata=__metadata__ or {},
             user=user,
         )
 
@@ -347,6 +348,7 @@ async def edit_image(
         images = await image_edits(
             request=__request__,
             form_data=EditImageForm(prompt=prompt, image=image_urls),
+            metadata=__metadata__ or {},
             user=user,
         )
 
