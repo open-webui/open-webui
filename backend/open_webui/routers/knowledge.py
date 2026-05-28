@@ -217,6 +217,7 @@ async def search_knowledge_bases(
 @router.get('/search/files', response_model=KnowledgeFileListResponse)
 async def search_knowledge_files(
     query: str | None = None,
+    include_content: bool = Query(False, description='Include file content in search (expensive).'),
     page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -228,6 +229,8 @@ async def search_knowledge_files(
     filter = {}
     if query:
         filter['query'] = query
+    if include_content:
+        filter['include_content'] = True
 
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     if groups:
@@ -558,6 +561,7 @@ async def update_knowledge_access_by_id(
 async def get_knowledge_files_by_id(
     id: str,
     query: str | None = None,
+    include_content: bool = Query(False, description='Include file content in search (expensive).'),
     view_option: str | None = None,
     order_by: str | None = None,
     direction: str | None = None,
@@ -602,6 +606,8 @@ async def get_knowledge_files_by_id(
     filter = {}
     if query:
         filter['query'] = query
+    if include_content:
+        filter['include_content'] = True
     if view_option:
         filter['view_option'] = view_option
     if order_by:
@@ -996,9 +1002,9 @@ async def reset_knowledge_by_id(
 
 
 class FileManifestEntry(BaseModel):
-    filename: str       # basename: "readme.md"
-    path: str           # relative dir: "docs/api" or "" for root
-    checksum: str       # SHA-256 of raw bytes
+    filename: str  # basename: "readme.md"
+    path: str  # relative dir: "docs/api" or "" for root
+    checksum: str  # SHA-256 of raw bytes
     size: int
 
 
@@ -1007,13 +1013,13 @@ class SyncDiffForm(BaseModel):
 
 
 class SyncDiffResponse(BaseModel):
-    added: list[dict]               # [{filename, path}] — new files
-    modified: list[dict]            # [{filename, path, stale_file_id}] — changed files
-    deleted: list[dict]             # [{file_id, filename}] — files to remove
-    mkdir: list[str]                # directory paths to create
-    rmdir: list[str]                # directory IDs to remove
+    added: list[dict]  # [{filename, path}] — new files
+    modified: list[dict]  # [{filename, path, stale_file_id}] — changed files
+    deleted: list[dict]  # [{file_id, filename}] — files to remove
+    mkdir: list[str]  # directory paths to create
+    rmdir: list[str]  # directory IDs to remove
     unmodified_count: int
-    directory_map: dict[str, str]   # existing path → directory ID
+    directory_map: dict[str, str]  # existing path → directory ID
 
 
 @router.post('/{id}/sync/diff', response_model=SyncDiffResponse)
@@ -1073,11 +1079,13 @@ async def sync_knowledge_diff(
         if key not in indexed_files:
             added.append({'filename': entry.filename, 'path': entry.path})
         elif indexed_files[key]['checksum'] != entry.checksum:
-            modified.append({
-                'filename': entry.filename,
-                'path': entry.path,
-                'stale_file_id': indexed_files[key]['file_id'],
-            })
+            modified.append(
+                {
+                    'filename': entry.filename,
+                    'path': entry.path,
+                    'stale_file_id': indexed_files[key]['file_id'],
+                }
+            )
         else:
             unmodified_count += 1
 
@@ -1091,12 +1099,9 @@ async def sync_knowledge_diff(
         if entry.path:
             segments = entry.path.split('/')
             for depth in range(len(segments)):
-                required_directory_paths.add('/'.join(segments[:depth + 1]))
+                required_directory_paths.add('/'.join(segments[: depth + 1]))
 
-    mkdir = sorted(
-        [p for p in required_directory_paths if p not in directory_id_by_path],
-        key=lambda p: p.count('/')
-    )
+    mkdir = sorted([p for p in required_directory_paths if p not in directory_id_by_path], key=lambda p: p.count('/'))
 
     orphaned_directory_paths = set(directory_id_by_path) - required_directory_paths
     rmdir = [directory_id_by_path[p] for p in orphaned_directory_paths]
@@ -1118,8 +1123,8 @@ async def sync_knowledge_diff(
 
 
 class SyncCleanupForm(BaseModel):
-    file_ids: list[str]         # file IDs to delete
-    dir_ids: list[str] = []     # directory IDs to rmdir
+    file_ids: list[str]  # file IDs to delete
+    dir_ids: list[str] = []  # directory IDs to rmdir
 
 
 @router.post('/{id}/sync/cleanup')
@@ -1144,12 +1149,8 @@ async def sync_knowledge_cleanup(
         await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
 
         try:
-            await ASYNC_VECTOR_DB_CLIENT.delete(
-                collection_name=id, filter={'file_id': file_id}
-            )
-            await ASYNC_VECTOR_DB_CLIENT.delete(
-                collection_name=id, filter={'hash': file.hash}
-            )
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'file_id': file_id})
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
         except Exception:
             pass
 
@@ -1342,9 +1343,7 @@ class KnowledgeFileMoveForm(BaseModel):
     directory_id: Optional[str] = None
 
 
-async def _verify_knowledge_write_access(
-    id: str, user, db: AsyncSession
-):
+async def _verify_knowledge_write_access(id: str, user, db: AsyncSession):
     """Verify the user has write access to the knowledge base. Returns the knowledge model."""
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -1494,4 +1493,3 @@ async def move_file_in_knowledge(
             detail='Failed to move file.',
         )
     return {'status': True}
-

@@ -115,11 +115,12 @@ export const searchKnowledgeBases = async (
 
 export const searchKnowledgeFiles = async (
 	token: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
-	page: number = 1
+	query?: string | null,
+	viewOption?: string | null,
+	orderBy?: string | null,
+	direction?: string | null,
+	page: number = 1,
+	includeContent: boolean = false
 ) => {
 	let error = null;
 
@@ -129,6 +130,7 @@ export const searchKnowledgeFiles = async (
 	if (orderBy) searchParams.append('order_by', orderBy);
 	if (direction) searchParams.append('direction', direction);
 	searchParams.append('page', page.toString());
+	if (includeContent) searchParams.append('include_content', 'true');
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/knowledge/search/files?${searchParams.toString()}`,
@@ -197,12 +199,13 @@ export const getKnowledgeById = async (token: string, id: string) => {
 export const searchKnowledgeFilesById = async (
 	token: string,
 	id: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
+	query?: string | null,
+	viewOption?: string | null,
+	orderBy?: string | null,
+	direction?: string | null,
 	page: number = 1,
-	directoryId?: string | null = undefined
+	directoryId?: string | null,
+	includeContent: boolean = false
 ) => {
 	let error = null;
 
@@ -216,6 +219,7 @@ export const searchKnowledgeFilesById = async (
 	if (directoryId !== undefined) {
 		searchParams.append('directory_id', directoryId ?? '');
 	}
+	if (includeContent) searchParams.append('include_content', 'true');
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/knowledge/${id}/files?${searchParams.toString()}`,
@@ -545,7 +549,6 @@ export const syncKnowledgeCleanup = async (
 
 export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
-
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
 		method: 'DELETE',

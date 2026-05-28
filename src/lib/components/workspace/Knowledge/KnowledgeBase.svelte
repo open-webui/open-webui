@@ -65,6 +65,9 @@
 	import Search from '$lib/components/icons/Search.svelte';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import DropdownOptions from '$lib/components/common/DropdownOptions.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
@@ -107,6 +110,7 @@
 	let inputFiles = null;
 
 	let query = '';
+	let includeContent = false;
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let viewOption = null;
@@ -150,7 +154,8 @@
 		viewOption !== undefined &&
 		sortKey !== undefined &&
 		direction !== undefined &&
-		currentPage !== undefined
+		currentPage !== undefined &&
+		includeContent !== undefined
 	) {
 		getItemsPage();
 	}
@@ -182,7 +187,8 @@
 			sortKey,
 			direction,
 			currentPage,
-			currentDirectoryId
+			currentDirectoryId,
+			includeContent
 		).catch(() => {
 			return null;
 		});
@@ -1272,6 +1278,37 @@
 						}}
 					/>
 
+					<Dropdown align="end">
+						<button
+							class="p-1.5 mr-1 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							type="button"
+						>
+							<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
+						</button>
+
+						<div slot="content">
+							<div
+								class="min-w-[180px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+							>
+								<button
+									class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+									type="button"
+									on:click={() => {
+										includeContent = !includeContent;
+									}}
+								>
+									<Checkbox
+										state={includeContent ? 'checked' : 'unchecked'}
+										on:change={(e) => {
+											includeContent = e.detail === 'checked';
+										}}
+									/>
+									{$i18n.t('File content')}
+								</button>
+							</div>
+						</div>
+					</Dropdown>
+
 					{#if knowledge?.write_access}
 						<div>
 							<AddContentMenu
@@ -1293,27 +1330,15 @@
 									if (pendingSyncFiles?.length) {
 										showSyncConfirmModal = true;
 									}
-							}}
-							onReset={() => {
-								showResetConfirm = true;
-							}}
-						/>
+								}}
+								onReset={() => {
+									showResetConfirm = true;
+								}}
+							/>
 						</div>
 					{/if}
 				</div>
 			</div>
-
-			{#if currentDirectoryId !== null}
-				<div class="px-5 -mt-1 pb-2">
-					<KnowledgeBreadcrumbs
-						rootLabel={knowledge.name}
-						{breadcrumbs}
-						onNavigate={(dirId) => navigateToDirectory(dirId)}
-						onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)}
-						onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
-					/>
-				</div>
-			{/if}
 
 			<div class="px-3 flex justify-between">
 				<div
@@ -1370,6 +1395,18 @@
 					</div>
 				</div>
 			</div>
+
+			{#if currentDirectoryId !== null}
+				<div class="px-5 mt-1 pb-1">
+					<KnowledgeBreadcrumbs
+						rootLabel={knowledge.name}
+						{breadcrumbs}
+						onNavigate={(dirId) => navigateToDirectory(dirId)}
+						onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)}
+						onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
+					/>
+				</div>
+			{/if}
 
 			{#if syncing}
 				<div class="mx-2.5 mt-2.5 -mb-0.5">
@@ -1543,6 +1580,8 @@
 	}}
 >
 	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
-		{$i18n.t('This will remove all files and directories from this knowledge base. This action cannot be undone.')}
+		{$i18n.t(
+			'This will remove all files and directories from this knowledge base. This action cannot be undone.'
+		)}
 	</div>
 </ConfirmDialog>

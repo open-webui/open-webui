@@ -360,18 +360,21 @@ class KnowledgeTable:
                 )
 
                 # Apply filename / content search
-                # Use ->> (as_string) instead of CAST(-> AS TEXT) to avoid
-                # PostgreSQL "invalid memory alloc request size" on large
-                # extracted-content rows (#24670).
-                content_text = File.data['content'].as_string()
                 search_filter = None
                 if filter:
                     q = filter.get('query')
                     if q:
-                        search_filter = or_(
-                            File.filename.ilike(f'%{q}%'),
-                            content_text.ilike(f'%{q}%'),
-                        )
+                        if filter.get('include_content'):
+                            # Use ->> (as_string) instead of CAST(-> AS TEXT)
+                            # to avoid PostgreSQL "invalid memory alloc request
+                            # size" on large extracted-content rows (#24670).
+                            content_text = File.data['content'].as_string()
+                            search_filter = or_(
+                                File.filename.ilike(f'%{q}%'),
+                                content_text.ilike(f'%{q}%'),
+                            )
+                        else:
+                            search_filter = File.filename.ilike(f'%{q}%')
                         stmt = stmt.filter(search_filter)
 
                 # Order by file changes
@@ -546,16 +549,19 @@ class KnowledgeTable:
                 if filter:
                     query_key = filter.get('query')
                     if query_key:
-                        # Use ->> (as_string) instead of CAST(-> AS TEXT) to
-                        # avoid PostgreSQL memory allocation failures on large
-                        # content (#24670).
-                        content_text = File.data['content'].as_string()
-                        stmt = stmt.filter(
-                            or_(
-                                File.filename.ilike(f'%{query_key}%'),
-                                content_text.ilike(f'%{query_key}%'),
+                        if filter.get('include_content'):
+                            # Use ->> (as_string) instead of CAST(-> AS TEXT)
+                            # to avoid PostgreSQL memory allocation failures on
+                            # large content (#24670).
+                            content_text = File.data['content'].as_string()
+                            stmt = stmt.filter(
+                                or_(
+                                    File.filename.ilike(f'%{query_key}%'),
+                                    content_text.ilike(f'%{query_key}%'),
+                                )
                             )
-                        )
+                        else:
+                            stmt = stmt.filter(File.filename.ilike(f'%{query_key}%'))
 
                     view_option = filter.get('view_option')
                     if view_option == 'created':
@@ -692,7 +698,9 @@ class KnowledgeTable:
         except Exception:
             return False
 
-    async def reset_knowledge_by_id(self, id: str, include_directories: bool = True, db: Optional[AsyncSession] = None) -> Optional[KnowledgeModel]:
+    async def reset_knowledge_by_id(
+        self, id: str, include_directories: bool = True, db: Optional[AsyncSession] = None
+    ) -> Optional[KnowledgeModel]:
         try:
             async with get_async_db_context(db) as db:
                 # Delete all knowledge_file entries for this knowledge_id
@@ -819,9 +827,7 @@ class KnowledgeTable:
     ) -> list[KnowledgeDirectoryModel]:
         """List directories at a given level (parent_id=None for root)."""
         async with get_async_db_context(db) as db:
-            stmt = select(KnowledgeDirectory).filter(
-                KnowledgeDirectory.knowledge_id == knowledge_id
-            )
+            stmt = select(KnowledgeDirectory).filter(KnowledgeDirectory.knowledge_id == knowledge_id)
             if parent_id:
                 stmt = stmt.filter(KnowledgeDirectory.parent_id == parent_id)
             else:
@@ -859,10 +865,7 @@ class KnowledgeTable:
                     .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
                 )
-                return [
-                    (FileModel.model_validate(file), dir_id)
-                    for file, dir_id in result.all()
-                ]
+                return [(FileModel.model_validate(file), dir_id) for file, dir_id in result.all()]
         except Exception:
             return []
 
@@ -870,9 +873,7 @@ class KnowledgeTable:
         self, directory_id: str, db: Optional[AsyncSession] = None
     ) -> Optional[KnowledgeDirectoryModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(KnowledgeDirectory).filter_by(id=directory_id)
-            )
+            result = await db.execute(select(KnowledgeDirectory).filter_by(id=directory_id))
             directory = result.scalars().first()
             return KnowledgeDirectoryModel.model_validate(directory) if directory else None
 
@@ -892,9 +893,7 @@ class KnowledgeTable:
 
             while current_id and current_id not in seen:
                 seen.add(current_id)
-                result = await db.execute(
-                    select(KnowledgeDirectory).filter_by(id=current_id)
-                )
+                result = await db.execute(select(KnowledgeDirectory).filter_by(id=current_id))
                 directory = result.scalars().first()
                 if not directory:
                     break
@@ -913,9 +912,7 @@ class KnowledgeTable:
         async with get_async_db_context(db) as db:
             try:
                 await db.execute(
-                    update(KnowledgeDirectory)
-                    .filter_by(id=directory_id)
-                    .values(name=name, updated_at=int(time.time()))
+                    update(KnowledgeDirectory).filter_by(id=directory_id).values(name=name, updated_at=int(time.time()))
                 )
                 await db.commit()
                 return await self.get_directory_by_id(directory_id, db=db)
@@ -941,9 +938,7 @@ class KnowledgeTable:
                         if current == directory_id:
                             return None  # Would create a cycle
                         seen.add(current)
-                        result = await db.execute(
-                            select(KnowledgeDirectory.parent_id).filter_by(id=current)
-                        )
+                        result = await db.execute(select(KnowledgeDirectory.parent_id).filter_by(id=current))
                         row = result.first()
                         current = row[0] if row else None
 
@@ -991,9 +986,7 @@ class KnowledgeTable:
         async with get_async_db_context(db) as db:
             try:
                 # Get the directory to find its parent
-                result = await db.execute(
-                    select(KnowledgeDirectory).filter_by(id=directory_id)
-                )
+                result = await db.execute(select(KnowledgeDirectory).filter_by(id=directory_id))
                 directory = result.scalars().first()
                 if not directory:
                     return False
@@ -1003,9 +996,7 @@ class KnowledgeTable:
                 if move_files_to_parent:
                     # Move files in this directory to its parent (or root)
                     await db.execute(
-                        update(KnowledgeFile)
-                        .filter_by(directory_id=directory_id)
-                        .values(directory_id=parent_id)
+                        update(KnowledgeFile).filter_by(directory_id=directory_id).values(directory_id=parent_id)
                     )
                     # Recursively move files from all subdirectories too
                     await self._move_files_from_subtree(directory_id, parent_id, db=db)
@@ -1014,9 +1005,7 @@ class KnowledgeTable:
                     await self._delete_files_in_subtree(directory_id, db=db)
 
                 # CASCADE on parent_id will handle deleting subdirectories
-                await db.execute(
-                    delete(KnowledgeDirectory).filter_by(id=directory_id)
-                )
+                await db.execute(delete(KnowledgeDirectory).filter_by(id=directory_id))
                 await db.commit()
                 return True
             except Exception as e:
@@ -1030,16 +1019,12 @@ class KnowledgeTable:
         db: AsyncSession,
     ) -> None:
         """Recursively move all files from a directory subtree to the target."""
-        result = await db.execute(
-            select(KnowledgeDirectory.id).filter_by(parent_id=directory_id)
-        )
+        result = await db.execute(select(KnowledgeDirectory.id).filter_by(parent_id=directory_id))
         child_ids = [row[0] for row in result.all()]
 
         for child_id in child_ids:
             await db.execute(
-                update(KnowledgeFile)
-                .filter_by(directory_id=child_id)
-                .values(directory_id=target_directory_id)
+                update(KnowledgeFile).filter_by(directory_id=child_id).values(directory_id=target_directory_id)
             )
             await self._move_files_from_subtree(child_id, target_directory_id, db=db)
 
@@ -1049,12 +1034,8 @@ class KnowledgeTable:
         db: AsyncSession,
     ) -> None:
         """Recursively delete all files from a directory subtree."""
-        await db.execute(
-            delete(KnowledgeFile).filter_by(directory_id=directory_id)
-        )
-        result = await db.execute(
-            select(KnowledgeDirectory.id).filter_by(parent_id=directory_id)
-        )
+        await db.execute(delete(KnowledgeFile).filter_by(directory_id=directory_id))
+        result = await db.execute(select(KnowledgeDirectory.id).filter_by(parent_id=directory_id))
         child_ids = [row[0] for row in result.all()]
         for child_id in child_ids:
             await self._delete_files_in_subtree(child_id, db=db)
