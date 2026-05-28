@@ -1713,6 +1713,21 @@ async def search_knowledge_files(
 
         # No attached knowledge - search all accessible KBs
         if knowledge_id:
+            # search_files_by_id does not enforce knowledge_id ownership; mirror the attached-KB check above.
+            knowledge = await Knowledges.get_knowledge_by_id(knowledge_id)
+            if not knowledge or not (
+                user_role == 'admin'
+                or knowledge.user_id == user_id
+                or await AccessGrants.has_access(
+                    user_id=user_id,
+                    resource_type='knowledge',
+                    resource_id=knowledge.id,
+                    permission='read',
+                    user_group_ids=set(user_group_ids),
+                )
+            ):
+                return json.dumps({'error': f'Access denied to knowledge base {knowledge_id}'})
+
             result = await Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
                 user_id=user_id,
