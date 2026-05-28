@@ -1252,11 +1252,23 @@ async def get_sources_from_items(
                             ],
                         }
             else:
-                # Fallback to collection names
-                if item.get('legacy'):
-                    collection_names.append(f'{item["id"]}')
-                else:
-                    collection_names.append(f'file-{item["id"]}')
+                # Chunked-retrieval fallback. body.metadata.files is client-
+                # controlled, so a caller could attach an arbitrary file id and
+                # query its vector collection. Require read access on the file
+                # before exposing its collection — same posture as the
+                # full-context branch above.
+                file_id = item.get('id')
+                if file_id:
+                    file_object = await Files.get_file_by_id(file_id)
+                    if file_object and (
+                        user.role == 'admin'
+                        or file_object.user_id == user.id
+                        or await has_access_to_file(file_id, 'read', user)
+                    ):
+                        if item.get('legacy'):
+                            collection_names.append(f'{file_id}')
+                        else:
+                            collection_names.append(f'file-{file_id}')
 
         elif item.get('type') == 'collection':
             # Manual Full Mode Toggle for Collection
@@ -1302,9 +1314,25 @@ async def get_sources_from_items(
                             'metadatas': [metadatas],
                         }
                 else:
-                    # Fallback to collection names
                     if item.get('legacy'):
-                        collection_names = item.get('collection_names', [])
+                        # Legacy KB: item.collection_names is client-supplied
+                        # and would otherwise let a caller substitute arbitrary
+                        # vector collection names (e.g. file-<victim_id>) while
+                        # holding access only to the parent KB. Filter the
+                        # supplied names against what the verified KB actually
+                        # owns; drop anything outside that set.
+                        supplied = item.get('collection_names') or []
+                        kb_files = await Knowledges.get_files_by_id(knowledge_base.id)
+                        owned = {f'file-{f.id}' for f in kb_files}
+                        owned.add(knowledge_base.id)
+                        validated = [name for name in supplied if name in owned]
+                        if validated:
+                            collection_names = validated
+                        else:
+                            # Either no names supplied or all were spoofed —
+                            # fall back to the KB id, which the access check
+                            # above already validated.
+                            collection_names.append(knowledge_base.id)
                     else:
                         collection_names.append(item['id'])
 
@@ -1315,8 +1343,19 @@ async def get_sources_from_items(
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
         elif item.get('collection_name'):
-            # Direct Collection Name
-            collection_names.append(item['collection_name'])
+            # WARNING: removed unauthenticated direct-collection-name
+            # passthrough. Previously this branch trusted the client-supplied
+            # `collection_name` field and queried it without any ownership
+            # check, letting a caller read arbitrary vector collections
+            # (e.g. file-<victim_id>) by attaching a bare item to the chat.
+            # Legitimate flows route through type='file' or type='collection'
+            # which carry the proper access checks; items reaching this
+            # branch without a recognized type are no longer trusted.
+            log.debug(
+                'get_sources_from_items: ignoring untrusted direct '
+                "collection_name '%s' on item without type",
+                item.get('collection_name'),
+            )
         elif item.get('collection_names'):
             # Collection Names List
             collection_names.extend(item['collection_names'])
