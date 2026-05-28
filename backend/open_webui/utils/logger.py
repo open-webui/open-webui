@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+import traceback
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -62,7 +63,9 @@ def _json_sink(message: 'Message') -> None:
         log_entry['extra'] = record['extra']
 
     if record['exception'] is not None:
-        log_entry['error'] = ''.join(record['exception'].format_exception()).rstrip()
+        log_entry['error'] = ''.join(
+            traceback.format_exception(*record['exception'])
+        ).rstrip()
 
     sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + '\n')
     sys.stdout.flush()
