@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
 from typing import Optional
+
+log = logging.getLogger(__name__)
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -90,7 +93,7 @@ class PromptForm(BaseModel):
 
 class PromptsTable:
     async def _get_access_grants(self, prompt_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
-        return await AccessGrants.get_grants_by_resource('prompt', prompt_id, db=session)
+        return await AccessGrants.get_grants_by_resource('prompt', prompt_id, db=db)
 
     async def _to_prompt_model(
         self,
@@ -100,7 +103,7 @@ class PromptsTable:
     ) -> PromptModel:
         prompt_data = PromptModel.model_validate(prompt).model_dump(exclude={'access_grants'})
         prompt_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(prompt_data['id'], db=session)
+            access_grants if access_grants is not None else await self._get_access_grants(prompt_data['id'], db=db)
         )
         return PromptModel.model_validate(prompt_data)
 
