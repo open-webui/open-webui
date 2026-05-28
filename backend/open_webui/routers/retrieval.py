@@ -718,6 +718,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     request.app.state.config.RAG_TEMPLATE = (
         form_data.RAG_TEMPLATE if form_data.RAG_TEMPLATE is not None else request.app.state.config.RAG_TEMPLATE
     )
+    from open_webui.utils.task import warn_if_deprecated_rag_template_placeholders
+
+    warn_if_deprecated_rag_template_placeholders(request.app.state.config.RAG_TEMPLATE)
     request.app.state.config.TOP_K = form_data.TOP_K if form_data.TOP_K is not None else request.app.state.config.TOP_K
     request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
         form_data.BYPASS_EMBEDDING_AND_RETRIEVAL

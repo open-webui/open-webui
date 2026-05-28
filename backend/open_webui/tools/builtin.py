@@ -61,11 +61,15 @@ async def _has_read_access_to_file(
         for item in model_knowledge
     ):
         return True
+    from open_webui.models.users import Users
     from open_webui.utils.access_control.files import has_access_to_file
-    return await has_access_to_file(
-        file_id=file.id, access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
-    )
+
+    # Fetch the real user (cheap PK lookup); a synthesized partial UserModel
+    # fails validation on the required email/name/timestamp fields.
+    user = await Users.get_user_by_id(user_id)
+    if not user:
+        return False
+    return await has_access_to_file(file_id=file.id, access_type='read', user=user)
 
 # =============================================================================
 # TIME UTILITIES
@@ -2322,9 +2326,11 @@ async def query_knowledge_files(
         if knowledge_ids.lower() in ('none', 'null', ''):
             knowledge_ids = None
         else:
-            # Try to parse as JSON array if it looks like one
+            # Wrap scalar parse results (e.g. '"abc"' -> 'abc') in a list so
+            # membership checks stay list-shaped, not substring/dict-key matching.
             try:
-                knowledge_ids = json.loads(knowledge_ids)
+                parsed = json.loads(knowledge_ids)
+                knowledge_ids = parsed if isinstance(parsed, list) else [parsed]
             except json.JSONDecodeError:
                 # Treat as single ID
                 knowledge_ids = [knowledge_ids]
@@ -2449,10 +2455,11 @@ async def query_knowledge_files(
                 distances = query_results.get('distances', [[]])[0]
 
                 for idx, doc in enumerate(documents):
+                    meta = (metadatas[idx] if idx < len(metadatas) else None) or {}
                     chunk_info = {
                         'content': doc,
-                        'source': metadatas[idx].get('source', metadatas[idx].get('name', 'Unknown')),
-                        'file_id': metadatas[idx].get('file_id', ''),
+                        'source': meta.get('source') or meta.get('name') or 'Unknown',
+                        'file_id': meta.get('file_id', ''),
                     }
                     if idx < len(distances):
                         chunk_info['distance'] = distances[idx]
@@ -2464,6 +2471,178 @@ async def query_knowledge_files(
         return json.dumps(chunks, ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_knowledge_files error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def query_attached_files(
+    query: str,
+    ids: Optional[list[str]] = None,
+    count: Optional[int] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __attached_files__: list[dict] = None,
+) -> str:
+    """
+    Search files and knowledge bases the user attached to this chat.
+
+    The system context lists each retrievable item inside <retrievable_files>
+    as a <retrievable_file id="..."> entry. Call this tool to fetch
+    semantically relevant chunks; cite from the returned chunks rather than
+    the inventory entries themselves. Distinct from query_knowledge_files
+    (which searches model-attached knowledge).
+
+    :param query: Required. Natural-language search query used for semantic / hybrid retrieval over the attached items' content.
+    :param ids: Optional. When omitted, the search runs against every file and knowledge base attached to this chat (the default). To narrow the search to a subset, supply a list of plain attached-item id strings — each id is the literal value of the `id` attribute on a `<retrievable_file id="...">` entry in the system context (for example "abc123" for `<retrievable_file id="abc123" ...>`, not the whole tag).
+    :param count: Optional. Maximum number of result chunks to return. When omitted, defaults to the admin-configured retrieval TOP_K. When supplied, values above that limit are clamped down.
+    :return: JSON list of chunks with content, source, file_id, distance
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if not __attached_files__:
+        return json.dumps({'error': 'No retrievable files are attached to this chat.'})
+
+    admin_top_k = __request__.app.state.config.TOP_K
+
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = None
+
+    if not isinstance(count, int) or count <= 0:
+        count = admin_top_k
+    else:
+        count = min(count, admin_top_k)
+
+    if isinstance(ids, str):
+        if ids.lower() in ('none', 'null', ''):
+            ids = None
+        else:
+            try:
+                parsed = json.loads(ids)
+                # Wrap non-list parses in a list so `id in ids` stays a list
+                # membership check (not substring/dict-key matching).
+                ids = parsed if isinstance(parsed, list) else [parsed]
+            except json.JSONDecodeError:
+                ids = [ids]
+
+    try:
+        from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.retrieval.utils import query_collection
+
+        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
+        if not embedding_function:
+            return json.dumps({'error': 'Embedding function not configured'})
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
+
+        # Empty list and missing field both mean "no scoping" — search every
+        # attached item. Only an explicit non-empty list that resolves to
+        # nothing is treated as a model error.
+        if ids:
+            scoped_items = [item for item in __attached_files__ if item.get('id') in ids]
+            if not scoped_items:
+                return json.dumps({
+                    'error': 'None of the requested ids match an attached file. '
+                    'Check the <retrievable_file id="..."> entries in <retrievable_files>, '
+                    'or omit `ids` to search every attached item.'
+                })
+        else:
+            scoped_items = list(__attached_files__)
+
+        # Resolve each attached item to collection names AFTER verifying the
+        # caller can read it. Items the user can't access are silently skipped
+        # (same posture as query_knowledge_files).
+        collection_names = []
+        for attached_item in scoped_items:
+            # Belt-and-suspenders: callers already filter context == 'full'.
+            if attached_item.get('context') == 'full':
+                continue
+            item_type = attached_item.get('type')
+            item_id = attached_item.get('id')
+            if not item_id:
+                continue
+
+            if item_type == 'file':
+                file_record = await Files.get_file_by_id(item_id)
+                if not file_record:
+                    continue
+                # Chat scope: deliberately do not pass __model_knowledge__ —
+                # this tool only reads items the user attached to *this* chat.
+                if not await _has_read_access_to_file(file_record, user_id, user_role):
+                    continue
+                collection_names.append(f'file-{item_id}')
+
+            elif item_type == 'collection':
+                knowledge_record = await Knowledges.get_knowledge_by_id(item_id)
+                user_owns_kb = knowledge_record and (
+                    user_role == 'admin'
+                    or knowledge_record.user_id == user_id
+                    or await AccessGrants.has_access(
+                        user_id=user_id,
+                        resource_type='knowledge',
+                        resource_id=knowledge_record.id,
+                        permission='read',
+                        user_group_ids=set(user_group_ids),
+                    )
+                )
+                if not user_owns_kb:
+                    continue
+                # Use the access-checked KB id directly (matches
+                # query_knowledge_files). Trusting client-supplied
+                # collection_names here would be a BOLA.
+                collection_names.append(item_id)
+
+        if not collection_names:
+            return json.dumps({
+                'error': 'No accessible retrievable collections resolved from the attached items.'
+            })
+
+        collection_names = list(dict.fromkeys(collection_names))
+
+        chunks: list[dict] = []
+        query_results = await query_collection(
+            __request__,
+            collection_names=collection_names,
+            queries=[query],
+            embedding_function=embedding_function,
+            k=count,
+        )
+
+        if query_results and 'documents' in query_results:
+            chunk_documents = query_results.get('documents', [[]])[0]
+            chunk_metadatas = query_results.get('metadatas', [[]])[0]
+            chunk_distances = query_results.get('distances', [[]])[0]
+
+            for chunk_index, document in enumerate(chunk_documents):
+                # Some query_collection paths can return None in the
+                # metadatas list (e.g. partial hybrid-search failures).
+                chunk_metadata = (
+                    chunk_metadatas[chunk_index]
+                    if chunk_index < len(chunk_metadatas)
+                    else None
+                ) or {}
+                chunk_info = {
+                    'content': document,
+                    'source': chunk_metadata.get('source') or chunk_metadata.get('name') or 'Unknown',
+                    'file_id': chunk_metadata.get('file_id', ''),
+                }
+                if chunk_index < len(chunk_distances):
+                    chunk_info['distance'] = chunk_distances[chunk_index]
+                chunks.append(chunk_info)
+
+        chunks = chunks[:count]
+        return json.dumps(chunks, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'query_attached_files error: {e}')
         return json.dumps({'error': str(e)})
 
 

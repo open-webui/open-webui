@@ -65,6 +65,7 @@ from open_webui.tools.builtin import (
     list_knowledge,
     list_knowledge_bases,
     list_memories,
+    query_attached_files,
     query_knowledge_bases,
     query_knowledge_files,
     replace_memory_content,
@@ -469,6 +470,23 @@ async def get_builtin_tools(
     folder_knowledge = extra_params.get('__metadata__', {}).get('folder_knowledge')
     if folder_knowledge:
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
+
+    # Chat-attached items the model can read via query_attached_files.
+    # RAG_FULL_CONTEXT or BYPASS_EMBEDDING_AND_RETRIEVAL force everything to
+    # full content, leaving nothing for chunked retrieval.
+    attached_files = extra_params.get('__attached_files__') or []
+    force_full_context = (
+        request.app.state.config.RAG_FULL_CONTEXT
+        or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+    )
+    retrievable_attached_files = (
+        []
+        if force_full_context
+        else [
+            item for item in attached_files
+            if item.get('context') != 'full' and item.get('type') in ('file', 'collection')
+        ]
+    )
     if is_builtin_tool_enabled('knowledge'):
         from open_webui.env import ENABLE_KB_EXEC
 
@@ -497,6 +515,11 @@ async def get_builtin_tools(
                 grep_knowledge_files, search_knowledge_files, query_knowledge_files,
                 view_knowledge_file,
             ])
+
+        # Chat-scoped retrieval (distinct from query_knowledge_files which
+        # searches model-attached knowledge).
+        if retrievable_attached_files:
+            builtin_functions.append(query_attached_files)
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):
@@ -619,6 +642,7 @@ async def get_builtin_tools(
                 '__chat_id__': extra_params.get('__chat_id__'),
                 '__message_id__': extra_params.get('__message_id__'),
                 '__model_knowledge__': model_knowledge,
+                '__attached_files__': retrievable_attached_files,
             },
         )
 

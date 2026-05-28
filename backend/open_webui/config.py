@@ -1411,8 +1411,9 @@ Respond to the user query using the provided context, incorporating inline citat
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [id] (e.g., [1], [2]) when the <source> tag includes an id attribute.**
-- Do not cite if the <source> tag does not contain an id attribute.
+- **For `<source>` tags in the context: only include inline citations using [id] (e.g., [1], [2]) when the `<source>` tag includes an id attribute, and do not cite from `<source>` tags that lack an id attribute.**
+- **For tool result chunks (which do not arrive wrapped in `<source>` tags):** cite using the chunk's source identifier in square brackets — typically the `source` filename, e.g. `[contract.pdf]`. Do not invent numeric `[N]` citations for tool result content that doesn't carry one.
+- If the context lists items as available for retrieval but does not include their content (for example, inventory-style entries), do not cite them directly — call the appropriate tool to fetch their content first, then cite from the returned chunks.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
@@ -1421,7 +1422,7 @@ If the user asks about a specific topic and the information is found in a source
 * "According to the study, the proposed method increases efficiency by 20% [1]."
 
 ### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [id] only when the <source> tag with id attribute is present in the context.
+Provide a clear and direct response to the user's query. Use inline citations in [id] format when an `<source id="...">` tag is present in the context, or in [source-name] format when citing a chunk returned by a tool result.
 
 <context>
 {{CONTEXT}}
