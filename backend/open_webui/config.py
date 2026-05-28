@@ -1413,13 +1413,16 @@ Respond to the user query using the provided context, incorporating inline citat
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
 - **For `<source>` tags in the context: only include inline citations using [id] (e.g., [1], [2]) when the `<source>` tag includes an id attribute, and do not cite from `<source>` tags that lack an id attribute.**
 - **For tool result chunks (which do not arrive wrapped in `<source>` tags):** cite using the chunk's source identifier in square brackets — typically the `source` filename, e.g. `[contract.pdf]`. Do not invent numeric `[N]` citations for tool result content that doesn't carry one.
-- If the context lists items as available for retrieval but does not include their content (for example, inventory-style entries), do not cite them directly — call the appropriate tool to fetch their content first, then cite from the returned chunks.
+- If the context lists items as available for retrieval but does not include their content, do not cite them directly — call the appropriate tool to fetch their content first, then cite from the returned chunks.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
 ### Example of Citation:
 If the user asks about a specific topic and the information is found in a source with a provided id attribute, the response should include the citation like in the following example:
 * "According to the study, the proposed method increases efficiency by 20% [1]."
+
+Or in the example of you retrieving the information through a tool call in a tool result, you can cite like so:
+* "The emergency server room access code is stored in the key box [emergency_handbook.pdf]."
 
 ### Output:
 Provide a clear and direct response to the user's query. Use inline citations in [id] format when an `<source id="...">` tag is present in the context, or in [source-name] format when citing a chunk returned by a tool result.
