@@ -1680,7 +1680,11 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
         if not url:
             continue
 
-        if url.startswith('data:image/png;base64'):
+        # Persist any base64-encoded image type (image/png, image/jpeg, image/webp, ...)
+        # to disk and replace the data URL with a /api/v1/files/... reference. Without
+        # this, non-PNG images returned by models (e.g. nano-banana 2 via OpenRouter
+        # returns JPEG) stay inlined as multi-MB data URLs in chat history.
+        if url.startswith('data:image/') and ';base64,' in url:
             url = await get_image_url_from_base64(request, url, metadata, user)
 
         image_urls.append(url)
