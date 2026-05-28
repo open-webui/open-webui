@@ -563,6 +563,7 @@ async def get_knowledge_files_by_id(
     direction: str | None = None,
     directory_id: str | None = Query(None, description='Filter by directory ID. Pass empty string for root.'),
     page: int | None = 1,
+    limit: int = Query(30, ge=1, le=100),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -591,7 +592,6 @@ async def get_knowledge_files_by_id(
 
     page = max(page, 1)
 
-    limit = 30
     skip = (page - 1) * limit
 
     filter = {}
