@@ -1624,10 +1624,31 @@ class ChatTable:
             return None
 
         chat_message_file_ids = {
-            item.id for item in await self.get_chat_files_by_chat_id_and_message_id(chat_id, message_id, db=session)
+            item.id for item in await self.get_chat_files_by_chat_id_and_message_id(chat_id, message_id, db=db)
         }
         # Remove duplicates and existing file_ids
         file_ids = list({file_id for file_id in file_ids if file_id and file_id not in chat_message_file_ids})
+        if not file_ids:
+            return None
+
+        # Only link files the caller can read; blocks forging a chat_file row to another user's file.
+        from open_webui.models.files import Files
+        from open_webui.models.users import Users
+        from open_webui.utils.access_control.files import has_access_to_file
+
+        user = await Users.get_user_by_id(user_id, db=db)
+        accessible_file_ids = []
+        for file_id in file_ids:
+            file = await Files.get_file_by_id(file_id, db=db)
+            if not file:
+                continue
+            if (
+                file.user_id == user_id
+                or (user and user.role == 'admin')
+                or (user and await has_access_to_file(file_id, 'read', user, db=db))
+            ):
+                accessible_file_ids.append(file_id)
+        file_ids = accessible_file_ids
         if not file_ids:
             return None
 
