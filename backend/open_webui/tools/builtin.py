@@ -2483,13 +2483,13 @@ async def query_attached_files(
     __attached_files__: list[dict] = None,
 ) -> str:
     """
-    Search files and knowledge bases the user attached to this chat.
+    Search files and knowledge bases the user manually attached to this chat.
 
-    The system context lists each retrievable item inside <retrievable_files>
+    If the user manually attached files or knowledge bases to this chat, the
+    system context will list each retrievable item inside <retrievable_files>
     as a <retrievable_file id="..."> entry. Call this tool to fetch
     semantically relevant chunks; cite from the returned chunks rather than
-    the inventory entries themselves. Distinct from query_knowledge_files
-    (which searches model-attached knowledge).
+    the inventory entries themselves.
 
     :param query: Required. Natural-language search query used for semantic / hybrid retrieval over the attached items' content.
     :param ids: Optional. When omitted, the search runs against every file and knowledge base attached to this chat (the default). To narrow the search to a subset, supply a list of plain attached-item id strings — each id is the literal value of the `id` attribute on a `<retrievable_file id="...">` entry in the system context (for example "abc123" for `<retrievable_file id="abc123" ...>`, not the whole tag).
