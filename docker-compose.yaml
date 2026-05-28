@@ -22,7 +22,10 @@ services:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:?WEBUI_SECRET_KEY is required}
+      - ENABLE_GOOGLE_DRIVE_INTEGRATION=${ENABLE_GOOGLE_DRIVE_INTEGRATION:-true}
+      - GOOGLE_DRIVE_CLIENT_ID=${GOOGLE_DRIVE_CLIENT_ID:?GOOGLE_DRIVE_CLIENT_ID is required}
+      - GOOGLE_DRIVE_API_KEY=${GOOGLE_DRIVE_API_KEY:?GOOGLE_DRIVE_API_KEY is required}
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
