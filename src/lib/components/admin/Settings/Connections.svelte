@@ -5,7 +5,14 @@
 	const dispatch = createEventDispatcher();
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
-	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import {
+		createOpenAIWebAuthConfigUpdate,
+		isOpenAICodexWebAuthConfig,
+		isEmptyNativeOpenAIBearerConnection,
+		getOpenAIConfig,
+		updateOpenAIConfig,
+		getOpenAIModels
+	} from '$lib/apis/openai';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
@@ -17,6 +24,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
+	import OpenAIWebAuthConnection from './Connections/OpenAIWebAuthConnection.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
@@ -48,6 +56,13 @@
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
+
+	$: openAIWebAuthConfigured = OPENAI_API_BASE_URLS.some((url, idx) => {
+		return (
+			isOpenAICodexWebAuthConfig(OPENAI_API_CONFIGS[idx]) &&
+			(OPENAI_API_CONFIGS[idx]?.enable ?? true)
+		);
+	});
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -136,6 +151,22 @@
 		await updateOllamaHandler();
 	};
 
+	const useOpenAIWebAuthConnectionHandler = async () => {
+		const next = createOpenAIWebAuthConfigUpdate({
+			ENABLE_OPENAI_API: ENABLE_OPENAI_API ?? true,
+			OPENAI_API_BASE_URLS,
+			OPENAI_API_KEYS,
+			OPENAI_API_CONFIGS
+		});
+
+		ENABLE_OPENAI_API = next.ENABLE_OPENAI_API;
+		OPENAI_API_BASE_URLS = next.OPENAI_API_BASE_URLS;
+		OPENAI_API_KEYS = next.OPENAI_API_KEYS;
+		OPENAI_API_CONFIGS = next.OPENAI_API_CONFIGS;
+
+		await updateOpenAIHandler();
+	};
+
 	onMount(async () => {
 		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
@@ -175,6 +206,15 @@
 				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
 					OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[idx] || {};
 					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
+						return;
+					}
+					if (
+						isEmptyNativeOpenAIBearerConnection(
+							url,
+							OPENAI_API_KEYS[idx] ?? '',
+							OPENAI_API_CONFIGS[idx]
+						)
+					) {
 						return;
 					}
 					const res = await getOpenAIModels(localStorage.token, idx);
@@ -285,6 +325,11 @@
 										/>
 									{/each}
 								</div>
+
+								<OpenAIWebAuthConnection
+									configured={openAIWebAuthConfigured}
+									onUseCredential={useOpenAIWebAuthConnectionHandler}
+								/>
 							</div>
 						{/if}
 					</div>

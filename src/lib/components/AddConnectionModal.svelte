@@ -4,7 +4,11 @@
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
-	import { verifyOpenAIConnection } from '$lib/apis/openai';
+	import {
+		OPENAI_CODEX_WEB_AUTH_API_BASE_URL,
+		getSupportedOpenAIConnectionAuthTypes,
+		verifyOpenAIConnection
+	} from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -58,6 +62,14 @@
 	let loading = false;
 	let showDeleteConfirmDialog = false;
 
+	$: authOptions = (() => {
+		const options = getSupportedOpenAIConnectionAuthTypes({ direct, ollama, azure });
+		if (edit && auth_type === 'openai_codex_web_auth') {
+			return [...options, { value: 'openai_codex_web_auth', label: 'OpenAI Account Auth' }];
+		}
+		return options;
+	})();
+
 	const verifyOllamaHandler = async () => {
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
@@ -77,6 +89,13 @@
 	const verifyOpenAIHandler = async () => {
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
+
+		if (auth_type === 'openai_codex_web_auth') {
+			toast.error(
+				$i18n.t('Verify OpenAI Account Auth from the dedicated OpenAI Account Auth card below the connection list')
+			);
+			return;
+		}
 
 		let _headers = null;
 
@@ -141,6 +160,17 @@
 			return;
 		}
 
+		if (
+			auth_type === 'openai_codex_web_auth' &&
+			url.replace(/\/$/, '') !== OPENAI_CODEX_WEB_AUTH_API_BASE_URL
+		) {
+			loading = false;
+			toast.error(
+				$i18n.t('OpenAI Account Auth is only available for the account-auth runtime URL')
+			);
+			return;
+		}
+
 		if (azure) {
 			if (!apiVersion) {
 				loading = false;
@@ -149,7 +179,10 @@
 				return;
 			}
 
-			if (!key && !['azure_ad', 'microsoft_entra_id'].includes(auth_type)) {
+			if (
+				!key &&
+				!['azure_ad', 'microsoft_entra_id', 'openai_codex_web_auth'].includes(auth_type)
+			) {
 				loading = false;
 
 				toast.error($i18n.t('Key is required'));
@@ -178,6 +211,9 @@
 
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
+		if (auth_type === 'openai_codex_web_auth') {
+			key = '';
+		}
 
 		const connection = {
 			url,
@@ -380,24 +416,15 @@
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
-										<select
-											id="select-bearer-or-session"
-											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											bind:value={auth_type}
-										>
-											<option value="none">{$i18n.t('None')}</option>
-											<option value="bearer">{$i18n.t('Bearer')}</option>
-
-											{#if !ollama}
-												<option value="session">{$i18n.t('Session')}</option>
-												{#if !direct}
-													<option value="system_oauth">{$i18n.t('OAuth')}</option>
-													{#if azure}
-														<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
-													{/if}
-												{/if}
-											{/if}
-										</select>
+									<select
+										id="select-bearer-or-session"
+										class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										bind:value={auth_type}
+									>
+										{#each authOptions as option}
+											<option value={option.value}>{$i18n.t(option.label)}</option>
+										{/each}
+									</select>
 									</div>
 
 									<div class="flex flex-1 items-center">
@@ -412,6 +439,12 @@
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('No authentication')}
+											</div>
+										{:else if auth_type === 'openai_codex_web_auth'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Uses the connected OpenAI account auth credential')}
 											</div>
 										{:else if auth_type === 'session'}
 											<div
