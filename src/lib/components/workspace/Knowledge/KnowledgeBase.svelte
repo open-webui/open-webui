@@ -1397,7 +1397,7 @@
 			</div>
 
 			{#if currentDirectoryId !== null}
-				<div class="px-5 mt-1 pb-1">
+				<div class="px-5 mt-2">
 					<KnowledgeBreadcrumbs
 						rootLabel={knowledge.name}
 						{breadcrumbs}
