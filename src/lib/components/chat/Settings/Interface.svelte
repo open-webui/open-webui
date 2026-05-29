@@ -264,8 +264,8 @@
 		showFloatingActionButtons = $settings?.showFloatingActionButtons ?? true;
 		floatingActionButtons = $settings?.floatingActionButtons ?? null;
 
-		imageCompression = $settings?.imageCompression ?? false;
-		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
+		imageCompression = $settings?.imageCompression ?? true;
+		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '1024', height: '1024' };
 		imageCompressionInChannels = $settings?.imageCompressionInChannels ?? true;
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
