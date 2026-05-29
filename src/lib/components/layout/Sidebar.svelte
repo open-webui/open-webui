@@ -1611,7 +1611,7 @@
 							<div
 								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
 							>
-								<div class=" self-center mr-3 relative">
+								<div class=" self-center mr-3 relative flex-shrink-0">
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class=" size-7 object-cover rounded-full"
@@ -1631,7 +1631,7 @@
 										</div>
 									{/if}
 								</div>
-								<div class=" self-center font-medium">{$user?.name}</div>
+								<div class=" self-center font-medium truncate">{$user?.name}</div>
 							</div>
 						</UserMenu>
 					{/if}
