@@ -78,10 +78,10 @@
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
 
-	let imageCompression = false;
+	let imageCompression = true;
 	let imageCompressionSize = {
-		width: '',
-		height: ''
+		width: '1024',
+		height: '1024'
 	};
 	let imageCompressionInChannels = true;
 
