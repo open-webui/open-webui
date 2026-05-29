@@ -60,9 +60,13 @@ class Chat(Base):
 
     last_read_at = Column(BigInteger, nullable=True)
 
+    # Company custom: Team Workspaces V1 — nullable; NULL means private chat (existing behavior)
+    workspace_id = Column(String, nullable=True)
+
     __table_args__ = (
         # Performance indexes for common queries
         Index('folder_id_idx', 'folder_id'),
+        Index('chat_workspace_id_idx', 'workspace_id'),
         Index('user_id_pinned_idx', 'user_id', 'pinned'),
         Index('user_id_archived_idx', 'user_id', 'archived'),
         Index('updated_at_user_id_idx', 'updated_at', 'user_id'),
@@ -92,6 +96,9 @@ class ChatModel(BaseModel):
     summary: Optional[str] = None
 
     last_read_at: Optional[int] = None
+
+    # Company custom: Team Workspaces V1
+    workspace_id: Optional[str] = None
 
 
 class ChatFile(Base):
@@ -132,6 +139,8 @@ class ChatFileModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
     folder_id: Optional[str] = None
+    # Company custom: Team Workspaces V1
+    workspace_id: Optional[str] = None
 
 
 class ChatImportForm(ChatForm):
@@ -169,6 +178,8 @@ class ChatResponse(BaseModel):
 
     tasks: Optional[list] = None
     summary: Optional[str] = None
+    # Company custom: Team Workspaces V1
+    workspace_id: Optional[str] = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -305,6 +316,8 @@ class ChatTable:
                     ),
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
+                    # Company custom: Team Workspaces V1
+                    'workspace_id': getattr(form_data, 'workspace_id', None),
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
                 }
@@ -868,6 +881,9 @@ class ChatTable:
                 user_id=user_id
             )
 
+            # Company custom: Team Workspaces V1 — exclude workspace chats from personal list
+            stmt = stmt.filter(Chat.workspace_id.is_(None))
+
             if not include_folders:
                 stmt = stmt.filter_by(folder_id=None)
 
@@ -898,6 +914,39 @@ class ChatTable:
                     }
                 )
                 for chat in all_chats
+            ]
+
+    # Company custom: Team Workspaces V1
+    async def get_chat_title_id_list_by_workspace_id(
+        self,
+        workspace_id: str,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> list["ChatTitleIdResponse"]:
+        async with get_async_db_context(db) as db:
+            stmt = (
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                .where(Chat.workspace_id == workspace_id)
+                .where(Chat.archived == False)  # noqa: E712
+                .order_by(Chat.updated_at.desc(), Chat.id)
+            )
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+            result = await db.execute(stmt)
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        'id': r[0],
+                        'title': r[1],
+                        'updated_at': r[2],
+                        'created_at': r[3],
+                        'last_read_at': r[4],
+                    }
+                )
+                for r in result.all()
             ]
 
     async def get_chat_list_by_chat_ids(
