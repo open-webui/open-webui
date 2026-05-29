@@ -178,6 +178,7 @@ class ChatTitleIdResponse(BaseModel):
     updated_at: int
     created_at: int
     last_read_at: int | None = None
+    snippet: str | None = None
 
 
 class SharedChatResponse(BaseModel):

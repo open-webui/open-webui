@@ -593,6 +593,49 @@ async def import_chats(
 ############################
 
 
+def _extract_search_snippet(chat_model, search_text: str, max_length: int = 200) -> str | None:
+    """Extract a content snippet from the first matching message in a chat.
+
+    Scans the chat's message list for the first message whose content
+    contains *search_text* (case-insensitive) and returns a window of
+    up to *max_length* characters centred on the match.
+    """
+    if not search_text:
+        return None
+
+    search_lower = search_text.lower()
+    messages = chat_model.chat.get('messages', {})
+    if isinstance(messages, dict):
+        messages = messages.values()
+
+    for message in messages:
+        content = message.get('content', '')
+        if not isinstance(content, str):
+            continue
+
+        idx = content.lower().find(search_lower)
+        if idx == -1:
+            continue
+
+        # Build a window around the match
+        half = (max_length - len(search_text)) // 2
+        start = max(0, idx - half)
+        end = min(len(content), idx + len(search_text) + half)
+
+        snippet = content[start:end].strip()
+        # Replace newlines with spaces for single-line display
+        snippet = ' '.join(snippet.split())
+
+        if start > 0:
+            snippet = '…' + snippet
+        if end < len(content):
+            snippet = snippet + '…'
+
+        return snippet
+
+    return None
+
+
 @router.get('/search', response_model=list[ChatTitleIdResponse])
 async def search_user_chats(
     text: str,
@@ -606,10 +649,19 @@ async def search_user_chats(
     limit = 60
     skip = (page - 1) * limit
 
-    chat_list = [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
-    ]
+    # Strip filter prefixes to get the actual search text for snippet extraction
+    search_words = text.strip().split(' ')
+    snippet_text = ' '.join(
+        w for w in search_words
+        if not any(w.startswith(p) for p in ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:'))
+    ).strip()
+
+    chat_list = []
+    for chat in await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db):
+        snippet = _extract_search_snippet(chat, snippet_text) if snippet_text else None
+        chat_list.append(
+            ChatTitleIdResponse(**{**chat.model_dump(), 'snippet': snippet})
+        )
 
     # Delete tag if no chat is found
     words = text.strip().split(' ')

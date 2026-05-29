@@ -384,10 +384,24 @@
 								onClose();
 							}}
 						>
-							<div class=" flex-1">
+							<div class=" flex-1 min-w-0">
 								<div class="text-ellipsis line-clamp-1 w-full">
 									{chat?.title}
 								</div>
+								{#if chat?.snippet && query}
+									<div class="text-xs text-gray-400 dark:text-gray-500 line-clamp-2 mt-0.5">
+										{@html (() => {
+											const snippet = chat.snippet;
+											const q = query.trim().toLowerCase();
+											if (!q) return snippet;
+											const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+											return snippet.replace(
+												new RegExp(`(${escaped})`, 'gi'),
+												'<mark class="bg-yellow-200/60 dark:bg-yellow-500/30 text-inherit rounded-sm px-0.5">$1</mark>'
+											);
+										})()}
+									</div>
+								{/if}
 							</div>
 
 							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
