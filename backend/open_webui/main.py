@@ -1707,9 +1707,24 @@ async def chat_completion(
 
         # Model params: global defaults as base, per-model overrides win
         default_model_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+
+        db_model_params = model_info.params.model_dump() if model_info and model_info.params else {}
+        db_meta_params = {}
+        if model_info and getattr(model_info, 'meta', None):
+            try:
+                db_meta_params = (
+                    model_info.meta.model_dump() if hasattr(model_info.meta, 'model_dump') else dict(model_info.meta)
+                ).get('params', {}) or {}
+            except Exception:
+                db_meta_params = {}
+
+        payload_meta_params = ((((model_item or {}).get('info') or {}).get('meta') or {}).get('params', {}) or {})
+
         model_info_params = {
             **default_model_params,
-            **(model_info.params.model_dump() if model_info and model_info.params else {}),
+            **db_meta_params,
+            **db_model_params,
+            **payload_meta_params,
         }
 
         # Check base model existence for custom models
