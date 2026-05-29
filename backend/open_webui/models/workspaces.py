@@ -137,6 +137,8 @@ class WorkspaceResponse(BaseModel):
     meta: Optional[dict] = None
     created_at: int
     updated_at: int
+    # Company custom: Team Workspaces V1 — current user's role in this workspace
+    my_role: Optional[str] = None  # manager | member | viewer | None (creator context)
 
 
 class WorkspaceMemberResponse(BaseModel):
@@ -146,6 +148,9 @@ class WorkspaceMemberResponse(BaseModel):
     role: str
     created_at: int
     updated_at: int
+    # Company custom: Team Workspaces V1 — enriched from users table
+    display_name: Optional[str] = None
+    email: Optional[str] = None
 
 
 ####################

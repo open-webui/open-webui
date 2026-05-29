@@ -75,6 +75,28 @@ async def assert_workspace_access(
 
 
 ####################
+# Response builders
+####################
+
+
+async def _workspace_response(ws: WorkspaceModel, user_id: str, db: AsyncSession) -> WorkspaceResponse:
+    """Build WorkspaceResponse enriched with the requesting user's role."""
+    member = await WorkspaceMembers.get(ws.id, user_id, db=db)
+    return WorkspaceResponse(**ws.model_dump(), my_role=member.role if member else None)
+
+
+async def _member_response(m: WorkspaceMemberModel, db: AsyncSession) -> WorkspaceMemberResponse:
+    """Build WorkspaceMemberResponse enriched with the user's display_name and email."""
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    user_obj = await Users.get_user_by_id(m.user_id, db=db)
+    if user_obj:
+        display_name = user_obj.name
+        email = user_obj.email
+    return WorkspaceMemberResponse(**m.model_dump(), display_name=display_name, email=email)
+
+
+####################
 # Workspace CRUD
 ####################
 
@@ -90,7 +112,7 @@ async def create_workspace(
         workspace = await Workspaces.create(user.id, form_data, db=db)
         # Auto-add creator as manager
         await WorkspaceMembers.add(workspace.id, user.id, WORKSPACE_ROLE_MANAGER, db=db)
-        return WorkspaceResponse(**workspace.model_dump())
+        return await _workspace_response(workspace, user.id, db)
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -101,10 +123,10 @@ async def list_workspaces(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """List workspaces the current user is a member of."""
+    """List workspaces the current user is a member of, each with my_role populated."""
     try:
-        workspaces = await Workspaces.get_for_user(user.id, db=db)
-        return [WorkspaceResponse(**ws.model_dump()) for ws in workspaces]
+        workspace_list = await Workspaces.get_for_user(user.id, db=db)
+        return [await _workspace_response(ws, user.id, db) for ws in workspace_list]
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -119,7 +141,7 @@ async def get_workspace(
     """Get workspace details; only accessible to members."""
     await assert_workspace_access(workspace_id, user, "read", db)
     workspace = await Workspaces.get_by_id(workspace_id, db=db)
-    return WorkspaceResponse(**workspace.model_dump())
+    return await _workspace_response(workspace, user.id, db)
 
 
 @router.patch('/{workspace_id}', response_model=WorkspaceResponse)
@@ -134,7 +156,7 @@ async def update_workspace(
     workspace = await Workspaces.update(workspace_id, form_data, db=db)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-    return WorkspaceResponse(**workspace.model_dump())
+    return await _workspace_response(workspace, user.id, db)
 
 
 @router.delete('/{workspace_id}')
@@ -162,10 +184,10 @@ async def list_workspace_members(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """List all members; accessible to all workspace members."""
+    """List all members with display_name and email; accessible to all workspace members."""
     await assert_workspace_access(workspace_id, user, "read", db)
     members = await WorkspaceMembers.list_members(workspace_id, db=db)
-    return [WorkspaceMemberResponse(**m.model_dump()) for m in members]
+    return [await _member_response(m, db) for m in members]
 
 
 @router.post('/{workspace_id}/members', response_model=WorkspaceMemberResponse)
@@ -198,7 +220,7 @@ async def add_workspace_member(
 
     try:
         member = await WorkspaceMembers.add(workspace_id, form_data.user_id, form_data.role, db=db)
-        return WorkspaceMemberResponse(**member.model_dump())
+        return await _member_response(member, db)
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -224,7 +246,7 @@ async def update_workspace_member(
     updated = await WorkspaceMembers.update_role(workspace_id, target_user_id, form_data.role, db=db)
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    return WorkspaceMemberResponse(**updated.model_dump())
+    return await _member_response(updated, db)
 
 
 @router.delete('/{workspace_id}/members/{target_user_id}')

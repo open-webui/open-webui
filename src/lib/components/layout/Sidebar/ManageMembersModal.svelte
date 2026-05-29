@@ -227,11 +227,18 @@
 							<div class="flex items-center gap-2 overflow-hidden">
 								<img
 									src={`/api/v1/users/${member.user_id}/profile/image`}
-									alt={member.user_id}
+									alt={member.display_name ?? member.user_id}
 									class="size-6 rounded-full shrink-0"
 									on:error={(e) => { (e.target as HTMLImageElement).src = '/user.png'; }}
 								/>
-								<span class="text-sm dark:text-gray-200 line-clamp-1">{member.user_id}</span>
+								<div class="overflow-hidden">
+									<div class="text-sm dark:text-gray-200 line-clamp-1 font-medium">
+										{member.display_name ?? member.user_id}
+									</div>
+									{#if member.email}
+										<div class="text-xs text-gray-400 line-clamp-1">{member.email}</div>
+									{/if}
+								</div>
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">

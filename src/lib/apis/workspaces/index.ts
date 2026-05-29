@@ -23,6 +23,8 @@ export type WorkspaceResponse = {
 	meta?: Record<string, any> | null;
 	created_at: number;
 	updated_at: number;
+	// Company custom: Team Workspaces V1 — current user's role in this workspace
+	my_role?: 'manager' | 'member' | 'viewer' | null;
 };
 
 export type WorkspaceMemberForm = {
@@ -41,6 +43,9 @@ export type WorkspaceMemberResponse = {
 	role: 'manager' | 'member' | 'viewer';
 	created_at: number;
 	updated_at: number;
+	// Company custom: Team Workspaces V1 — enriched from users table
+	display_name?: string | null;
+	email?: string | null;
 };
 
 export type WorkspaceChatResponse = {

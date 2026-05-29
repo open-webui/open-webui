@@ -1336,9 +1336,8 @@
 								workspace={ws}
 								onManage={() => {
 									managingWorkspace = ws;
-									// Creator is always a manager; for other members we default to 'member'
-									// and let ManageMembersModal load the real role list.
-									managingWorkspaceRole = ws.user_id === $user?.id ? 'manager' : 'member';
+									// Use backend-provided my_role (set by /api/v1/workspaces/ list endpoint)
+									managingWorkspaceRole = ws.my_role ?? null;
 									showManageMembers = true;
 								}}
 							/>
