@@ -1403,7 +1403,7 @@ CHUNK_OVERLAP = ConfigVar(
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
+Respond to the user query using the provided context, citing sources inline by name in square brackets (e.g., `[contract.pdf]` or `[wikipedia.org]`).
 
 ### Guidelines:
 - If you don't know the answer, clearly state that.
@@ -1411,21 +1411,21 @@ Respond to the user query using the provided context, incorporating inline citat
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **For `<source>` tags in the context: only include inline citations using [id] (e.g., [1], [2]) when the `<source>` tag includes an id attribute, and do not cite from `<source>` tags that lack an id attribute.**
-- **For tool result chunks (which do not arrive wrapped in `<source>` tags):** cite using the chunk's source identifier in square brackets — typically the `source` filename, e.g. `[contract.pdf]`. Do not invent numeric `[N]` citations for tool result content that doesn't carry one.
-- If the context lists items as available for retrieval but does not include their content, do not cite them directly — call the appropriate tool to fetch their content first, then cite from the returned chunks.
+- **Cite each `<source>` tag in the context by the value of its `name` attribute**, in square brackets — e.g. `<source name="contract.pdf">` → `[contract.pdf]`, `<source name="https://wikipedia.org">` → `[https://wikipedia.org]` or `[wikipedia.org]` (URL protocol is optional in the citation).
+- **For content returned by tool calls** (web search, page fetch, attached-file or knowledge search): cite by the source's primary name as it appears in the result — a web result's title, a file chunk's source filename, or, for a directly fetched page, its URL. Prefer the title/name when one is present. Use the same `[identifier]` format.
+- If the context lists items as available for retrieval but does not include their content (for example, `<retrievable_file>` entries inside `<retrievable_files>`), do not cite them directly — call the appropriate tool to fetch their content first, then cite the returned sources by name.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
 ### Example of Citation:
-If the user asks about a specific topic and the information is found in a source with a provided id attribute, the response should include the citation like in the following example:
-* "According to the study, the proposed method increases efficiency by 20% [1]."
+* "According to the study, the proposed method increases efficiency by 20% [research_paper.pdf]."
+* "The official documentation confirms this behavior [docs.python.org]."
 
 Or in the example of you retrieving the information through a tool call in a tool result, you can cite like so:
 * "The emergency server room access code is stored in the key box [emergency_handbook.pdf]."
 
 ### Output:
-Provide a clear and direct response to the user's query. Use inline citations in [id] format when an `<source id="...">` tag is present in the context, or in [source-name] format when citing a chunk returned by a tool result.
+Provide a clear and direct response to the user's query, including inline `[source-name]` citations matched to the `name` attribute of `<source>` tags in the context, or to the source identifier of chunks returned by tool calls.
 
 <context>
 {{CONTEXT}}

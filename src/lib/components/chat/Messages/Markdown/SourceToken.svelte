@@ -23,7 +23,7 @@
 
 	// Helper function to check if text is a URL and return the domain
 	function formattedTitle(title: string): string {
-		if (title.startsWith('http')) {
+		if (title?.startsWith?.('http')) {
 			return getDomain(title);
 		}
 
@@ -37,10 +37,45 @@
 		}
 		return title;
 	};
+
+	// Name-based citation resolution. The tokenizer emits [name]/[url] tokens
+	// with empty `ids` and the bracket content in `citationIdentifiers[0]`.
+	// We match it against `sourceIds` using exact equality, with protocol
+	// stripped from URL-shaped sources so `[wikipedia.org]` matches
+	// `https://wikipedia.org` but NOT `https://wikipedia.org/python`.
+	// Returns the 1-based index into sourceIds, or 0 if no unique match.
+	function findNameMatch(citation: string, ids: string[]): number {
+		if (!citation || !ids?.length) return 0;
+		const stripUrl = (s: string) => s.replace(/^https?:\/\//, '').replace(/\/$/, '');
+		const target = stripUrl(citation);
+		const matches: number[] = [];
+		for (let i = 0; i < ids.length; i++) {
+			const s = ids[i];
+			if (typeof s !== 'string' || !s) continue;
+			if (s === citation) {
+				matches.push(i + 1);
+				continue;
+			}
+			if (s.startsWith('http://') || s.startsWith('https://')) {
+				if (stripUrl(s) === target) matches.push(i + 1);
+			}
+		}
+		return matches.length === 1 ? matches[0] : 0;
+	}
+
+	$: nameOnly =
+		(token?.ids ?? []).length === 0 && (token?.citationIdentifiers ?? []).length > 0;
+	$: resolvedNameId = nameOnly ? findNameMatch(token.citationIdentifiers[0], sourceIds) : 0;
 </script>
 
 {#if sourceIds}
-	{#if (token?.ids ?? []).length == 1}
+	{#if nameOnly}
+		{#if resolvedNameId > 0}
+			<Source id={resolvedNameId} title={sourceIds[resolvedNameId - 1]} {onClick} />
+		{:else}
+			<span>{token.raw}</span>
+		{/if}
+	{:else if (token?.ids ?? []).length == 1}
 		{@const id = token.ids[0]}
 		{@const identifier = token.citationIdentifiers ? token.citationIdentifiers[0] : id - 1}
 		<Source id={identifier} title={sourceIds[id - 1]} {onClick} />

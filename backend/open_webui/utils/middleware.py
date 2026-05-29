@@ -945,18 +945,17 @@ def _format_tag_attrs(pairs: list[tuple[str, str | None]]) -> str:
     )
 
 
-def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
+def get_source_context(sources: list, include_content: bool = True) -> str:
     """
     Render sources for the RAG <context> block.
 
-    Citeable sources -> <source id="N">body</source>. Roster-only sources
+    Citeable sources -> <source name="...">body</source>. Roster-only sources
     (roster_only=True, no body) -> <retrievable_file ...> inside <retrievable_files>.
     Citeable-only input stays bare (no wrapper, backward compatible); mixed
-    input wraps citeable sources under <full_context_files>.
+    input wraps citeable sources under <full_context_files>. The model cites
+    sources by their `name` attribute (or URL for web results) — see
+    DEFAULT_RAG_TEMPLATE.
     """
-    if source_ids is None:
-        source_ids = {}
-
     citeable_parts: list[str] = []
     roster_parts: list[str] = []
 
@@ -978,12 +977,17 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
             continue
 
         for document_chunk, chunk_meta in zip(source.get('document', []), source.get('metadata', [])):
-            source_id = (chunk_meta or {}).get('source') or source_resource_id or 'N/A'
-            if source_id not in source_ids:
-                source_ids[source_id] = len(source_ids) + 1
+            # Per-chunk citation handle: chunk metadata `source` (often the
+            # filename or URL) takes priority, falling back to the top-level
+            # source name, then the resource id.
+            citation_name = (
+                (chunk_meta or {}).get('source')
+                or source_name
+                or source_resource_id
+                or 'Unknown'
+            )
             attrs = _format_tag_attrs([
-                ('id', str(source_ids[source_id])),
-                ('name', source_name),
+                ('name', citation_name),
                 ('resource-type', source_type),
                 ('resource-id', source_resource_id),
             ])
@@ -2015,8 +2019,8 @@ async def chat_completion_files_handler(
             )
 
         if should_partition:
-            # Sort by id so the rendered blocks (and source_ids numbering) stay
-            # byte-stable across turns regardless of frontend file ordering.
+            # Sort by id so the rendered blocks stay byte-stable across
+            # turns regardless of frontend file ordering.
             retrievable_items = sorted(
                 (item for item in files if is_retrievable(item)),
                 key=lambda item: item.get('id') or '',
@@ -4874,12 +4878,10 @@ async def streaming_chat_response_handler(response, ctx):
 
                             # Build context: file sources with content,
                             # tool sources as citation markers only.
-                            source_ids = {}
                             source_context = get_source_context(
-                                metadata.get('sources', []), source_ids
+                                metadata.get('sources', [])
                             ) + get_source_context(
                                 all_tool_call_sources,
-                                source_ids,
                                 include_content=False,
                             )
                             source_context = source_context.strip()

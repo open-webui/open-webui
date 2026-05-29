@@ -4,55 +4,64 @@ export function citationExtension() {
 		level: 'inline' as const,
 
 		start(src: string) {
-			// Trigger on any [number] or [number#suffix]
-			// We check for a digit immediately after [ to avoid matching arbitrary links
-			return src.search(/\[\d/);
+			// Trigger on any `[`; we filter precisely in the tokenizer.
+			// The tokenizer rejects markdown links (`[text](url)`) and
+			// footnotes (`[^foo]`).
+			return src.search(/\[/);
 		},
 
 		tokenizer(src: string) {
 			// Avoid matching footnotes
 			if (/^\[\^/.test(src)) return;
 
-			// Match ONE OR MORE adjacent [1], [1,2], or [1#foo] blocks
-			// Example matched: "[1][2,3][4#bar]"
-			// We allow: digits, commas, spaces, and # followed by non-control chars (excluding ] and ,)
-			const rule = /^(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/;
-			const match = rule.exec(src);
-			if (!match) return;
-
-			const raw = match[0];
-
-			// Extract ALL bracket groups inside the big match
-			const groupRegex = /\[([^\]]+)\]/g;
-			const ids: number[] = [];
-			const citationIdentifiers: string[] = [];
-			let m: RegExpExecArray | null;
-
-			while ((m = groupRegex.exec(raw))) {
-				// m[1] is the content inside brackets, e.g. "1, 2#foo"
-				const parts = m[1].split(',').map((p) => p.trim());
-
-				parts.forEach((part) => {
-					// Check if it starts with digit
-					const match = /^(\d+)(?:#(.+))?$/.exec(part);
-					if (match) {
-						const index = parseInt(match[1], 10);
-						if (!isNaN(index)) {
-							ids.push(index);
-							// Store the full identifier ("1#foo" or "1")
-							citationIdentifiers.push(part);
+			// 1) Numeric path: ONE OR MORE adjacent [1], [1,2], [1#foo] blocks.
+			// Backward-compatible with existing chat history that has [N] tokens.
+			const numericRule = /^(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/;
+			const numericMatch = numericRule.exec(src);
+			if (numericMatch) {
+				const raw = numericMatch[0];
+				const groupRegex = /\[([^\]]+)\]/g;
+				const ids: number[] = [];
+				const citationIdentifiers: string[] = [];
+				let m: RegExpExecArray | null;
+				while ((m = groupRegex.exec(raw))) {
+					const parts = m[1].split(',').map((p) => p.trim());
+					parts.forEach((part) => {
+						const inner = /^(\d+)(?:#(.+))?$/.exec(part);
+						if (inner) {
+							const index = parseInt(inner[1], 10);
+							if (!isNaN(index)) {
+								ids.push(index);
+								citationIdentifiers.push(part);
+							}
 						}
-					}
-				});
+					});
+				}
+				if (ids.length === 0) return;
+				return {
+					type: 'citation',
+					raw,
+					ids,
+					citationIdentifiers
+				};
 			}
 
-			if (ids.length === 0) return;
-
+			// 2) Name path: a single [non-empty content] bracket whose content
+			// is not purely-numeric (handled above), contains no `]` or `(`,
+			// and is not followed by `(` (which would make it a markdown link).
+			// Examples matched: [contract.pdf], [wikipedia.org], [Wikipedia: Python]
+			// NOT matched: [text](url), [^foo], [1], [1, 2]
+			const nameRule = /^\[([^\[\]()\n]+?)\](?!\()/;
+			const nameMatch = nameRule.exec(src);
+			if (!nameMatch) return;
+			const content = nameMatch[1].trim();
+			if (!content) return;
+			if (/^\d+(?:\s*,\s*\d+)*$/.test(content)) return;
 			return {
 				type: 'citation',
-				raw,
-				ids, // merged list of integers for legacy title lookup
-				citationIdentifiers // merged list of full identifiers for granular targeting
+				raw: nameMatch[0],
+				ids: [], // no numeric id; lookup is by name
+				citationIdentifiers: [content]
 			};
 		},
 
