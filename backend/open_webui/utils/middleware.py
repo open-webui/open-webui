@@ -3006,6 +3006,9 @@ async def get_system_oauth_token(request, user):
             from open_webui.models.oauth_sessions import OAuthSessions
 
             sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
+
+            # Filter out MCP sessions for SSO OAuth
+            sessions = [s for s in sessions if not (s.provider or '').startswith('mcp:')]
             if sessions:
                 best = max(sessions, key=lambda s: s.updated_at)
                 oauth_token = await request.app.state.oauth_manager.get_oauth_token(
