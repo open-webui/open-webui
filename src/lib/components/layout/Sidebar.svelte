@@ -29,7 +29,10 @@
 		selectedFolder,
 		WEBUI_NAME,
 		sidebarWidth,
-		activeChatIds
+		activeChatIds,
+		// Company custom: Team Workspaces V1
+		workspaces,
+		activeWorkspaceId
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -64,6 +67,11 @@
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
+	// Company custom: Team Workspaces V1
+	import { getWorkspaces, getWorkspaceChats } from '$lib/apis/workspaces';
+	import WorkspaceItem from './Sidebar/WorkspaceItem.svelte';
+	import WorkspaceModal from './Sidebar/WorkspaceModal.svelte';
+	import ManageMembersModal from './Sidebar/ManageMembersModal.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
@@ -98,6 +106,12 @@
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
+	// Company custom: Team Workspaces V1
+	let showWorkspaces = false;
+	let showCreateWorkspace = false;
+	let showManageMembers = false;
+	let managingWorkspace: any = null;
+	let managingWorkspaceRole: 'manager' | 'member' | 'viewer' | null = null;
 
 	let folders = {};
 	let folderRegistry = {};
@@ -279,6 +293,14 @@
 						['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
 				)
 			);
+		}
+	};
+
+	// Company custom: Team Workspaces V1
+	const initWorkspaces = async () => {
+		const res = await getWorkspaces(localStorage.token).catch(() => null);
+		if (res) {
+			workspaces.set(res);
 		}
 	};
 
@@ -558,6 +580,8 @@
 						await initChannels();
 					}
 					await initChatList();
+					// Company custom: Team Workspaces V1
+					await initWorkspaces();
 
 					// Check which chats have active tasks
 					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
@@ -1294,6 +1318,51 @@
 						{/each}
 					</Folder>
 				{/if}
+
+				<!-- Company custom: Team Workspaces V1 -->
+				{#if $workspaces?.length > 0 || true}
+					<Folder
+						id="sidebar-workspaces"
+						bind:open={showWorkspaces}
+						className="px-2 mt-0.5"
+						name={$i18n.t('Team Workspaces')}
+						chevron={false}
+						dragAndDrop={false}
+						onAdd={async () => { showCreateWorkspace = true; }}
+						onAddLabel={$i18n.t('New Workspace')}
+					>
+						{#each $workspaces as ws (ws.id)}
+							<WorkspaceItem
+								workspace={ws}
+								onManage={() => {
+									managingWorkspace = ws;
+									// Creator is always a manager; for other members we default to 'member'
+									// and let ManageMembersModal load the real role list.
+									managingWorkspaceRole = ws.user_id === $user?.id ? 'manager' : 'member';
+									showManageMembers = true;
+								}}
+							/>
+						{:else}
+							<div class="px-3 py-1 text-xs text-gray-400 dark:text-gray-600 italic">
+								{$i18n.t('No workspaces yet')}
+							</div>
+						{/each}
+					</Folder>
+				{/if}
+
+				<!-- Company custom: Team Workspaces V1 — modals -->
+				<WorkspaceModal
+					bind:show={showCreateWorkspace}
+					onSubmit={async () => { await initWorkspaces(); showWorkspaces = true; }}
+				/>
+
+				<ManageMembersModal
+					bind:show={showManageMembers}
+					workspace={managingWorkspace}
+					currentUserRole={managingWorkspaceRole}
+					onUpdate={initWorkspaces}
+					onDeleted={() => { managingWorkspace = null; activeWorkspaceId.set(null); }}
+				/>
 
 				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
 					<Folder
