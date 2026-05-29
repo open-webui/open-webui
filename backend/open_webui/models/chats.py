@@ -356,9 +356,32 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
+            # Collect all unique folder_ids referenced by the import payload and
+            # resolve which ones actually exist for this user.  Any folder_id that
+            # doesn't have a matching row in the folder table is cleared to None so
+            # the imported chats remain visible in the uncategorised chat list
+            # instead of being silently hidden.  This is the most common cause of
+            # "import succeeds but chats are not visible" when exporting from
+            # ChatGPT / other providers whose folder IDs are opaque strings that
+            # have no counterpart in the Open WebUI folder table (#24910).
+            requested_folder_ids: set[str] = {
+                form_data.folder_id
+                for form_data in chat_import_forms
+                if form_data.folder_id is not None
+            }
+            valid_folder_ids: set[str] = set()
+            for fid in requested_folder_ids:
+                if await Folders.get_folder_by_id_and_user_id(fid, user_id, db=db) is not None:
+                    valid_folder_ids.add(fid)
+
             chats = []
 
             for form_data in chat_import_forms:
+                # Strip folder_id when the referenced folder does not exist so the
+                # chat appears in the normal uncategorised list rather than being
+                # invisible in the UI.
+                if form_data.folder_id is not None and form_data.folder_id not in valid_folder_ids:
+                    form_data = form_data.model_copy(update={'folder_id': None})
                 chat = self._chat_import_form_to_chat_model(user_id, form_data)
                 chats.append(Chat(**chat.model_dump()))
 
