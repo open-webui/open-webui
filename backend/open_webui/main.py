@@ -660,7 +660,7 @@ async def lifespan(app: FastAPI):
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
 
-    def _daemon_done_cb(task: asyncio.Task) -> None:
+    def log_unexpected_cleanup_task_exit(task: asyncio.Task) -> None:
         # `asyncio.create_task` discards exceptions on unreferenced tasks; without
         # this callback a dead cleanup loop only surfaces as a delayed
         # "Task exception was never retrieved" WARNING at GC time, by which point
@@ -669,7 +669,7 @@ async def lifespan(app: FastAPI):
         # immediate, alertable signal at the moment of death.
         if not task.cancelled() and task.exception() is not None:
             log.error(
-                'Background daemon task %s exited unexpectedly: %r '
+                'Background cleanup task %s exited unexpectedly: %r '
                 '— pool cleanup has stopped for the remaining lifetime of the process.',
                 task.get_name(),
                 task.exception(),
@@ -679,12 +679,12 @@ async def lifespan(app: FastAPI):
     app.state.periodic_usage_cleanup_task = asyncio.create_task(
         periodic_usage_pool_cleanup(), name='periodic_usage_pool_cleanup'
     )
-    app.state.periodic_usage_cleanup_task.add_done_callback(_daemon_done_cb)
+    app.state.periodic_usage_cleanup_task.add_done_callback(log_unexpected_cleanup_task_exit)
 
     app.state.periodic_session_cleanup_task = asyncio.create_task(
         periodic_session_pool_cleanup(), name='periodic_session_pool_cleanup'
     )
-    app.state.periodic_session_cleanup_task.add_done_callback(_daemon_done_cb)
+    app.state.periodic_session_cleanup_task.add_done_callback(log_unexpected_cleanup_task_exit)
 
     from open_webui.utils.automations import scheduler_worker_loop
 
@@ -763,10 +763,10 @@ async def lifespan(app: FastAPI):
     # the tasks are destroyed mid-await and asyncio emits a
     # "Task was destroyed but it is pending!" warning on every clean restart,
     # which trains operators to ignore that warning and masks real failures.
-    for _attr in ('periodic_usage_cleanup_task', 'periodic_session_cleanup_task'):
-        _t = getattr(app.state, _attr, None)
-        if _t is not None:
-            _t.cancel()
+    if hasattr(app.state, 'periodic_usage_cleanup_task'):
+        app.state.periodic_usage_cleanup_task.cancel()
+    if hasattr(app.state, 'periodic_session_cleanup_task'):
+        app.state.periodic_session_cleanup_task.cancel()
 
 
 app = FastAPI(
