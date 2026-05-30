@@ -1884,6 +1884,13 @@ async def chat_completion(
                     # Save user message to DB
                     user_message = metadata.get('user_message') or {}
                     if user_message and user_message.get('id'):
+                        # Guard: infer parentId from chat's currentId when frontend sends null
+                        if not user_message.get('parentId'):
+                            _existing = locals().get('existing_chat') or await Chats.get_chat_by_id(chat_id)
+                            _current_id = (_existing.chat or {}).get('history', {}).get('currentId') if _existing else None
+                            if _current_id and _current_id != user_message['id']:
+                                user_message['parentId'] = _current_id
+
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             chat_id,
                             user_message['id'],
