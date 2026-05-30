@@ -101,7 +101,10 @@
 				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined,
 				think: params.think !== null ? params.think : undefined,
 				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
-				format: params.format !== null ? params.format : undefined
+				format: params.format !== null ? params.format : undefined,
+				...(params.custom_params && Object.keys(params.custom_params).length > 0
+					? { custom_params: params.custom_params }
+					: {})
 			}
 		});
 		dispatch('save');
@@ -316,7 +319,7 @@
 				</div>
 
 				{#if showAdvanced}
-					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
+					<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 				{/if}
 			</div>
 		{/if}

@@ -366,7 +366,7 @@
 
 											{#if showDefaultParams}
 												<div class="mt-2">
-													<AdvancedParams admin={true} bind:params={defaultParams} />
+													<AdvancedParams admin={true} custom={true} bind:params={defaultParams} />
 												</div>
 											{/if}
 										</div>
