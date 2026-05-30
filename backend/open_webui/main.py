@@ -1703,7 +1703,7 @@ async def chat_completion(
         payload_meta_params = ((((model_item or {}).get('info') or {}).get('meta') or {}).get('params', {}) or {})
 
         model_info_params = {
-            **default_model_params,
+            **default_model_params.value if hasattr(default_model_params, 'value') else default_model_params,
             **db_meta_params,
             **db_model_params,
             **payload_meta_params,
