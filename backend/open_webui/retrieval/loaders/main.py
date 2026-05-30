@@ -19,6 +19,7 @@ from langchain_community.document_loaders import (
 from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
+from open_webui.retrieval.loaders.file_type import detect_ooxml_file_type
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
@@ -262,6 +263,9 @@ class Loader:
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split('.')[-1].lower()
+        detected_ooxml_type = detect_ooxml_file_type(file_path)
+        if detected_ooxml_type:
+            file_ext = detected_ooxml_type
 
         if (
             self.engine == 'external'
