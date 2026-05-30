@@ -28,6 +28,9 @@
 	import Select from '$lib/components/common/Select.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -93,6 +96,24 @@
 		if (res) {
 			automations = (automations ?? []).map((a) => (a.id === res.id ? res : a));
 		}
+	};
+
+	const enableAllHandler = async () => {
+		const toEnable = (automations ?? []).filter((a) => !a.is_active);
+		// Optimistic UI update
+		toEnable.forEach((a) => (a.is_active = true));
+		automations = automations;
+		// Sync with server
+		await Promise.all(toEnable.map((a) => toggleAutomationById(localStorage.token, a.id)));
+	};
+
+	const disableAllHandler = async () => {
+		const toDisable = (automations ?? []).filter((a) => a.is_active);
+		// Optimistic UI update
+		toDisable.forEach((a) => (a.is_active = false));
+		automations = automations;
+		// Sync with server
+		await Promise.all(toDisable.map((a) => toggleAutomationById(localStorage.token, a.id)));
 	};
 
 	const runNowHandler = async (automation: AutomationResponse) => {
@@ -329,6 +350,47 @@
 								</svelte:fragment>
 							</Select>
 						</div>
+
+						<div class="flex-1"></div>
+
+						<Dropdown>
+							<Tooltip content={$i18n.t('Actions')}>
+								<button
+									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									type="button"
+								>
+									<EllipsisHorizontal className="size-4" />
+								</button>
+							</Tooltip>
+
+							<div slot="content">
+								<div
+									class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+								>
+									<button
+										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+										type="button"
+										on:click={() => {
+											enableAllHandler();
+										}}
+									>
+										<CheckCircle className="size-4" />
+										<div class="flex items-center">{$i18n.t('Enable All')}</div>
+									</button>
+
+									<button
+										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+										type="button"
+										on:click={() => {
+											disableAllHandler();
+										}}
+									>
+										<Minus className="size-4" />
+										<div class="flex items-center">{$i18n.t('Disable All')}</div>
+									</button>
+								</div>
+							</div>
+						</Dropdown>
 					</div>
 
 					{#if automations === null || loading}
