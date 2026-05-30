@@ -46,9 +46,11 @@ function escapeRegExp(string: string): string {
 // Replace tokens outside code blocks only
 export const replaceOutsideCode = (content: string, replacer: (str: string) => string) => {
 	return content
-		.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
+		.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[\s\S]*?`)/)
 		.map((segment) => {
-			return segment.startsWith('```') || segment.startsWith('`') ? segment : replacer(segment);
+			return segment.startsWith('```') || segment.startsWith('~~~') || segment.startsWith('`')
+				? segment
+				: replacer(segment);
 		})
 		.join('');
 };
