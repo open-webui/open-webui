@@ -118,7 +118,7 @@
 		{/if}
 
 		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">
-			{@html DOMPurify.sanitize(marked(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
+			{@html DOMPurify.sanitize(marked.parseInline(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
 		</div>
 	</div>
 </div>
