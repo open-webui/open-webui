@@ -679,8 +679,31 @@ async def lifespan(app: FastAPI):
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
 
-    asyncio.create_task(periodic_usage_pool_cleanup())
-    asyncio.create_task(periodic_session_pool_cleanup())
+    def _daemon_done_cb(task: asyncio.Task) -> None:
+        # `asyncio.create_task` discards exceptions on unreferenced tasks; without
+        # this callback a dead cleanup loop only surfaces as a delayed
+        # "Task exception was never retrieved" WARNING at GC time, by which point
+        # SESSION_POOL/USAGE_POOL have already been growing without bound for an
+        # unknown interval. Logging at ERROR with exc_info gives operators an
+        # immediate, alertable signal at the moment of death.
+        if not task.cancelled() and task.exception() is not None:
+            log.error(
+                'Background daemon task %s exited unexpectedly: %r '
+                '— pool cleanup has stopped for the remaining lifetime of the process.',
+                task.get_name(),
+                task.exception(),
+                exc_info=task.exception(),
+            )
+
+    app.state.periodic_usage_cleanup_task = asyncio.create_task(
+        periodic_usage_pool_cleanup(), name='periodic_usage_pool_cleanup'
+    )
+    app.state.periodic_usage_cleanup_task.add_done_callback(_daemon_done_cb)
+
+    app.state.periodic_session_cleanup_task = asyncio.create_task(
+        periodic_session_pool_cleanup(), name='periodic_session_pool_cleanup'
+    )
+    app.state.periodic_session_cleanup_task.add_done_callback(_daemon_done_cb)
 
     from open_webui.utils.automations import scheduler_worker_loop
 
@@ -753,6 +776,16 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    # Cooperatively cancel the cleanup daemons so their `finally: release_fn()`
+    # blocks run and the Redis lock is freed for the next replica. Without this,
+    # the tasks are destroyed mid-await and asyncio emits a
+    # "Task was destroyed but it is pending!" warning on every clean restart,
+    # which trains operators to ignore that warning and masks real failures.
+    for _attr in ('periodic_usage_cleanup_task', 'periodic_session_cleanup_task'):
+        _t = getattr(app.state, _attr, None)
+        if _t is not None:
+            _t.cancel()
 
 
 app = FastAPI(
