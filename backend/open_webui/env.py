@@ -16,8 +16,6 @@ import markdown
 from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives import serialization
 
-from open_webui.constants import ERROR_MESSAGES
-
 ####################################
 # Load .env file
 ####################################
@@ -603,9 +601,10 @@ ENABLE_SIGNUP_PASSWORD_CONFIRMATION = os.getenv('ENABLE_SIGNUP_PASSWORD_CONFIRMA
 ####################################
 
 # WEBUI_JWT_SECRET_KEY is deprecated; use WEBUI_SECRET_KEY instead.
+# No hardcoded fallback by design: the supported start scripts set/auto-generate it; unset is rejected below.
 WEBUI_SECRET_KEY = os.getenv(
     'WEBUI_SECRET_KEY',
-    os.getenv('WEBUI_JWT_SECRET_KEY', 't0p-s3cr3t'),
+    os.getenv('WEBUI_JWT_SECRET_KEY', ''),
 )
 
 WEBUI_SESSION_COOKIE_SAME_SITE = os.getenv('WEBUI_SESSION_COOKIE_SAME_SITE', 'lax')
@@ -620,7 +619,14 @@ WEBUI_AUTH_COOKIE_SECURE = (
 )
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == '':
-    raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+    raise SystemExit(
+        'WEBUI_SECRET_KEY is not set. It is a hard requirement when authentication is enabled.\n'
+        'The supported start methods set or auto-generate it for you: use start.sh (Linux/macOS), '
+        'start_windows.bat (Windows), or `open-webui serve`.\n'
+        'If you start the backend another way (e.g. invoking uvicorn directly, which is unsupported), '
+        'you must set WEBUI_SECRET_KEY yourself to a long random value.\n'
+        'See https://docs.openwebui.com/reference/env-configuration#webui_secret_key'
+    )
 
 ENABLE_COMPRESSION_MIDDLEWARE = os.getenv('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
 
