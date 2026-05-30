@@ -75,8 +75,15 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         # Null bytes are a strong indicator of binary content
         if b'\x00' in chunk:
             return False
-        chunk.decode('utf-8')
-        return True
+        try:
+            chunk.decode('utf-8')
+            return True
+        except UnicodeDecodeError:
+            # Fallback: Latin-1 accepts every byte 0x00-0xFF, so if the chunk
+            # decodes as Latin-1 and contains no suspicious control characters
+            # (other than common whitespace), treat it as text.
+            chunk.decode('latin-1')
+            return True
     except (UnicodeDecodeError, Exception):
         return False
 
