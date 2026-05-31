@@ -9,6 +9,44 @@ from open_webui.utils.misc import (
 
 # An honest ledger is worth more than a flattering one.
 # Let every cost here be counted true.
+def get_completion_message_content(response: object) -> str | None:
+    if not isinstance(response, dict):
+        return None
+
+    choices = response.get('choices')
+    if not isinstance(choices, list) or not choices:
+        return None
+
+    first_choice = choices[0]
+    if not isinstance(first_choice, dict):
+        return None
+
+    message = first_choice.get('message')
+    if not isinstance(message, dict):
+        return None
+
+    content = message.get('content')
+    return content if isinstance(content, str) else None
+
+
+def parse_generated_queries(response: str | None, fallback_query: str) -> list[str]:
+    if not response:
+        return [fallback_query]
+
+    try:
+        bracket_start = response.rfind('{')
+        bracket_end = response.rfind('}') + 1
+
+        if bracket_start == -1 or bracket_end == -1:
+            raise Exception('No JSON object found in the response')
+
+        response = response[bracket_start:bracket_end]
+        queries = json.loads(response)
+        return queries.get('queries', [])
+    except Exception:
+        return [response]
+
+
 def normalize_usage(usage: dict) -> dict:
     """
     Normalize usage statistics to standard format.

@@ -86,7 +86,6 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
-
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -110,7 +109,7 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.response import normalize_usage
+from open_webui.utils.response import get_completion_message_content, normalize_usage, parse_generated_queries
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.task import (
     get_task_model_id,
@@ -1520,20 +1519,8 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
             user,
         )
 
-        response = res['choices'][0]['message']['content']
-
-        try:
-            bracket_start = response.rfind('{')
-            bracket_end = response.rfind('}') + 1
-
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception('No JSON object found in the response')
-
-            response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
-            queries = queries.get('queries', [])
-        except Exception as e:
-            queries = [response]
+        response = get_completion_message_content(res)
+        queries = parse_generated_queries(response, user_message or '')
 
         if ENABLE_QUERIES_CACHE:
             request.state.cached_queries = queries
