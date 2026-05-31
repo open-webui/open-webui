@@ -2671,6 +2671,31 @@ async def process_files_batch(
                 )
             ]
 
+            # Duplicate-content guard — mirrors save_docs_to_vector_db's hash check
+            # for the single-file endpoint. Skip files already in this collection.
+            try:
+                if collection_name and VECTOR_DB_CLIENT.has_collection(collection_name):
+                    dup_result = VECTOR_DB_CLIENT.query(
+                        collection_name=collection_name,
+                        filter={'hash': file_hash},
+                    )
+                    if dup_result is not None and dup_result.ids and dup_result.ids[0]:
+                        existing_file_id = (
+                            dup_result.metadatas[0][0].get('file_id')
+                            if dup_result.metadatas and dup_result.metadatas[0]
+                            else None
+                        )
+                        if existing_file_id != file.id:
+                            log.info(f'Batch add: skipping duplicate file {file.id} (hash already in {collection_name})')
+                            file_errors.append(BatchProcessFilesResult(
+                                file_id=file.id,
+                                status='skipped',
+                                error=str(ERROR_MESSAGES.DUPLICATE_CONTENT),
+                            ))
+                            continue
+            except Exception as dup_err:
+                log.debug(f'Batch add: duplicate check skipped for {file.id}: {dup_err}')
+
             all_docs.extend(docs)
 
             file_updates.append(
