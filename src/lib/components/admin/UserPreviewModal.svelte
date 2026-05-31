@@ -35,14 +35,14 @@
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
-			<div class=" text-lg font-medium self-center font-primary">
+			<div class=" text-lg font-medium self-center font-primary min-w-0 truncate">
 				{$i18n.t('User Preview')}
 				{#if userName}
 					<span class="text-sm font-normal text-gray-500 ml-1">{userName}</span>
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center flex-shrink-0"
 				on:click={() => {
 					show = false;
 				}}

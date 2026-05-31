@@ -400,7 +400,7 @@
 								{/if}
 							</div>
 						</td>
-						<td class=" px-3 py-1"> {user.email} </td>
+						<td class=" px-3 py-1 max-w-48 truncate"> {user.email} </td>
 
 						<td class=" px-3 py-1">
 							{dayjs(user.last_active_at * 1000).fromNow()}
