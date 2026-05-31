@@ -407,7 +407,7 @@
 					{/if}
 				</div>
 
-				<div class="flex-auto w-0 pl-2">
+				<div class="flex-auto w-0 min-w-0 pl-2">
 					{#if showUserProfile}
 						<Name>
 							<div class=" self-end text-base shrink-0 font-medium truncate">
