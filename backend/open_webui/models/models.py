@@ -17,6 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
+# Track invalid profile_image_url values we've already warned about so we
+# don't flood the logs on every DB read (the validator fires per-row).
+_warned_profile_urls: set[str] = set()
+
 
 # --- Models DB Schema ---
 
@@ -30,7 +34,7 @@ class ModelParams(BaseModel):
 class ModelMeta(BaseModel):
     """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
 
-    profile_image_url: str | None = '/static/favicon.png'
+    profile_image_url: str | None = None
     description: str | None = Field(default=None, description='User-facing description of the model.')
     capabilities: dict | None = None
 
@@ -41,7 +45,17 @@ class ModelMeta(BaseModel):
     def check_profile_image_url(cls, v: str | None) -> str | None:
         if v is None:
             return v
-        return validate_profile_image_url(v)
+        try:
+            return validate_profile_image_url(v)
+        except ValueError:
+            if v not in _warned_profile_urls:
+                _warned_profile_urls.add(v)
+                log.warning(
+                    'Clearing invalid profile_image_url stored in DB '
+                    '(likely a legacy SVG data-URI): %.80s…',
+                    v,
+                )
+            return None
 
     @model_validator(mode='before')
     @classmethod
@@ -178,10 +192,15 @@ class ModelsTable:
             all_models = result.scalars().all()
             model_ids = [model.id for model in all_models]
             grants_map = await AccessGrants.get_grants_by_resources('model', model_ids, db=db)
-            return [
-                await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
-                for model in all_models
-            ]
+            models: list[ModelModel] = []
+            for model in all_models:
+                try:
+                    models.append(
+                        await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
+                    )
+                except Exception as exc:
+                    log.error('Skipping model %r during get_all_models due to error: %s', model.id, exc)
+            return models
 
     async def get_models(self, db: AsyncSession | None = None) -> list[ModelUserResponse]:
         async with get_async_db_context(db) as db:
