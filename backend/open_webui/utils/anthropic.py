@@ -349,6 +349,45 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     'type': 'function',
                     'function': {'name': tc.get('name', '')},
                 }
+    # === Add logic to convert Anthropic thinking/reasoning parameters to OpenAI reasoning_effort ===
+    def map_effort_string(raw_str: str) -> str:
+        """Extract reasoning level via fuzzy matching, defaulting to safe compatible 'high' for max values."""
+        s = raw_str.lower()
+        if any(keyword in s for keyword in ('high', 'max', 'ultra')):
+            return 'high'
+        elif 'low' in s:
+            return 'low'
+        else:
+            return 'medium'
+
+    # 1. Prioritize capturing output_config.effort from the latest Claude Code versions
+    if 'output_config' in anthropic_payload and isinstance(anthropic_payload['output_config'], dict):
+        effort_val = anthropic_payload['output_config'].get('effort')
+        if effort_val:
+            openai_payload['reasoning_effort'] = map_effort_string(str(effort_val))
+            
+    # 2. Compatibility for effort field passed directly at the top level
+    elif 'effort' in anthropic_payload:
+        openai_payload['reasoning_effort'] = map_effort_string(str(anthropic_payload['effort']))
+
+    # 3. Fallback handling for thinking field (supports both adaptive and legacy budget_tokens)
+    if 'thinking' in anthropic_payload:
+        thinking_cfg = anthropic_payload['thinking']
+        if isinstance(thinking_cfg, dict):
+            # If using the latest adaptive thinking, and effort wasn't caught above, default to high intensity
+            if thinking_cfg.get('type') == 'adaptive' and 'reasoning_effort' not in openai_payload:
+                openai_payload['reasoning_effort'] = 'high'
+            # Legacy budget_tokens logic
+            elif 'budget_tokens' in thinking_cfg and 'reasoning_effort' not in openai_payload:
+                budget = thinking_cfg.get('budget_tokens', 0)
+                if budget == 0:
+                    openai_payload['reasoning_effort'] = 'medium'
+                elif budget < 4000:
+                    openai_payload['reasoning_effort'] = 'low'
+                elif budget < 8000:
+                    openai_payload['reasoning_effort'] = 'medium'
+                else:
+                    openai_payload['reasoning_effort'] = 'high'
 
     return openai_payload
 
