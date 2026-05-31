@@ -1954,6 +1954,7 @@
 	};
 
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
+		userPrompt = userPrompt.trim();
 		console.log('submitHandler', userPrompt, $chatId);
 
 		const _selectedModels = selectedModels.map((modelId) =>
