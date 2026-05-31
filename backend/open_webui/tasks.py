@@ -77,10 +77,29 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
 
 async def redis_send_command(redis: Redis, command: dict):
     command_json = json.dumps(command)
-    # RedisCluster doesn't expose publish() directly, but the
-    # PUBLISH command broadcasts across all cluster nodes server-side.
     if hasattr(redis, 'nodes_manager'):
-        await redis.execute_command('PUBLISH', REDIS_PUBSUB_CHANNEL, command_json)
+        # RedisCluster: PUBLISH is node-local, so we must broadcast to every
+        # primary node to ensure all subscribers (on any worker) receive it.
+        try:
+            primaries = redis.get_primaries()
+        except AttributeError:
+            # Older redis-py API: fall back to targeting all nodes at once
+            try:
+                await redis.execute_command(
+                    'PUBLISH', REDIS_PUBSUB_CHANNEL, command_json,
+                    target_nodes='all'
+                )
+            except TypeError:
+                await redis.execute_command('PUBLISH', REDIS_PUBSUB_CHANNEL, command_json)
+            return
+        for node in primaries:
+            try:
+                await redis.execute_command(
+                    'PUBLISH', REDIS_PUBSUB_CHANNEL, command_json,
+                    target_nodes=node
+                )
+            except Exception as node_err:
+                log.warning(f'redis_send_command: failed to publish to node {node}: {node_err}')
     else:
         await redis.publish(REDIS_PUBSUB_CHANNEL, command_json)
 
