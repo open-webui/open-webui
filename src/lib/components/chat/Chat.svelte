@@ -215,7 +215,7 @@
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		if (chatIdProp && (await loadChat().catch((e) => { console.error('navigateHandler: loadChat failed', e); loading = false; return false; }))) {
 			await tick();
 			loading = false;
 			window.setTimeout(() => scrollToBottom(), 0);
@@ -255,6 +255,7 @@
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
 		} else {
+			loading = false; // Prevent infinite loading spinner if goto() is slow or fails
 			await goto('/');
 		}
 	};
