@@ -1954,6 +1954,7 @@
 	};
 
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
+		userPrompt = userPrompt.trim(); // strip leading/trailing whitespace (#20198)
 		console.log('submitHandler', userPrompt, $chatId);
 
 		const _selectedModels = selectedModels.map((modelId) =>
