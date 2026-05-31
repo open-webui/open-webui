@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext } from 'svelte';
 	import { fly } from 'svelte/transition';
 
 	import { config, user, tools as _tools, mobile, knowledge } from '$lib/stores';
@@ -46,7 +46,7 @@
 	export let onUpload: Function;
 	export let onClose: Function;
 
-	let show = false;
+let show = false;
 	let tab = '';
 
 	let showAttachWebpageModal = false;
