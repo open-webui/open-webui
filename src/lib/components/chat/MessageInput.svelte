@@ -1660,12 +1660,14 @@
 											chatInput?.focus();
 										}}
 									>
-										<div
+										<button
+											type="button"
 											id="input-menu-button"
+											aria-label={$i18n.t('Add files and more')}
 											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 										>
 											<PlusAlt className="size-5.5" />
-										</div>
+										</button>
 									</InputMenu>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
@@ -1699,12 +1701,14 @@
 												chatInput?.focus();
 											}}
 										>
-											<div
+											<button
+												type="button"
 												id="integration-menu-button"
+												aria-label={$i18n.t('Integrations')}
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
-											</div>
+											</button>
 										</IntegrationsMenu>
 									{/if}
 
