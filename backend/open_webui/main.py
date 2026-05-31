@@ -288,6 +288,7 @@ from open_webui.config import (
     MOJEEK_SEARCH_API_KEY,
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_ROLES,
+    OAUTH_AUTO_REDIRECT,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_PROVIDERS,
@@ -858,6 +859,7 @@ app.state.BASE_MODELS = []
 app.state.config.WEBUI_URL = WEBUI_URL
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+app.state.config.OAUTH_AUTO_REDIRECT = OAUTH_AUTO_REDIRECT
 app.state.config.ENABLE_PASSWORD_CHANGE_FORM = ENABLE_PASSWORD_CHANGE_FORM
 
 app.state.config.ENABLE_API_KEYS = ENABLE_API_KEYS
@@ -2350,7 +2352,10 @@ async def get_app_config(request: Request):
         'name': app.state.WEBUI_NAME,
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
-        'oauth': {'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()}},
+        'oauth': {
+            'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()},
+            'auto_redirect': app.state.config.OAUTH_AUTO_REDIRECT,
+        },
         'features': {
             # --- Public: required by login/signup page pre-auth ---
             'auth': WEBUI_AUTH,

@@ -276,6 +276,7 @@ type Document = {
 type Config = {
 	license_metadata: any;
 	status: boolean;
+	onboarding?: boolean;
 	name: string;
 	version: string;
 	default_locale: string;
@@ -305,6 +306,7 @@ type Config = {
 		providers: {
 			[key: string]: string;
 		};
+		auto_redirect: boolean;
 	};
 	ui?: {
 		pending_user_overlay_title?: string;

@@ -3433,6 +3433,12 @@ ENABLE_OAUTH_SIGNUP = ConfigVar(
     os.getenv('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true',
 )
 
+OAUTH_AUTO_REDIRECT = ConfigVar(
+    'OAUTH_AUTO_REDIRECT',
+    'oauth.auto_redirect',
+    os.getenv('OAUTH_AUTO_REDIRECT', 'False').lower() == 'true',
+)
+
 OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = ConfigVar(
     'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE',
     'oauth.refresh_token_include_scope',
