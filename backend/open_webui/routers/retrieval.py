@@ -466,6 +466,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'MINERU_API_KEY': request.app.state.config.MINERU_API_KEY,
         'MINERU_API_TIMEOUT': request.app.state.config.MINERU_API_TIMEOUT,
         'MINERU_PARAMS': request.app.state.config.MINERU_PARAMS,
+        'MINERU_FILE_EXTENSIONS': request.app.state.config.MINERU_FILE_EXTENSIONS,
         # Reranking settings
         'RAG_RERANKING_MODEL': request.app.state.config.RAG_RERANKING_MODEL,
         'RAG_RERANKING_ENGINE': request.app.state.config.RAG_RERANKING_ENGINE,
@@ -681,6 +682,7 @@ class ConfigForm(BaseModel):
     MINERU_API_KEY: str | None = None
     MINERU_API_TIMEOUT: str | None = None
     MINERU_PARAMS: dict | None = None
+    MINERU_FILE_EXTENSIONS: list[str] | None = None
 
     # Reranking settings
     RAG_RERANKING_MODEL: str | None = None
@@ -903,6 +905,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     )
     request.app.state.config.MINERU_PARAMS = (
         form_data.MINERU_PARAMS if form_data.MINERU_PARAMS is not None else request.app.state.config.MINERU_PARAMS
+    )
+    request.app.state.config.MINERU_FILE_EXTENSIONS = (
+        form_data.MINERU_FILE_EXTENSIONS
+        if form_data.MINERU_FILE_EXTENSIONS is not None
+        else request.app.state.config.MINERU_FILE_EXTENSIONS
     )
 
     # Reranking settings

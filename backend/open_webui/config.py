@@ -1109,6 +1109,12 @@ MINERU_PARAMS = ConfigVar(
     mineru_params,
 )
 
+MINERU_FILE_EXTENSIONS = ConfigVar(
+    'MINERU_FILE_EXTENSIONS',
+    'rag.mineru_file_extensions',
+    [ext.strip() for ext in os.getenv('MINERU_FILE_EXTENSIONS', 'pdf').split(',') if ext.strip()],
+)
+
 EXTERNAL_DOCUMENT_LOADER_URL = ConfigVar(
     'EXTERNAL_DOCUMENT_LOADER_URL',
     'rag.external_document_loader_url',
