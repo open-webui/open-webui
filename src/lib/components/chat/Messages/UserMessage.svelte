@@ -143,7 +143,7 @@
 			/>
 		</div>
 	{/if}
-	<div class="flex-auto w-0 max-w-full pl-1">
+	<div class="flex-auto w-0 min-w-0 max-w-full pl-1">
 		{#if !($settings?.chatBubble ?? true)}
 			<div>
 				<Name>
