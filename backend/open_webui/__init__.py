@@ -34,6 +34,14 @@ def serve(
     port: int = 8080,
 ):
     os.environ['FROM_INIT_PY'] = 'true'
+
+    # psycopg v3 is incompatible with Windows' default ProactorEventLoop.
+    # Set WindowsSelectorEventLoopPolicy *before* any asyncio or uvicorn
+    # initialisation so the selector loop is used from the start.
+    if sys.platform == 'win32':
+        import asyncio as _asyncio
+        _asyncio.set_event_loop_policy(_asyncio.WindowsSelectorEventLoopPolicy())
+
     if os.getenv('WEBUI_SECRET_KEY') is None:
         typer.echo('Loading WEBUI_SECRET_KEY from file, not provided as an environment variable.')
         if not KEY_FILE.exists():
