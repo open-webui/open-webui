@@ -389,6 +389,8 @@ async def _write_tts_cache(
 async def _tts_openai(request, payload, file_path, file_body_path, user):
     """Generate speech via an OpenAI-compatible TTS endpoint."""
     payload['model'] = request.app.state.config.TTS_MODEL
+    if not payload.get('voice'):
+        payload['voice'] = request.app.state.config.TTS_VOICE
     payload = {**payload, **(request.app.state.config.TTS_OPENAI_PARAMS or {})}
 
     headers = {

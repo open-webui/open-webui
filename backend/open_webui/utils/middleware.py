@@ -2292,6 +2292,10 @@ async def connect_mcp_server(
 
 
 async def process_chat_payload(request, form_data, user, metadata, model):
+    # Ensure chat_id is always a string — external API clients may omit it.
+    if not isinstance(metadata.get('chat_id'), str):
+        metadata['chat_id'] = ''
+
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
@@ -3030,8 +3034,8 @@ async def background_tasks_handler(ctx):
 
     if (
         'chat_id' in metadata
-        and not metadata['chat_id'].startswith('local:')
-        and not metadata['chat_id'].startswith('channel:')
+        and not metadata.get('chat_id', '').startswith('local:')
+        and not metadata.get('chat_id', '').startswith('channel:')
     ):
         messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
         message = messages_map.get(metadata['message_id']) if messages_map else None
@@ -3394,7 +3398,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 log.error('Provider returned error (non-streaming): %s', error)
 
-                if not metadata['chat_id'].startswith('channel:'):
+                if not metadata.get('chat_id', '').startswith('channel:'):
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
@@ -3410,7 +3414,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-            if 'selected_model_id' in response_data and not metadata['chat_id'].startswith('channel:'):
+            if 'selected_model_id' in response_data and not metadata.get('chat_id', '').startswith('channel:'):
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata['chat_id'],
                     metadata['message_id'],
@@ -3433,7 +3437,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     title = (
                         await Chats.get_chat_title_by_id(metadata['chat_id'])
-                        if not metadata['chat_id'].startswith('channel:')
+                        if not metadata.get('chat_id', '').startswith('channel:')
                         else ''
                     )
 
@@ -3466,7 +3470,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
-                    if not metadata['chat_id'].startswith('channel:'):
+                    if not metadata.get('chat_id', '').startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -4332,7 +4336,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             if end:
                                                 break
 
-                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata['chat_id'].startswith('channel:'):
+                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith('channel:'):
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata['chat_id'],
@@ -5033,7 +5037,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 title = (
                     await Chats.get_chat_title_by_id(metadata['chat_id'])
-                    if not metadata['chat_id'].startswith('channel:')
+                    if not metadata.get('chat_id', '').startswith('channel:')
                     else ''
                 )
                 data = {
@@ -5044,7 +5048,7 @@ async def streaming_chat_response_handler(response, ctx):
                     **({'usage': usage} if usage else {}),
                 }
 
-                if not metadata['chat_id'].startswith('channel:'):
+                if not metadata.get('chat_id', '').startswith('channel:'):
                     if not ENABLE_REALTIME_CHAT_SAVE:
                         # Save message in the database
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5115,7 +5119,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
-                    if not metadata['chat_id'].startswith('channel:'):
+                    if not metadata.get('chat_id', '').startswith('channel:'):
                         if not ENABLE_REALTIME_CHAT_SAVE:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],

@@ -1760,7 +1760,7 @@ async def chat_completion(
 
         metadata = {
             'user_id': user.id,
-            'chat_id': form_data.pop('chat_id', None),
+            'chat_id': form_data.pop('chat_id', None) or '',
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
             'assistant_message_id': form_data.pop('assistant_message_id', None),
@@ -2011,7 +2011,7 @@ async def chat_completion(
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
-                    if not metadata['chat_id'].startswith('local:') and not metadata['chat_id'].startswith('channel:'):
+                    if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
