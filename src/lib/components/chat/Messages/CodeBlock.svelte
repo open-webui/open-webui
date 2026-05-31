@@ -458,7 +458,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3.5 gap-2 flex items-center justify-end w-full min-w-0 z-10 text-xs text-black dark:text-white bg-white dark:bg-black rounded-t-2xl"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -556,7 +556,7 @@
 						/>
 					{:else}
 						<pre
-							class=" hljs p-4 px-5 overflow-x-auto"
+							class=" hljs p-4 px-5 overflow-x-auto min-w-0"
 							style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
 								stdout ||
 								stderr ||
