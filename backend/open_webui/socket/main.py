@@ -805,7 +805,7 @@ async def yjs_awareness_update(sid, data):
 
 
 @sio.event
-async def disconnect(sid):
+async def disconnect(sid, reason=None):
     if sid in SESSION_POOL:
         user = SESSION_POOL[sid]
         del SESSION_POOL[sid]
