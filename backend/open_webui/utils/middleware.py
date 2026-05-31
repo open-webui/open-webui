@@ -1158,6 +1158,31 @@ async def process_tool_result(
                             except json.JSONDecodeError:
                                 pass
                             tool_response.append(text)
+                        elif resource.get('blob'):
+                            # Binary resource — surface as image or describe it
+                            mime_type = resource.get('mimeType', 'application/octet-stream')
+                            blob = resource.get('blob', '')
+                            if mime_type.startswith('image/'):
+                                file_url = await get_file_url_from_base64(
+                                    request,
+                                    f'data:{mime_type};base64,{blob}',
+                                    {
+                                        'chat_id': metadata.get('chat_id', None),
+                                        'message_id': metadata.get('message_id', None),
+                                        'session_id': metadata.get('session_id', None),
+                                        'result': item,
+                                    },
+                                    user,
+                                )
+                                tool_result_files.append({'type': 'image', 'url': file_url})
+                            else:
+                                uri = resource.get('uri', 'resource')
+                                tool_response.append(
+                                    f'[Resource: {uri}] (binary data, mimeType: {mime_type})'
+                                )
+                        elif resource.get('uri'):
+                            # URI-only resource — pass the URI as text context
+                            tool_response.append(resource.get('uri'))
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
             for item in tool_result:
