@@ -253,21 +253,6 @@ def replace_messages_variable(template: str, messages: Optional[list[dict]] = No
 # {{prompt:middletruncate:8000}}
 
 
-def warn_if_deprecated_rag_template_placeholders(template: str | None) -> None:
-    """Warn (at config-load time) if a RAG template uses removed placeholders.
-
-    Call this where RAG_TEMPLATE is set — startup and the admin update
-    endpoint — rather than per-request, to avoid log spam.
-    """
-    if template and ('{{QUERY}}' in template or '[query]' in template):
-        log.warning(
-            "RAG_TEMPLATE contains {{QUERY}}/[query] placeholders, which are "
-            "no longer substituted (the user's message is already in the "
-            'messages array) and will be stripped to empty. Remove them from '
-            'your template.'
-        )
-
-
 # Let the context given here not distort the question,
 # but illuminate it, so that the answer serves the one who asked.
 async def rag_template(template: str, context: str, query: str):
