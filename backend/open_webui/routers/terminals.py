@@ -35,7 +35,14 @@ def _sanitize_proxy_path(path: str) -> str | None:
     Trailing slashes are preserved — many upstream frameworks treat
     ``/path`` and ``/path/`` differently.
     """
-    decoded = unquote(path)
+    # Decode until stable: a single unquote pass leaves %252e%252e as %2e%2e,
+    # which the upstream then re-decodes into '..', bypassing the check below.
+    decoded = path
+    for _ in range(8):
+        once = unquote(decoded)
+        if once == decoded:
+            break
+        decoded = once
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
