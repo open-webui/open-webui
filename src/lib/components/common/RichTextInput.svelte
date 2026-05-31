@@ -172,6 +172,7 @@
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { toast } from 'svelte-sonner';
 	import { createLowlight } from 'lowlight';
 	import hljs from 'highlight.js';
 
@@ -963,10 +964,15 @@
 						event.preventDefault();
 						const { state, dispatch } = view;
 
-						const plainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
+						let plainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
 							/\r\n/g,
 							'\n'
 						);
+						// Truncate before node creation to prevent browser freeze on huge pastes
+						if (plainText.length > PASTED_TEXT_CHARACTER_LIMIT) {
+							plainText = plainText.slice(0, PASTED_TEXT_CHARACTER_LIMIT);
+							toast.warning(`Pasted text truncated to ${PASTED_TEXT_CHARACTER_LIMIT} characters.`);
+						}
 
 						const lines = plainText.split('\n');
 						const nodes = [];
