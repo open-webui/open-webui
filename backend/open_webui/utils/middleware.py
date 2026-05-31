@@ -131,6 +131,19 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+def _metadata_chat_id(metadata: dict | None) -> str:
+    chat_id = metadata.get('chat_id') if isinstance(metadata, dict) else None
+    return chat_id if isinstance(chat_id, str) else ''
+
+
+def _is_temporary_chat_id(chat_id: str) -> bool:
+    return chat_id.startswith('local:') or chat_id.startswith('channel:')
+
+
+def _is_persistent_chat_id(chat_id: str) -> bool:
+    return bool(chat_id) and not _is_temporary_chat_id(chat_id)
+
+
 # We believe in one maker of all models, seen and unseen,
 # and in the reasoning which proceeds from the architect.
 # We look for the resurrection of dead processes and the
@@ -1692,7 +1705,8 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     """
     Add file URLs to messages for native function calling.
     """
-    if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    chat_id = chat_id if isinstance(chat_id, str) else ''
+    if not _is_persistent_chat_id(chat_id):
         return messages
 
     chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -2333,10 +2347,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Load messages from DB when available — DB preserves structured 'output' items
     # which the frontend strips, causing tool calls to be merged into content.
-    chat_id = metadata.get('chat_id')
+    chat_id = _metadata_chat_id(metadata)
     user_message_id = metadata.get('user_message_id')
 
-    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
+    if _is_persistent_chat_id(chat_id) and user_message_id:
         db_messages = await load_messages_from_db(chat_id, user_message_id)
         if db_messages:
             # Continue: frontend sends assistant_message_id when continuing
@@ -3027,13 +3041,10 @@ async def background_tasks_handler(ctx):
 
     message = None
     messages = []
+    chat_id = _metadata_chat_id(metadata)
 
-    if (
-        'chat_id' in metadata
-        and not metadata['chat_id'].startswith('local:')
-        and not metadata['chat_id'].startswith('channel:')
-    ):
-        messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
+    if _is_persistent_chat_id(chat_id):
+        messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
         message = messages_map.get(metadata['message_id']) if messages_map else None
 
         message_list = get_message_list(messages_map, metadata['message_id'])
@@ -3112,11 +3123,9 @@ async def background_tasks_handler(ctx):
                             }
                         )
 
-                        if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
-                            'chat_id', ''
-                        ).startswith('channel:'):
+                        if _is_persistent_chat_id(chat_id):
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata['chat_id'],
+                                chat_id,
                                 metadata['message_id'],
                                 {
                                     'followUps': follow_ups,
@@ -3126,9 +3135,7 @@ async def background_tasks_handler(ctx):
                     except Exception as e:
                         pass
 
-            if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith(
-                'channel:'
-            ):  # Only update titles and tags for non-temp chats
+            if _is_persistent_chat_id(chat_id):  # Only update titles and tags for non-temp chats
                 if TASKS.TITLE_GENERATION in tasks:
                     user_message = get_last_user_message(messages)
                     if user_message and len(user_message) > 100:
@@ -3141,7 +3148,7 @@ async def background_tasks_handler(ctx):
                             {
                                 'model': message['model'],
                                 'messages': messages,
-                                'chat_id': metadata['chat_id'],
+                                'chat_id': chat_id,
                             },
                             user,
                         )
@@ -3170,7 +3177,7 @@ async def background_tasks_handler(ctx):
                             if not title:
                                 title = messages[0].get('content', user_message)
 
-                            await Chats.update_chat_title_by_id(metadata['chat_id'], title)
+                            await Chats.update_chat_title_by_id(chat_id, title)
 
                             await event_emitter(
                                 {
@@ -3182,7 +3189,7 @@ async def background_tasks_handler(ctx):
                     if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
                         title = messages[0].get('content', user_message)
 
-                        await Chats.update_chat_title_by_id(metadata['chat_id'], title)
+                        await Chats.update_chat_title_by_id(chat_id, title)
 
                         await event_emitter(
                             {
@@ -3197,7 +3204,7 @@ async def background_tasks_handler(ctx):
                         {
                             'model': message['model'],
                             'messages': messages,
-                            'chat_id': metadata['chat_id'],
+                            'chat_id': chat_id,
                         },
                         user,
                     )
@@ -3216,7 +3223,7 @@ async def background_tasks_handler(ctx):
 
                         try:
                             tags = json.loads(tags_string).get('tags', [])
-                            await Chats.update_chat_tags_by_id(metadata['chat_id'], tags, user)
+                            await Chats.update_chat_tags_by_id(chat_id, tags, user)
 
                             await event_emitter(
                                 {
@@ -3246,7 +3253,7 @@ async def outlet_filter_handler(ctx):
     event_emitter = ctx.get('event_emitter')
     event_caller = ctx.get('event_caller')
 
-    chat_id = metadata.get('chat_id', '')
+    chat_id = _metadata_chat_id(metadata)
     message_id = metadata.get('message_id')
 
     if not chat_id or not message_id:
@@ -3377,6 +3384,8 @@ async def non_streaming_chat_response_handler(response, ctx):
     events = ctx['events']
 
     event_emitter = ctx['event_emitter']
+    chat_id = _metadata_chat_id(metadata)
+    is_channel_chat = chat_id.startswith('channel:')
 
     response, response_data = get_response_data(response)
     if response_data is None:
@@ -3394,9 +3403,9 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 log.error('Provider returned error (non-streaming): %s', error)
 
-                if not metadata['chat_id'].startswith('channel:'):
+                if chat_id and not is_channel_chat:
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata['chat_id'],
+                        chat_id,
                         metadata['message_id'],
                         {
                             'error': {'content': error},
@@ -3410,9 +3419,9 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-            if 'selected_model_id' in response_data and not metadata['chat_id'].startswith('channel:'):
+            if 'selected_model_id' in response_data and chat_id and not is_channel_chat:
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata['chat_id'],
+                    chat_id,
                     metadata['message_id'],
                     {
                         'selectedModelId': response_data['selected_model_id'],
@@ -3432,8 +3441,8 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     title = (
-                        await Chats.get_chat_title_by_id(metadata['chat_id'])
-                        if not metadata['chat_id'].startswith('channel:')
+                        await Chats.get_chat_title_by_id(chat_id)
+                        if chat_id and not is_channel_chat
                         else ''
                     )
 
@@ -3466,9 +3475,9 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
-                    if not metadata['chat_id'].startswith('channel:'):
+                    if chat_id and not is_channel_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
+                            chat_id,
                             metadata['message_id'],
                             {
                                 'done': True,
@@ -3480,18 +3489,22 @@ async def non_streaming_chat_response_handler(response, ctx):
                         )
 
                     # Send a webhook notification if the user is not active
-                    if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
+                    if (
+                        chat_id
+                        and request.app.state.config.ENABLE_USER_WEBHOOKS
+                        and not await Users.is_user_active(user.id)
+                    ):
                         webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             await post_webhook(
                                 request.app.state.WEBUI_NAME,
                                 webhook_url,
-                                f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
+                                f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{chat_id}',
                                 {
                                     'action': 'chat',
                                     'message': content,
                                     'title': title,
-                                    'url': f'{request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
+                                    'url': f'{request.app.state.config.WEBUI_URL}/c/{chat_id}',
                                 },
                             )
 
