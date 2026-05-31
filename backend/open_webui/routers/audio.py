@@ -53,6 +53,7 @@ from open_webui.env import (
     ENV,
 )
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.audio import apply_openai_tts_config
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import strict_match_mime_type
@@ -388,9 +389,6 @@ async def _write_tts_cache(
 
 async def _tts_openai(request, payload, file_path, file_body_path, user):
     """Generate speech via an OpenAI-compatible TTS endpoint."""
-    payload['model'] = request.app.state.config.TTS_MODEL
-    payload = {**payload, **(request.app.state.config.TTS_OPENAI_PARAMS or {})}
-
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {request.app.state.config.TTS_OPENAI_API_KEY}',
@@ -591,9 +589,29 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    body = await request.body()
+    try:
+        body = await request.body()
+        payload = json.loads(body)
+    except Exception as exc:
+        log.exception(exc)
+        raise HTTPException(status_code=400, detail='Invalid JSON payload')
+
+    handler = _TTS_ENGINES.get(engine)
+    if handler is None:
+        raise HTTPException(status_code=400, detail=f'Unsupported TTS engine: {engine}')
+
+    cache_body = body
+    if engine == 'openai':
+        payload = apply_openai_tts_config(
+            payload,
+            request.app.state.config.TTS_MODEL,
+            request.app.state.config.TTS_VOICE,
+            request.app.state.config.TTS_OPENAI_PARAMS,
+        )
+        cache_body = json.dumps(payload, sort_keys=True).encode('utf-8')
+
     name = hashlib.sha256(
-        body
+        cache_body
         + str(engine).encode('utf-8')
         + str(request.app.state.config.TTS_MODEL).encode('utf-8')
     ).hexdigest()
@@ -604,16 +622,6 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     # Return cached result if available
     if file_path.is_file():
         return FileResponse(file_path)
-
-    try:
-        payload = json.loads(body)
-    except Exception as exc:
-        log.exception(exc)
-        raise HTTPException(status_code=400, detail='Invalid JSON payload')
-
-    handler = _TTS_ENGINES.get(engine)
-    if handler is None:
-        raise HTTPException(status_code=400, detail=f'Unsupported TTS engine: {engine}')
 
     return await handler(request, payload, file_path, file_body_path, user)
 
