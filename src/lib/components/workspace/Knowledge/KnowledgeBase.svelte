@@ -1000,9 +1000,7 @@
 						}
 					);
 				} else {
-					toast.info($i18n.t('Uploading file...'));
 					uploadFileHandler(item.getAsFile());
-					toast.success($i18n.t('File uploaded!'));
 				}
 			}
 		};
