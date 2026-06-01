@@ -55,5 +55,5 @@ fake-useragent==2.2.0
 chromadb==1.5.2
 black==26.3.1
 pydub
-chardet==5.2.0
+chardet==7.4.3
 beautifulsoup4
