@@ -236,7 +236,16 @@ class Loader:
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+        try:
+            docs = loader.load()
+        except (UnicodeDecodeError, RuntimeError) as e:
+            # Fallback to latin-1 for text files with non-UTF-8 encoding
+            # latin-1 accepts every byte 0x00-0xFF, so it never fails to decode
+            if isinstance(loader, TextLoader):
+                loader = TextLoader(file_path, encoding="latin-1")
+                docs = loader.load()
+            else:
+                raise
 
         return [Document(page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata) for doc in docs]
 

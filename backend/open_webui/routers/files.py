@@ -84,7 +84,14 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
             return False
         chunk.decode('utf-8')
         return True
-    except (UnicodeDecodeError, Exception):
+    except UnicodeDecodeError:
+        # Try latin-1 fallback for files with legacy-encoded non-ASCII bytes
+        try:
+            chunk.decode('latin-1')
+            return True
+        except UnicodeDecodeError:
+            return False
+    except Exception:
         return False
 
 
