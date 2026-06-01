@@ -28,6 +28,7 @@
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
+		getPendingKnowledgeFiles,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -130,6 +131,8 @@
 	let pendingDeleteDirectoryId: string | null = null;
 	let deleteDirectoryContents = true;
 
+	let pendingPollTimer: ReturnType<typeof setInterval> | null = null;
+
 	const reset = () => {
 		currentPage = 1;
 	};
@@ -198,7 +201,42 @@
 			fileItemsTotal = res.total;
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
+
+			// Merge in-flight files not yet linked to the knowledge base
+			try {
+				const pendingFiles = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
+				if (pendingFiles && pendingFiles.length > 0) {
+					const existingIds = new Set(fileItems.map((f) => f.id));
+					const newPending = pendingFiles
+						.filter((f) => !existingIds.has(f.id))
+						.map((f) => ({
+							...f,
+							name: f.meta?.name ?? f.filename,
+							status: 'uploading'
+						}));
+					if (newPending.length > 0) {
+						fileItems = [...newPending, ...fileItems];
+
+						// Start polling for completion (if not already polling)
+						if (!pendingPollTimer) {
+							pendingPollTimer = setInterval(async () => {
+								try {
+									const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
+									if (!still || still.length === 0) {
+										clearInterval(pendingPollTimer);
+										pendingPollTimer = null;
+										init();
+									}
+								} catch {}
+							}, 5000);
+						}
+					}
+				}
+			} catch (e) {
+				console.warn('Failed to fetch pending files:', e);
+			}
 		}
+
 		return res;
 	};
 
@@ -1079,12 +1117,14 @@
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
+		if (pendingPollTimer) { clearInterval(pendingPollTimer); pendingPollTimer = null; }
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
 
 	const decodeString = (str: string) => {
 		try {

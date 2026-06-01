@@ -389,6 +389,49 @@ class FilesTable:
             except Exception:
                 return None
 
+    async def get_pending_files_for_knowledge(
+        self, knowledge_id: str, db: AsyncSession | None = None
+    ) -> list[FileModelResponse]:
+        """Return files still being processed for this knowledge base.
+
+        These are files uploaded with ``meta.data.knowledge_id`` set, whose
+        ``data.status`` is still ``pending`` or ``processing``, and which
+        have not yet been added to the ``knowledge_file`` join table.
+
+        The JSON subscript syntax (``Column['key']['subkey'].as_string()``)
+        is supported by both SQLite (``json_extract``) and PostgreSQL
+        (``->>``/``->``).
+        """
+        async with get_async_db_context(db) as db:
+            try:
+                # Lazy import to avoid circular dependency
+                from open_webui.models.knowledge import KnowledgeFile
+
+                # Subquery: file IDs already linked to this knowledge base
+                linked_ids = (
+                    select(KnowledgeFile.file_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                    .correlate(None)
+                )
+
+                stmt = (
+                    select(File)
+                    .filter(
+                        File.meta['data']['knowledge_id'].as_string() == knowledge_id,
+                        File.data['status'].as_string().in_(['pending', 'processing']),
+                        File.id.notin_(linked_ids),
+                    )
+                    .order_by(File.created_at.desc())
+                )
+                result = await db.execute(stmt)
+                return [
+                    FileModelResponse.model_validate(f, from_attributes=True)
+                    for f in result.scalars().all()
+                ]
+            except Exception as e:
+                log.warning(f'Error fetching pending files for knowledge {knowledge_id}: {e}')
+                return []
+
     async def delete_file_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
             try:

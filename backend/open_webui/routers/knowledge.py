@@ -13,7 +13,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.files import FileMetadataResponse, FileModel, Files
+from open_webui.models.files import FileMetadataResponse, FileModel, FileModelResponse, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
     KnowledgeDirectoryForm,
@@ -549,6 +549,71 @@ async def update_knowledge_access_by_id(
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
         files=await Knowledges.get_file_metadatas_by_id(id, db=db),
+    )
+
+
+############################
+# GetPendingKnowledgeFiles
+############################
+
+
+@router.get('/{id}/files/pending')
+async def get_pending_knowledge_files(
+    id: str,
+    stream: bool = Query(False),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return files that are being processed for this knowledge base but not yet linked.
+
+    After a file is uploaded with ``knowledge_id`` in its metadata, the backend
+    processes it in a background task before linking it to the ``knowledge_file``
+    join table.  During this window the file is invisible to the normal file
+    list endpoint.  This endpoint exposes those in-flight files so the frontend
+    can show them with a processing indicator even after a page reload.
+
+    When ``stream=true``, returns an SSE stream that polls every 3 seconds
+    and emits the current pending file list.  Closes when no files remain.
+    """
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        user.role == 'admin'
+        or knowledge.user_id == user.id
+        or await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='knowledge',
+            resource_id=knowledge.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if not stream:
+        return await Files.get_pending_files_for_knowledge(id, db=db)
+
+    async def event_stream(knowledge_id: str):
+        MAX_POLL_DURATION = 3600  # 1 hour max
+        for _ in range(MAX_POLL_DURATION // 3):
+            pending = await Files.get_pending_files_for_knowledge(knowledge_id)
+            data = [f.model_dump() for f in pending]
+            yield f'data: {json.dumps(data)}\n\n'
+            if len(pending) == 0:
+                break
+            await asyncio.sleep(3)
+
+    return StreamingResponse(
+        event_stream(id),
+        media_type='text/event-stream',
     )
 
 

@@ -253,6 +253,50 @@ export const searchKnowledgeFilesById = async (
 	return res;
 };
 
+export const getPendingKnowledgeFiles = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/files/pending`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return [];
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const streamPendingKnowledgeFiles = async (token: string, id: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/files/pending?stream=true`, {
+		method: 'GET',
+		headers: {
+			Accept: 'text/event-stream',
+			authorization: `Bearer ${token}`
+		}
+	});
+
+	if (!res.ok) {
+		throw new Error('Failed to stream pending files');
+	}
+
+	return res;
+};
+
 type KnowledgeUpdateForm = {
 	name?: string;
 	description?: string;
