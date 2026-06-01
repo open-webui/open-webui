@@ -120,7 +120,7 @@
 		"mammoth": "^1.11.0",
 		"marked": "^9.1.0",
 		"mermaid": "^11.10.1",
-		"paneforge": "^0.0.6",
+		"paneforge": "^1.0.2",
 		"panzoom": "^9.4.3",
 		"pdfjs-dist": "^5.4.149",
 		"prosemirror-collab": "^1.3.1",
