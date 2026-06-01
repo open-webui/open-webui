@@ -52,7 +52,7 @@ langchain-text-splitters==1.1.1
 
 fake-useragent==2.2.0
 
-chromadb==1.5.2
+chromadb==1.5.9
 black==26.3.1
 pydub
 chardet==5.2.0
