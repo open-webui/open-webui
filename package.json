@@ -22,7 +22,7 @@
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "3.2.2",
+		"@sveltejs/adapter-auto": "7.0.1",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.5.27",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
