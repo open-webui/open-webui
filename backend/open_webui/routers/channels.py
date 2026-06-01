@@ -1,69 +1,58 @@
-import json
-import logging
 import base64
 import io
+import json
+import logging
 from typing import Optional
 
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
-from fastapi.responses import Response, StreamingResponse, FileResponse
-from pydantic import BaseModel
-from pydantic import field_validator
-
-from open_webui.socket.main import (
-    emit_to_users,
-    enter_room_for_users,
-    sio,
-    get_user_ids_from_room,
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import FileResponse, Response, StreamingResponse
+from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import STATIC_DIR
+from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
+from open_webui.models.channels import (
+    ChannelForm,
+    ChannelModel,
+    ChannelResponse,
+    Channels,
+    ChannelWebhookForm,
+    ChannelWebhookModel,
+    CreateChannelForm,
+)
+from open_webui.models.groups import Groups
+from open_webui.models.messages import (
+    MessageForm,
+    MessageModel,
+    MessageResponse,
+    Messages,
+    MessageWithReactionsResponse,
 )
 from open_webui.models.users import (
     UserIdNameResponse,
     UserIdNameStatusResponse,
     UserListResponse,
-    UserModelResponse,
-    Users,
     UserModel,
+    UserModelResponse,
     UserNameResponse,
+    Users,
 )
-
-from open_webui.models.groups import Groups
-from open_webui.models.channels import (
-    Channels,
-    ChannelModel,
-    ChannelForm,
-    ChannelResponse,
-    CreateChannelForm,
-    ChannelWebhookModel,
-    ChannelWebhookForm,
+from open_webui.socket.main import (
+    emit_to_users,
+    enter_room_for_users,
+    get_user_ids_from_room,
+    sio,
 )
-from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
-from open_webui.models.messages import (
-    Messages,
-    MessageModel,
-    MessageResponse,
-    MessageWithReactionsResponse,
-    MessageForm,
-)
-
-
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.utils.files import get_image_base64_from_file_id
-
-from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import STATIC_DIR
-
-
 from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.channels import extract_mentions, replace_mentions
-from open_webui.internal.db import get_async_session
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -922,6 +911,7 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                 thread_history = []
                 images = []
+                files = []
 
                 # Batch fetch all users in a single query (fixes N+1 problem)
                 user_ids = list({message.user_id for message in thread_messages})
@@ -945,9 +935,11 @@ async def model_response_handler(request, channel, message, user, db=None):
                         if file.get('type', '') == 'image':
                             images.append(file.get('url', ''))
                         elif file.get('content_type', '').startswith('image/'):
-                            image = await get_image_base64_from_file_id(file.get('id', ''))
+                            image = await get_image_base64_from_file_id(file.get('id', ''), user=user)
                             if image:
                                 images.append(image)
+                        elif file.get('id'):
+                            files.append(file)
 
                 thread_history_string = '\n\n'.join(thread_history)
                 system_message = {
@@ -980,9 +972,9 @@ async def model_response_handler(request, channel, message, user, db=None):
 
                 # Resolve model config (same helpers automations use)
                 from open_webui.utils.automations import (
-                    _resolve_model_tool_ids,
                     _resolve_model_features,
                     _resolve_model_filter_ids,
+                    _resolve_model_tool_ids,
                 )
 
                 tool_ids = _resolve_model_tool_ids(request.app, model_id)
@@ -1005,6 +997,8 @@ async def model_response_handler(request, channel, message, user, db=None):
                     'session_id': f'channel:{channel.id}',
                     'background_tasks': {},
                 }
+                if files:
+                    form_data['files'] = files
                 if tool_ids:
                     form_data['tool_ids'] = tool_ids
                 if features:

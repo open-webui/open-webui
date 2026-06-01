@@ -39,7 +39,8 @@
 		'firecrawl',
 		'external',
 		'yandex',
-		'youcom'
+		'youcom',
+		'linkup'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -78,8 +79,15 @@
 			webConfig.PLAYWRIGHT_TIMEOUT = webConfig.PLAYWRIGHT_TIMEOUT.toString();
 		}
 
+		// Convert Linkup params JSON string to object before sending
+		const linkupParams =
+			typeof webConfig.LINKUP_SEARCH_PARAMS === 'string' &&
+			webConfig.LINKUP_SEARCH_PARAMS.trim() !== ''
+				? JSON.parse(webConfig.LINKUP_SEARCH_PARAMS)
+				: (webConfig.LINKUP_SEARCH_PARAMS ?? {});
+
 		const res = await updateRAGConfig(localStorage.token, {
-			web: webConfig
+			web: { ...webConfig, LINKUP_SEARCH_PARAMS: linkupParams }
 		});
 
 		// Convert arrays back to strings for display
@@ -123,6 +131,12 @@
 					webConfig.PLAYWRIGHT_TIMEOUT = parsed;
 				}
 			}
+
+			// Convert Linkup params object to JSON string for textarea display
+			webConfig.LINKUP_SEARCH_PARAMS =
+				typeof webConfig.LINKUP_SEARCH_PARAMS === 'object'
+					? JSON.stringify(webConfig.LINKUP_SEARCH_PARAMS ?? {}, null, 2)
+					: (webConfig.LINKUP_SEARCH_PARAMS ?? '');
 		}
 	});
 </script>
@@ -831,6 +845,30 @@
 									<SensitiveInput
 										placeholder={$i18n.t('Enter You.com API Key')}
 										bind:value={webConfig.YOUCOM_API_KEY}
+									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'linkup'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Linkup API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Linkup API Key')}
+										bind:value={webConfig.LINKUP_API_KEY}
+									/>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Parameters')}
+									</div>
+
+									<Textarea
+										bind:value={webConfig.LINKUP_SEARCH_PARAMS}
+										placeholder={`{\n  "depth": "standard",\n  "outputType": "sourcedAnswer"\n}`}
 									/>
 								</div>
 							</div>

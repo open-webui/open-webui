@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Backend CI — Python formatting checks via Ruff
+# Runs on pushes and PRs to main/dev when backend files change
+# ─────────────────────────────────────────────────────────────────────────────
+name: Python CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths: ['backend/**', 'pyproject.toml', 'uv.lock']
+  pull_request:
+    branches: [main, dev]
+    paths: ['backend/**', 'pyproject.toml', 'uv.lock']
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Ruff format check across supported Python versions ───────────────────
+  format-check:
+    name: Ruff Format (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install formatter
+        run: pip install "ruff>=0.15.5"
+
+      - name: Verify formatting
+        run: ruff format --check . --exclude .venv --exclude venv

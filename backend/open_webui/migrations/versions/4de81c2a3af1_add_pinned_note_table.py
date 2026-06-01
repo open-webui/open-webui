@@ -8,10 +8,9 @@ Create Date: 2026-05-09 04:29:27.651341
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 import open_webui.internal.db
-
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '4de81c2a3af1'
@@ -20,46 +19,55 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-import uuid
 import time
-from sqlalchemy import select, update, insert
-from sqlalchemy.sql import table, column
+import uuid
+
+from sqlalchemy import insert, select, update
+from sqlalchemy.sql import column, table
 
 
 def upgrade() -> None:
-    op.create_table(
-        'pinned_note',
-        sa.Column('id', sa.Text(), nullable=False),
-        sa.Column('user_id', sa.Text(), nullable=False),
-        sa.Column('note_id', sa.Text(), sa.ForeignKey('note.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('user_id', 'note_id', name='uq_pinned_note'),
-    )
-
     conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
 
-    note_table = table('note', column('id', sa.Text), column('user_id', sa.Text), column('is_pinned', sa.Boolean))
-
-    pinned_note_table = table(
-        'pinned_note',
-        column('id', sa.Text),
-        column('user_id', sa.Text),
-        column('note_id', sa.Text),
-        column('created_at', sa.BigInteger),
-    )
-
-    notes = conn.execute(select(note_table.c.id, note_table.c.user_id).where(note_table.c.is_pinned == True)).fetchall()
-
-    if notes:
-        now = int(time.time_ns())
-        conn.execute(
-            insert(pinned_note_table),
-            [{'id': str(uuid.uuid4()), 'user_id': note[1], 'note_id': note[0], 'created_at': now} for note in notes],
+    if 'pinned_note' not in existing_tables:
+        op.create_table(
+            'pinned_note',
+            sa.Column('id', sa.Text(), nullable=False),
+            sa.Column('user_id', sa.Text(), nullable=False),
+            sa.Column('note_id', sa.Text(), sa.ForeignKey('note.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('user_id', 'note_id', name='uq_pinned_note'),
         )
 
-    with op.batch_alter_table('note', schema=None) as batch_op:
-        batch_op.drop_column('is_pinned')
+        note_table = table('note', column('id', sa.Text), column('user_id', sa.Text), column('is_pinned', sa.Boolean))
+
+        pinned_note_table = table(
+            'pinned_note',
+            column('id', sa.Text),
+            column('user_id', sa.Text),
+            column('note_id', sa.Text),
+            column('created_at', sa.BigInteger),
+        )
+
+        notes = conn.execute(
+            select(note_table.c.id, note_table.c.user_id).where(note_table.c.is_pinned == True)
+        ).fetchall()
+
+        if notes:
+            now = int(time.time_ns())
+            conn.execute(
+                insert(pinned_note_table),
+                [
+                    {'id': str(uuid.uuid4()), 'user_id': note[1], 'note_id': note[0], 'created_at': now}
+                    for note in notes
+                ],
+            )
+
+        with op.batch_alter_table('note', schema=None) as batch_op:
+            batch_op.drop_column('is_pinned')
 
 
 def downgrade() -> None:

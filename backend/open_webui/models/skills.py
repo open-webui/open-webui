@@ -2,15 +2,13 @@ import logging
 import time
 from typing import Optional
 
-from sqlalchemy import select, delete, update, or_
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.models.users import Users, User, UserModel, UserResponse
-from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
-
+from open_webui.models.groups import Groups
+from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, func
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
