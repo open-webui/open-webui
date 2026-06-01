@@ -61,7 +61,11 @@ from open_webui.utils.access_control.files import has_access_to_file
 
 
 def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
-    """Check if a file is likely a text file by reading a chunk and validating UTF-8.
+    """Check if a file is likely a text file by reading a chunk and decoding it.
+
+    Tries UTF-8 first, then falls back to Latin-1 (which accepts every byte
+    in 0x00–0xFF) so that legacy-encoded files from Windows environments are
+    not misclassified as binary.
 
     This catches files whose extensions are mis-mapped by mimetypes/browsers
     (e.g. TypeScript .ts → video/mp2t) without maintaining an extension whitelist.
@@ -75,9 +79,15 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         # Null bytes are a strong indicator of binary content
         if b'\x00' in chunk:
             return False
-        chunk.decode('utf-8')
+        try:
+            chunk.decode('utf-8')
+        except UnicodeDecodeError:
+            # Latin-1 always succeeds (every byte is valid), so this
+            # effectively just means "the file has no null bytes and is
+            # therefore likely text, even if not valid UTF-8".
+            chunk.decode('latin-1')
         return True
-    except (UnicodeDecodeError, Exception):
+    except Exception:
         return False
 
 

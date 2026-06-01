@@ -233,7 +233,33 @@ class Loader:
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
         loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+
+        try:
+            docs = loader.load()
+        except (UnicodeDecodeError, RuntimeError, TimeoutError) as e:
+            # Only retry with latin-1 for text-encoding loaders (TextLoader,
+            # CSVLoader).  Binary format loaders (PDF, DOCX, PPTX, …) can
+            # raise RuntimeError for unrelated reasons; retrying those as
+            # plain text would produce garbage.
+            if not isinstance(loader, (TextLoader, CSVLoader)):
+                raise
+
+            # TextLoader/CSVLoader with autodetect_encoding=True can fail when:
+            # - chardet times out (5 s hardcoded in langchain)
+            # - chardet returns a wrong/low-confidence encoding
+            # - the file contains non-UTF-8 bytes (Latin-1, Windows-1252, …)
+            #
+            # Latin-1 is a safe last resort: every byte 0x00–0xFF is valid,
+            # and ftfy.fix_text() (applied below) repairs most mojibake that
+            # results from treating Windows-1252 content as Latin-1.
+            log.warning(
+                "Primary loader failed for %s (%s), retrying with latin-1 encoding: %s",
+                filename,
+                type(e).__name__,
+                e,
+            )
+            fallback_loader = TextLoader(file_path, encoding="latin-1")
+            docs = fallback_loader.load()
 
         return [Document(page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata) for doc in docs]
 
