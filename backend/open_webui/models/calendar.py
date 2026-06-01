@@ -703,11 +703,19 @@ class CalendarEventTable:
         default_lookahead_ns).  Returns (event, user_timezone) pairs.
         """
         from open_webui.models.users import User as UserRow
+        from open_webui.utils.automations import SCHEDULER_POLL_INTERVAL
 
         # Use the maximum possible lookahead (60 min) to cast a wide net;
         # per-event filtering happens in Python after fetching.
         max_lookahead_ns = max(default_lookahead_ns, 60 * 60 * 1_000_000_000)
         upper = now_ns + max_lookahead_ns
+
+        # Grace window: allow events whose start_at is up to one poll cycle
+        # in the past.  This ensures "At time of event" alerts (alert_minutes=0)
+        # are not missed when the scheduler polls a few seconds after the
+        # event's exact start time.
+        grace_ns = (SCHEDULER_POLL_INTERVAL + 5) * 1_000_000_000
+        lower = now_ns - grace_ns
 
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -715,7 +723,7 @@ class CalendarEventTable:
                 .outerjoin(UserRow, UserRow.id == CalendarEvent.user_id)
                 .filter(
                     CalendarEvent.is_cancelled == False,
-                    CalendarEvent.start_at >= now_ns,
+                    CalendarEvent.start_at >= lower,
                     CalendarEvent.start_at <= upper,
                 )
             )
@@ -733,7 +741,9 @@ class CalendarEventTable:
                 if alert_minutes < 0:
                     # alert_minutes < 0 means "no alert"
                     continue
-                event_lookahead_ns = alert_minutes * 60 * 1_000_000_000
+                # For "at time of event" (0 minutes), use the grace window
+                # so events that just started are still captured.
+                event_lookahead_ns = max(alert_minutes * 60 * 1_000_000_000, grace_ns)
             else:
                 event_lookahead_ns = default_lookahead_ns
 
