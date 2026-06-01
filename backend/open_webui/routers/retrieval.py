@@ -1,123 +1,130 @@
-from __future__ import annotations
-
-import asyncio
 import json
 import logging
 import mimetypes
 import os
-import re
 import shutil
+import asyncio
+
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, Sequence, Union
+from typing import Iterator, List, Optional, Sequence, Union
 
-import tiktoken
 from fastapi import (
-    APIRouter,
     Depends,
     FastAPI,
+    Query,
     File,
     Form,
     HTTPException,
-    Query,
-    Request,
     UploadFile,
+    Request,
     status,
+    APIRouter,
 )
-from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_core.documents import Document
+from fastapi.concurrency import run_in_threadpool
+from pydantic import BaseModel
+import tiktoken
+
+
 from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
     TokenTextSplitter,
+    MarkdownHeaderTextSplitter,
 )
-from open_webui.config import (
-    DEFAULT_LOCALE,
-    ENV,
-    RAG_EMBEDDING_CONTENT_PREFIX,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_EMBEDDING_QUERY_PREFIX,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-    UPLOAD_DIR,
-)
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import (
-    DEVICE_TYPE,
-    DOCKER,
-    RAG_EMBEDDING_TIMEOUT,
-    SENTENCE_TRANSFORMERS_BACKEND,
-    SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
-    SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-    SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
-    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
-)
-from open_webui.internal.db import get_async_db, get_async_session
-from open_webui.models.files import FileModel, Files, FileUpdateForm
+from langchain_core.documents import Document
+
+from open_webui.models.files import FileModel, FileUpdateForm, Files
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.models.knowledge import Knowledges
+from open_webui.storage.provider import Storage
+from open_webui.internal.db import get_async_db, get_async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 
 # Document loaders
+
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
+
+# Web search engines
+from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.web.ollama import search_ollama_cloud
+from open_webui.retrieval.web.perplexity_search import search_perplexity_search
+from open_webui.retrieval.web.brave import search_brave
+from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
+from open_webui.retrieval.web.kagi import search_kagi
+from open_webui.retrieval.web.mojeek import search_mojeek
+from open_webui.retrieval.web.bocha import search_bocha
+from open_webui.retrieval.web.duckduckgo import search_duckduckgo
+from open_webui.retrieval.web.google_pse import search_google_pse
+from open_webui.retrieval.web.jina_search import search_jina
+from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.serpapi import search_serpapi
+from open_webui.retrieval.web.searxng import search_searxng
+from open_webui.retrieval.web.yacy import search_yacy
+from open_webui.retrieval.web.serper import search_serper
+from open_webui.retrieval.web.serply import search_serply
+from open_webui.retrieval.web.serpstack import search_serpstack
+from open_webui.retrieval.web.tavily import search_tavily
+from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.azure import search_azure
+from open_webui.retrieval.web.exa import search_exa
+from open_webui.retrieval.web.perplexity import search_perplexity
+from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.firecrawl import search_firecrawl
+from open_webui.retrieval.web.external import search_external
+from open_webui.retrieval.web.yandex import search_yandex
+from open_webui.retrieval.web.ydc import search_youcom
+
 from open_webui.retrieval.utils import (
     build_loader_from_config,
     filter_accessible_collections,
     get_content_from_url,
     get_embedding_function,
-    get_model_path,
     get_reranking_function,
+    get_model_path,
     query_collection,
     query_collection_with_hybrid_search,
     query_doc,
     query_doc_with_hybrid_search,
 )
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.utils import filter_metadata
-from open_webui.retrieval.web.azure import search_azure
-from open_webui.retrieval.web.bing import search_bing
-from open_webui.retrieval.web.bocha import search_bocha
-from open_webui.retrieval.web.brave import search_brave
-from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
-from open_webui.retrieval.web.duckduckgo import search_duckduckgo
-from open_webui.retrieval.web.exa import search_exa
-from open_webui.retrieval.web.external import search_external
-from open_webui.retrieval.web.firecrawl import search_firecrawl
-from open_webui.retrieval.web.google_pse import search_google_pse
-from open_webui.retrieval.web.jina_search import search_jina
-from open_webui.retrieval.web.kagi import search_kagi
-
-# Web search engines
-from open_webui.retrieval.web.main import SearchResult
-from open_webui.retrieval.web.mojeek import search_mojeek
-from open_webui.retrieval.web.ollama import search_ollama_cloud
-from open_webui.retrieval.web.perplexity import search_perplexity
-from open_webui.retrieval.web.perplexity_search import search_perplexity_search
-from open_webui.retrieval.web.searchapi import search_searchapi
-from open_webui.retrieval.web.searxng import search_searxng
-from open_webui.retrieval.web.serpapi import search_serpapi
-from open_webui.retrieval.web.serper import search_serper
-from open_webui.retrieval.web.serply import search_serply
-from open_webui.retrieval.web.serpstack import search_serpstack
-from open_webui.retrieval.web.sougou import search_sougou
-from open_webui.retrieval.web.tavily import search_tavily
-from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.retrieval.web.yacy import search_yacy
-from open_webui.retrieval.web.yandex import search_yandex
-from open_webui.retrieval.web.ydc import search_youcom
-from open_webui.retrieval.web.linkup import search_linkup
-from open_webui.storage.provider import Storage
-from open_webui.utils.access_control import has_permission
-from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
 )
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
+
+from open_webui.config import (
+    ENV,
+    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_MODEL_AUTO_UPDATE,
+    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    UPLOAD_DIR,
+    DEFAULT_LOCALE,
+    RAG_EMBEDDING_CONTENT_PREFIX,
+    RAG_EMBEDDING_QUERY_PREFIX,
+)
+from open_webui.env import (
+    DEVICE_TYPE,
+    DOCKER,
+    RAG_EMBEDDING_TIMEOUT,
+    SENTENCE_TRANSFORMERS_BACKEND,
+    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
+)
+
+from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 
@@ -155,7 +162,7 @@ def get_ef(
 
 def get_rf(
     engine: str = '',
-    reranking_model: str | None = None,
+    reranking_model: Optional[str] = None,
     external_reranker_url: str = '',
     external_reranker_api_key: str = '',
     external_reranker_timeout: str = '',
@@ -242,7 +249,7 @@ router = APIRouter()
 
 
 class CollectionNameForm(BaseModel):
-    collection_name: str | None = None
+    collection_name: Optional[str] = None
 
 
 class ProcessUrlForm(CollectionNameForm):
@@ -250,7 +257,7 @@ class ProcessUrlForm(CollectionNameForm):
 
 
 class SearchForm(BaseModel):
-    queries: list[str]
+    queries: List[str]
 
 
 @router.get('/embedding')
@@ -295,14 +302,14 @@ class AzureOpenAIConfigForm(BaseModel):
 
 
 class EmbeddingModelUpdateForm(BaseModel):
-    openai_config: OpenAIConfigForm | None = None
-    ollama_config: OllamaConfigForm | None = None
-    azure_openai_config: AzureOpenAIConfigForm | None = None
+    openai_config: Optional[OpenAIConfigForm] = None
+    ollama_config: Optional[OllamaConfigForm] = None
+    azure_openai_config: Optional[AzureOpenAIConfigForm] = None
     RAG_EMBEDDING_ENGINE: str
     RAG_EMBEDDING_MODEL: str
-    RAG_EMBEDDING_BATCH_SIZE: int | None = 1
-    ENABLE_ASYNC_EMBEDDING: bool | None = True
-    RAG_EMBEDDING_CONCURRENT_REQUESTS: int | None = 0
+    RAG_EMBEDDING_BATCH_SIZE: Optional[int] = 1
+    ENABLE_ASYNC_EMBEDDING: Optional[bool] = True
+    RAG_EMBEDDING_CONCURRENT_REQUESTS: Optional[int] = 0
 
 
 def unload_embedding_model(request: Request):
@@ -554,162 +561,158 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'YANDEX_WEB_SEARCH_API_KEY': request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             'YANDEX_WEB_SEARCH_CONFIG': request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             'YOUCOM_API_KEY': request.app.state.config.YOUCOM_API_KEY,
-            'LINKUP_API_KEY': request.app.state.config.LINKUP_API_KEY,
-            'LINKUP_SEARCH_PARAMS': request.app.state.config.LINKUP_SEARCH_PARAMS,
         },
     }
 
 
 class WebConfig(BaseModel):
-    ENABLE_WEB_SEARCH: bool | None = None
-    WEB_SEARCH_ENGINE: str | None = None
-    WEB_SEARCH_TRUST_ENV: bool | None = None
-    WEB_SEARCH_RESULT_COUNT: int | None = None
-    WEB_SEARCH_CONCURRENT_REQUESTS: int | None = None
-    WEB_SEARCH_DOMAIN_FILTER_LIST: list[str | None] = []
-    WEB_FETCH_MAX_CONTENT_LENGTH: int | None = None
-    WEB_LOADER_CONCURRENT_REQUESTS: int | None = None
-    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: bool | None = None
-    BYPASS_WEB_SEARCH_WEB_LOADER: bool | None = None
-    OLLAMA_CLOUD_WEB_SEARCH_API_KEY: str | None = None
-    SEARXNG_QUERY_URL: str | None = None
-    SEARXNG_LANGUAGE: str | None = None
-    YACY_QUERY_URL: str | None = None
-    YACY_USERNAME: str | None = None
-    YACY_PASSWORD: str | None = None
-    GOOGLE_PSE_API_KEY: str | None = None
-    GOOGLE_PSE_ENGINE_ID: str | None = None
-    BRAVE_SEARCH_API_KEY: str | None = None
-    BRAVE_SEARCH_CONTEXT_TOKENS: int | None = None
-    KAGI_SEARCH_API_KEY: str | None = None
-    MOJEEK_SEARCH_API_KEY: str | None = None
-    BOCHA_SEARCH_API_KEY: str | None = None
-    SERPSTACK_API_KEY: str | None = None
-    SERPSTACK_HTTPS: bool | None = None
-    SERPER_API_KEY: str | None = None
-    SERPLY_API_KEY: str | None = None
-    DDGS_BACKEND: str | None = None
-    TAVILY_API_KEY: str | None = None
-    SEARCHAPI_API_KEY: str | None = None
-    SEARCHAPI_ENGINE: str | None = None
-    SERPAPI_API_KEY: str | None = None
-    SERPAPI_ENGINE: str | None = None
-    JINA_API_KEY: str | None = None
-    JINA_API_BASE_URL: str | None = None
-    BING_SEARCH_V7_ENDPOINT: str | None = None
-    BING_SEARCH_V7_SUBSCRIPTION_KEY: str | None = None
-    EXA_API_KEY: str | None = None
-    PERPLEXITY_API_KEY: str | None = None
-    PERPLEXITY_MODEL: str | None = None
-    PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
-    PERPLEXITY_SEARCH_API_URL: str | None = None
-    SOUGOU_API_SID: str | None = None
-    SOUGOU_API_SK: str | None = None
-    WEB_LOADER_ENGINE: str | None = None
-    WEB_LOADER_TIMEOUT: str | None = None
-    ENABLE_WEB_LOADER_SSL_VERIFICATION: bool | None = None
-    PLAYWRIGHT_WS_URL: str | None = None
-    PLAYWRIGHT_TIMEOUT: int | None = None
-    FIRECRAWL_API_KEY: str | None = None
-    FIRECRAWL_API_BASE_URL: str | None = None
-    FIRECRAWL_TIMEOUT: str | None = None
-    TAVILY_EXTRACT_DEPTH: str | None = None
-    EXTERNAL_WEB_SEARCH_URL: str | None = None
-    EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
-    EXTERNAL_WEB_LOADER_URL: str | None = None
-    EXTERNAL_WEB_LOADER_API_KEY: str | None = None
-    YOUTUBE_LOADER_LANGUAGE: list[str | None] = None
-    YOUTUBE_LOADER_PROXY_URL: str | None = None
-    YOUTUBE_LOADER_TRANSLATION: str | None = None
-    YANDEX_WEB_SEARCH_URL: str | None = None
-    YANDEX_WEB_SEARCH_API_KEY: str | None = None
-    YANDEX_WEB_SEARCH_CONFIG: str | None = None
-    YOUCOM_API_KEY: str | None = None
-    LINKUP_API_KEY: str | None = None
-    LINKUP_SEARCH_PARAMS: dict | None = None
+    ENABLE_WEB_SEARCH: Optional[bool] = None
+    WEB_SEARCH_ENGINE: Optional[str] = None
+    WEB_SEARCH_TRUST_ENV: Optional[bool] = None
+    WEB_SEARCH_RESULT_COUNT: Optional[int] = None
+    WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
+    WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
+    WEB_FETCH_MAX_CONTENT_LENGTH: Optional[int] = None
+    WEB_LOADER_CONCURRENT_REQUESTS: Optional[int] = None
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
+    BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
+    OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
+    SEARXNG_QUERY_URL: Optional[str] = None
+    SEARXNG_LANGUAGE: Optional[str] = None
+    YACY_QUERY_URL: Optional[str] = None
+    YACY_USERNAME: Optional[str] = None
+    YACY_PASSWORD: Optional[str] = None
+    GOOGLE_PSE_API_KEY: Optional[str] = None
+    GOOGLE_PSE_ENGINE_ID: Optional[str] = None
+    BRAVE_SEARCH_API_KEY: Optional[str] = None
+    BRAVE_SEARCH_CONTEXT_TOKENS: Optional[int] = None
+    KAGI_SEARCH_API_KEY: Optional[str] = None
+    MOJEEK_SEARCH_API_KEY: Optional[str] = None
+    BOCHA_SEARCH_API_KEY: Optional[str] = None
+    SERPSTACK_API_KEY: Optional[str] = None
+    SERPSTACK_HTTPS: Optional[bool] = None
+    SERPER_API_KEY: Optional[str] = None
+    SERPLY_API_KEY: Optional[str] = None
+    DDGS_BACKEND: Optional[str] = None
+    TAVILY_API_KEY: Optional[str] = None
+    SEARCHAPI_API_KEY: Optional[str] = None
+    SEARCHAPI_ENGINE: Optional[str] = None
+    SERPAPI_API_KEY: Optional[str] = None
+    SERPAPI_ENGINE: Optional[str] = None
+    JINA_API_KEY: Optional[str] = None
+    JINA_API_BASE_URL: Optional[str] = None
+    BING_SEARCH_V7_ENDPOINT: Optional[str] = None
+    BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
+    EXA_API_KEY: Optional[str] = None
+    PERPLEXITY_API_KEY: Optional[str] = None
+    PERPLEXITY_MODEL: Optional[str] = None
+    PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
+    PERPLEXITY_SEARCH_API_URL: Optional[str] = None
+    SOUGOU_API_SID: Optional[str] = None
+    SOUGOU_API_SK: Optional[str] = None
+    WEB_LOADER_ENGINE: Optional[str] = None
+    WEB_LOADER_TIMEOUT: Optional[str] = None
+    ENABLE_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
+    PLAYWRIGHT_WS_URL: Optional[str] = None
+    PLAYWRIGHT_TIMEOUT: Optional[int] = None
+    FIRECRAWL_API_KEY: Optional[str] = None
+    FIRECRAWL_API_BASE_URL: Optional[str] = None
+    FIRECRAWL_TIMEOUT: Optional[str] = None
+    TAVILY_EXTRACT_DEPTH: Optional[str] = None
+    EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
+    EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
+    EXTERNAL_WEB_LOADER_URL: Optional[str] = None
+    EXTERNAL_WEB_LOADER_API_KEY: Optional[str] = None
+    YOUTUBE_LOADER_LANGUAGE: Optional[List[str]] = None
+    YOUTUBE_LOADER_PROXY_URL: Optional[str] = None
+    YOUTUBE_LOADER_TRANSLATION: Optional[str] = None
+    YANDEX_WEB_SEARCH_URL: Optional[str] = None
+    YANDEX_WEB_SEARCH_API_KEY: Optional[str] = None
+    YANDEX_WEB_SEARCH_CONFIG: Optional[str] = None
+    YOUCOM_API_KEY: Optional[str] = None
 
 
 class ConfigForm(BaseModel):
     # RAG settings
-    RAG_TEMPLATE: str | None = None
-    TOP_K: int | None = None
-    BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
-    RAG_FULL_CONTEXT: bool | None = None
+    RAG_TEMPLATE: Optional[str] = None
+    TOP_K: Optional[int] = None
+    BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
+    RAG_FULL_CONTEXT: Optional[bool] = None
 
     # Hybrid search settings
-    ENABLE_RAG_HYBRID_SEARCH: bool | None = None
-    ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: bool | None = None
-    TOP_K_RERANKER: int | None = None
-    RELEVANCE_THRESHOLD: float | None = None
-    HYBRID_BM25_WEIGHT: float | None = None
+    ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
+    ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: Optional[bool] = None
+    TOP_K_RERANKER: Optional[int] = None
+    RELEVANCE_THRESHOLD: Optional[float] = None
+    HYBRID_BM25_WEIGHT: Optional[float] = None
 
     # Content extraction settings
-    CONTENT_EXTRACTION_ENGINE: str | None = None
-    PDF_EXTRACT_IMAGES: bool | None = None
-    PDF_LOADER_MODE: str | None = None
+    CONTENT_EXTRACTION_ENGINE: Optional[str] = None
+    PDF_EXTRACT_IMAGES: Optional[bool] = None
+    PDF_LOADER_MODE: Optional[str] = None
 
-    DATALAB_MARKER_API_KEY: str | None = None
-    DATALAB_MARKER_API_BASE_URL: str | None = None
-    DATALAB_MARKER_ADDITIONAL_CONFIG: str | None = None
-    DATALAB_MARKER_SKIP_CACHE: bool | None = None
-    DATALAB_MARKER_FORCE_OCR: bool | None = None
-    DATALAB_MARKER_PAGINATE: bool | None = None
-    DATALAB_MARKER_STRIP_EXISTING_OCR: bool | None = None
-    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: bool | None = None
-    DATALAB_MARKER_FORMAT_LINES: bool | None = None
-    DATALAB_MARKER_USE_LLM: bool | None = None
-    DATALAB_MARKER_OUTPUT_FORMAT: str | None = None
+    DATALAB_MARKER_API_KEY: Optional[str] = None
+    DATALAB_MARKER_API_BASE_URL: Optional[str] = None
+    DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
+    DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
+    DATALAB_MARKER_FORCE_OCR: Optional[bool] = None
+    DATALAB_MARKER_PAGINATE: Optional[bool] = None
+    DATALAB_MARKER_STRIP_EXISTING_OCR: Optional[bool] = None
+    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: Optional[bool] = None
+    DATALAB_MARKER_FORMAT_LINES: Optional[bool] = None
+    DATALAB_MARKER_USE_LLM: Optional[bool] = None
+    DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
 
-    EXTERNAL_DOCUMENT_LOADER_URL: str | None = None
-    EXTERNAL_DOCUMENT_LOADER_API_KEY: str | None = None
+    EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
+    EXTERNAL_DOCUMENT_LOADER_API_KEY: Optional[str] = None
 
-    TIKA_SERVER_URL: str | None = None
-    DOCLING_SERVER_URL: str | None = None
-    DOCLING_API_KEY: str | None = None
-    DOCLING_PARAMS: dict | None = None
-    DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = None
-    DOCUMENT_INTELLIGENCE_KEY: str | None = None
-    DOCUMENT_INTELLIGENCE_MODEL: str | None = None
-    MISTRAL_OCR_API_BASE_URL: str | None = None
-    MISTRAL_OCR_API_KEY: str | None = None
-    PADDLEOCR_VL_BASE_URL: str | None = None
-    PADDLEOCR_VL_TOKEN: str | None = None
+    TIKA_SERVER_URL: Optional[str] = None
+    DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_API_KEY: Optional[str] = None
+    DOCLING_PARAMS: Optional[dict] = None
+    DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
+    DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
+    DOCUMENT_INTELLIGENCE_MODEL: Optional[str] = None
+    MISTRAL_OCR_API_BASE_URL: Optional[str] = None
+    MISTRAL_OCR_API_KEY: Optional[str] = None
+    PADDLEOCR_VL_BASE_URL: Optional[str] = None
+    PADDLEOCR_VL_TOKEN: Optional[str] = None
 
     # MinerU settings
-    MINERU_API_MODE: str | None = None
-    MINERU_API_URL: str | None = None
-    MINERU_API_KEY: str | None = None
-    MINERU_API_TIMEOUT: str | None = None
-    MINERU_PARAMS: dict | None = None
+    MINERU_API_MODE: Optional[str] = None
+    MINERU_API_URL: Optional[str] = None
+    MINERU_API_KEY: Optional[str] = None
+    MINERU_API_TIMEOUT: Optional[str] = None
+    MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
-    RAG_RERANKING_MODEL: str | None = None
-    RAG_RERANKING_ENGINE: str | None = None
-    RAG_RERANKING_BATCH_SIZE: int | None = None
-    RAG_EXTERNAL_RERANKER_URL: str | None = None
-    RAG_EXTERNAL_RERANKER_API_KEY: str | None = None
-    RAG_EXTERNAL_RERANKER_TIMEOUT: str | None = None
+    RAG_RERANKING_MODEL: Optional[str] = None
+    RAG_RERANKING_ENGINE: Optional[str] = None
+    RAG_RERANKING_BATCH_SIZE: Optional[int] = None
+    RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
 
     # Chunking settings
-    TEXT_SPLITTER: str | None = None
-    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: bool | None = None
-    CHUNK_SIZE: int | None = None
-    CHUNK_MIN_SIZE_TARGET: int | None = None
-    CHUNK_OVERLAP: int | None = None
+    TEXT_SPLITTER: Optional[str] = None
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
+    CHUNK_SIZE: Optional[int] = None
+    CHUNK_MIN_SIZE_TARGET: Optional[int] = None
+    CHUNK_OVERLAP: Optional[int] = None
 
     # File upload settings
-    FILE_MAX_SIZE: Union[int, str | None] = None
-    FILE_MAX_COUNT: Union[int, str | None] = None
-    FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
-    FILE_IMAGE_COMPRESSION_HEIGHT: Union[int, str | None] = None
-    ALLOWED_FILE_EXTENSIONS: list[str | None] = None
+    FILE_MAX_SIZE: Optional[Union[int, str]] = None
+    FILE_MAX_COUNT: Optional[Union[int, str]] = None
+    FILE_IMAGE_COMPRESSION_WIDTH: Optional[Union[int, str]] = None
+    FILE_IMAGE_COMPRESSION_HEIGHT: Optional[Union[int, str]] = None
+    ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
 
     # Integration settings
-    ENABLE_GOOGLE_DRIVE_INTEGRATION: bool | None = None
-    ENABLE_ONEDRIVE_INTEGRATION: bool | None = None
+    ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
+    ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
 
     # Web search settings
-    web: WebConfig | None = None
+    web: Optional[WebConfig] = None
 
 
 @router.post('/config/update')
@@ -1114,8 +1117,6 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.YANDEX_WEB_SEARCH_API_KEY = form_data.web.YANDEX_WEB_SEARCH_API_KEY
         request.app.state.config.YANDEX_WEB_SEARCH_CONFIG = form_data.web.YANDEX_WEB_SEARCH_CONFIG
         request.app.state.config.YOUCOM_API_KEY = form_data.web.YOUCOM_API_KEY
-        request.app.state.config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
-        request.app.state.config.LINKUP_SEARCH_PARAMS = form_data.web.LINKUP_SEARCH_PARAMS
 
     return {
         'status': True,
@@ -1248,8 +1249,6 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'YANDEX_WEB_SEARCH_API_KEY': request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
             'YANDEX_WEB_SEARCH_CONFIG': request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             'YOUCOM_API_KEY': request.app.state.config.YOUCOM_API_KEY,
-            'LINKUP_API_KEY': request.app.state.config.LINKUP_API_KEY,
-            'LINKUP_SEARCH_PARAMS': request.app.state.config.LINKUP_SEARCH_PARAMS,
         },
     }
 
@@ -1342,7 +1341,7 @@ def save_docs_to_vector_db(
     request: Request,
     docs,
     collection_name,
-    metadata: dict | None = None,
+    metadata: Optional[dict] = None,
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
@@ -1515,15 +1514,22 @@ def save_docs_to_vector_db(
         embeddings = future.result(timeout=embedding_timeout)
         log.info(f'embeddings generated {len(embeddings)} for {len(texts)} items')
 
-        items = [
-            {
-                'id': str(uuid.uuid4()),
-                'text': text,
-                'vector': embeddings[idx],
-                'metadata': metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+        # Filter out texts without valid embeddings (empty lists are rejected by chromadb)
+        valid_items = []
+        for idx, text in enumerate(texts):
+            if idx < len(embeddings) and len(embeddings[idx]) > 0:
+                valid_items.append({
+                    'id': str(uuid.uuid4()),
+                    'text': text,
+                    'vector': embeddings[idx],
+                    'metadata': metadatas[idx],
+                })
+
+        items = valid_items
+
+        if not items:
+            log.warning(f'No valid embeddings found, skipping vector DB insert for collection {collection_name}')
+            return True
 
         log.info(f'adding to collection {collection_name}')
         VECTOR_DB_CLIENT.insert(
@@ -1540,8 +1546,8 @@ def save_docs_to_vector_db(
 
 class ProcessFileForm(BaseModel):
     file_id: str
-    content: str | None = None
-    collection_name: str | None = None
+    content: Optional[str] = None
+    collection_name: Optional[str] = None
 
 
 @router.post('/process/file')
@@ -1768,7 +1774,7 @@ async def process_file(
 class ProcessTextForm(BaseModel):
     name: str
     content: str
-    collection_name: str | None = None
+    collection_name: Optional[str] = None
 
 
 @router.post('/process/text')
@@ -1866,18 +1872,32 @@ async def process_web(
         )
 
 
-async def search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
-    """Dispatch a web search query to the configured engine and return results.
-
-    Providers that have been migrated to async (aiohttp) are awaited natively.
-    Legacy sync providers are offloaded via ``asyncio.to_thread`` to avoid
-    blocking the event loop.
+def search_web(request: Request, engine: str, query: str, user=None) -> list[SearchResult]:
+    """Search the web using a search engine and return the results as a list of SearchResult objects.
+    Will look for a search engine API key in environment variables in the following order:
+    - SEARXNG_QUERY_URL
+    - YACY_QUERY_URL + YACY_USERNAME + YACY_PASSWORD
+    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
+    - BRAVE_SEARCH_API_KEY
+    - KAGI_SEARCH_API_KEY
+    - MOJEEK_SEARCH_API_KEY
+    - BOCHA_SEARCH_API_KEY
+    - SERPSTACK_API_KEY
+    - SERPER_API_KEY
+    - SERPLY_API_KEY
+    - TAVILY_API_KEY
+    - EXA_API_KEY
+    - PERPLEXITY_API_KEY
+    - SOUGOU_API_SID + SOUGOU_API_SK
+    - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
+    - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
+    Args:
+        query (str): The query to search for
     """
 
     # TODO: add playwright to search the web
     if engine == 'ollama_cloud':
-        return await asyncio.to_thread(
-            search_ollama_cloud,
+        return search_ollama_cloud(
             'https://ollama.com',
             request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             query,
@@ -1886,8 +1906,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         )
     elif engine == 'perplexity_search':
         if request.app.state.config.PERPLEXITY_API_KEY:
-            return await asyncio.to_thread(
-                search_perplexity_search,
+            return search_perplexity_search(
                 request.app.state.config.PERPLEXITY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1900,7 +1919,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
     elif engine == 'searxng':
         if request.app.state.config.SEARXNG_QUERY_URL:
             searxng_kwargs = {'language': request.app.state.config.SEARXNG_LANGUAGE}
-            return await search_searxng(
+            return search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1911,8 +1930,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No SEARXNG_QUERY_URL found in environment variables')
     elif engine == 'yacy':
         if request.app.state.config.YACY_QUERY_URL:
-            return await asyncio.to_thread(
-                search_yacy,
+            return search_yacy(
                 request.app.state.config.YACY_QUERY_URL,
                 request.app.state.config.YACY_USERNAME,
                 request.app.state.config.YACY_PASSWORD,
@@ -1924,7 +1942,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No YACY_QUERY_URL found in environment variables')
     elif engine == 'google_pse':
         if request.app.state.config.GOOGLE_PSE_API_KEY and request.app.state.config.GOOGLE_PSE_ENGINE_ID:
-            return await search_google_pse(
+            return search_google_pse(
                 request.app.state.config.GOOGLE_PSE_API_KEY,
                 request.app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
@@ -1936,7 +1954,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables')
     elif engine == 'brave':
         if request.app.state.config.BRAVE_SEARCH_API_KEY:
-            return await search_brave(
+            return search_brave(
                 request.app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1946,8 +1964,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
     elif engine == 'brave_llm_context':
         if request.app.state.config.BRAVE_SEARCH_API_KEY:
-            return await asyncio.to_thread(
-                search_brave_llm_context,
+            return search_brave_llm_context(
                 request.app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1958,8 +1975,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
     elif engine == 'kagi':
         if request.app.state.config.KAGI_SEARCH_API_KEY:
-            return await asyncio.to_thread(
-                search_kagi,
+            return search_kagi(
                 request.app.state.config.KAGI_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1969,8 +1985,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No KAGI_SEARCH_API_KEY found in environment variables')
     elif engine == 'mojeek':
         if request.app.state.config.MOJEEK_SEARCH_API_KEY:
-            return await asyncio.to_thread(
-                search_mojeek,
+            return search_mojeek(
                 request.app.state.config.MOJEEK_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1980,8 +1995,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No MOJEEK_SEARCH_API_KEY found in environment variables')
     elif engine == 'bocha':
         if request.app.state.config.BOCHA_SEARCH_API_KEY:
-            return await asyncio.to_thread(
-                search_bocha,
+            return search_bocha(
                 request.app.state.config.BOCHA_SEARCH_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -1991,7 +2005,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No BOCHA_SEARCH_API_KEY found in environment variables')
     elif engine == 'serpstack':
         if request.app.state.config.SERPSTACK_API_KEY:
-            return await search_serpstack(
+            return search_serpstack(
                 request.app.state.config.SERPSTACK_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2002,7 +2016,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No SERPSTACK_API_KEY found in environment variables')
     elif engine == 'serper':
         if request.app.state.config.SERPER_API_KEY:
-            return await search_serper(
+            return search_serper(
                 request.app.state.config.SERPER_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2012,8 +2026,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No SERPER_API_KEY found in environment variables')
     elif engine == 'serply':
         if request.app.state.config.SERPLY_API_KEY:
-            return await asyncio.to_thread(
-                search_serply,
+            return search_serply(
                 request.app.state.config.SERPLY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2022,8 +2035,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         else:
             raise Exception('No SERPLY_API_KEY found in environment variables')
     elif engine == 'duckduckgo':
-        return await asyncio.to_thread(
-            search_duckduckgo,
+        return search_duckduckgo(
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
@@ -2032,8 +2044,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         )
     elif engine == 'tavily':
         if request.app.state.config.TAVILY_API_KEY:
-            return await asyncio.to_thread(
-                search_tavily,
+            return search_tavily(
                 request.app.state.config.TAVILY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2043,8 +2054,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No TAVILY_API_KEY found in environment variables')
     elif engine == 'exa':
         if request.app.state.config.EXA_API_KEY:
-            return await asyncio.to_thread(
-                search_exa,
+            return search_exa(
                 request.app.state.config.EXA_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2054,8 +2064,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No EXA_API_KEY found in environment variables')
     elif engine == 'searchapi':
         if request.app.state.config.SEARCHAPI_API_KEY:
-            return await asyncio.to_thread(
-                search_searchapi,
+            return search_searchapi(
                 request.app.state.config.SEARCHAPI_API_KEY,
                 request.app.state.config.SEARCHAPI_ENGINE,
                 query,
@@ -2066,8 +2075,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No SEARCHAPI_API_KEY found in environment variables')
     elif engine == 'serpapi':
         if request.app.state.config.SERPAPI_API_KEY:
-            return await asyncio.to_thread(
-                search_serpapi,
+            return search_serpapi(
                 request.app.state.config.SERPAPI_API_KEY,
                 request.app.state.config.SERPAPI_ENGINE,
                 query,
@@ -2077,16 +2085,14 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         else:
             raise Exception('No SERPAPI_API_KEY found in environment variables')
     elif engine == 'jina':
-        return await asyncio.to_thread(
-            search_jina,
+        return search_jina(
             request.app.state.config.JINA_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.JINA_API_BASE_URL,
         )
     elif engine == 'bing':
-        return await asyncio.to_thread(
-            search_bing,
+        return search_bing(
             request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             str(DEFAULT_LOCALE),
@@ -2100,8 +2106,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             and request.app.state.config.AZURE_AI_SEARCH_ENDPOINT
             and request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME
         ):
-            return await asyncio.to_thread(
-                search_azure,
+            return search_azure(
                 request.app.state.config.AZURE_AI_SEARCH_API_KEY,
                 request.app.state.config.AZURE_AI_SEARCH_ENDPOINT,
                 request.app.state.config.AZURE_AI_SEARCH_INDEX_NAME,
@@ -2113,9 +2118,15 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception(
                 'AZURE_AI_SEARCH_API_KEY, AZURE_AI_SEARCH_ENDPOINT, and AZURE_AI_SEARCH_INDEX_NAME are required for Azure AI Search'
             )
+    elif engine == 'exa':
+        return search_exa(
+            request.app.state.config.EXA_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == 'perplexity':
-        return await asyncio.to_thread(
-            search_perplexity,
+        return search_perplexity(
             request.app.state.config.PERPLEXITY_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
@@ -2125,8 +2136,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         )
     elif engine == 'sougou':
         if request.app.state.config.SOUGOU_API_SID and request.app.state.config.SOUGOU_API_SK:
-            return await asyncio.to_thread(
-                search_sougou,
+            return search_sougou(
                 request.app.state.config.SOUGOU_API_SID,
                 request.app.state.config.SOUGOU_API_SK,
                 query,
@@ -2136,8 +2146,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
         else:
             raise Exception('No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables')
     elif engine == 'firecrawl':
-        return await asyncio.to_thread(
-            search_firecrawl,
+        return search_firecrawl(
             request.app.state.config.FIRECRAWL_API_BASE_URL,
             request.app.state.config.FIRECRAWL_API_KEY,
             query,
@@ -2145,8 +2154,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     elif engine == 'external':
-        return await asyncio.to_thread(
-            search_external,
+        return search_external(
             request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -2156,8 +2164,7 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             user=user,
         )
     elif engine == 'yandex':
-        return await asyncio.to_thread(
-            search_yandex,
+        return search_yandex(
             request,
             request.app.state.config.YANDEX_WEB_SEARCH_URL,
             request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
@@ -2168,28 +2175,14 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             user=user,
         )
     elif engine == 'youcom':
-        return await asyncio.to_thread(
-            search_youcom,
+        return search_youcom(
             request.app.state.config.YOUCOM_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
-    elif engine == 'linkup':
-        if request.app.state.config.LINKUP_API_KEY:
-            return await asyncio.to_thread(
-                search_linkup,
-                api_key=request.app.state.config.LINKUP_API_KEY,
-                query=query,
-                count=request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                filter_list=request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-                params=request.app.state.config.LINKUP_SEARCH_PARAMS,
-            )
-        else:
-            raise Exception('No LINKUP_API_KEY found in environment variables')
     else:
         raise Exception('No search engine API key found in environment variables')
-
 
 
 @router.post('/process/web/search')
@@ -2225,7 +2218,8 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
             async def search_query_with_semaphore(query):
                 async with semaphore:
-                    return await search_web(
+                    return await run_in_threadpool(
+                        search_web,
                         request,
                         request.app.state.config.WEB_SEARCH_ENGINE,
                         query,
@@ -2234,9 +2228,10 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
             search_tasks = [search_query_with_semaphore(query) for query in form_data.queries]
         else:
-            # Unlimited parallel execution
+            # Unlimited parallel execution (previous behavior)
             search_tasks = [
-                search_web(
+                run_in_threadpool(
+                    search_web,
                     request,
                     request.app.state.config.WEB_SEARCH_ENGINE,
                     query,
@@ -2258,8 +2253,12 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         log.debug(f'urls: {urls}')
 
     except Exception as e:
-        log.exception('Web search failed')
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e))
+        log.exception(e)
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
 
     if len(urls) == 0:
         raise HTTPException(
@@ -2339,8 +2338,11 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 'loaded_count': len(docs),
             }
     except Exception as e:
-        log.exception('Web search content loading failed')
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read') -> None:
@@ -2362,10 +2364,10 @@ async def _validate_collection_access(collection_names: list[str], user, access_
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
-    k: int | None = None
-    k_reranker: int | None = None
-    r: float | None = None
-    hybrid: bool | None = None
+    k: Optional[int] = None
+    k_reranker: Optional[int] = None
+    r: Optional[float] = None
+    hybrid: Optional[bool] = None
 
 
 @router.post('/query/doc')
@@ -2428,12 +2430,12 @@ async def query_doc_handler(
 class QueryCollectionsForm(BaseModel):
     collection_names: list[str]
     query: str
-    k: int | None = None
-    k_reranker: int | None = None
-    r: float | None = None
-    hybrid: bool | None = None
-    hybrid_bm25_weight: float | None = None
-    enable_enriched_texts: bool | None = None
+    k: Optional[int] = None
+    k_reranker: Optional[int] = None
+    r: Optional[float] = None
+    hybrid: Optional[bool] = None
+    hybrid_bm25_weight: Optional[float] = None
+    enable_enriched_texts: Optional[bool] = None
 
 
 @router.post('/query/collection')
@@ -2586,24 +2588,24 @@ async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
 if ENV == 'dev':
 
     @router.get('/ef/{text}')
-    async def get_embeddings(request: Request, text: str | None = 'Hello World!'):
+    async def get_embeddings(request: Request, text: Optional[str] = 'Hello World!'):
         return {'result': await request.app.state.EMBEDDING_FUNCTION(text, prefix=RAG_EMBEDDING_QUERY_PREFIX)}
 
 
 class BatchProcessFilesForm(BaseModel):
-    files: list[FileModel]
+    files: List[FileModel]
     collection_name: str
 
 
 class BatchProcessFilesResult(BaseModel):
     file_id: str
     status: str
-    error: str | None = None
+    error: Optional[str] = None
 
 
 class BatchProcessFilesResponse(BaseModel):
-    results: list[BatchProcessFilesResult]
-    errors: list[BatchProcessFilesResult]
+    results: List[BatchProcessFilesResult]
+    errors: List[BatchProcessFilesResult]
 
 
 @router.post('/process/files/batch')
@@ -2627,12 +2629,12 @@ async def process_files_batch(
     if collection_name:
         await _validate_collection_access([collection_name], user, access_type='write')
 
-    file_results: list[BatchProcessFilesResult] = []
-    file_errors: list[BatchProcessFilesResult] = []
-    file_updates: list[FileUpdateForm] = []
+    file_results: List[BatchProcessFilesResult] = []
+    file_errors: List[BatchProcessFilesResult] = []
+    file_updates: List[FileUpdateForm] = []
 
     # Prepare all documents first
-    all_docs: list[Document] = []
+    all_docs: List[Document] = []
 
     for file in form_data.files:
         try:
@@ -2658,7 +2660,7 @@ async def process_files_batch(
                 continue
 
             text_content = file.data.get('content', '')
-            docs: list[Document] = [
+            docs: List[Document] = [
                 Document(
                     page_content=text_content.replace('<br/>', '\n'),
                     metadata={
