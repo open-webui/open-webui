@@ -1,28 +1,14 @@
-from typing import Optional
-import io
-import base64
-import json
+from __future__ import annotations
+
 import asyncio
+import base64
+import io
+import json
 import logging
 import posixpath
+from typing import Optional
 from urllib.parse import unquote
 
-from open_webui.models.groups import Groups
-from open_webui.models.models import (
-    ModelForm,
-    ModelMeta,
-    ModelModel,
-    ModelParams,
-    ModelResponse,
-    ModelListResponse,
-    ModelAccessListResponse,
-    ModelAccessResponse,
-    Models,
-)
-from open_webui.models.access_grants import AccessGrants
-
-from pydantic import BaseModel
-from open_webui.constants import ERROR_MESSAGES
 from fastapi import (
     APIRouter,
     Depends,
@@ -32,13 +18,27 @@ from fastapi import (
     status,
 )
 from fastapi.responses import RedirectResponse, StreamingResponse
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
 from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.models.models import (
+    ModelAccessListResponse,
+    ModelAccessResponse,
+    ModelForm,
+    ModelListResponse,
+    ModelMeta,
+    ModelModel,
+    ModelParams,
+    ModelResponse,
+    Models,
+)
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _safe_static_redirect_path(url: str) -> Optional[str]:
+def _safe_static_redirect_path(url: str) -> str | None:
     """
     If url is a same-origin static asset path, return a normalized path safe for
     RedirectResponse Location. Otherwise None (caller should fall back to default).
@@ -78,6 +78,32 @@ def is_valid_model_id(model_id: str) -> bool:
     return model_id and len(model_id) <= 256
 
 
+async def _verify_knowledge_file_access(
+    knowledge_items: list | None,
+    user,
+    db: AsyncSession,
+) -> None:
+    """Raise 403 if any knowledge item references a file the caller cannot read."""
+    if not knowledge_items or user.role == 'admin':
+        return
+    for item in knowledge_items:
+        if not isinstance(item, dict) or item.get('type') != 'file':
+            continue
+        file_id = item.get('id')
+        if not file_id:
+            continue
+        if not await has_access_to_file(file_id, 'read', user, db=db):
+            log.warning(
+                'knowledge file access denied: user %s cannot read file %s',
+                user.id,
+                file_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+
 ###########################
 # GetModels
 # Let each model here be judged by what it does and not
@@ -90,12 +116,12 @@ PAGE_ITEM_COUNT = 30
 
 @router.get('/list', response_model=ModelAccessListResponse)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
-    query: Optional[str] = None,
-    view_option: Optional[str] = None,
-    tag: Optional[str] = None,
-    order_by: Optional[str] = None,
-    direction: Optional[str] = None,
-    page: Optional[int] = 1,
+    query: str | None = None,
+    view_option: str | None = None,
+    tag: str | None = None,
+    order_by: str | None = None,
+    direction: str | None = None,
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -192,13 +218,14 @@ async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Dep
 ############################
 
 
-@router.post('/create', response_model=Optional[ModelModel])
+@router.post('/create', response_model=ModelModel | None)
 async def create_new_model(
     request: Request,
     form_data: ModelForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Create a new workspace model entry."""
     if user.role != 'admin' and not await has_permission(
         user.id, 'workspace.models', request.app.state.config.USER_PERMISSIONS, db=db
     ):
@@ -221,6 +248,12 @@ async def create_new_model(
         )
 
     else:
+        await _verify_knowledge_file_access(
+            getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
+            user,
+            db,
+        )
+
         form_data.access_grants = await filter_allowed_access_grants(
             request.app.state.config.USER_PERMISSIONS,
             user.id,
@@ -327,6 +360,21 @@ async def import_models(
                 model_id = model_data.get('id')
 
                 if model_id and is_valid_model_id(model_id):
+                    # Defense-in-depth: skip models referencing inaccessible files
+                    try:
+                        await _verify_knowledge_file_access(
+                            (model_data.get('meta') or {}).get('knowledge'),
+                            user,
+                            db,
+                        )
+                    except HTTPException:
+                        log.warning(
+                            'import_models: user %s skipped model %s (knowledge file access denied)',
+                            user.id,
+                            model_id,
+                        )
+                        continue
+
                     existing_model = existing_models.get(model_id)
                     if existing_model:
                         # Enforce ownership/write-access before allowing overwrite
@@ -409,7 +457,7 @@ class ModelIdForm(BaseModel):
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get('/model', response_model=Optional[ModelAccessResponse])
+@router.get('/model', response_model=ModelAccessResponse | None)
 async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
@@ -505,9 +553,19 @@ async def get_model_profile_image(
                 header, base64_data = profile_image_url.split(',', 1)
                 image_data = base64.b64decode(base64_data)
                 image_buffer = io.BytesIO(image_data)
-                media_type = header.split(';')[0].lstrip('data:')
+                media_type = header.split(';')[0].lstrip('data:').lower()
 
-                headers = {'Content-Disposition': 'inline'}
+                # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
+                if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                    return RedirectResponse(
+                        url='/static/favicon.png',
+                        status_code=status.HTTP_302_FOUND,
+                    )
+
+                headers = {
+                    'Content-Disposition': 'inline',
+                    'X-Content-Type-Options': 'nosniff',
+                }
                 if updated_at:
                     headers['ETag'] = f'"{updated_at}"'
 
@@ -537,7 +595,7 @@ async def get_model_profile_image(
 ############################
 
 
-@router.post('/model/toggle', response_model=Optional[ModelResponse])
+@router.post('/model/toggle', response_model=ModelResponse | None)
 async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     model = await Models.get_model_by_id(id, db=db)
     if model:
@@ -578,13 +636,14 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Async
 ############################
 
 
-@router.post('/model/update', response_model=Optional[ModelModel])
+@router.post('/model/update', response_model=ModelModel | None)
 async def update_model_by_id(
     request: Request,
     form_data: ModelForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Update a workspace model's configuration."""
     model = await Models.get_model_by_id(form_data.id, db=db)
     if not model:
         raise HTTPException(
@@ -608,6 +667,12 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    await _verify_knowledge_file_access(
+        getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
+        user,
+        db,
+    )
+
     form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
@@ -627,11 +692,11 @@ async def update_model_by_id(
 
 class ModelAccessGrantsForm(BaseModel):
     id: str
-    name: Optional[str] = None
+    name: str | None = None
     access_grants: list[dict]
 
 
-@router.post('/model/access/update', response_model=Optional[ModelModel])
+@router.post('/model/access/update', response_model=ModelModel | None)
 async def update_model_access_by_id(
     request: Request,
     form_data: ModelAccessGrantsForm,

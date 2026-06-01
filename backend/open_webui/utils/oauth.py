@@ -1,98 +1,92 @@
 import base64
-from dataclasses import dataclass, field
 import copy
+import fnmatch
 import hashlib
+import json
 import logging
 import mimetypes
+import re
+import secrets
 import sys
+import time
 import urllib
 import uuid
-import json
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-
-import re
-import fnmatch
-import time
-import secrets
-from cryptography.fernet import Fernet
-from typing import Literal
+from typing import Literal, Optional
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
 from authlib.jose.errors import BadSignatureError
+from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
+from cryptography.fernet import Fernet
 from fastapi import (
     HTTPException,
     status,
 )
-from starlette.responses import RedirectResponse
-from typing import Optional
-
-
-from open_webui.models.auths import Auths
-from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.models.users import Users
-
-
-from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
+from mcp.shared.auth import (
+    OAuthClientMetadata as MCPOAuthClientMetadata,
+)
+from mcp.shared.auth import (
+    OAuthMetadata,
+)
 from open_webui.config import (
     DEFAULT_USER_ROLE,
-    ENABLE_OAUTH_SIGNUP,
-    OAUTH_CLIENT_TIMEOUT,
-    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
-    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
-    OAUTH_PROVIDERS,
-    ENABLE_OAUTH_ROLE_MANAGEMENT,
-    ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
-    OAUTH_GROUP_DEFAULT_SHARE,
-    OAUTH_BLOCKED_GROUPS,
-    OAUTH_GROUPS_SEPARATOR,
-    OAUTH_ROLES_SEPARATOR,
-    OAUTH_ROLES_CLAIM,
-    OAUTH_SUB_CLAIM,
-    OAUTH_GROUPS_CLAIM,
-    OAUTH_EMAIL_CLAIM,
-    OAUTH_PICTURE_CLAIM,
-    OAUTH_USERNAME_CLAIM,
-    OAUTH_ALLOWED_ROLES,
+    ENABLE_OAUTH_GROUP_MANAGEMENT,
+    ENABLE_OAUTH_ROLE_MANAGEMENT,
+    ENABLE_OAUTH_SIGNUP,
+    JWT_EXPIRES_IN,
+    OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
-    OAUTH_UPDATE_PICTURE_ON_LOGIN,
-    OAUTH_UPDATE_NAME_ON_LOGIN,
-    OAUTH_UPDATE_EMAIL_ON_LOGIN,
-    OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID,
+    OAUTH_ALLOWED_ROLES,
     OAUTH_AUDIENCE,
     OAUTH_AUTHORIZE_PARAMS,
+    OAUTH_BLOCKED_GROUPS,
+    OAUTH_CLIENT_TIMEOUT,
+    OAUTH_EMAIL_CLAIM,
+    OAUTH_GROUP_DEFAULT_SHARE,
+    OAUTH_GROUPS_CLAIM,
+    OAUTH_GROUPS_SEPARATOR,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    OAUTH_PICTURE_CLAIM,
+    OAUTH_PROVIDERS,
+    OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
+    OAUTH_ROLES_CLAIM,
+    OAUTH_ROLES_SEPARATOR,
+    OAUTH_SUB_CLAIM,
+    OAUTH_UPDATE_EMAIL_ON_LOGIN,
+    OAUTH_UPDATE_NAME_ON_LOGIN,
+    OAUTH_UPDATE_PICTURE_ON_LOGIN,
+    OAUTH_USERNAME_CLAIM,
     WEBHOOK_URL,
-    JWT_EXPIRES_IN,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
-    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
-    WEBUI_NAME,
-    WEBUI_AUTH_COOKIE_SAME_SITE,
-    WEBUI_AUTH_COOKIE_SECURE,
-    ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_OAUTH_EMAIL_FALLBACK,
+    ENABLE_OAUTH_ID_TOKEN_COOKIE,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
     REDIS_KEY_PREFIX,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
+    WEBUI_NAME,
 )
-from open_webui.utils.misc import parse_duration
-from open_webui.utils.auth import get_password_hash, create_token
-from open_webui.utils.webhook import post_webhook
-from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.models.auths import Auths
+from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
+from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import validate_url
-
-from mcp.shared.auth import (
-    OAuthClientMetadata as MCPOAuthClientMetadata,
-    OAuthMetadata,
-)
-
-from authlib.oauth2.rfc6749.errors import OAuth2Error
+from open_webui.utils.auth import create_token, get_password_hash
+from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.utils.misc import parse_duration
+from open_webui.utils.webhook import post_webhook
+from starlette.responses import RedirectResponse
 
 
 class OAuthClientMetadata(MCPOAuthClientMetadata):
@@ -299,6 +293,7 @@ class ProtectedResourceMetadata:
 
     resource: str | None = None
     authorization_servers: list[str] = field(default_factory=list)
+    scopes_supported: list[str] = field(default_factory=list)
 
     def get_discovery_urls(self, server_url: str) -> list[str]:
         """Build all candidate OAuth discovery URLs from this metadata and the server URL."""
@@ -321,6 +316,7 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
     """
     authorization_servers = []
     resource = None
+    scopes = []
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
@@ -365,6 +361,10 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
                                         log.debug(f'Discovered resource indicator: {resource}')
 
                                     servers = resource_metadata.get('authorization_servers', [])
+                                    scopes = resource_metadata.get('scopes_supported', [])
+                                    if scopes:
+                                        log.debug(f'Discovered resource scopes: {scopes}')
+
                                     if servers:
                                         authorization_servers = servers
                                         log.debug(f'Discovered authorization servers: {servers}')
@@ -375,7 +375,9 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
-    return ProtectedResourceMetadata(resource=resource, authorization_servers=authorization_servers)
+    return ProtectedResourceMetadata(
+        resource=resource, authorization_servers=authorization_servers, scopes_supported=scopes
+    )
 
 
 def _build_well_known_urls(server_url: str) -> list[str]:
@@ -559,12 +561,11 @@ async def get_oauth_client_info_with_static_credentials(
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
 
-        # Let the OAuth provider apply its default scopes.
-        # We intentionally do NOT join all scopes_supported here — that list
-        # represents every scope the server *can* grant, not what the client
-        # should request.  Requesting all of them is almost always wrong and
-        # can break providers like Entra ID that require resource-specific scopes.
-        scope = None
+        # Use scopes from the Protected Resource Metadata (RFC 9728) if available.
+        # Unlike the Authorization Server's scopes_supported (which is a full catalog
+        # of every scope the server can grant), the PRM scopes_supported represents
+        # what this specific resource requires — making it safe to request them all.
+        scope = ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'
@@ -1083,6 +1084,18 @@ class OAuthManager:
                 log.warning(f'No OAuth session found for user {user_id}, session {session_id}')
                 return None
 
+            # Guard: MCP-provider sessions must be refreshed by
+            # oauth_client_manager, not the SSO OAuthManager.  If one
+            # reaches here (e.g. via a stale cookie), bail out early
+            # instead of attempting a refresh that will fail and delete
+            # the session (#24618).
+            if (session.provider or '').startswith('mcp:'):
+                log.debug(
+                    f'Skipping MCP session {session.id} (provider={session.provider}) '
+                    f'in SSO OAuthManager — handled by oauth_client_manager'
+                )
+                return None
+
             if (
                 force_refresh
                 or session.expires_at is None
@@ -1270,7 +1283,7 @@ class OAuthManager:
             if oauth_roles:
                 matched = False
                 for allowed_role in oauth_allowed_roles:
-                    if allowed_role in oauth_roles:
+                    if allowed_role == '*' or allowed_role in oauth_roles:
                         log.debug('Assigned user the user role')
                         role = 'user'
                         matched = True
@@ -1454,7 +1467,13 @@ class OAuthManager:
                     'Authorization': f'Bearer {access_token}',
                 }
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(picture_url, **get_kwargs, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                # allow_redirects=False prevents redirect-based SSRF: validate_url() only vetted the initial URL (CVE-2026-45401 cohort).
+                async with session.get(
+                    picture_url,
+                    **get_kwargs,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                ) as resp:
                     if resp.ok:
                         picture = await resp.read()
                         base64_encoded_picture = base64.b64encode(picture).decode('utf-8')

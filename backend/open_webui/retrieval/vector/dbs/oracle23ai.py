@@ -28,34 +28,33 @@ ORACLE_DB_POOL_MAX = 10
 ORACLE_DB_POOL_INCREMENT = 1
 """
 
-from typing import Optional, List, Dict, Any, Union
-from decimal import Decimal
+import array
+import json
 import logging
 import os
 import threading
 import time
-import json
-import array
+from decimal import Decimal
+from typing import Any, Dict, List, Optional, Union
+
 import oracledb
-
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
-
 from open_webui.config import (
+    ORACLE_DB_DSN,
+    ORACLE_DB_PASSWORD,
+    ORACLE_DB_POOL_INCREMENT,
+    ORACLE_DB_POOL_MAX,
+    ORACLE_DB_POOL_MIN,
     ORACLE_DB_USE_WALLET,
     ORACLE_DB_USER,
-    ORACLE_DB_PASSWORD,
-    ORACLE_DB_DSN,
+    ORACLE_VECTOR_LENGTH,
     ORACLE_WALLET_DIR,
     ORACLE_WALLET_PASSWORD,
-    ORACLE_VECTOR_LENGTH,
-    ORACLE_DB_POOL_MIN,
-    ORACLE_DB_POOL_MAX,
-    ORACLE_DB_POOL_INCREMENT,
+)
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
 )
 
 log = logging.getLogger(__name__)

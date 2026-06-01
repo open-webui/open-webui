@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import json
 import logging
@@ -20,28 +22,35 @@ from open_webui.env import (
     DATABASE_URL,
     ENABLE_DB_MIGRATIONS,
     ENV,
-    REDIS_URL,
-    REDIS_KEY_PREFIX,
-    REDIS_SENTINEL_HOSTS,
-    REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
+    REDIS_KEY_PREFIX,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
+    REDIS_URL,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
     log,
 )
+from open_webui.internal.config import (
+    STATE as _state,
+)
+from open_webui.internal.config import (
+    AppConfig,
+    ConfigVar,
+)
 
 # ── Persistent configuration layer ──────────────────────────────────────────
-
 from open_webui.internal.config import (  # noqa: F401
     ConfigTable as Config,
-    ConfigVar,
-    AppConfig,
-    STATE as _state,
-    initialize as _initialize_config,
+)
+from open_webui.internal.config import (
     _all_configs as PERSISTENT_CONFIG_REGISTRY,
+)
+from open_webui.internal.config import (
+    initialize as _initialize_config,
 )
 
 
@@ -190,9 +199,7 @@ if frontend_loader.exists():
         logging.error(f'An error occurred: {e}')
 
 
-####################################
-# STORAGE PROVIDER
-####################################
+# --- Storage Provider ---
 
 STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # defaults to local, s3
 STORAGE_LOCAL_CACHE = os.getenv('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
@@ -939,6 +946,15 @@ log.info(f'VECTOR_DB: {VECTOR_DB}')
 S3_VECTOR_BUCKET_NAME = os.getenv('S3_VECTOR_BUCKET_NAME', None)
 S3_VECTOR_REGION = os.getenv('S3_VECTOR_REGION', None)
 
+# Valkey Vector Store
+VALKEY_URL = os.getenv('VALKEY_URL', '')
+VALKEY_COLLECTION_PREFIX = os.getenv('VALKEY_COLLECTION_PREFIX', 'open_webui')
+VALKEY_INDEX_TYPE = os.getenv('VALKEY_INDEX_TYPE', 'HNSW').upper()
+VALKEY_DISTANCE_METRIC = os.getenv('VALKEY_DISTANCE_METRIC', 'COSINE').upper()
+VALKEY_HNSW_M = int(os.getenv('VALKEY_HNSW_M', '16'))
+VALKEY_HNSW_EF_CONSTRUCTION = int(os.getenv('VALKEY_HNSW_EF_CONSTRUCTION', '200'))
+VALKEY_HNSW_EF_RUNTIME = int(os.getenv('VALKEY_HNSW_EF_RUNTIME', '10'))
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
@@ -1100,6 +1116,12 @@ MINERU_PARAMS = ConfigVar(
     'MINERU_PARAMS',
     'rag.mineru_params',
     mineru_params,
+)
+
+MINERU_FILE_EXTENSIONS = ConfigVar(
+    'MINERU_FILE_EXTENSIONS',
+    'rag.mineru_file_extensions',
+    [ext.strip() for ext in os.getenv('MINERU_FILE_EXTENSIONS', 'pdf').split(',') if ext.strip()],
 )
 
 EXTERNAL_DOCUMENT_LOADER_URL = ConfigVar(
@@ -1288,9 +1310,7 @@ RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE and os.getenv('RAG_EMBEDDING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
 
-RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
-    os.getenv('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
-)
+RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = os.getenv('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 
 RAG_EMBEDDING_BATCH_SIZE = ConfigVar(
     'RAG_EMBEDDING_BATCH_SIZE',
@@ -1335,9 +1355,7 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE and os.getenv('RAG_RERANKING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
 
-RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
-    os.getenv('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
-)
+RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = os.getenv('RAG_RERANKING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 
 RAG_RERANKING_BATCH_SIZE = ConfigVar(
     'RAG_RERANKING_BATCH_SIZE',
@@ -1907,6 +1925,24 @@ YOUCOM_API_KEY = ConfigVar(
     'YOUCOM_API_KEY',
     'rag.web.search.youcom_api_key',
     os.getenv('YOUCOM_API_KEY', ''),
+)
+
+LINKUP_API_KEY = ConfigVar(
+    'LINKUP_API_KEY',
+    'rag.web.search.linkup_api_key',
+    os.getenv('LINKUP_API_KEY', ''),
+)
+
+linkup_search_params = os.getenv('LINKUP_SEARCH_PARAMS', '')
+try:
+    linkup_search_params = json.loads(linkup_search_params)
+except json.JSONDecodeError:
+    linkup_search_params = {}
+
+LINKUP_SEARCH_PARAMS = ConfigVar(
+    'LINKUP_SEARCH_PARAMS',
+    'rag.web.search.linkup_search_params',
+    linkup_search_params,
 )
 
 ####################################
@@ -2709,9 +2745,7 @@ USER_PERMISSIONS_CHAT_DELETE = os.getenv('USER_PERMISSIONS_CHAT_DELETE', 'True')
 
 USER_PERMISSIONS_CHAT_DELETE_MESSAGE = os.getenv('USER_PERMISSIONS_CHAT_DELETE_MESSAGE', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE = (
-    os.getenv('USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE', 'True').lower() == 'true'
-)
+USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE = os.getenv('USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE = (
     os.getenv('USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE', 'True').lower() == 'true'
@@ -2735,9 +2769,7 @@ USER_PERMISSIONS_CHAT_TTS = os.getenv('USER_PERMISSIONS_CHAT_TTS', 'True').lower
 
 USER_PERMISSIONS_CHAT_CALL = os.getenv('USER_PERMISSIONS_CHAT_CALL', 'True').lower() == 'true'
 
-USER_PERMISSIONS_CHAT_MULTIPLE_MODELS = (
-    os.getenv('USER_PERMISSIONS_CHAT_MULTIPLE_MODELS', 'True').lower() == 'true'
-)
+USER_PERMISSIONS_CHAT_MULTIPLE_MODELS = os.getenv('USER_PERMISSIONS_CHAT_MULTIPLE_MODELS', 'True').lower() == 'true'
 
 USER_PERMISSIONS_CHAT_TEMPORARY = os.getenv('USER_PERMISSIONS_CHAT_TEMPORARY', 'True').lower() == 'true'
 
@@ -2770,9 +2802,7 @@ USER_PERMISSIONS_FEATURES_API_KEYS = os.getenv('USER_PERMISSIONS_FEATURES_API_KE
 
 USER_PERMISSIONS_FEATURES_MEMORIES = os.getenv('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
 
-USER_PERMISSIONS_FEATURES_AUTOMATIONS = (
-    os.getenv('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
-)
+USER_PERMISSIONS_FEATURES_AUTOMATIONS = os.getenv('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_CALENDAR = os.getenv('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
 
@@ -2940,9 +2970,7 @@ WEBHOOK_URL = ConfigVar('WEBHOOK_URL', 'webhook_url', os.getenv('WEBHOOK_URL', '
 
 ENABLE_ADMIN_EXPORT = os.getenv('ENABLE_ADMIN_EXPORT', 'True').lower() == 'true'
 
-ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
-    os.getenv('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True').lower() == 'true'
-)
+ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = os.getenv('ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS', 'True').lower() == 'true'
 
 BYPASS_ADMIN_ACCESS_CONTROL = (
     os.getenv(
@@ -3024,7 +3052,7 @@ else:
 class BannerModel(BaseModel):
     id: str
     type: str
-    title: Optional[str] = None
+    title: str | None = None
     content: str
     dismissible: bool
     timestamp: int
@@ -3420,6 +3448,12 @@ ENABLE_OAUTH_SIGNUP = ConfigVar(
     os.getenv('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true',
 )
 
+OAUTH_AUTO_REDIRECT = ConfigVar(
+    'OAUTH_AUTO_REDIRECT',
+    'oauth.auto_redirect',
+    os.getenv('OAUTH_AUTO_REDIRECT', 'False').lower() == 'true',
+)
+
 OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = ConfigVar(
     'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE',
     'oauth.refresh_token_include_scope',
@@ -3705,9 +3739,7 @@ OAUTH_ALLOWED_ROLES = ConfigVar(
     'oauth.allowed_roles',
     [
         role.strip()
-        for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(
-            OAUTH_ROLES_SEPARATOR
-        )
+        for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(OAUTH_ROLES_SEPARATOR)
         if role
     ],
 )

@@ -8,7 +8,7 @@
 	import { user } from '$lib/stores';
 	import { updateToolAccessGrants } from '$lib/apis/tools';
 
-	import { nameToId } from '$lib/utils';
+	import { extractFrontmatter, formatSkillName, nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
@@ -312,6 +312,16 @@ class Tools:
 						{boilerplate}
 						onChange={(e) => {
 							_content = e;
+							if (!edit) {
+								const fm = extractFrontmatter(e);
+								if (fm.title && !name) {
+									name = formatSkillName(fm.title);
+									id = nameToId(fm.title);
+								}
+								if (fm.description && !meta.description) {
+									meta = { ...meta, description: fm.description };
+								}
+							}
 						}}
 						onSave={async () => {
 							if (formElement) {

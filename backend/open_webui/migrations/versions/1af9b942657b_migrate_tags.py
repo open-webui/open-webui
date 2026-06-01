@@ -6,12 +6,12 @@ Create Date: 2024-10-09 21:02:35.241684
 
 """
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.sql import table, select, update, column
-from sqlalchemy.engine.reflection import Inspector
-
 import json
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.sql import column, select, table, update
 
 revision = '1af9b942657b'
 down_revision = '242a2047eae0'
@@ -93,8 +93,11 @@ def upgrade():
                 conn.execute(update_stmt)
 
     # Add columns `pinned` and `meta` to 'chat'
-    op.add_column('chat', sa.Column('pinned', sa.Boolean(), nullable=True))
-    op.add_column('chat', sa.Column('meta', sa.JSON(), nullable=False, server_default='{}'))
+    chat_columns = {c['name'] for c in inspector.get_columns('chat')}
+    if 'pinned' not in chat_columns:
+        op.add_column('chat', sa.Column('pinned', sa.Boolean(), nullable=True))
+    if 'meta' not in chat_columns:
+        op.add_column('chat', sa.Column('meta', sa.JSON(), nullable=False, server_default='{}'))
 
     chatidtag = table('chatidtag', column('chat_id', sa.String()), column('tag_name', sa.String()))
     chat = table(

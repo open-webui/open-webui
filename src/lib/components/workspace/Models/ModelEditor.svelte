@@ -6,6 +6,7 @@
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
 
@@ -93,6 +94,7 @@
 	let knowledge = [];
 	let toolIds = [];
 	let skillIds = [];
+	let skillsList = [];
 
 	let filterIds = [];
 	let defaultFilterIds = [];
@@ -248,6 +250,7 @@
 
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
+		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		await functions.set(await getFunctions(localStorage.token));
 
 		// Fetch admin-configured default model metadata so the editor
@@ -771,7 +774,7 @@
 					</div>
 
 					<div class="my-4">
-						<SkillsSelector bind:selectedSkillIds={skillIds} />
+						<SkillsSelector bind:selectedSkillIds={skillIds} skills={skillsList} />
 					</div>
 
 					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}

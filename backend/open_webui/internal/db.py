@@ -1,35 +1,36 @@
-import os
-import sys
+from __future__ import annotations
+
 import json
 import logging
+import os
+import sys
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-
 from open_webui.env import (
-    OPEN_WEBUI_DIR,
-    DATABASE_URL,
-    DATABASE_SCHEMA,
+    DATABASE_ENABLE_SESSION_SHARING,
+    DATABASE_ENABLE_SQLITE_WAL,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
-    DATABASE_ENABLE_SQLITE_WAL,
-    DATABASE_ENABLE_SESSION_SHARING,
-    DATABASE_SQLITE_PRAGMA_SYNCHRONOUS,
+    DATABASE_SCHEMA,
     DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT,
     DATABASE_SQLITE_PRAGMA_CACHE_SIZE,
-    DATABASE_SQLITE_PRAGMA_TEMP_STORE,
-    DATABASE_SQLITE_PRAGMA_MMAP_SIZE,
     DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT,
+    DATABASE_SQLITE_PRAGMA_MMAP_SIZE,
+    DATABASE_SQLITE_PRAGMA_SYNCHRONOUS,
+    DATABASE_SQLITE_PRAGMA_TEMP_STORE,
+    DATABASE_URL,
     ENABLE_DB_MIGRATIONS,
+    OPEN_WEBUI_DIR,
 )
-from sqlalchemy import Dialect, create_engine, MetaData, event, types
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy import Dialect, MetaData, create_engine, event, types
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker, Session
-from sqlalchemy.pool import QueuePool, NullPool
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy.pool import NullPool, QueuePool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
@@ -116,26 +117,25 @@ extract_ssl_mode_from_url = extract_ssl_params_from_url
 reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
-class JSONField(types.TypeDecorator):
-    impl = types.Text
+class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
+    """Store arbitrary Python objects as JSON-encoded TEXT.
+
+    Used instead of native JSON columns for portability across SQLite and
+    PostgreSQL.  Values are serialized with ``json.dumps`` on write and
+    deserialized with ``json.loads`` on read.
+    """
+
+    impl = types.UnicodeText
     cache_ok = True
 
-    def process_bind_param(self, value: Optional[_T], dialect: Dialect) -> Any:
-        return json.dumps(value)
+    def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
+        return json.dumps(value) if value is not None else None
 
-    def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
-        if value is not None:
-            return json.loads(value)
+    def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
+        return json.loads(value) if value is not None else None
 
-    def copy(self, **kw: Any) -> Self:
-        return JSONField(self.impl.length)
-
-    def db_value(self, value):
-        return json.dumps(value)
-
-    def python_value(self, value):
-        if value is not None:
-            return json.loads(value)
+    def copy(self, **kwargs: Any) -> Self:
+        return JSONField(length=self.impl.length)
 
 
 # Normalize SSL params from the URL once; the sync engine needs them
@@ -374,7 +374,7 @@ async def get_async_db():
 
 
 @asynccontextmanager
-async def get_async_db_context(db: Optional[AsyncSession] = None):
+async def get_async_db_context(db: AsyncSession | None = None):
     """Async context manager that reuses an existing session if provided and session sharing is enabled."""
     if isinstance(db, AsyncSession) and DATABASE_ENABLE_SESSION_SHARING:
         yield db

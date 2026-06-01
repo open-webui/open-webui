@@ -18,7 +18,7 @@ env:
 
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.platform.runner }}
     permissions:
       contents: read
       packages: write
