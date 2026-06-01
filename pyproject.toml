@@ -65,7 +65,7 @@ dependencies = [
     "chromadb==1.5.2",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
-    "boto3==1.42.62",
+    "boto3==1.43.18",
     
     "transformers==5.5.4",
     "sentence-transformers==5.4.0",
