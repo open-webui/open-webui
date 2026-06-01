@@ -18,7 +18,7 @@ from uuid import uuid4
 
 from aiocache import cached
 from fastapi import HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from open_webui.config import (
     CACHE_DIR,
     CODE_INTERPRETER_BLOCKED_MODULES,
@@ -1332,7 +1332,8 @@ async def chat_completion_tools_handler(
 
                 tool_function_name = tool_call.get('name', None)
                 if tool_function_name not in tools:
-                    return body, {}
+                    log.warning(f'Tool "{tool_function_name}" not found')
+                    return
 
                 tool_function_params = tool_call.get('parameters', {})
 
@@ -1519,6 +1520,18 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
             },
             user,
         )
+
+        # generate_queries returns a JSONResponse on error (e.g. model not
+        # found, chat completion failure).  Extract the error detail and
+        # re-raise so the outer except block falls back to using the raw
+        # user message as the search query.
+        if isinstance(res, JSONResponse):
+            try:
+                error_body = json.loads(res.body)
+                detail = error_body.get('detail', 'Query generation failed')
+            except Exception:
+                detail = 'Query generation failed'
+            raise Exception(detail)
 
         response = res['choices'][0]['message']['content']
 
@@ -1850,6 +1863,15 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                     },
                     user,
                 )
+
+                # Handle JSONResponse from error paths
+                if isinstance(res, JSONResponse):
+                    try:
+                        error_body = json.loads(res.body)
+                        detail = error_body.get('detail', 'Image prompt generation failed')
+                    except Exception:
+                        detail = 'Image prompt generation failed'
+                    raise Exception(detail)
 
                 response = res['choices'][0]['message']['content']
 
@@ -4577,6 +4599,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                             except Exception as e:
                                 tool_result = str(e)
+                        else:
+                            tool_result = f'Error: Tool "{tool_function_name}" not found.'
 
                         tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
                             request,
