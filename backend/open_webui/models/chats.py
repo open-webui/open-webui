@@ -696,7 +696,7 @@ class ChatTable:
         from open_webui.models.shared_chats import SharedChats
 
         try:
-            return await SharedChats.delete_by_chat_id(chat_id, db=session)
+            return await SharedChats.delete_by_chat_id(chat_id, db=db)
         except Exception:
             return False
 
@@ -820,7 +820,7 @@ class ChatTable:
         """Delegate to SharedChats for listing shared chats by user."""
         from open_webui.models.shared_chats import SharedChats
 
-        return await SharedChats.get_by_user_id(user_id, filter=filter, skip=skip, limit=limit, db=session)
+        return await SharedChats.get_by_user_id(user_id, filter=filter, skip=skip, limit=limit, db=db)
 
     async def get_chat_list_by_user_id(
         self,
@@ -960,7 +960,7 @@ class ChatTable:
         from open_webui.models.shared_chats import SharedChats
 
         try:
-            shared = await SharedChats.get_by_id(id, db=session)
+            shared = await SharedChats.get_by_id(id, db=db)
             if shared:
                 # Return a ChatModel-compatible view of the snapshot
                 return ChatModel(
@@ -1422,7 +1422,7 @@ class ChatTable:
         self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
     ) -> ChatModel | None:
         tag_id = tag_name.replace(' ', '_').lower()
-        await Tags.ensure_tags_exist([tag_name], user_id, db=session)
+        await Tags.ensure_tags_exist([tag_name], user_id, db=db)
         try:
             async with get_async_db_context(db) as session:
                 chat = await session.get(Chat, id)
