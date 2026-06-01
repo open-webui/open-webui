@@ -16,6 +16,10 @@
 		"title": "Arabic (Bahrain)"
 	},
 	{
+		"code": "az-AZ",
+		"title": "Azərbaycanca"
+	},
+	{
 		"code": "eu-ES",
 		"title": "Basque (Euskara)"
 	},
@@ -132,6 +136,10 @@
 		"title": "Lithuanian (Lietuvių)"
 	},
 	{
+		"code": "lv-LV",
+		"title": "Latvian (Latviešu)"
+	},
+	{
 		"code": "ms-MY",
 		"title": "Malay (Bahasa Malaysia)"
 	},
@@ -182,6 +190,14 @@
 	{
 		"code": "sv-SE",
 		"title": "Swedish (Svenska)"
+	},
+	{
+		"code": "fil-PH",
+		"title": "Tagalog (Filipino)"
+	},
+	{
+		"code": "ta-IN",
+		"title": "தமிழ் (இந்தியா)"
 	},
 	{
 		"code": "th-TH",

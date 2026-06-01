@@ -4,6 +4,7 @@ type FolderForm = {
 	name?: string;
 	data?: Record<string, any>;
 	meta?: Record<string, any>;
+	parent_id?: string | null;
 };
 
 export const createNewFolder = async (token: string, folderForm: FolderForm) => {
@@ -178,45 +179,6 @@ export const updateFolderParentIdById = async (token: string, id: string, parent
 		},
 		body: JSON.stringify({
 			parent_id: parentId
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-type FolderItems = {
-	chat_ids: string[];
-	file_ids: string[];
-};
-
-export const updateFolderItemsById = async (token: string, id: string, items: FolderItems) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			items: items
 		})
 	})
 		.then(async (res) => {

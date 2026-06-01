@@ -12,8 +12,8 @@
 </script>
 
 <div
-	class=" text-xs font-semibold {classNames[type] ??
-		classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
+	class=" text-xs font-medium {classNames[type] ??
+		classNames['info']} w-fit px-[5px] rounded-lg uppercase line-clamp-1 mr-0.5"
 >
 	{content}
 </div>

@@ -60,14 +60,15 @@
 							<div class=" self-center text-xs font-medium">{$i18n.t('Code Execution Engine')}</div>
 							<div class="flex items-center relative">
 								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 									bind:value={config.CODE_EXECUTION_ENGINE}
 									placeholder={$i18n.t('Select a engine')}
 									required
 								>
 									<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 									{#each engines as engine}
-										<option value={engine}>{engine}</option>
+										<option value={engine}>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option
+										>
 									{/each}
 								</select>
 							</div>
@@ -109,7 +110,7 @@
 
 								<div>
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
+										class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
 										bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
 										placeholder={$i18n.t('Select an auth method')}
 									>
@@ -151,7 +152,7 @@
 							<div class="">
 								<Tooltip content={$i18n.t('Enter timeout in seconds')}>
 									<input
-										class="dark:bg-gray-900 w-fit rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										type="number"
 										bind:value={config.CODE_EXECUTION_JUPYTER_TIMEOUT}
 										placeholder={$i18n.t('e.g. 60')}
@@ -186,14 +187,16 @@
 								</div>
 								<div class="flex items-center relative">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										bind:value={config.CODE_INTERPRETER_ENGINE}
 										placeholder={$i18n.t('Select a engine')}
 										required
 									>
 										<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 										{#each engines as engine}
-											<option value={engine}>{engine}</option>
+											<option value={engine}
+												>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option
+											>
 										{/each}
 									</select>
 								</div>
@@ -235,7 +238,7 @@
 
 									<div>
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
+											class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
 											bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
 											placeholder={$i18n.t('Select an auth method')}
 										>
@@ -277,7 +280,7 @@
 								<div class="">
 									<Tooltip content={$i18n.t('Enter timeout in seconds')}>
 										<input
-											class="dark:bg-gray-900 w-fit rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+											class="w-fit rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 											type="number"
 											bind:value={config.CODE_INTERPRETER_JUPYTER_TIMEOUT}
 											placeholder={$i18n.t('e.g. 60')}

@@ -62,9 +62,9 @@
 											>{$i18n.t('Image Max Compression Size width')}</label
 										>
 										<input
+											id="image-comp-width"
 											bind:value={size.width}
 											type="number"
-											aria-labelledby="image-comp-width"
 											class="w-full bg-transparent outline-hidden text-center"
 											min="0"
 											placeholder={$i18n.t('Width')}
@@ -80,9 +80,9 @@
 											>{$i18n.t('Image Max Compression Size height')}</label
 										>
 										<input
+											id="image-comp-height"
 											bind:value={size.height}
 											type="number"
-											aria-labelledby="image-comp-height"
 											class="w-full bg-transparent outline-hidden text-center"
 											min="0"
 											placeholder={$i18n.t('Height')}

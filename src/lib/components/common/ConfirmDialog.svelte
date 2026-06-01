@@ -10,6 +10,7 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { marked } from 'marked';
+	import SensitiveInput from './SensitiveInput.svelte';
 
 	export let title = '';
 	export let message = '';
@@ -22,6 +23,9 @@
 	export let input = false;
 	export let inputPlaceholder = '';
 	export let inputValue = '';
+	export let inputType = '';
+
+	let _inputValue = inputValue;
 
 	export let show = false;
 
@@ -35,7 +39,7 @@
 	let focusTrap: FocusTrap.FocusTrap | null = null;
 
 	const init = () => {
-		inputValue = '';
+		_inputValue = inputValue;
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -46,6 +50,8 @@
 
 		if (event.key === 'Enter') {
 			console.log('Enter');
+			event.preventDefault();
+			event.stopPropagation();
 			confirmHandler();
 		}
 	};
@@ -54,7 +60,7 @@
 		show = false;
 		await tick();
 		await onConfirm();
-		dispatch('confirm', inputValue);
+		dispatch('confirm', _inputValue);
 	};
 
 	onMount(() => {
@@ -81,6 +87,7 @@
 
 	onDestroy(() => {
 		show = false;
+		window.removeEventListener('keydown', handleKeyDown);
 		if (focusTrap) {
 			focusTrap.deactivate();
 		}
@@ -127,13 +134,28 @@
 						{/if}
 
 						{#if input}
-							<textarea
-								bind:value={inputValue}
-								placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
-								rows="3"
-								required
-							/>
+							{#if inputType === 'password'}
+								<div
+									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900"
+								>
+									<SensitiveInput
+										id="event-confirm-input"
+										placeholder={inputPlaceholder
+											? inputPlaceholder
+											: $i18n.t('Enter your message')}
+										bind:value={_inputValue}
+										required={true}
+									/>
+								</div>
+							{:else}
+								<textarea
+									bind:value={_inputValue}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+									rows="3"
+									required
+								/>
+							{/if}
 						{/if}
 					</div>
 				</slot>

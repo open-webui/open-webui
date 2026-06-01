@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 
 from open_webui.env import REDIS_KEY_PREFIX
 
-
 log = logging.getLogger(__name__)
 
 # A dictionary to keep track of active tasks
@@ -18,14 +17,12 @@ tasks: Dict[str, asyncio.Task] = {}
 item_tasks = {}
 
 
-REDIS_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks"
-REDIS_ITEM_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks:item"
+REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
+REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_TASK_STOP_KEY = f"{REDIS_KEY_PREFIX}:task:stop"
 
 # Task stop check interval in seconds
 TASK_STOP_CHECK_INTERVAL = 1.0
-
-
 ### ------------------------------
 ### REDIS-ENABLED HANDLERS
 ### ------------------------------
@@ -33,9 +30,9 @@ TASK_STOP_CHECK_INTERVAL = 1.0
 
 async def redis_save_task(redis: Redis, task_id: str, item_id: Optional[str]):
     pipe = redis.pipeline()
-    pipe.hset(REDIS_TASKS_KEY, task_id, item_id or "")
+    pipe.hset(REDIS_TASKS_KEY, task_id, item_id or '')
     if item_id:
-        pipe.sadd(f"{REDIS_ITEM_TASKS_KEY}:{item_id}", task_id)
+        pipe.sadd(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
     await pipe.execute()
 
 
@@ -67,7 +64,7 @@ async def redis_list_tasks(redis: Redis) -> List[str]:
 
 
 async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
-    return list(await redis.smembers(f"{REDIS_ITEM_TASKS_KEY}:{item_id}"))
+    return list(await redis.smembers(f'{REDIS_ITEM_TASKS_KEY}:{item_id}'))
 
 
 async def should_stop_task(redis: Redis, task_id: str) -> bool:
@@ -79,6 +76,7 @@ async def should_stop_task(redis: Redis, task_id: str) -> bool:
         return await redis.exists(stop_key) > 0
     except Exception:
         return False
+
 
 
 async def cleanup_task(redis, task_id: str, id=None):
@@ -146,9 +144,7 @@ async def create_task(redis, coroutine, id=None):
     task = asyncio.create_task(task_with_stop_check())
 
     # Add a done callback for cleanup
-    task.add_done_callback(
-        lambda t: asyncio.create_task(cleanup_task(redis, task_id, id))
-    )
+    task.add_done_callback(lambda t: asyncio.create_task(cleanup_task(redis, task_id, id)))
     tasks[task_id] = task
 
     # If an ID is provided, associate the task with that ID
@@ -179,6 +175,44 @@ async def list_task_ids_by_item_id(redis, id):
     if redis:
         return await redis_list_item_tasks(redis, id)
     return item_tasks.get(id, [])
+
+
+async def stop_task(redis, task_id: str):
+    """
+    Cancel a running task and remove it from the global task list.
+    """
+    if redis:
+        # Look up the item_id before cleanup so we can remove the set entry too
+        item_id = await redis.hget(REDIS_TASKS_KEY, task_id)
+        # PUBSUB: All instances check if they have this task, and stop if so.
+        await redis_send_command(
+            redis,
+            {
+                'action': 'stop',
+                'task_id': task_id,
+            },
+        )
+        # Always clean Redis directly — hdel/srem are idempotent, safe even
+        # if the done_callback on the owning process also fires cleanup.
+        await redis_cleanup_task(redis, task_id, item_id or None)
+        return {'status': True, 'message': f'Task {task_id} stopped.'}
+
+    task = tasks.pop(task_id, None)
+    if not task:
+        return {'status': False, 'message': f'Task with ID {task_id} not found.'}
+
+    task.cancel()  # Request task cancellation
+    try:
+        await task  # Wait for the task to handle the cancellation
+    except asyncio.CancelledError:
+        # Task successfully canceled
+        return {'status': True, 'message': f'Task {task_id} successfully stopped.'}
+
+    if task.cancelled() or task.done():
+        return {'status': True, 'message': f'Task {task_id} successfully cancelled.'}
+
+    return {'status': True, 'message': f'Cancellation requested for {task_id}.'}
+
 
 
 async def stop_task(redis, task_id: str):
@@ -216,17 +250,16 @@ async def stop_task(redis, task_id: str):
     return {"status": False, "message": f"Failed to stop task {task_id}."}
 
 
-async def stop_item_tasks(redis: Redis, item_id: str):
-    """
-    Stop all tasks associated with a specific item ID.
-    """
-    task_ids = await list_task_ids_by_item_id(redis, item_id)
-    if not task_ids:
-        return {"status": True, "message": f"No tasks found for item {item_id}."}
+async def has_active_tasks(redis, chat_id: str) -> bool:
+    """Check if a chat has any active tasks."""
+    task_ids = await list_task_ids_by_item_id(redis, chat_id)
+    return len(task_ids) > 0
 
-    for task_id in task_ids:
-        result = await stop_task(redis, task_id)
-        if not result["status"]:
-            return result  # Return the first failure
 
-    return {"status": True, "message": f"All tasks for item {item_id} stopped."}
+async def get_active_chat_ids(redis, chat_ids: List[str]) -> List[str]:
+    """Filter a list of chat_ids to only those with active tasks."""
+    active = []
+    for chat_id in chat_ids:
+        if await has_active_tasks(redis, chat_id):
+            active.append(chat_id)
+    return active

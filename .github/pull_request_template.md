@@ -1,82 +1,104 @@
+<!--
+⚠️ CRITICAL CHECKS FOR CONTRIBUTORS (READ, DON'T DELETE) ⚠️
+1. Target the `dev` branch. PRs targeting `main` will be automatically closed.
+2. Do NOT delete the CLA section at the bottom. It is required for the bot to accept your PR.
+-->
+
 # Pull Request Checklist
 
 ### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) to discuss your idea/fix with the community before creating a pull request, and describe your changes before submitting a pull request.
 
 This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
 
+<!--
+### ⚠️ Important: Your PR is a contribution, not a guarantee of merge.
+
+The most impactful way to contribute to Open WebUI is through well-written bug reports, detailed feature discussions, and thoughtful ideas. These directly shape the project. If you do open a pull request, please know that Open WebUI is held to the highest standard of code quality, consistency, and architectural coherence, and every line merged becomes something the core team must own, maintain, and support indefinitely. Submitted code may be refactored, rewritten, or used as inspiration for a different implementation. This is not a reflection of your work's quality. It is how we ensure that a small team can deeply understand and evolve every part of the codebase.
+-->
+
 **Before submitting, make sure you've checked the following:**
 
-- [ ] **Target branch:** Verify that the pull request targets the `dev` branch. **Not targeting the `dev` branch will lead to immediate closure of the PR.**
-- [ ] **Description:** Provide a concise description of the changes made in this pull request down below.
-- [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
-- [ ] **Documentation:** If necessary, update relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs) like environment variables, the tutorials, or other documentation sources.
-- [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
-- [ ] **Testing:** Perform manual tests to **verify the implemented fix/feature works as intended AND does not break any other functionality**. Take this as an opportunity to **make screenshots of the feature/fix and include it in the PR description**.
-- [ ] **Agentic AI Code:** Confirm this Pull Request is **not written by any AI Agent** or has at least **gone through additional human review AND manual testing**. If any AI Agent is the co-author of this PR, it may lead to immediate closure of the PR.
-- [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
-- [ ] **Title Prefix:** To clearly categorize this pull request, prefix the pull request title using one of the following:
-  - **BREAKING CHANGE**: Significant changes that may affect compatibility
-  - **build**: Changes that affect the build system or external dependencies
-  - **ci**: Changes to our continuous integration processes or workflows
-  - **chore**: Refactor, cleanup, or other non-functional code changes
-  - **docs**: Documentation update or addition
-  - **feat**: Introduces a new feature or enhancement to the codebase
-  - **fix**: Bug fix or error correction
+- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. If one does not exist, create one first. PRs without a linked issue or discussion may be closed without review.
+- [ ] **Target branch:** The pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
+- [ ] **Description:** A concise description of the changes is provided below.
+- [ ] **Changelog:** A changelog entry following [Keep a Changelog](https://keepachangelog.com/) format is included at the bottom.
+- [ ] **Documentation:** Relevant documentation has been added or updated in the [Open WebUI Docs Repository](https://github.com/open-webui/docs).
+- [ ] **Dependencies:** Any new or updated dependencies are explained, tested, and documented.
+- [ ] **Testing:** Manual tests have been performed to verify the fix/feature works correctly and does not introduce regressions. Screenshots or recordings are included where applicable.
+- [ ] **No Unchecked AI Code:** This PR is either human-written or has undergone thorough human review AND manual testing. Unreviewed AI-generated PRs may be closed immediately.
+- [ ] **Self-Review:** A self-review of the code has been performed, ensuring adherence to project coding standards.
+- [ ] **Architecture:** Smart defaults are preferred over new settings. Local state is used for ephemeral UI logic. Major architectural or UX changes have been discussed first.
+- [ ] **Git Hygiene:** The PR is atomic (one logical change), rebased on `dev`, and contains no unrelated commits.
+- [ ] **Title Prefix:** The PR title uses one of the following prefixes:
+  - **BREAKING CHANGE**: Changes affecting backward compatibility
+  - **build**: Build system or dependency changes
+  - **ci**: CI/CD workflow changes
+  - **chore**: Refactoring, cleanup, or non-functional changes
+  - **docs**: Documentation additions or updates
+  - **feat**: New features or enhancements
+  - **fix**: Bug fixes or corrections
   - **i18n**: Internationalization or localization changes
-  - **perf**: Performance improvement
-  - **refactor**: Code restructuring for better maintainability, readability, or scalability
-  - **style**: Changes that do not affect the meaning of the code (white space, formatting, missing semi-colons, etc.)
-  - **test**: Adding missing tests or correcting existing tests
-  - **WIP**: Work in progress, a temporary label for incomplete or ongoing work
+  - **perf**: Performance improvements
+  - **refactor**: Code restructuring
+  - **style**: Formatting changes (whitespace, semicolons, etc.)
+  - **test**: Test additions or corrections
+  - **WIP**: Work in progress
 
 # Changelog Entry
 
 ### Description
 
-- [Concisely describe the changes made in this pull request, including any relevant motivation and impact (e.g., fixing a bug, adding a feature, or improving performance)]
+- [Describe the changes, including motivation and impact]
 
 ### Added
 
-- [List any new features, functionalities, or additions]
+- [New features, functionalities, or additions]
 
 ### Changed
 
-- [List any changes, updates, refactorings, or optimizations]
+- [Changes, updates, refactorings, or optimizations]
 
 ### Deprecated
 
-- [List any deprecated functionality or features that have been removed]
+- [Deprecated functionality or features]
 
 ### Removed
 
-- [List any removed features, files, or functionalities]
+- [Removed features, files, or functionalities]
 
 ### Fixed
 
-- [List any fixes, corrections, or bug fixes]
+- [Bug fixes or corrections]
 
 ### Security
 
-- [List any new or updated security-related changes, including vulnerability fixes]
+- [Security-related changes or vulnerability fixes]
 
 ### Breaking Changes
 
-- **BREAKING CHANGE**: [List any breaking changes affecting compatibility or functionality]
+- **BREAKING CHANGE**: [Changes affecting compatibility or functionality]
 
 ---
 
 ### Additional Information
 
-- [Insert any additional context, notes, or explanations for the changes]
-  - [Reference any related issues, commits, or other relevant information]
+- [Any additional context, notes, or references to related issues/commits]
 
 ### Screenshots or Videos
 
-- [Attach any relevant screenshots or videos demonstrating the changes]
+- [Attach relevant screenshots or videos demonstrating the changes]
 
 ### Contributor License Agreement
 
-By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](https://github.com/open-webui/open-webui/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
+<!--
+🚨 DO NOT DELETE THE TEXT BELOW 🚨
+Keep the "Contributor License Agreement" confirmation text intact.
+Deleting it will trigger the CLA-Bot to INVALIDATE your PR.
+
+Your PR will NOT be reviewed or merged until you check the box below confirming that you have read and agree to the terms of the CLA.
+-->
+
+- [ ] By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](https://github.com/open-webui/open-webui/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
 
 > [!NOTE]
 > Deleting the CLA section will lead to immediate closure of your PR and it will not be merged in.

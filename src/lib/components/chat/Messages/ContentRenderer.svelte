@@ -10,11 +10,61 @@
 		settings,
 		showArtifacts,
 		showControls,
-		showEmbeds,
-		showOverview
+		showEmbeds
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
-	import { createMessagesList } from '$lib/utils';
+	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+
+	/**
+	 * Extracts all top-level <details>...</details> blocks from content,
+	 * handling nested <details> via depth tracking.
+	 * Returns { detailsContent, plainContent }.
+	 */
+	const extractDetailsBlocks = (text) => {
+		const blocks = [];
+		let remaining = text;
+		let result = '';
+		const openTag = '<details';
+		const closeTag = '</details>';
+
+		while (true) {
+			const start = remaining.indexOf(openTag);
+			if (start === -1) {
+				result += remaining;
+				break;
+			}
+
+			result += remaining.slice(0, start);
+
+			// Find matching closing tag with depth tracking
+			let depth = 1;
+			let idx = start + openTag.length;
+			while (depth > 0 && idx < remaining.length) {
+				if (remaining.startsWith(openTag, idx)) {
+					depth++;
+				} else if (remaining.startsWith(closeTag, idx)) {
+					depth--;
+				}
+				if (depth > 0) idx++;
+			}
+
+			if (depth === 0) {
+				const end = idx + closeTag.length;
+				blocks.push(remaining.slice(start, end));
+				remaining = remaining.slice(end);
+			} else {
+				// Unmatched opening tag, treat as plain text
+				result += remaining.slice(start);
+				remaining = '';
+				break;
+			}
+		}
+
+		return {
+			detailsContent: blocks.join('\n'),
+			plainContent: result.trim()
+		};
+	};
 
 	export let id;
 	export let content;
@@ -38,10 +88,35 @@
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
 	export let onTaskClick = (e) => {};
-	export let onAddMessages = (e) => {};
+	export let onSetInputText = (text) => {};
 
 	let contentContainerElement;
 	let floatingButtonsElement;
+
+	let sourceIds = [];
+	$: getSourceIds(sources);
+
+	const getSourceIds = (sources) => {
+		const result = [];
+		for (const source of sources ?? []) {
+			for (let index = 0; index < (source.document ?? []).length; index++) {
+				if (model?.info?.meta?.capabilities?.citations == false) {
+					result.push('N/A');
+					continue;
+				}
+				const metadata = source.metadata?.[index];
+				const id = metadata?.source ?? 'N/A';
+				if (metadata?.name) {
+					result.push(metadata.name);
+				} else if (id.startsWith('http://') || id.startsWith('https://')) {
+					result.push(id);
+				} else {
+					result.push(source?.source?.name ?? id);
+				}
+			}
+		}
+		sourceIds = [...new Set(result)];
+	};
 
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
@@ -116,106 +191,99 @@
 		}
 	};
 
-	onMount(() => {
-		if (floatingButtons) {
-			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+	// Reactive listener attachment: re-attaches when floatingButtons
+	// transitions from false → true (e.g. when message.done flips).
+	let listenersAttached = false;
+
+	function attachListeners() {
+		if (!listenersAttached && contentContainerElement) {
+			contentContainerElement.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('keydown', keydownHandler);
+			listenersAttached = true;
 		}
-	});
+	}
 
-	onDestroy(() => {
-		if (floatingButtons) {
+	function detachListeners() {
+		if (listenersAttached) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('keydown', keydownHandler);
+			listenersAttached = false;
 		}
+	}
+
+	$: if (floatingButtons && contentContainerElement) {
+		attachListeners();
+	} else {
+		detachListeners();
+	}
+
+	onDestroy(() => {
+		detachListeners();
 	});
 </script>
 
 <div bind:this={contentContainerElement}>
-	<Markdown
-		{id}
-		{content}
-		{model}
-		{save}
-		{preview}
-		{done}
-		{editCodeBlock}
-		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, source) => {
-			let ids = [];
-			source.document.forEach((document, index) => {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push('N/A');
-					return ids;
+	{#if $settings?.renderMarkdownInAssistantMessages ?? true}
+		<Markdown
+			{id}
+			content={model?.info?.meta?.capabilities?.citations == false
+				? replaceOutsideCode(content, (segment) =>
+						segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, ''))
+				: content}
+			{model}
+			{save}
+			{preview}
+			{done}
+			{editCodeBlock}
+			{topPadding}
+			{sourceIds}
+			{onSourceClick}
+			{onTaskClick}
+			{onSave}
+			onUpdate={async (token) => {
+				const { lang, text: code } = token;
+
+				if (
+					($settings?.detectArtifacts ?? true) &&
+					(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+					!$mobile &&
+					$chatId
+				) {
+					await tick();
+					showArtifacts.set(true);
+					showControls.set(true);
 				}
+			}}
+			onPreview={async (value) => {
+				console.log('Preview', value);
+				await artifactCode.set(value);
+				await showControls.set(true);
+				await showArtifacts.set(true);
+				await showEmbeds.set(false);
+			}}
+		/>
+	{:else}
+		{@const extracted = extractDetailsBlocks(content)}
 
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
-
-				if (metadata?.name) {
-					ids.push(metadata.name);
-					return ids;
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					ids.push(id);
-				} else {
-					ids.push(source?.source?.name ?? id);
-				}
-
-				return ids;
-			});
-
-			acc = [...acc, ...ids];
-
-			// remove duplicates
-			return acc.filter((item, index) => acc.indexOf(item) === index);
-		}, [])}
-		{onSourceClick}
-		{onTaskClick}
-		{onSave}
-		onUpdate={async (token) => {
-			const { lang, text: code } = token;
-
-			if (
-				($settings?.detectArtifacts ?? true) &&
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-				!$mobile &&
-				$chatId
-			) {
-				await tick();
-				showArtifacts.set(true);
-				showControls.set(true);
-			}
-		}}
-		onPreview={async (value) => {
-			console.log('Preview', value);
-			await artifactCode.set(value);
-			await showControls.set(true);
-			await showArtifacts.set(true);
-			await showOverview.set(false);
-			await showEmbeds.set(false);
-		}}
-	/>
+		{#if extracted.detailsContent}
+			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
+			<Markdown {id} content={extracted.detailsContent} {done} />
+		{/if}
+		{#if extracted.plainContent}
+			<div class="whitespace-pre-wrap">{extracted.plainContent}</div>
+		{/if}
+	{/if}
 </div>
 
-{#if floatingButtons && model}
+{#if floatingButtons}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		{messageId}
 		actions={$settings?.floatingActionButtons ?? []}
-		model={(selectedModels ?? []).includes(model?.id)
-			? model?.id
-			: (selectedModels ?? []).length > 0
-				? selectedModels.at(0)
-				: model?.id}
-		messages={createMessagesList(history, messageId)}
-		onAdd={({ modelId, parentId, messages }) => {
-			console.log(modelId, parentId, messages);
-			onAddMessages({ modelId, parentId, messages });
+		onSetInputText={(text) => {
+			onSetInputText(text);
 			closeFloatingButtons();
 		}}
 	/>

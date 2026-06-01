@@ -13,6 +13,12 @@ const ALLOWED_SURROUNDING_CHARS =
 	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 // Modified to fit more formats in different languages. Originally: '\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 
+// Pre-compile the surrounding character regex once at module load time.
+// This regex uses Unicode property escapes (\p{Script=Han}, etc.) which are
+// extremely expensive to compile - doing so on every call caused ~87% of
+// markdown rendering time to be spent in KaTeX regex compilation.
+const ALLOWED_SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u');
+
 // const DELIMITER_LIST = [
 //     { left: '$$', right: '$$', display: false },
 //     { left: '$', right: '$', display: false },
@@ -60,6 +66,44 @@ function generateRegexRules(delimiters) {
 
 const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 
+const isAllowedTrailing = (src: string, i: number): boolean =>
+	i >= src.length || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i));
+
+const isBlockBoundary = (src: string, i: number): boolean =>
+	/^(?:[ \t]*\r?\n|$)/.test(src.slice(i));
+
+const findClosingDelimiter = (src: string, i: number): number =>
+	i >= src.length - 1
+		? -1
+		: src[i] === '\\'
+			? findClosingDelimiter(src, i + 2)
+			: src[i] === '$' && src[i + 1] === '$'
+				? i
+				: findClosingDelimiter(src, i + 1);
+
+export const tokenizeDisplayMath = (
+	src: string,
+	type: 'inlineKatex' | 'blockKatex',
+	requireBlockBoundary = false
+) => {
+	if (!src.startsWith('$$')) return;
+
+	const endIndex = findClosingDelimiter(src, 2);
+	if (endIndex === -1) return;
+
+	const raw = src.slice(0, endIndex + 2);
+	const text = raw.slice(2, -2);
+	const afterClose = endIndex + 2;
+
+	const validators: Array<() => boolean> = [
+		() => text.trim().length > 0,
+		() => isAllowedTrailing(src, afterClose),
+		() => !requireBlockBoundary || isBlockBoundary(src, afterClose)
+	];
+
+	return validators.every((v) => v()) ? { type, raw, text, displayMode: true } : undefined;
+};
+
 export default function (options = {}) {
 	return {
 		extensions: [inlineKatex(options), blockKatex(options)]
@@ -67,52 +111,46 @@ export default function (options = {}) {
 }
 
 function katexStart(src, displayMode: boolean) {
-	const ruleReg = displayMode ? blockRule : inlineRule;
+	for (let i = 0; i < src.length; i++) {
+		const ch = src.charCodeAt(i);
 
-	let indexSrc = src;
-
-	while (indexSrc) {
-		let index = -1;
-		let startIndex = -1;
-		let startDelimiter = '';
-		let endDelimiter = '';
-		for (const delimiter of DELIMITER_LIST) {
-			if (delimiter.display !== displayMode) {
+		if (ch === 36 /* $ */) {
+			// Display mode requires $$, skip single $ for display
+			if (displayMode && src.charAt(i + 1) !== '$') {
 				continue;
 			}
-
-			startIndex = indexSrc.indexOf(delimiter.left);
-			if (startIndex === -1) {
-				continue;
+			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
+				return i;
 			}
-
-			index = startIndex;
-			startDelimiter = delimiter.left;
-			endDelimiter = delimiter.right;
-		}
-
-		if (index === -1) {
-			return;
-		}
-
-		// Check if the delimiter is preceded by a special character.
-		// If it does, then it's potentially a math formula.
-		const f =
-			index === 0 ||
-			indexSrc.charAt(index - 1).match(new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u'));
-		if (f) {
-			const possibleKatex = indexSrc.substring(index);
-
-			if (possibleKatex.match(ruleReg)) {
-				return index;
+		} else if (ch === 92 /* \ */) {
+			const next = src.charAt(i + 1);
+			// Only consider \ if followed by a valid math delimiter start
+			if (displayMode) {
+				// Display: \[ or \begin{equation}
+				if (next !== '[' && next !== 'b') continue;
+			} else {
+				// Inline: \( or \ce{ or \pu{
+				if (next !== '(' && next !== 'c' && next !== 'p') continue;
+			}
+			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
+				return i;
 			}
 		}
-
-		indexSrc = indexSrc.substring(index + startDelimiter.length).replace(endDelimiter, '');
 	}
 }
 
 function katexTokenizer(src, tokens, displayMode: boolean) {
+	if (src.startsWith('$$')) {
+		const displayToken = tokenizeDisplayMath(
+			src,
+			displayMode ? 'blockKatex' : 'inlineKatex',
+			displayMode
+		);
+		if (displayToken) {
+			return displayToken;
+		}
+	}
+
 	const ruleReg = displayMode ? blockRule : inlineRule;
 	const type = displayMode ? 'blockKatex' : 'inlineKatex';
 
