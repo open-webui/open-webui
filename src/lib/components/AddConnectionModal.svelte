@@ -41,7 +41,8 @@
 		provider === 'azure' ||
 		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
 			!direct &&
-			provider === '');
+			provider === '' &&
+			!/\/openai\/v1(\/|$)/.test(url));
 
 	let prefixId = '';
 	let enable = true;
@@ -392,9 +393,7 @@
 												<option value="session">{$i18n.t('Session')}</option>
 												{#if !direct}
 													<option value="system_oauth">{$i18n.t('OAuth')}</option>
-													{#if azure}
-														<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
-													{/if}
+													<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
 												{/if}
 											{/if}
 										</select>
@@ -523,7 +522,7 @@
 									<label
 										for="api-version-input"
 										class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+										${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 										>{$i18n.t('API Version')}</label
 									>
 

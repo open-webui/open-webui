@@ -687,9 +687,18 @@ async def verify_connection(
                 if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                     headers['api-key'] = key
 
-                api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                # Azure v1 format: base URL already ends with /openai/v1,
+                # use standard /models endpoint without api-version.
+                is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+                if is_azure_v1:
+                    verify_url = f'{url.rstrip("/")}/models'
+                else:
+                    api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                    verify_url = f'{url}/openai/models?api-version={api_version}'
+
                 async with session.get(
-                    url=f'{url}/openai/models?api-version={api_version}',
+                    url=verify_url,
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1305,11 +1314,32 @@ async def embeddings(request: Request, form_data: dict, user):
     streaming = False
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
+
+    if api_config.get('azure') or api_config.get('provider') == 'azure':
+        # Only set api-key header if not using Azure Entra ID authentication
+        auth_type = api_config.get('auth_type', 'bearer')
+        if auth_type not in ('azure_ad', 'microsoft_entra_id'):
+            headers['api-key'] = key
+
+        # Azure v1 format: base URL already ends with /openai/v1,
+        # model stays in the payload, no deployment URL rewriting.
+        is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+        if is_azure_v1:
+            embeddings_url = f'{url.rstrip("/")}/embeddings'
+        else:
+            api_version = api_config.get('api_version', '2023-03-15-preview')
+            model = _sanitize_model_for_url(form_data.get('model', ''))
+            embeddings_url = f'{url}/openai/deployments/{model}/embeddings?api-version={api_version}'
+            headers['api-version'] = api_version
+    else:
+        embeddings_url = f'{url}/embeddings'
+
     try:
         session = await get_session()
         r = await session.request(
             method='POST',
-            url=f'{url}/embeddings',
+            url=embeddings_url,
             data=body,
             headers=headers,
             cookies=cookies,
