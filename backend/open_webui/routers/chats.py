@@ -973,13 +973,22 @@ async def update_chat_by_id(
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
 
+        # Merge (don't replace) history so a stale save can't clobber unseen
+        # messages; see Chats.merge_history for the full rationale.
+        if 'history' in form_data.chat:
+            updated_chat['history'] = Chats.merge_history(
+                chat.chat.get('history'),
+                form_data.chat.get('history'),
+                deleted_message_ids=form_data.deleted_message_ids,
+            )
+
         # Re-derive content from output for assistant messages so that frontend
         # edits to output items are reflected in content. Only when output
         # actually changed — otherwise content set independently of output
         # (e.g. a `replace` event or an outlet filter footer) would be reverted.
         existing_messages = (chat.chat.get('history') or {}).get('messages') or {}
         for msg_id, msg in updated_chat.get('history', {}).get('messages', {}).items():
-            if msg.get('role') == 'assistant' and msg.get('output'):
+            if isinstance(msg, dict) and msg.get('role') == 'assistant' and msg.get('output'):
                 if msg.get('output') != existing_messages.get(msg_id, {}).get('output'):
                     msg['content'] = serialize_output(msg['output'])
 
@@ -990,7 +999,9 @@ async def update_chat_by_id(
         # history with potential edits, deletions, or new branches.
         messages = (updated_chat.get('history') or {}).get('messages') or {}
         if messages:
-            await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
+            await Chats.reconcile_messages_by_chat_id(
+                id, user.id, messages, deleted_message_ids=form_data.deleted_message_ids
+            )
 
         return ChatResponse(**chat.model_dump())
     else:

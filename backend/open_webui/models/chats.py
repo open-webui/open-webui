@@ -134,6 +134,7 @@ class ChatFileModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
     folder_id: str | None = None
+    deleted_message_ids: list[str] | None = None
 
 
 class ChatImportForm(ChatForm):
@@ -497,6 +498,69 @@ class ChatTable:
             if msg.get('parentId') and msg['parentId'] not in messages_map
         }
 
+    @staticmethod
+    def _expand_deleted_ids(messages_map: dict, deleted_ids, protected_ids=()) -> set[str]:
+        """Expand a deletion set to include its orphaned descendants, keeping any
+        node that reappears in ``protected_ids`` (reparented children survive).
+        """
+        dead = set(deleted_ids)
+        if not dead:
+            return dead
+        changed = True
+        while changed:
+            changed = False
+            for message_id, message in messages_map.items():
+                if message_id in dead or message_id in protected_ids:
+                    continue
+                if message.get('parentId') in dead:
+                    dead.add(message_id)
+                    changed = True
+        # Intersect so unknown/already-gone ids in deleted_ids don't leak out.
+        return dead & set(messages_map)
+
+    @staticmethod
+    def merge_history(existing_history: dict, incoming_history: dict, deleted_message_ids=None) -> dict:
+        """Merge an incoming history onto the stored one without inferring deletions.
+
+        Messages absent from the push are kept — only ``deleted_message_ids`` and
+        their orphaned descendants are removed — so a stale client can't drop a
+        message it never saw. Blob counterpart to ``reconcile_messages_by_chat_id``.
+        """
+        existing = (existing_history or {}).get('messages') or {}
+        incoming = (incoming_history or {}).get('messages') or {}
+        merged = {**existing, **incoming}
+        # Drop non-dict nodes so a corrupt stored entry can't crash the rebuild below.
+        merged = {mid: msg for mid, msg in merged.items() if isinstance(msg, dict)}
+
+        for message_id in ChatTable._expand_deleted_ids(
+            merged, deleted_message_ids or [], protected_ids=incoming
+        ):
+            merged.pop(message_id, None)
+
+        # Rebuild childrenIds from parentId so concurrent branches stay reachable
+        # (display only; the model context walks parentId, not childrenIds).
+        for message in merged.values():
+            message['childrenIds'] = [
+                child_id for child_id in (message.get('childrenIds') or []) if child_id in merged
+            ]
+        for message_id, message in merged.items():
+            parent_id = message.get('parentId')
+            if parent_id in merged and message_id not in merged[parent_id]['childrenIds']:
+                merged[parent_id]['childrenIds'].append(message_id)
+
+        # Keep the push's currentId; fall back only if it was pruned.
+        current_id = (incoming_history or {}).get('currentId')
+        if current_id not in merged:
+            fallback = (existing_history or {}).get('currentId')
+            current_id = fallback if fallback in merged else None
+
+        # Preserve any other history keys from the push (fall back to existing).
+        return {
+            **(incoming_history or existing_history or {}),
+            'messages': merged,
+            'currentId': current_id,
+        }
+
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
         """Write messages to the ``chat_message`` table so future lookups
         use the fast path.  Errors are logged but never raised.
@@ -514,21 +578,29 @@ class ChatTable:
             except Exception as e:
                 log.warning('Backfill failed for message %s in chat %s: %s', message_id, chat_id, e)
 
-    async def reconcile_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
+    async def reconcile_messages_by_chat_id(
+        self, chat_id: str, user_id: str, messages: dict[str, dict], deleted_message_ids=None
+    ) -> None:
         """Sync ``chat_message`` rows with the committed JSON blob.
 
-        Upserts current messages via ``backfill_messages_by_chat_id``
-        and deletes orphaned rows whose message_id no longer appears
-        in the blob.  Best-effort: errors are logged but never raised.
+        Upserts the pushed messages via ``backfill_messages_by_chat_id``, then
+        prunes only the IDs the client explicitly reported in ``deleted_message_ids``
+        plus their orphaned descendants. Rows merely missing from the push are never
+        inferred as deletions — otherwise a stale/lost-update save would silently drop
+        a still-valid message from the model context. Best-effort: errors are logged
+        but never raised.
         """
         try:
             await self.backfill_messages_by_chat_id(chat_id, user_id, messages)
 
-            existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id)
-            if existing_map is not None:
-                orphaned_ids = set(existing_map.keys()) - set(messages.keys())
-                if orphaned_ids:
-                    await ChatMessages.delete_message_ids_by_chat_id(chat_id, orphaned_ids)
+            if deleted_message_ids:
+                existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id)
+                if existing_map is not None:
+                    dead_ids = self._expand_deleted_ids(
+                        existing_map, deleted_message_ids, protected_ids=messages
+                    )
+                    if dead_ids:
+                        await ChatMessages.delete_message_ids_by_chat_id(chat_id, dead_ids)
         except Exception as e:
             log.warning('Failed to reconcile chat_message rows for chat %s: %s', chat_id, e)
 
