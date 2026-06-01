@@ -216,7 +216,7 @@
 						<div class=" mb-1 text-xs text-gray-500">
 							{$i18n.t('Channel Name')}
 							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
-								>{type === 'dm' ? $i18n.t('Optional') : ''}</span
+								>{(type === 'dm' ? $i18n.t('Optional') : '')}</span
 							>
 						</div>
 
