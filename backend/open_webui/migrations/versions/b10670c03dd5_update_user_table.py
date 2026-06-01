@@ -182,27 +182,18 @@ def upgrade() -> None:
 
     # ── Migrate oauth_sub → oauth JSON (only if old column still exists)
     if 'oauth_sub' in user_columns:
-        rows = conn.execute(
-            sa.select(_user.c.id, _user.c.oauth_sub)
-            .where(_user.c.oauth_sub.is_not(None))
-        ).fetchall()
+        rows = conn.execute(sa.select(_user.c.id, _user.c.oauth_sub).where(_user.c.oauth_sub.is_not(None))).fetchall()
 
         for uid, oauth_sub in rows:
             if oauth_sub:
-                provider, sub = (oauth_sub.split('@', 1) if '@' in oauth_sub
-                                 else ('oidc', oauth_sub))
+                provider, sub = oauth_sub.split('@', 1) if '@' in oauth_sub else ('oidc', oauth_sub)
                 conn.execute(
-                    sa.update(_user)
-                    .where(_user.c.id == uid)
-                    .values(oauth=json.dumps({provider: {'sub': sub}}))
+                    sa.update(_user).where(_user.c.id == uid).values(oauth=json.dumps({provider: {'sub': sub}}))
                 )
 
     # ── Migrate api_key column → api_key table (only if old column still exists)
     if 'api_key' in user_columns:
-        rows = conn.execute(
-            sa.select(_user.c.id, _user.c.api_key)
-            .where(_user.c.api_key.is_not(None))
-        ).fetchall()
+        rows = conn.execute(sa.select(_user.c.id, _user.c.api_key).where(_user.c.api_key.is_not(None))).fetchall()
         now = int(time.time())
 
         for uid, key_val in rows:
@@ -233,10 +224,7 @@ def downgrade() -> None:
     op.add_column('user', sa.Column('oauth_sub', sa.Text(), nullable=True))
 
     conn = op.get_bind()
-    rows = conn.execute(
-        sa.select(_user.c.id, _user.c.oauth)
-        .where(_user.c.oauth.is_not(None))
-    ).fetchall()
+    rows = conn.execute(sa.select(_user.c.id, _user.c.oauth).where(_user.c.oauth.is_not(None))).fetchall()
 
     for uid, oauth in rows:
         try:
@@ -247,11 +235,7 @@ def downgrade() -> None:
         except Exception:
             oauth_sub = None
 
-        conn.execute(
-            sa.update(_user)
-            .where(_user.c.id == uid)
-            .values(oauth_sub=oauth_sub)
-        )
+        conn.execute(sa.update(_user).where(_user.c.id == uid).values(oauth_sub=oauth_sub))
 
     op.drop_column('user', 'oauth')
 
@@ -260,11 +244,7 @@ def downgrade() -> None:
 
     keys = conn.execute(sa.select(_api_key.c.user_id, _api_key.c.key)).fetchall()
     for uid, key in keys:
-        conn.execute(
-            sa.update(_user)
-            .where(_user.c.id == uid)
-            .values(api_key=key)
-        )
+        conn.execute(sa.update(_user).where(_user.c.id == uid).values(api_key=key))
 
     op.drop_table('api_key')
 

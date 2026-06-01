@@ -34,6 +34,7 @@ class MemoryModel(BaseModel):
     created_at: int  # timestamp in epoch
     model_config = ConfigDict(from_attributes=True)  # allows ORM mapping
 
+
 class MemoriesTable:
     async def insert_new_memory(
         self,

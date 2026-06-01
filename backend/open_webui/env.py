@@ -685,9 +685,7 @@ BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', '
 # web-search-*, or knowledge-base collection are allowed through access control
 # for non-admin users.  When False (default), unknown collection names are
 # denied — closing the legacy unscoped namespace.
-ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = (
-    os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
-)
+ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
 
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
@@ -800,9 +798,7 @@ PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
 # Max stored length (bytes) of a data:image profile URI; bounds Postgres/Redis
 # bloat from inline avatars and model icons. Unset (default) disables the cap.
 _profile_image_max_data_uri_size = os.getenv('PROFILE_IMAGE_MAX_DATA_URI_SIZE', '').strip()
-PROFILE_IMAGE_MAX_DATA_URI_SIZE = (
-    int(_profile_image_max_data_uri_size) if _profile_image_max_data_uri_size else None
-)
+PROFILE_IMAGE_MAX_DATA_URI_SIZE = int(_profile_image_max_data_uri_size) if _profile_image_max_data_uri_size else None
 
 ####################################
 # Forward Headers

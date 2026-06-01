@@ -2061,7 +2061,9 @@ async def chat_completion(
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
-                    if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith('channel:'):
+                    if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
+                        'chat_id', ''
+                    ).startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -2969,6 +2971,8 @@ async def check_db_health():
     """Verify database connectivity by issuing a lightweight ping."""
     await async_db_ping()
     return {'status': True}
+
+
 # --- static assets & files ---
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')

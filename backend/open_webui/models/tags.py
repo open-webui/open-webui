@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
@@ -37,6 +38,7 @@ class TagModel(BaseModel):
     meta: dict | None = None
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
+
 # --- tag schema forms ---
 # Forms
 ####################
@@ -49,7 +51,10 @@ class TagChatIdForm(BaseModel):
 
 class TagTable:
     async def insert_new_tag(
-        self, name: str, user_id: str, db: AsyncSession | None = None,
+        self,
+        name: str,
+        user_id: str,
+        db: AsyncSession | None = None,
     ) -> TagModel | None:
         """Create a new tag, deriving the id from the name."""
         async with get_async_db_context(db) as db:

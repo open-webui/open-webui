@@ -64,10 +64,7 @@
 		: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 	draggable="true"
 	on:dragstart={(e) => {
-		e.dataTransfer?.setData(
-			'application/x-kb-dir-move',
-			JSON.stringify({ dirId: directory.id })
-		);
+		e.dataTransfer?.setData('application/x-kb-dir-move', JSON.stringify({ dirId: directory.id }));
 	}}
 	on:dblclick={() => {
 		if (writeAccess) startRename();

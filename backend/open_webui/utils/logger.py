@@ -67,9 +67,7 @@ def _json_sink(message: 'Message') -> None:
             log_entry['error'] = {
                 'type': exc.type.__name__ if exc.type else None,
                 'message': str(exc.value) if exc.value else None,
-                'stacktrace': ''.join(
-                    traceback.format_exception(exc.type, exc.value, exc.traceback)
-                ).rstrip(),
+                'stacktrace': ''.join(traceback.format_exception(exc.type, exc.value, exc.traceback)).rstrip(),
             }
 
         sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + '\n')

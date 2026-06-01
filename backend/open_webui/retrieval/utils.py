@@ -933,6 +933,7 @@ def get_embedding_function(
                 'SentenceTransformer model name, or configure an external '
                 'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
             )
+
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
             return await asyncio.to_thread(
@@ -1108,8 +1109,7 @@ async def filter_accessible_collections(
     rejected = collection_names - safe_names
     if rejected:
         log.warning(
-            'filter_accessible_collections: rejected %d collection name(s) '
-            'with unsafe characters (user_id=%s)',
+            'filter_accessible_collections: rejected %d collection name(s) with unsafe characters (user_id=%s)',
             len(rejected),
             getattr(user, 'id', '<unknown>'),
         )
@@ -1363,10 +1363,7 @@ async def get_sources_from_items(
                             files = await Knowledges.get_files_by_id(knowledge_base.id)
                             owned_names = {f'file-{f.id}' for f in files}
                             owned_names.add(knowledge_base.id)
-                            valid_names = [
-                                n for n in (item.get('collection_names') or [])
-                                if n in owned_names
-                            ]
+                            valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
                             collection_names = valid_names if valid_names else [knowledge_base.id]
                     else:
                         collection_names.append(item['id'])
@@ -1382,8 +1379,7 @@ async def get_sources_from_items(
                 collection_names.append(item['collection_name'])
             else:
                 log.debug(
-                    "get_sources_from_items: ignoring untrusted direct "
-                    "collection_name '%s' on item without type",
+                    "get_sources_from_items: ignoring untrusted direct collection_name '%s' on item without type",
                     item.get('collection_name'),
                 )
         elif item.get('collection_names'):
@@ -1391,8 +1387,7 @@ async def get_sources_from_items(
                 collection_names.extend(item['collection_names'])
             else:
                 log.debug(
-                    "get_sources_from_items: ignoring untrusted direct "
-                    "collection_names on item without type",
+                    'get_sources_from_items: ignoring untrusted direct collection_names on item without type',
                 )
 
         # If query_result is None

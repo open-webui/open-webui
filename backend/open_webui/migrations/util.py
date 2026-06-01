@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from alembic import op  # noqa: E402 — alembic runtime context
 from sqlalchemy import inspect  # metadata inspection
+
+
 # --- database helper functions ---
 def get_existing_tables() -> set[str]:
     """Return table names already present in the database."""

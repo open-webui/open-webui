@@ -50,22 +50,24 @@ MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
 
 
 async def _has_read_access_to_file(
-    file, user_id: str, user_role: str,
+    file,
+    user_id: str,
+    user_role: str,
     model_knowledge: Optional[list[dict]] = None,
 ) -> bool:
     """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
     if file.user_id == user_id or user_role == 'admin':
         return True
-    if model_knowledge and any(
-        item.get('type') == 'file' and item.get('id') == file.id
-        for item in model_knowledge
-    ):
+    if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
         return True
     from open_webui.utils.access_control.files import has_access_to_file
+
     return await has_access_to_file(
-        file_id=file.id, access_type='read',
+        file_id=file.id,
+        access_type='read',
         user=UserModel(**{'id': user_id, 'role': user_role}),
     )
+
 
 # =============================================================================
 # TIME UTILITIES

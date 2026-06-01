@@ -41,4 +41,3 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         parsed_headers[key] = value
 
     return parsed_headers
-

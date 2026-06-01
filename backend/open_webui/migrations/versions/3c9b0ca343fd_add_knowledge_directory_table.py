@@ -5,6 +5,7 @@ Revises: a0b1c2d3e4f5
 Create Date: 2026-05-13 21:58:40.832482
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -36,7 +37,9 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(['knowledge_id'], ['knowledge.id'], ondelete='CASCADE'),
             sa.ForeignKeyConstraint(['parent_id'], ['knowledge_directory.id'], ondelete='CASCADE'),
             sa.PrimaryKeyConstraint('id'),
-            sa.UniqueConstraint('knowledge_id', 'parent_id', 'name', name='uq_knowledge_directory_knowledge_parent_name'),
+            sa.UniqueConstraint(
+                'knowledge_id', 'parent_id', 'name', name='uq_knowledge_directory_knowledge_parent_name'
+            ),
         )
         op.create_index('ix_knowledge_directory_knowledge_id', 'knowledge_directory', ['knowledge_id'])
         op.create_index('ix_knowledge_directory_parent_id', 'knowledge_directory', ['parent_id'])

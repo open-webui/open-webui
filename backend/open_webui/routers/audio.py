@@ -72,7 +72,6 @@ SPEECH_CACHE_DIR = CACHE_DIR / 'audio' / 'speech'
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-
 def is_audio_conversion_required(file_path):
     """
     Check if the given audio file needs conversion to mp3.
@@ -307,8 +306,6 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
     else:
         request.app.state.faster_whisper_model = None
 
-
-
     return {
         'tts': {
             'ENGINE': request.app.state.config.TTS_ENGINE,
@@ -377,7 +374,10 @@ async def _raise_tts_error(exc: Exception, r=None) -> None:
 
 
 async def _write_tts_cache(
-    file_path: Path, audio: bytes, body_path: Path, payload: dict,
+    file_path: Path,
+    audio: bytes,
+    body_path: Path,
+    payload: dict,
 ) -> None:
     """Persist audio + request metadata to the speech cache."""
     async with aiofiles.open(file_path, 'wb') as f:
@@ -405,16 +405,16 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
         session = await get_session()
         r = await session.post(
             url=f'{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech',
-            json=payload, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            json=payload,
+            headers=headers,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
         r.raise_for_status()
 
         audio_data = await r.read()
         content_type = r.headers.get('Content-Type', 'audio/mpeg')
 
-        if not await asyncio.to_thread(
-            transcode_audio_to_mp3, audio_data, content_type, file_path
-        ):
+        if not await asyncio.to_thread(transcode_audio_to_mp3, audio_data, content_type, file_path):
             async with aiofiles.open(file_path, 'wb') as f:
                 await f.write(audio_data)
 
@@ -595,9 +595,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     body = await request.body()
     name = hashlib.sha256(
-        body
-        + str(engine).encode('utf-8')
-        + str(request.app.state.config.TTS_MODEL).encode('utf-8')
+        body + str(engine).encode('utf-8') + str(request.app.state.config.TTS_MODEL).encode('utf-8')
     ).hexdigest()
 
     file_path = SPEECH_CACHE_DIR.joinpath(f'{name}.mp3')
@@ -628,8 +626,11 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
 
     def _run():
         segments, info = model.transcribe(
-            file_path, beam_size=5, vad_filter=WHISPER_VAD_FILTER,
-            language=languages[0], multilingual=WHISPER_MULTILINGUAL,
+            file_path,
+            beam_size=5,
+            vad_filter=WHISPER_VAD_FILTER,
+            language=languages[0],
+            multilingual=WHISPER_MULTILINGUAL,
         )
         log.info("Detected language '%s' with probability %f" % (info.language, info.language_probability))
         return ''.join([segment.text for segment in list(segments)])
@@ -665,7 +666,9 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
 
             r = await session.post(
                 url=f'{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions',
-                headers=headers, data=form_data, ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                headers=headers,
+                data=form_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             )
             if r.status == 200:
                 break
@@ -724,11 +727,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
 
         # Parse the Deepgram response structure
         try:
-            transcript = (
-                body['results']['channels'][0]['alternatives'][0]
-                .get('transcript', '')
-                .strip()
-            )
+            transcript = body['results']['channels'][0]['alternatives'][0].get('transcript', '').strip()
         except (KeyError, IndexError) as exc:
             log.error(f'Malformed Deepgram response: {exc}')
             raise Exception('Failed to parse Deepgram response') from exc
@@ -744,13 +743,16 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
         if r is not None:
             try:
                 res = await r.json()
-                msg = res.get('error', {}).get('message', '') if isinstance(res.get('error'), dict) else str(res.get('error', ''))
+                msg = (
+                    res.get('error', {}).get('message', '')
+                    if isinstance(res.get('error'), dict)
+                    else str(res.get('error', ''))
+                )
                 if msg:
                     detail = f'External: {msg}'
             except Exception:
                 detail = f'External: {e}'
         raise Exception(detail)
-
 
 
 async def _transcribe_azure(request, file_path, filename, file_dir, id):
@@ -762,7 +764,7 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
     if audio_size > AZURE_MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'File size ({audio_size // (1024*1024)}MB) exceeds Azure limit of {AZURE_MAX_FILE_SIZE_MB}MB',
+            detail=f'File size ({audio_size // (1024 * 1024)}MB) exceeds Azure limit of {AZURE_MAX_FILE_SIZE_MB}MB',
         )
 
     api_key = request.app.state.config.AUDIO_STT_AZURE_API_KEY
@@ -773,11 +775,23 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
 
     # Default to a broad set of locales when none are configured
     if len(locale_str) < 2:
-        locale_str = ','.join([
-            'en-US', 'es-ES', 'es-MX', 'fr-FR', 'hi-IN',
-            'it-IT', 'de-DE', 'en-GB', 'en-IN', 'ja-JP',
-            'ko-KR', 'pt-BR', 'zh-CN',
-        ])
+        locale_str = ','.join(
+            [
+                'en-US',
+                'es-ES',
+                'es-MX',
+                'fr-FR',
+                'hi-IN',
+                'it-IT',
+                'de-DE',
+                'en-GB',
+                'en-IN',
+                'ja-JP',
+                'ko-KR',
+                'pt-BR',
+                'zh-CN',
+            ]
+        )
 
     if not api_key or not region:
         raise HTTPException(status_code=400, detail='Azure API key and region are required for Azure STT')
@@ -785,7 +799,8 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
     # Build the transcription definition payload
     definition = json.dumps(
         {'locales': locale_str.split(','), 'diarization': {'maxSpeakers': max_speakers, 'enabled': True}}
-        if locale_str else {}
+        if locale_str
+        else {}
     )
     endpoint = (
         base_url or f'https://{region}.api.cognitive.microsoft.com'
@@ -799,7 +814,8 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
     try:
         session = await get_session()
         r = await session.post(
-            url=endpoint, data=form_data,
+            url=endpoint,
+            data=form_data,
             headers={'Ocp-Apim-Subscription-Key': api_key},
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
@@ -833,8 +849,10 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
                 if 'code' in res and 'message' in res:
                     azure_code = res.get('innerError', {}).get('code', res['code'])
                     user_facing_codes = {
-                        'EmptyAudioFile', 'AudioLengthLimitExceeded',
-                        'NoLanguageIdentified', 'MultipleLanguagesIdentified',
+                        'EmptyAudioFile',
+                        'AudioLengthLimitExceeded',
+                        'NoLanguageIdentified',
+                        'MultipleLanguagesIdentified',
                     }
                     if azure_code in user_facing_codes:
                         detail = res['message']
@@ -849,7 +867,6 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
             status_code=e.status if e.status else 500,
             detail=detail if detail else 'Open WebUI: Server Connection Error',
         )
-
 
 
 async def transcription_handler(request, file_path, metadata, user=None):
@@ -897,8 +914,7 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
     try:
         model = request.app.state.config.STT_MODEL or 'voxtral-mini-latest'
         log.info(
-            f'Mistral STT - model: {model}, '
-            f'method: {"chat_completions" if use_chat_completions else "transcriptions"}'
+            f'Mistral STT - model: {model}, method: {"chat_completions" if use_chat_completions else "transcriptions"}'
         )
 
         session = await get_session()
@@ -932,17 +948,20 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
 
             payload = {
                 'model': model,
-                'messages': [{
-                    'role': 'user',
-                    'content': [
-                        {'type': 'input_audio', 'input_audio': audio_base64},
-                        {'type': 'text', 'text': text_instruction},
-                    ],
-                }],
+                'messages': [
+                    {
+                        'role': 'user',
+                        'content': [
+                            {'type': 'input_audio', 'input_audio': audio_base64},
+                            {'type': 'text', 'text': text_instruction},
+                        ],
+                    }
+                ],
             }
 
             r = await session.post(
-                url=f'{api_base_url}/chat/completions', json=payload,
+                url=f'{api_base_url}/chat/completions',
+                json=payload,
                 headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             )
@@ -969,7 +988,8 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
             form_data.add_field('file', open(file_path, 'rb'), filename=filename, content_type=mime_type)
 
             r = await session.post(
-                url=f'{api_base_url}/audio/transcriptions', data=form_data,
+                url=f'{api_base_url}/audio/transcriptions',
+                data=form_data,
                 headers={'Authorization': f'Bearer {api_key}'},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             )
@@ -1041,10 +1061,7 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
 
     results = []
     try:
-        tasks = [
-            transcription_handler(request, chunk_path, metadata, user)
-            for chunk_path in chunk_paths
-        ]
+        tasks = [transcription_handler(request, chunk_path, metadata, user) for chunk_path in chunk_paths]
         for coro in asyncio.as_completed(tasks):
             try:
                 results.append(await coro)
@@ -1226,7 +1243,8 @@ async def get_available_models(request: Request) -> list[dict]:
             try:
                 async with session.get(
                     f'{base_url}/audio/models',
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    timeout=_timeout,
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
@@ -1236,7 +1254,8 @@ async def get_available_models(request: Request) -> list[dict]:
                 try:
                     async with session.get(
                         f'{base_url}/models',
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        timeout=_timeout,
                     ) as resp:
                         resp.raise_for_status()
                         data = await resp.json()
@@ -1256,7 +1275,8 @@ async def get_available_models(request: Request) -> list[dict]:
                     'xi-api-key': request.app.state.config.TTS_API_KEY,
                     'Content-Type': 'application/json',
                 },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=_timeout,
             ) as resp:
                 resp.raise_for_status()
                 models = await resp.json()
@@ -1274,9 +1294,14 @@ async def get_available_models(request: Request) -> list[dict]:
 async def get_models(request: Request, user=Depends(get_verified_user)):
     return {'models': await get_available_models(request)}
 
+
 _OPENAI_DEFAULT_VOICES = {
-    'alloy': 'alloy', 'echo': 'echo', 'fable': 'fable',
-    'onyx': 'onyx', 'nova': 'nova', 'shimmer': 'shimmer',
+    'alloy': 'alloy',
+    'echo': 'echo',
+    'fable': 'fable',
+    'onyx': 'onyx',
+    'nova': 'nova',
+    'shimmer': 'shimmer',
 }
 
 
@@ -1292,7 +1317,8 @@ async def get_available_voices(request) -> dict:
                 session = await get_session()
                 async with session.get(
                     f'{base_url}/audio/voices',
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    timeout=_timeout,
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
@@ -1311,7 +1337,8 @@ async def get_available_voices(request) -> dict:
                     'xi-api-key': request.app.state.config.TTS_API_KEY,
                     'Content-Type': 'application/json',
                 },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=_timeout,
             ) as resp:
                 resp.raise_for_status()
                 voices_data = await resp.json()
@@ -1330,7 +1357,8 @@ async def get_available_voices(request) -> dict:
             async with session.get(
                 url,
                 headers={'Ocp-Apim-Subscription-Key': request.app.state.config.TTS_API_KEY},
-                ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=_timeout,
             ) as resp:
                 resp.raise_for_status()
                 voices = await resp.json()
@@ -1348,7 +1376,8 @@ async def get_available_voices(request) -> dict:
                 async with session.get(
                     f'{api_base_url}/audio/voices',
                     headers={'Authorization': f'Bearer {api_key}'},
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL, timeout=_timeout,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    timeout=_timeout,
                 ) as resp:
                     resp.raise_for_status()
                     voices_data = await resp.json()

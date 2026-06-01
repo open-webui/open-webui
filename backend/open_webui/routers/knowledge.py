@@ -1336,8 +1336,11 @@ async def add_files_to_knowledge_batch(
     dir_map = {form.file_id: form.directory_id for form in new_entries}
     for file_id in successful_file_ids:
         await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id, file_id=file_id, user_id=user.id,
-            directory_id=dir_map.get(file_id), db=db,
+            knowledge_id=id,
+            file_id=file_id,
+            user_id=user.id,
+            directory_id=dir_map.get(file_id),
+            db=db,
         )
 
     # If there were any errors, include them in the response

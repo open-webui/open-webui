@@ -29,12 +29,12 @@ from open_webui.env import (
 
 log = logging.getLogger(__name__)
 
-_ACCEPTED_SCHEMES = frozenset({"redis", "rediss"})
+_ACCEPTED_SCHEMES = frozenset({'redis', 'rediss'})
 _SENTINEL_RETRYABLE = (
     _redis_sync.exceptions.ConnectionError,
     _redis_sync.exceptions.ReadOnlyError,
 )
-_FACTORY_METHODS = frozenset({"pipeline", "pubsub", "monitor", "client", "transaction"})
+_FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transaction'})
 _CONNECTION_POOL: dict[tuple, Any] = {}
 
 
@@ -42,16 +42,15 @@ def parse_redis_url(url: str) -> dict[str, Any]:
     """Break a ``redis://`` URL into its parts: service, port, db, username, password."""
     parts: ParseResult = urlparse(url)
     if parts.scheme not in _ACCEPTED_SCHEMES:
-        raise ValueError(
-            f"Invalid Redis URL scheme '{parts.scheme}'; expected 'redis' or 'rediss'."
-        )
+        raise ValueError(f"Invalid Redis URL scheme '{parts.scheme}'; expected 'redis' or 'rediss'.")
     return {
-        "service": parts.hostname or "mymaster",
-        "port": parts.port or 6379,
-        "db": int(parts.path.lstrip("/") or "0"),
-        "username": parts.username or None,
-        "password": parts.password or None,
+        'service': parts.hostname or 'mymaster',
+        'port': parts.port or 6379,
+        'db': int(parts.path.lstrip('/') or '0'),
+        'username': parts.username or None,
+        'password': parts.password or None,
     }
+
 
 parse_redis_service_url = parse_redis_url
 
@@ -64,11 +63,7 @@ def get_sentinels_from_env(
     if not hosts_csv:
         return []
     resolved_port = int(port) if port else 26379
-    return [
-        (host.strip(), resolved_port)
-        for host in hosts_csv.split(",")
-        if host.strip()
-    ]
+    return [(host.strip(), resolved_port) for host in hosts_csv.split(',') if host.strip()]
 
 
 def build_sentinel_url(
@@ -82,13 +77,11 @@ def build_sentinel_url(
     ``hosts_csv`` is a comma-separated list of sentinel hostnames.
     """
     cfg = parse_redis_url(base_url)
-    auth = ""
-    if cfg["username"] or cfg["password"]:
-        auth = f"{cfg['username'] or ''}:{cfg['password'] or ''}@"
-    nodes = ",".join(
-        f"{host.strip()}:{port}" for host in hosts_csv.split(",") if host.strip()
-    )
-    return f"redis+sentinel://{auth}{nodes}/{cfg['db']}/{cfg['service']}"
+    auth = ''
+    if cfg['username'] or cfg['password']:
+        auth = f'{cfg["username"] or ""}:{cfg["password"] or ""}@'
+    nodes = ','.join(f'{host.strip()}:{port}' for host in hosts_csv.split(',') if host.strip())
+    return f'redis+sentinel://{auth}{nodes}/{cfg["db"]}/{cfg["service"]}'
 
 
 def get_redis_client(async_mode: bool = False) -> Any | None:
@@ -107,7 +100,7 @@ def get_redis_client(async_mode: bool = False) -> Any | None:
             async_mode=async_mode,
         )
     except Exception:
-        log.debug("Could not establish Redis connection", exc_info=True)
+        log.debug('Could not establish Redis connection', exc_info=True)
         return None
 
 
@@ -157,7 +150,7 @@ class SentinelRedisProxy:
 
     def _log_retry(self, exc: Exception, attempt: int) -> None:
         log.debug(
-            "Sentinel failover (%s) — retry %d/%d",
+            'Sentinel failover (%s) — retry %d/%d',
             type(exc).__name__,
             attempt + 1,
             REDIS_SENTINEL_MAX_RETRY_COUNT,
@@ -165,7 +158,7 @@ class SentinelRedisProxy:
 
     def _log_exhausted(self, exc: Exception) -> None:
         log.error(
-            "Redis operation failed after %d retries: %s",
+            'Redis operation failed after %d retries: %s',
             REDIS_SENTINEL_MAX_RETRY_COUNT,
             exc,
         )
@@ -254,11 +247,11 @@ def _socket_options() -> dict[str, Any]:
     """Collect optional socket-level kwargs once instead of repeating them."""
     opts: dict[str, Any] = {}
     if REDIS_SOCKET_CONNECT_TIMEOUT is not None:
-        opts["socket_connect_timeout"] = REDIS_SOCKET_CONNECT_TIMEOUT
+        opts['socket_connect_timeout'] = REDIS_SOCKET_CONNECT_TIMEOUT
     if REDIS_SOCKET_KEEPALIVE:
-        opts["socket_keepalive"] = True
+        opts['socket_keepalive'] = True
     if REDIS_HEALTH_CHECK_INTERVAL:
-        opts["health_check_interval"] = REDIS_HEALTH_CHECK_INTERVAL
+        opts['health_check_interval'] = REDIS_HEALTH_CHECK_INTERVAL
     return opts
 
 
@@ -273,15 +266,15 @@ def _build_sentinel(
     cfg = parse_redis_url(url)
     sentinel = redis_module.sentinel.Sentinel(
         sentinels,
-        port=cfg["port"],
-        db=cfg["db"],
-        username=cfg["username"],
-        password=cfg["password"],
+        port=cfg['port'],
+        db=cfg['db'],
+        username=cfg['username'],
+        password=cfg['password'],
         decode_responses=decode_responses,
         socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
-        **{k: v for k, v in _socket_options().items() if k != "socket_connect_timeout"},
+        **{k: v for k, v in _socket_options().items() if k != 'socket_connect_timeout'},
     )
-    return SentinelRedisProxy(sentinel, cfg["service"], async_mode=async_mode)
+    return SentinelRedisProxy(sentinel, cfg['service'], async_mode=async_mode)
 
 
 def get_redis_connection(
@@ -320,12 +313,14 @@ def get_redis_connection(
         connection = _build_sentinel(redis_mod, redis_url, redis_sentinels, decode_responses, async_mode)
     elif redis_cluster:
         if not redis_url:
-            raise ValueError("Redis URL is required for cluster mode.")
+            raise ValueError('Redis URL is required for cluster mode.')
         connection = redis_mod.cluster.RedisCluster.from_url(
-            redis_url, decode_responses=decode_responses, **extra,
+            redis_url,
+            decode_responses=decode_responses,
+            **extra,
         )
     elif redis_url:
-        factory = getattr(redis_mod, "from_url", None) or redis_mod.Redis.from_url
+        factory = getattr(redis_mod, 'from_url', None) or redis_mod.Redis.from_url
         connection = factory(redis_url, decode_responses=decode_responses, **extra)
 
     _CONNECTION_POOL[cache_key] = connection

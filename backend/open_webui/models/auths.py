@@ -119,7 +119,13 @@ class AuthsTable:
             session.add(credential)
 
             created_user = await Users.insert_new_user(
-                new_id, name, email, profile_image_url, role, oauth=oauth, db=session,
+                new_id,
+                name,
+                email,
+                profile_image_url,
+                role,
+                oauth=oauth,
+                db=session,
             )
             # persist both records and reload generated defaults
             await session.commit()
@@ -127,7 +133,10 @@ class AuthsTable:
             return created_user if credential and created_user else None
 
     async def authenticate_user(
-        self, email: str, verify_password: callable, db: AsyncSession | None = None,
+        self,
+        email: str,
+        verify_password: callable,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Verify email + password credentials and return the matching user."""
         log.info('authenticate_user: %s', email)
@@ -144,7 +153,9 @@ class AuthsTable:
             return resolved
 
     async def authenticate_user_by_api_key(
-        self, api_key: str, db: AsyncSession | None = None,
+        self,
+        api_key: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Look up the user that owns the given API key."""
         log.info('authenticate_user_by_api_key')
@@ -163,17 +174,19 @@ class AuthsTable:
         # single JOIN avoids N+1 — returns (Auth, User) tuple or None
         async with get_async_db_context(db) as session:
             joined_query = (
-                select(Auth, User)
-                .join(User, Auth.id == User.id)
-                .where(Auth.email == email, Auth.active.is_(True))
+                select(Auth, User).join(User, Auth.id == User.id).where(Auth.email == email, Auth.active.is_(True))
             )
             match = (await session.execute(joined_query)).first()
             if not match:
                 return
             _, found_user = match
             return UserModel.model_validate(found_user)
+
     async def update_email_by_id(
-        self, user_id: str, email: str, db: AsyncSession | None = None,
+        self,
+        user_id: str,
+        email: str,
+        db: AsyncSession | None = None,
     ) -> bool:
         """Set a new email on the auth record and propagate to the user row."""
         async with get_async_db_context(db) as session:
@@ -185,8 +198,12 @@ class AuthsTable:
             await Users.update_user_by_id(user_id, {'email': email}, db=session)
             return True
         # --- password modification ---
+
     async def update_user_password_by_id(
-        self, user_id: str, new_password: str, db: AsyncSession | None = None,
+        self,
+        user_id: str,
+        new_password: str,
+        db: AsyncSession | None = None,
     ) -> bool:
         """Set a new password hash for an existing user."""
         async with get_async_db_context(db) as session:
@@ -198,7 +215,9 @@ class AuthsTable:
             return True
 
     async def delete_auth_by_id(
-        self, id: str, db: AsyncSession | None = None,
+        self,
+        id: str,
+        db: AsyncSession | None = None,
     ) -> bool:
         """Remove a user and their auth credential in one transaction."""
         async with get_async_db_context(db) as session:

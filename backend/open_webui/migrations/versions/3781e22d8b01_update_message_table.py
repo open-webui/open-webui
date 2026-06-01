@@ -53,7 +53,9 @@ def upgrade():
     if 'channel_member' not in existing_tables:
         op.create_table(
             'channel_member',
-            sa.Column('id', sa.Text(), nullable=False, primary_key=True, unique=True),  # Record ID for the membership row
+            sa.Column(
+                'id', sa.Text(), nullable=False, primary_key=True, unique=True
+            ),  # Record ID for the membership row
             sa.Column('channel_id', sa.Text(), nullable=False),  # Associated channel
             sa.Column('user_id', sa.Text(), nullable=False),  # Associated user
             sa.Column('created_at', sa.BigInteger(), nullable=True),  # Timestamp of when the user joined the channel

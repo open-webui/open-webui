@@ -1314,7 +1314,7 @@ def merge_docs_to_target_size(
         prev = result[-1]
         if not can_merge_chunks(prev, chunk):
             return False
-        merged = f"{prev.page_content}\n\n{content}"
+        merged = f'{prev.page_content}\n\n{content}'
         if measure(merged) > max_size:
             return False
         result[-1] = Document(page_content=merged, metadata={**prev.metadata})
@@ -2209,7 +2209,6 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             raise Exception('No LINKUP_API_KEY found in environment variables')
     else:
         raise Exception('No search engine API key found in environment variables')
-
 
 
 @router.post('/process/web/search')

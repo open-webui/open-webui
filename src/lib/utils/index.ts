@@ -278,9 +278,7 @@ export const sanitizeHistory = (history) => {
 
 	// Prune childrenIds referencing deleted/missing nodes
 	for (const message of Object.values(history.messages)) {
-		message.childrenIds = message.childrenIds.filter(
-			(childId) => history.messages[childId]
-		);
+		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
 	}
 
 	// Recover currentId if it points to a missing or incomplete node
@@ -289,10 +287,7 @@ export const sanitizeHistory = (history) => {
 		let latestLeafId = null;
 		let latestTimestamp = -1;
 		for (const [id, message] of Object.entries(history.messages)) {
-			if (
-				message.childrenIds.length === 0 &&
-				(message.timestamp ?? 0) > latestTimestamp
-			) {
+			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
 				latestLeafId = id;
 				latestTimestamp = message.timestamp ?? 0;
 			}

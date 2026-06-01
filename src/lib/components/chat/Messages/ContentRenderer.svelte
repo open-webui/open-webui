@@ -230,7 +230,8 @@
 			{id}
 			content={model?.info?.meta?.capabilities?.citations == false
 				? replaceOutsideCode(content, (segment) =>
-						segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, ''))
+						segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+					)
 				: content}
 			{model}
 			{save}

@@ -15,9 +15,7 @@
 	$: filteredSkillKeys = Object.keys(_skills).filter((id) => {
 		if (!searchQuery.trim()) return true;
 		const q = searchQuery.toLowerCase();
-		return (
-			_skills[id].name?.toLowerCase().includes(q) || _skills[id].id?.toLowerCase().includes(q)
-		);
+		return _skills[id].name?.toLowerCase().includes(q) || _skills[id].id?.toLowerCase().includes(q);
 	});
 
 	onMount(() => {

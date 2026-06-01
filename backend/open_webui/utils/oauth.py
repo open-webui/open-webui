@@ -375,7 +375,9 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
-    return ProtectedResourceMetadata(resource=resource, authorization_servers=authorization_servers, scopes_supported=scopes)
+    return ProtectedResourceMetadata(
+        resource=resource, authorization_servers=authorization_servers, scopes_supported=scopes
+    )
 
 
 def _build_well_known_urls(server_url: str) -> list[str]:

@@ -127,10 +127,13 @@ class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
 
     impl = types.UnicodeText
     cache_ok = True
+
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
         return json.dumps(value) if value is not None else None
+
     def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
         return json.loads(value) if value is not None else None
+
     def copy(self, **kwargs: Any) -> Self:
         return JSONField(length=self.impl.length)
 

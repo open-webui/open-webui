@@ -324,8 +324,10 @@ async def export_tools(
 
 @router.post('/create', response_model=ToolResponse | None)
 async def create_new_tools(
-    request: Request, form_data: ToolForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
+    request: Request,
+    form_data: ToolForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new tool from user-supplied Python source code."""
     if user.role != 'admin' and not (
@@ -448,14 +450,18 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 
 @router.post('/id/{id}/update', response_model=ToolModel | None)
 async def update_tools_by_id(
-    request: Request, id: str, form_data: ToolForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
+    request: Request,
+    id: str,
+    form_data: ToolForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Update an existing tool's source code and metadata."""
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
     # Is the user the original creator, in a group with write access, or an admin

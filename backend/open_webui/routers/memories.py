@@ -63,7 +63,9 @@ class MemoryUpdateModel(BaseModel):
 
 @router.post('/add', response_model=MemoryModel | None)
 async def add_memory(
-    request: Request, form_data: AddMemoryForm, user=Depends(get_verified_user),
+    request: Request,
+    form_data: AddMemoryForm,
+    user=Depends(get_verified_user),
 ):
     """Persist a new memory and embed it into the user's vector collection.
 

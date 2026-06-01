@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -49,6 +50,7 @@ class ToolModel(BaseModel):
     created_at: int  # timestamp in epoch
 
     model_config = ConfigDict(from_attributes=True)  # enables ORM mapping
+
 
 # --- tool request forms ---
 # Forms
@@ -138,7 +140,9 @@ class ToolsTable:
                 return None  # creation failed
 
     async def get_tool_by_id(
-        self, id: str, db: AsyncSession | None = None,
+        self,
+        id: str,
+        db: AsyncSession | None = None,
     ) -> ToolModel | None:
         """Fetch a single tool by primary key, including access grants."""
         try:  # single PK lookup + access grants
@@ -150,18 +154,14 @@ class ToolsTable:
         except Exception:
             return None
 
-    async def get_tools_by_ids(
-        self, tool_ids: list[str], db: AsyncSession | None = None
-    ) -> dict[str, ToolModel]:
+    async def get_tools_by_ids(self, tool_ids: list[str], db: AsyncSession | None = None) -> dict[str, ToolModel]:
         """Batch-fetch multiple tools by ID, returning a dict keyed by tool ID."""
         if not tool_ids:
             return {}
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Tool).where(Tool.id.in_(tool_ids)))
             tools = result.scalars().all()
-            grants_map = await AccessGrants.get_grants_by_resources(
-                'tool', [tool.id for tool in tools], db=db
-            )
+            grants_map = await AccessGrants.get_grants_by_resources('tool', [tool.id for tool in tools], db=db)
             return {
                 tool.id: await self._to_tool_model(tool, access_grants=grants_map.get(tool.id, []), db=db)
                 for tool in tools

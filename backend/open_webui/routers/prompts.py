@@ -239,8 +239,11 @@ async def get_prompt_by_id(
 
 @router.post('/id/{prompt_id}/update', response_model=PromptModel | None)
 async def update_prompt_by_id(
-    request: Request, prompt_id: str, form_data: PromptForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
+    request: Request,
+    prompt_id: str,
+    form_data: PromptForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Update a prompt's content, creating a new history entry if changed."""
     prompt = await Prompts.get_prompt_by_id(prompt_id, db=db)

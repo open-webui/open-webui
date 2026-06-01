@@ -123,9 +123,7 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            stt_supported = getattr(
-                request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', []
-            )
+            stt_supported = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
 
             if content_type and strict_match_mime_type(stt_supported, content_type):
                 # Audio / STT-supported files → transcribe then index
@@ -161,17 +159,12 @@ async def process_uploaded_file(
                         db=db_session,
                     )
                 else:
-                    raise Exception(
-                        f'File type {content_type} is not supported for processing'
-                    )
+                    raise Exception(f'File type {content_type} is not supported for processing')
 
             else:
                 # Documents, or any file when an external engine is configured
                 if not content_type:
-                    log.info(
-                        f'File type {file.content_type} is not provided, '
-                        'but trying to process anyway'
-                    )
+                    log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),

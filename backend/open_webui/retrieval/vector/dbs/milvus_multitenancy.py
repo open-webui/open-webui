@@ -284,9 +284,7 @@ class MilvusClient(VectorDBBase):
                 elif isinstance(value, (int, float)):
                     expr.append(f"metadata['{key}'] == {value}")
                 else:
-                    raise TypeError(
-                        f'Unsupported Milvus filter value type for key {key!r}: {type(value).__name__}'
-                    )
+                    raise TypeError(f'Unsupported Milvus filter value type for key {key!r}: {type(value).__name__}')
 
         iterator = collection.query_iterator(
             expr=' and '.join(expr),

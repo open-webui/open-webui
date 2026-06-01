@@ -66,9 +66,7 @@ def main():
 
     results = search_bing(
         os.environ.get('BING_SEARCH_V7_SUBSCRIPTION_KEY', ''),
-        os.environ.get(
-            'BING_SEARCH_V7_ENDPOINT', 'https://api.bing.microsoft.com/v7.0/search'
-        ),
+        os.environ.get('BING_SEARCH_V7_ENDPOINT', 'https://api.bing.microsoft.com/v7.0/search'),
         args.locale,
         args.query,
         args.count,

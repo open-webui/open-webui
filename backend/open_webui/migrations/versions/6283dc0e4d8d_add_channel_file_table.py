@@ -48,7 +48,9 @@ def upgrade() -> None:
             sa.Index('ix_channel_file_file_id', 'file_id'),
             sa.Index('ix_channel_file_user_id', 'user_id'),
             # unique constraints
-            sa.UniqueConstraint('channel_id', 'file_id', name='uq_channel_file_channel_file'),  # prevent duplicate entries
+            sa.UniqueConstraint(
+                'channel_id', 'file_id', name='uq_channel_file_channel_file'
+            ),  # prevent duplicate entries
         )
 
 

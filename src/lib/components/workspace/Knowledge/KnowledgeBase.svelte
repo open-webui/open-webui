@@ -1117,14 +1117,16 @@
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
-		if (pendingPollTimer) { clearInterval(pendingPollTimer); pendingPollTimer = null; }
+		if (pendingPollTimer) {
+			clearInterval(pendingPollTimer);
+			pendingPollTimer = null;
+		}
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
-
 
 	const decodeString = (str: string) => {
 		try {

@@ -83,10 +83,7 @@
 			on:dragstart={(e) => {
 				const fileId = file?.id ?? file?.tempId;
 				if (fileId) {
-					e.dataTransfer?.setData(
-						'application/x-kb-file-move',
-						JSON.stringify({ fileId })
-					);
+					e.dataTransfer?.setData('application/x-kb-file-move', JSON.stringify({ fileId }));
 				}
 			}}
 		>

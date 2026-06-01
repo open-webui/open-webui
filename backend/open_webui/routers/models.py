@@ -220,8 +220,10 @@ async def get_model_tags(user=Depends(get_verified_user), db: AsyncSession = Dep
 
 @router.post('/create', response_model=ModelModel | None)
 async def create_new_model(
-    request: Request, form_data: ModelForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
+    request: Request,
+    form_data: ModelForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new workspace model entry."""
     if user.role != 'admin' and not await has_permission(
@@ -248,7 +250,8 @@ async def create_new_model(
     else:
         await _verify_knowledge_file_access(
             getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
-            user, db,
+            user,
+            db,
         )
 
         form_data.access_grants = await filter_allowed_access_grants(
@@ -361,13 +364,14 @@ async def import_models(
                     try:
                         await _verify_knowledge_file_access(
                             (model_data.get('meta') or {}).get('knowledge'),
-                            user, db,
+                            user,
+                            db,
                         )
                     except HTTPException:
                         log.warning(
-                            'import_models: user %s skipped model %s '
-                            '(knowledge file access denied)',
-                            user.id, model_id,
+                            'import_models: user %s skipped model %s (knowledge file access denied)',
+                            user.id,
+                            model_id,
                         )
                         continue
 
@@ -634,14 +638,17 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Async
 
 @router.post('/model/update', response_model=ModelModel | None)
 async def update_model_by_id(
-    request: Request, form_data: ModelForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
+    request: Request,
+    form_data: ModelForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Update a workspace model's configuration."""
     model = await Models.get_model_by_id(form_data.id, db=db)
     if not model:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
     if (
@@ -662,7 +669,8 @@ async def update_model_by_id(
 
     await _verify_knowledge_file_access(
         getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
-        user, db,
+        user,
+        db,
     )
 
     form_data.access_grants = await filter_allowed_access_grants(

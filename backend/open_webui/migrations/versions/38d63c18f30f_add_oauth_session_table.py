@@ -42,9 +42,9 @@ def upgrade() -> None:
 
     # Create indexes (idempotent — no-ops when table was just created
     # with the columns above, and safe to call if indexes already exist).
-    existing_indexes = {
-        idx['name'] for idx in inspector.get_indexes('oauth_session')
-    } if 'oauth_session' in existing_tables else set()
+    existing_indexes = (
+        {idx['name'] for idx in inspector.get_indexes('oauth_session')} if 'oauth_session' in existing_tables else set()
+    )
 
     if 'idx_oauth_session_user_id' not in existing_indexes:
         op.create_index('idx_oauth_session_user_id', 'oauth_session', ['user_id'])

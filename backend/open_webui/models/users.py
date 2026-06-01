@@ -46,11 +46,11 @@ class UserSettings(BaseModel):
 class User(Base):  # identity & profile
     """One row per registered account — profile, role, and settings."""
 
-    __tablename__: str = 'user'    # Identity & Credentials
+    __tablename__: str = 'user'  # Identity & Credentials
     id = Column(String, primary_key=True, unique=True)  # unique user id
     email = Column(String, unique=True)  # user email address
     username = Column(String(50), nullable=True)  # custom handle
-    role = Column(String, default="pending")  # permissions role
+    role = Column(String, default='pending')  # permissions role
     name = Column(String, nullable=False)  # display name
 
     # Profile
@@ -117,18 +117,14 @@ class UserModel(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
     )
+
     # validation schema logic
     # --- model validators ---
     @model_validator(mode='after')
     def _ensure_profile_image(self) -> 'UserModel':
         """Assign a generated avatar when no profile image is provided."""
-        self.profile_image_url = (
-            self.profile_image_url
-            or _DEFAULT_PROFILE_IMAGE_URL.format(user_id=self.id)
-        )
+        self.profile_image_url = self.profile_image_url or _DEFAULT_PROFILE_IMAGE_URL.format(user_id=self.id)
         return self
-
-
 
 
 class UserStatusModel(UserModel):
@@ -303,31 +299,37 @@ class UsersTable:
             await session.commit()
             await session.refresh(result)
             return user if result else None
+
     # database read methods
     # --- read / lookup operations ---
     async def get_user_by_id(
-        self, id: str, db: AsyncSession | None = None,
+        self,
+        id: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Fetch a single user by primary key."""
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)
             return UserModel.model_validate(user) if user else None
+
     # api key auth helper
     async def get_user_by_api_key(
-        self, api_key: str, db: AsyncSession | None = None,
+        self,
+        api_key: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Resolve a user from their API key via a JOIN on the api_key table."""
         async with get_async_db_context(db) as session:
             result = await session.execute(
-                select(User)
-                .join(ApiKey, User.id == ApiKey.user_id)
-                .where(ApiKey.key == api_key),
+                select(User).join(ApiKey, User.id == ApiKey.user_id).where(ApiKey.key == api_key),
             )
             user = result.scalars().first()
             return UserModel.model_validate(user) if user else None
 
     async def get_user_by_email(
-        self, email: str, db: AsyncSession | None = None,
+        self,
+        email: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Case-insensitive email lookup using SQL lower()."""
         async with get_async_db_context(db) as session:
@@ -342,7 +344,10 @@ class UsersTable:
 
     # --- oauth & integrations ---
     async def get_user_by_oauth_sub(
-        self, provider: str, sub: str, db: AsyncSession | None = None,
+        self,
+        provider: str,
+        sub: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Look up a user by OAuth provider + subject claim (dialect-aware JSON filter)."""
         async with get_async_db_context(db) as session:
@@ -358,7 +363,10 @@ class UsersTable:
             return UserModel.model_validate(row) if row else None
 
     async def get_user_by_scim_external_id(
-        self, provider: str, external_id: str, db: AsyncSession | None = None,
+        self,
+        provider: str,
+        external_id: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Look up a user by SCIM provider + external ID (dialect-aware JSON filter)."""
         async with get_async_db_context(db) as session:
@@ -373,10 +381,12 @@ class UsersTable:
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
-
     async def get_users(
-        self, filter: dict | None = None, skip: int | None = None,
-        limit: int | None = None, db: AsyncSession | None = None,
+        self,
+        filter: dict | None = None,
+        skip: int | None = None,
+        limit: int | None = None,
+        db: AsyncSession | None = None,
     ) -> dict:
         """Paginated user listing with optional filters for role, group, and channel."""
         async with get_async_db_context(db) as session:
@@ -531,11 +541,13 @@ class UsersTable:
             result = await session.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
+
     # count registered accounts
     async def get_num_users(self, db: AsyncSession | None = None) -> int | None:
         async with get_async_db_context(db) as session:
             result = await session.execute(select(func.count()).select_from(User))
             return result.scalar()
+
     # check user existence
     async def has_users(self, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
@@ -589,7 +601,10 @@ class UsersTable:
             return UserModel.model_validate(user)
 
     async def update_user_profile_image_url_by_id(
-        self, id: str, profile_image_url: str, db: AsyncSession | None = None,
+        self,
+        id: str,
+        profile_image_url: str,
+        db: AsyncSession | None = None,
     ) -> UserModel | None:
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)
@@ -650,6 +665,7 @@ class UsersTable:
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)
+
     # settings update helper
     async def update_user_settings_by_id(
         self, id: str, updated: dict, db: AsyncSession | None = None
@@ -745,4 +761,3 @@ class UsersTable:
 
 
 Users = UsersTable()  # singleton user repository
-

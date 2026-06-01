@@ -5,6 +5,7 @@ Revises: 3c9b0ca343fd
 Create Date: 2026-05-14 04:38:14.000000
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -21,9 +22,18 @@ depends_on: Union[str, Sequence[str], None] = None
 # already have correct PKs from 7e5b5dc7342b_init.py.
 # 'tag' uses a composite PK since the same tag name can exist for multiple users.
 LEGACY_TABLES = {
-    'auth': ['id'], 'chat': ['id'], 'chatidtag': ['id'], 'document': ['id'],
-    'file': ['id'], 'function': ['id'], 'memory': ['id'], 'model': ['id'],
-    'prompt': ['id'], 'tag': ['id', 'user_id'], 'tool': ['id'], 'user': ['id'],
+    'auth': ['id'],
+    'chat': ['id'],
+    'chatidtag': ['id'],
+    'document': ['id'],
+    'file': ['id'],
+    'function': ['id'],
+    'memory': ['id'],
+    'model': ['id'],
+    'prompt': ['id'],
+    'tag': ['id', 'user_id'],
+    'tool': ['id'],
+    'user': ['id'],
 }
 
 

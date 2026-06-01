@@ -376,8 +376,12 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                         metadata = extra_params.get('__metadata__', {})
                         headers, cookies = await build_tool_server_headers(
-                            tool_server_connection, request, user,
-                            server_id=server_id, metadata=metadata, extra_params=extra_params,
+                            tool_server_connection,
+                            request,
+                            user,
+                            server_id=server_id,
+                            metadata=metadata,
+                            extra_params=extra_params,
                         )
                         headers.setdefault('Content-Type', 'application/json')
 
@@ -484,7 +488,9 @@ async def get_builtin_tools(
                 builtin_functions.append(query_knowledge_bases)
                 builtin_functions.append(search_knowledge_bases)
         elif model_knowledge:
-            builtin_functions.extend([list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files])
+            builtin_functions.extend(
+                [list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files]
+            )
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
@@ -492,11 +498,17 @@ async def get_builtin_tools(
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
-            builtin_functions.extend([
-                list_knowledge_bases, search_knowledge_bases, query_knowledge_bases,
-                grep_knowledge_files, search_knowledge_files, query_knowledge_files,
-                view_knowledge_file,
-            ])
+            builtin_functions.extend(
+                [
+                    list_knowledge_bases,
+                    search_knowledge_bases,
+                    query_knowledge_bases,
+                    grep_knowledge_files,
+                    search_knowledge_files,
+                    query_knowledge_files,
+                    view_knowledge_file,
+                ]
+            )
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):

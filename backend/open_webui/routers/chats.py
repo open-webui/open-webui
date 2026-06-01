@@ -514,9 +514,13 @@ async def delete_all_user_chats(
 
 @router.get('/list/user/{user_id}', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
-    user_id: str, page: int | None = None, query: str | None = None,
-    order_by: str | None = None, direction: str | None = None,
-    user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session),
+    user_id: str,
+    page: int | None = None,
+    query: str | None = None,
+    order_by: str | None = None,
+    direction: str | None = None,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """List chat summaries for a given user (admin-only endpoint)."""
     if not ENABLE_ADMIN_CHAT_ACCESS:

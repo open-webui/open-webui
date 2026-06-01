@@ -141,9 +141,7 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     Well-formed output is unaffected: every id pairs, so nothing is stripped.
     """
     completed_tool_call_ids = {
-        message['tool_call_id']
-        for message in messages
-        if message.get('role') == 'tool' and message.get('tool_call_id')
+        message['tool_call_id'] for message in messages if message.get('role') == 'tool' and message.get('tool_call_id')
     }
     requested_tool_call_ids = {
         tool_call['id']
@@ -167,9 +165,7 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
 
         # Keep only tool_calls whose id received a tool-role response.
         valid_tool_calls = [
-            tool_call
-            for tool_call in message['tool_calls']
-            if tool_call.get('id') in completed_tool_call_ids
+            tool_call for tool_call in message['tool_calls'] if tool_call.get('id') in completed_tool_call_ids
         ]
 
         if valid_tool_calls:
@@ -181,9 +177,7 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
         content = message.get('content', '')
         has_meaningful_content = content.strip() if isinstance(content, str) else content
         if has_meaningful_content or message.get('reasoning_content'):
-            reconciled_messages.append(
-                {key: value for key, value in message.items() if key != 'tool_calls'}
-            )
+            reconciled_messages.append({key: value for key, value in message.items() if key != 'tool_calls'})
 
     return reconciled_messages
 

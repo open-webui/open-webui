@@ -76,8 +76,7 @@ def validate_profile_image_url(url: str) -> str:
     if _SAFE_DATA_URI_RE.match(url):
         if PROFILE_IMAGE_MAX_DATA_URI_SIZE and len(url) > PROFILE_IMAGE_MAX_DATA_URI_SIZE:
             raise ValueError(
-                f'Invalid profile image URL: data URI exceeds the '
-                f'{PROFILE_IMAGE_MAX_DATA_URI_SIZE}-byte limit.'
+                f'Invalid profile image URL: data URI exceeds the {PROFILE_IMAGE_MAX_DATA_URI_SIZE}-byte limit.'
             )
         return url
 

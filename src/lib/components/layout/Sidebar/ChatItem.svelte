@@ -368,7 +368,9 @@
 
 		// For the active chat, prefer the live dropdown selection.
 		if (id === $chatId) {
-			try { model = JSON.parse(sessionStorage.selectedModels || '[]').find((m) => m) ?? ''; } catch {}
+			try {
+				model = JSON.parse(sessionStorage.selectedModels || '[]').find((m) => m) ?? '';
+			} catch {}
 		}
 
 		if (!model && history?.messages && history?.currentId) {

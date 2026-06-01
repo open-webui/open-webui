@@ -9,7 +9,9 @@ import uuid
 import pycrdt as Y
 from open_webui.utils.redis import get_redis_connection
 from open_webui.env import REDIS_KEY_PREFIX
-YDOC_KEY_PREFIX = f"{REDIS_KEY_PREFIX}:ydoc:documents"
+
+YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
+
 
 class RedisLock:
     """Distributed lock backed by a Redis SET with NX/EX semantics."""
@@ -105,9 +107,7 @@ class RedisDict:
         # this process wrote.  The check is per-instance (not distributed), but
         # still eliminates the majority of redundant writes because each pod
         # typically produces the same model list on consecutive refreshes.
-        signature = hashlib.sha256(
-            json.dumps(serialized, sort_keys=True).encode()
-        ).hexdigest()
+        signature = hashlib.sha256(json.dumps(serialized, sort_keys=True).encode()).hexdigest()
         if signature == self._last_signature:
             return
 

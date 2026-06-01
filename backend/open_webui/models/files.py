@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import sanitize_metadata
@@ -45,6 +46,7 @@ class FileModel(BaseModel):
 
     created_at: int | None  # timestamp in epoch
     updated_at: int | None  # timestamp in epoch
+
 
 # --- metadata structures ---
 class FileMeta(BaseModel):
@@ -150,7 +152,9 @@ class FilesTable:
                 return None  # insertion failed
 
     async def get_file_by_id(
-        self, id: str, db: AsyncSession | None = None,
+        self,
+        id: str,
+        db: AsyncSession | None = None,
     ) -> FileModel | None:
         """Look up a file by its primary key."""
         try:
@@ -409,9 +413,7 @@ class FilesTable:
 
                 # Subquery: file IDs already linked to this knowledge base
                 linked_ids = (
-                    select(KnowledgeFile.file_id)
-                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
-                    .correlate(None)
+                    select(KnowledgeFile.file_id).filter(KnowledgeFile.knowledge_id == knowledge_id).correlate(None)
                 )
 
                 stmt = (
@@ -424,10 +426,7 @@ class FilesTable:
                     .order_by(File.created_at.desc())
                 )
                 result = await db.execute(stmt)
-                return [
-                    FileModelResponse.model_validate(f, from_attributes=True)
-                    for f in result.scalars().all()
-                ]
+                return [FileModelResponse.model_validate(f, from_attributes=True) for f in result.scalars().all()]
             except Exception as e:
                 log.warning(f'Error fetching pending files for knowledge {knowledge_id}: {e}')
                 return []

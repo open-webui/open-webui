@@ -108,9 +108,7 @@
 		);
 
 		try {
-			await Promise.all(
-				targets.map((a) => toggleAutomationById(localStorage.token, a.id))
-			);
+			await Promise.all(targets.map((a) => toggleAutomationById(localStorage.token, a.id)));
 		} catch (err) {
 			toast.error(`${err}`);
 			// Refresh from server to restore consistent state

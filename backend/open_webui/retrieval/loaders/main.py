@@ -273,18 +273,18 @@ class Loader:
         4. Falling back to latin-1 (always valid, ftfy fixes mojibake later).
         """
         try:
-            with open(file_path, "rb") as f:
+            with open(file_path, 'rb') as f:
                 raw = f.read()
         except OSError:
-            return "utf-8"
+            return 'utf-8'
 
         if not raw:
-            return "utf-8"
+            return 'utf-8'
 
         # Fast path: most files are UTF-8
         try:
-            raw.decode("utf-8")
-            return "utf-8"
+            raw.decode('utf-8')
+            return 'utf-8'
         except UnicodeDecodeError:
             pass
 
@@ -292,24 +292,24 @@ class Loader:
         import chardet
 
         detected = chardet.detect(raw)
-        detected_enc = (detected.get("encoding") or "").lower().replace("-", "").replace("_", "")
+        detected_enc = (detected.get('encoding') or '').lower().replace('-', '').replace('_', '')
 
         # Map chardet's detected encoding to the correct superset codec.
         # chardet often reports GB2312 for content that is actually GB18030;
         # GB18030 is a strict superset of both GB2312 and GBK.
         _ENC_FAMILY = {
-            "gb2312": "gb18030",
-            "gb18030": "gb18030",
-            "gbk": "gb18030",
-            "big5": "big5",
-            "euckr": "euc-kr",
-            "eucjp": "euc-jp",
-            "iso2022jp": "euc-jp",
-            "shiftjis": "shift_jis",
+            'gb2312': 'gb18030',
+            'gb18030': 'gb18030',
+            'gbk': 'gb18030',
+            'big5': 'big5',
+            'euckr': 'euc-kr',
+            'eucjp': 'euc-jp',
+            'iso2022jp': 'euc-jp',
+            'shiftjis': 'shift_jis',
         }
 
         # Build priority list: chardet-hinted codec first, then remaining CJK
-        base_order = ["gb18030", "big5", "euc-kr", "euc-jp"]
+        base_order = ['gb18030', 'big5', 'euc-kr', 'euc-jp']
         hinted = _ENC_FAMILY.get(detected_enc)
         if hinted and hinted in base_order:
             ordered = [hinted] + [e for e in base_order if e != hinted]
@@ -321,10 +321,10 @@ class Loader:
                 text = raw.decode(enc)
                 if text.strip() and self._has_cjk_characters(text):
                     log.info(
-                        "Detected encoding %s for %s (chardet guessed %s)",
+                        'Detected encoding %s for %s (chardet guessed %s)',
                         enc,
                         file_path,
-                        detected.get("encoding"),
+                        detected.get('encoding'),
                     )
                     return enc
             except (UnicodeDecodeError, LookupError):
@@ -332,12 +332,12 @@ class Loader:
 
         # If chardet gave a non-CJK answer that isn't in our family map,
         # try it directly — it might be a valid Western encoding.
-        chardet_encoding = detected.get("encoding")
+        chardet_encoding = detected.get('encoding')
         if chardet_encoding:
             try:
                 raw.decode(chardet_encoding)
                 log.info(
-                    "Using chardet-detected encoding %s for %s",
+                    'Using chardet-detected encoding %s for %s',
                     chardet_encoding,
                     file_path,
                 )
@@ -348,8 +348,8 @@ class Loader:
         # latin-1 is the ultimate fallback: every byte 0x00–0xFF is valid.
         # ftfy.fix_text() (applied downstream) repairs most mojibake that
         # results from treating Windows-1252 content as Latin-1.
-        log.info("Falling back to latin-1 encoding for %s", file_path)
-        return "latin-1"
+        log.info('Falling back to latin-1 encoding for %s', file_path)
+        return 'latin-1'
 
     @staticmethod
     def _has_cjk_characters(text: str, threshold: float = 0.05) -> bool:
@@ -371,17 +371,17 @@ class Loader:
             total += 1
             cp = ord(ch)
             if (
-                0x4E00 <= cp <= 0x9FFF       # CJK Unified Ideographs
-                or 0x3400 <= cp <= 0x4DBF     # CJK Extension A
-                or 0x20000 <= cp <= 0x2A6DF   # CJK Extension B
-                or 0x2A700 <= cp <= 0x2B73F   # CJK Extension C
-                or 0x2B740 <= cp <= 0x2B81F   # CJK Extension D
-                or 0xF900 <= cp <= 0xFAFF     # CJK Compatibility Ideographs
-                or 0x3000 <= cp <= 0x303F     # CJK Symbols and Punctuation
-                or 0x3040 <= cp <= 0x309F     # Hiragana
-                or 0x30A0 <= cp <= 0x30FF     # Katakana
-                or 0xAC00 <= cp <= 0xD7AF     # Hangul Syllables
-                or 0xFF00 <= cp <= 0xFFEF     # Halfwidth and Fullwidth Forms
+                0x4E00 <= cp <= 0x9FFF  # CJK Unified Ideographs
+                or 0x3400 <= cp <= 0x4DBF  # CJK Extension A
+                or 0x20000 <= cp <= 0x2A6DF  # CJK Extension B
+                or 0x2A700 <= cp <= 0x2B73F  # CJK Extension C
+                or 0x2B740 <= cp <= 0x2B81F  # CJK Extension D
+                or 0xF900 <= cp <= 0xFAFF  # CJK Compatibility Ideographs
+                or 0x3000 <= cp <= 0x303F  # CJK Symbols and Punctuation
+                or 0x3040 <= cp <= 0x309F  # Hiragana
+                or 0x30A0 <= cp <= 0x30FF  # Katakana
+                or 0xAC00 <= cp <= 0xD7AF  # Hangul Syllables
+                or 0xFF00 <= cp <= 0xFFEF  # Halfwidth and Fullwidth Forms
             ):
                 cjk_count += 1
 
@@ -646,4 +646,3 @@ class Loader:
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
 
         return loader
-

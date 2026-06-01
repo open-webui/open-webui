@@ -51,8 +51,7 @@ class ModelMeta(BaseModel):
             if v not in _warned_profile_urls:
                 _warned_profile_urls.add(v)
                 log.warning(
-                    'Clearing invalid profile_image_url stored in DB '
-                    '(likely a legacy SVG data-URI): %.80s…',
+                    'Clearing invalid profile_image_url stored in DB (likely a legacy SVG data-URI): %.80s…',
                     v,
                 )
             return None
@@ -74,7 +73,6 @@ class ModelMeta(BaseModel):
 
 
 class Model(Base):
-
     """Workspace model entry — wraps an upstream LLM with custom params and metadata."""
 
     __tablename__ = 'model'
@@ -195,9 +193,7 @@ class ModelsTable:
             models: list[ModelModel] = []
             for model in all_models:
                 try:
-                    models.append(
-                        await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
-                    )
+                    models.append(await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db))
                 except Exception as exc:
                     log.error('Skipping model %r during get_all_models due to error: %s', model.id, exc)
             return models

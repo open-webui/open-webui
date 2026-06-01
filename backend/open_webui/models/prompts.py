@@ -55,6 +55,8 @@ class PromptModel(BaseModel):
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
+
+
 # --- form / schema definitions ---
 # Forms
 ####################
@@ -107,26 +109,36 @@ class PromptsTable:
         )
         return PromptModel.model_validate(prompt_data)
 
-    async def insert_new_prompt(self, user_id: str, form_data: PromptForm, db: AsyncSession | None = None) -> PromptModel | None:
+    async def insert_new_prompt(
+        self, user_id: str, form_data: PromptForm, db: AsyncSession | None = None
+    ) -> PromptModel | None:
         now = int(time.time())
         prompt_id = str(uuid.uuid4())
 
         async with get_async_db_context(db) as session:
             try:
                 record = Prompt(
-                    id=prompt_id, user_id=user_id,
-                    command=form_data.command, name=form_data.name,
+                    id=prompt_id,
+                    user_id=user_id,
+                    command=form_data.command,
+                    name=form_data.name,
                     content=form_data.content,
-                    data=form_data.data or {}, meta=form_data.meta or {},
-                    tags=form_data.tags or [], is_active=True,
-                    created_at=now, updated_at=now,
+                    data=form_data.data or {},
+                    meta=form_data.meta or {},
+                    tags=form_data.tags or [],
+                    is_active=True,
+                    created_at=now,
+                    updated_at=now,
                 )
                 session.add(record)
                 await session.commit()
                 await session.refresh(record)  # populate generated defaults
 
                 await AccessGrants.set_access_grants(
-                    'prompt', prompt_id, form_data.access_grants, db=session,
+                    'prompt',
+                    prompt_id,
+                    form_data.access_grants,
+                    db=session,
                 )  # persist sharing rules
 
                 if not record:  # shouldn't happen, but guard anyway
@@ -145,8 +157,10 @@ class PromptsTable:
                 }
 
                 history_entry = await PromptHistories.create_history_entry(
-                    prompt_id=prompt_id, snapshot=snapshot,
-                    user_id=user_id, parent_id=None,
+                    prompt_id=prompt_id,
+                    snapshot=snapshot,
+                    user_id=user_id,
+                    parent_id=None,
                     commit_message=form_data.commit_message or 'Initial version',
                     db=session,
                 )  # creates the first version entry
@@ -178,9 +192,7 @@ class PromptsTable:
     async def get_prompt_by_command(self, command: str, db: AsyncSession | None = None) -> PromptModel | None:
         """Look up a prompt by its unique slash-command string."""
         async with get_async_db_context(db) as session:
-            match = (await session.execute(
-                select(Prompt).where(Prompt.command == command)
-            )).scalars().first()
+            match = (await session.execute(select(Prompt).where(Prompt.command == command))).scalars().first()
             if match is None:
                 return
             return await self._to_prompt_model(match, db=session)
@@ -190,9 +202,15 @@ class PromptsTable:
     async def get_prompts(self, db: AsyncSession | None = None) -> list[PromptUserResponse]:
         """Return all active prompts ordered by most recently updated."""
         async with get_async_db_context(db) as session:
-            active = (await session.execute(
-                select(Prompt).where(Prompt.is_active.is_(True)).order_by(Prompt.updated_at.desc())
-            )).scalars().all()
+            active = (
+                (
+                    await session.execute(
+                        select(Prompt).where(Prompt.is_active.is_(True)).order_by(Prompt.updated_at.desc())
+                    )
+                )
+                .scalars()
+                .all()
+            )
 
             user_ids = list(set(p.user_id for p in active))
             prompt_ids = [p.id for p in active]
@@ -600,10 +618,13 @@ class PromptsTable:
 
                 return await self._to_prompt_model(prompt, db=session)
         except Exception as e:  # connection error
-            log.error(f"Failed to restore prompt version: {e}")
+            log.error(f'Failed to restore prompt version: {e}')
             return None  # restoration failed
+
     async def toggle_prompt_active(
-        self, prompt_id: str, db: AsyncSession | None = None,
+        self,
+        prompt_id: str,
+        db: AsyncSession | None = None,
     ) -> PromptModel | None:
         """Flip the is_active flag on a prompt."""
         if not prompt_id:
@@ -654,7 +675,7 @@ class PromptsTable:
                     return True
                 return False
         except Exception as err:
-            log.error(f"Failed to delete prompt: {err}")
+            log.error(f'Failed to delete prompt: {err}')
             return False  # deletion failed
 
     async def get_tags(self, db: AsyncSession | None = None) -> list[str]:

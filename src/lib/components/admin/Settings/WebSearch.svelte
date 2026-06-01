@@ -81,9 +81,10 @@
 
 		// Convert Linkup params JSON string to object before sending
 		const linkupParams =
-			typeof webConfig.LINKUP_SEARCH_PARAMS === 'string' && webConfig.LINKUP_SEARCH_PARAMS.trim() !== ''
+			typeof webConfig.LINKUP_SEARCH_PARAMS === 'string' &&
+			webConfig.LINKUP_SEARCH_PARAMS.trim() !== ''
 				? JSON.parse(webConfig.LINKUP_SEARCH_PARAMS)
-				: webConfig.LINKUP_SEARCH_PARAMS ?? {};
+				: (webConfig.LINKUP_SEARCH_PARAMS ?? {});
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: { ...webConfig, LINKUP_SEARCH_PARAMS: linkupParams }
@@ -135,7 +136,7 @@
 			webConfig.LINKUP_SEARCH_PARAMS =
 				typeof webConfig.LINKUP_SEARCH_PARAMS === 'object'
 					? JSON.stringify(webConfig.LINKUP_SEARCH_PARAMS ?? {}, null, 2)
-					: webConfig.LINKUP_SEARCH_PARAMS ?? '';
+					: (webConfig.LINKUP_SEARCH_PARAMS ?? '');
 		}
 	});
 </script>

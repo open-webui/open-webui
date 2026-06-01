@@ -51,9 +51,7 @@ def search_linkup(
 
         output_type = merged.get('outputType', 'sourcedAnswer')
         search_results = (
-            json_response.get('sources', [])
-            if output_type == 'sourcedAnswer'
-            else json_response.get('results', [])
+            json_response.get('sources', []) if output_type == 'sourcedAnswer' else json_response.get('results', [])
         )
 
         if filter_list:

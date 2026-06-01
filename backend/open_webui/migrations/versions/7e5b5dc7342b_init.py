@@ -9,7 +9,8 @@ import sqlalchemy as sa
 from alembic import op
 from open_webui.internal.db import JSONField
 from open_webui.migrations.util import get_existing_tables
-revision: str = "7e5b5dc7342b"
+
+revision: str = '7e5b5dc7342b'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -175,12 +176,16 @@ _INITIAL_TABLES: list[tuple[str, list[sa.Column], list]] = [
         ],
     ),
 ]
+
+
 # --- migration execution ---
 def upgrade() -> None:  # deploy initial schema tables
     existing_tables = set(get_existing_tables())
     for name, columns, constraints in _INITIAL_TABLES:
         if name not in existing_tables:
             op.create_table(name, *columns, *constraints)
+
+
 # --- rollback function ---
 def downgrade() -> None:  # rollback initial schema tables
     for table_name, _, _ in reversed(_INITIAL_TABLES):

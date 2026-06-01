@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import UserModel, UserResponse, Users
@@ -51,6 +52,7 @@ class FunctionModel(BaseModel):
     created_at: int  # timestamp in epoch
 
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
+
 
 # --- form / schema definitions ---
 class FunctionWithValvesModel(BaseModel):

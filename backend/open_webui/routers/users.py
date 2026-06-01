@@ -384,7 +384,9 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user), db: Asy
 
 @router.post('/user/info/update', response_model=dict | None)
 async def update_user_info_by_session_user(  # PATCH-style merge
-    form_data: dict, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     """Merge caller-supplied fields into the current user's info dict.
 
@@ -400,6 +402,7 @@ async def update_user_info_by_session_user(  # PATCH-style merge
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
     return updated.info
+
 
 ############################
 # GetUserById
@@ -538,7 +541,8 @@ async def get_user_active_status_by_id(
 
 @router.post('/{user_id}/update', response_model=UserModel | None)
 async def update_user_by_id(
-    user_id: str, form_data: UserUpdateForm,
+    user_id: str,
+    form_data: UserUpdateForm,
     session_user: UserModel = Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -743,27 +747,15 @@ async def get_user_preview(
         'user': {'id': target_user.id, 'name': target_user.name},
         'groups': [{'id': g.id, 'name': g.name} for g in user_groups],
         'models': {
-            'items': [
-                {'id': m.id, 'name': m.name}
-                for m in active_models
-                if m.id in accessible_model_ids
-            ],
+            'items': [{'id': m.id, 'name': m.name} for m in active_models if m.id in accessible_model_ids],
             'total': len(active_models),
         },
         'knowledge': {
-            'items': [
-                {'id': k.id, 'name': k.name}
-                for k in all_knowledge
-                if k.id in accessible_knowledge_ids
-            ],
+            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.id in accessible_knowledge_ids],
             'total': len(all_knowledge),
         },
         'tools': {
-            'items': [
-                {'id': t.id, 'name': t.name}
-                for t in all_tools
-                if t.id in accessible_tool_ids
-            ],
+            'items': [{'id': t.id, 'name': t.name} for t in all_tools if t.id in accessible_tool_ids],
             'total': len(all_tools),
         },
     }
