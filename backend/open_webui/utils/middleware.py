@@ -3374,13 +3374,20 @@ async def outlet_filter_handler(ctx):
                     outlet_message_id = message.get('id')
                     if outlet_message_id and outlet_message_id in messages_map:
                         original_message = messages_map[outlet_message_id]
-                        if original_message.get('content') != message.get('content'):
+                        content_changed = original_message.get('content') != message.get('content')
+                        output_changed = message.get('output') and message.get('output') != original_message.get('output')
+                        if content_changed or output_changed:
+                            # If output was modified, re-derive content from it
+                            new_content = message.get('content', original_message.get('content', ''))
+                            if output_changed:
+                                new_content = serialize_output(message['output'])
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 chat_id,
                                 outlet_message_id,
                                 {
-                                    'content': message['content'],
+                                    'content': new_content,
                                     'originalContent': original_message.get('content'),
+                                    **({'output': message['output']} if output_changed else {}),
                                 },
                             )
 
