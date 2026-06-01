@@ -672,6 +672,14 @@ PASSWORD_VALIDATION_HINT = os.getenv('PASSWORD_VALIDATION_HINT', '')
 BYPASS_MODEL_ACCESS_CONTROL = os.getenv('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
 BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', 'False').lower() == 'true'
 
+# When True, collection names that do not match any known file-*, user-memory-*,
+# web-search-*, or knowledge-base collection are allowed through access control
+# for non-admin users.  When False (default), unknown collection names are
+# denied — closing the legacy unscoped namespace.
+ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = (
+    os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
+)
+
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
 # the upstream provider handles these steps or when ffmpeg is unavailable.

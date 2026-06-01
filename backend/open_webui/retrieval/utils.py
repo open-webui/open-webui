@@ -31,6 +31,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     BYPASS_RETRIEVAL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
     OFFLINE_MODE,
 )
 from open_webui.models.access_grants import AccessGrants
@@ -1097,8 +1098,10 @@ async def filter_accessible_collections(
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
                           via Knowledges.check_access_by_user_id; if no
-                          such KB exists, the name is treated as an
-                          ephemeral/legacy collection and allowed
+                          such KB exists, denied by default.  When
+                          ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS is True,
+                          the name is treated as a legacy/ephemeral
+                          collection and allowed.
     """
     # Applied before the admin bypass — malformed names should never reach the vector store.
     safe_names = {n for n in collection_names if _is_safe_collection_name(n)}
@@ -1134,11 +1137,13 @@ async def filter_accessible_collections(
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.
             # If it IS a KB, enforce access control.  If no such KB
-            # exists, treat it as a non-sensitive collection (e.g. legacy
-            # model knowledge, process_text SHA256 collections) and allow.
+            # exists, the behaviour depends on
+            # ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS:
+            #   False (default) — deny (closes the unscoped namespace)
+            #   True  — allow (preserves legacy behaviour)
             if await Knowledges.check_access_by_user_id(name, user.id, permission=access_type):
                 validated.add(name)
-            elif not await Knowledges.get_knowledge_by_id(name):
+            elif ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS and not await Knowledges.get_knowledge_by_id(name):
                 # Not a KB at all — legacy/ephemeral collection, allow
                 validated.add(name)
     return validated
