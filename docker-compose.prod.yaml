@@ -1,0 +1,121 @@
+# ============================================================
+#  生产编排：PostgreSQL + Redis + 安全硬化的 Open WebUI
+#  启动： docker compose -f docker-compose.prod.yaml up -d
+#  密钥从同目录 .env 读取（compose 自动加载）
+# ============================================================
+
+services:
+  # ---------- 主业务库（替代默认 SQLite）----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: owui-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openwebui
+      POSTGRES_USER: openwebui
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 未在 .env 设置}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # 不发布端口到宿主机，只在 compose 内网可达
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwebui -d openwebui"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- 缓存 / 令牌吊销 / WebSocket 横向扩展 ----------
+  redis:
+    image: redis:7-alpine
+    container_name: owui-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD 未在 .env 设置}
+      - --appendonly
+      - "yes"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- Open WebUI ----------
+  open-webui:
+    # 从本地 fork 源码构建（你改了代码会生效）；
+    # 若未改代码、想直接拉官方预构建镜像加速：注释掉 build:，保留 image: 即可。
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-main}
+    container_name: owui-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # 仅绑定到宿主机回环，公网由反向代理（nginx/caddy，443/TLS）转发到这里
+    ports:
+      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      # ===== 数据库 =====
+      DATABASE_URL: postgresql://openwebui:${POSTGRES_PASSWORD}@postgres:5432/openwebui
+      DATABASE_POOL_SIZE: "10"
+      DATABASE_POOL_MAX_OVERFLOW: "20"
+      DATABASE_POOL_TIMEOUT: "30"
+
+      # ===== Redis（缓存 + 令牌吊销 + WebSocket）=====
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      WEBSOCKET_MANAGER: redis
+      WEBSOCKET_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      ENABLE_WEBSOCKET_SUPPORT: "true"
+
+      # ===== 核心安全密钥（覆盖硬编码默认 t0p-s3cr3t）=====
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?WEBUI_SECRET_KEY 未在 .env 设置}
+
+      # ===== 认证 / 注册（在全新 DB 上首次启动即按此初始化）=====
+      WEBUI_AUTH: "true"
+      ENABLE_SIGNUP: "false"          # 关闭公开注册，防陌生人白嫖
+      DEFAULT_USER_ROLE: pending      # 万一开放注册，新号也需管理员审批
+      ENABLE_LOGIN_FORM: "true"
+      ENABLE_API_KEYS: "false"        # 不用 API key 调用就关掉，减小面
+      ENABLE_PASSWORD_VALIDATION: "true"
+      JWT_EXPIRES_IN: 8h              # 默认 4w 太长，配合 Redis 可即时吊销
+
+      # ===== 首次启动自动建管理员（无用户时才生效）=====
+      WEBUI_ADMIN_EMAIL: ${WEBUI_ADMIN_EMAIL:-}
+      WEBUI_ADMIN_PASSWORD: ${WEBUI_ADMIN_PASSWORD:-}
+      WEBUI_ADMIN_NAME: Admin
+
+      # ===== Cookie / CORS / 反代（必须配合前面的 TLS 反向代理）=====
+      WEBUI_SESSION_COOKIE_SECURE: "true"
+      WEBUI_SESSION_COOKIE_SAME_SITE: strict
+      WEBUI_AUTH_COOKIE_SECURE: "true"
+      WEBUI_AUTH_COOKIE_SAME_SITE: strict
+      CORS_ALLOW_ORIGIN: ${WEBUI_URL:-*}
+      WEBUI_URL: ${WEBUI_URL:-}
+      # open-webui 只监听 127.0.0.1，外部仅反代可达，故信任转发头
+      FORWARDED_ALLOW_IPS: "*"
+
+      # ===== 上游中转（指向 new-api）=====
+      ENABLE_OPENAI_API: "true"
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ENABLE_OLLAMA_API: "false"
+
+      # ===== 关闭遥测 =====
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+
+volumes:
+  postgres-data: {}
+  redis-data: {}
+  open-webui-data: {}

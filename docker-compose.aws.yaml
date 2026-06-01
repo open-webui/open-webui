@@ -1,0 +1,104 @@
+# ============================================================
+#  AWS 服务器用：拉官方预构建镜像（不在机器上从源码构建）
+#  与 docker-compose.prod.yaml 唯一区别：open-webui 用 image 直接拉取，去掉 build
+#  启动： docker compose -f docker-compose.aws.yaml up -d
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: owui-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"   # 仅宿主机本地，供 Navicat 经 SSH 隧道连接；不进安全组/公网
+    environment:
+      POSTGRES_DB: openwebui
+      POSTGRES_USER: openwebui
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 未在 .env 设置}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwebui -d openwebui"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: owui-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD 未在 .env 设置}
+      - --appendonly
+      - "yes"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG:-main}
+    container_name: owui-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
+    volumes:
+      - open-webui-data:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      DATABASE_URL: postgresql://openwebui:${POSTGRES_PASSWORD}@postgres:5432/openwebui
+      DATABASE_POOL_SIZE: "10"
+      DATABASE_POOL_MAX_OVERFLOW: "20"
+      DATABASE_POOL_TIMEOUT: "30"
+
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      WEBSOCKET_MANAGER: redis
+      WEBSOCKET_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      ENABLE_WEBSOCKET_SUPPORT: "true"
+
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?WEBUI_SECRET_KEY 未在 .env 设置}
+
+      WEBUI_AUTH: "true"
+      ENABLE_SIGNUP: "false"
+      DEFAULT_USER_ROLE: pending
+      ENABLE_LOGIN_FORM: "true"
+      ENABLE_API_KEYS: "false"
+      ENABLE_PASSWORD_VALIDATION: "true"
+      JWT_EXPIRES_IN: 8h
+
+      WEBUI_ADMIN_EMAIL: ${WEBUI_ADMIN_EMAIL:-}
+      WEBUI_ADMIN_PASSWORD: ${WEBUI_ADMIN_PASSWORD:-}
+      WEBUI_ADMIN_NAME: Admin
+
+      WEBUI_SESSION_COOKIE_SECURE: "true"
+      WEBUI_SESSION_COOKIE_SAME_SITE: strict
+      WEBUI_AUTH_COOKIE_SECURE: "true"
+      WEBUI_AUTH_COOKIE_SAME_SITE: strict
+      CORS_ALLOW_ORIGIN: ${WEBUI_URL:-*}
+      WEBUI_URL: ${WEBUI_URL:-}
+      FORWARDED_ALLOW_IPS: "*"
+
+      ENABLE_OPENAI_API: "true"
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ENABLE_OLLAMA_API: "false"
+
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+
+volumes:
+  postgres-data: {}
+  redis-data: {}
+  open-webui-data: {}
