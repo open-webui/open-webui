@@ -110,7 +110,7 @@ dependencies = [
     "pydub==0.25.1",
     "ddgs==9.11.3",
 
-    "google-api-python-client==2.193.0",
+    "google-api-python-client==2.197.0",
     "google-auth-httplib2==0.3.0",
     "google-auth-oauthlib==1.3.0",
 
