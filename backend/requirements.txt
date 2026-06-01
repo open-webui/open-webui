@@ -126,7 +126,7 @@ boto3==1.42.62
 # mariadb==1.1.14 should be added if you want to support MariaDB
 
 pymilvus==2.6.9
-qdrant-client==1.17.0
+qdrant-client==1.18.0
 playwright==1.58.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
 elasticsearch==9.3.0
 pinecone==6.0.2
