@@ -10,7 +10,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, Sequence, Union
+from typing import Callable, Iterator, Optional, Sequence, Union
 
 import tiktoken
 from fastapi import (
@@ -1291,20 +1291,43 @@ def merge_docs_to_target_size(
     Attempts to grow small chunks up to a desired minimum size,
     without exceeding the maximum size or crossing source/file
     boundaries.
-    """
-    min_chunk_size_target = request.app.state.config.CHUNK_MIN_SIZE_TARGET
-    max_chunk_size = request.app.state.config.CHUNK_SIZE
 
-    if min_chunk_size_target <= 0:
+    Uses forward merging first (absorb the next chunk), then
+    backward merging (append into the previous emitted chunk)
+    for undersized chunks that can't grow forward.
+    """
+    min_size = request.app.state.config.CHUNK_MIN_SIZE_TARGET
+    max_size = request.app.state.config.CHUNK_SIZE
+
+    if min_size <= 0:
         return chunks
 
-    measure_chunk_size = len
+    measure: Callable[[str], int] = len
     if request.app.state.config.TEXT_SPLITTER == 'token':
         encoding = tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-        measure_chunk_size = lambda text: len(encoding.encode(text))
+        measure = lambda text: len(encoding.encode(text))
 
-    processed_chunks: list[Document] = []
+    def _merge_backward(result: list[Document], content: str, chunk: Document) -> bool:
+        """Try to append content into the last emitted chunk. Returns True on success."""
+        if not result:
+            return False
+        prev = result[-1]
+        if not can_merge_chunks(prev, chunk):
+            return False
+        merged = f"{prev.page_content}\n\n{content}"
+        if measure(merged) > max_size:
+            return False
+        result[-1] = Document(page_content=merged, metadata={**prev.metadata})
+        return True
 
+    def _emit(result: list[Document], content: str, chunk: Document) -> None:
+        """Emit a chunk, trying backward merge first if it's undersized."""
+        is_undersized = measure(content) < min_size
+        if is_undersized and _merge_backward(result, content, chunk):
+            return
+        result.append(Document(page_content=content, metadata={**chunk.metadata}))
+
+    result: list[Document] = []
     current_chunk: Document | None = None
     current_content: str = ''
 
@@ -1312,37 +1335,27 @@ def merge_docs_to_target_size(
         if current_chunk is None:
             current_chunk = next_chunk
             current_content = next_chunk.page_content
-            continue  # First chunk initialization
+            continue
 
-        proposed_content = f'{current_content}\n\n{next_chunk.page_content}'
-
-        can_merge = (
+        # Forward merge: absorb next chunk into current if undersized and fits
+        merged_content = f'{current_content}\n\n{next_chunk.page_content}'
+        can_merge_forward = (
             can_merge_chunks(current_chunk, next_chunk)
-            and measure_chunk_size(current_content) < min_chunk_size_target
-            and measure_chunk_size(proposed_content) <= max_chunk_size
+            and measure(current_content) < min_size
+            and measure(merged_content) <= max_size
         )
 
-        if can_merge:
-            current_content = proposed_content
+        if can_merge_forward:
+            current_content = merged_content
         else:
-            processed_chunks.append(
-                Document(
-                    page_content=current_content,
-                    metadata={**current_chunk.metadata},
-                )
-            )
+            _emit(result, current_content, current_chunk)
             current_chunk = next_chunk
             current_content = next_chunk.page_content
 
     if current_chunk is not None:
-        processed_chunks.append(
-            Document(
-                page_content=current_content,
-                metadata={**current_chunk.metadata},
-            )
-        )
+        _emit(result, current_content, current_chunk)
 
-    return processed_chunks
+    return result
 
 
 def save_docs_to_vector_db(
