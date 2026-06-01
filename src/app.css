@@ -53,6 +53,29 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 	}
 }
 
+/* 2-column prompt suggestions grid */
+#chat-pane [role="list"] {
+	display: grid !important;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.5rem;
+	max-width: 48rem;
+	margin: 0 auto;
+}
+
+#chat-pane [role="list"] button[role="listitem"] {
+	margin: 0.25rem 0 !important;
+}
+
+/* Move input box closer to prompts */
+#chat-pane .flex.items-center.h-full {
+	align-items: flex-start !important;
+	padding-top: 2rem !important;
+}
+
+#chat-pane .translate-y-1 {
+	transform: none !important;
+}
+
 /* 1. Primary Buttons: Mocha Color (#6D3B07) */
 button.bg-black,
 button.bg-gray-800,
