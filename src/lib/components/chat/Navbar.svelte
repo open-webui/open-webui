@@ -253,11 +253,12 @@
 								}
 							}}
 						>
-							<div
+							<button
+								type="button"
 								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center">
-									<span class="sr-only">{$i18n.t('User menu')}</span>
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class="size-6 object-cover rounded-full"
@@ -265,7 +266,7 @@
 										draggable="false"
 									/>
 								</div>
-							</div>
+							</button>
 						</UserMenu>
 					{/if}
 				</div>
