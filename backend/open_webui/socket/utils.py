@@ -239,6 +239,11 @@ class YdocManager:
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.sadd(redis_key, user_id)
+            # Maintain a per-session reverse index so disconnect cleanup
+            # can look up only the documents this session joined, instead
+            # of issuing a cluster-wide SCAN over the entire keyspace.
+            session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
+            await self._redis.sadd(session_key, document_id)
         else:
             if document_id not in self._users:
                 self._users[document_id] = set()
@@ -250,22 +255,31 @@ class YdocManager:
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.srem(redis_key, user_id)
+            # Keep the reverse index in sync.
+            session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
+            await self._redis.srem(session_key, document_id)
         else:
             if document_id in self._users and user_id in self._users[document_id]:
                 self._users[document_id].remove(user_id)
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            keys = []
-            async for key in self._redis.scan_iter(match=f'{self._redis_key_prefix}:*', count=100):
-                keys.append(key)
-            for key in keys:
-                if key.endswith(':users'):
-                    await self._redis.srem(key, user_id)
+            # Use the per-session reverse index instead of a cluster-wide
+            # SCAN.  This set contains only the document IDs that this
+            # session actually joined, so the cost is proportional to
+            # the session's footprint — not the total number of documents.
+            session_key = f'{self._redis_key_prefix}:session:{user_id}:documents'
+            document_ids = await self._redis.smembers(session_key)
 
-                    document_id = key.split(':')[-2]
-                    if len(await self.get_users(document_id)) == 0:
-                        await self.clear_document(document_id)
+            for document_id in document_ids:
+                users_key = f'{self._redis_key_prefix}:{document_id}:users'
+                await self._redis.srem(users_key, user_id)
+
+                if len(await self.get_users(document_id)) == 0:
+                    await self.clear_document(document_id)
+
+            # Clean up the reverse index itself.
+            await self._redis.delete(session_key)
 
         else:
             for document_id in list(self._users.keys()):
