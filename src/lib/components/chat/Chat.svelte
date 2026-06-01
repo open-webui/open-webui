@@ -184,6 +184,19 @@
 		navigateHandler();
 	}
 
+	// When navigating away from a chat to a brand-new conversation (chatIdProp
+	// becomes ''), the `$: if (chatIdProp)` block above does not fire, so
+	// navigateHandler() — which marks the previous chat as read — is never called.
+	// Track the previous value and emit last_read_at when transitioning to no-chat.
+	let prevChatIdProp = chatIdProp;
+	$: {
+		const prev = prevChatIdProp;
+		prevChatIdProp = chatIdProp;
+		if (!chatIdProp && prev && $chatId && !$temporaryChatEnabled) {
+			updateLastReadAt($chatId);
+		}
+	}
+
 	let saveControlsTimer;
 	$: if (!loading && !$temporaryChatEnabled && $chatId && params && chatFiles) {
 		clearTimeout(saveControlsTimer);
