@@ -26,7 +26,7 @@ python-mimeparse==2.0.0
 
 sqlalchemy[asyncio]==2.0.48
 aiosqlite==0.21.0
-psycopg[binary]==3.2.9
+psycopg[binary]==3.3.4
 alembic==1.18.4
 peewee==3.19.0
 peewee-migrate==1.14.3
