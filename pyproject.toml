@@ -25,7 +25,7 @@ dependencies = [
     "async-timeout==5.0.1",
     "aiocache==0.12.3",
     "aiofiles==25.1.0",
-    "starlette-compress==1.7.0",
+    "starlette-compress==1.7.1",
     "Brotli==1.2.0",
     "brotlicffi==1.2.0.1",
     "httpx[socks,http2,zstd,cli,brotli]==0.28.1",
