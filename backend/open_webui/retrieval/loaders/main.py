@@ -455,6 +455,16 @@ class Loader:
                 or file_ext == 'docx'
             ):
                 loader = Docx2txtLoader(file_path)
+            elif file_ext == 'doc' or file_content_type == 'application/msword':
+                try:
+                    from langchain_community.document_loaders import UnstructuredWordDocumentLoader
+
+                    loader = UnstructuredWordDocumentLoader(file_path)
+                except ImportError:
+                    raise ValueError(
+                        "Processing .doc files requires the 'unstructured' package. "
+                        'Install it with: pip install unstructured'
+                    )
             elif file_content_type in [
                 'application/vnd.ms-excel',
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
