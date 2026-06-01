@@ -1077,6 +1077,18 @@ class OAuthManager:
                 log.warning(f'No OAuth session found for user {user_id}, session {session_id}')
                 return None
 
+            # Guard: MCP-provider sessions must be refreshed by
+            # oauth_client_manager, not the SSO OAuthManager.  If one
+            # reaches here (e.g. via a stale cookie), bail out early
+            # instead of attempting a refresh that will fail and delete
+            # the session (#24618).
+            if (session.provider or '').startswith('mcp:'):
+                log.debug(
+                    f'Skipping MCP session {session.id} (provider={session.provider}) '
+                    f'in SSO OAuthManager — handled by oauth_client_manager'
+                )
+                return None
+
             if (
                 force_refresh
                 or session.expires_at is None
