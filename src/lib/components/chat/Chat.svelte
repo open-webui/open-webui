@@ -2159,22 +2159,24 @@
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
 
-			scrollToBottom();
-			await sendMessageSocket(
-				primaryModel,
-				messages && messages.length > 0
-					? messages
-					: createMessagesList(_history, primaryResponseMessageId),
-				_history,
-				primaryResponseMessageId,
-				_chatId,
-				{
-					messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
-					regenerationPrompt
-				}
-			);
-
-			if (chatEventEmitter) clearInterval(chatEventEmitter);
+			try {
+				scrollToBottom();
+				await sendMessageSocket(
+					primaryModel,
+					messages && messages.length > 0
+						? messages
+						: createMessagesList(_history, primaryResponseMessageId),
+					_history,
+					primaryResponseMessageId,
+					_chatId,
+					{
+						messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
+						regenerationPrompt
+					}
+				);
+			} finally {
+				if (chatEventEmitter) clearInterval(chatEventEmitter);
+			}
 		}
 	};
 
