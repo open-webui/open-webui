@@ -2243,18 +2243,18 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
 
 
 def strip_skill_mentions(messages: list[dict]) -> None:
-    """Strip <$skillId|label> mention tags from message content in-place."""
-    strip_re = re.compile(r'<\$[^>]+>')
+    """Replace <$skillId|label> mention tags with the label in message content in-place."""
+    strip_re = re.compile(r'<\$[^|>]+\|?([^>]*)>')
     for message in messages:
         content = message.get('content')
         if isinstance(content, str) and strip_re.search(content):
-            message['content'] = strip_re.sub('', content).strip()
+            message['content'] = strip_re.sub(r'\1', content).strip()
         elif isinstance(content, list):
             for part in content:
                 if isinstance(part, dict) and part.get('type') == 'text':
                     text = part.get('text', '')
                     if strip_re.search(text):
-                        part['text'] = strip_re.sub('', text).strip()
+                        part['text'] = strip_re.sub(r'\1', text).strip()
 
 
 
@@ -2667,6 +2667,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     strip_skill_mentions(form_data.get('messages', []))
 
     prompt = get_last_user_message(form_data['messages'])
+
+    # Guard against empty user message after skill mention stripping.
+    # When a user selects a skill ($skill-name) without typing additional text,
+    # the stripped result is an empty string which causes 400 errors on providers
+    # that reject empty content blocks (e.g. AWS Bedrock ConverseStream).
+    if not prompt or not prompt.strip():
+        fallback = ', '.join(s.name for s in available_skills)
+        if fallback:
+            set_last_user_message_content(fallback, form_data['messages'])
+            prompt = fallback
     # TODO: re-enable URL extraction from prompt
     # urls = []
     # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
