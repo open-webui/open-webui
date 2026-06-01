@@ -46,7 +46,7 @@ tiktoken==0.12.0
 mcp==1.26.0
 
 openai==2.29.0
-anthropic==0.86.0
+anthropic==0.105.2
 google-genai==1.66.0
 
 langchain==1.2.10
