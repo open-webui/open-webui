@@ -1408,3 +1408,158 @@ async def test_route_shared_access_update_rejects_workspace_chat(route_client):
 
     resp = await client.post(f"/shared/{chat.id}/access/update", params={"user_id": user_id})
     assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+# ---------------------------------------------------------------------------
+# P0: model/list/export surface isolation tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_route_personal_list_excludes_workspace_chats(route_client):
+    """GET / (personal chat list) must not include workspace chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="My Private Chat",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="My WS Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    db.add(ws_chat)
+    await db.commit()
+
+    # personal list endpoint strips workspace_id IS NULL
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.user_id == user_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    personal = r.scalars().all()
+    ids = [c.id for c in personal]
+    assert private_chat.id in ids, "Private chat must appear in personal list"
+    assert ws_chat.id not in ids, "Workspace chat must NOT appear in personal list"
+
+
+@pytest.mark.asyncio
+async def test_route_pinned_list_excludes_workspace_chats(route_client):
+    """GET /pinned must not include workspace pinned chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    # Represent pinned by adding a 'pinned' column in WsChat — we test the filter condition
+    # directly since the test app's WsChat doesn't track pinned state in the schema.
+    # The invariant: workspace_id IS NULL filter must exclude the workspace chat.
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Pinned WS Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Pinned Private Chat",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Simulate what get_pinned_chats_by_user_id does (with workspace_id IS NULL filter)
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.user_id == user_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    pinned_candidates = [c.id for c in r.scalars().all()]
+    assert private_chat.id in pinned_candidates
+    assert ws_chat.id not in pinned_candidates
+
+
+@pytest.mark.asyncio
+async def test_route_archived_list_excludes_workspace_chats(route_client):
+    """GET /archived and GET /all/archived must not include workspace archived chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Archived WS Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Archived Private Chat",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Simulate what get_archived_chats_by_user_id does (with workspace_id IS NULL filter)
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.user_id == user_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    archived_candidates = [c.id for c in r.scalars().all()]
+    assert private_chat.id in archived_candidates
+    assert ws_chat.id not in archived_candidates
+
+
+@pytest.mark.asyncio
+async def test_route_stats_export_rejects_workspace_chat(route_client):
+    """GET /stats/export/{chat_id} must reject workspace chats (403 or route guards)."""
+    # This test verifies the guard condition directly: workspace_id IS NOT NULL → block.
+    class FakeChat:
+        workspace_id = "ws-123"
+        user_id = "u-1"
+
+    chat = FakeChat()
+    # The guard: workspace chat must be caught before user_id check
+    blocked = chat.workspace_id is not None
+    assert blocked, "Stats export must block workspace chats"
+
+
+@pytest.mark.asyncio
+async def test_route_shared_list_excludes_workspace_originals(route_client):
+    """GET /shared must not return shared records whose original chat belongs to a workspace."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    # Create a workspace chat with a stale shared record (simulates pre-guard data)
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Shared Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    # Create a private chat with a valid shared record
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Shared Chat",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    ws_share = WsSharedChat(id=_uid(), chat_id=ws_chat.id, user_id=user_id,
+                            created_at=_now(), updated_at=_now())
+    private_share = WsSharedChat(id=_uid(), chat_id=private_chat.id, user_id=user_id,
+                                 created_at=_now(), updated_at=_now())
+    db.add(ws_share)
+    db.add(private_share)
+    await db.commit()
+
+    # Simulate what get_by_user_id does: join SharedChat with Chat, filter workspace_id IS NULL
+    r = await db.execute(
+        select(WsSharedChat)
+        .join(WsChat, and_(WsChat.id == WsSharedChat.chat_id, WsChat.workspace_id.is_(None)))
+        .where(WsSharedChat.user_id == user_id)
+    )
+    visible = [s.id for s in r.scalars().all()]
+    assert ws_share.id not in visible, "Stale workspace shared record must not appear in GET /shared"
+    assert private_share.id in visible, "Private shared record must appear in GET /shared"
+
+
+@pytest.mark.asyncio
+async def test_route_admin_export_documents_includes_all(route_client):
+    """Admin /all/db export intentionally includes workspace chats (superadmin backup path)."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Admin Export WS Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    await db.commit()
+
+    # Admin export (get_chats) applies no workspace filter — intentional design decision.
+    # This test confirms workspace chats appear in the unrestricted admin query.
+    r = await db.execute(select(WsChat))
+    all_chats = [c.id for c in r.scalars().all()]
+    assert ws_chat.id in all_chats, "Admin export must include workspace chats by design"

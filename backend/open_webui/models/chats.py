@@ -755,9 +755,10 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
+            # Company custom: Team Workspaces V1 — exclude workspace chats from personal archived list
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(
                 user_id=user_id, archived=True
-            )
+            ).filter(Chat.workspace_id.is_(None))
 
             if filter:
                 query_key = filter.get('query')
@@ -1050,7 +1051,8 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> ChatListResponse:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat).filter_by(user_id=user_id)
+            # Company custom: Team Workspaces V1 — exclude workspace chats from all personal surfaces
+            stmt = select(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
 
             if filter:
                 if filter.get('updated_at'):
@@ -1096,6 +1098,8 @@ class ChatTable:
             result = await db.execute(
                 select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
+                # Company custom: Team Workspaces V1 — exclude workspace chats from personal pinned list
+                .filter(Chat.workspace_id.is_(None))
                 .order_by(Chat.updated_at.desc())
             )
             all_chats = result.all()
@@ -1115,7 +1119,10 @@ class ChatTable:
     async def get_archived_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
+                # Company custom: Team Workspaces V1 — exclude workspace chats from personal archived list
+                select(Chat).filter_by(user_id=user_id, archived=True)
+                .filter(Chat.workspace_id.is_(None))
+                .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
 

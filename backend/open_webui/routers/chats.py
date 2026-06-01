@@ -541,6 +541,16 @@ async def export_single_chat_stats(
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
 
+        # Company custom: Team Workspaces V1 — stats export is a personal/community-sharing
+        # surface. Workspace chats are rejected here regardless of membership, because:
+        # (a) workspace data belongs to the workspace, not the individual's export corpus,
+        # (b) workspace access is governed by assert_chat_read_allowed on workspace routes.
+        if chat.workspace_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
         # Verify the chat belongs to the user (unless admin)
         if chat.user_id != user.id and user.role != 'admin':
             raise HTTPException(
@@ -831,6 +841,13 @@ async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = 
 
 @router.get('/all/db', response_model=list[ChatResponse])
 async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    # Company custom: Team Workspaces V1 — INTENTIONAL DESIGN DECISION (Option 1):
+    # This endpoint is a superadmin-only full-database backup/restore path gated by
+    # ENABLE_ADMIN_EXPORT. It exports ALL chats, including workspace chats, by design.
+    # Rationale: a DB backup must be complete. Normal platform admins cannot reach this
+    # endpoint without the flag being explicitly set by the operator.
+    # If the deploying team later requires workspace chats to be excluded from admin export,
+    # add a `.filter(Chat.workspace_id.is_(None))` to Chats.get_chats().
     if not ENABLE_ADMIN_EXPORT:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
