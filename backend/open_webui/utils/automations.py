@@ -500,9 +500,14 @@ async def _check_calendar_alerts(app) -> None:
 
     now_ns = int(time.time_ns())
     default_lookahead_ns = CALENDAR_ALERT_LOOKAHEAD_MINUTES * 60 * 1_000_000_000
+    # Grace window covers one poll cycle + jitter so "At time of event"
+    # alerts (alert_minutes=0) are not missed.
+    grace_ns = (SCHEDULER_POLL_INTERVAL + 5) * 1_000_000_000
 
     async with get_async_db() as db:
-        upcoming = await CalendarEvents.get_upcoming_events(now_ns, default_lookahead_ns, db=db)
+        upcoming = await CalendarEvents.get_upcoming_events(
+            now_ns, default_lookahead_ns, grace_ns=grace_ns, db=db
+        )
 
     if not upcoming:
         return
