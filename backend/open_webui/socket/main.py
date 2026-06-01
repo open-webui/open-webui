@@ -898,6 +898,12 @@ async def _make_channel_emitter(request_info):
 
 
 async def get_event_emitter(request_info, update_db=True):
+    # Company custom: Team Workspaces V1 — security note.
+    # `request_info` is constructed server-side by the completions pipeline in main.py
+    # after workspace write-access has been verified.  WebSocket clients cannot call
+    # this function directly; they can only receive socket events emitted to their own
+    # room.  The DB mutations below (upsert_message_to_chat_by_id_and_message_id etc.)
+    # are therefore already covered by the workspace permission checks in main.py.
     # Channel mode: route pipeline output to channel message updates
     if request_info.get('chat_id', '').startswith('channel:'):
         return await _make_channel_emitter(request_info)

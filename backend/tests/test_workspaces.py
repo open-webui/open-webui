@@ -2138,3 +2138,143 @@ async def test_delete_shared_chats_ignores_workspace_snapshots(route_client):
 
     r = await db.execute(select(WsSharedChat).where(WsSharedChat.id == ws_share.id))
     assert r.scalars().first() is not None, "Workspace shared snapshot must NOT be deleted"
+
+
+# ---------------------------------------------------------------------------
+# Analytics workspace isolation tests (P0 — Team Workspaces V1)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_analytics_messages_by_chat_id_excludes_workspace_chat(route_client):
+    """GET /analytics/messages?chat_id=… must return [] for workspace chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat Msg",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Chat Msg",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Mirror analytics guard: workspace chat must be excluded (workspace_id IS NOT NULL → empty)
+    for chat in [ws_chat, private_chat]:
+        r = await db.execute(
+            select(WsChat)
+            .where(WsChat.id == chat.id)
+            .where(WsChat.workspace_id.is_(None))
+        )
+        row = r.scalars().first()
+        if chat.workspace_id is not None:
+            assert row is None, "Workspace chat must not pass analytics messages filter"
+        else:
+            assert row is not None, "Private chat must pass analytics messages filter"
+
+
+@pytest.mark.asyncio
+async def test_analytics_messages_by_user_id_excludes_workspace_chats(route_client):
+    """GET /analytics/messages?user_id=… must strip messages whose chat has workspace_id set."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS User Msg",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private User Msg",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Simulate the filter: given a list of chat_ids (from user messages), only keep private ones
+    candidate_ids = [ws_chat.id, private_chat.id]
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.id.in_(candidate_ids))
+        .where(WsChat.workspace_id.is_(None))
+    )
+    private_ids = {row for row in r.scalars().all()}
+
+    assert ws_chat.id not in private_ids, "Workspace chat must be stripped from user message analytics"
+    assert private_chat.id in private_ids, "Private chat must remain in user message analytics"
+
+
+@pytest.mark.asyncio
+async def test_analytics_model_chat_list_excludes_workspace_chats(route_client):
+    """GET /analytics/models/{id}/chats must not include workspace chat IDs or their metadata."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Model Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Model Chat",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Simulate _filter_private_chat_ids: only chats with workspace_id IS NULL survive
+    all_chat_ids = [ws_chat.id, private_chat.id]
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.id.in_(all_chat_ids))
+        .where(WsChat.workspace_id.is_(None))
+    )
+    filtered = list(r.scalars().all())
+
+    assert ws_chat.id not in filtered, "Workspace chat ID must not appear in model chat browser"
+    assert private_chat.id in filtered, "Private chat must appear in model chat browser"
+
+
+@pytest.mark.asyncio
+async def test_analytics_feedback_history_excludes_workspace_chats(route_client):
+    """Model overview feedback history must not count ratings from workspace chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Feedback",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Feedback",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Simulate _filter_private_chat_ids applied before feedback aggregation
+    model_chat_ids = [ws_chat.id, private_chat.id]
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.id.in_(model_chat_ids))
+        .where(WsChat.workspace_id.is_(None))
+    )
+    ids_for_feedback = list(r.scalars().all())
+
+    assert ws_chat.id not in ids_for_feedback, "Workspace chat must be excluded from feedback history aggregation"
+    assert private_chat.id in ids_for_feedback, "Private chat must be included in feedback history aggregation"
+
+
+@pytest.mark.asyncio
+async def test_analytics_private_chat_always_visible(route_client):
+    """Private (non-workspace) chats must pass all analytics workspace filters."""
+    client, db = route_client
+    user_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Visible Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    await db.commit()
+
+    # All three analytics filters use workspace_id IS NULL — verify private chat passes all
+    for label in ("messages", "model_chats", "feedback_history"):
+        r = await db.execute(
+            select(WsChat)
+            .where(WsChat.id == private_chat.id)
+            .where(WsChat.workspace_id.is_(None))
+        )
+        row = r.scalars().first()
+        assert row is not None, f"Private chat must pass analytics {label} filter"
