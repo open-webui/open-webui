@@ -297,7 +297,8 @@
 					);
 
 					const uploadedFile = await uploadFile(localStorage.token, file, {
-						knowledge_id: knowledge.id
+						knowledge_id: knowledge.id,
+						directory_id: currentDirectoryId
 					}).catch((e) => {
 						toast.error(`${e}`);
 						return null;
@@ -376,6 +377,7 @@
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
+				directory_id: currentDirectoryId,
 				// If the file is an audio file, provide the language for STT.
 				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
