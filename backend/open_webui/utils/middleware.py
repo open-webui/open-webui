@@ -3070,7 +3070,10 @@ async def background_tasks_handler(ctx):
         and not metadata.get('chat_id', '').startswith('channel:')
     ):
         messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
-        message = messages_map.get(metadata['message_id']) if messages_map else None
+        if not messages_map:
+            # Chat was deleted while the response was streaming — skip background tasks
+            return
+        message = messages_map.get(metadata['message_id'])
 
         message_list = get_message_list(messages_map, metadata['message_id'])
 
