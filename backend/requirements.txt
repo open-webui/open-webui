@@ -121,7 +121,7 @@ pymongo==4.16.0
 psycopg2-binary==2.9.11
 pgvector==0.4.2
 
-PyMySQL==1.1.2
+PyMySQL==1.2.0
 boto3==1.42.62
 # mariadb==1.1.14 should be added if you want to support MariaDB
 
