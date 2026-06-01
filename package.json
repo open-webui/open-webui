@@ -60,7 +60,7 @@
 		"@floating-ui/dom": "^1.7.2",
 		"@huggingface/transformers": "^3.0.0",
 		"@joplin/turndown-plugin-gfm": "^1.0.62",
-		"@mediapipe/tasks-vision": "^0.10.17",
+		"@mediapipe/tasks-vision": "^0.10.35",
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
