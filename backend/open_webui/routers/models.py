@@ -36,6 +36,7 @@ from open_webui.models.models import (
     Models,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,6 +76,32 @@ def _safe_static_redirect_path(url: str) -> str | None:
 
 def is_valid_model_id(model_id: str) -> bool:
     return model_id and len(model_id) <= 256
+
+
+async def _verify_knowledge_file_access(
+    knowledge_items: list | None,
+    user,
+    db: AsyncSession,
+) -> None:
+    """Raise 403 if any knowledge item references a file the caller cannot read."""
+    if not knowledge_items or user.role == 'admin':
+        return
+    for item in knowledge_items:
+        if not isinstance(item, dict) or item.get('type') != 'file':
+            continue
+        file_id = item.get('id')
+        if not file_id:
+            continue
+        if not await has_access_to_file(file_id, 'read', user, db=db):
+            log.warning(
+                'knowledge file access denied: user %s cannot read file %s',
+                user.id,
+                file_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
 
 ###########################
@@ -219,6 +246,11 @@ async def create_new_model(
         )
 
     else:
+        await _verify_knowledge_file_access(
+            getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
+            user, db,
+        )
+
         form_data.access_grants = await filter_allowed_access_grants(
             request.app.state.config.USER_PERMISSIONS,
             user.id,
@@ -325,6 +357,20 @@ async def import_models(
                 model_id = model_data.get('id')
 
                 if model_id and is_valid_model_id(model_id):
+                    # Defense-in-depth: skip models referencing inaccessible files
+                    try:
+                        await _verify_knowledge_file_access(
+                            (model_data.get('meta') or {}).get('knowledge'),
+                            user, db,
+                        )
+                    except HTTPException:
+                        log.warning(
+                            'import_models: user %s skipped model %s '
+                            '(knowledge file access denied)',
+                            user.id, model_id,
+                        )
+                        continue
+
                     existing_model = existing_models.get(model_id)
                     if existing_model:
                         # Enforce ownership/write-access before allowing overwrite
@@ -613,6 +659,11 @@ async def update_model_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    await _verify_knowledge_file_access(
+        getattr(form_data.meta, 'knowledge', None) if form_data.meta else None,
+        user, db,
+    )
 
     form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
