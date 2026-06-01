@@ -164,7 +164,7 @@ all = [
     "weaviate-client==4.20.3",
     "pymilvus==2.6.9",
     "pinecone==6.0.2",
-    "oracledb==3.4.2",
+    "oracledb==4.0.1",
     "colbert-ai==0.2.22",
 
     "azure-search-documents==11.6.0",
