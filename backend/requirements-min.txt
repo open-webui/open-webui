@@ -30,7 +30,7 @@ sqlalchemy==2.0.48
 aiosqlite==0.21.0
 psycopg[binary]==3.2.9
 alembic==1.18.4
-peewee==3.19.0
+peewee==4.0.6
 peewee-migrate==1.14.3
 
 pycrdt==0.12.47
