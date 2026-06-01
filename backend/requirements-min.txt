@@ -15,7 +15,7 @@ argon2-cffi==25.1.0
 PyJWT[crypto]==2.11.0
 authlib==1.6.10
 
-requests==2.33.1
+requests==2.34.2
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
 async-timeout
 aiocache
