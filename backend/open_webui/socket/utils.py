@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 
@@ -50,6 +51,7 @@ class RedisLock:
 class RedisDict:
     def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
         self.name = name
+        self._last_signature = None
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -90,6 +92,18 @@ class RedisDict:
     def set(self, mapping: dict):
         if not mapping:
             self.redis.delete(self.name)
+            self._last_signature = None
+            return
+
+        serialized = {k: json.dumps(v) for k, v in mapping.items()}
+
+        # Skip the write when the prepared mapping is identical to the last one
+        # this instance wrote — model lists rarely change between calls, and the
+        # full HSET is the dominant Redis write source on busy multi-pod setups.
+        signature = hashlib.sha256(
+            json.dumps(serialized, sort_keys=True).encode()
+        ).hexdigest()
+        if signature == self._last_signature:
             return
 
         # Fetch existing keys before writing so we know which ones to remove.
@@ -101,9 +115,10 @@ class RedisDict:
         # HSET first (add/update all new values), then HDEL (remove stale keys).
         # We never DELETE the whole hash — this eliminates the race window
         # where concurrent readers would see an empty models dict.
-        self.redis.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+        self.redis.hset(self.name, mapping=serialized)
         if keys_to_remove:
             self.redis.hdel(self.name, *keys_to_remove)
+        self._last_signature = signature
 
     def get(self, key, default=None):
         try:

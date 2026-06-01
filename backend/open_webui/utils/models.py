@@ -28,6 +28,9 @@ from open_webui.utils.plugin import (
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+# Frozen at import so synthetic models (ollama/arena) keep a stable `created`, letting RedisDict.set() skip no-op writes.
+MODEL_CREATED = int(time.time())
+
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
@@ -36,7 +39,7 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
             'id': model['model'],
             'name': model['name'],
             'object': 'model',
-            'created': int(time.time()),
+            'created': MODEL_CREATED,
             'owned_by': 'ollama',
             'ollama': model,
             'loaded': 'expires_at' in model,
@@ -100,7 +103,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         'meta': model['meta'],
                     },
                     'object': 'model',
-                    'created': int(time.time()),
+                    'created': MODEL_CREATED,
                     'owned_by': 'arena',
                     'arena': True,
                 }
@@ -116,7 +119,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         'meta': DEFAULT_ARENA_MODEL['meta'],
                     },
                     'object': 'model',
-                    'created': int(time.time()),
+                    'created': MODEL_CREATED,
                     'owned_by': 'arena',
                     'arena': True,
                 }
