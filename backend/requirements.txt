@@ -106,7 +106,7 @@ ddgs==9.11.3
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.2
 azure-storage-blob==12.28.0
-azure-search-documents==11.6.0
+azure-search-documents==12.0.0
 
 ## Google Drive
 google-api-python-client==2.193.0

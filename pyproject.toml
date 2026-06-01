@@ -167,7 +167,7 @@ all = [
     "oracledb==3.4.2",
     "colbert-ai==0.2.22",
 
-    "azure-search-documents==11.6.0",
+    "azure-search-documents==12.0.0",
     "unstructured==0.18.31",
 ]
 
