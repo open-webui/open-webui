@@ -217,6 +217,8 @@ class YdocManager:
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.sadd(redis_key, user_id)
+            # Reverse index so disconnect can target this user's docs without a SCAN.
+            await self._redis.sadd(f'{self._redis_key_prefix}:user:{user_id}:documents', document_id)
         else:
             if document_id not in self._users:
                 self._users[document_id] = set()
@@ -228,22 +230,24 @@ class YdocManager:
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:users'
             await self._redis.srem(redis_key, user_id)
+            await self._redis.srem(f'{self._redis_key_prefix}:user:{user_id}:documents', document_id)
         else:
             if document_id in self._users and user_id in self._users[document_id]:
                 self._users[document_id].remove(user_id)
 
     async def remove_user_from_all_documents(self, user_id: str):
         if self._redis:
-            keys = []
-            async for key in self._redis.scan_iter(match=f'{self._redis_key_prefix}:*', count=100):
-                keys.append(key)
-            for key in keys:
-                if key.endswith(':users'):
-                    await self._redis.srem(key, user_id)
-
-                    document_id = key.split(':')[-2]
-                    if len(await self.get_users(document_id)) == 0:
-                        await self.clear_document(document_id)
+            # Use the per-user reverse index instead of SCANning every key.
+            # On Redis Cluster a SCAN fans out to all masters; this touches only
+            # the documents the user actually joined (none for most disconnects).
+            index_key = f'{self._redis_key_prefix}:user:{user_id}:documents'
+            document_ids = await self._redis.smembers(index_key)
+            for document_id in document_ids:
+                await self._redis.srem(f'{self._redis_key_prefix}:{document_id}:users', user_id)
+                if len(await self.get_users(document_id)) == 0:
+                    await self.clear_document(document_id)
+            if document_ids:
+                await self._redis.delete(index_key)
 
         else:
             for document_id in list(self._users.keys()):
