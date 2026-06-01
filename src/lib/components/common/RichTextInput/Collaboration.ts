@@ -35,6 +35,14 @@ export type EditorContentGetter = () => {
 	json: string;
 };
 
+type SocketPayload = {
+	document_id: string;
+	socket_id?: string;
+	update: number[];
+	state?: number[];
+	sessions?: unknown[];
+};
+
 // Custom Yjs Socket.IO provider
 export class SocketIOCollaborationProvider {
 	private readonly doc = new Y.Doc();
@@ -104,138 +112,132 @@ export class SocketIOCollaborationProvider {
 	}
 
 	private setupEventListeners() {
-		// Listen for document updates from server
-		this.socket.on('ydoc:document:update', (data) => {
-			if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
-				try {
-					const update = new Uint8Array(data.update);
-					Y.applyUpdate(this.doc, update);
-				} catch (error) {
-					console.error('Error applying Yjs update:', error);
-				}
-			}
-		});
-
-		// Listen for document state from server
-		this.socket.on('ydoc:document:state', async (data) => {
-			if (data.document_id === this.documentId) {
-				try {
-					if (data.state) {
-						const state = new Uint8Array(data.state);
-
-						if (state.length === 2 && state[0] === 0 && state[1] === 0) {
-							// Empty state, check if we have content to initialize
-							// check if editor empty as well
-							// const editor = await getEditorInstance();
-
-							const isEmptyEditor = !this.editor?.getText().trim();
-							if (isEmptyEditor && this.editor) {
-								if (this.initialContent && (data?.sessions ?? ['']).length === 1) {
-									// Check if initialContent is HTML (string) or JSON (object)
-									if (typeof this.initialContent === 'string') {
-										// HTML content - let the editor parse it, then sync to Yjs
-										this.editor.commands.setContent(this.initialContent);
-										// The Yjs plugin will automatically sync the content
-									} else {
-										// JSON content - use the existing approach
-										const editorYdoc = prosemirrorJSONToYDoc(
-											this.editor.schema,
-											this.initialContent
-										);
-										if (editorYdoc) {
-											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
-										}
-									}
-								}
-							} else {
-								// If the editor already has content, we don't need to send an empty state
-								if (this.doc.getXmlFragment('prosemirror').length > 0) {
-									this.socket.emit('ydoc:document:update', {
-										document_id: this.documentId,
-										user_id: this.user?.id,
-										socket_id: this.socket.id,
-										update: Y.encodeStateAsUpdate(this.doc)
-									});
-								} else {
-									console.warn('Yjs document is empty, not sending state.');
-								}
-							}
-						} else {
-							Y.applyUpdate(this.doc, state, 'server');
-						}
-					}
-					this.synced = true;
-				} catch (error) {
-					console.error('Error applying Yjs state:', error);
-
-					this.synced = false;
-					this.socket.emit('ydoc:document:state', {
-						document_id: this.documentId
-					});
-				}
-			}
-		});
-
-		// Listen for awareness updates
-		this.socket.on('ydoc:awareness:update', (data) => {
-			if (data.document_id === this.documentId) {
-				try {
-					const awarenessUpdate = new Uint8Array(data.update);
-					this.awareness.applyUpdate(awarenessUpdate, 'server');
-				} catch (error) {
-					console.error('Error applying awareness update:', error);
-				}
-			}
-		});
-
-		// Handle connection events
+		this.socket.on('ydoc:document:update', this.onSocketDocUpdate);
+		this.socket.on('ydoc:document:state', this.onSocketDocState);
+		this.socket.on('ydoc:awareness:update', this.onSocketAwarenessUpdate);
 		this.socket.on('connect', this.onConnect);
 		this.socket.on('disconnect', this.onDisconnect);
-
-		// Listen for document updates from Yjs
-		this.doc.on('update', async (update, origin) => {
-			if (this.editor && origin !== 'server' && this.isConnected) {
-				await tick(); // Ensure the DOM is updated before sending
-				this.socket.emit('ydoc:document:update', {
-					document_id: this.documentId,
-					user_id: this.user?.id,
-					socket_id: this.socket.id,
-					update: Array.from(update),
-					data: {
-						content: this.editorContentGetter?.() ?? {
-							md: '',
-							html: '',
-							json: ''
-						}
-					}
-				});
-			}
-		});
-
-		// Listen for awareness updates from Yjs
-		this.awareness.on(
-			'change',
-			(
-				{ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] },
-				origin: string
-			) => {
-				if (origin !== 'server' && this.isConnected) {
-					const changedClients = added.concat(updated).concat(removed);
-					const awarenessUpdate = this.awareness.encodeUpdate(changedClients);
-					this.socket.emit('ydoc:awareness:update', {
-						document_id: this.documentId,
-						user_id: this.socket.id,
-						update: Array.from(awarenessUpdate)
-					});
-				}
-			}
-		);
+		this.doc.on('update', this.onDocUpdate);
+		this.awareness.on('change', this.onAwarenessChange);
 
 		if (this.socket.connected) {
 			this.isConnected = true;
 			this.joinDocument();
 		}
 	}
+
+	// Document updates from server
+	private readonly onSocketDocUpdate = (data: SocketPayload) => {
+		if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
+			try {
+				const update = new Uint8Array(data.update);
+				Y.applyUpdate(this.doc, update);
+			} catch (error) {
+				console.error('Error applying Yjs update:', error);
+			}
+		}
+	};
+
+	// Document state from server
+	private readonly onSocketDocState = async (data: SocketPayload) => {
+		if (data.document_id === this.documentId) {
+			try {
+				if (data.state) {
+					const state = new Uint8Array(data.state);
+
+					if (state.length === 2 && state[0] === 0 && state[1] === 0) {
+						// Empty state, check if we have content to initialize
+						const isEmptyEditor = !this.editor?.getText().trim();
+						if (isEmptyEditor && this.editor) {
+							if (this.initialContent && (data?.sessions ?? ['']).length === 1) {
+								// Check if initialContent is HTML (string) or JSON (object)
+								if (typeof this.initialContent === 'string') {
+									// HTML content - let the editor parse it, then sync to Yjs
+									this.editor.commands.setContent(this.initialContent);
+								} else {
+									// JSON content - use the existing approach
+									const editorYdoc = prosemirrorJSONToYDoc(this.editor.schema, this.initialContent);
+									if (editorYdoc) {
+										Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
+									}
+								}
+							}
+						} else {
+							// If the editor already has content, we don't need to send an empty state
+							if (this.doc.getXmlFragment('prosemirror').length > 0) {
+								this.socket.emit('ydoc:document:update', {
+									document_id: this.documentId,
+									user_id: this.user?.id,
+									socket_id: this.socket.id,
+									update: Y.encodeStateAsUpdate(this.doc)
+								});
+							} else {
+								console.warn('Yjs document is empty, not sending state.');
+							}
+						}
+					} else {
+						Y.applyUpdate(this.doc, state, 'server');
+					}
+				}
+				this.synced = true;
+			} catch (error) {
+				console.error('Error applying Yjs state:', error);
+
+				this.synced = false;
+				this.socket.emit('ydoc:document:state', {
+					document_id: this.documentId
+				});
+			}
+		}
+	};
+
+	// Awareness updates from server
+	private readonly onSocketAwarenessUpdate = (data: SocketPayload) => {
+		if (data.document_id === this.documentId) {
+			try {
+				const awarenessUpdate = new Uint8Array(data.update);
+				this.awareness.applyUpdate(awarenessUpdate, 'server');
+			} catch (error) {
+				console.error('Error applying awareness update:', error);
+			}
+		}
+	};
+
+	// Local document updates from Yjs
+	private readonly onDocUpdate = async (update: Uint8Array, origin: unknown) => {
+		if (this.editor && origin !== 'server' && this.isConnected) {
+			await tick(); // Ensure the DOM is updated before sending
+			this.socket.emit('ydoc:document:update', {
+				document_id: this.documentId,
+				user_id: this.user?.id,
+				socket_id: this.socket.id,
+				update: Array.from(update),
+				data: {
+					content: this.editorContentGetter?.() ?? {
+						md: '',
+						html: '',
+						json: ''
+					}
+				}
+			});
+		}
+	};
+
+	// Local awareness updates from Yjs
+	private readonly onAwarenessChange = (
+		{ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] },
+		origin: string
+	) => {
+		if (origin !== 'server' && this.isConnected) {
+			const changedClients = added.concat(updated).concat(removed);
+			const awarenessUpdate = this.awareness.encodeUpdate(changedClients);
+			this.socket.emit('ydoc:awareness:update', {
+				document_id: this.documentId,
+				user_id: this.socket.id,
+				update: Array.from(awarenessUpdate)
+			});
+		}
+	};
 
 	private readonly onConnect = () => {
 		this.isConnected = true;
@@ -248,11 +250,14 @@ export class SocketIOCollaborationProvider {
 	};
 
 	public destroy() {
-		this.socket.off('ydoc:document:update');
-		this.socket.off('ydoc:document:state');
-		this.socket.off('ydoc:awareness:update');
+		// Pass handler refs so we only remove this provider's listeners, not others sharing the socket
+		this.socket.off('ydoc:document:update', this.onSocketDocUpdate);
+		this.socket.off('ydoc:document:state', this.onSocketDocState);
+		this.socket.off('ydoc:awareness:update', this.onSocketAwarenessUpdate);
 		this.socket.off('connect', this.onConnect);
 		this.socket.off('disconnect', this.onDisconnect);
+		this.doc.off('update', this.onDocUpdate);
+		this.awareness.off('change', this.onAwarenessChange);
 
 		if (this.isConnected) {
 			this.socket.emit('ydoc:document:leave', {
