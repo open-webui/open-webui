@@ -505,9 +505,7 @@ async def _check_calendar_alerts(app) -> None:
     grace_ns = (SCHEDULER_POLL_INTERVAL + 5) * 1_000_000_000
 
     async with get_async_db() as db:
-        upcoming = await CalendarEvents.get_upcoming_events(
-            now_ns, default_lookahead_ns, grace_ns=grace_ns, db=db
-        )
+        upcoming = await CalendarEvents.get_upcoming_events(now_ns, default_lookahead_ns, grace_ns=grace_ns, db=db)
 
     if not upcoming:
         return

@@ -36515,16 +36515,14 @@
 								Re.createElement('span', { className: 'brace-close' }, '}')
 							),
 							de.size
-								? de
-										.entrySeq()
-										.map(([s, o]) =>
-											Re.createElement(Pe, {
-												key: `${s}-${o}`,
-												propKey: s,
-												propVal: o,
-												propClass: 'property'
-											})
-										)
+								? de.entrySeq().map(([s, o]) =>
+										Re.createElement(Pe, {
+											key: `${s}-${o}`,
+											propKey: s,
+											propVal: o,
+											propClass: 'property'
+										})
+									)
 								: null
 						);
 					}
@@ -36666,16 +36664,14 @@
 									Re.createElement('span', { className: 'prop-type' }, C),
 									j && Re.createElement('span', { className: 'prop-format' }, '($', j, ')'),
 									z.size
-										? z
-												.entrySeq()
-												.map(([s, o]) =>
-													Re.createElement(ae, {
-														key: `${s}-${o}`,
-														propKey: s,
-														propVal: o,
-														propClass: ts
-													})
-												)
+										? z.entrySeq().map(([s, o]) =>
+												Re.createElement(ae, {
+													key: `${s}-${o}`,
+													propKey: s,
+													propVal: o,
+													propClass: ts
+												})
+											)
 										: null,
 									x && V.size > 0
 										? Re.createElement(pe, { extensions: V, propClass: `${ts} extension` })
@@ -58957,20 +58953,18 @@
 										Re.createElement(
 											'div',
 											{ className: 'modal-ux-content' },
-											w
-												.valueSeq()
-												.map((w, C) =>
-													Re.createElement(x, {
-														key: C,
-														AST: _,
-														definitions: w,
-														getComponent: i,
-														errSelectors: a,
-														authSelectors: s,
-														authActions: o,
-														specSelectors: u
-													})
-												)
+											w.valueSeq().map((w, C) =>
+												Re.createElement(x, {
+													key: C,
+													AST: _,
+													definitions: w,
+													getComponent: i,
+													errSelectors: a,
+													authSelectors: s,
+													authActions: o,
+													specSelectors: u
+												})
+											)
 										)
 									)
 								)
