@@ -711,7 +711,7 @@ def sanitize_data_for_db(obj):
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        if '\x00' not in json.dumps(obj, ensure_ascii=False):
+        if '\\u0000' not in json.dumps(obj, ensure_ascii=False):
             return obj
     except (TypeError, ValueError):
         pass
