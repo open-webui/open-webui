@@ -24,7 +24,7 @@ httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 
-sqlalchemy[asyncio]==2.0.48
+sqlalchemy[asyncio]==2.0.50
 aiosqlite==0.21.0
 psycopg[binary]==3.2.9
 alembic==1.18.4
