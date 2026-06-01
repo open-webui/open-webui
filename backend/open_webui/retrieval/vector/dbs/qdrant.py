@@ -216,28 +216,23 @@ class QdrantClient(VectorDBBase):
         ids: Optional[list[str]] = None,
         filter: Optional[dict] = None,
     ):
-        # Delete the items from the collection based on the ids.
-        field_conditions = []
-
+        # Delete by point ID: the point ID is the item's id (see _create_points).
+        # Filtering on metadata.id silently misses points whose payload omits an
+        # id (e.g. memories), leaving orphaned vectors behind.
         if ids:
-            for id_value in ids:
-                (
-                    field_conditions.append(
-                        models.FieldCondition(
-                            key='metadata.id',
-                            match=models.MatchValue(value=id_value),
-                        ),
-                    ),
-                )
-        elif filter:
+            return self.client.delete(
+                collection_name=f'{self.collection_prefix}_{collection_name}',
+                points_selector=models.PointIdsList(points=ids),
+            )
+
+        field_conditions = []
+        if filter:
             for key, value in filter.items():
-                (
-                    field_conditions.append(
-                        models.FieldCondition(
-                            key=f'metadata.{key}',
-                            match=models.MatchValue(value=value),
-                        ),
-                    ),
+                field_conditions.append(
+                    models.FieldCondition(
+                        key=f'metadata.{key}',
+                        match=models.MatchValue(value=value),
+                    )
                 )
 
         return self.client.delete(

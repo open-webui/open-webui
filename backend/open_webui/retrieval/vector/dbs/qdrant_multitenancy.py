@@ -228,15 +228,17 @@ class QdrantClient(VectorDBBase):
             return None
 
         must_conditions = [_tenant_filter(tenant_id)]
-        should_conditions = []
         if ids:
-            should_conditions = [_metadata_filter('id', id_value) for id_value in ids]
+            # Delete by point ID within the tenant. The point ID is the item's id
+            # (see _create_points); filtering on metadata.id silently misses points
+            # whose payload omits an id (e.g. memories), leaving orphaned vectors.
+            must_conditions.append(models.HasIdCondition(has_id=ids))
         elif filter:
             must_conditions += [_metadata_filter(k, v) for k, v in filter.items()]
 
         return self.client.delete(
             collection_name=mt_collection,
-            points_selector=models.FilterSelector(filter=models.Filter(must=must_conditions, should=should_conditions)),
+            points_selector=models.FilterSelector(filter=models.Filter(must=must_conditions)),
         )
 
     def search(
