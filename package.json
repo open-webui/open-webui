@@ -40,7 +40,7 @@
 		"postcss": "^8.4.31",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
-		"sass-embedded": "^1.81.0",
+		"sass-embedded": "^1.100.0",
 		"svelte": "^5.53.10",
 		"svelte-check": "^4.0.0",
 		"svelte-confetti": "^2.3.2",
