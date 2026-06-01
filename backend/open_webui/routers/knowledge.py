@@ -1302,6 +1302,23 @@ async def add_files_to_knowledge_batch(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
+    # Filter out files already linked to this knowledge base to prevent
+    # duplicate embeddings in the vector DB (issue #10679).
+    new_entries = []
+    for form in form_data:
+        if not await Knowledges.has_file(knowledge_id=id, file_id=form.file_id, db=db):
+            new_entries.append(form)
+
+    if not new_entries:
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+        )
+
+    # Narrow the file list to only new files for processing
+    new_file_ids = {form.file_id for form in new_entries}
+    files = [f for f in files if f.id in new_file_ids]
+
     # Process files
     try:
         result = await process_files_batch(
@@ -1316,8 +1333,12 @@ async def add_files_to_knowledge_batch(
 
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
+    dir_map = {form.file_id: form.directory_id for form in new_entries}
     for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+        await Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id, file_id=file_id, user_id=user.id,
+            directory_id=dir_map.get(file_id), db=db,
+        )
 
     # If there were any errors, include them in the response
     if result.errors:
