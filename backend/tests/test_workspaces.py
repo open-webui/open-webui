@@ -560,8 +560,27 @@ class WsSharedChat(Base):
 
 def _assert_ws_mutation_allowed(chat, member, workspace):
     """
-    Inline mirror of production _assert_workspace_chat_mutation_allowed.
+    Inline mirror of production assert_chat_write_allowed.
     Returns (ok: bool, status_code: int).
+    Viewer role is blocked (write requires manager or member).
+    """
+    if chat.workspace_id is None:
+        return True, 200
+    if workspace is None:
+        return False, 403
+    if member is None:
+        return False, 403
+    # Company custom: Team Workspaces V1 — viewer cannot mutate
+    if member.role not in WRITE_ROLES:
+        return False, 403
+    return True, 200
+
+
+def _assert_ws_read_allowed(chat, member, workspace):
+    """
+    Inline mirror of production assert_chat_read_allowed.
+    Returns (ok: bool, status_code: int).
+    Any active member (including viewer) can read.
     """
     if chat.workspace_id is None:
         return True, 200
@@ -695,12 +714,63 @@ def _build_app(get_db_fn):
             raise FHTTPException(status_code=404, detail="not found")
         if chat.workspace_id is not None:
             workspace = await _get_workspace(db, chat.workspace_id)
-            if workspace is None:
-                raise FHTTPException(status_code=403, detail="workspace deleted or not found")
             member = await get_member(db, chat.workspace_id, user_id)
-            if member is None:
-                raise FHTTPException(status_code=403, detail="access prohibited")
+            ok, code = _assert_ws_read_allowed(chat, member, workspace)
+            if not ok:
+                raise FHTTPException(status_code=code, detail="access prohibited")
         return {'id': chat.id, 'workspace_id': chat.workspace_id}
+
+    # ── GET /chats/{chat_id}/pinned ──────────────────────────────────────────
+    @app.get('/chats/{chat_id}/pinned', status_code=200)
+    async def get_pinned_status(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None:
+            raise FHTTPException(status_code=404, detail="not found")
+        if chat.workspace_id is not None:
+            workspace = await _get_workspace(db, chat.workspace_id)
+            member = await get_member(db, chat.workspace_id, user_id)
+            ok, code = _assert_ws_read_allowed(chat, member, workspace)
+            if not ok:
+                raise FHTTPException(status_code=code, detail="access prohibited")
+        return {'pinned': False}
+
+    # ── GET /chats/{chat_id}/tags ────────────────────────────────────────────
+    @app.get('/chats/{chat_id}/tags', status_code=200)
+    async def get_chat_tags(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None:
+            raise FHTTPException(status_code=404, detail="not found")
+        if chat.workspace_id is not None:
+            workspace = await _get_workspace(db, chat.workspace_id)
+            member = await get_member(db, chat.workspace_id, user_id)
+            ok, code = _assert_ws_read_allowed(chat, member, workspace)
+            if not ok:
+                raise FHTTPException(status_code=code, detail="access prohibited")
+        return {'tags': []}
+
+    # ── DELETE /chats/{chat_id}/share ────────────────────────────────────────
+    @app.delete('/chats/{chat_id}/share', status_code=200)
+    async def delete_share(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None:
+            raise FHTTPException(status_code=404, detail="not found")
+        if chat.workspace_id is not None:
+            raise FHTTPException(status_code=403, detail="Workspace chats cannot be shared")
+        return {'ok': True}
+
+    # ── POST /shared/{chat_id}/access/update ─────────────────────────────────
+    @app.post('/shared/{chat_id}/access/update', status_code=200)
+    async def update_shared_access(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None:
+            raise FHTTPException(status_code=404, detail="not found")
+        if chat.workspace_id is not None:
+            raise FHTTPException(status_code=403, detail="Workspace chats cannot be shared")
+        return {'ok': True}
 
     # ── Mutation routes ──────────────────────────────────────────────────────
     # Each mirrors production: fetch chat owned by user, then call
@@ -1128,4 +1198,213 @@ async def test_route_deleted_workspace_chat_cannot_be_updated(route_client):
     user_id, chat = await _setup_deleted_ws_chat(db)
 
     resp = await client.post(f"/chats/{chat.id}/update", params={"user_id": user_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+# ---------------------------------------------------------------------------
+# New scenarios: viewer read/write, former-member, deleted-workspace pinned/tags,
+# DELETE share, access/update
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_route_viewer_can_read_workspace_chat(route_client):
+    """Viewer role can read a workspace chat (read-only access is permitted)."""
+    client, db = route_client
+    creator_id = _uid()
+    viewer_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Viewer Read Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.get(f"/chats/{chat.id}", params={"user_id": viewer_id})
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_viewer_cannot_pin_workspace_chat(route_client):
+    """Viewer cannot pin a workspace chat (write role required)."""
+    client, db = route_client
+    creator_id = _uid()
+    viewer_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
+
+    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Pin Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.post(f"/chats/{chat.id}/pin", params={"user_id": viewer_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_viewer_cannot_archive_workspace_chat(route_client):
+    """Viewer cannot archive a workspace chat (write role required)."""
+    client, db = route_client
+    creator_id = _uid()
+    viewer_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
+
+    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Archive Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.post(f"/chats/{chat.id}/archive", params={"user_id": viewer_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_viewer_cannot_add_tag_to_workspace_chat(route_client):
+    """Viewer cannot add tags to a workspace chat (write role required)."""
+    client, db = route_client
+    creator_id = _uid()
+    viewer_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
+
+    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Tag Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.post(f"/chats/{chat.id}/tags", params={"user_id": viewer_id, "tag": "vip"})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_viewer_cannot_move_workspace_chat_to_folder(route_client):
+    """Viewer cannot move a workspace chat to a folder (write role required)."""
+    client, db = route_client
+    creator_id = _uid()
+    viewer_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
+
+    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Folder Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.post(f"/chats/{chat.id}/folder",
+                             params={"user_id": viewer_id, "folder_id": "f-vip"})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_former_member_cannot_read_pinned_status(route_client):
+    """Former member (removed from workspace) cannot read pinned status."""
+    client, db = route_client
+    creator_id = _uid()
+    former_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, former_id, ROLE_MEMBER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Former Member Pinned Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    # Remove the member
+    await db.execute(
+        delete(WsWorkspaceMember).where(
+            and_(WsWorkspaceMember.workspace_id == ws.id,
+                 WsWorkspaceMember.user_id == former_id)
+        )
+    )
+    await db.commit()
+
+    resp = await client.get(f"/chats/{chat.id}/pinned", params={"user_id": former_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_soft_deleted_workspace_blocks_pinned_read(route_client):
+    """Soft-deleted workspace blocks GET /chats/{id}/pinned."""
+    client, db = route_client
+    creator_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Deleted WS Pinned Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    ws.deleted_at = _now()
+    await db.commit()
+
+    resp = await client.get(f"/chats/{chat.id}/pinned", params={"user_id": creator_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_soft_deleted_workspace_blocks_tag_read(route_client):
+    """Soft-deleted workspace blocks GET /chats/{id}/tags."""
+    client, db = route_client
+    creator_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Deleted WS Tags Test",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    ws.deleted_at = _now()
+    await db.commit()
+
+    resp = await client.get(f"/chats/{chat.id}/tags", params={"user_id": creator_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_delete_share_rejects_workspace_chat(route_client):
+    """DELETE /{id}/share must reject workspace chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    chat = WsChat(id=_uid(), user_id=user_id, title="WS Delete Share Test",
+                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.delete(f"/chats/{chat.id}/share", params={"user_id": user_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_shared_access_update_rejects_workspace_chat(route_client):
+    """POST /shared/{id}/access/update must reject workspace chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    chat = WsChat(id=_uid(), user_id=user_id, title="WS Access Update Test",
+                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.post(f"/shared/{chat.id}/access/update", params={"user_id": user_id})
     assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"

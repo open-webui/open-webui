@@ -48,25 +48,28 @@ router = APIRouter()
 
 
 # Company custom: Team Workspaces V1
-async def _assert_workspace_chat_access(
+# Company custom: Team Workspaces V1 — central permission helpers
+# All three public helpers share one private implementation so that workspace
+# and member DB lookups happen exactly once per request.
+# Rules that apply to ALL workspace chat routes:
+#   • Platform admin role does NOT bypass workspace membership.
+#   • Workspace must exist and not be soft-deleted.
+#   • User must be an explicit, active workspace member.
+
+async def _ws_check(
     chat,
     user,
     db: AsyncSession,
     require_write: bool = False,
     require_manage: bool = False,
-):
+) -> None:
     """
-    If a chat belongs to a workspace, enforce membership.
-    - Non-members always get 403 (prevents enumeration by direct ID).
-    - Soft-deleted workspace → 403 (workspace no longer accessible).
-    - Viewers can read but not write/delete.
-    - Members can read and write their own chats.
-    - Managers can read/write/delete any workspace chat.
+    Internal implementation.  Raises HTTP 403 on any permission failure.
+    No-ops for private chats (chat.workspace_id is None).
     """
     if chat.workspace_id is None:
-        return  # private chat — existing logic applies
+        return
 
-    # P0: reject if workspace is soft-deleted
     workspace = await Workspaces.get_by_id(chat.workspace_id, db=db)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
@@ -82,30 +85,39 @@ async def _assert_workspace_chat_access(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
 
-async def _assert_workspace_chat_mutation_allowed(chat, user, db: AsyncSession, require_write: bool = False):
+async def assert_chat_read_allowed(chat, user, db: AsyncSession) -> None:
     """
-    Centralized guard for all workspace chat mutation routes (pin, archive, tag, folder, message).
-
-    Called after the route has already verified the caller owns the chat (via
-    get_chat_by_id_and_user_id).  Verifies:
-      1. Workspace still exists (not soft-deleted).
-      2. Caller is still a workspace member.
-      3. If require_write=True, caller has a write-capable role (manager | member).
-
-    No-ops for private chats (workspace_id is None).
-    Admin platform role does NOT bypass workspace membership — admins must be
-    explicitly added as members (same rule as _assert_workspace_chat_access).
+    READ gate for workspace chats.
+    Requires: active workspace + active membership (any role, including viewer).
+    No-op for private chats — preserve existing private-chat logic in each route.
     """
-    if chat.workspace_id is None:
-        return
-    workspace = await Workspaces.get_by_id(chat.workspace_id, db=db)
-    if workspace is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    member = await WorkspaceMembers.get(chat.workspace_id, user.id, db=db)
-    if member is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    if require_write and member.role not in WORKSPACE_WRITE_ROLES:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    await _ws_check(chat, user, db)
+
+
+async def assert_chat_write_allowed(chat, user, db: AsyncSession) -> None:
+    """
+    WRITE gate for workspace chats.
+    Requires: active workspace + membership with manager or member role.
+    Viewer role is explicitly blocked from all mutations (pin, archive, tag,
+    folder, message update, content update).
+    No-op for private chats.
+    """
+    await _ws_check(chat, user, db, require_write=True)
+
+
+async def assert_workspace_chat_not_shareable(chat) -> None:
+    """
+    SHARE gate: workspace chats do not support public sharing, access grants,
+    or clone-via-share in V1.
+    Raises 403 whenever chat.workspace_id is set, regardless of workspace
+    active state (share state must not be mutable even post-deletion).
+    No-op for private chats.
+    """
+    if chat.workspace_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Workspace chats cannot be publicly shared in V1.",
+        )
 
 ############################
 # GetChatList
@@ -958,18 +970,15 @@ async def get_shared_chat_by_id(
     # Two cases:
     #   A) Normal share path (shared is not None): resolve original → check workspace_id.
     #   B) Admin fallback (share_id was a chat_id, shared is None): check chat.workspace_id directly.
+    # Company custom: Team Workspaces V1 — block workspace chats through every access path.
+    # Snapshot from get_chat_by_share_id has no workspace_id; resolve original via shared.chat_id.
+    # Admin direct-ID fallback: chat IS the original row — check directly.
     if shared:
         original_chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
-        if original_chat and original_chat.workspace_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Workspace chats are not publicly accessible.",
-            )
-    elif admin_fallback and chat.workspace_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace chats are not publicly accessible.",
-        )
+        if original_chat:
+            await assert_workspace_chat_not_shareable(original_chat)
+    elif admin_fallback:
+        await assert_workspace_chat_not_shareable(chat)
 
     # Check access grants (admins bypass)
     if user.role != 'admin' or not ENABLE_ADMIN_CHAT_ACCESS:
@@ -1029,7 +1038,7 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
     # Company custom: Team Workspaces V1 — check workspace membership before returning chat
     raw_chat = await Chats.get_chat_by_id(id, db=db)
     if raw_chat and raw_chat.workspace_id is not None:
-        await _assert_workspace_chat_access(raw_chat, user, db=db)
+        await assert_chat_read_allowed(raw_chat, user, db)
         return ChatResponse(**raw_chat.model_dump())
 
     # Existing private-chat path (unmodified logic)
@@ -1071,7 +1080,7 @@ async def update_chat_by_id(
     # Company custom: Team Workspaces V1 — workspace chats are writable by member/manager
     raw_chat = await Chats.get_chat_by_id(id, db=db)
     if raw_chat and raw_chat.workspace_id is not None:
-        await _assert_workspace_chat_access(raw_chat, user, db=db, require_write=True)
+        await assert_chat_write_allowed(raw_chat, user, db)
         updated_chat = {**raw_chat.chat, **form_data.chat}
         for msg in updated_chat.get('history', {}).get('messages', {}).values():
             if msg.get('role') == 'assistant' and msg.get('output'):
@@ -1123,8 +1132,8 @@ async def update_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Company custom: Team Workspaces V1 — workspace membership supersedes admin bypass.
-    await _assert_workspace_chat_mutation_allowed(chat, user, db=db, require_write=True)
+    # Company custom: Team Workspaces V1 — workspace permission supersedes admin/owner bypass.
+    await assert_chat_write_allowed(chat, user, db)
 
     if chat.workspace_id is None and chat.user_id != user.id and user.role != 'admin':
         raise HTTPException(
@@ -1188,8 +1197,8 @@ async def send_chat_message_event_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Company custom: Team Workspaces V1 — workspace membership supersedes admin bypass.
-    await _assert_workspace_chat_mutation_allowed(chat, user, db=db, require_write=True)
+    # Company custom: Team Workspaces V1 — workspace permission supersedes admin/owner bypass.
+    await assert_chat_write_allowed(chat, user, db)
 
     if chat.workspace_id is None and chat.user_id != user.id and user.role != 'admin':
         raise HTTPException(
@@ -1232,9 +1241,9 @@ async def delete_chat_by_id(
     if raw_chat and raw_chat.workspace_id is not None:
         # Members can only delete their own; managers can delete any
         if raw_chat.user_id == user.id:
-            await _assert_workspace_chat_access(raw_chat, user, db=db, require_write=True)
+            await assert_chat_write_allowed(raw_chat, user, db)
         else:
-            await _assert_workspace_chat_access(raw_chat, user, db=db, require_manage=True)
+            await _ws_check(raw_chat, user, db, require_manage=True)
         await Chats.delete_orphan_tags_for_user(raw_chat.meta.get('tags', []), user.id, threshold=1, db=db)
         return await Chats.delete_chat_by_id(id, db=db)
 
@@ -1281,6 +1290,8 @@ async def get_pinned_status_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        # Company custom: Team Workspaces V1 — block if workspace deleted or membership lost
+        await assert_chat_read_allowed(chat, user, db)
         return chat.pinned
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
@@ -1295,7 +1306,7 @@ async def get_pinned_status_by_id(
 async def pin_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        await _assert_workspace_chat_mutation_allowed(chat, user, db=db)
+        await assert_chat_write_allowed(chat, user, db)
         chat = await Chats.toggle_chat_pinned_by_id(id, db=db)
         return chat
     else:
@@ -1321,11 +1332,7 @@ async def clone_chat_by_id(
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         # Company custom: Team Workspaces V1 — workspace chats cannot be cloned out of the workspace
-        if chat.workspace_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Workspace chats cannot be cloned in V1.",
-            )
+        await assert_workspace_chat_not_shareable(chat)
         updated_chat = {
             **chat.chat,
             'originalChatId': chat.id,
@@ -1390,16 +1397,10 @@ async def clone_shared_chat_by_id(
     # For admin direct-ID fallback, chat IS the original row — check directly.
     if shared:
         original_chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
-        if original_chat and original_chat.workspace_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Workspace chats are not publicly accessible.",
-            )
-    elif admin_fallback and chat.workspace_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace chats are not publicly accessible.",
-        )
+        if original_chat:
+            await assert_workspace_chat_not_shareable(original_chat)
+    elif admin_fallback:
+        await assert_workspace_chat_not_shareable(chat)
 
     # Enforce access grants (owner and admins bypass)
     if shared and user.role != 'admin' and shared.user_id != user.id:
@@ -1457,7 +1458,7 @@ async def clone_shared_chat_by_id(
 async def archive_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        await _assert_workspace_chat_mutation_allowed(chat, user, db=db)
+        await assert_chat_write_allowed(chat, user, db)
         chat = await Chats.toggle_chat_archive_by_id(id, db=db)
 
         tag_ids = chat.meta.get('tags', [])
@@ -1495,14 +1496,9 @@ async def share_chat_by_id(
 
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
-    # Company custom: Team Workspaces V1 — block public sharing for workspace chats
-    if chat and chat.workspace_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace chats cannot be publicly shared in V1.",
-        )
-
     if chat:
+        # Company custom: Team Workspaces V1 — block public sharing for workspace chats
+        await assert_workspace_chat_not_shareable(chat)
         if chat.share_id:
             # Re-snapshot existing share
             shared = await SharedChats.update(chat.share_id, db=db)
@@ -1545,6 +1541,9 @@ async def delete_shared_chat_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        # Company custom: Team Workspaces V1 — workspace chats cannot be shared or unshared
+        await assert_workspace_chat_not_shareable(chat)
+
         if not chat.share_id:
             return False
 
@@ -1589,6 +1588,9 @@ async def update_shared_chat_access_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    # Company custom: Team Workspaces V1 — workspace chats cannot have public access grants
+    await assert_workspace_chat_not_shareable(chat)
+
     form_data.access_grants = await filter_allowed_access_grants(
         request.app.state.config.USER_PERMISSIONS,
         user.id,
@@ -1623,6 +1625,9 @@ async def get_shared_chat_access_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    # Company custom: Team Workspaces V1 — workspace chats have no public access grants
+    await assert_workspace_chat_not_shareable(chat)
+
     grants = await AccessGrants.get_grants_by_resource('shared_chat', id, db=db)
     return [
         {
@@ -1653,7 +1658,7 @@ async def update_chat_folder_id_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        await _assert_workspace_chat_mutation_allowed(chat, user, db=db)
+        await assert_chat_write_allowed(chat, user, db)
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
@@ -1669,6 +1674,8 @@ async def update_chat_folder_id_by_id(
 async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        # Company custom: Team Workspaces V1 — block former members and soft-deleted workspace
+        await assert_chat_read_allowed(chat, user, db)
         tags = chat.meta.get('tags', [])
         return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
@@ -1689,7 +1696,7 @@ async def add_tag_by_id_and_tag_name(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        await _assert_workspace_chat_mutation_allowed(chat, user, db=db)
+        await assert_chat_write_allowed(chat, user, db)
         tags = chat.meta.get('tags', [])
         tag_id = form_data.name.replace(' ', '_').lower()
 
@@ -1723,7 +1730,7 @@ async def delete_tag_by_id_and_tag_name(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        await _assert_workspace_chat_mutation_allowed(chat, user, db=db)
+        await assert_chat_write_allowed(chat, user, db)
         await Chats.delete_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
 
         if await Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db) == 0:
@@ -1747,7 +1754,7 @@ async def delete_all_tags_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        await _assert_workspace_chat_mutation_allowed(chat, user, db=db)
+        await assert_chat_write_allowed(chat, user, db)
         old_tags = chat.meta.get('tags', [])
         await Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
         await Chats.delete_orphan_tags_for_user(old_tags, user.id, db=db)
