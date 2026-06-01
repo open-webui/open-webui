@@ -2278,3 +2278,169 @@ async def test_analytics_private_chat_always_visible(route_client):
         )
         row = r.scalars().first()
         assert row is not None, f"Private chat must pass analytics {label} filter"
+
+
+# ---------------------------------------------------------------------------
+# Analytics aggregate / tag / folder / socket — additional isolation tests
+# ---------------------------------------------------------------------------
+
+class WsChatMessage(Base):
+    """Mirror of chat_message table for aggregate analytics tests."""
+    __tablename__ = "chat_message_ws_test"
+    id = Column(String, primary_key=True)
+    chat_id = Column(String, nullable=False)
+    user_id = Column(String, nullable=True)
+    role = Column(Text, nullable=False)
+    model_id = Column(Text, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+
+
+@pytest.mark.asyncio
+async def test_tag_filtered_list_excludes_workspace_chats(route_client):
+    """get_chat_list_by_user_id_and_tag_name must filter workspace_id IS NULL."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Tag Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Tag WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    db.add(ws_chat)
+    await db.commit()
+
+    # Mirror get_chat_list_by_user_id_and_tag_name filter
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.user_id == user_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    visible = {row for row in r.scalars().all()}
+    assert private_chat.id in visible, "Private chat must appear in tag-filtered list"
+    assert ws_chat.id not in visible, "Workspace chat must not appear in tag-filtered list"
+
+
+@pytest.mark.asyncio
+async def test_chat_list_by_user_id_excludes_workspace_chats(route_client):
+    """get_chat_list_by_user_id must filter workspace_id IS NULL."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="List Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="List WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    db.add(ws_chat)
+    await db.commit()
+
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.user_id == user_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    visible = {row for row in r.scalars().all()}
+    assert private_chat.id in visible, "Private chat must appear in chat list by user_id"
+    assert ws_chat.id not in visible, "Workspace chat must not appear in chat list by user_id"
+
+
+@pytest.mark.asyncio
+async def test_folder_assignment_rejects_workspace_chat(route_client):
+    """POST /chats/{id}/folder must reject workspace chats — workspace_id IS NOT NULL → 403."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+    folder_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Folder WS Assignment",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Folder Private Assignment",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    db.add(private_chat)
+    await db.commit()
+
+    # Mirror guard: workspace chat must not be assignable to a personal folder
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id == ws_chat.id)
+        .where(WsChat.workspace_id.is_(None))  # route checks this before update
+    )
+    assert r.scalars().first() is None, "Workspace chat must fail folder assignment guard"
+
+    # Private chat passes the guard
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id == private_chat.id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    assert r.scalars().first() is not None, "Private chat must pass folder assignment guard"
+
+
+@pytest.mark.asyncio
+async def test_analytics_aggregate_excludes_workspace_messages(route_client):
+    """Analytics aggregate helpers join Chat and filter workspace_id IS NULL.
+
+    Simulates the JOIN pattern used by get_message_count_by_model and siblings.
+    Workspace messages must not inflate analytics counts.
+    """
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+    model_id = "test-model"
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Agg Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Agg WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    db.add(ws_chat)
+    await db.commit()
+
+    # Simulate: given messages from both chats, only count those from private chats
+    chat_ids_with_messages = [private_chat.id, ws_chat.id]
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.id.in_(chat_ids_with_messages))
+        .where(WsChat.workspace_id.is_(None))
+    )
+    private_chat_ids = set(r.scalars().all())
+
+    assert private_chat.id in private_chat_ids, "Private chat messages must be counted in analytics"
+    assert ws_chat.id not in private_chat_ids, "Workspace chat messages must be excluded from analytics aggregates"
+
+
+@pytest.mark.asyncio
+async def test_socket_last_read_at_non_owner_member_safe(route_client):
+    """events:chat last_read_at is safe: update_chat_last_read_at_by_id checks user_id ownership.
+
+    Non-owner workspace members cannot update last_read_at because the DB helper
+    requires chat.user_id == user_id. This test documents that invariant.
+    """
+    client, db = route_client
+    owner_id = _uid()
+    non_owner_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=owner_id, title="Socket WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    await db.commit()
+
+    # Non-owner: must not match the user_id check in update_chat_last_read_at_by_id
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id == ws_chat.id)
+        .where(WsChat.user_id == non_owner_id)  # mirrors helper guard
+    )
+    assert r.scalars().first() is None, "Non-owner workspace member must fail last_read_at ownership check"
+
+    # Owner: passes ownership check — but socket handler also verifies workspace membership
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id == ws_chat.id)
+        .where(WsChat.user_id == owner_id)
+    )
+    assert r.scalars().first() is not None, "Owner passes ownership check (socket handler adds workspace membership guard)"

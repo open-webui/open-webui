@@ -519,6 +519,21 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
+        # Company custom: Team Workspaces V1 — guard workspace chats.
+        # update_chat_last_read_at_by_id already checks chat.user_id == user_id,
+        # so non-owner workspace members are already silently blocked.
+        # We add an explicit workspace membership check here so that even the
+        # chat owner is denied if their workspace has been soft-deleted or they
+        # have been removed as a member since the session started.
+        chat = await Chats.get_chat_by_id(data['chat_id'])
+        if chat and chat.workspace_id is not None:
+            from open_webui.models.workspaces import Workspaces, WorkspaceMembers
+            ws = await Workspaces.get_by_id(chat.workspace_id)
+            if ws is None:
+                return
+            member = await WorkspaceMembers.get(chat.workspace_id, user['id'])
+            if member is None:
+                return
         await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
 
 

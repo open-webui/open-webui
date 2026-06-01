@@ -837,7 +837,7 @@ class ChatTable:
         async with get_async_db_context(db) as db:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
-            )
+            ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
@@ -1431,7 +1431,7 @@ class ChatTable:
         async with get_async_db_context(db) as db:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
-            )
+            ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await db.connection()

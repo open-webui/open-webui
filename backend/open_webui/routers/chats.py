@@ -1676,6 +1676,9 @@ async def update_chat_folder_id_by_id(
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         await assert_chat_write_allowed(chat, user, db)
+        # Company custom: Team Workspaces V1 — workspace chats cannot be assigned to personal folders
+        if chat.workspace_id is not None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
