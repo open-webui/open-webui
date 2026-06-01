@@ -1129,10 +1129,27 @@ async def view_chat(
     try:
         user_id = __user__.get('id')
 
-        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user_id)
+        # Company custom: Team Workspaces V1 — fetch by ID first, then enforce boundary.
+        # get_chat_by_id_and_user_id only checks ownership; workspace chats require
+        # active workspace membership regardless of ownership.
+        chat = await Chats.get_chat_by_id(chat_id)
 
         if not chat:
             return json.dumps({'error': 'Chat not found or access denied'})
+
+        if chat.workspace_id is not None:
+            # Workspace chat: membership is the only source of truth.
+            from open_webui.models.workspaces import Workspaces, WorkspaceMembers
+            ws = await Workspaces.get_by_id(chat.workspace_id)
+            if ws is None:
+                return json.dumps({'error': 'Chat not found or access denied'})
+            member = await WorkspaceMembers.get(chat.workspace_id, user_id)
+            if member is None:
+                return json.dumps({'error': 'Chat not found or access denied'})
+        else:
+            # Private chat: owner check preserved.
+            if chat.user_id != user_id:
+                return json.dumps({'error': 'Chat not found or access denied'})
 
         # Extract messages from history
         messages = []

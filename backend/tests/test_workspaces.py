@@ -2444,3 +2444,121 @@ async def test_socket_last_read_at_non_owner_member_safe(route_client):
         .where(WsChat.user_id == owner_id)
     )
     assert r.scalars().first() is not None, "Owner passes ownership check (socket handler adds workspace membership guard)"
+
+
+# ---------------------------------------------------------------------------
+# view_chat builtin tool workspace boundary tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_view_chat_denies_former_workspace_owner(route_client):
+    """view_chat must deny former workspace member even if they are the chat owner."""
+    client, db = route_client
+    owner_id = _uid()
+    ws_id = _uid()
+
+    ws_chat = WsChat(id=_uid(), user_id=owner_id, title="ViewChat WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    await db.commit()
+
+    # Simulate view_chat guard: workspace chat requires active membership,
+    # not just ownership. Former member/owner with no membership row must be denied.
+    member_row = await db.execute(
+        select(WsWorkspaceMember)
+        .where(WsWorkspaceMember.workspace_id == ws_id)
+        .where(WsWorkspaceMember.user_id == owner_id)
+    )
+    assert member_row.scalars().first() is None, "No membership row → access must be denied even for owner"
+
+
+@pytest.mark.asyncio
+async def test_view_chat_denies_deleted_workspace(route_client):
+    """view_chat must deny access when workspace has been soft-deleted."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    ws = WsWorkspace(id=ws_id, user_id=user_id, name="Deleted WS",
+                     created_at=_now(), updated_at=_now(),
+                     deleted_at=_now())  # soft-deleted
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="ViewChat Deleted WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(ws)
+    db.add(ws_chat)
+    await db.commit()
+
+    # Simulate Workspaces.get_by_id which filters deleted_at IS NULL
+    r = await db.execute(
+        select(WsWorkspace)
+        .where(WsWorkspace.id == ws_id)
+        .where(WsWorkspace.deleted_at.is_(None))
+    )
+    assert r.scalars().first() is None, "Soft-deleted workspace must cause view_chat to deny access"
+
+
+@pytest.mark.asyncio
+async def test_view_chat_allows_active_workspace_member(route_client):
+    """view_chat must allow any active workspace member (viewer/member/manager)."""
+    client, db = route_client
+    owner_id = _uid()
+    member_id = _uid()
+    ws_id = _uid()
+
+    ws = WsWorkspace(id=ws_id, user_id=owner_id, name="Active WS",
+                     created_at=_now(), updated_at=_now(), deleted_at=None)
+    ws_chat = WsChat(id=_uid(), user_id=owner_id, title="ViewChat Active WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    member = WsWorkspaceMember(id=_uid(), workspace_id=ws_id, user_id=member_id,
+                               role=ROLE_MEMBER, created_at=_now(), updated_at=_now())
+    db.add(ws)
+    db.add(ws_chat)
+    db.add(member)
+    await db.commit()
+
+    # Workspace exists and is active
+    r = await db.execute(
+        select(WsWorkspace)
+        .where(WsWorkspace.id == ws_id)
+        .where(WsWorkspace.deleted_at.is_(None))
+    )
+    assert r.scalars().first() is not None, "Active workspace must exist"
+
+    # Member row exists → access allowed
+    r = await db.execute(
+        select(WsWorkspaceMember)
+        .where(WsWorkspaceMember.workspace_id == ws_id)
+        .where(WsWorkspaceMember.user_id == member_id)
+    )
+    assert r.scalars().first() is not None, "Active member must be allowed by view_chat"
+
+
+@pytest.mark.asyncio
+async def test_view_chat_allows_private_chat_owner(route_client):
+    """view_chat must still allow private chat owner (workspace_id IS NULL path)."""
+    client, db = route_client
+    owner_id = _uid()
+    other_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=owner_id, title="ViewChat Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    await db.commit()
+
+    # Owner passes private path (chat.user_id == user_id)
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id == private_chat.id)
+        .where(WsChat.user_id == owner_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    assert r.scalars().first() is not None, "Private chat owner must still be allowed"
+
+    # Non-owner blocked
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id == private_chat.id)
+        .where(WsChat.user_id == other_id)
+    )
+    assert r.scalars().first() is None, "Non-owner must be denied on private chat"
