@@ -36,7 +36,7 @@ redis==7.4.0
 
 APScheduler==3.11.2
 RestrictedPython==8.1
-pytz==2026.1.post1
+pytz==2026.2
 
 loguru==0.7.3
 asgiref==3.11.1
