@@ -56,14 +56,3 @@ jobs:
             !.git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Dispatch Docker build
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'docker.yaml',
-              ref: 'v${{ steps.pkg.outputs.version }}',
-            })
