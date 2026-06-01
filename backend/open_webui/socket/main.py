@@ -519,6 +519,21 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
+        # Company custom: Team Workspaces V1 — guard workspace chats.
+        # update_chat_last_read_at_by_id already checks chat.user_id == user_id,
+        # so non-owner workspace members are already silently blocked.
+        # We add an explicit workspace membership check here so that even the
+        # chat owner is denied if their workspace has been soft-deleted or they
+        # have been removed as a member since the session started.
+        chat = await Chats.get_chat_by_id(data['chat_id'])
+        if chat and chat.workspace_id is not None:
+            from open_webui.models.workspaces import Workspaces, WorkspaceMembers
+            ws = await Workspaces.get_by_id(chat.workspace_id)
+            if ws is None:
+                return
+            member = await WorkspaceMembers.get(chat.workspace_id, user['id'])
+            if member is None:
+                return
         await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
 
 
@@ -898,6 +913,12 @@ async def _make_channel_emitter(request_info):
 
 
 async def get_event_emitter(request_info, update_db=True):
+    # Company custom: Team Workspaces V1 — security note.
+    # `request_info` is constructed server-side by the completions pipeline in main.py
+    # after workspace write-access has been verified.  WebSocket clients cannot call
+    # this function directly; they can only receive socket events emitted to their own
+    # room.  The DB mutations below (upsert_message_to_chat_by_id_and_message_id etc.)
+    # are therefore already covered by the workspace permission checks in main.py.
     # Channel mode: route pipeline output to channel message updates
     if request_info.get('chat_id', '').startswith('channel:'):
         return await _make_channel_emitter(request_info)

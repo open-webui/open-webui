@@ -14,6 +14,19 @@ from open_webui.utils.auth import get_admin_user
 from open_webui.internal.db import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
+# Company custom: Team Workspaces V1
+# Filter a list of chat_ids to only those with workspace_id IS NULL (private chats).
+# Analytics is a general-usage surface; workspace chat content and metadata must not
+# be exposed here regardless of admin role.
+async def _filter_private_chat_ids(chat_ids: list[str], db: AsyncSession) -> list[str]:
+    result = []
+    for chat_id in chat_ids:
+        chat = await Chats.get_chat_by_id(chat_id, db=db)
+        if chat and chat.workspace_id is None:
+            result.append(chat_id)
+    return result
+
 log = logging.getLogger(__name__)
 
 
@@ -125,10 +138,14 @@ async def get_messages(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Query messages with filters."""
+    # Company custom: Team Workspaces V1 — exclude workspace chat messages from analytics
     if chat_id:
+        chat = await Chats.get_chat_by_id(chat_id, db=db)
+        if chat is None or chat.workspace_id is not None:
+            return []
         return await ChatMessages.get_messages_by_chat_id(chat_id=chat_id, db=db)
     elif model_id:
-        return await ChatMessages.get_messages_by_model_id(
+        msgs = await ChatMessages.get_messages_by_model_id(
             model_id=model_id,
             start_date=start_date,
             end_date=end_date,
@@ -136,8 +153,12 @@ async def get_messages(
             limit=limit,
             db=db,
         )
+        private_ids = set(await _filter_private_chat_ids([m.chat_id for m in msgs], db=db))
+        return [m for m in msgs if m.chat_id in private_ids]
     elif user_id:
-        return await ChatMessages.get_messages_by_user_id(user_id=user_id, skip=skip, limit=limit, db=db)
+        msgs = await ChatMessages.get_messages_by_user_id(user_id=user_id, skip=skip, limit=limit, db=db)
+        private_ids = set(await _filter_private_chat_ids([m.chat_id for m in msgs], db=db))
+        return [m for m in msgs if m.chat_id in private_ids]
     else:
         # Return empty if no filter specified
         return []
@@ -294,6 +315,9 @@ async def get_model_chats(
     if not chat_ids:
         return ModelChatsResponse(chats=[], total=0)
 
+    # Company custom: Team Workspaces V1 — exclude workspace chats entirely
+    chat_ids = await _filter_private_chat_ids(chat_ids, db=db)
+
     # Get chat details from messages only
     chats_data = []
     for chat_id in chat_ids:
@@ -377,6 +401,9 @@ async def get_model_overview(
         db=db,
     )
 
+    # Company custom: Team Workspaces V1 — exclude workspace chats from feedback history
+    chat_ids = await _filter_private_chat_ids(chat_ids, db=db)
+
     # Get feedback history per day
     history_counts: dict[str, dict] = defaultdict(lambda: {'won': 0, 'lost': 0})
 
@@ -428,11 +455,13 @@ async def get_model_overview(
             )
             current += timedelta(days=1)
 
-    # Get chat tags
+    # Get chat tags — Company custom: Team Workspaces V1 — exclude workspace chats.
+    # Analytics is a private/general-usage surface; workspace metadata must only be
+    # visible through workspace-scoped endpoints with membership checks.
     tag_counts: dict[str, int] = defaultdict(int)
     for chat_id in chat_ids:
         chat = await Chats.get_chat_by_id(chat_id, db=db)
-        if chat and chat.meta:
+        if chat and chat.meta and chat.workspace_id is None:
             for tag in chat.meta.get('tags', []):
                 tag_counts[tag] += 1
 

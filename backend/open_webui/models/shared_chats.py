@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 
@@ -142,7 +142,16 @@ class SharedChatsTable:
     ) -> list[SharedChatResponse]:
         """List all shared chats created by a user."""
         async with get_async_db_context(db) as db:
-            stmt = select(SharedChat).filter_by(user_id=user_id)
+            from open_webui.models.chats import Chat
+
+            # Company custom: Team Workspaces V1 — exclude shared chats whose original
+            # chat belongs to a workspace. Stale shared records from workspace chats
+            # (created before this guard was added) must not appear in personal shared list.
+            stmt = (
+                select(SharedChat)
+                .join(Chat, and_(Chat.id == SharedChat.chat_id, Chat.workspace_id.is_(None)))
+                .filter(SharedChat.user_id == user_id)
+            )
 
             if filter:
                 query_key = filter.get('query')
