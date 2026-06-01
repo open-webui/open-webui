@@ -462,7 +462,7 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
     """Generate speech via Azure Cognitive Services TTS."""
     az_region = request.app.state.config.TTS_AZURE_SPEECH_REGION or 'eastus'
     az_base = request.app.state.config.TTS_AZURE_SPEECH_BASE_URL
-    language = request.app.state.config.TTS_VOICE
+    language = payload.get('voice') or request.app.state.config.TTS_VOICE
     locale = '-'.join(language.split('-')[:2])
     output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
