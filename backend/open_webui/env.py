@@ -780,6 +780,10 @@ PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
     if t.strip()
 )
 
+# Max stored length (bytes) of a data:image profile URI; bounds Postgres/Redis
+# bloat from inline avatars and model icons. 0 disables the cap.
+PROFILE_IMAGE_MAX_DATA_URI_SIZE = int(os.getenv('PROFILE_IMAGE_MAX_DATA_URI_SIZE', str(256 * 1024)))
+
 ####################################
 # Forward Headers
 ####################################
