@@ -1120,10 +1120,16 @@ OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != '' else OLLAMA_BASE_U
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
 OLLAMA_BASE_URLS = PersistentConfig('OLLAMA_BASE_URLS', 'ollama.base_urls', OLLAMA_BASE_URLS)
 
+try:
+    ollama_api_configs = json.loads(os.environ.get('OLLAMA_API_CONFIGS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading OLLAMA_API_CONFIGS: {e}')
+    ollama_api_configs = {}
+
 OLLAMA_API_CONFIGS = PersistentConfig(
     'OLLAMA_API_CONFIGS',
     'ollama.api_configs',
-    {},
+    ollama_api_configs,
 )
 
 ####################################
@@ -1165,10 +1171,16 @@ OPENAI_API_BASE_URLS = [
 ]
 OPENAI_API_BASE_URLS = PersistentConfig('OPENAI_API_BASE_URLS', 'openai.api_base_urls', OPENAI_API_BASE_URLS)
 
+try:
+    openai_api_configs = json.loads(os.environ.get('OPENAI_API_CONFIGS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading OPENAI_API_CONFIGS: {e}')
+    openai_api_configs = {}
+
 OPENAI_API_CONFIGS = PersistentConfig(
     'OPENAI_API_CONFIGS',
     'openai.api_configs',
-    {},
+    openai_api_configs,
 )
 
 # Get the actual OpenAI API key based on the base URL
