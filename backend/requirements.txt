@@ -117,7 +117,7 @@ googleapis-common-protos==1.72.0
 google-cloud-storage==3.9.0
 
 ## Databases
-pymongo==4.16.0
+pymongo==4.17.0
 psycopg2-binary==2.9.11
 pgvector==0.4.2
 
