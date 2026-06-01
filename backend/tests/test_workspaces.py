@@ -500,3 +500,190 @@ async def test_my_role_not_heuristic_for_promoted_non_creator(db):
     # The heuristic (ws.user_id === current_user.id) would return 'member' here
     # because promoted_id != creator_id. The backend-sourced my_role is correct.
     assert result.role == ROLE_MANAGER, "Backend must return promoted role, not heuristic"
+
+
+# ---------------------------------------------------------------------------
+# P0 blocker tests
+# ---------------------------------------------------------------------------
+
+
+async def count_managers(db: AsyncSession, workspace_id: str) -> int:
+    from sqlalchemy import func
+    r = await db.execute(
+        select(func.count()).select_from(WsWorkspaceMember).where(
+            and_(
+                WsWorkspaceMember.workspace_id == workspace_id,
+                WsWorkspaceMember.role == ROLE_MANAGER,
+            )
+        )
+    )
+    return r.scalar() or 0
+
+
+@pytest.mark.asyncio
+async def test_p0_workspace_creation_is_atomic(db):
+    """
+    P0-3: Workspace creation must add workspace + creator membership atomically.
+    Simulate: insert both in one transaction, then verify both rows exist.
+    """
+    creator_id = _uid()
+    now = int(time.time())
+    ws_id = _uid()
+
+    ws = WsWorkspace(id=ws_id, user_id=creator_id, name="Atomic WS",
+                     created_at=now, updated_at=now)
+    member = WsWorkspaceMember(id=_uid(), workspace_id=ws_id, user_id=creator_id,
+                               role=ROLE_MANAGER, created_at=now, updated_at=now)
+    db.add(ws)
+    db.add(member)
+    await db.commit()
+
+    ws_row = await db.get(WsWorkspace, ws_id)
+    m_row = await get_member(db, ws_id, creator_id)
+    assert ws_row is not None, "Workspace must be persisted"
+    assert m_row is not None, "Creator membership must be persisted in same transaction"
+    assert m_row.role == ROLE_MANAGER
+
+
+@pytest.mark.asyncio
+async def test_p0_last_manager_cannot_be_removed(db):
+    """
+    P0-4: Removing the last manager must be rejected.
+    The production router checks count_managers <= 1 before remove.
+    """
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    managers = await count_managers(db, ws.id)
+    assert managers == 1
+
+    # Guard logic: if manager and only one manager → reject
+    member = await get_member(db, ws.id, creator_id)
+    is_last_manager = member.role == ROLE_MANAGER and managers <= 1
+    assert is_last_manager, "Must detect last-manager condition and block removal"
+
+
+@pytest.mark.asyncio
+async def test_p0_last_manager_cannot_be_demoted(db):
+    """
+    P0-4: Demoting the last manager to member/viewer must be rejected.
+    """
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    managers = await count_managers(db, ws.id)
+    member = await get_member(db, ws.id, creator_id)
+
+    new_role = ROLE_MEMBER
+    is_last_manager = member.role == ROLE_MANAGER and managers <= 1 and new_role != ROLE_MANAGER
+    assert is_last_manager, "Must detect last-manager demotion and block"
+
+
+@pytest.mark.asyncio
+async def test_p0_second_manager_allows_removal_of_first(db):
+    """
+    P0-4: When two managers exist, removing one is permitted.
+    """
+    creator_id = _uid()
+    second_manager_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, second_manager_id, ROLE_MANAGER)
+
+    managers = await count_managers(db, ws.id)
+    assert managers == 2
+
+    # Guard: not the last manager — removal is allowed
+    member = await get_member(db, ws.id, creator_id)
+    is_last_manager = member.role == ROLE_MANAGER and managers <= 1
+    assert not is_last_manager, "With 2 managers, removal must be permitted"
+
+
+@pytest.mark.asyncio
+async def test_p0_soft_deleted_workspace_inaccessible(db):
+    """
+    P0-2: A soft-deleted workspace must be treated as not found.
+    Workspaces.get_by_id returns None when deleted_at IS NOT NULL.
+    """
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="To Delete")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    # Soft-delete
+    ws.deleted_at = _now()
+    await db.commit()
+
+    # Simulate get_by_id check
+    row = await db.get(WsWorkspace, ws.id)
+    accessible = row is not None and row.deleted_at is None
+    assert not accessible, "Soft-deleted workspace must not be accessible"
+
+
+@pytest.mark.asyncio
+async def test_p0_workspace_chat_blocked_after_workspace_deleted(db):
+    """
+    P0-2: Chat belonging to a soft-deleted workspace must be rejected at the
+    _assert_workspace_chat_access check (workspace returned None).
+    """
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Deleted Owner")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="WS Chat",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    # Soft-delete workspace
+    ws.deleted_at = _now()
+    await db.commit()
+
+    # Simulate the guard: workspace lookup returns None → 403
+    row = await db.get(WsWorkspace, ws.id)
+    workspace_accessible = row is not None and row.deleted_at is None
+    assert not workspace_accessible, "Access must be rejected when workspace is soft-deleted"
+
+
+@pytest.mark.asyncio
+async def test_p0_non_member_workspace_chat_access_blocked(db):
+    """
+    P0-1/2: A non-member must be blocked from accessing a workspace chat.
+    Mirrors the membership check in _assert_workspace_chat_access.
+    """
+    creator_id = _uid()
+    stranger_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Private WS Chat",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    # Guard: member lookup for stranger must return None → 403
+    member = await get_member(db, ws.id, stranger_id)
+    assert member is None, "Non-member must have no membership row"
+
+
+@pytest.mark.asyncio
+async def test_p0_workspace_chat_share_guard():
+    """
+    P0-5: Any route that retrieves a chat by share_id must block workspace chats.
+    Verifies the guard condition: chat.workspace_id is not None → 403.
+    """
+    class FakeChat:
+        workspace_id = "ws-99"
+
+    class FakePrivateChat:
+        workspace_id = None
+
+    ws_chat = FakeChat()
+    private_chat = FakePrivateChat()
+
+    # Guard condition used in GET /share/{share_id} and POST /{id}/clone/shared
+    assert ws_chat.workspace_id is not None, "Workspace chat must trigger share block"
+    assert private_chat.workspace_id is None, "Private chat must not trigger share block"

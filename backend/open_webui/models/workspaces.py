@@ -316,6 +316,22 @@ class WorkspaceMembersTable:
             await db.refresh(row)
             return WorkspaceMemberModel.model_validate(row)
 
+    async def count_managers(
+        self, workspace_id: str, db: Optional[AsyncSession] = None
+    ) -> int:
+        """Return the number of members with manager role."""
+        async with get_async_db_context(db) as db:
+            from sqlalchemy import func
+            result = await db.execute(
+                select(func.count()).select_from(WorkspaceMember).where(
+                    and_(
+                        WorkspaceMember.workspace_id == workspace_id,
+                        WorkspaceMember.role == WORKSPACE_ROLE_MANAGER,
+                    )
+                )
+            )
+            return result.scalar() or 0
+
     async def remove(
         self,
         workspace_id: str,

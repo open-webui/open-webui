@@ -8,6 +8,9 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
+import time
+import uuid as uuid_lib
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +21,8 @@ from open_webui.models.users import Users
 from open_webui.models.workspaces import (
     WORKSPACE_MANAGE_ROLES,
     WORKSPACE_WRITE_ROLES,
+    Workspace,
+    WorkspaceMember,
     WorkspaceForm,
     WorkspaceMemberForm,
     WorkspaceMemberModel,
@@ -107,13 +112,35 @@ async def create_workspace(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Create a new workspace; creator is automatically added as manager."""
+    """Create a new workspace; creator is automatically added as manager (atomic)."""
     try:
-        workspace = await Workspaces.create(user.id, form_data, db=db)
-        # Auto-add creator as manager
-        await WorkspaceMembers.add(workspace.id, user.id, WORKSPACE_ROLE_MANAGER, db=db)
+        now = int(time.time())
+        ws_id = str(uuid_lib.uuid4())
+        ws = Workspace(
+            id=ws_id,
+            user_id=user.id,
+            name=form_data.name,
+            description=form_data.description,
+            meta=form_data.meta,
+            created_at=now,
+            updated_at=now,
+        )
+        member = WorkspaceMember(
+            id=str(uuid_lib.uuid4()),
+            workspace_id=ws_id,
+            user_id=user.id,
+            role=WORKSPACE_ROLE_MANAGER,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(ws)
+        db.add(member)
+        await db.commit()
+        await db.refresh(ws)
+        workspace = WorkspaceModel.model_validate(ws)
         return await _workspace_response(workspace, user.id, db)
     except Exception as e:
+        await db.rollback()
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -243,6 +270,17 @@ async def update_workspace_member(
             detail="Role must be one of: manager, member, viewer",
         )
 
+    # P0: prevent demoting the last manager
+    if form_data.role != WORKSPACE_ROLE_MANAGER:
+        current = await WorkspaceMembers.get(workspace_id, target_user_id, db=db)
+        if current and current.role == WORKSPACE_ROLE_MANAGER:
+            manager_count = await WorkspaceMembers.count_managers(workspace_id, db=db)
+            if manager_count <= 1:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Cannot demote the last manager. Promote another member first.",
+                )
+
     updated = await WorkspaceMembers.update_role(workspace_id, target_user_id, form_data.role, db=db)
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
@@ -258,6 +296,16 @@ async def remove_workspace_member(
 ):
     """Remove a member; manager only."""
     await assert_workspace_access(workspace_id, user, "manage", db)
+
+    # P0: prevent removing the last manager
+    current = await WorkspaceMembers.get(workspace_id, target_user_id, db=db)
+    if current and current.role == WORKSPACE_ROLE_MANAGER:
+        manager_count = await WorkspaceMembers.count_managers(workspace_id, db=db)
+        if manager_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot remove the last manager. Promote another member first.",
+            )
 
     ok = await WorkspaceMembers.remove(workspace_id, target_user_id, db=db)
     if not ok:
