@@ -11,7 +11,7 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
-from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER
+from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL, AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER, MCP_INITIALIZE_TIMEOUT
 
 
 def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
@@ -69,7 +69,7 @@ class MCPClient:
                 self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
 
                 self.session = await exit_stack.enter_async_context(self._session_context)
-                with anyio.fail_after(10):
+                with anyio.fail_after(MCP_INITIALIZE_TIMEOUT):
                     await self.session.initialize()
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:

@@ -545,6 +545,15 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
 
+# Timeout (in seconds) for the MCP session.initialize() handshake.
+# The handshake performs a list-tools round-trip and can take tens of
+# seconds on cold-start servers or servers exposing many tools.
+MCP_INITIALIZE_TIMEOUT = os.getenv('MCP_INITIALIZE_TIMEOUT', '10')
+try:
+    MCP_INITIALIZE_TIMEOUT = int(MCP_INITIALIZE_TIMEOUT)
+except (ValueError, TypeError):
+    MCP_INITIALIZE_TIMEOUT = 10
+
 
 ####################################
 # AIOHTTP Connection Pool
