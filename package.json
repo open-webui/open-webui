@@ -142,7 +142,7 @@
 		"sql.js": "^1.14.1",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
-		"turndown": "^7.2.0",
+		"turndown": "^7.2.4",
 		"turndown-plugin-gfm": "^1.0.2",
 		"undici": "^7.3.0",
 		"uuid": "^9.0.1",
