@@ -109,6 +109,7 @@ from open_webui.routers import (
 )
 # Company custom: Team Workspaces V1
 from open_webui.routers import workspaces
+from open_webui.models.workspaces import Workspaces, WorkspaceMembers, WORKSPACE_WRITE_ROLES
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -1871,8 +1872,25 @@ async def chat_completion(
                             log.debug(f'Error inserting chat files: {e}')
                             pass
                 else:
-                    # Existing chat — verify ownership
-                    if not await Chats.is_chat_owner(chat_id, user.id) and user.role != 'admin':
+                    # Existing chat — verify access.
+                    # Company custom: Team Workspaces V1 — workspace permission is authoritative;
+                    # owner/admin checks must not bypass workspace membership.
+                    existing_chat = await Chats.get_chat_by_id(chat_id)
+                    if existing_chat is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=ERROR_MESSAGES.DEFAULT(),
+                        )
+
+                    if existing_chat.workspace_id is not None:
+                        ws = await Workspaces.get_by_id(existing_chat.workspace_id)
+                        member = await WorkspaceMembers.get(existing_chat.workspace_id, user.id)
+                        if ws is None or member is None or member.role not in WORKSPACE_WRITE_ROLES:
+                            raise HTTPException(
+                                status_code=status.HTTP_404_NOT_FOUND,
+                                detail=ERROR_MESSAGES.DEFAULT(),
+                            )
+                    elif existing_chat.user_id != user.id and user.role != 'admin':
                         raise HTTPException(
                             status_code=status.HTTP_404_NOT_FOUND,
                             detail=ERROR_MESSAGES.DEFAULT(),
@@ -1883,7 +1901,6 @@ async def chat_completion(
                     # now the backend owns persistence.
                     chat_files = metadata.get('files')
                     if chat_files is not None:
-                        existing_chat = await Chats.get_chat_by_id(chat_id)
                         if existing_chat:
                             updated = {**existing_chat.chat, 'files': chat_files}
                             await Chats.update_chat_by_id(chat_id, updated)
@@ -2288,7 +2305,15 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
             return {'task_ids': []}
     else:
         chat = await Chats.get_chat_by_id(chat_id)
-        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+        if chat is None:
+            return {'task_ids': []}
+        # Company custom: Team Workspaces V1 — workspace permission is authoritative for task list
+        if chat.workspace_id is not None:
+            ws = await Workspaces.get_by_id(chat.workspace_id)
+            member = await WorkspaceMembers.get(chat.workspace_id, user.id)
+            if ws is None or member is None:
+                return {'task_ids': []}
+        elif chat.user_id != user.id and user.role != 'admin':
             return {'task_ids': []}
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
@@ -2306,7 +2331,15 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     else:
         chat = await Chats.get_chat_by_id(chat_id)
-        if chat is None or (chat.user_id != user.id and user.role != 'admin'):
+        if chat is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+        # Company custom: Team Workspaces V1 — workspace permission is authoritative for task stop
+        if chat.workspace_id is not None:
+            ws = await Workspaces.get_by_id(chat.workspace_id)
+            member = await WorkspaceMembers.get(chat.workspace_id, user.id)
+            if ws is None or member is None or member.role not in WORKSPACE_WRITE_ROLES:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+        elif chat.user_id != user.id and user.role != 'admin':
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)
     return result

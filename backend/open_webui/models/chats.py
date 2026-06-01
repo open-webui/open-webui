@@ -1684,8 +1684,15 @@ class ChatTable:
                 # Delete shared_chat rows for this user's chats
                 await db.execute(delete(SharedChatTable).filter_by(user_id=user_id))
 
-                # Clear share_id on all of this user's chats
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(share_id=None))
+                # Company custom: Team Workspaces V1 — only clear share_id on private chats.
+                # Workspace chats cannot have share_id (blocked at router), but we guard
+                # explicitly so bulk account wipe never touches workspace chat rows.
+                await db.execute(
+                    update(Chat)
+                    .filter_by(user_id=user_id)
+                    .filter(Chat.workspace_id.is_(None))
+                    .values(share_id=None)
+                )
                 await db.commit()
 
                 return True

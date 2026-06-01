@@ -29,6 +29,8 @@ from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
 
 from open_webui.models.chats import Chats
+# Company custom: Team Workspaces V1
+from open_webui.models.workspaces import Workspaces, WorkspaceMembers
 from open_webui.models.notes import Notes
 from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.files import has_access_to_file
@@ -1186,7 +1188,16 @@ async def get_sources_from_items(
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
 
-            if chat and (user.role == 'admin' or chat.user_id == user.id):
+            # Company custom: Team Workspaces V1 — workspace permission is authoritative
+            _chat_accessible = False
+            if chat:
+                if chat.workspace_id is not None:
+                    _ws = await Workspaces.get_by_id(chat.workspace_id)
+                    _member = await WorkspaceMembers.get(chat.workspace_id, user.id)
+                    _chat_accessible = _ws is not None and _member is not None
+                else:
+                    _chat_accessible = user.role == 'admin' or chat.user_id == user.id
+            if _chat_accessible:
                 messages_map = chat.chat.get('history', {}).get('messages', {})
                 message_id = chat.chat.get('history', {}).get('currentId')
 
