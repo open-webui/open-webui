@@ -11,7 +11,6 @@ from open_webui.models.feedbacks import (
     FeedbackListResponse,
     FeedbackModel,
     Feedbacks,
-    FeedbackUserResponse,
     LeaderboardFeedbackData,
     ModelHistoryEntry,
     ModelHistoryResponse,
@@ -317,19 +316,25 @@ async def export_all_feedbacks(
     return feedbacks
 
 
-@router.get('/feedbacks/user', response_model=list[FeedbackUserResponse])
-async def get_feedbacks(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    feedbacks = await Feedbacks.get_feedbacks_by_user_id(user.id, db=db)
-    return feedbacks
+PAGE_ITEM_COUNT = 30
+
+
+@router.get('/feedbacks/user', response_model=FeedbackListResponse)
+async def get_user_feedbacks(
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    limit = PAGE_ITEM_COUNT
+    page = max(1, page)
+    skip = (page - 1) * limit
+    return await Feedbacks.get_feedbacks_by_user_id(user.id, skip=skip, limit=limit, db=db)
 
 
 @router.delete('/feedbacks', response_model=bool)
 async def delete_feedbacks(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     success = await Feedbacks.delete_feedbacks_by_user_id(user.id, db=db)
     return success
-
-
-PAGE_ITEM_COUNT = 30
 
 
 @router.get('/feedbacks/list', response_model=FeedbackListResponse)

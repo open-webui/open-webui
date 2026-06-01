@@ -380,10 +380,39 @@ class FeedbackTable:
             result = await db.execute(select(Feedback).filter_by(type=type).order_by(Feedback.updated_at.desc()))
             return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
 
-    async def get_feedbacks_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[FeedbackModel]:
+    async def get_feedbacks_by_user_id(
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[AsyncSession] = None,
+    ) -> FeedbackListResponse:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(Feedback).filter_by(user_id=user_id).order_by(Feedback.updated_at.desc()))
-            return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
+            stmt = (
+                select(Feedback, User)
+                .join(User, Feedback.user_id == User.id)
+                .filter(Feedback.user_id == user_id)
+                .order_by(Feedback.updated_at.desc())
+            )
+
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            total = count_result.scalar()
+
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+
+            result = await db.execute(stmt)
+            items = result.all()
+
+            feedbacks = []
+            for feedback, user in items:
+                feedback_model = FeedbackModel.model_validate(feedback)
+                user_model = UserResponse.model_validate(user)
+                feedbacks.append(FeedbackUserResponse(**feedback_model.model_dump(), user=user_model))
+
+            return FeedbackListResponse(items=feedbacks, total=total)
 
     async def update_feedback_by_id(
         self, id: str, form_data: FeedbackForm, db: Optional[AsyncSession] = None
