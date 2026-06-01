@@ -2,7 +2,6 @@ import asyncio
 import copy
 import logging
 import sys
-import time
 
 from aiocache import cached
 from fastapi import Request
@@ -36,7 +35,7 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
             'id': model['model'],
             'name': model['name'],
             'object': 'model',
-            'created': int(time.time()),
+            'created': 0,
             'owned_by': 'ollama',
             'ollama': model,
             'loaded': 'expires_at' in model,
@@ -100,7 +99,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         'meta': model['meta'],
                     },
                     'object': 'model',
-                    'created': int(time.time()),
+                    'created': 0,
                     'owned_by': 'arena',
                     'arena': True,
                 }
@@ -116,7 +115,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         'meta': DEFAULT_ARENA_MODEL['meta'],
                     },
                     'object': 'model',
-                    'created': int(time.time()),
+                    'created': 0,
                     'owned_by': 'arena',
                     'arena': True,
                 }
