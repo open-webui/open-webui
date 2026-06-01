@@ -29,6 +29,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
+    BYPASS_RETRIEVAL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     OFFLINE_MODE,
 )
@@ -115,6 +116,7 @@ def build_loader_from_config(request):
         MINERU_API_KEY=config.MINERU_API_KEY,
         MINERU_API_TIMEOUT=config.MINERU_API_TIMEOUT,
         MINERU_PARAMS=config.MINERU_PARAMS,
+        MINERU_FILE_EXTENSIONS=config.MINERU_FILE_EXTENSIONS,
     )
 
 
@@ -1252,11 +1254,27 @@ async def get_sources_from_items(
                             ],
                         }
             else:
-                # Fallback to collection names
-                if item.get('legacy'):
-                    collection_names.append(f'{item["id"]}')
-                else:
-                    collection_names.append(f'file-{item["id"]}')
+                # Chunked-retrieval fallback — verify read access before
+                # exposing the file's vector collection (same posture as the
+                # full-context branch above).
+                file_id = item.get('id')
+                if file_id:
+                    if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                        if item.get('legacy'):
+                            collection_names.append(f'{file_id}')
+                        else:
+                            collection_names.append(f'file-{file_id}')
+                    else:
+                        file_object = await Files.get_file_by_id(file_id)
+                        if file_object and (
+                            user.role == 'admin'
+                            or file_object.user_id == user.id
+                            or await has_access_to_file(file_id, 'read', user)
+                        ):
+                            if item.get('legacy'):
+                                collection_names.append(f'{file_id}')
+                            else:
+                                collection_names.append(f'file-{file_id}')
 
         elif item.get('type') == 'collection':
             # Manual Full Mode Toggle for Collection
@@ -1302,9 +1320,21 @@ async def get_sources_from_items(
                             'metadatas': [metadatas],
                         }
                 else:
-                    # Fallback to collection names
                     if item.get('legacy'):
-                        collection_names = item.get('collection_names', [])
+                        if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                            collection_names = item.get('collection_names', [])
+                        else:
+                            # Legacy KB: item.collection_names is client-supplied.
+                            # Validate against the KB's actual files to prevent
+                            # cross-tenant collection name substitution.
+                            files = await Knowledges.get_files_by_id(knowledge_base.id)
+                            owned_names = {f'file-{f.id}' for f in files}
+                            owned_names.add(knowledge_base.id)
+                            valid_names = [
+                                n for n in (item.get('collection_names') or [])
+                                if n in owned_names
+                            ]
+                            collection_names = valid_names if valid_names else [knowledge_base.id]
                     else:
                         collection_names.append(item['id'])
 
@@ -1315,11 +1345,22 @@ async def get_sources_from_items(
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
         elif item.get('collection_name'):
-            # Direct Collection Name
-            collection_names.append(item['collection_name'])
+            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                collection_names.append(item['collection_name'])
+            else:
+                log.debug(
+                    "get_sources_from_items: ignoring untrusted direct "
+                    "collection_name '%s' on item without type",
+                    item.get('collection_name'),
+                )
         elif item.get('collection_names'):
-            # Collection Names List
-            collection_names.extend(item['collection_names'])
+            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                collection_names.extend(item['collection_names'])
+            else:
+                log.debug(
+                    "get_sources_from_items: ignoring untrusted direct "
+                    "collection_names on item without type",
+                )
 
         # If query_result is None
         # Fallback to collection names and vector search the collections

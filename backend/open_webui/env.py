@@ -670,6 +670,7 @@ PASSWORD_VALIDATION_HINT = os.getenv('PASSWORD_VALIDATION_HINT', '')
 
 
 BYPASS_MODEL_ACCESS_CONTROL = os.getenv('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
+BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', 'False').lower() == 'true'
 
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
