@@ -558,16 +558,33 @@ class WsSharedChat(Base):
 # Minimal route app factory (built fresh per test session)
 # ---------------------------------------------------------------------------
 
+def _assert_ws_mutation_allowed(chat, member, workspace):
+    """
+    Inline mirror of production _assert_workspace_chat_mutation_allowed.
+    Returns (ok: bool, status_code: int).
+    """
+    if chat.workspace_id is None:
+        return True, 200
+    if workspace is None:
+        return False, 403
+    if member is None:
+        return False, 403
+    return True, 200
+
+
 def _build_app(get_db_fn):
     """
-    Build a minimal FastAPI app whose routes mirror production guard logic.
+    Minimal FastAPI app mirroring production guard logic for route-level tests.
     get_db_fn() → AsyncSession (already open, caller manages lifecycle).
+
+    Route handlers follow the SAME guard order as production chats.py:
+      1. Fetch shared record early (before admin fallback) — P0-1 fix.
+      2. Workspace block covers snapshot path AND admin direct-ID fallback.
+      3. Mutation routes call _assert_ws_mutation_allowed after chat ownership check.
     """
     app = FastAPI()
 
     # ── POST /workspaces/{ws_id}/chats ──────────────────────────────────────
-    # Production: POST /api/v1/workspaces/{workspace_id}/chats
-    # Guard: user must be member with write role.
     @app.post('/workspaces/{ws_id}/chats', status_code=201)
     async def create_workspace_chat(ws_id: str, user_id: str):
         db = get_db_fn()
@@ -584,12 +601,10 @@ def _build_app(get_db_fn):
         return {'id': chat.id, 'workspace_id': ws_id}
 
     # ── POST /chats/new ──────────────────────────────────────────────────────
-    # Production: POST /api/v1/chats/new
     # P0-2: workspace_id from client is stripped; route creates private chats only.
     @app.post('/chats/new', status_code=201)
     async def create_private_chat(user_id: str, workspace_id: str = None):
         db = get_db_fn()
-        # Strip any client-supplied workspace_id — private chat only
         chat = WsChat(id=_uid(), user_id=user_id, title="Private Chat",
                       workspace_id=None, created_at=_now(), updated_at=_now())
         db.add(chat)
@@ -597,7 +612,6 @@ def _build_app(get_db_fn):
         return {'id': chat.id, 'workspace_id': chat.workspace_id}
 
     # ── POST /chats/{chat_id}/share ──────────────────────────────────────────
-    # Production guard: if chat.workspace_id is not None → 403
     @app.post('/chats/{chat_id}/share', status_code=200)
     async def share_chat(chat_id: str, user_id: str):
         db = get_db_fn()
@@ -614,29 +628,58 @@ def _build_app(get_db_fn):
         return {'share_id': share_id}
 
     # ── GET /share/{share_id} ────────────────────────────────────────────────
-    # P0-1: resolve original chat via shared.chat_id, not snapshot.workspace_id
+    # P0-1: hoist shared lookup; check original via shared.chat_id (normal path)
+    # OR check chat.workspace_id directly (admin direct-ID fallback path).
     @app.get('/share/{share_id}', status_code=200)
-    async def get_shared_chat(share_id: str):
+    async def get_shared_chat(share_id: str, is_admin: bool = False):
         db = get_db_fn()
         shared = await _get_shared(db, share_id)
-        if shared is None:
+
+        # Normal path: snapshot (no workspace_id on snapshot object)
+        chat = None
+        if shared:
+            # Simulate get_chat_by_share_id returning a snapshot without workspace_id
+            chat = type('Snap', (), {'id': shared.id, 'workspace_id': None})()
+        admin_fallback = False
+        if chat is None and is_admin:
+            chat = await _get_chat(db, share_id)  # share_id used as chat_id
+            admin_fallback = True
+        if chat is None:
             raise FHTTPException(status_code=404, detail="not found")
-        original = await _get_chat(db, shared.chat_id)
-        if original and original.workspace_id is not None:
+
+        # Workspace block — mirrors production P0-1 fix
+        if shared:
+            original = await _get_chat(db, shared.chat_id)
+            if original and original.workspace_id is not None:
+                raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+        elif admin_fallback and chat.workspace_id is not None:
             raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
-        return {'chat_id': shared.chat_id}
+
+        return {'chat_id': shared.chat_id if shared else share_id}
 
     # ── POST /chats/{share_id}/clone/shared ──────────────────────────────────
-    # P0-1: resolve original chat via shared.chat_id
+    # P0-1: same pattern as GET /share/{share_id}
     @app.post('/chats/{share_id}/clone/shared', status_code=201)
-    async def clone_shared_chat(share_id: str, user_id: str):
+    async def clone_shared_chat(share_id: str, user_id: str, is_admin: bool = False):
         db = get_db_fn()
         shared = await _get_shared(db, share_id)
-        if shared is None:
+        chat = None
+        if shared:
+            chat = type('Snap', (), {'id': shared.id, 'workspace_id': None})()
+        admin_fallback = False
+        if chat is None and is_admin:
+            chat = await _get_chat(db, share_id)
+            admin_fallback = True
+        if chat is None:
             raise FHTTPException(status_code=404, detail="not found")
-        original = await _get_chat(db, shared.chat_id)
-        if original and original.workspace_id is not None:
+
+        if shared:
+            original = await _get_chat(db, shared.chat_id)
+            if original and original.workspace_id is not None:
+                raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+        elif admin_fallback and chat.workspace_id is not None:
             raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+
         clone = WsChat(id=_uid(), user_id=user_id, title="Clone",
                        workspace_id=None, created_at=_now(), updated_at=_now())
         db.add(clone)
@@ -644,7 +687,6 @@ def _build_app(get_db_fn):
         return {'id': clone.id}
 
     # ── GET /chats/{chat_id} ─────────────────────────────────────────────────
-    # Guard: soft-deleted workspace → 403; non-member → 403
     @app.get('/chats/{chat_id}', status_code=200)
     async def get_chat_by_id(chat_id: str, user_id: str):
         db = get_db_fn()
@@ -659,6 +701,77 @@ def _build_app(get_db_fn):
             if member is None:
                 raise FHTTPException(status_code=403, detail="access prohibited")
         return {'id': chat.id, 'workspace_id': chat.workspace_id}
+
+    # ── Mutation routes ──────────────────────────────────────────────────────
+    # Each mirrors production: fetch chat owned by user, then call
+    # _assert_ws_mutation_allowed before performing the mutation.
+
+    @app.post('/chats/{chat_id}/pin', status_code=200)
+    async def pin_chat(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None or chat.user_id != user_id:
+            raise FHTTPException(status_code=401, detail="not found or not owner")
+        workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
+        member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
+        ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
+        if not ok:
+            raise FHTTPException(status_code=code, detail="access prohibited")
+        return {'pinned': True}
+
+    @app.post('/chats/{chat_id}/archive', status_code=200)
+    async def archive_chat(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None or chat.user_id != user_id:
+            raise FHTTPException(status_code=401, detail="not found or not owner")
+        workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
+        member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
+        ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
+        if not ok:
+            raise FHTTPException(status_code=code, detail="access prohibited")
+        return {'archived': True}
+
+    @app.post('/chats/{chat_id}/tags', status_code=200)
+    async def add_tag(chat_id: str, user_id: str, tag: str = 'test'):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None or chat.user_id != user_id:
+            raise FHTTPException(status_code=401, detail="not found or not owner")
+        workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
+        member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
+        ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
+        if not ok:
+            raise FHTTPException(status_code=code, detail="access prohibited")
+        return {'tag': tag}
+
+    @app.post('/chats/{chat_id}/folder', status_code=200)
+    async def set_folder(chat_id: str, user_id: str, folder_id: str = 'f1'):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None or chat.user_id != user_id:
+            raise FHTTPException(status_code=401, detail="not found or not owner")
+        workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
+        member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
+        ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
+        if not ok:
+            raise FHTTPException(status_code=code, detail="access prohibited")
+        return {'folder_id': folder_id}
+
+    @app.post('/chats/{chat_id}/update', status_code=200)
+    async def update_chat(chat_id: str, user_id: str):
+        db = get_db_fn()
+        chat = await _get_chat(db, chat_id)
+        if chat is None:
+            raise FHTTPException(status_code=401, detail="not found")
+        workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
+        member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
+        ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
+        if not ok:
+            raise FHTTPException(status_code=code, detail="access prohibited")
+        if chat.workspace_id is None and chat.user_id != user_id:
+            raise FHTTPException(status_code=401, detail="not owner")
+        return {'updated': True}
 
     return app
 
@@ -901,3 +1014,118 @@ async def test_route_private_chat_sharing_works(route_client):
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
     data = resp.json()
     assert 'share_id' in data
+
+
+# ---------------------------------------------------------------------------
+# P0 new: admin bypass scenarios (P0-1)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_route_admin_cannot_expose_workspace_chat_via_share(route_client):
+    """
+    P0-1: Admin using share_id as a direct chat_id (fallback path) must still be
+    blocked when the resolved chat belongs to a workspace.
+    """
+    client, db = route_client
+    creator_id = _uid()
+    ws_id = _uid()
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Admin Share Test",
+                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    # Admin passes the chat.id directly as share_id (no shared record exists)
+    resp = await client.get(f"/share/{chat.id}", params={"is_admin": "true"})
+    assert resp.status_code == 403, f"Expected 403 (admin fallback blocked), got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_admin_cannot_clone_workspace_chat_via_shared(route_client):
+    """
+    P0-1: Admin clone/shared fallback must be blocked for workspace chats.
+    """
+    client, db = route_client
+    creator_id = _uid()
+    ws_id = _uid()
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Admin Clone Test",
+                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    resp = await client.post(f"/chats/{chat.id}/clone/shared",
+                             params={"user_id": _uid(), "is_admin": "true"})
+    assert resp.status_code == 403, f"Expected 403 (admin fallback blocked), got {resp.status_code}: {resp.text}"
+
+
+# ---------------------------------------------------------------------------
+# P0 new: deleted-workspace mutation scenarios (P0-2)
+# ---------------------------------------------------------------------------
+
+async def _setup_deleted_ws_chat(db: AsyncSession):
+    """Helper: create a workspace, add creator as member, create a chat, soft-delete the workspace."""
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Mutation Test WS")
+    await add_member(db, ws.id, creator_id, ROLE_MEMBER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Mutation Chat",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    ws.deleted_at = _now()
+    await db.commit()
+
+    return creator_id, chat
+
+
+@pytest.mark.asyncio
+async def test_route_deleted_workspace_chat_cannot_be_pinned(route_client):
+    """P0-2: pin must be blocked when the workspace is soft-deleted."""
+    client, db = route_client
+    user_id, chat = await _setup_deleted_ws_chat(db)
+
+    resp = await client.post(f"/chats/{chat.id}/pin", params={"user_id": user_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_deleted_workspace_chat_cannot_be_archived(route_client):
+    """P0-2: archive must be blocked when the workspace is soft-deleted."""
+    client, db = route_client
+    user_id, chat = await _setup_deleted_ws_chat(db)
+
+    resp = await client.post(f"/chats/{chat.id}/archive", params={"user_id": user_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_deleted_workspace_chat_cannot_be_tagged(route_client):
+    """P0-2: adding a tag must be blocked when the workspace is soft-deleted."""
+    client, db = route_client
+    user_id, chat = await _setup_deleted_ws_chat(db)
+
+    resp = await client.post(f"/chats/{chat.id}/tags", params={"user_id": user_id, "tag": "important"})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_deleted_workspace_chat_cannot_be_moved_to_folder(route_client):
+    """P0-2: folder assignment must be blocked when the workspace is soft-deleted."""
+    client, db = route_client
+    user_id, chat = await _setup_deleted_ws_chat(db)
+
+    resp = await client.post(f"/chats/{chat.id}/folder",
+                             params={"user_id": user_id, "folder_id": "folder-99"})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+
+
+@pytest.mark.asyncio
+async def test_route_deleted_workspace_chat_cannot_be_updated(route_client):
+    """P0-2: chat content update must be blocked when the workspace is soft-deleted."""
+    client, db = route_client
+    user_id, chat = await _setup_deleted_ws_chat(db)
+
+    resp = await client.post(f"/chats/{chat.id}/update", params={"user_id": user_id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
