@@ -968,12 +968,15 @@ async def update_chat_by_id(
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
 
-        # Re-derive content from output for assistant messages so that
-        # frontend edits to output items are always reflected in content.
-        # serialize_output() is the single source of truth for this conversion.
-        for msg in updated_chat.get('history', {}).get('messages', {}).values():
+        # Re-derive content from output for assistant messages so that frontend
+        # edits to output items are reflected in content. Only when output
+        # actually changed — otherwise content set independently of output
+        # (e.g. a `replace` event or an outlet filter footer) would be reverted.
+        existing_messages = (chat.chat.get('history') or {}).get('messages') or {}
+        for msg_id, msg in updated_chat.get('history', {}).get('messages', {}).items():
             if msg.get('role') == 'assistant' and msg.get('output'):
-                msg['content'] = serialize_output(msg['output'])
+                if msg.get('output') != existing_messages.get(msg_id, {}).get('output'):
+                    msg['content'] = serialize_output(msg['output'])
 
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
 
