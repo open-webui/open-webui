@@ -96,7 +96,7 @@ rank-bm25==0.2.2
 onnxruntime==1.24.3
 faster-whisper==1.2.1
 
-black==26.3.1
+black==26.5.1
 youtube-transcript-api==1.2.4
 pytube==15.0.0
 
