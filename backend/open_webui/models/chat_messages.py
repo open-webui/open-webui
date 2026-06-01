@@ -172,7 +172,7 @@ class ChatMessageTable:
                 # Update existing
                 if 'role' in data:
                     existing.role = data['role']
-                if 'parent_id' in data:
+                if 'parent_id' in data or 'parentId' in data:
                     existing.parent_id = data.get('parent_id') or data.get('parentId')
                 if 'content' in data:
                     existing.content = data.get('content')
@@ -391,6 +391,24 @@ class ChatMessageTable:
     async def delete_messages_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
             await db.execute(delete(ChatMessage).filter_by(chat_id=chat_id))
+            await db.commit()
+            return True
+
+    async def delete_message_ids_by_chat_id(
+        self,
+        chat_id: str,
+        message_ids: set[str],
+        db: Optional[AsyncSession] = None,
+    ) -> bool:
+        """Delete specific ``chat_message`` rows by their original message IDs."""
+        if not message_ids:
+            return True
+        async with get_async_db_context(db) as db:
+            await db.execute(
+                delete(ChatMessage)
+                .where(ChatMessage.chat_id == chat_id)
+                .where(ChatMessage.id.in_({f'{chat_id}-{mid}' for mid in message_ids}))
+            )
             await db.commit()
             return True
 

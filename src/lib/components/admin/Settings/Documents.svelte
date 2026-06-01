@@ -244,7 +244,10 @@
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
-					: {}
+					: {},
+			MINERU_FILE_EXTENSIONS: RAGConfig.MINERU_FILE_EXTENSIONS.split(',')
+				.map((ext) => ext.trim())
+				.filter((ext) => ext !== '')
 		});
 		dispatch('save');
 	};
@@ -285,6 +288,8 @@
 			typeof config.MINERU_PARAMS === 'object'
 				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
 				: config.MINERU_PARAMS;
+
+		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
 
 		RAGConfig = config;
 	});
@@ -762,6 +767,25 @@
 										minSize={100}
 									/>
 								</div>
+							</div>
+
+							<!-- File Extensions -->
+							<div class="flex flex-col justify-between w-full mt-2">
+								<div class="text-xs font-medium mb-1">
+									<Tooltip
+										content={$i18n.t(
+											'Comma-separated list of file extensions MinerU will handle (e.g. pdf, docx, pptx, xlsx)'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('File Extensions')}
+									</Tooltip>
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('pdf, docx, pptx, xlsx')}
+									bind:value={RAGConfig.MINERU_FILE_EXTENSIONS}
+								/>
 							</div>
 						{/if}
 					</div>

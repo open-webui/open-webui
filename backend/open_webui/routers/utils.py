@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 import black
-import markdown
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
@@ -73,15 +72,6 @@ async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_v
         )
 
 
-class MarkdownForm(BaseModel):
-    md: str
-
-
-@router.post('/markdown')
-async def get_html_from_markdown(form_data: MarkdownForm, user=Depends(get_verified_user)):
-    return {'html': markdown.markdown(form_data.md)}
-
-
 class ChatForm(BaseModel):
     title: str
     messages: list[dict]
@@ -104,20 +94,18 @@ async def download_chat_as_pdf(form_data: ChatTitleMessagesForm, user=Depends(ge
 
 @router.get('/db/download')
 async def download_db(user=Depends(get_admin_user)):
+    """Download the raw SQLite database file (admin-only, SQLite deployments only)."""
     if not ENABLE_ADMIN_EXPORT:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    # Lazy import avoids circular dependency at module load time
     from open_webui.internal.db import engine
 
     if engine.name != 'sqlite':
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DB_NOT_SQLITE,
-        )
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DB_NOT_SQLITE)
+
     return FileResponse(
-        engine.url.database,
+        str(engine.url.database),
         media_type='application/octet-stream',
         filename='webui.db',
     )

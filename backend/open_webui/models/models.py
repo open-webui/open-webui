@@ -9,39 +9,53 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from open_webui.utils.validate import validate_profile_image_url
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-
-####################
-# Models DB Schema
-# A misconfigured model wastes the time of everyone
-# who trusts it. Let what is set here be set with care.
-####################
+# Track invalid profile_image_url values we've already warned about so we
+# don't flood the logs on every DB read (the validator fires per-row).
+_warned_profile_urls: set[str] = set()
 
 
-# ModelParams is a model for the data stored in the params field of the Model table
+# --- Models DB Schema ---
+
+
 class ModelParams(BaseModel):
+    """Parameters for model inference (temperature, top_p, etc.)."""
+
     model_config = ConfigDict(extra='allow')
-    pass
 
 
-# ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
-    profile_image_url: str | None = '/static/favicon.png'
+    """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
 
-    description: str | None = None
-    """
-        User-facing description of the model.
-    """
-
+    profile_image_url: str | None = None
+    description: str | None = Field(default=None, description='User-facing description of the model.')
     capabilities: dict | None = None
 
     model_config = ConfigDict(extra='allow')
+
+    @field_validator('profile_image_url', mode='before')
+    @classmethod
+    def check_profile_image_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        try:
+            return validate_profile_image_url(v)
+        except ValueError:
+            if v not in _warned_profile_urls:
+                _warned_profile_urls.add(v)
+                log.warning(
+                    'Clearing invalid profile_image_url stored in DB '
+                    '(likely a legacy SVG data-URI): %.80s…',
+                    v,
+                )
+            return None
 
     @model_validator(mode='before')
     @classmethod
@@ -60,38 +74,20 @@ class ModelMeta(BaseModel):
 
 
 class Model(Base):
+
+    """Workspace model entry — wraps an upstream LLM with custom params and metadata."""
+
     __tablename__ = 'model'
 
-    id = Column(Text, primary_key=True, unique=True)
-    """
-        The model's id as used in the API. If set to an existing model, it will override the model.
-    """
-    user_id = Column(Text)
-
-    base_model_id = Column(Text, nullable=True)
-    """
-        An optional pointer to the actual model that should be used when proxying requests.
-    """
-
-    name = Column(Text)
-    """
-        The human-readable display name of the model.
-    """
-
-    params = Column(JSONField)
-    """
-        Holds a JSON encoded blob of parameters, see `ModelParams`.
-    """
-
-    meta = Column(JSONField)
-    """
-        Holds a JSON encoded blob of metadata, see `ModelMeta`.
-    """
-
-    is_active = Column(Boolean, default=True)
-
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    id = Column(Text, primary_key=True, unique=True)  # API model identifier; overrides built-in when matching
+    user_id = Column(Text)  # owner
+    base_model_id = Column(Text, nullable=True)  # actual upstream model for proxied requests
+    name = Column(Text)  # human-readable display name
+    params = Column(JSONField)  # see ModelParams
+    meta = Column(JSONField)  # see ModelMeta
+    is_active = Column(Boolean, default=True)  # soft-disable toggle
+    updated_at = Column(BigInteger)  # epoch seconds
+    created_at = Column(BigInteger)  # epoch seconds
 
 
 class ModelModel(BaseModel):
@@ -109,12 +105,9 @@ class ModelModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
-
-
-####################
-# Forms
-####################
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
 
 
 class ModelUserResponse(ModelModel):
@@ -199,10 +192,15 @@ class ModelsTable:
             all_models = result.scalars().all()
             model_ids = [model.id for model in all_models]
             grants_map = await AccessGrants.get_grants_by_resources('model', model_ids, db=db)
-            return [
-                await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
-                for model in all_models
-            ]
+            models: list[ModelModel] = []
+            for model in all_models:
+                try:
+                    models.append(
+                        await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
+                    )
+                except Exception as exc:
+                    log.error('Skipping model %r during get_all_models due to error: %s', model.id, exc)
+            return models
 
     async def get_models(self, db: AsyncSession | None = None) -> list[ModelUserResponse]:
         async with get_async_db_context(db) as db:
@@ -595,4 +593,4 @@ class ModelsTable:
             return []
 
 
-Models = ModelsTable()
+Models = ModelsTable()  # singleton model registry

@@ -16,8 +16,6 @@ import markdown
 from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives import serialization
 
-from open_webui.constants import ERROR_MESSAGES
-
 ####################################
 # Load .env file
 ####################################
@@ -514,6 +512,11 @@ AIOHTTP_CLIENT_SESSION_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True').low
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
 
+# Optional User-Agent override for outbound web-loader fetches.  When set,
+# SafeWebBaseLoader sends this value instead of the default python-requests UA
+# which is aggressively blocked by Cloudflare, Wikipedia, and similar services.
+USER_AGENT = os.getenv('USER_AGENT', '')
+
 _model_list_timeout_raw = os.getenv(
     'AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST',
     os.getenv('AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST', '10'),
@@ -541,6 +544,15 @@ else:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = int(AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = AIOHTTP_CLIENT_TIMEOUT
+
+# Timeout (in seconds) for the MCP session.initialize() handshake.
+# The handshake performs a list-tools round-trip and can take tens of
+# seconds on cold-start servers or servers exposing many tools.
+MCP_INITIALIZE_TIMEOUT = os.getenv('MCP_INITIALIZE_TIMEOUT', '10')
+try:
+    MCP_INITIALIZE_TIMEOUT = int(MCP_INITIALIZE_TIMEOUT)
+except (ValueError, TypeError):
+    MCP_INITIALIZE_TIMEOUT = 10
 
 
 ####################################
@@ -598,9 +610,10 @@ ENABLE_SIGNUP_PASSWORD_CONFIRMATION = os.getenv('ENABLE_SIGNUP_PASSWORD_CONFIRMA
 ####################################
 
 # WEBUI_JWT_SECRET_KEY is deprecated; use WEBUI_SECRET_KEY instead.
+# No hardcoded fallback by design: the supported start scripts set/auto-generate it; unset is rejected below.
 WEBUI_SECRET_KEY = os.getenv(
     'WEBUI_SECRET_KEY',
-    os.getenv('WEBUI_JWT_SECRET_KEY', 't0p-s3cr3t'),
+    os.getenv('WEBUI_JWT_SECRET_KEY', ''),
 )
 
 WEBUI_SESSION_COOKIE_SAME_SITE = os.getenv('WEBUI_SESSION_COOKIE_SAME_SITE', 'lax')
@@ -615,7 +628,14 @@ WEBUI_AUTH_COOKIE_SECURE = (
 )
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == '':
-    raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+    raise SystemExit(
+        'WEBUI_SECRET_KEY is not set. It is a hard requirement when authentication is enabled.\n'
+        'The supported start methods set or auto-generate it for you: use start.sh (Linux/macOS), '
+        'start_windows.bat (Windows), or `open-webui serve`.\n'
+        'If you start the backend another way (e.g. invoking uvicorn directly, which is unsupported), '
+        'you must set WEBUI_SECRET_KEY yourself to a long random value.\n'
+        'See https://docs.openwebui.com/reference/env-configuration#webui_secret_key'
+    )
 
 ENABLE_COMPRESSION_MIDDLEWARE = os.getenv('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
 
@@ -659,6 +679,15 @@ PASSWORD_VALIDATION_HINT = os.getenv('PASSWORD_VALIDATION_HINT', '')
 
 
 BYPASS_MODEL_ACCESS_CONTROL = os.getenv('BYPASS_MODEL_ACCESS_CONTROL', 'False').lower() == 'true'
+BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', 'False').lower() == 'true'
+
+# When True, collection names that do not match any known file-*, user-memory-*,
+# web-search-*, or knowledge-base collection are allowed through access control
+# for non-admin users.  When False (default), unknown collection names are
+# denied — closing the legacy unscoped namespace.
+ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = (
+    os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
+)
 
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
@@ -768,6 +797,13 @@ PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
     if t.strip()
 )
 
+# Max stored length (bytes) of a data:image profile URI; bounds Postgres/Redis
+# bloat from inline avatars and model icons. Unset (default) disables the cap.
+_profile_image_max_data_uri_size = os.getenv('PROFILE_IMAGE_MAX_DATA_URI_SIZE', '').strip()
+PROFILE_IMAGE_MAX_DATA_URI_SIZE = (
+    int(_profile_image_max_data_uri_size) if _profile_image_max_data_uri_size else None
+)
+
 ####################################
 # Forward Headers
 ####################################
@@ -840,15 +876,24 @@ else:
         CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
 
 
-CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.getenv('CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES', '30')
+# Maximum tool-call iterations per chat response. Set to -1 for unlimited.
+# The old CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES name is accepted as a fallback.
+CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = os.getenv(
+    'CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS',
+    os.getenv('CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES', '256'),
+)
 
-if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == '':
-    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+if CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS == '':
+    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = 256
 else:
     try:
-        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
+        CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = int(CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS)
     except Exception:
-        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+        CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = 256
+
+# -1 means unlimited (no cap).
+if CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS == -1:
+    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = None
 
 
 # WARNING: Experimental. Only enable if your upstream Responses API endpoint

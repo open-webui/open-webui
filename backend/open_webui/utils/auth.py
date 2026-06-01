@@ -426,7 +426,7 @@ async def get_current_user_by_api_key(request, api_key: str):
         allowed_paths = [
             path.strip() for path in str(request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',') if path.strip()
         ]
-        request_path = request.url.path
+        request_path = request.scope["path"]  # Use raw ASGI path — not spoofable via Host header (CVE-2026-48710)
         is_allowed = any(request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths)
         if not is_allowed:
             raise HTTPException(

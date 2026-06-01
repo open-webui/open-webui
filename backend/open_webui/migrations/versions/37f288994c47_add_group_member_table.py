@@ -22,6 +22,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'group_member' in existing_tables:
+        return  # Already created — skip everything
+
     # 1. Create new table
     op.create_table(
         'group_member',

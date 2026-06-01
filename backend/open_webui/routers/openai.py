@@ -595,7 +595,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
             try:
                 headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-                if api_config.get('azure', False):
+                if api_config.get('azure') or api_config.get('provider') == 'azure':
                     models = {
                         'data': api_config.get('model_ids', []) or [],
                         'object': 'list',
@@ -681,15 +681,24 @@ async def verify_connection(
         try:
             headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-            if api_config.get('azure', False):
+            if api_config.get('azure') or api_config.get('provider') == 'azure':
                 # Only set api-key header if not using Azure Entra ID authentication
                 auth_type = api_config.get('auth_type', 'bearer')
                 if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                     headers['api-key'] = key
 
-                api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                # Azure v1 format: base URL already ends with /openai/v1,
+                # use standard /models endpoint without api-version.
+                is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+                if is_azure_v1:
+                    verify_url = f'{url.rstrip("/")}/models'
+                else:
+                    api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                    verify_url = f'{url}/openai/models?api-version={api_version}'
+
                 async with session.get(
-                    url=f'{url}/openai/models?api-version={api_version}',
+                    url=verify_url,
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1045,19 +1054,20 @@ async def generate_chat_completion(
     request: Request,
     form_data: dict,
     user=Depends(get_verified_user),
-    bypass_system_prompt: bool = False,
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
 
-    # bypass_filter is read from request.state to prevent external clients from
-    # setting it via query parameter (CVE fix). Only internal server-side callers
-    # (e.g. utils/chat.py) should set request.state.bypass_filter = True.
+    # bypass_filter and bypass_system_prompt are read from request.state to prevent
+    # external clients from setting them via query parameter. Only internal
+    # server-side callers (e.g. utils/chat.py) should set
+    # request.state.bypass_filter / request.state.bypass_system_prompt = True.
     bypass_filter = getattr(request.state, 'bypass_filter', False)
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
 
     idx = 0
 
@@ -1151,7 +1161,7 @@ async def generate_chat_completion(
 
     is_responses = api_config.get('api_type') == 'responses'
 
-    if api_config.get('azure', False):
+    if api_config.get('azure') or api_config.get('provider') == 'azure':
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get('auth_type', 'bearer')
         if auth_type not in ('azure_ad', 'microsoft_entra_id'):
@@ -1304,11 +1314,32 @@ async def embeddings(request: Request, form_data: dict, user):
     streaming = False
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
+
+    if api_config.get('azure') or api_config.get('provider') == 'azure':
+        # Only set api-key header if not using Azure Entra ID authentication
+        auth_type = api_config.get('auth_type', 'bearer')
+        if auth_type not in ('azure_ad', 'microsoft_entra_id'):
+            headers['api-key'] = key
+
+        # Azure v1 format: base URL already ends with /openai/v1,
+        # model stays in the payload, no deployment URL rewriting.
+        is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+        if is_azure_v1:
+            embeddings_url = f'{url.rstrip("/")}/embeddings'
+        else:
+            api_version = api_config.get('api_version', '2023-03-15-preview')
+            model = _sanitize_model_for_url(form_data.get('model', ''))
+            embeddings_url = f'{url}/openai/deployments/{model}/embeddings?api-version={api_version}'
+            headers['api-version'] = api_version
+    else:
+        embeddings_url = f'{url}/embeddings'
+
     try:
         session = await get_session()
         r = await session.request(
             method='POST',
-            url=f'{url}/embeddings',
+            url=embeddings_url,
             data=body,
             headers=headers,
             cookies=cookies,
@@ -1408,7 +1439,7 @@ async def responses(
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if api_config.get('azure') or api_config.get('provider') == 'azure':
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                 headers['api-key'] = key
@@ -1519,7 +1550,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if api_config.get('azure') or api_config.get('provider') == 'azure':
             # Only set api-key header if not using Azure Entra ID authentication
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):

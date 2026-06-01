@@ -56,6 +56,13 @@ def _flush_batch(conn, table, batch):
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'chat_message' in existing_tables:
+        return  # Already created — skip everything
+
     # Step 1: Create table
     op.create_table(
         'chat_message',
@@ -85,8 +92,6 @@ def upgrade() -> None:
     op.create_index('chat_message_user_created_idx', 'chat_message', ['user_id', 'created_at'])
 
     # Step 2: Backfill from existing chats
-    conn = op.get_bind()
-
     chat_table = sa.table(
         'chat',
         sa.column('id', sa.Text()),

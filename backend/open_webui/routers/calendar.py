@@ -301,6 +301,12 @@ async def update_event(
 
     await _check_calendar_access(event.calendar_id, user, 'write')
 
+    # A new calendar_id in the form moves the event; require write access on the
+    # destination too, mirroring create_event. Without this, write on the source
+    # calendar alone is enough to inject an event into any other calendar.
+    if form_data.calendar_id is not None and form_data.calendar_id != event.calendar_id:
+        await _check_calendar_access(form_data.calendar_id, user, 'write')
+
     updated = await CalendarEvents.update_event_by_id(event_id, form_data)
     if not updated:
         raise HTTPException(status_code=500, detail='Failed to update')

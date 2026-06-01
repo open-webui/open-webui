@@ -1,30 +1,20 @@
+# Initial bootstrap migration version.
+# Revision ID: 7e5b5dc7342b
+# Revises: (none)
+# Created on: 2024-06-24 13:15:33.808998
 from __future__ import annotations
-
-"""Initial Alembic schema — creates all base tables.
-
-Revision ID: 7e5b5dc7342b
-Revises: —
-Create Date: 2024-06-24 13:15:33.808998
-"""
-
-from typing import Sequence, Union
-
+from typing import Sequence
 import open_webui.internal.db  # noqa: F401
 import sqlalchemy as sa
 from alembic import op
 from open_webui.internal.db import JSONField
 from open_webui.migrations.util import get_existing_tables
-
-revision: str = '7e5b5dc7342b'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
-# ── Table definitions ────────────────────────────────────────────────────────
-# Each table is only created if it doesn't already exist, because databases
-# migrated from the Peewee era will already have these tables.
-
-_TABLES: list[tuple[str, list[sa.Column], list]] = [
+revision: str = "7e5b5dc7342b"
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+# Initial schema table declarations
+_INITIAL_TABLES: list[tuple[str, list[sa.Column], list]] = [
     (
         'auth',
         [
@@ -185,15 +175,13 @@ _TABLES: list[tuple[str, list[sa.Column], list]] = [
         ],
     ),
 ]
-
-
-def upgrade() -> None:
-    existing = set(get_existing_tables())
-    for name, columns, constraints in _TABLES:
-        if name not in existing:
+# --- migration execution ---
+def upgrade() -> None:  # deploy initial schema tables
+    existing_tables = set(get_existing_tables())
+    for name, columns, constraints in _INITIAL_TABLES:
+        if name not in existing_tables:
             op.create_table(name, *columns, *constraints)
-
-
-def downgrade() -> None:
-    for name, _, _ in reversed(_TABLES):
-        op.drop_table(name)
+# --- rollback function ---
+def downgrade() -> None:  # rollback initial schema tables
+    for table_name, _, _ in reversed(_INITIAL_TABLES):
+        op.drop_table(table_name)

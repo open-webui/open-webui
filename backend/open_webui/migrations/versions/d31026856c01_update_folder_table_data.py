@@ -16,7 +16,12 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('folder', sa.Column('data', sa.JSON(), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    folder_cols = {c['name'] for c in inspector.get_columns('folder')}
+
+    if 'data' not in folder_cols:
+        op.add_column('folder', sa.Column('data', sa.JSON(), nullable=True))
 
 
 def downgrade():

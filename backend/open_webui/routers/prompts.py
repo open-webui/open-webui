@@ -189,50 +189,6 @@ async def create_new_prompt(
 
 
 ############################
-# GetPromptByCommand
-############################
-
-
-@router.get('/command/{command}', response_model=PromptAccessResponse | None)
-async def get_prompt_by_command(
-    command: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
-):
-    prompt = await Prompts.get_prompt_by_command(command, db=db)
-
-    if prompt:
-        if (
-            user.role == 'admin'
-            or prompt.user_id == user.id
-            or await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='prompt',
-                resource_id=prompt.id,
-                permission='read',
-                db=db,
-            )
-        ):
-            return PromptAccessResponse(
-                **prompt.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == prompt.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='prompt',
-                        resource_id=prompt.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
-            )
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=ERROR_MESSAGES.NOT_FOUND,
-    )
-
-
-############################
 # GetPromptById
 ############################
 
@@ -283,12 +239,10 @@ async def get_prompt_by_id(
 
 @router.post('/id/{prompt_id}/update', response_model=PromptModel | None)
 async def update_prompt_by_id(
-    request: Request,
-    prompt_id: str,
-    form_data: PromptForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
+    request: Request, prompt_id: str, form_data: PromptForm,
+    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session),
 ):
+    """Update a prompt's content, creating a new history entry if changed."""
     prompt = await Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
@@ -699,7 +653,7 @@ async def delete_prompt_history_entry(
             detail='Cannot delete the active production version',
         )
 
-    success = await PromptHistories.delete_history_entry(history_id, db=db)
+    success = await PromptHistories.delete_history_entry(history_id, prompt.id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -743,7 +697,7 @@ async def get_prompt_diff(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    diff = await PromptHistories.compute_diff(from_id, to_id, db=db)
+    diff = await PromptHistories.compute_diff(from_id, to_id, prompt.id, db=db)
     if not diff:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -19,7 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('user', sa.Column('scim', sa.JSON(), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    user_cols = {c['name'] for c in inspector.get_columns('user')}
+
+    if 'scim' not in user_cols:
+        op.add_column('user', sa.Column('scim', sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

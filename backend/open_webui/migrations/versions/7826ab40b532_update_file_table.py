@@ -16,10 +16,15 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        'file',
-        sa.Column('access_control', sa.JSON(), nullable=True),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    file_cols = {c['name'] for c in inspector.get_columns('file')}
+
+    if 'access_control' not in file_cols:
+        op.add_column(
+            'file',
+            sa.Column('access_control', sa.JSON(), nullable=True),
+        )
 
 
 def downgrade():
