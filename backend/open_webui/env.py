@@ -813,6 +813,17 @@ FORWARD_USER_INFO_HEADER_USER_ROLE = os.getenv('FORWARD_USER_INFO_HEADER_USER_RO
 FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id')
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
 
+# If set while ENABLE_FORWARD_USER_INFO_HEADERS is True, send one signed HS256 JWT
+# (FORWARD_USER_INFO_HEADER_JWT) instead of separate X-OpenWebUI-User-* headers.
+FORWARD_USER_INFO_HEADER_JWT_SECRET = (os.environ.get('FORWARD_USER_INFO_HEADER_JWT_SECRET') or '').strip() or None
+FORWARD_USER_INFO_HEADER_JWT = os.environ.get('FORWARD_USER_INFO_HEADER_JWT', 'X-OpenWebUI-User-Jwt')
+try:
+    FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS = int(
+        os.environ.get('FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS', '300')
+    )
+except ValueError:
+    FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS = 300
+
 ####################################
 # Progressive Web App
 ####################################
