@@ -2193,14 +2193,24 @@ async def view_knowledge_file(
 
 
 async def list_knowledge(
+    knowledge_id: Optional[str] = None,
+    skip: int = 0,
+    count: int = 50,
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    List all knowledge bases, files, and notes attached to the current model.
+    List knowledge bases, files, and notes attached to the current model.
     Use this first to discover what knowledge is available before querying or reading files.
+    Without knowledge_id: returns KB summaries (name, description, file_count)
+    plus standalone files and notes — no file listing inside KBs.
+    With knowledge_id: includes paginated file listing for that specific KB.
+    Use skip/count to page through large KBs.
 
+    :param knowledge_id: Optional KB ID to get file listing for
+    :param skip: Number of files to skip for pagination (default: 0)
+    :param count: Maximum files per page (default: 50, max: 200)
     :return: JSON with knowledge_bases, files, and notes attached to this model
     """
     if __request__ is None:
@@ -2211,6 +2221,22 @@ async def list_knowledge(
 
     if not __model_knowledge__:
         return json.dumps({'knowledge_bases': [], 'files': [], 'notes': []})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(skip, str):
+        try:
+            skip = int(skip)
+        except ValueError:
+            skip = 0
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 50
+    if isinstance(knowledge_id, str) and knowledge_id.lower() in ('none', 'null', ''):
+        knowledge_id = None
+
+    count = min(count, 200)
 
     try:
         from open_webui.models.access_grants import AccessGrants
@@ -2253,9 +2279,15 @@ async def list_knowledge(
                         'file_count': file_count,
                     }
 
-                    # Include file listing for each KB
-                    if kb_files:
-                        kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in kb_files]
+                    # Include file listing only when this KB is targeted
+                    if knowledge_id and knowledge_id == knowledge.id:
+                        if kb_files:
+                            paged_files = kb_files[skip : skip + count]
+                            kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in paged_files]
+                            kb_entry['files_skip'] = skip
+                            kb_entry['files_count'] = len(paged_files)
+                            kb_entry['files_total'] = file_count
+                            kb_entry['has_more'] = skip + count < file_count
 
                     knowledge_bases.append(kb_entry)
 
