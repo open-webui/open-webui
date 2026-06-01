@@ -357,6 +357,23 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
+            # Validate folder_id references — clear any that don't exist
+            folder_ids = {
+                f.folder_id for f in chat_import_forms if f.folder_id
+            }
+            existing = set()
+            for fid in folder_ids:
+                if await Folders.get_folder_by_id_and_user_id(fid, user_id, db=session):
+                    existing.add(fid)
+
+            cleared = 0
+            for form in chat_import_forms:
+                if form.folder_id and form.folder_id not in existing:
+                    form.folder_id = None
+                    cleared += 1
+            if cleared:
+                log.info('Import: cleared %d dangling folder_id(s) for user %s', cleared, user_id)
+
             chats = []
 
             for form_data in chat_import_forms:
