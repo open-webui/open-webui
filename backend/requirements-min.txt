@@ -4,7 +4,7 @@
 fastapi==0.135.1
 uvicorn[standard]==0.41.0
 pydantic==2.12.5
-python-multipart==0.0.22
+python-multipart==0.0.30
 itsdangerous==2.2.0
 
 python-socketio==5.16.1
