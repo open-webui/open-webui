@@ -1037,12 +1037,17 @@ class ChatTable:
 
     async def get_chat_folder_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[str]:
         """
-        Fetch only the folder_id column for a chat, without loading the full
-        JSON blob. Returns None if chat doesn't exist or doesn't belong to user.
+        Fetch only the folder_id column for a private chat.
+        Returns None if chat doesn't exist, doesn't belong to user, or belongs to a workspace.
+        Company custom: Team Workspaces V1 — workspace chats must not flow through private folder logic.
         """
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Chat.folder_id).filter_by(id=id, user_id=user_id))
+                result = await db.execute(
+                    select(Chat.folder_id)
+                    .filter_by(id=id, user_id=user_id)
+                    .filter(Chat.workspace_id.is_(None))
+                )
                 row = result.first()
                 return row[0] if row else None
         except Exception:
@@ -1488,7 +1493,13 @@ class ChatTable:
         self, tag_name: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> int:
         async with get_async_db_context(db) as db:
-            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+            # Company custom: Team Workspaces V1 — count only private chats so workspace tags
+            # don't inflate the reference count and prevent orphan-tag cleanup.
+            stmt = (
+                select(func.count(Chat.id))
+                .filter_by(user_id=user_id, archived=False)
+                .filter(Chat.workspace_id.is_(None))
+            )
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await db.connection()
@@ -1536,7 +1547,12 @@ class ChatTable:
         self, folder_id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> int:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id))
+            # Company custom: Team Workspaces V1 — count only private chats in folder.
+            result = await db.execute(
+                select(func.count(Chat.id))
+                .filter_by(user_id=user_id, folder_id=folder_id)
+                .filter(Chat.workspace_id.is_(None))
+            )
             count = result.scalar()
 
             log.info(f"Count of chats for folder '{folder_id}': {count}")
@@ -1681,8 +1697,21 @@ class ChatTable:
 
         try:
             async with get_async_db_context(db) as db:
-                # Delete shared_chat rows for this user's chats
-                await db.execute(delete(SharedChatTable).filter_by(user_id=user_id))
+                # Company custom: Team Workspaces V1 — delete only shared snapshots
+                # whose original Chat is private (workspace_id IS NULL). Workspace chats
+                # cannot be shared (blocked at router), but stale pre-guard rows must not
+                # be swept up by a private-account bulk cleanup.
+                private_chat_ids_stmt = (
+                    select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
+                )
+                await db.execute(
+                    delete(SharedChatTable).where(
+                        and_(
+                            SharedChatTable.user_id == user_id,
+                            SharedChatTable.chat_id.in_(private_chat_ids_stmt),
+                        )
+                    )
+                )
 
                 # Company custom: Team Workspaces V1 — only clear share_id on private chats.
                 # Workspace chats cannot have share_id (blocked at router), but we guard

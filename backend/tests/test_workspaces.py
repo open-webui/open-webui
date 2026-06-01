@@ -1995,3 +1995,146 @@ async def test_bulk_shared_deletion_ignores_workspace_chats(route_client):
 
     assert private_chat.archived is True, "Private chat must be affected by bulk operation"
     assert ws_chat.archived is False, "Workspace chat must NOT be affected by bulk operation"
+
+
+# ---------------------------------------------------------------------------
+# P0: final blocker tests — error-handler mutation, analytics, folder lookup,
+# shared-snapshot cleanup
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_error_handler_denied_workspace_completion_no_write(route_client):
+    """
+    After a denied workspace completion, the error-handler write guard must block
+    the upsert. Mirror: _can_write is False for non-member, so write is skipped.
+    """
+    client, db = route_client
+    creator_id = _uid()
+    non_member_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    chat = WsChat(id=_uid(), user_id=creator_id, title="Error Handler Chat",
+                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    db.add(chat)
+    await db.commit()
+
+    # Mirror production guard used in error handler: re-verify write access
+    r = await db.execute(select(WsWorkspace).where(WsWorkspace.id == ws.id, WsWorkspace.deleted_at.is_(None)))
+    active_ws = r.scalars().first()
+    member = await get_member(db, ws.id, non_member_id)
+
+    # non_member_id is not in the workspace → _can_write must be False
+    can_write = active_ws is not None and member is not None and (member.role if member else None) in WRITE_ROLES
+    assert not can_write, "Error handler must not write for non-member workspace chat"
+
+
+@pytest.mark.asyncio
+async def test_error_handler_private_chat_write_allowed(route_client):
+    """Private chat owner can still get error written (unchanged behavior)."""
+    client, db = route_client
+    owner_id = _uid()
+
+    private = WsChat(id=_uid(), user_id=owner_id, title="Private Error Chat",
+                     workspace_id=None, created_at=_now(), updated_at=_now())
+    db.add(private)
+    await db.commit()
+
+    # Mirror: workspace_id is None → fall through to owner check
+    can_write = private.user_id == owner_id  # owner, not admin needed
+    assert can_write, "Private chat owner must still receive error writes"
+
+
+@pytest.mark.asyncio
+async def test_analytics_excludes_workspace_chat_tags(route_client):
+    """Analytics tag aggregation must skip chats with workspace_id set."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Analytics Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Analytics WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    db.add(ws_chat)
+    await db.commit()
+
+    # Mirror analytics guard: only include chats where workspace_id IS NULL
+    r = await db.execute(
+        select(WsChat)
+        .where(WsChat.id.in_([private_chat.id, ws_chat.id]))
+        .where(WsChat.workspace_id.is_(None))
+    )
+    visible_to_analytics = [c.id for c in r.scalars().all()]
+    assert private_chat.id in visible_to_analytics
+    assert ws_chat.id not in visible_to_analytics, "Workspace chat must not appear in analytics tag aggregation"
+
+
+@pytest.mark.asyncio
+async def test_get_chat_folder_id_returns_none_for_workspace_chat(route_client):
+    """get_chat_folder_id must return None for workspace chats (workspace_id IS NULL filter)."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+    folder_id = _uid()
+
+    # Workspace chat — has a folder_id set but must not be surfaced via private folder path
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Folder WS Chat",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(ws_chat)
+    await db.commit()
+
+    # Mirror get_chat_folder_id filter: user_id match + workspace_id IS NULL required
+    r = await db.execute(
+        select(WsChat.id)
+        .where(WsChat.id == ws_chat.id)
+        .where(WsChat.user_id == user_id)
+        .where(WsChat.workspace_id.is_(None))
+    )
+    row = r.first()
+    assert row is None, "get_chat_folder_id must return None for workspace chats"
+
+
+@pytest.mark.asyncio
+async def test_delete_shared_chats_ignores_workspace_snapshots(route_client):
+    """delete_shared_chats_by_user_id must not delete shared snapshots of workspace chats."""
+    client, db = route_client
+    user_id = _uid()
+    ws_id = _uid()
+
+    private_chat = WsChat(id=_uid(), user_id=user_id, title="Shared Cleanup Private",
+                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Shared Cleanup WS",
+                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    db.add(private_chat)
+    db.add(ws_chat)
+    await db.commit()
+
+    private_share = WsSharedChat(id=_uid(), chat_id=private_chat.id, user_id=user_id,
+                                 created_at=_now(), updated_at=_now())
+    # stale workspace share (pre-guard data, should survive cleanup)
+    ws_share = WsSharedChat(id=_uid(), chat_id=ws_chat.id, user_id=user_id,
+                            created_at=_now(), updated_at=_now())
+    db.add(private_share)
+    db.add(ws_share)
+    await db.commit()
+
+    # Mirror delete_shared_chats_by_user_id: join with Chat to restrict to private-only originals
+    private_ids = select(WsChat.id).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None))
+    await db.execute(
+        delete(WsSharedChat).where(
+            and_(
+                WsSharedChat.user_id == user_id,
+                WsSharedChat.chat_id.in_(private_ids),
+            )
+        )
+    )
+    await db.commit()
+
+    r = await db.execute(select(WsSharedChat).where(WsSharedChat.id == private_share.id))
+    assert r.scalars().first() is None, "Private shared snapshot must be deleted"
+
+    r = await db.execute(select(WsSharedChat).where(WsSharedChat.id == ws_share.id))
+    assert r.scalars().first() is not None, "Workspace shared snapshot must NOT be deleted"

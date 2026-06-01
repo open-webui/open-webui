@@ -2036,14 +2036,28 @@ async def chat_completion(
                 # Update the chat message with the error
                 try:
                     if not metadata['chat_id'].startswith('local:') and not metadata['chat_id'].startswith('channel:'):
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'parentId': metadata.get('user_message_id', None),
-                                'error': {'content': error_detail},
-                            },
-                        )
+                        # Company custom: Team Workspaces V1 — re-verify write access before
+                        # writing error payload. An auth failure earlier in the pipeline must
+                        # not be followed by an unguarded DB write into the same chat.
+                        _error_chat = await Chats.get_chat_by_id(metadata['chat_id'])
+                        _can_write = False
+                        if _error_chat is not None:
+                            if _error_chat.workspace_id is not None:
+                                _ws = await Workspaces.get_by_id(_error_chat.workspace_id)
+                                _mbr = await WorkspaceMembers.get(_error_chat.workspace_id, user.id)
+                                _can_write = _ws is not None and _mbr is not None and _mbr.role in WORKSPACE_WRITE_ROLES
+                            else:
+                                _can_write = _error_chat.user_id == user.id or user.role == 'admin'
+
+                        if _can_write:
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata['chat_id'],
+                                metadata['message_id'],
+                                {
+                                    'parentId': metadata.get('user_message_id', None),
+                                    'error': {'content': error_detail},
+                                },
+                            )
 
                     event_emitter = await get_event_emitter(metadata)
                     if event_emitter:

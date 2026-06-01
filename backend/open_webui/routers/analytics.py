@@ -428,11 +428,13 @@ async def get_model_overview(
             )
             current += timedelta(days=1)
 
-    # Get chat tags
+    # Get chat tags — Company custom: Team Workspaces V1 — exclude workspace chats.
+    # Analytics is a private/general-usage surface; workspace metadata must only be
+    # visible through workspace-scoped endpoints with membership checks.
     tag_counts: dict[str, int] = defaultdict(int)
     for chat_id in chat_ids:
         chat = await Chats.get_chat_by_id(chat_id, db=db)
-        if chat and chat.meta:
+        if chat and chat.meta and chat.workspace_id is None:
             for tag in chat.meta.get('tags', []):
                 tag_counts[tag] += 1
 
