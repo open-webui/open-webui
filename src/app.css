@@ -37,6 +37,7 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
   font-family: 'Harmattan', sans-serif;
   font-weight: 500;
   font-size-adjust: 0.58;
+  line-height: 1.6em;
 }
 /* hide nav on desktop */
 @media (min-width: 768px) {
@@ -64,8 +65,8 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 
 #chat-pane [role="list"] button[role="listitem"] {
 	margin: 0.125rem 0 !important;
-	padding-top: 0.25rem !important;
-	padding-bottom: 0.25rem !important;
+	padding-top: 0.4em !important;
+	padding-bottom: 0.4em !important;
 }
 
 #chat-pane [role="list"] button[role="listitem"] > div:first-child {
@@ -81,7 +82,8 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 /* Move input box closer to prompts */
 #chat-pane .flex.items-center.h-full {
 	align-items: flex-start !important;
-	padding-top: 0.5rem !important;
+	padding-top: 0 !important;
+	margin-top: -3rem !important;
 }
 
 #chat-pane .flex.items-center .text-center {
@@ -89,7 +91,7 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 }
 
 #chat-pane .translate-y-1 {
-	transform: none !important;
+	transform: translateY(-1rem) !important;
 }
 
 /* 1. Primary Buttons: Mocha Color (#6D3B07) */
