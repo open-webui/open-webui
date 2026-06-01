@@ -597,14 +597,10 @@ async def create_new_chat(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Company custom: Team Workspaces V1 — validate workspace write access before inserting
+    # Company custom: Team Workspaces V1 — POST /chats/new is for private chats only.
+    # workspace_id must be assigned server-side via POST /workspaces/{id}/chats.
     if form_data.workspace_id is not None:
-        workspace = await Workspaces.get_by_id(form_data.workspace_id, db=db)
-        if workspace is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-        member = await WorkspaceMembers.get(form_data.workspace_id, user.id, db=db)
-        if member is None or member.role not in WORKSPACE_WRITE_ROLES:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+        form_data.workspace_id = None
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())
@@ -920,16 +916,20 @@ async def get_shared_chat_by_id(
     if not chat:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    # Company custom: Team Workspaces V1 — workspace chats cannot be accessed via public share
-    if chat.workspace_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace chats are not publicly accessible.",
-        )
+    # Company custom: Team Workspaces V1 — resolve the ORIGINAL chat (not the snapshot) to check
+    # whether it belongs to a workspace. Snapshots may have stale or missing workspace_id.
+    # Block applies whether the workspace is active or soft-deleted.
+    shared = await SharedChats.get_by_id(share_id, db=db)
+    if shared:
+        original_chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
+        if original_chat and original_chat.workspace_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Workspace chats are not publicly accessible.",
+            )
 
     # Look up the original chat_id to check access grants (admins bypass)
     if user.role != 'admin' or not ENABLE_ADMIN_CHAT_ACCESS:
-        shared = await SharedChats.get_by_id(share_id, db=db)
         if shared and shared.user_id != user.id:
             has_grant = await AccessGrants.has_access(
                 user_id=user.id,
@@ -1331,15 +1331,18 @@ async def clone_shared_chat_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Company custom: Team Workspaces V1 — workspace chats cannot be cloned via share link
-    if chat.workspace_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace chats are not publicly accessible.",
-        )
+    # Company custom: Team Workspaces V1 — resolve the ORIGINAL chat via shared.chat_id.
+    # Snapshots may have stale workspace_id; block applies for active or soft-deleted workspace.
+    shared = await SharedChats.get_by_id(id, db=db)
+    if shared:
+        original_chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
+        if original_chat and original_chat.workspace_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Workspace chats are not publicly accessible.",
+            )
 
     # Enforce access grants (owner and admins bypass)
-    shared = await SharedChats.get_by_id(id, db=db)
     if shared and user.role != 'admin' and shared.user_id != user.id:
         has_grant = await AccessGrants.has_access(
             user_id=user.id,
