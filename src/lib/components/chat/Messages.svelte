@@ -164,14 +164,24 @@
 		}
 	};
 
+	// Deletions buffered since the last save; the backend prunes exactly these.
+	let deletedMessageIds = new Set();
+
 	const updateChat = async () => {
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			const res = await updateChatById(localStorage.token, chatId, {
-				history: history,
-				messages: messages
-			});
+			const res = await updateChatById(
+				localStorage.token,
+				chatId,
+				{
+					history: history,
+					messages: messages
+				},
+				Array.from(deletedMessageIds)
+			);
+			// Reached only on success (updateChatById throws otherwise); keep IDs for retry on failure.
+			deletedMessageIds.clear();
 
 			// Refresh local message content from backend (e.g. re-derived via serialize_output)
 			if (res?.chat?.history?.messages) {
@@ -461,9 +471,11 @@
 		// Delete the message and its children
 		[messageId, ...childMessageIds].forEach((id) => {
 			delete history.messages[id];
+			deletedMessageIds.add(id);
 		});
 
 		showMessage({ id: parentMessageId }, false);
+		await updateChat();
 	};
 
 	const triggerScroll = () => {

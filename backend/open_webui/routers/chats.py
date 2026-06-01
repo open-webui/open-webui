@@ -982,7 +982,9 @@ async def update_chat_by_id(
         # history with potential edits, deletions, or new branches.
         messages = (updated_chat.get('history') or {}).get('messages') or {}
         if messages:
-            await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
+            await Chats.reconcile_messages_by_chat_id(
+                id, user.id, messages, deleted_message_ids=form_data.deleted_message_ids
+            )
 
         return ChatResponse(**chat.model_dump())
     else:

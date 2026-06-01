@@ -133,6 +133,8 @@ class ChatFileModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
     folder_id: str | None = None
+    # Explicit deletions to prune; absent => upsert-only.
+    deleted_message_ids: list[str] | None = None
 
 
 class ChatImportForm(ChatForm):
@@ -496,22 +498,42 @@ class ChatTable:
                 log.warning('Backfill failed for message %s in chat %s: %s', message_id, chat_id, e)
 
     async def reconcile_messages_by_chat_id(
-        self, chat_id: str, user_id: str, messages: dict[str, dict]
+        self,
+        chat_id: str,
+        user_id: str,
+        messages: dict[str, dict],
+        deleted_message_ids: list[str] | None = None,
     ) -> None:
-        """Sync ``chat_message`` rows with the committed JSON blob.
+        """Upsert blob messages, then prune only the IDs the client explicitly
+        deleted (plus their now-orphaned descendants).
 
-        Upserts current messages via ``backfill_messages_by_chat_id``
-        and deletes orphaned rows whose message_id no longer appears
-        in the blob.  Best-effort: errors are logged but never raised.
+        Rows merely missing from the blob are never inferred as deletions — a
+        lost write race would otherwise drop a still-valid message permanently.
+        Best-effort: errors are logged, not raised.
         """
         try:
             await self.backfill_messages_by_chat_id(chat_id, user_id, messages)
 
-            existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id)
-            if existing_map is not None:
-                orphaned_ids = set(existing_map.keys()) - set(messages.keys())
-                if orphaned_ids:
-                    await ChatMessages.delete_message_ids_by_chat_id(chat_id, orphaned_ids)
+            dead_ids = set(deleted_message_ids or [])
+            if not dead_ids:
+                return
+
+            existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id) or {}
+
+            # Reparented children reappear in the blob and survive; truly orphaned ones go with the parent.
+            changed = True
+            while changed:
+                changed = False
+                for message_id, message in existing_map.items():
+                    if message_id in dead_ids or message_id in messages:
+                        continue
+                    if message.get('parentId') in dead_ids:
+                        dead_ids.add(message_id)
+                        changed = True
+
+            dead_ids &= set(existing_map.keys())
+            if dead_ids:
+                await ChatMessages.delete_message_ids_by_chat_id(chat_id, dead_ids)
         except Exception as e:
             log.warning('Failed to reconcile chat_message rows for chat %s: %s', chat_id, e)
 
