@@ -60,9 +60,13 @@ class Chat(Base):
 
     last_read_at = Column(BigInteger, nullable=True)
 
+    # Company custom: Team Workspaces V1 — nullable; NULL means private chat (existing behavior)
+    workspace_id = Column(String, nullable=True)
+
     __table_args__ = (
         # Performance indexes for common queries
         Index('folder_id_idx', 'folder_id'),
+        Index('chat_workspace_id_idx', 'workspace_id'),
         Index('user_id_pinned_idx', 'user_id', 'pinned'),
         Index('user_id_archived_idx', 'user_id', 'archived'),
         Index('updated_at_user_id_idx', 'updated_at', 'user_id'),
@@ -92,6 +96,9 @@ class ChatModel(BaseModel):
     summary: Optional[str] = None
 
     last_read_at: Optional[int] = None
+
+    # Company custom: Team Workspaces V1
+    workspace_id: Optional[str] = None
 
 
 class ChatFile(Base):
@@ -132,6 +139,8 @@ class ChatFileModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
     folder_id: Optional[str] = None
+    # Company custom: Team Workspaces V1
+    workspace_id: Optional[str] = None
 
 
 class ChatImportForm(ChatForm):
@@ -169,6 +178,8 @@ class ChatResponse(BaseModel):
 
     tasks: Optional[list] = None
     summary: Optional[str] = None
+    # Company custom: Team Workspaces V1
+    workspace_id: Optional[str] = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -305,6 +316,8 @@ class ChatTable:
                     ),
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
+                    # Company custom: Team Workspaces V1
+                    'workspace_id': getattr(form_data, 'workspace_id', None),
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
                 }
@@ -680,7 +693,13 @@ class ChatTable:
     async def unarchive_all_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(archived=False))
+                # Company custom: Team Workspaces V1 — only unarchive private chats
+                await db.execute(
+                    update(Chat)
+                    .filter_by(user_id=user_id)
+                    .filter(Chat.workspace_id.is_(None))
+                    .values(archived=False)
+                )
                 await db.commit()
                 return True
         except Exception:
@@ -727,7 +746,13 @@ class ChatTable:
     async def archive_all_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(archived=True))
+                # Company custom: Team Workspaces V1 — only archive private chats
+                await db.execute(
+                    update(Chat)
+                    .filter_by(user_id=user_id)
+                    .filter(Chat.workspace_id.is_(None))
+                    .values(archived=True)
+                )
                 await db.commit()
                 return True
         except Exception:
@@ -742,9 +767,10 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
+            # Company custom: Team Workspaces V1 — exclude workspace chats from personal archived list
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(
                 user_id=user_id, archived=True
-            )
+            ).filter(Chat.workspace_id.is_(None))
 
             if filter:
                 query_key = filter.get('query')
@@ -811,7 +837,7 @@ class ChatTable:
         async with get_async_db_context(db) as db:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
-            )
+            ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
@@ -868,6 +894,9 @@ class ChatTable:
                 user_id=user_id
             )
 
+            # Company custom: Team Workspaces V1 — exclude workspace chats from personal list
+            stmt = stmt.filter(Chat.workspace_id.is_(None))
+
             if not include_folders:
                 stmt = stmt.filter_by(folder_id=None)
 
@@ -898,6 +927,39 @@ class ChatTable:
                     }
                 )
                 for chat in all_chats
+            ]
+
+    # Company custom: Team Workspaces V1
+    async def get_chat_title_id_list_by_workspace_id(
+        self,
+        workspace_id: str,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> list["ChatTitleIdResponse"]:
+        async with get_async_db_context(db) as db:
+            stmt = (
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                .where(Chat.workspace_id == workspace_id)
+                .where(Chat.archived == False)  # noqa: E712
+                .order_by(Chat.updated_at.desc(), Chat.id)
+            )
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+            result = await db.execute(stmt)
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        'id': r[0],
+                        'title': r[1],
+                        'updated_at': r[2],
+                        'created_at': r[3],
+                        'last_read_at': r[4],
+                    }
+                )
+                for r in result.all()
             ]
 
     async def get_chat_list_by_chat_ids(
@@ -975,12 +1037,17 @@ class ChatTable:
 
     async def get_chat_folder_id(self, id: str, user_id: str, db: Optional[AsyncSession] = None) -> Optional[str]:
         """
-        Fetch only the folder_id column for a chat, without loading the full
-        JSON blob. Returns None if chat doesn't exist or doesn't belong to user.
+        Fetch only the folder_id column for a private chat.
+        Returns None if chat doesn't exist, doesn't belong to user, or belongs to a workspace.
+        Company custom: Team Workspaces V1 — workspace chats must not flow through private folder logic.
         """
         try:
             async with get_async_db_context(db) as db:
-                result = await db.execute(select(Chat.folder_id).filter_by(id=id, user_id=user_id))
+                result = await db.execute(
+                    select(Chat.folder_id)
+                    .filter_by(id=id, user_id=user_id)
+                    .filter(Chat.workspace_id.is_(None))
+                )
                 row = result.first()
                 return row[0] if row else None
         except Exception:
@@ -1001,7 +1068,8 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> ChatListResponse:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat).filter_by(user_id=user_id)
+            # Company custom: Team Workspaces V1 — exclude workspace chats from all personal surfaces
+            stmt = select(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
 
             if filter:
                 if filter.get('updated_at'):
@@ -1047,6 +1115,8 @@ class ChatTable:
             result = await db.execute(
                 select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
+                # Company custom: Team Workspaces V1 — exclude workspace chats from personal pinned list
+                .filter(Chat.workspace_id.is_(None))
                 .order_by(Chat.updated_at.desc())
             )
             all_chats = result.all()
@@ -1066,7 +1136,10 @@ class ChatTable:
     async def get_archived_chats_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[ChatModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
+                # Company custom: Team Workspaces V1 — exclude workspace chats from personal archived list
+                select(Chat).filter_by(user_id=user_id, archived=True)
+                .filter(Chat.workspace_id.is_(None))
+                .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
 
@@ -1136,7 +1209,8 @@ class ChatTable:
         search_text = ' '.join(search_text_words)
 
         async with get_async_db_context(db) as db:
-            stmt = select(Chat).filter(Chat.user_id == user_id)
+            # Company custom: Team Workspaces V1 — exclude workspace chats from personal search
+            stmt = select(Chat).filter(Chat.user_id == user_id).filter(Chat.workspace_id.is_(None))
 
             if is_archived is not None:
                 stmt = stmt.filter(Chat.archived == is_archived)
@@ -1276,6 +1350,8 @@ class ChatTable:
             stmt = (
                 select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
                 .filter_by(folder_id=folder_id, user_id=user_id)
+                # Company custom: Team Workspaces V1 — exclude workspace chats from folder list
+                .filter(Chat.workspace_id.is_(None))
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
                 .order_by(Chat.updated_at.desc(), Chat.id)
@@ -1308,6 +1384,8 @@ class ChatTable:
             stmt = (
                 select(Chat)
                 .filter(Chat.folder_id.in_(folder_ids), Chat.user_id == user_id)
+                # Company custom: Team Workspaces V1 — exclude workspace chats from folder list
+                .filter(Chat.workspace_id.is_(None))
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
                 .order_by(Chat.updated_at.desc())
@@ -1353,7 +1431,7 @@ class ChatTable:
         async with get_async_db_context(db) as db:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
-            )
+            ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await db.connection()
@@ -1415,7 +1493,13 @@ class ChatTable:
         self, tag_name: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> int:
         async with get_async_db_context(db) as db:
-            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+            # Company custom: Team Workspaces V1 — count only private chats so workspace tags
+            # don't inflate the reference count and prevent orphan-tag cleanup.
+            stmt = (
+                select(func.count(Chat.id))
+                .filter_by(user_id=user_id, archived=False)
+                .filter(Chat.workspace_id.is_(None))
+            )
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await db.connection()
@@ -1463,7 +1547,12 @@ class ChatTable:
         self, folder_id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> int:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id))
+            # Company custom: Team Workspaces V1 — count only private chats in folder.
+            result = await db.execute(
+                select(func.count(Chat.id))
+                .filter_by(user_id=user_id, folder_id=folder_id)
+                .filter(Chat.workspace_id.is_(None))
+            )
             count = result.scalar()
 
             log.info(f"Count of chats for folder '{folder_id}': {count}")
@@ -1531,16 +1620,22 @@ class ChatTable:
             async with get_async_db_context(db) as db:
                 await self.delete_shared_chats_by_user_id(user_id, db=db)
 
-                chat_id_subquery = select(Chat.id).filter_by(user_id=user_id).scalar_subquery()
+                # Company custom: Team Workspaces V1 — only delete private (non-workspace) chats.
+                # Workspace chats belong to the workspace and must survive a user account wipe.
+                private_ids_stmt = (
+                    select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
+                )
                 await db.execute(
                     update(AutomationRun)
-                    .filter(AutomationRun.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
+                    .filter(AutomationRun.chat_id.in_(private_ids_stmt))
                     .values(chat_id=None)
                 )
                 await db.execute(
-                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
+                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(private_ids_stmt))
                 )
-                await db.execute(delete(Chat).filter_by(user_id=user_id))
+                await db.execute(
+                    delete(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
+                )
                 await db.commit()
 
                 return True
@@ -1552,12 +1647,22 @@ class ChatTable:
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
-                chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
+                # Company custom: Team Workspaces V1 — folders are a private-chat feature;
+                # workspace chats cannot be in a personal folder, so the filter is defensive.
+                chat_ids_stmt = (
+                    select(Chat.id)
+                    .filter_by(user_id=user_id, folder_id=folder_id)
+                    .filter(Chat.workspace_id.is_(None))
+                )
                 await db.execute(
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
                 await db.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
-                await db.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
+                await db.execute(
+                    delete(Chat)
+                    .filter_by(user_id=user_id, folder_id=folder_id)
+                    .filter(Chat.workspace_id.is_(None))
+                )
                 await db.commit()
 
                 return True
@@ -1573,8 +1678,12 @@ class ChatTable:
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
+                # Company custom: Team Workspaces V1 — only move private chats between folders
                 await db.execute(
-                    update(Chat).filter_by(user_id=user_id, folder_id=folder_id).values(folder_id=new_folder_id)
+                    update(Chat)
+                    .filter_by(user_id=user_id, folder_id=folder_id)
+                    .filter(Chat.workspace_id.is_(None))
+                    .values(folder_id=new_folder_id)
                 )
                 await db.commit()
 
@@ -1588,11 +1697,31 @@ class ChatTable:
 
         try:
             async with get_async_db_context(db) as db:
-                # Delete shared_chat rows for this user's chats
-                await db.execute(delete(SharedChatTable).filter_by(user_id=user_id))
+                # Company custom: Team Workspaces V1 — delete only shared snapshots
+                # whose original Chat is private (workspace_id IS NULL). Workspace chats
+                # cannot be shared (blocked at router), but stale pre-guard rows must not
+                # be swept up by a private-account bulk cleanup.
+                private_chat_ids_stmt = (
+                    select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
+                )
+                await db.execute(
+                    delete(SharedChatTable).where(
+                        and_(
+                            SharedChatTable.user_id == user_id,
+                            SharedChatTable.chat_id.in_(private_chat_ids_stmt),
+                        )
+                    )
+                )
 
-                # Clear share_id on all of this user's chats
-                await db.execute(update(Chat).filter_by(user_id=user_id).values(share_id=None))
+                # Company custom: Team Workspaces V1 — only clear share_id on private chats.
+                # Workspace chats cannot have share_id (blocked at router), but we guard
+                # explicitly so bulk account wipe never touches workspace chat rows.
+                await db.execute(
+                    update(Chat)
+                    .filter_by(user_id=user_id)
+                    .filter(Chat.workspace_id.is_(None))
+                    .values(share_id=None)
+                )
                 await db.commit()
 
                 return True

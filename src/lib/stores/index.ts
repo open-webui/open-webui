@@ -58,6 +58,10 @@ export const chatTitle = writable('');
 export const channels = writable([]);
 export const channelId = writable(null);
 
+// Company custom: Team Workspaces V1
+export const workspaces = writable([]);
+export const activeWorkspaceId = writable<string | null>(null);
+
 export const chats = writable(null);
 export const pinnedChats = writable([]);
 export const pinnedNotes = writable([]);
