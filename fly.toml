@@ -2,7 +2,7 @@ app = "open-webui-26z5ca"
 primary_region = "sin" 
 
 [build]
-  dockerfile = "Dockerfile.fly"
+  dockerfile = "Dockerfile"
 
 [http_service]
   internal_port = 8080
