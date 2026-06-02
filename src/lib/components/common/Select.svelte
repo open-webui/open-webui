@@ -38,6 +38,7 @@
 
 	let triggerEl;
 	let contentEl;
+	let contentMaxHeight = '';
 
 	$: selectedLabel = items.find((i) => i.value === value)?.label ?? placeholder;
 
@@ -59,8 +60,28 @@
 
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
-		contentEl.style.top = `${rect.bottom + 4}px`;
 		contentEl.style.minWidth = `${rect.width}px`;
+
+		// Find the trigger's nearest vertically-scrollable ancestor and use its
+		// top edge as the minimum dropdown position so the dropdown never overlaps
+		// fixed headers above the scroll area (e.g. workspace nav bar)
+		let minTop = 8;
+		let parent = triggerEl.parentElement;
+		while (parent && parent !== document.body) {
+			const style = getComputedStyle(parent);
+			const oy = style.overflowY;
+			if ((oy === 'auto' || oy === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+				minTop = parent.getBoundingClientRect().top;
+				break;
+			}
+			parent = parent.parentElement;
+		}
+		const dropdownTop = Math.max(minTop, rect.bottom + 4);
+		contentEl.style.top = `${dropdownTop}px`;
+
+		// Constrain dropdown height to available viewport space below the clamped top
+		const availableHeight = window.innerHeight - dropdownTop - 8;
+		contentMaxHeight = `${availableHeight}px`;
 
 		if (align === 'end') {
 			contentEl.style.right = `${window.innerWidth - rect.right}px`;
@@ -123,7 +144,14 @@
 </button>
 
 {#if open}
-	<div use:portal bind:this={contentEl} class={contentClass} transition:flyAndScale>
+	<div
+		use:portal
+		bind:this={contentEl}
+		class={contentClass}
+		style:max-height={contentMaxHeight}
+		style:overflow-y="auto"
+		transition:flyAndScale
+	>
 		<slot {open} {selectItem}>
 			{#each items as item}
 				<button class={itemClass} type="button" on:click={() => selectItem(item)}>

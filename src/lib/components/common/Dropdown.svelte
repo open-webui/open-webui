@@ -25,6 +25,7 @@
 
 	let triggerEl;
 	let contentEl;
+	let contentMaxHeight = '';
 
 	/** Svelte action: moves the node to document.body */
 	function portal(node) {
@@ -68,6 +69,22 @@
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
 
+		// Find the trigger's nearest vertically-scrollable ancestor to use as boundary
+		let minTop = 8;
+		let scrollParent = triggerEl.parentElement;
+		while (scrollParent && scrollParent !== document.body) {
+			const style = getComputedStyle(scrollParent);
+			const oy = style.overflowY;
+			if (
+				(oy === 'auto' || oy === 'scroll') &&
+				scrollParent.scrollHeight > scrollParent.clientHeight
+			) {
+				minTop = scrollParent.getBoundingClientRect().top;
+				break;
+			}
+			scrollParent = scrollParent.parentElement;
+		}
+
 		const contentHeight = contentEl.offsetHeight || 0;
 		const spaceBelow = window.innerHeight - rect.bottom - sideOffset;
 		const spaceAbove = rect.top - sideOffset;
@@ -83,9 +100,14 @@
 		if (openAbove) {
 			contentEl.style.bottom = `${window.innerHeight - rect.top + sideOffset}px`;
 			contentEl.style.top = 'auto';
+			const maxAbove = rect.top - minTop - sideOffset;
+			contentMaxHeight = `${maxAbove}px`;
 		} else {
-			contentEl.style.top = `${rect.bottom + sideOffset}px`;
+			const dropdownTop = Math.max(minTop, rect.bottom + sideOffset);
+			contentEl.style.top = `${dropdownTop}px`;
 			contentEl.style.bottom = 'auto';
+			const availableHeight = window.innerHeight - dropdownTop - 8;
+			contentMaxHeight = `${availableHeight}px`;
 		}
 
 		if (align === 'end') {
@@ -187,6 +209,8 @@
 		bind:this={contentEl}
 		class={contentClass}
 		role="menu"
+		style:max-height={contentMaxHeight}
+		style:overflow-y="auto"
 		transition:flyAndScale
 		on:click={(e) => e.stopPropagation()}
 		on:pointerdown={(e) => e.stopPropagation()}
