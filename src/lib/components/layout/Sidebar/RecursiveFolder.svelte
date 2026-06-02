@@ -627,7 +627,7 @@
 						onExport={() => {
 							exportHandler();
 						}}
-						onCreateSub={() => {
+						onCreateSubFolder={() => {
 							createSubFolderParentId = folderId;
 							showCreateSubFolderModal = true;
 						}}

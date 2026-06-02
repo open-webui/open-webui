@@ -1,26 +1,27 @@
+import logging
 import os
 from pathlib import Path
 from typing import Optional
-import logging
 
-from open_webui.models.users import Users, UserInfoResponse
-from open_webui.models.groups import (
-    Groups,
-    GroupForm,
-    GroupInfoResponse,
-    GroupUpdateForm,
-    GroupResponse,
-    UserIdsForm,
-)
-
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
 from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import (
+    GroupForm,
+    GroupInfoResponse,
+    GroupResponse,
+    Groups,
+    GroupUpdateForm,
+    UserIdsForm,
+)
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.models import Models
+from open_webui.models.tools import Tools
+from open_webui.models.users import UserInfoResponse, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -276,3 +277,75 @@ async def delete_group_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+############################
+# PreviewGroupAccess
+############################
+
+
+@router.get('/id/{id}/preview')
+async def preview_group_access(
+    id: str,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Show what resources a group can access (preview audit)."""
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    group_ids = {group.id}
+
+    # Batch-check accessible resources using existing AccessGrants
+    all_models = await Models.get_all_models(db=db)
+    accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id='',
+        resource_type='model',
+        resource_ids=[m.id for m in all_models],
+        permission='read',
+        user_group_ids=group_ids,
+        db=db,
+    )
+
+    all_knowledge = await Knowledges.get_knowledge_bases(db=db)
+    accessible_knowledge_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id='',
+        resource_type='knowledge',
+        resource_ids=[k.id for k in all_knowledge],
+        permission='read',
+        user_group_ids=group_ids,
+        db=db,
+    )
+
+    all_tools = await Tools.get_tools(defer_content=True, db=db)
+    accessible_tool_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id='',
+        resource_type='tool',
+        resource_ids=[t.id for t in all_tools],
+        permission='read',
+        user_group_ids=group_ids,
+        db=db,
+    )
+
+    active_models = [m for m in all_models if m.is_active]
+
+    return {
+        'group': {'id': group.id, 'name': group.name},
+        'models': {
+            'items': [{'id': m.id, 'name': m.name} for m in active_models if m.id in accessible_model_ids],
+            'total': len(active_models),
+        },
+        'knowledge': {
+            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.id in accessible_knowledge_ids],
+            'total': len(all_knowledge),
+        },
+        'tools': {
+            'items': [{'id': t.id, 'name': t.name} for t in all_tools if t.id in accessible_tool_ids],
+            'total': len(all_tools),
+        },
+        'permissions': group.permissions or {},
+    }

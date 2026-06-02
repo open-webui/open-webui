@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Frontend CI — Lint, format check, build, and unit tests
+# Runs on pushes and PRs to main/dev, skipping backend-only changes
+# ─────────────────────────────────────────────────────────────────────────────
+name: Frontend Build
+
+on:
+  push:
+    branches: [main, dev]
+    paths-ignore: ['backend/**', 'pyproject.toml', 'uv.lock']
+  pull_request:
+    branches: [main, dev]
+    paths-ignore: ['backend/**', 'pyproject.toml', 'uv.lock']
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Format, i18n, and production build ────────────────────────────────────
+  format-and-build:
+    name: Format & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --force
+
+      - name: Verify code formatting
+        run: npm run format
+
+      - name: Verify i18n strings
+        run: npm run i18n:parse
+
+      - name: Ensure working tree is clean
+        run: git diff --exit-code
+
+      - name: Production build
+        run: npm run build
+
+  # ── Vitest unit tests ────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install dependencies (frozen lockfile)
+        run: npm ci --force
+
+      - name: Execute test suite
+        run: npm run test:frontend

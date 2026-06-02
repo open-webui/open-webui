@@ -3,28 +3,27 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.calendar import (
-    Calendars,
-    CalendarEvents,
     CalendarEventAttendees,
-    CalendarForm,
-    CalendarUpdateForm,
     CalendarEventForm,
-    CalendarEventUpdateForm,
-    CalendarModel,
-    CalendarEventModel,
-    CalendarEventUserResponse,
     CalendarEventListResponse,
+    CalendarEventModel,
+    CalendarEvents,
+    CalendarEventUpdateForm,
+    CalendarEventUserResponse,
+    CalendarForm,
+    CalendarModel,
+    Calendars,
+    CalendarUpdateForm,
     RSVPForm,
 )
-from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 from open_webui.utils.calendar import expand_recurring_event
-from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 
@@ -188,7 +187,7 @@ async def get_events(
         cal_id_list is None or SCHEDULED_TASKS_CALENDAR_ID in cal_id_list
     ):
         try:
-            from open_webui.models.automations import Automations, AutomationRuns
+            from open_webui.models.automations import AutomationRuns, Automations
 
             # Future runs: expand RRULEs for active automations only
             active_automations = await Automations.get_active_by_user(user.id)
@@ -301,6 +300,12 @@ async def update_event(
         raise HTTPException(status_code=404, detail='Event not found')
 
     await _check_calendar_access(event.calendar_id, user, 'write')
+
+    # A new calendar_id in the form moves the event; require write access on the
+    # destination too, mirroring create_event. Without this, write on the source
+    # calendar alone is enough to inject an event into any other calendar.
+    if form_data.calendar_id is not None and form_data.calendar_id != event.calendar_id:
+        await _check_calendar_access(form_data.calendar_id, user, 'write')
 
     updated = await CalendarEvents.update_event_by_id(event_id, form_data)
     if not updated:

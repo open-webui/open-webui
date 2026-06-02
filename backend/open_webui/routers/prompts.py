@@ -1,14 +1,11 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from __future__ import annotations
 
-from open_webui.models.prompts import (
-    PromptForm,
-    PromptUserResponse,
-    PromptAccessResponse,
-    PromptAccessListResponse,
-    PromptModel,
-    Prompts,
-)
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
@@ -16,13 +13,18 @@ from open_webui.models.prompt_history import (
     PromptHistoryModel,
     PromptHistoryResponse,
 )
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.prompts import (
+    PromptAccessListResponse,
+    PromptAccessResponse,
+    PromptForm,
+    PromptModel,
+    Prompts,
+    PromptUserResponse,
+)
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class PromptVersionUpdateForm(BaseModel):
@@ -32,7 +34,7 @@ class PromptVersionUpdateForm(BaseModel):
 class PromptMetadataForm(BaseModel):
     name: str
     command: str
-    tags: Optional[list[str]] = None
+    tags: list[str | None] = None
 
 
 router = APIRouter()
@@ -66,12 +68,12 @@ async def get_prompt_tags(user=Depends(get_verified_user), db: AsyncSession = De
 
 @router.get('/list', response_model=PromptAccessListResponse)
 async def get_prompt_list(
-    query: Optional[str] = None,
-    view_option: Optional[str] = None,
-    tag: Optional[str] = None,
-    order_by: Optional[str] = None,
-    direction: Optional[str] = None,
-    page: Optional[int] = 1,
+    query: str | None = None,
+    view_option: str | None = None,
+    tag: str | None = None,
+    order_by: str | None = None,
+    direction: str | None = None,
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -136,7 +138,7 @@ async def get_prompt_list(
 ############################
 
 
-@router.post('/create', response_model=Optional[PromptModel])
+@router.post('/create', response_model=PromptModel | None)
 async def create_new_prompt(
     request: Request,
     form_data: PromptForm,
@@ -187,55 +189,11 @@ async def create_new_prompt(
 
 
 ############################
-# GetPromptByCommand
-############################
-
-
-@router.get('/command/{command}', response_model=Optional[PromptAccessResponse])
-async def get_prompt_by_command(
-    command: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
-):
-    prompt = await Prompts.get_prompt_by_command(command, db=db)
-
-    if prompt:
-        if (
-            user.role == 'admin'
-            or prompt.user_id == user.id
-            or await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='prompt',
-                resource_id=prompt.id,
-                permission='read',
-                db=db,
-            )
-        ):
-            return PromptAccessResponse(
-                **prompt.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == prompt.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='prompt',
-                        resource_id=prompt.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
-            )
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=ERROR_MESSAGES.NOT_FOUND,
-    )
-
-
-############################
 # GetPromptById
 ############################
 
 
-@router.get('/id/{prompt_id}', response_model=Optional[PromptAccessResponse])
+@router.get('/id/{prompt_id}', response_model=PromptAccessResponse | None)
 async def get_prompt_by_id(
     prompt_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -279,7 +237,7 @@ async def get_prompt_by_id(
 ############################
 
 
-@router.post('/id/{prompt_id}/update', response_model=Optional[PromptModel])
+@router.post('/id/{prompt_id}/update', response_model=PromptModel | None)
 async def update_prompt_by_id(
     request: Request,
     prompt_id: str,
@@ -287,6 +245,7 @@ async def update_prompt_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Update a prompt's content, creating a new history entry if changed."""
     prompt = await Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
@@ -345,7 +304,7 @@ async def update_prompt_by_id(
 ############################
 
 
-@router.post('/id/{prompt_id}/update/meta', response_model=Optional[PromptModel])
+@router.post('/id/{prompt_id}/update/meta', response_model=PromptModel | None)
 async def update_prompt_metadata(
     prompt_id: str,
     form_data: PromptMetadataForm,
@@ -398,7 +357,7 @@ async def update_prompt_metadata(
         )
 
 
-@router.post('/id/{prompt_id}/update/version', response_model=Optional[PromptModel])
+@router.post('/id/{prompt_id}/update/version', response_model=PromptModel | None)
 async def set_prompt_version(
     prompt_id: str,
     form_data: PromptVersionUpdateForm,
@@ -447,7 +406,7 @@ class PromptAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post('/id/{prompt_id}/access/update', response_model=Optional[PromptModel])
+@router.post('/id/{prompt_id}/access/update', response_model=PromptModel | None)
 async def update_prompt_access_by_id(
     request: Request,
     prompt_id: str,
@@ -496,7 +455,7 @@ async def update_prompt_access_by_id(
 ############################
 
 
-@router.post('/id/{prompt_id}/toggle', response_model=Optional[PromptModel])
+@router.post('/id/{prompt_id}/toggle', response_model=PromptModel | None)
 async def toggle_prompt_active(
     prompt_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -697,7 +656,7 @@ async def delete_prompt_history_entry(
             detail='Cannot delete the active production version',
         )
 
-    success = await PromptHistories.delete_history_entry(history_id, db=db)
+    success = await PromptHistories.delete_history_entry(history_id, prompt.id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -741,7 +700,7 @@ async def get_prompt_diff(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    diff = await PromptHistories.compute_diff(from_id, to_id, db=db)
+    diff = await PromptHistories.compute_diff(from_id, to_id, prompt.id, db=db)
     if not diff:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

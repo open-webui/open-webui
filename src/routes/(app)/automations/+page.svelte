@@ -26,8 +26,11 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Select from '$lib/components/common/Select.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -92,6 +95,24 @@
 		});
 		if (res) {
 			automations = (automations ?? []).map((a) => (a.id === res.id ? res : a));
+		}
+	};
+
+	const bulkToggleHandler = async (enable: boolean) => {
+		const targets = (automations ?? []).filter((a) => a.is_active !== enable);
+		if (targets.length === 0) return;
+
+		// Optimistic UI update via map for proper Svelte reactivity
+		automations = (automations ?? []).map((a) =>
+			targets.some((t) => t.id === a.id) ? { ...a, is_active: enable } : a
+		);
+
+		try {
+			await Promise.all(targets.map((a) => toggleAutomationById(localStorage.token, a.id)));
+		} catch (err) {
+			toast.error(`${err}`);
+			// Refresh from server to restore consistent state
+			await getAutomationList();
 		}
 	};
 
@@ -329,6 +350,43 @@
 								</svelte:fragment>
 							</Select>
 						</div>
+
+						<div class="flex-1"></div>
+
+						<Dropdown align="end">
+							<Tooltip content={$i18n.t('Actions')}>
+								<button
+									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									type="button"
+									aria-label={$i18n.t('Actions')}
+								>
+									<EllipsisHorizontal className="size-4" />
+								</button>
+							</Tooltip>
+
+							<div slot="content">
+								<div
+									class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+								>
+									<button
+										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+										type="button"
+										on:click={() => bulkToggleHandler(true)}
+									>
+										<CheckCircle className="size-4" />
+										{$i18n.t('Enable All')}
+									</button>
+									<button
+										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+										type="button"
+										on:click={() => bulkToggleHandler(false)}
+									>
+										<Minus className="size-4" />
+										{$i18n.t('Disable All')}
+									</button>
+								</div>
+							</div>
+						</Dropdown>
 					</div>
 
 					{#if automations === null || loading}

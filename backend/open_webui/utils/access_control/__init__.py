@@ -1,16 +1,15 @@
 import json
 from typing import Any
 
-from open_webui.models.users import UserModel
-from open_webui.models.groups import Groups
+from open_webui.config import DEFAULT_USER_PERMISSIONS
 from open_webui.models.access_grants import (
     has_public_read_access_grant,
     has_public_write_access_grant,
     has_user_access_grant,
     strip_user_access_grants,
 )
-from open_webui.config import DEFAULT_USER_PERMISSIONS
-
+from open_webui.models.groups import Groups
+from open_webui.models.users import UserModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -115,7 +114,7 @@ async def has_access(
     Check if a user has the specified permission using an in-memory access_grants list.
 
     Used for config-driven resources (arena models, tool servers) that store
-    access control as JSON in PersistentConfig rather than in the access_grant DB table.
+    access control as JSON in ConfigVar rather than in the access_grant DB table.
 
     Semantics:
     - None or []  → private (owner-only, deny all)
@@ -272,8 +271,8 @@ async def has_base_model_access(
     provider model that has no per-model ACL).  Returns ``False`` the
     moment a registered base model denies access.
     """
-    from open_webui.models.models import Models
     from open_webui.models.access_grants import AccessGrants
+    from open_webui.models.models import Models
 
     base_model_id = getattr(model_info, 'base_model_id', None)
     seen = {model_info.id}

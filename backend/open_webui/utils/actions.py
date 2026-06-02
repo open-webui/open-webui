@@ -1,20 +1,16 @@
+import inspect
 import logging
 import sys
-import inspect
-
 from typing import Any
 
 from fastapi import Request
-
-from open_webui.models.users import UserModel
-from open_webui.models.functions import Functions
-
-from open_webui.socket.main import get_event_call, get_event_emitter
-from open_webui.utils.plugin import get_function_module_from_cache
-from open_webui.utils.models import get_all_models
-from open_webui.utils.middleware import process_tool_result
-
 from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.models.functions import Functions
+from open_webui.models.users import UserModel
+from open_webui.socket.main import get_event_call, get_event_emitter
+from open_webui.utils.middleware import process_tool_result
+from open_webui.utils.models import get_all_models
+from open_webui.utils.plugin import get_function_module_from_cache
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)

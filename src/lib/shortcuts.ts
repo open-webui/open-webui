@@ -40,7 +40,10 @@ export enum Shortcut {
 	REGENERATE_RESPONSE = 'regenerateResponse',
 	COPY_LAST_CODE_BLOCK = 'copyLastCodeBlock',
 	COPY_LAST_RESPONSE = 'copyLastResponse',
-	STOP_GENERATING = 'stopGenerating'
+	STOP_GENERATING = 'stopGenerating',
+
+	//Voice
+	TOGGLE_MUTE = 'toggleMute'
 }
 
 export const shortcuts: ShortcutRegistry = {
@@ -164,5 +167,13 @@ export const shortcuts: ShortcutRegistry = {
 		name: 'Copy Last Code Block',
 		keys: ['mod', 'shift', ';'],
 		category: 'Message'
+	},
+
+	//Voice
+	[Shortcut.TOGGLE_MUTE]: {
+		name: 'Toggle Mute',
+		keys: ['M'],
+		category: 'Voice',
+		tooltip: 'Only active during Voice Mode.'
 	}
 };

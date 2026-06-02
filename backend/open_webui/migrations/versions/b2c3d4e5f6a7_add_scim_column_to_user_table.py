@@ -8,8 +8,8 @@ Create Date: 2026-02-13 14:19:00.000000
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b2c3d4e5f6a7'
@@ -19,7 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('user', sa.Column('scim', sa.JSON(), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    user_cols = {c['name'] for c in inspector.get_columns('user')}
+
+    if 'scim' not in user_cols:
+        op.add_column('user', sa.Column('scim', sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

@@ -1,49 +1,43 @@
-import logging
-import uuid
-import jwt
+from __future__ import annotations
+
 import base64
-import hmac
 import hashlib
-import requests
-import os
-import bcrypt
-
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from cryptography.hazmat.primitives import serialization
+import hmac
 import json
-
-
+import logging
+import os
+import uuid
 from datetime import datetime, timedelta
+from typing import Optional, Union
+
+import bcrypt
+import jwt
 import pytz
-from pytz import UTC
-from typing import Optional, Union, List, Dict
-
-
-from open_webui.utils.access_control import has_permission
-from open_webui.models.users import Users
-from open_webui.models.auths import Auths
-
-
+import requests
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from open_webui.constants import ERROR_MESSAGES
-
 from open_webui.env import (
     ENABLE_OTEL,
     ENABLE_PASSWORD_VALIDATION,
-    OFFLINE_MODE,
     LICENSE_BLOB,
+    OFFLINE_MODE,
     PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
-    pk,
-    WEBUI_SECRET_KEY,
-    TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
+    TRUSTED_SIGNATURE_KEY,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    WEBUI_SECRET_KEY,
+    pk,
 )
-
-from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from open_webui.models.auths import Auths
+from open_webui.models.users import Users
+from open_webui.utils.access_control import has_permission
+from pytz import UTC
 
 log = logging.getLogger(__name__)
 
@@ -211,7 +205,7 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
     return encoded_jwt
 
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> dict | None:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
@@ -284,7 +278,7 @@ def create_api_key():
     return f'sk-{key}'
 
 
-def get_http_authorization_cred(auth_header: Optional[str]):
+def get_http_authorization_cred(auth_header: str | None):
     if not auth_header:
         return None
     try:
@@ -432,7 +426,7 @@ async def get_current_user_by_api_key(request, api_key: str):
         allowed_paths = [
             path.strip() for path in str(request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',') if path.strip()
         ]
-        request_path = request.url.path
+        request_path = request.scope['path']  # Use raw ASGI path — not spoofable via Host header (CVE-2026-48710)
         is_allowed = any(request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths)
         if not is_allowed:
             raise HTTPException(

@@ -24,13 +24,15 @@
 		? $models.find((m) => m.id === model_id)?.name || model_id
 		: $i18n.t('Select model');
 
-	$: filteredModels = modelSearch
-		? $models.filter(
-				(m) =>
-					m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
-					m.id.toLowerCase().includes(modelSearch.toLowerCase())
-			)
-		: $models;
+	$: filteredModels = (
+		modelSearch
+			? $models.filter(
+					(m) =>
+						m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
+						m.id.toLowerCase().includes(modelSearch.toLowerCase())
+				)
+			: $models
+	).filter((m) => !(m?.info?.meta?.hidden ?? false));
 </script>
 
 <Dropdown bind:show={showDropdown} {side} {align}>

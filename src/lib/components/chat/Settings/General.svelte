@@ -44,6 +44,7 @@
 		stream_response: null,
 		stream_delta_chunk_size: null,
 		function_calling: null,
+		reasoning_tags: null,
 		seed: null,
 		temperature: null,
 		reasoning_effort: null,
@@ -64,7 +65,13 @@
 		num_batch: null,
 		num_keep: null,
 		max_tokens: null,
-		num_gpu: null
+		use_mmap: null,
+		use_mlock: null,
+		num_thread: null,
+		num_gpu: null,
+		think: null,
+		format: null,
+		keep_alive: null
 	};
 
 	const saveHandler = async () => {
@@ -75,14 +82,15 @@
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
+				reasoning_tags: params.reasoning_tags !== null ? params.reasoning_tags : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 				temperature: params.temperature !== null ? params.temperature : undefined,
 				reasoning_effort: params.reasoning_effort !== null ? params.reasoning_effort : undefined,
 				logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
 				frequency_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-				presence_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-				repeat_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				presence_penalty: params.presence_penalty !== null ? params.presence_penalty : undefined,
+				repeat_penalty: params.repeat_penalty !== null ? params.repeat_penalty : undefined,
 				repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
 				mirostat: params.mirostat !== null ? params.mirostat : undefined,
 				mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
@@ -101,7 +109,10 @@
 				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined,
 				think: params.think !== null ? params.think : undefined,
 				keep_alive: params.keep_alive !== null ? params.keep_alive : undefined,
-				format: params.format !== null ? params.format : undefined
+				format: params.format !== null ? params.format : undefined,
+				...(params.custom_params && Object.keys(params.custom_params).length > 0
+					? { custom_params: params.custom_params }
+					: {})
 			}
 		});
 		dispatch('save');
@@ -316,7 +327,7 @@
 				</div>
 
 				{#if showAdvanced}
-					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
+					<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 				{/if}
 			</div>
 		{/if}

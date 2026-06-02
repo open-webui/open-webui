@@ -160,7 +160,7 @@
 						<div
 							class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
 							false)
-								? 'dark:text-gray-900 text-gray-100'
+								? 'dark:text-gray-100 text-gray-900'
 								: 'invisible group-hover:visible transition'}"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>

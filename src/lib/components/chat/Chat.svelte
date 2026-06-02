@@ -38,6 +38,7 @@
 		showArtifacts,
 		artifactContents,
 		tools,
+		skills,
 		toolServers,
 		terminalServers,
 		functions,
@@ -58,6 +59,7 @@
 		copyToClipboard,
 		getMessageContentParts,
 		createMessagesList,
+		sanitizeHistory,
 		getPromptVariables,
 		processDetails,
 		removeAllDetails,
@@ -91,6 +93,7 @@
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
@@ -149,6 +152,7 @@
 	}
 
 	let selectedToolIds = [];
+	let selectedSkillIds = [];
 	let selectedFilterIds = [];
 	let pendingOAuthTools = [];
 
@@ -206,6 +210,7 @@
 
 		files = [];
 		selectedToolIds = [];
+		selectedSkillIds = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
@@ -241,6 +246,7 @@
 						messageInput?.setText(input.prompt);
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedSkillIds = input.selectedSkillIds ?? [];
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
@@ -301,6 +307,7 @@
 
 	const resetInput = async () => {
 		selectedToolIds = [];
+		selectedSkillIds = [];
 		selectedFilterIds = [];
 		pendingOAuthTools = [];
 		webSearchEnabled = false;
@@ -326,6 +333,9 @@
 		}
 		if (!$functions) {
 			functions.set(await getFunctions(localStorage.token));
+		}
+		if (!$skills) {
+			skills.set(await getSkills(localStorage.token));
 		}
 		if (selectedModels.length !== 1 && !atSelectedModel) {
 			return;
@@ -362,6 +372,19 @@
 				selectedToolIds = $settings.tools;
 			} else {
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+			}
+
+			// Set Default Skills
+			if (model?.info?.meta?.skillIds) {
+				selectedSkillIds = [
+					...new Set(
+						[...(model?.info?.meta?.skillIds ?? [])].filter((id) =>
+							($skills ?? []).find((s) => s.id === id && s.is_active)
+						)
+					)
+				];
+			} else {
+				selectedSkillIds = [];
 			}
 
 			// Set Default Filters (Toggleable only)
@@ -640,13 +663,21 @@
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
 
-		// Prompt-related message types only submit text to the chat input —
-		// functionally equivalent to the user typing.  When same-origin is
-		// enabled they go through immediately.  When it is disabled (opaque
-		// origin) we show a confirmation dialog so the user stays in control.
-		const iframePromptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+		// Prompt-driving message types let an embedding page control the chat
+		// input / submission.  Cross-origin sources are only trusted when the
+		// user has explicitly opted in via the "iframe Sandbox Allow Same
+		// Origin" interface setting (the same toggle that governs whether
+		// rendered iframes receive `allow-same-origin`).
+		const promptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
+		const isTrusted = isSameOrigin || ($settings?.iframeSandboxAllowSameOrigin ?? false);
 
-		if (!isSameOrigin && !iframePromptTypes.includes(type)) {
+		// Non-prompt message types are always restricted to same-origin only.
+		if (!isSameOrigin && !promptTypes.includes(type)) {
+			return;
+		}
+
+		// Prompt types from an untrusted cross-origin source are silently dropped.
+		if (promptTypes.includes(type) && !isTrusted) {
 			return;
 		}
 
@@ -654,8 +685,21 @@
 			console.debug(event.data.text);
 
 			if (prompt !== '') {
-				await tick();
-				submitHandler(prompt);
+				if (isSameOrigin) {
+					await tick();
+					submitHandler(prompt);
+				} else {
+					eventConfirmationInput = false;
+					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
+					eventConfirmationMessage = prompt;
+					eventCallback = async (confirmed: boolean) => {
+						if (confirmed) {
+							await tick();
+							submitHandler(prompt);
+						}
+					};
+					showEventConfirmation = true;
+				}
 			}
 		}
 
@@ -678,7 +722,6 @@
 					await tick();
 					submitHandler(event.data.text);
 				} else {
-					// Cross-origin: ask user to confirm before submitting
 					eventConfirmationInput = false;
 					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
 					eventConfirmationMessage = event.data.text;
@@ -808,6 +851,7 @@
 
 				files = [];
 				selectedToolIds = [];
+				selectedSkillIds = [];
 				selectedFilterIds = [];
 				webSearchEnabled = false;
 				imageGenerationEnabled = false;
@@ -820,6 +864,7 @@
 						messageInput?.setText(input.prompt);
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedSkillIds = input.selectedSkillIds ?? [];
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
@@ -1379,29 +1424,9 @@
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
 
-				// Sanitize history: repair orphaned references from failed regenerations (#24424)
-				for (const message of Object.values(history.messages)) {
-					if (message.childrenIds) {
-						message.childrenIds = message.childrenIds.filter(
-							(childId) => history.messages[childId]
-						);
-					}
-				}
-				if (history.currentId && !history.messages[history.currentId]) {
-					const messageIds = Object.keys(history.messages);
-					let lastMessageId = null;
-					for (const messageId of messageIds) {
-						const message = history.messages[messageId];
-						if (
-							(message.childrenIds ?? []).length === 0 &&
-							(!lastMessageId ||
-								(message.timestamp ?? 0) > (history.messages[lastMessageId].timestamp ?? 0))
-						) {
-							lastMessageId = messageId;
-						}
-					}
-					history.currentId = lastMessageId ?? messageIds[0] ?? null;
-				}
+				// Sanitize history: repair orphaned references and structurally-malformed
+				// nodes from failed regenerations (#24424, #24157, #20474)
+				sanitizeHistory(history);
 
 				chatTitle.set(chatContent.title);
 
@@ -1730,33 +1755,11 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const {
-			id,
-			done,
-			choices,
-			content,
-			output,
-			sources,
-			selected_model_id,
-			error,
-			usage,
-			provider_selected,
-			_owui_provider
-		} = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
 
 		// Store raw OR-aligned output items from backend
 		if (output) {
 			message.output = output;
-		}
-
-		// Failover: surface which provider answered this message. For SSE,
-		// the backend emits `{provider_selected: {...}}` as the first event;
-		// for non-streaming, `_owui_provider` rides on the response body.
-		if (provider_selected) {
-			message.provider = provider_selected;
-		}
-		if (_owui_provider) {
-			message.provider = _owui_provider;
 		}
 
 		if (error) {
@@ -2072,13 +2075,11 @@
 			messages = null,
 			modelId = null,
 			modelIdx = null,
-			skipProviderUrls = [],
 			regenerationPrompt = null
 		}: {
 			messages?: any[] | null;
 			modelId?: string | null;
 			modelIdx?: number | null;
-			skipProviderUrls?: string[];
 			regenerationPrompt?: string | null;
 		} = {}
 	) => {
@@ -2182,23 +2183,24 @@
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
 
-			scrollToBottom();
-			await sendMessageSocket(
-				primaryModel,
-				messages && messages.length > 0
-					? messages
-					: createMessagesList(_history, primaryResponseMessageId),
-				_history,
-				primaryResponseMessageId,
-				_chatId,
-				{
-					messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
-					regenerationPrompt,
-					skipProviderUrls
-				}
-			);
-
-			if (chatEventEmitter) clearInterval(chatEventEmitter);
+			try {
+				scrollToBottom();
+				await sendMessageSocket(
+					primaryModel,
+					messages && messages.length > 0
+						? messages
+						: createMessagesList(_history, primaryResponseMessageId),
+					_history,
+					primaryResponseMessageId,
+					_chatId,
+					{
+						messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
+						regenerationPrompt
+					}
+				);
+			} finally {
+				if (chatEventEmitter) clearInterval(chatEventEmitter);
+			}
 		}
 	};
 
@@ -2263,13 +2265,11 @@
 		{
 			messageIdsMap,
 			regenerationPrompt,
-			continueResponse = false,
-			skipProviderUrls = []
+			continueResponse = false
 		}: {
 			messageIdsMap?: Record<string, string>;
 			regenerationPrompt?: string | null;
 			continueResponse?: boolean;
-			skipProviderUrls?: string[];
 		} = {}
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
@@ -2388,11 +2388,15 @@
 
 		// Parse skill mentions (<$skillId|label>) from user messages
 		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
-		const skillIds = [];
+		const skillIds = [...selectedSkillIds];
+		const mentionSkillIds = [];
 		for (const message of messages) {
 			const content =
 				typeof message.content === 'string' ? message.content : (message.content?.[0]?.text ?? '');
 			for (const match of content.matchAll(skillMentionRegex)) {
+				if (!mentionSkillIds.includes(match[1])) {
+					mentionSkillIds.push(match[1]);
+				}
 				if (!skillIds.includes(match[1])) {
 					skillIds.push(match[1]);
 				}
@@ -2400,7 +2404,7 @@
 		}
 
 		// Strip skill mentions from message content
-		if (skillIds.length > 0) {
+		if (mentionSkillIds.length > 0) {
 			messages = messages.map((message) => {
 				if (typeof message.content === 'string') {
 					return {
@@ -2491,8 +2495,7 @@
 						}
 					: {})
 			},
-			`${WEBUI_BASE_URL}/api`,
-			skipProviderUrls
+			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
 			console.log(error);
 
@@ -2680,7 +2683,7 @@
 		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message, suggestionPrompt = null, options: { skipProviderUrls?: string[] } = {}) => {
+	const regenerateResponse = async (message, suggestionPrompt = null) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
@@ -2708,9 +2711,6 @@
 							modelId: message.model,
 							modelIdx: message.modelIdx
 						}
-					: {}),
-				...(options.skipProviderUrls && options.skipProviderUrls.length > 0
-					? { skipProviderUrls: options.skipProviderUrls }
 					: {})
 			});
 		}
@@ -2852,6 +2852,9 @@
 
 	const saveControls = async () => {
 		if (!$chatId || $temporaryChatEnabled) return;
+		const loaded = chat?.chat ?? {};
+		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
+
 		await updateChatById(localStorage.token, $chatId, { params, files: chatFiles }).catch((err) =>
 			console.error('[controls autosave]', err)
 		);
@@ -3133,6 +3136,7 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
+									bind:selectedSkillIds
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
@@ -3214,6 +3218,7 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
+									bind:selectedSkillIds
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled

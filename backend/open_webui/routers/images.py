@@ -1,46 +1,45 @@
+from __future__ import annotations
+
 import asyncio
 import base64
-import uuid
 import io
 import json
 import logging
 import mimetypes
 import re
+import uuid
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote, urlparse
 
-from urllib.parse import quote
 import aiohttp
-
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
-
 from open_webui.config import (
     CACHE_DIR,
     IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN,
     IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.web.utils import validate_url
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_ALLOW_REDIRECTS, ENABLE_FORWARD_USER_INFO_HEADERS
-from open_webui.utils.session_pool import get_session
-
-from open_webui.models.chats import Chats
-from open_webui.routers.files import upload_file_handler, get_file_content_by_id
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.models.chats import Chats
+from open_webui.retrieval.web.utils import validate_url
+from open_webui.routers.files import get_file_content_by_id, upload_file_handler
+from open_webui.utils.access_control import has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
     ComfyUIWorkflow,
-    comfyui_upload_image,
     comfyui_create_image,
     comfyui_edit_image,
+    comfyui_upload_image,
 )
+from open_webui.utils.session_pool import get_session
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -121,17 +120,17 @@ class ImagesConfig(BaseModel):
 
     IMAGE_GENERATION_ENGINE: str
     IMAGE_GENERATION_MODEL: str
-    IMAGE_SIZE: Optional[str]
-    IMAGE_STEPS: Optional[int]
+    IMAGE_SIZE: str | None
+    IMAGE_STEPS: int | None
 
     IMAGES_OPENAI_API_BASE_URL: str
     IMAGES_OPENAI_API_KEY: str
     IMAGES_OPENAI_API_VERSION: str
-    IMAGES_OPENAI_API_PARAMS: Optional[dict | str]
+    IMAGES_OPENAI_API_PARAMS: dict | str | None
 
     AUTOMATIC1111_BASE_URL: str
-    AUTOMATIC1111_API_AUTH: Optional[dict | str]
-    AUTOMATIC1111_PARAMS: Optional[dict | str]
+    AUTOMATIC1111_API_AUTH: dict | str | None
+    AUTOMATIC1111_PARAMS: dict | str | None
 
     COMFYUI_BASE_URL: str
     COMFYUI_API_KEY: str
@@ -145,7 +144,7 @@ class ImagesConfig(BaseModel):
     ENABLE_IMAGE_EDIT: bool
     IMAGE_EDIT_ENGINE: str
     IMAGE_EDIT_MODEL: str
-    IMAGE_EDIT_SIZE: Optional[str]
+    IMAGE_EDIT_SIZE: str | None
 
     IMAGES_EDIT_OPENAI_API_BASE_URL: str
     IMAGES_EDIT_OPENAI_API_KEY: str
@@ -428,22 +427,53 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 
 class CreateImageForm(BaseModel):
-    model: Optional[str] = None
+    model: str | None = None
     prompt: str
-    size: Optional[str] = None
+    size: str | None = None
     n: int = 1
-    steps: Optional[int] = None
-    negative_prompt: Optional[str] = None
+    steps: int | None = None
+    negative_prompt: str | None = None
 
 
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
 
 
-async def get_image_data(data: str, headers=None):
+def _is_same_origin(url: str, base_url: str) -> bool:
+    """Compare scheme + hostname + port of two URLs.
+
+    Pure string-prefix matching (``startswith``) is vulnerable to
+    userinfo injection (``http://host:port@evil.com/``) and suffix
+    confusion (``http://host:portevil.com/``).  Parsing both URLs
+    and comparing the three origin components eliminates those
+    attack vectors.
+    """
+
+    def _default_port(scheme: str) -> int:
+        return 443 if scheme == 'https' else 80
+
+    parsed = urlparse(url)
+    trusted = urlparse(base_url)
+    return (
+        parsed.scheme == trusted.scheme
+        and parsed.hostname == trusted.hostname
+        and (parsed.port or _default_port(parsed.scheme)) == (trusted.port or _default_port(trusted.scheme))
+    )
+
+
+async def get_image_data(data: str, headers=None, trusted_base_url: str | None = None):
     try:
         if data.startswith('http://') or data.startswith('https://'):
             # Defense-in-depth: gate before fetch (mirrors load_url_image).
-            validate_url(data)
+            # For URLs originating from an admin-configured backend (e.g.
+            # ComfyUI on a private network), skip SSRF validation only when
+            # the URL shares the exact same origin (scheme + host + port)
+            # as the admin-configured base.  This avoids both the global
+            # ENABLE_RAG_LOCAL_WEB_FETCH hammer and a blanket trust flag
+            # that would follow arbitrary redirects.
+            if trusted_base_url and _is_same_origin(data, trusted_base_url):
+                log.debug(f'Skipping URL validation for trusted backend: {data}')
+            else:
+                validate_url(data)
             session = await get_session()
             async with session.get(
                 data,
@@ -472,6 +502,8 @@ async def get_image_data(data: str, headers=None):
 
 
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
+    if image_data is None or content_type is None:
+        raise ValueError('Failed to retrieve image data from the generation backend')
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
@@ -528,7 +560,7 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
 async def image_generations(
     request: Request,
     form_data: CreateImageForm,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     user=None,
 ):
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
@@ -594,7 +626,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
 
@@ -644,7 +676,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
 
@@ -710,7 +742,11 @@ async def image_generations(
                 if request.app.state.config.COMFYUI_API_KEY:
                     headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
 
-                image_data, content_type = await get_image_data(image['url'], headers)
+                image_data, content_type = await get_image_data(
+                    image['url'],
+                    headers,
+                    trusted_base_url=request.app.state.config.COMFYUI_BASE_URL,
+                )
                 _, url = await upload_image(
                     request,
                     image_data,
@@ -750,7 +786,7 @@ async def image_generations(
                 headers={'authorization': get_automatic1111_api_auth(request)},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                res = await r.json()
+                res = await r.json(content_type=None)
             log.debug(f'res: {res}')
 
             images = []
@@ -776,18 +812,18 @@ async def image_generations(
 class EditImageForm(BaseModel):
     image: str | list[str]  # base64-encoded image(s) or URL(s)
     prompt: str
-    model: Optional[str] = None
-    size: Optional[str] = None
-    n: Optional[int] = None
-    negative_prompt: Optional[str] = None
-    background: Optional[str] = None
+    model: str | None = None
+    size: str | None = None
+    n: int | None = None
+    negative_prompt: str | None = None
+    background: str | None = None
 
 
 @router.post('/edit')
 async def image_edits(
     request: Request,
     form_data: EditImageForm,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     user=Depends(get_verified_user),
 ):
     size = None
@@ -925,7 +961,7 @@ async def image_edits(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
             for image in res['data']:
@@ -980,7 +1016,7 @@ async def image_edits(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
             for image in res['candidates']:
@@ -1066,7 +1102,11 @@ async def image_edits(
                 if request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY:
                     headers = {'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY}'}
 
-                image_data, content_type = await get_image_data(image_url, headers)
+                image_data, content_type = await get_image_data(
+                    image_url,
+                    headers,
+                    trusted_base_url=request.app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL,
+                )
                 _, url = await upload_image(
                     request,
                     image_data,

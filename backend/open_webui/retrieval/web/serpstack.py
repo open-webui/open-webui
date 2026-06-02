@@ -1,42 +1,42 @@
-import logging
-from typing import Optional
+from __future__ import annotations
 
-import requests
+import logging
+
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.utils.session_pool import get_session
 
 log = logging.getLogger(__name__)
 
 
-def search_serpstack(
+async def search_serpstack(
     api_key: str,
     query: str,
     count: int,
-    filter_list: Optional[list[str]] = None,
+    filter_list: list[str | None] | None = None,
     https_enabled: bool = True,
 ) -> list[SearchResult]:
-    """Search using serpstack.com's and return the results as a list of SearchResult objects.
+    """Query the serpstack.com API and return normalised results.
 
-    Args:
-        api_key (str): A serpstack.com API key
-        query (str): The query to search for
-        https_enabled (bool): Whether to use HTTPS or HTTP for the API request
+    Uses HTTPS by default; set ``https_enabled=False`` for free-tier HTTP access.
     """
-    url = f'{"https" if https_enabled else "http"}://api.serpstack.com/search'
+    scheme = 'https' if https_enabled else 'http'
+    url = f'{scheme}://api.serpstack.com/search'
+    params = {'access_key': api_key, 'query': query}
 
-    headers = {'Content-Type': 'application/json'}
-    params = {
-        'access_key': api_key,
-        'query': query,
-    }
+    session = await get_session()
+    async with session.get(url, params=params) as response:
+        response.raise_for_status()
+        payload = await response.json()
 
-    response = requests.request('POST', url, headers=headers, params=params)
-    response.raise_for_status()
-
-    json_response = response.json()
-    results = sorted(json_response.get('organic_results', []), key=lambda x: x.get('position', 0))
+    organic = sorted(payload.get('organic_results', []), key=lambda x: x.get('position', 0))
     if filter_list:
-        results = get_filtered_results(results, filter_list)
+        organic = get_filtered_results(organic, filter_list)
+
     return [
-        SearchResult(link=result['url'], title=result.get('title'), snippet=result.get('snippet'))
-        for result in results[:count]
+        SearchResult(
+            link=item.get('url', ''),
+            title=item.get('title'),
+            snippet=item.get('snippet'),
+        )
+        for item in organic[:count]
     ]
