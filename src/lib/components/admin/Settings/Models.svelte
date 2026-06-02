@@ -46,6 +46,7 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
+	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 
 	let shiftKey = false;
@@ -66,6 +67,9 @@
 	let showManageModal = false;
 
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
+
+	let tags: string[] = [];
+	let selectedTag = '';
 
 	const perPage = 30;
 	let currentPage = 1;
@@ -88,6 +92,11 @@
 				if (viewOption === 'private') return !isPublicModel(m);
 				return true; // All
 			})
+			.filter((m) => {
+				if (!selectedTag) return true;
+				const modelTags = m?.meta?.tags ?? [];
+				return modelTags.some((t) => (typeof t === 'string' ? t : t?.name) === selectedTag);
+			})
 			.sort((a, b) => {
 				return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 			});
@@ -95,7 +104,7 @@
 
 	let searchValue = '';
 
-	$: if (searchValue || viewOption !== undefined) {
+	$: if (searchValue || viewOption !== undefined || selectedTag !== undefined) {
 		currentPage = 1;
 	}
 
@@ -196,6 +205,16 @@
 				};
 			}
 		});
+
+		// Compute tags locally from the merged models list
+		const tagSet = new Set<string>();
+		for (const m of models) {
+			for (const t of m?.meta?.tags ?? []) {
+				const name = typeof t === 'string' ? t : t?.name;
+				if (name) tagSet.add(name);
+			}
+		}
+		tags = [...tagSet].sort();
 
 		_models.set(
 			await getModels(
@@ -501,6 +520,15 @@
 					class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent whitespace-nowrap"
 				>
 					<AdminViewSelector bind:value={viewOption} />
+
+					{#if (tags ?? []).length > 0}
+						<TagSelector
+							bind:value={selectedTag}
+							items={tags.map((tag) => {
+								return { value: tag, label: tag };
+							})}
+						/>
+					{/if}
 				</div>
 
 				<div class="flex-1"></div>
