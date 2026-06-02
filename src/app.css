@@ -32,12 +32,19 @@
 
 /* M3LLM UI Tweaks */
 
-*, body { font-family: 'Lexend Deca', sans-serif; }
-p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
-  font-family: 'Harmattan', sans-serif;
-  font-weight: 500;
-  font-size-adjust: 0.58;
-  line-height: 1.6em;
+*,
+body {
+	font-family: 'Lexend Deca', sans-serif;
+}
+p,
+.text-3xl,
+.text-2xl,
+.text-xl,
+.line-clamp-1 {
+	font-family: 'Harmattan', sans-serif;
+	font-weight: 500;
+	font-size-adjust: 0.58;
+	line-height: 1.6em;
 }
 /* hide nav on desktop */
 @media (min-width: 768px) {
@@ -55,7 +62,7 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 }
 
 /* 2-column prompt suggestions grid */
-#chat-pane [role="list"] {
+#chat-pane [role='list'] {
 	display: grid !important;
 	grid-template-columns: 1fr 1fr;
 	gap: 0.5rem;
@@ -63,18 +70,18 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 	margin: 0 auto;
 }
 
-#chat-pane [role="list"] button[role="listitem"] {
+#chat-pane [role='list'] button[role='listitem'] {
 	margin: 0.125rem 0 !important;
 	padding-top: 0.4em !important;
 	padding-bottom: 0.4em !important;
 }
 
-#chat-pane [role="list"] button[role="listitem"] > div:first-child {
+#chat-pane [role='list'] button[role='listitem'] > div:first-child {
 	font-size: 0.8125rem;
 	line-height: 1.2;
 }
 
-#chat-pane [role="list"] button[role="listitem"] > div:last-child {
+#chat-pane [role='list'] button[role='listitem'] > div:last-child {
 	line-height: 1.4;
 	overflow: visible !important;
 }
@@ -98,34 +105,105 @@ p, .text-3xl, .text-2xl, .text-xl, .line-clamp-1 {
 button.bg-black,
 button.bg-gray-800,
 button.bg-gray-900,
+button.bg-blue-500,
 button.bg-gray-700\/5,
 button.bg-gray-100\/5,
 button#send-message-button,
-#auth-page button[type="submit"],
+#auth-page button[type='submit'],
 .dark button.bg-white,
 .dark button.bg-gray-100,
 .dark button.bg-gray-200 {
-    background-color: #6D3B07 !important;
-    color: #ffffff !important;
-    opacity: 1 !important;
+	background-color: #6d3b07 !important;
+	color: #ffffff !important;
+	opacity: 1 !important;
 }
 button.bg-black:hover,
 button.bg-gray-800:hover,
 button.bg-gray-900:hover,
+button.bg-blue-500:hover,
 button#send-message-button:hover,
-#auth-page button[type="submit"]:hover,
+#auth-page button[type='submit']:hover,
 .dark button.bg-white:hover,
 .dark button.bg-gray-100:hover,
 .dark button.bg-gray-200:hover {
-    background-color: #5A2E05 !important;
+	background-color: #5a2e05 !important;
+}
+/* Voice recording: neutral gray over indigo tones */
+div.rounded-full.flex.justify-between:has(#confirm-recording-button) {
+	background-color: rgba(209, 213, 219, 0.1) !important;
+}
+div.rounded-full.flex.justify-between:has(#confirm-recording-button) button.bg-indigo-400\/20 {
+	background-color: rgba(209, 213, 219, 0.25) !important;
+	color: #6b7280 !important;
+}
+div.rounded-full.flex.justify-between:has(#confirm-recording-button) .bg-indigo-500 {
+	background-color: #6b7280 !important;
+}
+div.rounded-full.flex.justify-between:has(#confirm-recording-button) .text-indigo-400 {
+	color: #9ca3af !important;
+}
+.dark div.rounded-full.flex.justify-between:has(#confirm-recording-button) {
+	background-color: rgba(209, 213, 219, 0.1) !important;
+}
+.dark div.rounded-full.flex.justify-between:has(#confirm-recording-button) .text-indigo-300 {
+	color: #d1d5db !important;
+}
+.dark div.rounded-full.flex.justify-between:has(#confirm-recording-button) .bg-indigo-400 {
+	background-color: #9ca3af !important;
+}
+div.rounded-full.flex.justify-between:has(#confirm-recording-button)
+	button#confirm-recording-button {
+	background-color: #6d3b07 !important;
+	color: #ffffff !important;
+}
+.dark
+	div.rounded-full.flex.justify-between:has(#confirm-recording-button)
+	button#confirm-recording-button {
+	background-color: #6d3b07 !important;
+	color: #ffffff !important;
+}
+/* Calendar: today indicator gray instead of blue */
+.grid.grid-cols-7 .bg-blue-500.text-white.rounded-full {
+	background-color: #6b7280 !important;
+	color: #f3f4f6 !important;
+}
+/* Sidebar: unread dot gray instead of sky blue */
+.size-1\.5.bg-sky-500.rounded-full {
+	background-color: #d1d5db !important;
+}
+/* Suggestions: card-style borders and backgrounds */
+.waterfall.flex.flex-col.flex-1.shrink-0 {
+	border: 1px solid rgba(0, 0, 0, 0.08) !important;
+	background-color: rgba(255, 255, 255, 0.9) !important;
+	margin-top: 0.5rem !important;
+	margin-bottom: 0.5rem !important;
+}
+.dark .waterfall.flex.flex-col.flex-1.shrink-0 {
+	border-color: rgba(255, 255, 255, 0.08) !important;
+	background-color: rgba(30, 30, 30, 0.9) !important;
+}
+/* Remove legacy border/background from suggestions container */
+.mx-auto.max-w-2xl.font-primary.mt-2.rounded-3xl.border.py-3.bg-whiter {
+	border: none !important;
+	background: transparent !important;
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+}
+/* Hide tools section in message input footer (not the valves div) */
+div.ml-1.flex.gap-1\.5:not(:has(#model-valves-button)) {
+	display: none !important;
 }
 /* settings */
-#settings-search, [aria-controls="tab-general"],[aria-controls="tab-interface"],[aria-controls="tab-tools"],[aria-controls="tab-personalization"],[aria-controls="tab-audio"] {
+#settings-search,
+[aria-controls='tab-general'],
+[aria-controls='tab-interface'],
+[aria-controls='tab-tools'],
+[aria-controls='tab-personalization'],
+[aria-controls='tab-audio'] {
 	display: none;
 }
 
 /* M3LLM UI Tweaks */
-
 
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
