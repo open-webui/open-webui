@@ -16,6 +16,7 @@
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import EmailDraftDialog from '../email/EmailDraftDialog.svelte';
 	import { settings } from '$lib/stores';
 
 	export let id: string = '';
@@ -87,6 +88,25 @@
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
+
+	let showEmailDraft = false;
+	let emailSendResult: { status: string } | null = null;
+	let _emailDraftAutoOpened = false;
+
+	$: if (
+		!_emailDraftAutoOpened &&
+		parsedResult &&
+		typeof parsedResult === 'object' &&
+		(parsedResult as any).type === 'email_draft_dialog' &&
+		isDone
+	) {
+		const draftId = (parsedResult as any).draft_id;
+		if (!localStorage.getItem(`email-draft-done:${draftId}`)) {
+			showEmailDraft = true;
+			open = true;
+		}
+		_emailDraftAutoOpened = true;
+	}
 </script>
 
 <div {id} class={className}>
@@ -218,7 +238,36 @@
 								{$i18n.t('Output')}
 							</div>
 							<div class="w-full max-w-none!">
-								{#if typeof parsedResult === 'object' && parsedResult !== null}
+								{#if typeof parsedResult === 'object' && parsedResult !== null && (parsedResult as any).type === 'email_draft_dialog'}
+									{#if showEmailDraft}
+										<EmailDraftDialog
+											draftId={(parsedResult as any).draft_id}
+											draft={(parsedResult as any).draft}
+											on:close={(e) => {
+												showEmailDraft = false;
+												emailSendResult = e.detail;
+												localStorage.setItem(`email-draft-done:${(parsedResult as any).draft_id}`, '1');
+											}}
+										/>
+									{:else if emailSendResult}
+										<div
+											class="text-sm px-3 py-2 rounded-lg {emailSendResult.status === 'sent'
+												? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+												: 'bg-gray-50 dark:bg-gray-900 text-gray-500'}"
+										>
+											{emailSendResult.status === 'sent'
+												? '✓ E-mail byl odeslán'
+												: 'E-mail byl zrušen'}
+										</div>
+									{:else}
+										<button
+											on:click={() => (showEmailDraft = true)}
+											class="text-sm text-blue-600 dark:text-blue-400 hover:underline px-1"
+										>
+											Znovu otevřít dialog →
+										</button>
+									{/if}
+								{:else if typeof parsedResult === 'object' && parsedResult !== null}
 									<pre
 										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{JSON.stringify(
 											parsedResult,
@@ -270,3 +319,4 @@
 		{/if}
 	{/if}
 </div>
+

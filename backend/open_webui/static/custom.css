@@ -142,6 +142,16 @@
   background-color: rgba(70, 114, 52, 0.35) !important;
 }
 
+/* Message bubbles - light frosted glass */
+.light [id^="message-"] {
+  background: rgba(249, 253, 247, 0.82) !important;
+}
+
+/* Improve text contrast — push light grays 2 steps darker */
+.light .text-gray-300 { color: oklch(0.69 0 0) !important; }
+.light .text-gray-400 { color: oklch(0.51 0 0) !important; }
+.light .text-gray-500 { color: oklch(0.42 0 0) !important; }
+
 /* ===========================
    DARK MODE
    =========================== */
@@ -209,14 +219,18 @@
   background-color: rgba(90, 143, 68, 0.35) !important;
 }
 
+/* Message bubbles - dark frosted glass */
+.dark [id^="message-"] {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
 /* ===========================
    SHARED / BOTH MODES
    =========================== */
 
-/* Message bubbles - frosted glass cards */
+/* Message bubbles - frosted glass cards (background set per-mode above) */
 [id^="message-"] {
   padding: 1rem !important;
-  background: rgba(0, 0, 0, 0.5) !important;
   border-radius: 1rem !important;
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
   backdrop-filter: blur(16px) saturate(1.4);

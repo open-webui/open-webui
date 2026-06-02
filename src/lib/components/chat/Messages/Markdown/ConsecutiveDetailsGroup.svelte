@@ -33,6 +33,24 @@
 	export let allowEmbeds = true;
 
 	let open = $settings?.expandDetails ?? false;
+	let _autoOpenedForEmailDraft = false;
+
+	function _tokenHasEmailDraftResult(token: any): boolean {
+		if (token?.attributes?.type !== 'tool_calls' || token?.attributes?.done !== 'true') return false;
+		const text = decode((token as any).text ?? token.attributes?.result ?? '').trim();
+		if (!text) return false;
+		try {
+			const parsed = parseJSONString(text);
+			return typeof parsed === 'object' && parsed !== null && (parsed as any).type === 'email_draft_dialog';
+		} catch {
+			return false;
+		}
+	}
+
+	$: if (!_autoOpenedForEmailDraft && tokens.some(_tokenHasEmailDraftResult)) {
+		open = true;
+		_autoOpenedForEmailDraft = true;
+	}
 
 	function parseJSONString(str: string) {
 		try {
