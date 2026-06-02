@@ -1369,13 +1369,14 @@ async def get_sources_from_items(
                         collection_names.append(item['id'])
 
         elif item.get('docs'):
-            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL (and we need to accept type=='web_search')
             query_result = {
                 'documents': [[doc.get('content') for doc in item.get('docs')]],
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
         elif item.get('collection_name'):
-            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+            # Fix: Accept type=='web_search'
+            if BYPASS_RETRIEVAL_ACCESS_CONTROL or item.get('type') == 'web_search':
                 collection_names.append(item['collection_name'])
             else:
                 log.debug(
