@@ -1727,7 +1727,7 @@
 										</div>
 									{/if}
 
-									<div class="ml-1 flex gap-1.5 hidden">
+									<div class="ml-1 flex gap-1.5">
 										{#if (selectedToolIds ?? []).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
