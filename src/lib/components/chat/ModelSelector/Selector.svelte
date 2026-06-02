@@ -565,6 +565,7 @@
 								class="w-full text-sm bg-transparent outline-hidden"
 								placeholder={searchPlaceholder}
 								autocomplete="off"
+								maxlength="500"
 								aria-label={$i18n.t('Search In Models')}
 								on:keydown={(e) => {
 									if (e.code === 'Enter' && filteredItems.length > 0) {

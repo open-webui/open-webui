@@ -55,6 +55,7 @@
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-hidden"
 						placeholder={searchPlaceholder}
+						maxlength="500"
 						on:click|stopPropagation
 					/>
 				</div>
