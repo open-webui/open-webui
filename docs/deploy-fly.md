@@ -42,7 +42,9 @@ fly open --app open-webui-26z5ca
 
 ## Build strategy
 
-This Fly deployment uses the official prebuilt Open WebUI image via `Dockerfile.fly` to avoid source-build OOM and reduce deployment time.
+This Fly deployment builds from the repository `Dockerfile` declared in `fly.toml`. The repository build is required so the deployed image includes custom Open WebUI source changes, including Team Workspace V1 backend routes, models, and frontend UI.
+
+The Dockerfile builds the frontend from the checked-out repository source and copies `./backend` into the runtime image, so custom files are included in the final Fly image.
 
 ## Troubleshooting
 
@@ -52,11 +54,11 @@ If deployment fails with `app not found`, verify the Fly app name in `fly.toml`,
 fly apps list
 ```
 
-If build fails with `JavaScript heap out of memory`, confirm `fly.toml` points to `Dockerfile.fly` and `Dockerfile.fly` uses `ghcr.io/open-webui/open-webui:main`.
+If build fails with `JavaScript heap out of memory`, keep `fly.toml` pointed at `Dockerfile` and adjust the repository build resources or Node build settings. Do not switch Fly back to an upstream prebuilt image, because that would omit repository customizations from production.
 
 ## Notes
 
-- This setup is deployment-focused and does not modify upstream Open WebUI application source code.
+- This setup is deployment-focused and intentionally deploys this repository's customized Open WebUI source code.
 - Do not use SQLite for production; Fly Postgres is attached in step 2.
 - Fly Postgres persists database state.
 - The Fly volume persists `/app/backend/data` runtime data.
