@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v5
 
@@ -56,3 +57,14 @@ jobs:
             !.git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Docker build
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docker.yaml',
+              ref: 'v${{ steps.pkg.outputs.version }}',
+            })
