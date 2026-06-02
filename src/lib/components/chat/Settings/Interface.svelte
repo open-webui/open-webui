@@ -62,6 +62,7 @@
 
 	let landingPageMode = '';
 	let chatBubble = true;
+	let autoOpenTerminalSidebar = true;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
 	let ctrlEnterToSend = false;
 	let copyFormatted = false;
@@ -241,6 +242,7 @@
 
 		landingPageMode = $settings?.landingPageMode ?? '';
 		chatBubble = $settings?.chatBubble ?? true;
+		autoOpenTerminalSidebar = $settings?.autoOpenTerminalSidebar ?? true;
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
@@ -720,6 +722,25 @@
 					</div>
 				</div>
 			{/if}
+
+			<div>
+                <div class=" py-0.5 flex w-full justify-between">
+                    <div id="auto-open-terminal-sidebar-label" class=" self-center text-xs">
+                        {$i18n.t('Auto-Open Terminal Sidebar')}
+                    </div>
+
+                    <div class="flex items-center gap-2 p-1">
+                        <Switch
+                            tooltip={true}
+                            ariaLabelledbyId="auto-open-terminal-sidebar-label"
+                            bind:state={autoOpenTerminalSidebar}
+                            on:change={() => {
+                                saveSettings({ autoOpenTerminalSidebar });
+                            }}
+                        />
+                    </div>
+                </div>
+            </div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
