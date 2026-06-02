@@ -27,6 +27,8 @@ services:
     image: redis:7-alpine
     container_name: owui-redis
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"   # 仅宿主机本地，供 Navicat/RedisInsight 经 SSH 隧道连接；不进安全组/公网
     command:
       - redis-server
       - --requirepass
