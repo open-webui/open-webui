@@ -200,50 +200,6 @@
 </script>
 
 <div bind:this={contentContainerElement}>
-<<<<<<< HEAD
-	<Markdown
-		{id}
-		{content}
-		{model}
-		{save}
-		{preview}
-		{done}
-		{editCodeBlock}
-		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, source) => {
-			let ids = [];
-			source.document.forEach((document, index) => {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push({ name: 'N/A', url: null });
-					return ids;
-				}
-
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
-				const url = metadata?.url ?? null;
-
-				let name;
-				if (metadata?.name) {
-					name = metadata.name;
-				} else if (id.startsWith('http://') || id.startsWith('https://')) {
-					name = id;
-				} else {
-					name = source?.source?.name ?? id;
-				}
-
-				ids.push({ name, url });
-				return ids;
-			});
-
-			acc = [...acc, ...ids];
-			return acc;
-		}, [])}
-		{onSourceClick}
-		{onTaskClick}
-		{onSave}
-		onUpdate={async (token) => {
-			const { lang, text: code } = token;
-=======
 	{#if $settings?.renderMarkdownInAssistantMessages ?? true}
 		<Markdown
 			{id}
@@ -258,13 +214,39 @@
 			{done}
 			{editCodeBlock}
 			{topPadding}
-			{sourceIds}
+			sourceIds={(sources ?? []).reduce((acc, source) => {
+				let ids = [];
+				source.document.forEach((document, index) => {
+					if (model?.info?.meta?.capabilities?.citations == false) {
+						ids.push({ name: 'N/A', url: null });
+						return ids;
+					}
+
+					const metadata = source.metadata?.[index];
+					const id = metadata?.source ?? 'N/A';
+					const url = metadata?.url ?? null;
+
+					let name;
+					if (metadata?.name) {
+						name = metadata.name;
+					} else if (id.startsWith('http://') || id.startsWith('https://')) {
+						name = id;
+					} else {
+						name = source?.source?.name ?? id;
+					}
+
+					ids.push({ name, url });
+					return ids;
+				});
+
+				acc = [...acc, ...ids];
+				return acc;
+			}, [])}
 			{onSourceClick}
 			{onTaskClick}
 			{onSave}
 			onUpdate={async (token) => {
 				const { lang, text: code } = token;
->>>>>>> v0.9.6
 
 				if (
 					($settings?.detectArtifacts ?? true) &&

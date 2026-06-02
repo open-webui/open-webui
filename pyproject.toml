@@ -107,6 +107,7 @@ dependencies = [
     "black==26.3.1",
     "youtube-transcript-api==1.2.4",
     "pytube==15.0.0",
+
     "pydub==0.25.1",
     "ddgs==9.11.3",
 
