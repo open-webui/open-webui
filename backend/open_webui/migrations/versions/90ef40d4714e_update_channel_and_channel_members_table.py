@@ -8,9 +8,9 @@ Create Date: 2025-11-30 06:33:38.790341
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 import open_webui.internal.db
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '90ef40d4714e'
@@ -20,42 +20,53 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
     # Update 'channel' table
-    op.add_column('channel', sa.Column('is_private', sa.Boolean(), nullable=True))
-
-    op.add_column('channel', sa.Column('archived_at', sa.BigInteger(), nullable=True))
-    op.add_column('channel', sa.Column('archived_by', sa.Text(), nullable=True))
-
-    op.add_column('channel', sa.Column('deleted_at', sa.BigInteger(), nullable=True))
-    op.add_column('channel', sa.Column('deleted_by', sa.Text(), nullable=True))
-
-    op.add_column('channel', sa.Column('updated_by', sa.Text(), nullable=True))
+    channel_cols = {c['name'] for c in inspector.get_columns('channel')}
+    if 'is_private' not in channel_cols:
+        op.add_column('channel', sa.Column('is_private', sa.Boolean(), nullable=True))
+    if 'archived_at' not in channel_cols:
+        op.add_column('channel', sa.Column('archived_at', sa.BigInteger(), nullable=True))
+    if 'archived_by' not in channel_cols:
+        op.add_column('channel', sa.Column('archived_by', sa.Text(), nullable=True))
+    if 'deleted_at' not in channel_cols:
+        op.add_column('channel', sa.Column('deleted_at', sa.BigInteger(), nullable=True))
+    if 'deleted_by' not in channel_cols:
+        op.add_column('channel', sa.Column('deleted_by', sa.Text(), nullable=True))
+    if 'updated_by' not in channel_cols:
+        op.add_column('channel', sa.Column('updated_by', sa.Text(), nullable=True))
 
     # Update 'channel_member' table
-    op.add_column('channel_member', sa.Column('role', sa.Text(), nullable=True))
-    op.add_column('channel_member', sa.Column('invited_by', sa.Text(), nullable=True))
-    op.add_column('channel_member', sa.Column('invited_at', sa.BigInteger(), nullable=True))
+    cm_cols = {c['name'] for c in inspector.get_columns('channel_member')}
+    if 'role' not in cm_cols:
+        op.add_column('channel_member', sa.Column('role', sa.Text(), nullable=True))
+    if 'invited_by' not in cm_cols:
+        op.add_column('channel_member', sa.Column('invited_by', sa.Text(), nullable=True))
+    if 'invited_at' not in cm_cols:
+        op.add_column('channel_member', sa.Column('invited_at', sa.BigInteger(), nullable=True))
 
     #  Create 'channel_webhook' table
-    op.create_table(
-        'channel_webhook',
-        sa.Column('id', sa.Text(), primary_key=True, unique=True, nullable=False),
-        sa.Column('user_id', sa.Text(), nullable=False),
-        sa.Column(
-            'channel_id',
-            sa.Text(),
-            sa.ForeignKey('channel.id', ondelete='CASCADE'),
-            nullable=False,
-        ),
-        sa.Column('name', sa.Text(), nullable=False),
-        sa.Column('profile_image_url', sa.Text(), nullable=True),
-        sa.Column('token', sa.Text(), nullable=False),
-        sa.Column('last_used_at', sa.BigInteger(), nullable=True),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-        sa.Column('updated_at', sa.BigInteger(), nullable=False),
-    )
-
-    pass
+    if 'channel_webhook' not in existing_tables:
+        op.create_table(
+            'channel_webhook',
+            sa.Column('id', sa.Text(), primary_key=True, unique=True, nullable=False),
+            sa.Column('user_id', sa.Text(), nullable=False),
+            sa.Column(
+                'channel_id',
+                sa.Text(),
+                sa.ForeignKey('channel.id', ondelete='CASCADE'),
+                nullable=False,
+            ),
+            sa.Column('name', sa.Text(), nullable=False),
+            sa.Column('profile_image_url', sa.Text(), nullable=True),
+            sa.Column('token', sa.Text(), nullable=False),
+            sa.Column('last_used_at', sa.BigInteger(), nullable=True),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+            sa.Column('updated_at', sa.BigInteger(), nullable=False),
+        )
 
 
 def downgrade() -> None:
@@ -74,5 +85,3 @@ def downgrade() -> None:
 
     # Drop 'channel_webhook' table
     op.drop_table('channel_webhook')
-
-    pass

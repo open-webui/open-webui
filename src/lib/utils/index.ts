@@ -1,6 +1,7 @@
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import DOMPurify from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
 
 import dayjs from 'dayjs';
@@ -223,6 +224,76 @@ export const convertMessagesToHistory = (messages) => {
 
 	history.currentId = messageId;
 	return history;
+};
+
+// Repair structurally-malformed history nodes from failed regenerations.
+// A lost assistant placeholder may exist under its map key with only
+// completion fields (content/done/error), missing id/role/parentId.
+// Reconstruct graph fields so already-corrupted chats recover on open.
+export const sanitizeHistory = (history) => {
+	if (!history?.messages || typeof history.messages !== 'object') return;
+
+	// Purge entries that aren't usable objects
+	for (const [id, message] of Object.entries(history.messages)) {
+		if (!message || typeof message !== 'object') {
+			delete history.messages[id];
+		}
+	}
+
+	// Ensure every surviving node has its canonical id and a childrenIds array
+	for (const [id, message] of Object.entries(history.messages)) {
+		if (message.id !== id) message.id = id;
+		if (!Array.isArray(message.childrenIds)) message.childrenIds = [];
+	}
+
+	// Build reverse lookup: parent, indexed by child id
+	const parentByChildId = {};
+	for (const [id, message] of Object.entries(history.messages)) {
+		for (const childId of message.childrenIds) {
+			parentByChildId[childId] = id;
+		}
+	}
+
+	// Reconstruct missing parentId and role
+	for (const [id, message] of Object.entries(history.messages)) {
+		// Well-formed: has role and explicit parentId (null is valid for root)
+		if (message.role && message.parentId !== undefined) continue;
+
+		if (message.parentId === undefined) {
+			message.parentId = parentByChildId[id] ?? null;
+		}
+
+		if (!message.role) {
+			const parent = message.parentId ? history.messages[message.parentId] : null;
+			message.role =
+				parent?.role === 'user'
+					? 'assistant'
+					: parent?.role === 'assistant'
+						? 'user'
+						: message.model || message.usage || message.done !== undefined
+							? 'assistant'
+							: 'user';
+		}
+	}
+
+	// Prune childrenIds referencing deleted/missing nodes
+	for (const message of Object.values(history.messages)) {
+		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
+	}
+
+	// Recover currentId if it points to a missing or incomplete node
+	const currentMessage = history.messages?.[history.currentId];
+	if (!currentMessage?.id || !currentMessage?.role) {
+		let latestLeafId = null;
+		let latestTimestamp = -1;
+		for (const [id, message] of Object.entries(history.messages)) {
+			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
+				latestLeafId = id;
+				latestTimestamp = message.timestamp ?? 0;
+			}
+		}
+		history.currentId = latestLeafId ?? Object.keys(history.messages)[0] ?? null;
+	}
 };
 
 export const getGravatarURL = (email) => {
@@ -1688,7 +1759,42 @@ export const parseJsonValue = (value: string): any => {
 	return value;
 };
 
+type ReadableStreamWithAsyncIterator<T> = ReadableStream<T> & {
+	[Symbol.asyncIterator]?: () => AsyncIterableIterator<T>;
+};
+
+function ensureReadableStreamAsyncIterator() {
+	if (typeof ReadableStream === 'undefined') {
+		return;
+	}
+
+	const prototype = ReadableStream.prototype as ReadableStreamWithAsyncIterator<unknown>;
+	if (prototype[Symbol.asyncIterator]) {
+		return;
+	}
+
+	Object.defineProperty(prototype, Symbol.asyncIterator, {
+		value: async function* (this: ReadableStream<unknown>) {
+			const reader = this.getReader();
+			try {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) {
+						return;
+					}
+					yield value;
+				}
+			} finally {
+				reader.releaseLock();
+			}
+		},
+		configurable: true,
+		writable: true
+	});
+}
+
 async function ensurePDFjsLoaded() {
+	ensureReadableStreamAsyncIterator();
 	if (!window.pdfjsLib) {
 		const pdfjs = await import('pdfjs-dist');
 		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -1836,6 +1942,44 @@ const cleanupMermaidTempElements = (id: string) => {
 	document.getElementById(`i${id}`)?.remove();
 };
 
+// Mermaid runs with securityLevel:'loose', which emits unsanitized SVG (raw javascript: hrefs,
+// HTML labels); strip active content before it reaches any innerHTML/{@html} sink.
+export const sanitizeSvg = (svg: string): string =>
+	DOMPurify.sanitize(svg, {
+		USE_PROFILES: { svg: true, svgFilters: true },
+		WHOLE_DOCUMENT: false,
+		ADD_TAGS: ['style', 'foreignObject'],
+		ADD_ATTR: [
+			'class',
+			'style',
+			'id',
+			'data-*',
+			'viewBox',
+			'preserveAspectRatio',
+			'markerWidth',
+			'markerHeight',
+			'markerUnits',
+			'refX',
+			'refY',
+			'orient',
+			'href',
+			'xlink:href',
+			'dominant-baseline',
+			'text-anchor',
+			'clipPathUnits',
+			'filterUnits',
+			'patternUnits',
+			'patternContentUnits',
+			'maskUnits',
+			'role',
+			'aria-label',
+			'aria-labelledby',
+			'aria-hidden',
+			'tabindex'
+		],
+		SANITIZE_DOM: true
+	});
+
 export const renderMermaidDiagram = async (
 	mermaid: typeof import('mermaid').default,
 	code: string,
@@ -1846,7 +1990,7 @@ export const renderMermaidDiagram = async (
 		const parseResult = await mermaid.parse(code, { suppressErrors: false });
 		if (parseResult) {
 			const { svg } = await mermaid.render(id, code);
-			return svg;
+			return sanitizeSvg(svg);
 		}
 		return '';
 	} finally {

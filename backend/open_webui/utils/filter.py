@@ -1,11 +1,11 @@
 import inspect
 import logging
 
-from open_webui.utils.plugin import (
-    load_function_module_by_id,
-    get_function_module_from_cache,
-)
 from open_webui.models.functions import Functions
+from open_webui.utils.plugin import (
+    get_function_module_from_cache,
+    load_function_module_by_id,
+)
 
 log = logging.getLogger(__name__)
 

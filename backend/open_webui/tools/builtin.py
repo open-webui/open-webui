@@ -6,43 +6,68 @@ These tools are automatically available when native function calling is enabled.
 IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 """
 
+from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
+
+import asyncio
 import json
 import logging
 import time
-import asyncio
 from typing import Optional
 
 from fastapi import Request
 
-from open_webui.models.users import UserModel
-from open_webui.routers.retrieval import search_web as _search_web
-from open_webui.retrieval.utils import get_content_from_url
-from open_webui.routers.images import (
-    image_generations,
-    image_edits,
-    CreateImageForm,
-    EditImageForm,
-)
-from open_webui.routers.memories import (
-    query_memory,
-    add_memory as _add_memory,
-    update_memory_by_id,
-    QueryMemoryForm,
-    AddMemoryForm,
-    MemoryUpdateModel,
-)
-from open_webui.models.notes import Notes
+from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
-from open_webui.models.channels import Channels, ChannelMember, Channel
-from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
+from open_webui.models.messages import Message, Messages
+from open_webui.models.notes import Notes
+from open_webui.models.users import UserModel
+from open_webui.retrieval.utils import get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.routers.images import (
+    CreateImageForm,
+    EditImageForm,
+    image_edits,
+    image_generations,
+)
+from open_webui.routers.memories import (
+    AddMemoryForm,
+    MemoryUpdateModel,
+    QueryMemoryForm,
+    query_memory,
+    update_memory_by_id,
+)
+from open_webui.routers.memories import (
+    add_memory as _add_memory,
+)
+from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
+
+
+async def _has_read_access_to_file(
+    file,
+    user_id: str,
+    user_role: str,
+    model_knowledge: Optional[list[dict]] = None,
+) -> bool:
+    """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
+    if file.user_id == user_id or user_role == 'admin':
+        return True
+    if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
+        return True
+    from open_webui.utils.access_control.files import has_access_to_file
+
+    return await has_access_to_file(
+        file_id=file.id,
+        access_type='read',
+        user=UserModel(**{'id': user_id, 'role': user_role}),
+    )
+
 
 # =============================================================================
 # TIME UTILITIES
@@ -106,6 +131,7 @@ async def calculate_timestamp(
     """
     try:
         import datetime
+
         from dateutil.relativedelta import relativedelta
 
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -206,7 +232,7 @@ async def search_web(
         max_count = 5 if configured is None else configured
         count = max(1, min(count, max_count)) if count is not None else max_count
 
-        results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
+        results = await _search_web(__request__, engine, query, user)
 
         # Limit results
         results = results[:count] if results else []
@@ -248,7 +274,7 @@ async def fetch_url(
 
         return content
     except Exception as e:
-        log.exception(f'fetch_url error: {e}')
+        log.warning(f'fetch_url error: {e}')
         return json.dumps({'error': str(e)})
 
 
@@ -1602,9 +1628,9 @@ async def search_knowledge_files(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.knowledge import Knowledges
-        from open_webui.models.files import Files
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1689,6 +1715,21 @@ async def search_knowledge_files(
 
         # No attached knowledge - search all accessible KBs
         if knowledge_id:
+            # search_files_by_id does not enforce knowledge_id ownership; mirror the attached-KB check above.
+            knowledge = await Knowledges.get_knowledge_by_id(knowledge_id)
+            if not knowledge or not (
+                user_role == 'admin'
+                or knowledge.user_id == user_id
+                or await AccessGrants.has_access(
+                    user_id=user_id,
+                    resource_type='knowledge',
+                    resource_id=knowledge.id,
+                    permission='read',
+                    user_group_ids=set(user_group_ids),
+                )
+            ):
+                return json.dumps({'error': f'Access denied to knowledge base {knowledge_id}'})
+
             result = await Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
                 user_id=user_id,
@@ -1728,12 +1769,176 @@ async def search_knowledge_files(
 # Hard cap for view_file / view_knowledge_file output
 MAX_VIEW_FILE_CHARS = 100_000
 DEFAULT_VIEW_FILE_MAX_CHARS = 10_000
+MAX_GREP_RESULTS = 50
+
+
+async def grep_knowledge_files(
+    pattern: str,
+    file_id: Optional[str] = None,
+    case_insensitive: bool = False,
+    count_only: bool = False,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Search for exact text across knowledge files. Returns matching lines with line numbers.
+    Unlike query_knowledge_files (semantic/vector search), this performs exact string matching.
+    Automatically detects regex patterns (e.g. "error|warn", "version \\d+").
+
+    :param pattern: The text pattern to search for (regex auto-detected)
+    :param file_id: Optional file ID to search within a single file only
+    :param case_insensitive: If true, ignore case when matching (default: false)
+    :param count_only: If true, return only match counts per file (default: false)
+    :return: Matching lines with file IDs, filenames, and line numbers
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if not pattern or not pattern.strip():
+        return json.dumps({'error': 'Pattern is required'})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.tools.knowledge_fs import build_matcher
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
+
+        _matches, err = build_matcher(pattern, case_insensitive)
+        if err:
+            return json.dumps({'error': err})
+
+        # Collect files to search
+        files_to_search = []
+
+        if file_id:
+            # Single file mode — verify access
+            file = await Files.get_file_by_id(file_id)
+            if file:
+                if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+                    return json.dumps({'error': 'File not found'})
+                files_to_search.append(file)
+        elif __model_knowledge__:
+            # Scoped to model's attached knowledge
+            from open_webui.models.access_grants import AccessGrants
+
+            seen_ids = set()
+            for item in __model_knowledge__:
+                item_type = item.get('type')
+                item_id = item.get('id')
+                if item_type == 'file' and item_id not in seen_ids:
+                    file = await Files.get_file_by_id(item_id)
+                    if file:
+                        files_to_search.append(file)
+                        seen_ids.add(item_id)
+                elif item_type == 'collection':
+                    knowledge = await Knowledges.get_knowledge_by_id(item_id)
+                    if not knowledge:
+                        continue
+                    # Verify user can access this KB
+                    if not (
+                        user_role == 'admin'
+                        or knowledge.user_id == user_id
+                        or await AccessGrants.has_access(
+                            user_id=user_id,
+                            resource_type='knowledge',
+                            resource_id=knowledge.id,
+                            permission='read',
+                            user_group_ids=set(user_group_ids),
+                        )
+                    ):
+                        continue
+                    kb_files = await Knowledges.get_files_by_id(item_id)
+                    if kb_files:
+                        for f in kb_files:
+                            if f.id not in seen_ids:
+                                files_to_search.append(f)
+                                seen_ids.add(f.id)
+        else:
+            # All accessible knowledge bases — use the same search pattern as list_knowledge_bases
+            result = await Knowledges.search_knowledge_bases(
+                user_id,
+                filter={
+                    'query': '',
+                    'user_id': user_id,
+                    'group_ids': user_group_ids,
+                },
+                skip=0,
+                limit=200,
+            )
+            seen_ids = set()
+            for kb in result.items:
+                file_ids = []
+                # Get files attached to this KB
+                files_from_kb = await Knowledges.get_files_by_id(kb.id)
+                if files_from_kb:
+                    file_ids = [f.id for f in files_from_kb]
+                for fid in file_ids:
+                    if fid not in seen_ids:
+                        file = await Files.get_file_by_id(fid)
+                        if file:
+                            files_to_search.append(file)
+                            seen_ids.add(fid)
+
+        if not files_to_search:
+            return json.dumps({'error': 'No accessible files found'})
+
+        # Search
+        results = []
+        total_matches = 0
+        counts = []
+
+        for file in files_to_search:
+            content = ''
+            if file.data:
+                content = file.data.get('content', '')
+            if not content:
+                continue
+
+            lines = content.split('\n')
+            file_matches = 0
+
+            for i, line in enumerate(lines, 1):
+                if _matches(line):
+                    file_matches += 1
+                    total_matches += 1
+                    if not count_only and len(results) < MAX_GREP_RESULTS:
+                        results.append(f'{file.id}  {file.filename}:{i}: {line}')
+
+            if file_matches > 0 and count_only:
+                counts.append(f'{file.id}  {file.filename}: {file_matches}')
+
+        if count_only:
+            if not counts:
+                return f'No matches for "{pattern}"'
+            return '\n'.join(counts) + f'\n[{total_matches} total matches]'
+
+        if not results:
+            return f'No matches for "{pattern}"'
+
+        output = '\n'.join(results)
+        if total_matches > MAX_GREP_RESULTS:
+            output += f'\n[{MAX_GREP_RESULTS} of {total_matches} matches shown — use file_id to narrow]'
+        return output
+
+    except Exception as e:
+        log.exception(f'grep_knowledge_files error: {e}')
+        return json.dumps({'error': str(e)})
 
 
 async def view_file(
     file_id: str,
     offset: int = 0,
     max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
+    line_numbers: bool = False,
+    start_line: Optional[int] = None,
+    end_line: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
@@ -1744,6 +1949,9 @@ async def view_file(
     :param file_id: The ID of the file to retrieve
     :param offset: Character offset to start reading from (default: 0)
     :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :param line_numbers: If true, prefix each line with its 1-indexed line number
+    :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
+    :param end_line: Optional 1-indexed end line (inclusive)
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
@@ -1770,7 +1978,6 @@ async def view_file(
 
     try:
         from open_webui.models.files import Files
-        from open_webui.utils.access_control.files import has_access_to_file
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1779,18 +1986,7 @@ async def view_file(
         if not file:
             return json.dumps({'error': 'File not found'})
 
-        if (
-            file.user_id != user_id
-            and user_role != 'admin'
-            and not any(
-                item.get('type') == 'file' and item.get('id') == file_id for item in (__model_knowledge__ or [])
-            )
-            and not await has_access_to_file(
-                file_id=file_id,
-                access_type='read',
-                user=UserModel(**__user__),
-            )
-        ):
+        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
             return json.dumps({'error': 'File not found'})
 
         content = ''
@@ -1798,8 +1994,37 @@ async def view_file(
             content = file.data.get('content', '')
 
         total_chars = len(content)
+
+        # Line-based addressing (overrides char-based offset/max_chars)
+        if start_line is not None:
+            all_lines = content.split('\n')
+            total_lines = len(all_lines)
+            s = max(1, int(start_line)) - 1  # 1-indexed to 0-indexed
+            e = min(total_lines, int(end_line) if end_line else s + 100)
+            selected = all_lines[s:e]
+            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
+            is_truncated = e < total_lines
+            result = {
+                'id': file.id,
+                'filename': file.filename,
+                'content': sliced,
+                'updated_at': file.updated_at,
+                'created_at': file.created_at,
+                'total_lines': total_lines,
+                'showing_lines': f'{s + 1}-{e}',
+            }
+            if is_truncated:
+                result['truncated'] = True
+                result['next_start_line'] = e + 1
+            return json.dumps(result, ensure_ascii=False)
+
         sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
+
+        if line_numbers:
+            start_ln = content[:offset].count('\n') + 1
+            lines = sliced.split('\n')
+            sliced = '\n'.join(f'{start_ln + i}: {line}' for i, line in enumerate(lines))
 
         result = {
             'id': file.id,
@@ -1827,6 +2052,9 @@ async def view_knowledge_file(
     file_id: str,
     offset: int = 0,
     max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
+    line_numbers: bool = False,
+    start_line: Optional[int] = None,
+    end_line: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -1836,6 +2064,9 @@ async def view_knowledge_file(
     :param file_id: The ID of the file to retrieve
     :param offset: Character offset to start reading from (default: 0)
     :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :param line_numbers: If true, prefix each line with its 1-indexed line number
+    :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
+    :param end_line: Optional 1-indexed end line (inclusive)
     :return: JSON with the file's id, filename, content, and pagination metadata if truncated
     """
     if __request__ is None:
@@ -1861,9 +2092,9 @@ async def view_knowledge_file(
     offset = max(offset, 0)
 
     try:
+        from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
-        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1903,8 +2134,40 @@ async def view_knowledge_file(
             content = file.data.get('content', '')
 
         total_chars = len(content)
+
+        # Line-based addressing (overrides char-based offset/max_chars)
+        if start_line is not None:
+            all_lines = content.split('\n')
+            total_lines = len(all_lines)
+            s = max(1, int(start_line)) - 1
+            e = min(total_lines, int(end_line) if end_line else s + 100)
+            selected = all_lines[s:e]
+            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
+            is_truncated = e < total_lines
+            result = {
+                'id': file.id,
+                'filename': file.filename,
+                'content': sliced,
+                'updated_at': file.updated_at,
+                'created_at': file.created_at,
+                'total_lines': total_lines,
+                'showing_lines': f'{s + 1}-{e}',
+            }
+            if knowledge_info:
+                result['knowledge_id'] = knowledge_info['id']
+                result['knowledge_name'] = knowledge_info['name']
+            if is_truncated:
+                result['truncated'] = True
+                result['next_start_line'] = e + 1
+            return json.dumps(result, ensure_ascii=False)
+
         sliced = content[offset : offset + max_chars]
         is_truncated = (offset + len(sliced)) < total_chars
+
+        if line_numbers:
+            start_ln = content[:offset].count('\n') + 1
+            lines = sliced.split('\n')
+            sliced = '\n'.join(f'{start_ln + i}: {line}' for i, line in enumerate(lines))
 
         result = {
             'id': file.id,
@@ -1932,14 +2195,24 @@ async def view_knowledge_file(
 
 
 async def list_knowledge(
+    knowledge_id: Optional[str] = None,
+    skip: int = 0,
+    count: int = 50,
     __request__: Request = None,
     __user__: dict = None,
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    List all knowledge bases, files, and notes attached to the current model.
+    List knowledge bases, files, and notes attached to the current model.
     Use this first to discover what knowledge is available before querying or reading files.
+    Without knowledge_id: returns KB summaries (name, description, file_count)
+    plus standalone files and notes — no file listing inside KBs.
+    With knowledge_id: includes paginated file listing for that specific KB.
+    Use skip/count to page through large KBs.
 
+    :param knowledge_id: Optional KB ID to get file listing for
+    :param skip: Number of files to skip for pagination (default: 0)
+    :param count: Maximum files per page (default: 50, max: 200)
     :return: JSON with knowledge_bases, files, and notes attached to this model
     """
     if __request__ is None:
@@ -1951,11 +2224,27 @@ async def list_knowledge(
     if not __model_knowledge__:
         return json.dumps({'knowledge_bases': [], 'files': [], 'notes': []})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(skip, str):
+        try:
+            skip = int(skip)
+        except ValueError:
+            skip = 0
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 50
+    if isinstance(knowledge_id, str) and knowledge_id.lower() in ('none', 'null', ''):
+        knowledge_id = None
+
+    count = min(count, 200)
+
     try:
-        from open_webui.models.knowledge import Knowledges
-        from open_webui.models.files import Files
-        from open_webui.models.notes import Notes
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.models.notes import Notes
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -1992,9 +2281,15 @@ async def list_knowledge(
                         'file_count': file_count,
                     }
 
-                    # Include file listing for each KB
-                    if kb_files:
-                        kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in kb_files]
+                    # Include file listing only when this KB is targeted
+                    if knowledge_id and knowledge_id == knowledge.id:
+                        if kb_files:
+                            paged_files = kb_files[skip : skip + count]
+                            kb_entry['files'] = [{'id': f.id, 'filename': f.filename} for f in paged_files]
+                            kb_entry['files_skip'] = skip
+                            kb_entry['files_count'] = len(paged_files)
+                            kb_entry['files_total'] = file_count
+                            kb_entry['has_more'] = skip + count < file_count
 
                     knowledge_bases.append(kb_entry)
 
@@ -2084,11 +2379,11 @@ async def query_knowledge_files(
                 knowledge_ids = [knowledge_ids]
 
     try:
-        from open_webui.models.knowledge import Knowledges
+        from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
+        from open_webui.models.knowledge import Knowledges
         from open_webui.models.notes import Notes
         from open_webui.retrieval.utils import query_collection
-        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
@@ -2244,9 +2539,10 @@ async def query_knowledge_bases(
 
     try:
         import heapq
+
         from open_webui.models.knowledge import Knowledges
-        from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
         from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+        from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
@@ -2345,8 +2641,8 @@ async def view_skill(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.skills import Skills
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.skills import Skills
 
         user_id = __user__.get('id')
 
@@ -2385,8 +2681,9 @@ async def view_skill(
 # TASK MANAGEMENT TOOLS
 # =============================================================================
 
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
 
@@ -2569,9 +2866,9 @@ async def create_automation(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations, AutomationForm, AutomationData
+        from open_webui.models.automations import AutomationData, AutomationForm, Automations
         from open_webui.models.users import Users
-        from open_webui.utils.automations import validate_rrule, next_run_ns, next_n_runs_ns
+        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -2647,9 +2944,9 @@ async def update_automation(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations, AutomationForm, AutomationData
+        from open_webui.models.automations import AutomationData, AutomationForm, Automations
         from open_webui.models.users import Users
-        from open_webui.utils.automations import validate_rrule, next_run_ns, next_n_runs_ns
+        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -2833,7 +3130,7 @@ async def delete_automation(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations, AutomationRuns
+        from open_webui.models.automations import AutomationRuns, Automations
 
         user_id = __user__.get('id')
 
@@ -3048,7 +3345,7 @@ async def create_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.calendar import Calendars, CalendarEvents, CalendarEventForm
+        from open_webui.models.calendar import CalendarEventForm, CalendarEvents, Calendars
 
         user_id = __user__.get('id')
 
@@ -3175,8 +3472,8 @@ async def update_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.calendar import Calendars, CalendarEvents, CalendarEventUpdateForm
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.calendar import CalendarEvents, CalendarEventUpdateForm, Calendars
         from open_webui.models.groups import Groups
 
         user_id = __user__.get('id')
@@ -3278,8 +3575,8 @@ async def delete_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.calendar import Calendars, CalendarEvents
         from open_webui.models.access_grants import AccessGrants
+        from open_webui.models.calendar import CalendarEvents, Calendars
         from open_webui.models.groups import Groups
 
         user_id = __user__.get('id')

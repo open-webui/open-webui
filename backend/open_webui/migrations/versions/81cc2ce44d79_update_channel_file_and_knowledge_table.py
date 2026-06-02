@@ -8,9 +8,9 @@ Create Date: 2025-12-10 16:07:58.001282
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 import open_webui.internal.db
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '81cc2ce44d79'
@@ -20,20 +20,27 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
     # Add message_id column to channel_file table
-    with op.batch_alter_table('channel_file', schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                'message_id',
-                sa.Text(),
-                sa.ForeignKey('message.id', ondelete='CASCADE', name='fk_channel_file_message_id'),
-                nullable=True,
+    cf_cols = {c['name'] for c in inspector.get_columns('channel_file')}
+    if 'message_id' not in cf_cols:
+        with op.batch_alter_table('channel_file', schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column(
+                    'message_id',
+                    sa.Text(),
+                    sa.ForeignKey('message.id', ondelete='CASCADE', name='fk_channel_file_message_id'),
+                    nullable=True,
+                )
             )
-        )
 
     # Add data column to knowledge table
-    with op.batch_alter_table('knowledge', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('data', sa.JSON(), nullable=True))
+    k_cols = {c['name'] for c in inspector.get_columns('knowledge')}
+    if 'data' not in k_cols:
+        with op.batch_alter_table('knowledge', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('data', sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

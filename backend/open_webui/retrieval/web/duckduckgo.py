@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import logging
 import urllib.request
-from typing import Optional
 
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from ddgs import DDGS
 from ddgs.exceptions import RatelimitException
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 log = logging.getLogger(__name__)
 
@@ -12,9 +13,9 @@ log = logging.getLogger(__name__)
 def search_duckduckgo(
     query: str,
     count: int,
-    filter_list: Optional[list[str]] = None,
-    concurrent_requests: Optional[int] = None,
-    backend: Optional[str] = 'auto',
+    filter_list: list[str | None] = None,
+    concurrent_requests: int | None = None,
+    backend: str | None = 'auto',
 ) -> list[SearchResult]:
     """
     Search using DuckDuckGo's Search API and return the results as a list of SearchResult objects.

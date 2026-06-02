@@ -215,9 +215,9 @@
 					<div class="flex flex-col w-full mt-2">
 						<div class=" mb-1 text-xs text-gray-500">
 							{$i18n.t('Channel Name')}
-							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
-								>{type === 'dm' ? `${$i18n.t('Optional')}` : ''}</span
-							>
+							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5">
+								{#if type === 'dm'}{$i18n.t('Optional')}{/if}
+							</span>
 						</div>
 
 						<div class="flex-1">

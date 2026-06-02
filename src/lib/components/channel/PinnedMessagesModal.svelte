@@ -37,10 +37,10 @@
 
 			if (res) {
 				pinnedMessages = [...(pinnedMessages ?? []), ...res];
-			}
 
-			if (res.length === 0) {
-				allItemsLoaded = true;
+				if (res.length === 0) {
+					allItemsLoaded = true;
+				}
 			}
 		} catch (error) {
 			console.error('Error fetching pinned messages:', error);

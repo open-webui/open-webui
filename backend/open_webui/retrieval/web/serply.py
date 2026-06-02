@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 from urllib.parse import urlencode
 
 import requests
@@ -16,7 +17,7 @@ def search_serply(
     limit: int = 10,
     device_type: str = 'desktop',
     proxy_location: str = 'US',
-    filter_list: Optional[list[str]] = None,
+    filter_list: list[str | None] = None,
 ) -> list[SearchResult]:
     """Search using serper.dev's API and return the results as a list of SearchResult objects.
 

@@ -1,7 +1,8 @@
 import logging
-from typing import Optional, Literal
-import requests
+from typing import Literal, Optional
 
+import requests
+from open_webui.env import VERSION
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.headers import include_user_info_headers
 
@@ -28,7 +29,7 @@ def search_perplexity_search(
 
     """
 
-    # Handle PersistentConfig object
+    # Handle ConfigVar object
     if hasattr(api_key, '__str__'):
         api_key = str(api_key)
 
@@ -47,6 +48,7 @@ def search_perplexity_search(
         headers = {
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json',
+            'X-Pplx-Integration': f'open-webui/{VERSION}',
         }
 
         # Forward user info headers if user is provided

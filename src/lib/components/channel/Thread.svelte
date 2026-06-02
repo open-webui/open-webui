@@ -35,7 +35,9 @@
 	}
 
 	const scrollToBottom = () => {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		}
 	};
 
 	const initHandler = async () => {

@@ -2,33 +2,31 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-from pymilvus import MilvusClient as Client
-from pymilvus import FieldSchema, DataType
-from pymilvus import connections, Collection
-
 import json
 import logging
 from typing import Optional
 
-from open_webui.retrieval.vector.utils import process_metadata
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
 from open_webui.config import (
-    MILVUS_URI,
     MILVUS_DB,
-    MILVUS_TOKEN,
-    MILVUS_INDEX_TYPE,
-    MILVUS_METRIC_TYPE,
-    MILVUS_HNSW_M,
-    MILVUS_HNSW_EFCONSTRUCTION,
-    MILVUS_IVF_FLAT_NLIST,
     MILVUS_DISKANN_MAX_DEGREE,
     MILVUS_DISKANN_SEARCH_LIST_SIZE,
+    MILVUS_HNSW_EFCONSTRUCTION,
+    MILVUS_HNSW_M,
+    MILVUS_INDEX_TYPE,
+    MILVUS_IVF_FLAT_NLIST,
+    MILVUS_METRIC_TYPE,
+    MILVUS_TOKEN,
+    MILVUS_URI,
 )
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
+from open_webui.retrieval.vector.utils import process_metadata
+from pymilvus import Collection, DataType, FieldSchema, connections
+from pymilvus import MilvusClient as Client
 
 log = logging.getLogger(__name__)
 

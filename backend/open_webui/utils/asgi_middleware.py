@@ -37,13 +37,12 @@ from urllib.parse import parse_qs, urlencode
 
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials
-from starlette.datastructures import MutableHeaders
-from starlette.requests import Request
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
-
 from open_webui.env import CUSTOM_API_KEY_HEADER
 from open_webui.internal.db import ScopedSession
 from open_webui.utils.auth import get_http_authorization_cred
+from starlette.datastructures import MutableHeaders
+from starlette.requests import Request
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 log = logging.getLogger(__name__)
 

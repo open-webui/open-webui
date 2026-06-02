@@ -1,38 +1,32 @@
+import asyncio
+import hashlib
+import json
 import logging
 import os
 import uuid
-import json
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-import asyncio
-
 
 from fastapi import (
-    BackgroundTasks,
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
-    Query,
 )
-
-
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import get_async_session, get_async_db_context
-
-
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-
-
+from open_webui.internal.db import get_async_db_context, get_async_session
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
-from open_webui.models.users import Users
+from open_webui.models.chats import Chats
 from open_webui.models.files import (
     FileForm,
     FileListResponse,
@@ -40,36 +34,22 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.models.chats import Chats
-from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
-from open_webui.models.access_grants import AccessGrants
-
-
-from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import Users
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
-
-
+from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
-
-
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
-
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-
 router = APIRouter()
 
-
-############################
-# Constants
-############################
-
-PAGE_ITEM_COUNT = 50  # Default page size for pagination
 
 from open_webui.utils.access_control.files import has_access_to_file
 
@@ -81,7 +61,11 @@ from open_webui.utils.access_control.files import has_access_to_file
 
 
 def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
-    """Check if a file is likely a text file by reading a chunk and validating UTF-8.
+    """Check if a file is likely a text file by reading a chunk and decoding it.
+
+    Tries UTF-8 first, then falls back to Latin-1 (which accepts every byte
+    in 0x00–0xFF) so that legacy-encoded files from Windows environments are
+    not misclassified as binary.
 
     This catches files whose extensions are mis-mapped by mimetypes/browsers
     (e.g. TypeScript .ts → video/mp2t) without maintaining an extension whitelist.
@@ -95,9 +79,15 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         # Null bytes are a strong indicator of binary content
         if b'\x00' in chunk:
             return False
-        chunk.decode('utf-8')
+        try:
+            chunk.decode('utf-8')
+        except UnicodeDecodeError:
+            # Latin-1 always succeeds (every byte is valid), so this
+            # effectively just means "the file has no null bytes and is
+            # therefore likely text, even if not valid UTF-8".
+            chunk.decode('latin-1')
         return True
-    except (UnicodeDecodeError, Exception):
+    except Exception:
         return False
 
 
@@ -133,44 +123,76 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            if content_type:
-                stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
+            stt_supported = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
 
-                if strict_match_mime_type(stt_supported_content_types, content_type):
-                    file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
-                    result = await asyncio.to_thread(
-                        transcribe,
-                        request,
-                        file_path_processed,
-                        file_metadata,
-                        user,
-                    )
+            if content_type and strict_match_mime_type(stt_supported, content_type):
+                # Audio / STT-supported files → transcribe then index
+                file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
+                result = await transcribe(
+                    request,
+                    file_path_processed,
+                    file_metadata,
+                    user,
+                )
+                await process_file(
+                    request,
+                    ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
+                    user=user,
+                    db=db_session,
+                )
 
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
-                        user=user,
-                        db=db_session,
-                    )
-                elif (not content_type.startswith(('image/', 'video/'))) or (
-                    request.app.state.config.CONTENT_EXTRACTION_ENGINE == 'external'
-                ):
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id),
-                        user=user,
+            elif (
+                content_type
+                and content_type.startswith(('image/', 'video/'))
+                and request.app.state.config.CONTENT_EXTRACTION_ENGINE != 'external'
+            ):
+                # Media files without an external extraction engine
+                if content_type.startswith('video/'):
+                    # Videos are stored as-is for downstream multimodal
+                    # processing (Tools, vision models). Attempting text
+                    # extraction causes "Timeout reached while detecting
+                    # encoding" errors.
+                    log.info(f'Video file detected ({content_type}), skipping text extraction')
+                    await Files.update_file_data_by_id(
+                        file_item.id,
+                        {'status': 'completed'},
                         db=db_session,
                     )
                 else:
                     raise Exception(f'File type {content_type} is not supported for processing')
+
             else:
-                log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
+                # Documents, or any file when an external engine is configured
+                if not content_type:
+                    log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),
                     user=user,
                     db=db_session,
                 )
+
+            # Auto-link to Knowledge Collection when uploaded from one (#24807).
+            # Mirrors POST /knowledge/{id}/file/add so linking doesn't depend
+            # on the frontend staying connected after upload.
+            knowledge_id = file_metadata.get('knowledge_id')
+            if knowledge_id:
+                try:
+                    await Knowledges.add_file_to_knowledge_by_id(
+                        knowledge_id=knowledge_id,
+                        file_id=file_item.id,
+                        user_id=user.id,
+                        directory_id=file_metadata.get('directory_id'),
+                    )
+                    await process_file(
+                        request,
+                        ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                        user=user,
+                        db=db_session,
+                    )
+                    log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+                except Exception as e:
+                    log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
 
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')
@@ -273,6 +295,10 @@ async def upload_file_handler(
             },
         )
 
+        # SHA-256 of raw uploaded bytes for incremental sync diffing.
+        # If the client pre-computed and sent file_hash, use that.
+        file_hash = file_metadata.get('file_hash') or hashlib.sha256(contents).hexdigest()
+
         file_item = await Files.insert_new_file(
             user.id,
             FileForm(
@@ -287,6 +313,7 @@ async def upload_file_handler(
                         'name': name,
                         'content_type': (file.content_type if isinstance(file.content_type, str) else None),
                         'size': len(contents),
+                        'file_hash': file_hash,
                         'data': file_metadata,
                     },
                 }
@@ -346,25 +373,20 @@ async def upload_file_handler(
 ############################
 
 
+PAGE_SIZE = 50
+
+
 @router.get('/', response_model=FileListResponse)
 async def list_files(
     user=Depends(get_verified_user),
-    content: bool = Query(True, description='Include file content in response'),
     page: int = Query(1, ge=1, description='Page number (1-indexed)'),
-    limit: int = Query(PAGE_ITEM_COUNT, ge=1, le=200, description='Number of files per page'),
+    content: bool = Query(True),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """
-    List files with pagination support.
-
-    - **page**: Page number (starts at 1)
-    - **limit**: Number of files per page (default: 50, max: 200)
-    - **content**: Include file content in response (default: true)
-    """
-    skip = (page - 1) * limit
+    skip = (page - 1) * PAGE_SIZE
     user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
 
-    result = await Files.get_file_list(user_id=user_id, skip=skip, limit=limit, db=db)
+    result = await Files.get_file_list(user_id=user_id, skip=skip, limit=PAGE_SIZE, db=db)
 
     if not content:
         for file in result.items:
@@ -379,33 +401,27 @@ async def list_files(
 ############################
 
 
-@router.get('/search', response_model=FileListResponse)
+@router.get('/search', response_model=list[FileModelResponse])
 async def search_files(
     filename: str = Query(
         ...,
         description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
-    content: bool = Query(True, description='Include file content in response'),
-    view_option: Optional[str] = Query(None, description="Option to control response content, e.g. 'metadata_only'"),
-    page: int = Query(1, ge=1, description='Page number (starts at 1)'),
-    limit: int = Query(PAGE_ITEM_COUNT, ge=1, le=200, description='Number of files per page'),
+    content: bool = Query(True),
+    skip: int = Query(0, ge=0, description='Number of files to skip'),
+    limit: int = Query(100, ge=1, le=1000, description='Maximum number of files to return'),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """
-    Search for files by filename with support for wildcard patterns and pagination.
-
-    - **filename**: Filename pattern (supports wildcards like *.txt)
-    - **page**: Page number (starts at 1)
-    - **limit**: Number of files per page (default: 50, max: 200)
-    - **content**: Include file content in response (default: true)
-    - **view_option**: Set to 'metadata_only' to exclude content
+    Search for files by filename with support for wildcard patterns.
+    Uses SQL-based filtering with pagination for better performance.
     """
-    skip = (page - 1) * limit
-
+    # Determine user_id: null for admin with bypass (search all), user.id otherwise
     user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
 
-    result = await Files.search_files_paginated(
+    # Use optimized database query with pagination
+    files = await Files.search_files(
         user_id=user_id,
         filename=filename,
         skip=skip,
@@ -413,18 +429,18 @@ async def search_files(
         db=db,
     )
 
-    if not result.items:
+    if not files:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='No files found matching the pattern.',
         )
 
-    if not content or view_option == 'metadata_only':
-        for file in result.items:
+    if not content:
+        for file in files:
             if file.data and 'content' in file.data:
                 del file.data['content']
 
-    return result
+    return files
 
 
 ############################
@@ -777,7 +793,7 @@ async def get_file_content_by_id(
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
         else:
-            # File path doesn't exist, return the content as .txt if possible
+            # File path doesn’t exist, return the content as .txt if possible
             file_content = file.data.get('content', '')
             file_name = file.filename
 
@@ -795,6 +811,47 @@ async def get_file_content_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+############################
+# Rename File By Id
+############################
+
+
+class FileRenameForm(BaseModel):
+    filename: str
+
+
+@router.post('/{id}/rename')
+async def rename_file_by_id(
+    id: str,
+    form_data: FileRenameForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    file = await Files.get_file_by_id(id, db=db)
+
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
+        result = await Files.update_file_name_by_id(id, form_data.filename, db=db)
+        if result:
+            return result
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Error renaming file'),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
 
 ############################
 # Delete File By Id

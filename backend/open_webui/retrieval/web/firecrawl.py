@@ -197,8 +197,11 @@ def search_firecrawl(
             },
             timeout=count * 3 + 10,
         )
+        # Firecrawl /search has historically returned both `{"data": [...]}`
+        # (flat list, what v1 did and what frost19k reported under #23966)
+        # and `{"data": {"web": [...]}}` (current v2). Accept either.
         data = response.get('data') or {}
-        results = data.get('web') or []
+        results = data if isinstance(data, list) else (data.get('web') or [])
 
         if filter_list:
             from open_webui.retrieval.web.main import get_filtered_results

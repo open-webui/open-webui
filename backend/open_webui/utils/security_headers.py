@@ -1,9 +1,9 @@
-import re
 import os
+import re
+from typing import Dict
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from typing import Dict
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
