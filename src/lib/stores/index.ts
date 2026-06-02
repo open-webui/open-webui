@@ -216,6 +216,7 @@ type Settings = {
 	directConnections?: null;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
+	autoOpenTerminalSidebar?: boolean;
 	models?: string[];
 	conversationMode?: boolean;
 	speechAutoSend?: boolean;
