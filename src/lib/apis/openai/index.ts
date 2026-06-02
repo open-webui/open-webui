@@ -208,26 +208,12 @@ export const chatCompletion = async (
 
 	const activeBudget = get(thinkingBudget);
 	
-	if (activeBudget !== undefined) {
+	if (activeBudget !== undefined && activeBudget > 0) {
 		if (!body['metadata']) {
 			body['metadata'] = {};
 		}
 		body['metadata']['thinking_budget_tokens'] = activeBudget;
 	}
-
-	const res = await fetch(`${url}/chat/completions`, {
-		signal: controller.signal,
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(body)
-	}).catch((err) => {
-		console.error(err);
-		error = err;
-		return null;
-	});
 
 	if (error) {
 		throw error;
@@ -245,7 +231,7 @@ export const generateOpenAIChatCompletion = async (
 
 	const activeBudget = get(thinkingBudget);
 	
-	if (activeBudget !== undefined) {
+	if (activeBudget !== undefined && activeBudget > 0) {
 		if (!body['metadata']) {
 			body['metadata'] = {};
 		}
