@@ -85,7 +85,9 @@
 				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
 				<button
 					role="listitem"
-					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between px-3 py-2 my-2 transition group rounded-xl border bg-whiter hover:!bg-black/5 dark:hover:bg-white/5"
+					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
+				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
+				       dark:hover:bg-white/5 transition group"
 					style="animation-delay: {idx * 60}ms"
 					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
 				>
