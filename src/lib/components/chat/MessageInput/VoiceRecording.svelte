@@ -454,7 +454,7 @@
 	bind:clientWidth={containerWidth}
 	class="{loading
 		? ' bg-gray-100/50 dark:bg-gray-850/50'
-		: 'bg-gray-300/10 dark:bg-indigo-500/10 '} rounded-full flex justify-between {className}"
+		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex justify-between {className}"
 >
 	<div class="flex items-center mr-1">
 		<button
@@ -463,7 +463,7 @@
 
             {loading
 				? ' bg-gray-200 dark:bg-gray-700/50'
-				: 'bg-gray-400/20 text-gray-600 dark:text-indigo-300 '} 
+				: 'bg-indigo-400/20 text-indigo-600 dark:text-indigo-300 '} 
 
 
              rounded-full"
@@ -490,7 +490,7 @@
                     
                     {loading
 							? ' bg-gray-500 dark:bg-gray-400   '
-							: 'bg-gray-500 dark:bg-indigo-400  '} 
+							: 'bg-indigo-500 dark:bg-indigo-400  '} 
                     
                     inline-block h-full"
 						style="height: {Math.min(100, Math.max(14, rms * 100))}%;"
@@ -506,7 +506,7 @@
 				class="text-sm
         
         
-        {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-gray-500 '} 
+        {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-indigo-400 '} 
        font-medium flex-1 mx-auto text-center"
 			>
 				{formatSeconds(durationSeconds)}
@@ -609,7 +609,7 @@
 				<button
 					id="confirm-recording-button"
 					type="button"
-					class="p-1.5 bg-gray-800 text-white hover:bg-gray-600 dark:bg-indigo-500 dark:text-blue-950 rounded-full"
+					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
 					on:click={async () => {
 						await confirmRecording();
 					}}
