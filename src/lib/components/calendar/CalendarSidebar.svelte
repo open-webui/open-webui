@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import type { CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import { getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -158,7 +158,7 @@
 				<button
 					class="w-6 h-6 flex items-center justify-center rounded-full transition
 						{day.getMonth() !== miniMonth ? 'text-gray-300 dark:text-gray-600' : ''}
-						{isToday(day) ? 'bg-gray-500 text-gray-100' : ''}
+						{isToday(day) ? 'bg-blue-500 text-white' : ''}
 						{day.toDateString() === currentDate.toDateString() && !isToday(day)
 						? 'bg-gray-200 dark:bg-gray-700'
 						: ''}

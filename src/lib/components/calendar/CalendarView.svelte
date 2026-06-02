@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CalendarEventModel, CalendarModel } from '$lib/apis/calendar';
 	import { createEventDispatcher, getContext } from 'svelte';
+	import type { CalendarEventModel, CalendarModel } from '$lib/apis/calendar';
 	import CalendarEventChip from './CalendarEventChip.svelte';
 
 	const i18n = getContext('i18n');
@@ -172,7 +172,7 @@
 						<div class="flex justify-start px-0.5 mb-0.5">
 							<span
 								class="text-xs w-6 h-6 flex items-center justify-center rounded-full
-								{isToday(day) ? 'bg-gray-500 text-gray-100' : 'text-gray-500 dark:text-gray-400'}"
+								{isToday(day) ? 'bg-blue-500 text-white' : 'text-gray-500 dark:text-gray-400'}"
 							>
 								{day.getDate()}
 							</span>
@@ -225,7 +225,7 @@
 										class="text-sm mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full {isToday(
 											day
 										)
-											? 'bg-gray-500 text-gray-100'
+											? 'bg-blue-500 text-white'
 											: ''}"
 									>
 										{day.getDate()}
