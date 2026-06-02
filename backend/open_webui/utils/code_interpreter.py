@@ -6,9 +6,8 @@ from typing import Optional
 
 import aiohttp
 import websockets
-from pydantic import BaseModel
-
 from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 

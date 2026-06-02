@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
@@ -8,62 +10,52 @@ from urllib.parse import quote, urlparse
 
 import aiohttp
 from aiocache import cached
-
-
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-
-from fastapi import Depends, HTTPException, Request, APIRouter, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import (
     FileResponse,
-    StreamingResponse,
     JSONResponse,
     PlainTextResponse,
+    StreamingResponse,
 )
-from pydantic import BaseModel, ConfigDict
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from open_webui.internal.db import get_async_session
-
-from open_webui.models.models import Models
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
-from open_webui.utils.access_control import has_connection_access, check_model_access
 from open_webui.config import (
     CACHE_DIR,
 )
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
-    MODELS_CACHE_TTL,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_OPENAI_API_PASSTHROUGH,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+    MODELS_CACHE_TTL,
 )
+from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.models.models import Models
 from open_webui.models.users import UserModel
-
-from open_webui.constants import ERROR_MESSAGES
-
-
-from open_webui.utils.payload import (
-    apply_model_params_to_body_openai,
-    apply_system_prompt_to_body,
-)
+from open_webui.utils.access_control import check_model_access, has_connection_access
+from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
+)
+from open_webui.utils.payload import (
+    apply_model_params_to_body_openai,
+    apply_system_prompt_to_body,
 )
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_session,
     stream_wrapper,
 )
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import include_user_info_headers, get_custom_headers
-from open_webui.utils.anthropic import is_anthropic_url, get_anthropic_models
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -160,7 +152,7 @@ async def get_headers_and_cookies(
     url,
     key=None,
     config=None,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     user: UserModel = None,
 ):
     cookies = {}
@@ -256,7 +248,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 
 class OpenAIConfigForm(BaseModel):
-    ENABLE_OPENAI_API: Optional[bool] = None
+    ENABLE_OPENAI_API: bool | None = None
     OPENAI_API_BASE_URLS: list[str]
     OPENAI_API_KEYS: list[str]
     OPENAI_API_CONFIGS: dict
@@ -493,39 +485,6 @@ async def get_filtered_models(models, user, db=None):
     return filtered_models
 
 
-async def get_openai_loaded_models(request: Request, models: dict, api_base_urls: list):
-    """
-    Fetch loaded-model state from providers that expose it and annotate
-    each model dict with a ``loaded`` boolean.
-
-    Currently supports:
-      - **llama.cpp** – queries ``GET /slots`` and matches slot model IDs.
-    """
-    api_configs = request.app.state.config.OPENAI_API_CONFIGS
-    api_keys = request.app.state.config.OPENAI_API_KEYS
-
-    for idx, url in enumerate(api_base_urls):
-        api_config = api_configs.get(
-            str(idx),
-            api_configs.get(url, {}),
-        )
-        provider = api_config.get('provider', '')
-
-        if provider == 'llama.cpp':
-            try:
-                root_url = url.rstrip('/').removesuffix('/v1')
-                key = api_keys[idx] if idx < len(api_keys) else None
-                slots = await send_get_request(url=f'{root_url}/slots', key=key)
-                loaded_model_ids = (
-                    {s.get('model') for s in slots if s.get('model')} if isinstance(slots, list) else set()
-                )
-                for model_id, model in models.items():
-                    if model.get('urlIdx') == idx:
-                        model['loaded'] = model_id in loaded_model_ids
-            except Exception as e:
-                log.debug(f'Failed to fetch llama.cpp slots for idx {idx}: {e}')
-
-
 @cached(
     ttl=MODELS_CACHE_TTL,
     key=lambda _, user: f'openai_all_models_{user.id}' if user else 'openai_all_models',
@@ -580,7 +539,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                         continue
 
                     if model_id and model_id not in models:
-                        models[model_id] = {
+                        merged = {
                             **model,
                             'name': model.get('name', model_id),
                             'owned_by': 'openai',
@@ -590,13 +549,18 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             'urlIdx': idx,
                         }
 
+                        # llama.cpp router mode: derive loaded state from
+                        # the status object returned by GET /v1/models.
+                        status = model.get('status')
+                        if isinstance(status, dict) and 'value' in status:
+                            merged['loaded'] = status['value'] in ('loaded', 'sleeping')
+
+                        models[model_id] = merged
+
         return models
 
     models = get_merged_models(map(extract_data, responses))
     log.debug(f'models: {models}')
-
-    # Fetch loaded state for providers that support it (e.g. llama.cpp /slots)
-    await get_openai_loaded_models(request, models, api_base_urls)
 
     request.app.state.OPENAI_MODELS = models
     return {'data': list(models.values())}
@@ -604,7 +568,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
 @router.get('/models')
 @router.get('/models/{url_idx}')
-async def get_models(request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)):
+async def get_models(request: Request, url_idx: int | None = None, user=Depends(get_verified_user)):
     if not request.app.state.config.ENABLE_OPENAI_API:
         raise HTTPException(status_code=503, detail='OpenAI API is disabled')
 
@@ -631,7 +595,7 @@ async def get_models(request: Request, url_idx: Optional[int] = None, user=Depen
             try:
                 headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-                if api_config.get('azure', False):
+                if api_config.get('azure') or api_config.get('provider') == 'azure':
                     models = {
                         'data': api_config.get('model_ids', []) or [],
                         'object': 'list',
@@ -696,7 +660,7 @@ class ConnectionVerificationForm(BaseModel):
     url: str
     key: str
 
-    config: Optional[dict] = None
+    config: dict | None = None
 
 
 @router.post('/verify')
@@ -717,15 +681,24 @@ async def verify_connection(
         try:
             headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-            if api_config.get('azure', False):
+            if api_config.get('azure') or api_config.get('provider') == 'azure':
                 # Only set api-key header if not using Azure Entra ID authentication
                 auth_type = api_config.get('auth_type', 'bearer')
                 if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                     headers['api-key'] = key
 
-                api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                # Azure v1 format: base URL already ends with /openai/v1,
+                # use standard /models endpoint without api-version.
+                is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+                if is_azure_v1:
+                    verify_url = f'{url.rstrip("/")}/models'
+                else:
+                    api_version = api_config.get('api_version', '') or '2023-03-15-preview'
+                    verify_url = f'{url}/openai/models?api-version={api_version}'
+
                 async with session.get(
-                    url=f'{url}/openai/models?api-version={api_version}',
+                    url=verify_url,
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1081,19 +1054,20 @@ async def generate_chat_completion(
     request: Request,
     form_data: dict,
     user=Depends(get_verified_user),
-    bypass_system_prompt: bool = False,
 ):
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
 
-    # bypass_filter is read from request.state to prevent external clients from
-    # setting it via query parameter (CVE fix). Only internal server-side callers
-    # (e.g. utils/chat.py) should set request.state.bypass_filter = True.
+    # bypass_filter and bypass_system_prompt are read from request.state to prevent
+    # external clients from setting them via query parameter. Only internal
+    # server-side callers (e.g. utils/chat.py) should set
+    # request.state.bypass_filter / request.state.bypass_system_prompt = True.
     bypass_filter = getattr(request.state, 'bypass_filter', False)
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
 
     idx = 0
 
@@ -1187,7 +1161,7 @@ async def generate_chat_completion(
 
     is_responses = api_config.get('api_type') == 'responses'
 
-    if api_config.get('azure', False):
+    if api_config.get('azure') or api_config.get('provider') == 'azure':
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get('auth_type', 'bearer')
         if auth_type not in ('azure_ad', 'microsoft_entra_id'):
@@ -1340,11 +1314,32 @@ async def embeddings(request: Request, form_data: dict, user):
     streaming = False
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
+
+    if api_config.get('azure') or api_config.get('provider') == 'azure':
+        # Only set api-key header if not using Azure Entra ID authentication
+        auth_type = api_config.get('auth_type', 'bearer')
+        if auth_type not in ('azure_ad', 'microsoft_entra_id'):
+            headers['api-key'] = key
+
+        # Azure v1 format: base URL already ends with /openai/v1,
+        # model stays in the payload, no deployment URL rewriting.
+        is_azure_v1 = bool(re.search(r'/openai/v1(?:/|$)', url))
+
+        if is_azure_v1:
+            embeddings_url = f'{url.rstrip("/")}/embeddings'
+        else:
+            api_version = api_config.get('api_version', '2023-03-15-preview')
+            model = _sanitize_model_for_url(form_data.get('model', ''))
+            embeddings_url = f'{url}/openai/deployments/{model}/embeddings?api-version={api_version}'
+            headers['api-version'] = api_version
+    else:
+        embeddings_url = f'{url}/embeddings'
+
     try:
         session = await get_session()
         r = await session.request(
             method='POST',
-            url=f'{url}/embeddings',
+            url=embeddings_url,
             data=body,
             headers=headers,
             cookies=cookies,
@@ -1387,20 +1382,20 @@ class ResponsesForm(BaseModel):
     model_config = ConfigDict(extra='allow')
 
     model: str
-    input: Optional[list | str] = None
-    instructions: Optional[str] = None
-    stream: Optional[bool] = None
-    temperature: Optional[float] = None
-    max_output_tokens: Optional[int] = None
-    top_p: Optional[float] = None
-    tools: Optional[list] = None
-    tool_choice: Optional[str | dict] = None
-    text: Optional[dict] = None
-    truncation: Optional[str] = None
-    metadata: Optional[dict] = None
-    store: Optional[bool] = None
-    reasoning: Optional[dict] = None
-    previous_response_id: Optional[str] = None
+    input: list | str | None = None
+    instructions: str | None = None
+    stream: bool | None = None
+    temperature: float | None = None
+    max_output_tokens: int | None = None
+    top_p: float | None = None
+    tools: list | None = None
+    tool_choice: str | dict | None = None
+    text: dict | None = None
+    truncation: str | None = None
+    metadata: dict | None = None
+    store: bool | None = None
+    reasoning: dict | None = None
+    previous_response_id: str | None = None
 
 
 @router.post('/responses')
@@ -1444,7 +1439,7 @@ async def responses(
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if api_config.get('azure') or api_config.get('provider') == 'azure':
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):
                 headers['api-key'] = key
@@ -1555,7 +1550,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
-        if api_config.get('azure', False):
+        if api_config.get('azure') or api_config.get('provider') == 'azure':
             # Only set api-key header if not using Azure Entra ID authentication
             auth_type = api_config.get('auth_type', 'bearer')
             if auth_type not in ('azure_ad', 'microsoft_entra_id'):

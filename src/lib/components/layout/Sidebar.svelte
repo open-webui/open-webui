@@ -119,7 +119,8 @@
 					$user?.permissions?.workspace?.models ||
 					$user?.permissions?.workspace?.knowledge ||
 					$user?.permissions?.workspace?.prompts ||
-					$user?.permissions?.workspace?.tools
+					$user?.permissions?.workspace?.tools ||
+					$user?.permissions?.workspace?.skills
 				);
 			case 'automations':
 				return (
@@ -947,8 +948,10 @@
 								}
 							}}
 						>
-							<div
+							<button
+								type="button"
 								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								aria-label={$i18n.t('User menu')}
 							>
 								<div class="self-center relative">
 									<img
@@ -970,7 +973,7 @@
 										</div>
 									{/if}
 								</div>
-							</div>
+							</button>
 						</UserMenu>
 					{/if}
 				</div>
@@ -1607,10 +1610,12 @@
 								}
 							}}
 						>
-							<div
+							<button
+								type="button"
 								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								aria-label={$i18n.t('User menu')}
 							>
-								<div class=" self-center mr-3 relative">
+								<div class=" self-center mr-3 relative flex-shrink-0">
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class=" size-7 object-cover rounded-full"
@@ -1630,8 +1635,8 @@
 										</div>
 									{/if}
 								</div>
-								<div class=" self-center font-medium">{$user?.name}</div>
-							</div>
+								<div class=" self-center font-medium truncate">{$user?.name}</div>
+							</button>
 						</UserMenu>
 					{/if}
 				</div>

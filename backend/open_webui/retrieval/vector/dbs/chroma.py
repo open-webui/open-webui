@@ -1,29 +1,27 @@
-import chromadb
 import logging
-from chromadb import Settings
-from chromadb.utils.batch_utils import create_batches
-
 from typing import Optional
 
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
-from open_webui.retrieval.vector.utils import process_metadata
-
+import chromadb
+from chromadb import Settings
+from chromadb.utils.batch_utils import create_batches
 from open_webui.config import (
+    CHROMA_CLIENT_AUTH_CREDENTIALS,
+    CHROMA_CLIENT_AUTH_PROVIDER,
     CHROMA_DATA_PATH,
+    CHROMA_DATABASE,
+    CHROMA_HTTP_HEADERS,
     CHROMA_HTTP_HOST,
     CHROMA_HTTP_PORT,
-    CHROMA_HTTP_HEADERS,
     CHROMA_HTTP_SSL,
     CHROMA_TENANT,
-    CHROMA_DATABASE,
-    CHROMA_CLIENT_AUTH_PROVIDER,
-    CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
+from open_webui.retrieval.vector.utils import process_metadata
 
 log = logging.getLogger(__name__)
 

@@ -1,111 +1,166 @@
+from __future__ import annotations
+
+import asyncio
 import base64
 import copy
 import inspect
-import logging
-import re
-import inspect
-import aiohttp
-import asyncio
-import yaml
 import json
-from urllib.parse import quote, urlencode
-
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo
+import logging
+import os
+import re
+from functools import partial, update_wrapper
 from typing import (
     Any,
     Awaitable,
     Callable,
-    get_type_hints,
-    get_args,
-    get_origin,
-    Dict,
-    List,
-    Tuple,
-    Union,
     Optional,
     Type,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
 )
-from functools import update_wrapper, partial
+from urllib.parse import quote, urlencode
 
-
+import aiohttp
+import yaml
 from fastapi import Request
-from pydantic import BaseModel, Field, create_model
-
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
 )
-
-
-from open_webui.utils.misc import is_string_allowed
-from open_webui.models.tools import Tools
-from open_webui.models.users import UserModel
-from open_webui.models.groups import Groups
-from open_webui.models.access_grants import AccessGrants
-from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.utils.access_control import has_access, has_connection_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
-    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
-    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     REDIS_KEY_PREFIX,
 )
-from open_webui.utils.headers import include_user_info_headers, get_custom_headers
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.models.tools import Tools
+from open_webui.models.users import UserModel
 from open_webui.tools.builtin import (
-    search_web,
-    fetch_url,
-    generate_image,
+    add_memory,
+    calculate_timestamp,
+    create_automation,
+    create_calendar_event,
+    create_tasks,
+    delete_automation,
+    delete_calendar_event,
+    delete_memory,
     edit_image,
     execute_code,
-    search_memories,
-    add_memory,
-    replace_memory_content,
-    delete_memory,
-    list_memories,
+    fetch_url,
+    generate_image,
     get_current_timestamp,
-    calculate_timestamp,
-    search_notes,
-    search_chats,
-    search_channels,
+    grep_knowledge_files,
+    kb_exec,
+    list_automations,
+    list_knowledge,
+    list_knowledge_bases,
+    list_memories,
+    query_knowledge_bases,
+    query_knowledge_files,
+    replace_memory_content,
+    replace_note_content,
+    search_calendar_events,
     search_channel_messages,
-    view_note,
-    view_chat,
+    search_channels,
+    search_chats,
+    search_knowledge_bases,
+    search_knowledge_files,
+    search_memories,
+    search_notes,
+    search_web,
+    toggle_automation,
+    update_automation,
+    update_calendar_event,
+    update_task,
     view_channel_message,
     view_channel_thread,
-    replace_note_content,
-    write_note,
-    list_knowledge_bases,
-    search_knowledge_bases,
-    query_knowledge_bases,
-    search_knowledge_files,
-    query_knowledge_files,
-    list_knowledge,
+    view_chat,
     view_file,
     view_knowledge_file,
+    view_note,
     view_skill,
-    create_tasks,
-    update_task,
-    create_automation,
-    update_automation,
-    list_automations,
-    toggle_automation,
-    delete_automation,
-    search_calendar_events,
-    create_calendar_event,
-    update_calendar_event,
-    delete_calendar_event,
+    write_note,
 )
-
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_access, has_connection_access, has_permission
+from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.misc import is_string_allowed
+from open_webui.utils.plugin import load_tool_module_by_id
+from pydantic import BaseModel, Field, create_model
+from pydantic.fields import FieldInfo
 
 log = logging.getLogger(__name__)
+
+
+async def build_tool_server_headers(
+    connection: dict,
+    request,
+    user,
+    server_id: str = '',
+    metadata: dict | None = None,
+    extra_params: dict | None = None,
+) -> tuple[dict, dict]:
+    """Build auth headers and cookies for a tool server connection.
+
+    Handles bearer, session, system_oauth, and oauth_2.1 auth types plus
+    custom header interpolation and user-info forwarding.
+    Shared by MCP and OpenAPI paths.
+
+    Returns (headers, cookies).
+    """
+    extra_params = extra_params or {}
+    metadata = metadata or {}
+
+    auth_type = connection.get('auth_type', 'bearer')
+    headers = {}
+    cookies = {}
+
+    if auth_type == 'bearer':
+        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+    elif auth_type == 'session':
+        cookies = request.cookies if hasattr(request, 'cookies') else {}
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif auth_type == 'system_oauth':
+        cookies = request.cookies if hasattr(request, 'cookies') else {}
+        oauth_token = extra_params.get('__oauth_token__', None)
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+    elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+        try:
+            splits = server_id.split(':')
+            oauth_server_id = splits[-1] if len(splits) > 1 else server_id
+            connection_type = connection.get('type', 'openapi')
+            oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(
+                user.id, f'{connection_type}:{oauth_server_id}'
+            )
+            if oauth_token:
+                headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+        except Exception as e:
+            log.error(f'Error getting OAuth token: {e}')
+
+    # Interpolate template vars in custom connection headers
+    connection_headers = connection.get('headers', None)
+    if connection_headers and isinstance(connection_headers, dict):
+        headers.update(get_custom_headers(connection_headers, user, metadata))
+
+    # Add user info headers if enabled
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
+        if metadata.get('chat_id'):
+            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata['chat_id']
+        if metadata.get('message_id'):
+            headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata['message_id']
+
+    return headers, cookies
 
 
 # Let no function be called without need, and let what
@@ -173,8 +228,11 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     # Get user's group memberships for access control checks
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
+    # Batch-fetch all DB tools in one query instead of one per tool_id
+    tool_models = await Tools.get_tools_by_ids(tool_ids)
+
     for tool_id in tool_ids:
-        tool = await Tools.get_tool_by_id(tool_id)
+        tool = tool_models.get(tool_id)
         if tool:
             # Check access control for local tools
             if (
@@ -316,41 +374,16 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                                 # Skip this function
                                 continue
 
-                        auth_type = tool_server_connection.get('auth_type', 'bearer')
-
-                        cookies = {}
-                        headers = {
-                            'Content-Type': 'application/json',
-                        }
-
-                        if auth_type == 'bearer':
-                            headers['Authorization'] = f'Bearer {tool_server_connection.get("key", "")}'
-                        elif auth_type == 'none':
-                            # No authentication
-                            pass
-                        elif auth_type == 'session':
-                            cookies = request.cookies
-                            headers['Authorization'] = f'Bearer {request.state.token.credentials}'
-                        elif auth_type == 'system_oauth':
-                            cookies = request.cookies
-                            oauth_token = extra_params.get('__oauth_token__', None)
-                            if oauth_token:
-                                headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-
-                        connection_headers = tool_server_connection.get('headers', None)
-                        if connection_headers and isinstance(connection_headers, dict):
-                            metadata = extra_params.get('__metadata__', {})
-                            custom_headers = get_custom_headers(connection_headers, user, metadata)
-                            headers.update(custom_headers)
-
-                        # Add user info headers if enabled
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                            headers = include_user_info_headers(headers, user)
-                            metadata = extra_params.get('__metadata__', {})
-                            if metadata and metadata.get('chat_id'):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
-                            if metadata and metadata.get('message_id'):
-                                headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
+                        metadata = extra_params.get('__metadata__', {})
+                        headers, cookies = await build_tool_server_headers(
+                            tool_server_connection,
+                            request,
+                            user,
+                            server_id=server_id,
+                            metadata=metadata,
+                            extra_params=extra_params,
+                        )
+                        headers.setdefault('Content-Type', 'application/json')
 
                         async def make_tool_function(function_name, tool_server_data, headers):
                             async def tool_function(**kwargs):
@@ -441,25 +474,36 @@ async def get_builtin_tools(
     if folder_knowledge:
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
     if is_builtin_tool_enabled('knowledge'):
-        if model_knowledge:
-            # Model has attached knowledge - provide discovery, search and semantic tools
-            builtin_functions.append(list_knowledge)
-            builtin_functions.append(search_knowledge_files)
+        from open_webui.env import ENABLE_KB_EXEC
+
+        if ENABLE_KB_EXEC:
+            builtin_functions.append(kb_exec)
             builtin_functions.append(query_knowledge_files)
+            # Notes attached to the model need view_note since kb_exec is file-only
+            if model_knowledge:
+                knowledge_types = {item.get('type') for item in model_knowledge}
+                if 'note' in knowledge_types:
+                    builtin_functions.append(view_note)
+            if not model_knowledge:
+                builtin_functions.append(query_knowledge_bases)
+                builtin_functions.append(search_knowledge_bases)
+        elif model_knowledge:
+            builtin_functions.extend(
+                [list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files]
+            )
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
-                builtin_functions.append(view_file)
-                builtin_functions.append(view_knowledge_file)
+                builtin_functions.extend([view_file, view_knowledge_file])
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
-            # No model knowledge - allow full KB browsing
             builtin_functions.extend(
                 [
                     list_knowledge_bases,
                     search_knowledge_bases,
                     query_knowledge_bases,
+                    grep_knowledge_files,
                     search_knowledge_files,
                     query_knowledge_files,
                     view_knowledge_file,
@@ -952,8 +996,8 @@ async def get_tool_servers(request: Request):
 async def get_terminal_cwd(
     base_url: str,
     headers: dict,
-    cookies: Optional[dict] = None,
-) -> Optional[str]:
+    cookies: dict | None = None,
+) -> str | None:
     """Fetch the current working directory from a terminal server."""
     try:
         cwd_url = f'{base_url.rstrip("/")}/files/cwd'
@@ -975,8 +1019,8 @@ async def get_terminal_cwd(
 async def get_terminal_system_prompt(
     base_url: str,
     headers: dict,
-    cookies: Optional[dict] = None,
-) -> Optional[str]:
+    cookies: dict | None = None,
+) -> str | None:
     """Fetch the system prompt from a terminal server.
 
     Checks ``/api/config`` for the ``system`` feature flag first;
@@ -1096,7 +1140,7 @@ async def get_terminal_tools(
     terminal_id: str,
     user: UserModel,
     extra_params: dict,
-) -> dict[str, dict] | tuple[dict[str, dict], Optional[str]]:
+) -> dict[str, dict] | tuple[dict[str, dict], str | None]:
     """Resolve tools for a terminal server identified by terminal_id.
 
     - Finds the connection in TERMINAL_SERVER_CONNECTIONS
@@ -1189,7 +1233,7 @@ async def get_terminal_tools(
     return tools_dict, system_prompt
 
 
-async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, Any]:
+async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]:
     _headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -1231,7 +1275,7 @@ async def get_tool_server_data(url: str, headers: Optional[dict]) -> Dict[str, A
     return res
 
 
-async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     # Prepare list of enabled servers along with their original index
 
     tasks = []
@@ -1332,12 +1376,12 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
 
 async def execute_tool_server(
     url: str,
-    headers: Dict[str, str],
-    cookies: Dict[str, str],
+    headers: dict[str, str],
+    cookies: dict[str, str],
     name: str,
-    params: Dict[str, Any],
-    server_data: Dict[str, Any],
-) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    params: dict[str, Any],
+    server_data: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any | None]]:
     error = None
     try:
         openapi = server_data.get('openapi', {})
@@ -1481,11 +1525,11 @@ async def execute_tool_server(
 
     except Exception as err:
         error = str(err)
-        log.exception(f'API Request Error: {error}')
+        log.warning(f'API Request Error: {error}')
         return ({'error': error}, None)
 
 
-def get_tool_server_url(url: Optional[str], path: str) -> str:
+def get_tool_server_url(url: str | None, path: str) -> str:
     """
     Build the full URL for a tool server, given a base url and a path.
     """

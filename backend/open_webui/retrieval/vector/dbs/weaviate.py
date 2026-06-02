@@ -2,28 +2,28 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import weaviate
 import re
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
-from open_webui.retrieval.vector.utils import process_metadata
+import weaviate
 from open_webui.config import (
-    WEAVIATE_HTTP_HOST,
-    WEAVIATE_GRPC_HOST,
-    WEAVIATE_HTTP_PORT,
-    WEAVIATE_GRPC_PORT,
     WEAVIATE_API_KEY,
-    WEAVIATE_HTTP_SECURE,
+    WEAVIATE_GRPC_HOST,
+    WEAVIATE_GRPC_PORT,
     WEAVIATE_GRPC_SECURE,
+    WEAVIATE_HTTP_HOST,
+    WEAVIATE_HTTP_PORT,
+    WEAVIATE_HTTP_SECURE,
     WEAVIATE_SKIP_INIT_CHECKS,
 )
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
+from open_webui.retrieval.vector.utils import process_metadata
 
 
 def _convert_uuids_to_strings(obj: Any) -> Any:

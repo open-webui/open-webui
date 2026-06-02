@@ -1,22 +1,22 @@
 import json
 import logging
 import sys
+import traceback
 from typing import TYPE_CHECKING
 
 from loguru import logger
-
 from open_webui.env import (
-    ENABLE_AUDIT_STDOUT,
-    ENABLE_AUDIT_LOGS_FILE,
-    AUDIT_LOGS_FILE_PATH,
+    _LEVEL_MAP,
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_LEVEL,
-    GLOBAL_LOG_LEVEL,
-    LOG_FORMAT,
+    AUDIT_LOGS_FILE_PATH,
     AUDIT_UVICORN_LOGGER_NAMES,
+    ENABLE_AUDIT_LOGS_FILE,
+    ENABLE_AUDIT_STDOUT,
     ENABLE_OTEL,
     ENABLE_OTEL_LOGS,
-    _LEVEL_MAP,
+    GLOBAL_LOG_LEVEL,
+    LOG_FORMAT,
 )
 
 if TYPE_CHECKING:
@@ -50,22 +50,42 @@ def _json_sink(message: 'Message') -> None:
 
     Used as a Loguru sink when LOG_FORMAT is set to "json".
     """
-    record = message.record
-    log_entry = {
-        'ts': record['time'].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
-        'level': _LEVEL_MAP.get(record['level'].name, record['level'].name.lower()),
-        'msg': record['message'],
-        'caller': f'{record["name"]}:{record["function"]}:{record["line"]}',
-    }
+    try:
+        record = message.record
+        log_entry = {
+            'ts': record['time'].isoformat(timespec='milliseconds'),
+            'level': _LEVEL_MAP.get(record['level'].name, record['level'].name.lower()),
+            'msg': record['message'],
+            'caller': f'{record["name"]}:{record["function"]}:{record["line"]}',
+        }
 
-    if record['extra']:
-        log_entry['extra'] = record['extra']
+        if record['extra']:
+            log_entry['extra'] = record['extra']
 
-    if record['exception'] is not None:
-        log_entry['error'] = ''.join(record['exception'].format_exception()).rstrip()
+        exc = record['exception']
+        if exc is not None:
+            log_entry['error'] = {
+                'type': exc.type.__name__ if exc.type else None,
+                'message': str(exc.value) if exc.value else None,
+                'stacktrace': ''.join(traceback.format_exception(exc.type, exc.value, exc.traceback)).rstrip(),
+            }
 
-    sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + '\n')
-    sys.stdout.flush()
+        sys.stdout.write(json.dumps(log_entry, ensure_ascii=False, default=str) + '\n')
+        sys.stdout.flush()
+    except Exception:
+        # Last-resort fallback: never let a logging failure crash the application.
+        # Emit a minimal valid JSON line so the structured logging pipeline stays intact.
+        try:
+            fallback = {
+                'ts': message.record['time'].isoformat(timespec='milliseconds'),
+                'level': 'error',
+                'msg': f'[logging error] failed to serialize log record: {message}',
+            }
+            sys.stdout.write(json.dumps(fallback, ensure_ascii=False, default=str) + '\n')
+            sys.stdout.flush()
+        except Exception:
+            sys.stderr.write(f'[logging error] _json_sink failed: {message}\n')
+            sys.stderr.flush()
 
 
 class InterceptHandler(logging.Handler):

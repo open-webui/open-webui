@@ -2,39 +2,33 @@ import json
 import logging
 from typing import Optional
 
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
-from pydantic import BaseModel
-
-from open_webui.socket.main import sio
-
-from open_webui.models.groups import Groups
-from open_webui.models.users import Users, UserResponse
-from open_webui.models.notes import (
-    NoteListResponse,
-    Notes,
-    NoteModel,
-    NoteForm,
-    NoteUserResponse,
-)
-
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
 )
 from open_webui.constants import ERROR_MESSAGES
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
+from open_webui.models.notes import (
+    NoteForm,
+    NoteListResponse,
+    NoteModel,
+    Notes,
+    NoteUserResponse,
+)
+from open_webui.models.users import UserResponse, Users
+from open_webui.socket.main import sio
 from open_webui.utils.access_control import (
+    filter_allowed_access_grants,
     has_permission,
     has_public_read_access_grant,
     has_public_write_access_grant,
-    filter_allowed_access_grants,
 )
-from open_webui.models.access_grants import AccessGrants
-from open_webui.internal.db import get_async_session
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)

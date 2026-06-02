@@ -1,19 +1,16 @@
 import json
 import time
 import uuid
-from typing import Optional
 from functools import lru_cache
+from typing import Optional
 
-from sqlalchemy import Boolean, select, delete, update, or_, func, cast
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.models.groups import Groups
-from open_webui.models.users import User, UserModel, Users, UserResponse
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
-
-
+from open_webui.models.groups import Groups
+from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Column, Text, JSON, ForeignKey
+from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # Note DB Schema
@@ -183,7 +180,7 @@ class NoteTable:
                             or_(
                                 func.replace(func.replace(Note.title, '-', ''), ' ', '').ilike(f'%{word}%'),
                                 func.replace(
-                                    func.replace(cast(Note.data['content']['md'], Text), '-', ''),
+                                    func.replace(Note.data['content']['md'].as_string(), '-', ''),
                                     ' ',
                                     '',
                                 ).ilike(f'%{word}%'),

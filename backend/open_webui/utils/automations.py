@@ -25,14 +25,13 @@ from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
 from fastapi import Request
-from starlette.datastructures import Headers
-
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.automations import Automations, AutomationRuns, AutomationModel
+from open_webui.internal.db import get_async_db
+from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.users import Users
 from open_webui.utils.task import prompt_template
-from open_webui.internal.db import get_async_db
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
@@ -501,9 +500,12 @@ async def _check_calendar_alerts(app) -> None:
 
     now_ns = int(time.time_ns())
     default_lookahead_ns = CALENDAR_ALERT_LOOKAHEAD_MINUTES * 60 * 1_000_000_000
+    # Grace window covers one poll cycle + jitter so "At time of event"
+    # alerts (alert_minutes=0) are not missed.
+    grace_ns = (SCHEDULER_POLL_INTERVAL + 5) * 1_000_000_000
 
     async with get_async_db() as db:
-        upcoming = await CalendarEvents.get_upcoming_events(now_ns, default_lookahead_ns, db=db)
+        upcoming = await CalendarEvents.get_upcoming_events(now_ns, default_lookahead_ns, grace_ns=grace_ns, db=db)
 
     if not upcoming:
         return

@@ -1,50 +1,60 @@
+from __future__ import annotations
+
 import json
 import logging
 import time
 from typing import Optional
 
-from sqlalchemy import select, delete, update, or_, func, String, cast
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-
-from open_webui.models.groups import Groups
-from open_webui.models.users import User, UserModel, Users, UserResponse
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
-
-
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
+from open_webui.models.groups import Groups
+from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.validate import validate_profile_image_url
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import BigInteger, Column, Text, Boolean
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-
-####################
-# Models DB Schema
-# A misconfigured model wastes the time of everyone
-# who trusts it. Let what is set here be set with care.
-####################
+# Track invalid profile_image_url values we've already warned about so we
+# don't flood the logs on every DB read (the validator fires per-row).
+_warned_profile_urls: set[str] = set()
 
 
-# ModelParams is a model for the data stored in the params field of the Model table
+# --- Models DB Schema ---
+
+
 class ModelParams(BaseModel):
+    """Parameters for model inference (temperature, top_p, etc.)."""
+
     model_config = ConfigDict(extra='allow')
-    pass
 
 
-# ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
-    profile_image_url: Optional[str] = '/static/favicon.png'
+    """Metadata for a workspace model entry (profile, description, tags, capabilities)."""
 
-    description: Optional[str] = None
-    """
-        User-facing description of the model.
-    """
-
-    capabilities: Optional[dict] = None
+    profile_image_url: str | None = None
+    description: str | None = Field(default=None, description='User-facing description of the model.')
+    capabilities: dict | None = None
 
     model_config = ConfigDict(extra='allow')
+
+    @field_validator('profile_image_url', mode='before')
+    @classmethod
+    def check_profile_image_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        try:
+            return validate_profile_image_url(v)
+        except ValueError:
+            if v not in _warned_profile_urls:
+                _warned_profile_urls.add(v)
+                log.warning(
+                    'Clearing invalid profile_image_url stored in DB (likely a legacy SVG data-URI): %.80s…',
+                    v,
+                )
+            return None
 
     @model_validator(mode='before')
     @classmethod
@@ -63,44 +73,25 @@ class ModelMeta(BaseModel):
 
 
 class Model(Base):
+    """Workspace model entry — wraps an upstream LLM with custom params and metadata."""
+
     __tablename__ = 'model'
 
-    id = Column(Text, primary_key=True, unique=True)
-    """
-        The model's id as used in the API. If set to an existing model, it will override the model.
-    """
-    user_id = Column(Text)
-
-    base_model_id = Column(Text, nullable=True)
-    """
-        An optional pointer to the actual model that should be used when proxying requests.
-    """
-
-    name = Column(Text)
-    """
-        The human-readable display name of the model.
-    """
-
-    params = Column(JSONField)
-    """
-        Holds a JSON encoded blob of parameters, see `ModelParams`.
-    """
-
-    meta = Column(JSONField)
-    """
-        Holds a JSON encoded blob of metadata, see `ModelMeta`.
-    """
-
-    is_active = Column(Boolean, default=True)
-
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    id = Column(Text, primary_key=True, unique=True)  # API model identifier; overrides built-in when matching
+    user_id = Column(Text)  # owner
+    base_model_id = Column(Text, nullable=True)  # actual upstream model for proxied requests
+    name = Column(Text)  # human-readable display name
+    params = Column(JSONField)  # see ModelParams
+    meta = Column(JSONField)  # see ModelMeta
+    is_active = Column(Boolean, default=True)  # soft-disable toggle
+    updated_at = Column(BigInteger)  # epoch seconds
+    created_at = Column(BigInteger)  # epoch seconds
 
 
 class ModelModel(BaseModel):
     id: str
     user_id: str
-    base_model_id: Optional[str] = None
+    base_model_id: str | None = None
 
     name: str
     params: ModelParams
@@ -112,20 +103,17 @@ class ModelModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
-
-
-####################
-# Forms
-####################
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
 
 
 class ModelUserResponse(ModelModel):
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class ModelAccessResponse(ModelUserResponse):
-    write_access: Optional[bool] = False
+    write_access: bool | None = False
 
 
 class ModelResponse(ModelModel):
@@ -146,23 +134,23 @@ class ModelForm(BaseModel):
     model_config = ConfigDict(extra='ignore')
 
     id: str
-    base_model_id: Optional[str] = None
+    base_model_id: str | None = None
     name: str
     meta: ModelMeta
     params: ModelParams
-    access_grants: Optional[list[dict]] = None
+    access_grants: list[dict | None] = None
     is_active: bool = True
 
 
 class ModelsTable:
-    async def _get_access_grants(self, model_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
+    async def _get_access_grants(self, model_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
         return await AccessGrants.get_grants_by_resource('model', model_id, db=db)
 
     async def _to_model_model(
         self,
         model: Model,
-        access_grants: Optional[list[AccessGrantModel]] = None,
-        db: Optional[AsyncSession] = None,
+        access_grants: list[AccessGrantModel | None] = None,
+        db: AsyncSession | None = None,
     ) -> ModelModel:
         model_data = ModelModel.model_validate(model).model_dump(exclude={'access_grants'})
         model_data['access_grants'] = (
@@ -171,8 +159,8 @@ class ModelsTable:
         return ModelModel.model_validate(model_data)
 
     async def insert_new_model(
-        self, form_data: ModelForm, user_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[ModelModel]:
+        self, form_data: ModelForm, user_id: str, db: AsyncSession | None = None
+    ) -> ModelModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = Model(
@@ -196,18 +184,21 @@ class ModelsTable:
             log.exception(f'Failed to insert a new model: {e}')
             return None
 
-    async def get_all_models(self, db: Optional[AsyncSession] = None) -> list[ModelModel]:
+    async def get_all_models(self, db: AsyncSession | None = None) -> list[ModelModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Model))
             all_models = result.scalars().all()
             model_ids = [model.id for model in all_models]
             grants_map = await AccessGrants.get_grants_by_resources('model', model_ids, db=db)
-            return [
-                await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
-                for model in all_models
-            ]
+            models: list[ModelModel] = []
+            for model in all_models:
+                try:
+                    models.append(await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db))
+                except Exception as exc:
+                    log.error('Skipping model %r during get_all_models due to error: %s', model.id, exc)
+            return models
 
-    async def get_models(self, db: Optional[AsyncSession] = None) -> list[ModelUserResponse]:
+    async def get_models(self, db: AsyncSession | None = None) -> list[ModelUserResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Model).filter(Model.base_model_id != None))
             all_models = result.scalars().all()
@@ -238,7 +229,7 @@ class ModelsTable:
                 )
             return models
 
-    async def get_base_models(self, db: Optional[AsyncSession] = None) -> list[ModelModel]:
+    async def get_base_models(self, db: AsyncSession | None = None) -> list[ModelModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Model).filter(Model.base_model_id == None))
             all_models = result.scalars().all()
@@ -250,7 +241,7 @@ class ModelsTable:
             ]
 
     async def get_models_by_user_id(
-        self, user_id: str, permission: str = 'write', db: Optional[AsyncSession] = None
+        self, user_id: str, permission: str = 'write', db: AsyncSession | None = None
     ) -> list[ModelUserResponse]:
         models = await self.get_models(db=db)
         user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
@@ -287,7 +278,7 @@ class ModelsTable:
         filter: dict = {},
         skip: int = 0,
         limit: int = 30,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> ModelListResponse:
         async with get_async_db_context(db) as db:
             stmt = select(Model, User).outerjoin(User, User.id == Model.user_id)
@@ -391,7 +382,7 @@ class ModelsTable:
 
             return ModelListResponse(items=models, total=total)
 
-    async def get_model_meta_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[tuple[dict, int]]:
+    async def get_model_meta_by_id(self, id: str, db: AsyncSession | None = None) -> tuple[dict, int | None]:
         """Return (meta, updated_at) for a model, skipping access grant resolution."""
         try:
             async with get_async_db_context(db) as db:
@@ -404,7 +395,7 @@ class ModelsTable:
         self,
         user_id: str,
         is_admin: bool = False,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> set[str]:
         """Extract unique tag names from model meta, querying only the meta column."""
         async with get_async_db_context(db) as db:
@@ -437,7 +428,7 @@ class ModelsTable:
 
             return tags_set
 
-    async def get_model_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ModelModel]:
+    async def get_model_by_id(self, id: str, db: AsyncSession | None = None) -> ModelModel | None:
         try:
             async with get_async_db_context(db) as db:
                 model = await db.get(Model, id)
@@ -445,7 +436,7 @@ class ModelsTable:
         except Exception:
             return None
 
-    async def get_models_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> list[ModelModel]:
+    async def get_models_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> list[ModelModel]:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Model).filter(Model.id.in_(ids)))
@@ -463,7 +454,7 @@ class ModelsTable:
         except Exception:
             return []
 
-    async def toggle_model_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ModelModel]:
+    async def toggle_model_by_id(self, id: str, db: AsyncSession | None = None) -> ModelModel | None:
         async with get_async_db_context(db) as db:
             try:
                 result = await db.execute(select(Model).filter_by(id=id))
@@ -480,9 +471,7 @@ class ModelsTable:
             except Exception:
                 return None
 
-    async def update_model_by_id(
-        self, id: str, model: ModelForm, db: Optional[AsyncSession] = None
-    ) -> Optional[ModelModel]:
+    async def update_model_by_id(self, id: str, model: ModelForm, db: AsyncSession | None = None) -> ModelModel | None:
         try:
             async with get_async_db_context(db) as db:
                 # update only the fields that are present in the model
@@ -499,7 +488,7 @@ class ModelsTable:
             log.exception(f'Failed to update the model by id {id}: {e}')
             return None
 
-    async def update_model_updated_at_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ModelModel]:
+    async def update_model_updated_at_by_id(self, id: str, db: AsyncSession | None = None) -> ModelModel | None:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Model).filter_by(id=id))
@@ -514,7 +503,7 @@ class ModelsTable:
             log.exception(f'Failed to update the model updated_at by id {id}: {e}')
             return None
 
-    async def delete_model_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_model_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 await AccessGrants.revoke_all_access('model', id, db=db)
@@ -525,7 +514,7 @@ class ModelsTable:
         except Exception:
             return False
 
-    async def delete_all_models(self, db: Optional[AsyncSession] = None) -> bool:
+    async def delete_all_models(self, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Model.id))
@@ -540,7 +529,7 @@ class ModelsTable:
             return False
 
     async def sync_models(
-        self, user_id: str, models: list[ModelModel], db: Optional[AsyncSession] = None
+        self, user_id: str, models: list[ModelModel], db: AsyncSession | None = None
     ) -> list[ModelModel]:
         try:
             async with get_async_db_context(db) as db:
@@ -600,4 +589,4 @@ class ModelsTable:
             return []
 
 
-Models = ModelsTable()
+Models = ModelsTable()  # singleton model registry
