@@ -213,6 +213,12 @@ export HF_HUB_OFFLINE=1
 
 Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
 
+## Community Guides
+
+Practical guides written by the community:
+
+- [Open WebUI Multi-User Auth Setup (2026)](https://runaihome.com/blog/open-webui-multi-user-auth-family-setup-2026/) — Covers role-based access control, creating user accounts with different permission levels, and securing a shared Open WebUI instance for home or small-team use
+
 ## License 📜
 
 This project contains code under multiple licenses. The current codebase includes components licensed under the Open WebUI License with an additional requirement to preserve the "Open WebUI" branding, as well as prior contributions under their respective original licenses. For a detailed record of license changes and the applicable terms for each section of the code, please refer to [LICENSE_HISTORY](./LICENSE_HISTORY). For complete and updated licensing details, please see the [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) files.
