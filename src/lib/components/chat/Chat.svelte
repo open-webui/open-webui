@@ -374,7 +374,11 @@
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
 			}
 
-			// Set Default Skills
+			// Pre-select model-attached skills so they appear enabled in the integrations
+			// menu. These — and any skill the user enables there or via $-mention — are sent
+			// as skill_ids and exposed to the model as an <available_skills> manifest; the
+			// model loads full content on demand via the builtin view_skill tool rather than
+			// having it injected up front.
 			if (model?.info?.meta?.skillIds) {
 				selectedSkillIds = [
 					...new Set(
@@ -2386,44 +2390,12 @@
 			}
 		}
 
-		// Parse skill mentions (<$skillId|label>) from user messages
-		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
+		// Skills enabled via the integrations menu (the model's attached skills are
+		// pre-selected here) are sent as skill_ids and exposed to the model as a manifest,
+		// loaded on demand via view_skill. $-mention skills are left inline in the message:
+		// the backend extracts them, injects their full content into the chat, and strips
+		// the markup — so a mention is pulled into the chat rather than lazy-loaded.
 		const skillIds = [...selectedSkillIds];
-		const mentionSkillIds = [];
-		for (const message of messages) {
-			const content =
-				typeof message.content === 'string' ? message.content : (message.content?.[0]?.text ?? '');
-			for (const match of content.matchAll(skillMentionRegex)) {
-				if (!mentionSkillIds.includes(match[1])) {
-					mentionSkillIds.push(match[1]);
-				}
-				if (!skillIds.includes(match[1])) {
-					skillIds.push(match[1]);
-				}
-			}
-		}
-
-		// Strip skill mentions from message content
-		if (mentionSkillIds.length > 0) {
-			messages = messages.map((message) => {
-				if (typeof message.content === 'string') {
-					return {
-						...message,
-						content: message.content.replace(/<\$[^>]+>/g, '').trim()
-					};
-				} else if (Array.isArray(message.content)) {
-					return {
-						...message,
-						content: message.content.map((part) =>
-							part.type === 'text'
-								? { ...part, text: part.text.replace(/<\$[^>]+>/g, '').trim() }
-								: part
-						)
-					};
-				}
-				return message;
-			});
-		}
 
 		// Use the user-selected terminal from the dropdown
 		const activeTerminalId = $selectedTerminalId ?? null;
