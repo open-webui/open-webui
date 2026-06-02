@@ -1,5 +1,6 @@
 import time
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from open_webui.env import REDIS_KEY_PREFIX
 
 
@@ -35,7 +36,7 @@ class RateLimiter:
         self.enabled = enabled
 
     def _bucket_key(self, key: str, bucket_index: int) -> str:
-        return f"{REDIS_KEY_PREFIX}:ratelimit:{key.lower()}:{bucket_index}"
+        return f'{REDIS_KEY_PREFIX}:ratelimit:{key.lower()}:{bucket_index}'
 
     def _current_bucket(self) -> int:
         return int(time.time()) // self.bucket_size
@@ -84,9 +85,7 @@ class RateLimiter:
             self.r.expire(bucket_key, self.window + self.bucket_size)
 
         # Collect buckets
-        buckets = [
-            self._bucket_key(key, now_bucket - i) for i in range(self.num_buckets + 1)
-        ]
+        buckets = [self._bucket_key(key, now_bucket - i) for i in range(self.num_buckets + 1)]
 
         counts = self.r.mget(buckets)
         total = sum(int(c) for c in counts if c)
@@ -95,9 +94,7 @@ class RateLimiter:
 
     def _get_count_redis(self, key: str) -> int:
         now_bucket = self._current_bucket()
-        buckets = [
-            self._bucket_key(key, now_bucket - i) for i in range(self.num_buckets + 1)
-        ]
+        buckets = [self._bucket_key(key, now_bucket - i) for i in range(self.num_buckets + 1)]
         counts = self.r.mget(buckets)
         return sum(int(c) for c in counts if c)
 

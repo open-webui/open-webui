@@ -20,6 +20,7 @@
 		'yacy',
 		'google_pse',
 		'brave',
+		'brave_llm_context',
 		'kagi',
 		'mojeek',
 		'bocha',
@@ -38,7 +39,8 @@
 		'firecrawl',
 		'external',
 		'yandex',
-		'youcom'
+		'youcom',
+		'linkup'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -77,8 +79,15 @@
 			webConfig.PLAYWRIGHT_TIMEOUT = webConfig.PLAYWRIGHT_TIMEOUT.toString();
 		}
 
+		// Convert Linkup params JSON string to object before sending
+		const linkupParams =
+			typeof webConfig.LINKUP_SEARCH_PARAMS === 'string' &&
+			webConfig.LINKUP_SEARCH_PARAMS.trim() !== ''
+				? JSON.parse(webConfig.LINKUP_SEARCH_PARAMS)
+				: (webConfig.LINKUP_SEARCH_PARAMS ?? {});
+
 		const res = await updateRAGConfig(localStorage.token, {
-			web: webConfig
+			web: { ...webConfig, LINKUP_SEARCH_PARAMS: linkupParams }
 		});
 
 		// Convert arrays back to strings for display
@@ -122,6 +131,12 @@
 					webConfig.PLAYWRIGHT_TIMEOUT = parsed;
 				}
 			}
+
+			// Convert Linkup params object to JSON string for textarea display
+			webConfig.LINKUP_SEARCH_PARAMS =
+				typeof webConfig.LINKUP_SEARCH_PARAMS === 'object'
+					? JSON.stringify(webConfig.LINKUP_SEARCH_PARAMS ?? {}, null, 2)
+					: (webConfig.LINKUP_SEARCH_PARAMS ?? '');
 		}
 	});
 </script>
@@ -355,6 +370,39 @@
 										placeholder={$i18n.t('Enter Brave Search API Key')}
 										bind:value={webConfig.BRAVE_SEARCH_API_KEY}
 									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'brave_llm_context'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Brave Search API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Brave Search API Key')}
+										bind:value={webConfig.BRAVE_SEARCH_API_KEY}
+									/>
+								</div>
+								<div class="mt-1.5">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Context Tokens')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												min="1024"
+												max="32768"
+												step="1024"
+												placeholder={$i18n.t('Max tokens to retrieve (1024-32768, default 8192)')}
+												bind:value={webConfig.BRAVE_SEARCH_CONTEXT_TOKENS}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'kagi'}
@@ -800,6 +848,30 @@
 									/>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'linkup'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Linkup API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Linkup API Key')}
+										bind:value={webConfig.LINKUP_API_KEY}
+									/>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Parameters')}
+									</div>
+
+									<Textarea
+										bind:value={webConfig.LINKUP_SEARCH_PARAMS}
+										placeholder={`{\n  "depth": "standard",\n  "outputType": "sourcedAnswer"\n}`}
+									/>
+								</div>
+							</div>
 						{/if}
 
 						{#if webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
@@ -870,6 +942,27 @@
 									/>
 								</div>
 							</div>
+						</div>
+
+						<div class="mb-2.5 w-full">
+							<div class=" self-center text-xs font-medium mb-1">
+								<Tooltip
+									content={$i18n.t(
+										'Maximum characters to return from fetched URLs. Leave empty for no limit.'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('Fetch URL Content Length Limit')}
+								</Tooltip>
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t('No limit')}
+								bind:value={webConfig.WEB_FETCH_MAX_CONTENT_LENGTH}
+								type="number"
+								min="0"
+							/>
 						</div>
 
 						<div class="mb-2.5 flex w-full flex-col">

@@ -7,12 +7,14 @@
 	import {
 		artifactCode,
 		chatId,
+		config,
 		settings,
 		showArtifacts,
 		showControls,
 		artifactContents
 	} from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { injectCsp } from '$lib/utils/csp';
 
 	import XMark from '../icons/XMark.svelte';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -242,7 +244,10 @@
 							<iframe
 								bind:this={iframeElement}
 								title="Content"
-								srcdoc={contents[selectedContentIdx].content}
+								srcdoc={injectCsp(
+									contents[selectedContentIdx].content,
+									$config?.ui?.iframe_csp ?? ''
+								)}
 								class="w-full border-0 h-full rounded-none"
 								sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 									? ' allow-forms'

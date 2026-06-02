@@ -3,12 +3,14 @@ import traceback
 from typing import Collection, Union
 
 from aiohttp import (
-    TraceRequestStartParams,
     TraceRequestEndParams,
     TraceRequestExceptionParams,
+    TraceRequestStartParams,
 )
-from chromadb.telemetry.opentelemetry.fastapi import instrument_fastapi
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
+from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import (
     HTTPXClientInstrumentor,
     RequestInfo,
@@ -19,16 +21,12 @@ from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
 from opentelemetry.trace import Span, StatusCode
 from redis import Redis
 from redis.cluster import RedisCluster
 from requests import PreparedRequest, Response
 from sqlalchemy import Engine
-from fastapi import status
-
-from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +36,7 @@ def requests_hook(span: Span, request: PreparedRequest):
     Http Request Hook
     """
 
-    span.update_name(f"{request.method} {request.url}")
+    span.update_name(f'{request.method} {request.url}')
     span.set_attributes(
         attributes={
             SpanAttributes.HTTP_URL: request.url,
@@ -70,8 +68,8 @@ def redis_request_hook(span: Span, instance: Union[Redis | RedisCluster], args, 
     # - redis.cluster.RedisCluster
     # Instead of checking the type, we check if the instance has a nodes_manager attribute.
     try:
-        db = ""
-        if hasattr(instance, "nodes_manager"):
+        db = ''
+        if hasattr(instance, 'nodes_manager'):
             default_node = instance.nodes_manager.default_node
             if not default_node:
                 return
@@ -79,17 +77,17 @@ def redis_request_hook(span: Span, instance: Union[Redis | RedisCluster], args, 
             port = default_node.port
         else:
             connection_kwargs: dict = instance.connection_pool.connection_kwargs
-            host = connection_kwargs.get("host")
-            port = connection_kwargs.get("port")
-            db = connection_kwargs.get("db")
+            host = connection_kwargs.get('host')
+            port = connection_kwargs.get('port')
+            db = connection_kwargs.get('db')
         span.set_attributes(
             {
-                SpanAttributes.DB_INSTANCE: f"{host}/{db}",
-                SpanAttributes.DB_NAME: f"{host}/{db}",
+                SpanAttributes.DB_INSTANCE: f'{host}/{db}',
+                SpanAttributes.DB_NAME: f'{host}/{db}',
                 SpanAttributes.DB_TYPE: SPAN_REDIS_TYPE,
                 SpanAttributes.DB_PORT: port,
                 SpanAttributes.DB_IP: host,
-                SpanAttributes.DB_STATEMENT: " ".join([str(i) for i in args]),
+                SpanAttributes.DB_STATEMENT: ' '.join([str(i) for i in args]),
                 SpanAttributes.DB_OPERATION: str(args[0]),
             }
         )
@@ -102,7 +100,7 @@ def httpx_request_hook(span: Span, request: RequestInfo):
     HTTPX Request Hook
     """
 
-    span.update_name(f"{request.method.decode()} {str(request.url)}")
+    span.update_name(f'{request.method.decode()} {str(request.url)}')
     span.set_attributes(
         attributes={
             SpanAttributes.HTTP_URL: str(request.url),
@@ -117,11 +115,7 @@ def httpx_response_hook(span: Span, request: RequestInfo, response: ResponseInfo
     """
 
     span.set_attribute(SpanAttributes.HTTP_STATUS_CODE, response.status_code)
-    span.set_status(
-        StatusCode.ERROR
-        if response.status_code >= status.HTTP_400_BAD_REQUEST
-        else StatusCode.OK
-    )
+    span.set_status(StatusCode.ERROR if response.status_code >= status.HTTP_400_BAD_REQUEST else StatusCode.OK)
 
 
 async def httpx_async_request_hook(span: Span, request: RequestInfo):
@@ -132,9 +126,7 @@ async def httpx_async_request_hook(span: Span, request: RequestInfo):
     httpx_request_hook(span, request)
 
 
-async def httpx_async_response_hook(
-    span: Span, request: RequestInfo, response: ResponseInfo
-):
+async def httpx_async_response_hook(span: Span, request: RequestInfo, response: ResponseInfo):
     """
     Async Response Hook
     """
@@ -147,7 +139,7 @@ def aiohttp_request_hook(span: Span, request: TraceRequestStartParams):
     Aiohttp Request Hook
     """
 
-    span.update_name(f"{request.method} {str(request.url)}")
+    span.update_name(f'{request.method} {str(request.url)}')
     span.set_attributes(
         attributes={
             SpanAttributes.HTTP_URL: str(request.url),
@@ -156,20 +148,14 @@ def aiohttp_request_hook(span: Span, request: TraceRequestStartParams):
     )
 
 
-def aiohttp_response_hook(
-    span: Span, response: Union[TraceRequestExceptionParams, TraceRequestEndParams]
-):
+def aiohttp_response_hook(span: Span, response: Union[TraceRequestExceptionParams, TraceRequestEndParams]):
     """
     Aiohttp Response Hook
     """
 
     if isinstance(response, TraceRequestEndParams):
         span.set_attribute(SpanAttributes.HTTP_STATUS_CODE, response.response.status)
-        span.set_status(
-            StatusCode.ERROR
-            if response.response.status >= status.HTTP_400_BAD_REQUEST
-            else StatusCode.OK
-        )
+        span.set_status(StatusCode.ERROR if response.response.status >= status.HTTP_400_BAD_REQUEST else StatusCode.OK)
     elif isinstance(response, TraceRequestExceptionParams):
         span.set_status(StatusCode.ERROR)
         span.set_attribute(SpanAttributes.ERROR_MESSAGE, str(response.exception))
@@ -188,12 +174,10 @@ class Instrumentor(BaseInstrumentor):
         return []
 
     def _instrument(self, **kwargs):
-        instrument_fastapi(app=self.app)
+        FastAPIInstrumentor.instrument_app(app=self.app)
         SQLAlchemyInstrumentor().instrument(engine=self.db_engine)
         RedisInstrumentor().instrument(request_hook=redis_request_hook)
-        RequestsInstrumentor().instrument(
-            request_hook=requests_hook, response_hook=response_hook
-        )
+        RequestsInstrumentor().instrument(request_hook=requests_hook, response_hook=response_hook)
         LoggingInstrumentor().instrument()
         HTTPXClientInstrumentor().instrument(
             request_hook=httpx_request_hook,
@@ -208,7 +192,7 @@ class Instrumentor(BaseInstrumentor):
         SystemMetricsInstrumentor().instrument()
 
     def _uninstrument(self, **kwargs):
-        if getattr(self, "instrumentors", None) is None:
+        if getattr(self, 'instrumentors', None) is None:
             return
         for instrumentor in self.instrumentors:
             instrumentor.uninstrument()

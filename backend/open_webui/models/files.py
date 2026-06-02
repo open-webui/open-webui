@@ -1,33 +1,33 @@
+"""File upload models, forms, and database operations."""
+
+from __future__ import annotations
+
 import logging
 import time
-from typing import Optional
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+# local imports
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import sanitize_metadata
 from pydantic import BaseModel, ConfigDict, model_validator
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import JSON, BigInteger, Column, String, Text, delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# Files DB Schema
-####################
 
-
-class File(Base):
-    __tablename__ = "file"
+class File(Base):  # uploaded file record
+    __tablename__ = 'file'
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    user_id = Column(String, index=True)  # owner user id
     hash = Column(Text, nullable=True)
 
-    filename = Column(Text)
+    filename = Column(Text)  # original upload filename
     path = Column(Text, nullable=True)
 
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
-    created_at = Column(BigInteger)
+    created_at = Column(BigInteger, index=True)  # upload timestamp
     updated_at = Column(BigInteger)
 
 
@@ -36,31 +36,27 @@ class FileModel(BaseModel):
 
     id: str
     user_id: str
-    hash: Optional[str] = None
+    hash: str | None = None
 
     filename: str
-    path: Optional[str] = None
+    path: str | None = None
 
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    data: dict | None = None
+    meta: dict | None = None
 
-    created_at: Optional[int]  # timestamp in epoch
-    updated_at: Optional[int]  # timestamp in epoch
-
-
-####################
-# Forms
-####################
+    created_at: int | None  # timestamp in epoch
+    updated_at: int | None  # timestamp in epoch
 
 
+# --- metadata structures ---
 class FileMeta(BaseModel):
-    name: Optional[str] = None
-    content_type: Optional[str] = None
-    size: Optional[int] = None
+    name: str | None = None
+    content_type: str | None = None
+    size: int | None = None
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra='allow')
 
-    @model_validator(mode="before")
+    @model_validator(mode='before')
     @classmethod
     def sanitize_meta(cls, data):
         """Sanitize metadata fields to handle malformed legacy data."""
@@ -68,14 +64,12 @@ class FileMeta(BaseModel):
             return data
 
         # Handle content_type that may be a list like ['application/pdf', None]
-        content_type = data.get("content_type")
+        content_type = data.get('content_type')
         if isinstance(content_type, list):
             # Extract first non-None string value
-            data["content_type"] = next(
-                (item for item in content_type if isinstance(item, str)), None
-            )
+            data['content_type'] = next((item for item in content_type if isinstance(item, str)), None)
         elif content_type is not None and not isinstance(content_type, str):
-            data["content_type"] = None
+            data['content_type'] = None
 
         return data
 
@@ -83,29 +77,34 @@ class FileMeta(BaseModel):
 class FileModelResponse(BaseModel):
     id: str
     user_id: str
-    hash: Optional[str] = None
+    hash: str | None = None
 
     filename: str
-    data: Optional[dict] = None
-    meta: FileMeta
+    data: dict | None = None
+    meta: FileMeta | None = None
 
     created_at: int  # timestamp in epoch
-    updated_at: Optional[int] = None  # timestamp in epoch, optional for legacy files
+    updated_at: int | None = None  # timestamp in epoch, optional for legacy files
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra='allow')
 
 
 class FileMetadataResponse(BaseModel):
     id: str
-    hash: Optional[str] = None
-    meta: Optional[dict] = None
+    hash: str | None = None
+    meta: dict | None = None
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
 
+class FileListResponse(BaseModel):
+    items: list[FileModelResponse]
+    total: int
+
+
 class FileForm(BaseModel):
     id: str
-    hash: Optional[str] = None
+    hash: str | None = None
     filename: str
     path: str
     data: dict = {}
@@ -113,69 +112,67 @@ class FileForm(BaseModel):
 
 
 class FileUpdateForm(BaseModel):
-    hash: Optional[str] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
-
-
-class FileListResponse(BaseModel):
-    items: list[FileModel]
-    total: int
+    hash: str | None = None
+    data: dict | None = None
+    meta: dict | None = None
 
 
 class FilesTable:
-    def insert_new_file(
-        self, user_id: str, form_data: FileForm, db: Optional[Session] = None
-    ) -> Optional[FileModel]:
-        with get_db_context(db) as db:
+    async def insert_new_file(
+        self, user_id: str, form_data: FileForm, db: AsyncSession | None = None
+    ) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             file_data = form_data.model_dump()
 
             # Sanitize meta to remove non-JSON-serializable objects
             # (e.g. callable tool functions, MCP client instances from middleware)
-            if file_data.get("meta"):
-                file_data["meta"] = sanitize_metadata(file_data["meta"])
+            if file_data.get('meta'):
+                file_data['meta'] = sanitize_metadata(file_data['meta'])
 
             file = FileModel(
                 **{
                     **file_data,
-                    "user_id": user_id,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
+                    'user_id': user_id,
+                    'created_at': int(time.time()),
+                    'updated_at': int(time.time()),
                 }
             )
 
             try:
                 result = File(**file.model_dump())
                 db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     return FileModel.model_validate(result)
                 else:
                     return None
             except Exception as e:
-                log.exception(f"Error inserting a new file: {e}")
-                return None
+                log.exception(f'Error inserting a new file: {e}')
+                return None  # insertion failed
 
-    def get_file_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[FileModel]:
+    async def get_file_by_id(
+        self,
+        id: str,
+        db: AsyncSession | None = None,
+    ) -> FileModel | None:
+        """Look up a file by its primary key."""
         try:
-            with get_db_context(db) as db:
-                try:
-                    file = db.get(File, id)
-                    return FileModel.model_validate(file)
-                except Exception:
+            async with get_async_db_context(db) as db:
+                file = await db.get(File, id)
+                if not file:
                     return None
+                return FileModel.model_validate(file)
         except Exception:
             return None
 
-    def get_file_by_id_and_user_id(
-        self, id: str, user_id: str, db: Optional[Session] = None
-    ) -> Optional[FileModel]:
-        with get_db_context(db) as db:
+    async def get_file_by_id_and_user_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             try:
-                file = db.query(File).filter_by(id=id, user_id=user_id).first()
+                result = await db.execute(select(File).filter_by(id=id, user_id=user_id))
+                file = result.scalars().first()
                 if file:
                     return FileModel.model_validate(file)
                 else:
@@ -183,12 +180,12 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_file_metadata_by_id(
-        self, id: str, db: Optional[Session] = None
-    ) -> Optional[FileMetadataResponse]:
-        with get_db_context(db) as db:
+    async def get_file_metadata_by_id(self, id: str, db: AsyncSession | None = None) -> FileMetadataResponse | None:
+        async with get_async_db_context(db) as db:
             try:
-                file = db.get(File, id)
+                file = await db.get(File, id)
+                if not file:
+                    return None
                 return FileMetadataResponse(
                     id=file.id,
                     hash=file.hash,
@@ -199,14 +196,13 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_files(self, db: Optional[Session] = None) -> list[FileModel]:
-        with get_db_context(db) as db:
-            return [FileModel.model_validate(file) for file in db.query(File).all()]
+    async def get_files(self, db: AsyncSession | None = None) -> list[FileModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(File))
+            return [FileModel.model_validate(file) for file in result.scalars().all()]
 
-    def check_access_by_user_id(
-        self, id, user_id, permission="write", db: Optional[Session] = None
-    ) -> bool:
-        file = self.get_file_by_id(id, db=db)
+    async def check_access_by_user_id(self, id, user_id, permission='write', db: AsyncSession | None = None) -> bool:
+        file = await self.get_file_by_id(id, db=db)
         if not file:
             return False
         if file.user_id == user_id:
@@ -214,46 +210,55 @@ class FilesTable:
         # Implement additional access control logic here as needed
         return False
 
-    def get_files_by_ids(
-        self, ids: list[str], db: Optional[Session] = None
-    ) -> list[FileModel]:
-        with get_db_context(db) as db:
-            return [
-                FileModel.model_validate(file)
-                for file in db.query(File)
+    async def get_files_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> list[FileModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(File).filter(File.id.in_(ids)).order_by(File.updated_at.desc()))
+            return [FileModel.model_validate(file) for file in result.scalars().all()]
+
+    async def get_file_metadatas_by_ids(
+        self, ids: list[str], db: AsyncSession | None = None
+    ) -> list[FileMetadataResponse]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(File.id, File.hash, File.meta, File.created_at, File.updated_at)
                 .filter(File.id.in_(ids))
                 .order_by(File.updated_at.desc())
-                .all()
-            ]
-
-    def get_file_metadatas_by_ids(
-        self, ids: list[str], db: Optional[Session] = None
-    ) -> list[FileMetadataResponse]:
-        with get_db_context(db) as db:
+            )
             return [
                 FileMetadataResponse(
-                    id=file.id,
-                    hash=file.hash,
-                    meta=file.meta,
-                    created_at=file.created_at,
-                    updated_at=file.updated_at,
+                    id=row.id,
+                    hash=row.hash,
+                    meta=row.meta,
+                    created_at=row.created_at,
+                    updated_at=row.updated_at,
                 )
-                for file in db.query(
-                    File.id, File.hash, File.meta, File.created_at, File.updated_at
-                )
-                .filter(File.id.in_(ids))
-                .order_by(File.updated_at.desc())
-                .all()
+                for row in result.all()
             ]
 
-    def get_files_by_user_id(
-        self, user_id: str, db: Optional[Session] = None
-    ) -> list[FileModel]:
-        with get_db_context(db) as db:
-            return [
-                FileModel.model_validate(file)
-                for file in db.query(File).filter_by(user_id=user_id).all()
-            ]
+    async def get_files_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[FileModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(File).filter_by(user_id=user_id))
+            return [FileModel.model_validate(file) for file in result.scalars().all()]
+
+    async def get_file_list(
+        self,
+        user_id: str | None = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: AsyncSession | None = None,
+    ) -> 'FileListResponse':
+        async with get_async_db_context(db) as db:
+            stmt = select(File)
+            if user_id:
+                stmt = stmt.filter_by(user_id=user_id)
+
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            total = count_result.scalar()
+
+            result = await db.execute(stmt.order_by(File.updated_at.desc(), File.id.desc()).offset(skip).limit(limit))
+            items = [FileModelResponse.model_validate(file, from_attributes=True) for file in result.scalars().all()]
+
+            return FileListResponse(items=items, total=total)
 
     @staticmethod
     def _glob_to_like_pattern(glob: str) -> str:
@@ -271,20 +276,20 @@ class FilesTable:
             A SQL LIKE compatible pattern with proper escaping.
         """
         # Escape SQL special characters first, then convert glob wildcards
-        pattern = glob.replace("\\", "\\\\")
-        pattern = pattern.replace("%", "\\%")
-        pattern = pattern.replace("_", "\\_")
-        pattern = pattern.replace("*", "%")
-        pattern = pattern.replace("?", "_")
+        pattern = glob.replace('\\', '\\\\')
+        pattern = pattern.replace('%', '\\%')
+        pattern = pattern.replace('_', '\\_')
+        pattern = pattern.replace('*', '%')
+        pattern = pattern.replace('?', '_')
         return pattern
 
-    def search_files(
+    async def search_files(
         self,
-        user_id: Optional[str] = None,
-        filename: str = "*",
+        user_id: str | None = None,
+        filename: str = '*',
         skip: int = 0,
         limit: int = 100,
-        db: Optional[Session] = None,
+        db: AsyncSession | None = None,
     ) -> list[FileModel]:
         """
         Search files with glob pattern matching, optional user filter, and pagination.
@@ -299,30 +304,26 @@ class FilesTable:
         Returns:
             List of matching FileModel objects, ordered by created_at descending.
         """
-        with get_db_context(db) as db:
-            query = db.query(File)
+        async with get_async_db_context(db) as db:
+            stmt = select(File)
 
             if user_id:
-                query = query.filter_by(user_id=user_id)
+                stmt = stmt.filter_by(user_id=user_id)
 
             pattern = self._glob_to_like_pattern(filename)
-            if pattern != "%":
-                query = query.filter(File.filename.ilike(pattern, escape="\\"))
+            if pattern != '%':
+                stmt = stmt.filter(File.filename.ilike(pattern, escape='\\'))
 
-            return [
-                FileModel.model_validate(file)
-                for file in query.order_by(File.created_at.desc(), File.id.desc())
-                .offset(skip)
-                .limit(limit)
-                .all()
-            ]
+            result = await db.execute(stmt.order_by(File.created_at.desc(), File.id.desc()).offset(skip).limit(limit))
+            return [FileModel.model_validate(file) for file in result.scalars().all()]
 
-    def update_file_by_id(
-        self, id: str, form_data: FileUpdateForm, db: Optional[Session] = None
-    ) -> Optional[FileModel]:
-        with get_db_context(db) as db:
+    async def update_file_by_id(
+        self, id: str, form_data: FileUpdateForm, db: AsyncSession | None = None
+    ) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             try:
-                file = db.query(File).filter_by(id=id).first()
+                result = await db.execute(select(File).filter_by(id=id))
+                file = result.scalars().first()
 
                 if form_data.hash is not None:
                     file.hash = form_data.hash
@@ -334,74 +335,121 @@ class FilesTable:
                     file.meta = {**(file.meta if file.meta else {}), **form_data.meta}
 
                 file.updated_at = int(time.time())
-                db.commit()
+                await db.commit()
                 return FileModel.model_validate(file)
             except Exception as e:
-                log.exception(f"Error updating file completely by id: {e}")
+                log.exception(f'Error updating file completely by id: {e}')
                 return None
 
-    def update_file_hash_by_id(
-        self, id: str, hash: Optional[str], db: Optional[Session] = None
-    ) -> Optional[FileModel]:
-        with get_db_context(db) as db:
+    async def update_file_hash_by_id(
+        self, id: str, hash: str | None, db: AsyncSession | None = None
+    ) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             try:
-                file = db.query(File).filter_by(id=id).first()
+                result = await db.execute(select(File).filter_by(id=id))
+                file = result.scalars().first()
                 file.hash = hash
                 file.updated_at = int(time.time())
-                db.commit()
+                await db.commit()
 
                 return FileModel.model_validate(file)
             except Exception:
                 return None
 
-    def update_file_data_by_id(
-        self, id: str, data: dict, db: Optional[Session] = None
-    ) -> Optional[FileModel]:
-        with get_db_context(db) as db:
+    async def update_file_data_by_id(self, id: str, data: dict, db: AsyncSession | None = None) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             try:
-                file = db.query(File).filter_by(id=id).first()
+                result = await db.execute(select(File).filter_by(id=id))
+                file = result.scalars().first()
                 file.data = {**(file.data if file.data else {}), **data}
                 file.updated_at = int(time.time())
-                db.commit()
+                await db.commit()
                 return FileModel.model_validate(file)
             except Exception as e:
-
                 return None
 
-    def update_file_metadata_by_id(
-        self, id: str, meta: dict, db: Optional[Session] = None
-    ) -> Optional[FileModel]:
-        with get_db_context(db) as db:
+    async def update_file_metadata_by_id(self, id: str, meta: dict, db: AsyncSession | None = None) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             try:
-                file = db.query(File).filter_by(id=id).first()
+                result = await db.execute(select(File).filter_by(id=id))
+                file = result.scalars().first()
                 file.meta = {**(file.meta if file.meta else {}), **meta}
                 file.updated_at = int(time.time())
-                db.commit()
+                await db.commit()
                 return FileModel.model_validate(file)
             except Exception:
                 return None
 
-                return False
-
-    def delete_file_by_id(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    async def update_file_name_by_id(self, id: str, name: str, db: AsyncSession | None = None) -> FileModel | None:
+        async with get_async_db_context(db) as db:
             try:
-                db.query(File).filter_by(id=id).delete()
-                db.commit()
+                result = await db.execute(select(File).filter_by(id=id))
+                file = result.scalars().first()
+                file.filename = name
+                file.meta = {**(file.meta if file.meta else {}), 'name': name}
+                file.updated_at = int(time.time())
+                await db.commit()
+                return FileModel.model_validate(file)
+            except Exception:
+                return None
+
+    async def get_pending_files_for_knowledge(
+        self, knowledge_id: str, db: AsyncSession | None = None
+    ) -> list[FileModelResponse]:
+        """Return files still being processed for this knowledge base.
+
+        These are files uploaded with ``meta.data.knowledge_id`` set, whose
+        ``data.status`` is still ``pending`` or ``processing``, and which
+        have not yet been added to the ``knowledge_file`` join table.
+
+        The JSON subscript syntax (``Column['key']['subkey'].as_string()``)
+        is supported by both SQLite (``json_extract``) and PostgreSQL
+        (``->>``/``->``).
+        """
+        async with get_async_db_context(db) as db:
+            try:
+                # Lazy import to avoid circular dependency
+                from open_webui.models.knowledge import KnowledgeFile
+
+                # Subquery: file IDs already linked to this knowledge base
+                linked_ids = (
+                    select(KnowledgeFile.file_id).filter(KnowledgeFile.knowledge_id == knowledge_id).correlate(None)
+                )
+
+                stmt = (
+                    select(File)
+                    .filter(
+                        File.meta['data']['knowledge_id'].as_string() == knowledge_id,
+                        File.data['status'].as_string().in_(['pending', 'processing']),
+                        File.id.notin_(linked_ids),
+                    )
+                    .order_by(File.created_at.desc())
+                )
+                result = await db.execute(stmt)
+                return [FileModelResponse.model_validate(f, from_attributes=True) for f in result.scalars().all()]
+            except Exception as e:
+                log.warning(f'Error fetching pending files for knowledge {knowledge_id}: {e}')
+                return []
+
+    async def delete_file_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
+        async with get_async_db_context(db) as db:
+            try:
+                await db.execute(delete(File).filter_by(id=id))
+                await db.commit()
 
                 return True
             except Exception:
                 return False
 
-    def delete_all_files(self, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    async def delete_all_files(self, db: AsyncSession | None = None) -> bool:
+        async with get_async_db_context(db) as db:
             try:
-                db.query(File).delete()
-                db.commit()
+                await db.execute(delete(File))
+                await db.commit()
 
                 return True
             except Exception:
                 return False
 
 
-Files = FilesTable()
+Files = FilesTable()  # singleton files repository

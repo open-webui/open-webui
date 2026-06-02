@@ -4,6 +4,7 @@
 
 	const i18n = getContext('i18n');
 
+	import { extractFrontmatter, formatSkillName, nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -36,7 +37,7 @@
 	};
 
 	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
+		id = nameToId(name);
 	}
 
 	let codeEditor;
@@ -276,11 +277,11 @@ class Pipe:
 			content = _content;
 			await tick();
 
-			if (res) {
-				console.info('Code formatted successfully');
-
-				saveHandler();
+			if (!res) {
+				console.warn('Code formatting failed or was skipped, saving unformatted code');
 			}
+
+			saveHandler();
 		}
 	};
 </script>
@@ -374,6 +375,16 @@ class Pipe:
 						{boilerplate}
 						onChange={(e) => {
 							_content = e;
+							if (!edit) {
+								const fm = extractFrontmatter(e);
+								if (fm.title && !name) {
+									name = formatSkillName(fm.title);
+									id = nameToId(fm.title);
+								}
+								if (fm.description && !meta.description) {
+									meta = { ...meta, description: fm.description };
+								}
+							}
 						}}
 						onSave={async () => {
 							if (formElement) {
