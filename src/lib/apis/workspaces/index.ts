@@ -87,16 +87,27 @@ const apiFetch = async (url: string, options: RequestInit, token: string) => {
 // ── Workspace CRUD ────────────────────────────────────────────────────────────
 
 export const createWorkspace = async (token: string, form: WorkspaceForm) =>
-	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/`, { method: 'POST', body: JSON.stringify(form) }, token);
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/`,
+		{ method: 'POST', body: JSON.stringify(form) },
+		token
+	);
 
 export const getWorkspaces = async (token: string): Promise<WorkspaceResponse[]> =>
 	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/`, { method: 'GET' }, token) ?? [];
 
-export const getWorkspaceById = async (token: string, id: string): Promise<WorkspaceResponse | null> =>
+export const getWorkspaceById = async (
+	token: string,
+	id: string
+): Promise<WorkspaceResponse | null> =>
 	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${id}`, { method: 'GET' }, token);
 
 export const updateWorkspace = async (token: string, id: string, form: WorkspaceUpdateForm) =>
-	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify(form) }, token);
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${id}`,
+		{ method: 'PATCH', body: JSON.stringify(form) },
+		token
+	);
 
 export const deleteWorkspace = async (token: string, id: string) =>
 	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${id}`, { method: 'DELETE' }, token);
@@ -107,7 +118,8 @@ export const getWorkspaceMembers = async (
 	token: string,
 	workspaceId: string
 ): Promise<WorkspaceMemberResponse[]> =>
-	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/members`, { method: 'GET' }, token) ?? [];
+	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/members`, { method: 'GET' }, token) ??
+	[];
 
 export const addWorkspaceMember = async (
 	token: string,

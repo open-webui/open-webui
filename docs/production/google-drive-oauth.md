@@ -93,4 +93,3 @@ docker compose up -d --force-recreate open-webui
 2. Recreate service:
    - `docker compose up -d --force-recreate open-webui`
 3. Keep `WEBUI_SECRET_KEY` unchanged during rollback to avoid breaking existing encrypted token/session data.
-

@@ -35,15 +35,16 @@
 		try {
 			let res;
 			if (workspace) {
-				res = await updateWorkspace(localStorage.token, workspace.id, { name, description: description || null });
+				res = await updateWorkspace(localStorage.token, workspace.id, {
+					name,
+					description: description || null
+				});
 			} else {
 				res = await createWorkspace(localStorage.token, { name, description: description || null });
 			}
 
 			if (res) {
-				toast.success(
-					workspace ? $i18n.t('Workspace updated') : $i18n.t('Workspace created')
-				);
+				toast.success(workspace ? $i18n.t('Workspace updated') : $i18n.t('Workspace created'));
 				onSubmit(res);
 				show = false;
 			}
@@ -66,8 +67,15 @@
 				class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
 				on:click={() => (show = false)}
 			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
-					<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-5"
+				>
+					<path
+						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+					/>
 				</svg>
 			</button>
 		</div>
