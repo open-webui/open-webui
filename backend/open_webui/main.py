@@ -1834,8 +1834,10 @@ async def chat_completion(
                                 status_code=status.HTTP_403_FORBIDDEN,
                                 detail=ERROR_MESSAGES.DEFAULT(),
                             )
-                target_message_id = list(message_ids.values())[0] if message_ids else None
-                if target_message_id:
+                # Every message_ids value must match the channel; first-only let a multimodel id slip past.
+                for target_message_id in (message_ids or {}).values():
+                    if not target_message_id:
+                        continue
                     target_message = await Messages.get_message_by_id(target_message_id)
                     if target_message and target_message.channel_id != channel.id:
                         raise HTTPException(
