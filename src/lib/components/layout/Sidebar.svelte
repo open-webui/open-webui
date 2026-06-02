@@ -1328,7 +1328,9 @@
 						name={$i18n.t('Team Workspaces')}
 						chevron={false}
 						dragAndDrop={false}
-						onAdd={async () => { showCreateWorkspace = true; }}
+						onAdd={async () => {
+							showCreateWorkspace = true;
+						}}
 						onAddLabel={$i18n.t('New Workspace')}
 					>
 						{#each $workspaces as ws (ws.id)}
@@ -1352,7 +1354,10 @@
 				<!-- Company custom: Team Workspaces V1 — modals -->
 				<WorkspaceModal
 					bind:show={showCreateWorkspace}
-					onSubmit={async () => { await initWorkspaces(); showWorkspaces = true; }}
+					onSubmit={async () => {
+						await initWorkspaces();
+						showWorkspaces = true;
+					}}
 				/>
 
 				<ManageMembersModal
@@ -1360,7 +1365,10 @@
 					workspace={managingWorkspace}
 					currentUserRole={managingWorkspaceRole}
 					onUpdate={initWorkspaces}
-					onDeleted={() => { managingWorkspace = null; activeWorkspaceId.set(null); }}
+					onDeleted={() => {
+						managingWorkspace = null;
+						activeWorkspaceId.set(null);
+					}}
 				/>
 
 				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}

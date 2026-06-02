@@ -78,7 +78,10 @@
 	const addMember = async (userId: string) => {
 		addingUserId = userId;
 		try {
-			await addWorkspaceMember(localStorage.token, workspace.id, { user_id: userId, role: addRole });
+			await addWorkspaceMember(localStorage.token, workspace.id, {
+				user_id: userId,
+				role: addRole
+			});
 			toast.success($i18n.t('Member added'));
 			searchQuery = '';
 			searchResults = [];
@@ -143,8 +146,15 @@
 				class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
 				on:click={() => (show = false)}
 			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
-					<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-5"
+				>
+					<path
+						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+					/>
 				</svg>
 			</button>
 		</div>
@@ -229,7 +239,9 @@
 									src={`/api/v1/users/${member.user_id}/profile/image`}
 									alt={member.display_name ?? member.user_id}
 									class="size-6 rounded-full shrink-0"
-									on:error={(e) => { (e.target as HTMLImageElement).src = '/user.png'; }}
+									on:error={(e) => {
+										(e.target as HTMLImageElement).src = '/user.png';
+									}}
 								/>
 								<div class="overflow-hidden">
 									<div class="text-sm dark:text-gray-200 line-clamp-1 font-medium">
@@ -246,7 +258,8 @@
 									<select
 										value={member.role}
 										class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-0.5 text-xs dark:text-white focus:outline-none"
-										on:change={(e) => updateRole(member.user_id, (e.target as HTMLSelectElement).value)}
+										on:change={(e) =>
+											updateRole(member.user_id, (e.target as HTMLSelectElement).value)}
 									>
 										{#each ROLES as r}
 											<option value={r}>{$i18n.t(r)}</option>
@@ -258,8 +271,15 @@
 										class="p-0.5 text-gray-400 hover:text-red-500 rounded"
 										on:click={() => removeMember(member.user_id)}
 									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5">
-											<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-3.5"
+										>
+											<path
+												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+											/>
 										</svg>
 									</button>
 								{:else}
