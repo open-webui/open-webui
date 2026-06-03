@@ -51,7 +51,7 @@
 		activeWorkspaceId.set(workspace.id);
 		chatId.set('');
 		if (!open) open = true;
-		await goto('/');
+		await goto(`/workspaces/${workspace.id}`);
 		if ($mobile) showSidebar.set(false);
 	};
 
