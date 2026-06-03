@@ -1774,6 +1774,7 @@ async def chat_completion(
             'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
             'folder_id': form_data.pop('folder_id', None),
+            'workspace_id': form_data.pop('workspace_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
             'tool_servers': form_data.pop('tool_servers', None),
@@ -1795,6 +1796,15 @@ async def chat_completion(
                 ),
             },
         }
+
+        if metadata.get('workspace_id'):
+            workspace = await Workspaces.get_by_id(metadata['workspace_id'])
+            member = await WorkspaceMembers.get(metadata['workspace_id'], user.id)
+            if workspace is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+            if member is None or member.role not in WORKSPACE_WRITE_ROLES:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+            metadata['folder_id'] = None
 
         if is_new_chat:
             metadata['chat_id'] = str(uuid4())
@@ -1850,7 +1860,8 @@ async def chat_completion(
                                 'tags': [],
                                 'timestamp': int(time.time() * 1000),
                             },
-                            folder_id=metadata.get('folder_id'),
+                            folder_id=None if metadata.get('workspace_id') else metadata.get('folder_id'),
+                            workspace_id=metadata.get('workspace_id'),
                         ),
                     )
 

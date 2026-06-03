@@ -1045,7 +1045,12 @@ export const getChatAccessGrants = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateChatById = async (token: string, id: string, chat: object) => {
+export const updateChatById = async (
+	token: string,
+	id: string,
+	chat: object,
+	{ workspaceId = null, folderId = undefined }: { workspaceId?: string | null; folderId?: string | null } = {}
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
@@ -1056,7 +1061,9 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			chat: chat
+			chat: chat,
+			...(workspaceId ? { workspace_id: workspaceId, folder_id: null } : {}),
+			...(folderId !== undefined && !workspaceId ? { folder_id: folderId } : {})
 		})
 	})
 		.then(async (res) => {

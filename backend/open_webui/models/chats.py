@@ -396,12 +396,28 @@ class ChatTable:
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
-    async def update_chat_by_id(self, id: str, chat: dict, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def update_chat_by_id(
+        self,
+        id: str,
+        chat: dict,
+        db: Optional[AsyncSession] = None,
+        workspace_id: Optional[str] = None,
+        folder_id: Optional[str] = None,
+        update_workspace: bool = False,
+        update_folder: bool = False,
+    ) -> Optional[ChatModel]:
         try:
             async with get_async_db_context(db) as db:
                 chat_item = await db.get(Chat, id)
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
+
+                if update_workspace:
+                    chat_item.workspace_id = workspace_id
+                    if workspace_id is not None:
+                        chat_item.folder_id = None
+                if update_folder and workspace_id is None:
+                    chat_item.folder_id = folder_id
 
                 chat_item.updated_at = int(time.time())
 
