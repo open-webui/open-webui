@@ -5,7 +5,7 @@
 	import { fade, slide } from 'svelte/transition';
 
 	import { getUsage } from '$lib/apis';
-	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { getSessionUser } from '$lib/apis/auths';
 
 	import {
 		showSettings,
@@ -18,6 +18,7 @@
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { performSignOut } from '$lib/utils/signout';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -623,12 +624,8 @@
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
-					const res = await userSignOut();
-					user.set(null);
-					localStorage.removeItem('token');
-
-					location.href = res?.redirect_url ?? '/auth';
 					show = false;
+					await performSignOut();
 				}}
 			>
 				<div class=" self-center mr-3">
