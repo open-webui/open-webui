@@ -115,6 +115,7 @@
 	import { getBanners } from '$lib/apis/configs';
 
 	export let chatIdProp = '';
+	export let workspaceIdProp: string | null = null;
 
 	let loading = true;
 
@@ -2771,7 +2772,7 @@
 		let _chatId = $chatId;
 
 		if (!$temporaryChatEnabled) {
-			const workspaceId = $activeWorkspaceId;
+			const workspaceId = workspaceIdProp ?? $activeWorkspaceId ?? null;
 			chat = await createNewChat(
 				localStorage.token,
 				{
@@ -3032,7 +3033,7 @@
 								const title =
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-								const workspaceId = $activeWorkspaceId;
+								const workspaceId = workspaceIdProp ?? $activeWorkspaceId ?? null;
 								const savedChat = await createNewChat(
 									localStorage.token,
 									{
