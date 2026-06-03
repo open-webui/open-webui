@@ -671,6 +671,7 @@
 
 	const newChatHandler = async () => {
 		selectedChatId = null;
+		activeWorkspaceId.set(null);
 		selectedFolder.set(null);
 
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {

@@ -620,12 +620,22 @@ def _build_app(get_db_fn):
         return {'id': chat.id, 'workspace_id': ws_id}
 
     # ── POST /chats/new ──────────────────────────────────────────────────────
-    # P0-2: workspace_id from client is stripped; route creates private chats only.
+    # Legacy create-chat endpoint accepts optional workspace_id and validates
+    # membership/write role before persisting it. Missing workspace_id preserves
+    # existing private chat creation behavior.
     @app.post('/chats/new', status_code=201)
     async def create_private_chat(user_id: str, workspace_id: str = None):
         db = get_db_fn()
+        if workspace_id is not None:
+            workspace = await _get_workspace(db, workspace_id)
+            if workspace is None:
+                raise FHTTPException(status_code=404, detail="workspace not found")
+            member = await get_member(db, workspace_id, user_id)
+            if member is None or member.role not in WRITE_ROLES:
+                raise FHTTPException(status_code=403, detail="access prohibited")
+
         chat = WsChat(id=_uid(), user_id=user_id, title="Private Chat",
-                      workspace_id=None, created_at=_now(), updated_at=_now())
+                      workspace_id=workspace_id, created_at=_now(), updated_at=_now())
         db.add(chat)
         await db.commit()
         return {'id': chat.id, 'workspace_id': chat.workspace_id}
@@ -1050,19 +1060,36 @@ async def test_route_private_chat_creation_works(route_client):
 
 
 # ---------------------------------------------------------------------------
-# Scenario 8b: workspace_id supplied by client is stripped (P0-2)
+# Scenario 8b: /chats/new can create a workspace chat with valid write access
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_route_private_chat_strips_client_workspace_id(route_client):
+async def test_route_chat_new_with_workspace_id_saves_workspace_id(route_client):
     client, db = route_client
-    user_id = _uid()
-    ws_id = _uid()  # arbitrary, user is not even a member
+    creator_id = _uid()
+    member_id = _uid()
 
-    resp = await client.post("/chats/new", params={"user_id": user_id, "workspace_id": ws_id})
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, member_id, ROLE_MEMBER)
+
+    resp = await client.post("/chats/new", params={"user_id": member_id, "workspace_id": ws.id})
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     data = resp.json()
-    assert data['workspace_id'] is None, "Client-supplied workspace_id must be stripped"
+    assert data['workspace_id'] == ws.id, "Valid workspace_id must be persisted"
+
+
+@pytest.mark.asyncio
+async def test_route_chat_new_rejects_workspace_id_without_permission(route_client):
+    client, db = route_client
+    creator_id = _uid()
+    stranger_id = _uid()
+
+    ws = await create_workspace(db, creator_id)
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    resp = await client.post("/chats/new", params={"user_id": stranger_id, "workspace_id": ws.id})
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
 
 
 # ---------------------------------------------------------------------------

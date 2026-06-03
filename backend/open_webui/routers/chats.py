@@ -105,6 +105,21 @@ async def assert_chat_write_allowed(chat, user, db: AsyncSession) -> None:
     await _ws_check(chat, user, db, require_write=True)
 
 
+async def assert_workspace_chat_create_allowed(workspace_id: str, user, db: AsyncSession) -> None:
+    """
+    CREATE gate for chats created with a workspace_id.
+    Requires an active workspace and a member/manager role. Platform admin role
+    does not bypass explicit workspace membership in Team Workspaces V1.
+    """
+    workspace = await Workspaces.get_by_id(workspace_id, db=db)
+    if workspace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    member = await WorkspaceMembers.get(workspace_id, user.id, db=db)
+    if member is None or member.role not in WORKSPACE_WRITE_ROLES:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
 async def assert_workspace_chat_not_shareable(chat) -> None:
     """
     SHARE gate: workspace chats do not support public sharing, access grants,
@@ -645,10 +660,13 @@ async def create_new_chat(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Company custom: Team Workspaces V1 — POST /chats/new is for private chats only.
-    # workspace_id must be assigned server-side via POST /workspaces/{id}/chats.
+    # Company custom: Team Workspaces V1 — allow legacy chat creation clients to
+    # attach a new chat to the active workspace, but validate the workspace before
+    # persisting it. Missing workspace_id preserves existing private-chat behavior.
     if form_data.workspace_id is not None:
-        form_data.workspace_id = None
+        await assert_workspace_chat_create_allowed(form_data.workspace_id, user, db)
+        form_data.folder_id = None
+
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())

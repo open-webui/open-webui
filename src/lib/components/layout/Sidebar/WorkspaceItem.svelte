@@ -2,9 +2,16 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { mobile, showSidebar, activeWorkspaceId } from '$lib/stores';
+	import {
+		mobile,
+		showSidebar,
+		activeWorkspaceId,
+		chatId,
+		workspaceChatsRefreshKey
+	} from '$lib/stores';
 	import { getWorkspaceChats } from '$lib/apis/workspaces';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
@@ -19,11 +26,33 @@
 
 	let open = false;
 	let chats: any[] = [];
+	let lastRefreshKey = -1;
 
 	const openWorkspace = async () => {
 		open = !open;
 		activeWorkspaceId.set(open ? workspace.id : null);
-		if (open) await refreshChats();
+
+		if (open) {
+			lastRefreshKey = $workspaceChatsRefreshKey;
+			await refreshChats();
+		}
+	};
+
+	$: if ($activeWorkspaceId === workspace.id && !open) {
+		open = true;
+	}
+
+	$: if (open && $workspaceChatsRefreshKey !== lastRefreshKey) {
+		lastRefreshKey = $workspaceChatsRefreshKey;
+		refreshChats();
+	}
+
+	const newWorkspaceChat = async () => {
+		activeWorkspaceId.set(workspace.id);
+		chatId.set('');
+		if (!open) open = true;
+		await goto('/');
+		if ($mobile) showSidebar.set(false);
 	};
 
 	const refreshChats = async () => {
@@ -87,6 +116,15 @@
 	<!-- Chat list (shown when workspace is open) -->
 	{#if open}
 		<div class="ml-2 mt-0.5 flex flex-col gap-0.5">
+			<button
+				type="button"
+				class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+				       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
+				       line-clamp-1 cursor-pointer select-none"
+				on:click={newWorkspaceChat}
+			>
+				<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
+			</button>
 			{#if chats.length === 0}
 				<div class="px-3 py-1 text-xs text-gray-400 dark:text-gray-600 italic">
 					{$i18n.t('No chats yet')}
@@ -94,15 +132,16 @@
 			{:else}
 				{#each chats as chat (chat.id)}
 					<a
-						href="/c/{chat.id}"
+						href="/workspaces/{workspace.id}/c/{chat.id}"
 						draggable="false"
 						class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
 						       hover:bg-gray-100 dark:hover:bg-gray-900
-						       {$page.url.pathname === `/c/${chat.id}`
+						       {$page.url.pathname === `/workspaces/${workspace.id}/c/${chat.id}`
 							? 'bg-gray-100 dark:bg-gray-900 font-medium dark:text-white text-black'
 							: 'dark:text-gray-400 text-gray-600'}
 						       line-clamp-1 cursor-pointer select-none"
 						on:click={() => {
+							activeWorkspaceId.set(workspace.id);
 							if ($mobile) showSidebar.set(false);
 						}}
 					>

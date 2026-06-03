@@ -61,6 +61,7 @@ export const channelId = writable(null);
 // Company custom: Team Workspaces V1
 export const workspaces = writable([]);
 export const activeWorkspaceId = writable<string | null>(null);
+export const workspaceChatsRefreshKey = writable(0);
 
 export const chats = writable(null);
 export const pinnedChats = writable([]);
