@@ -41,12 +41,20 @@ async def apply_system_prompt_to_body(
 
 
 # inplace function: form_data is modified
-def apply_model_params_to_body(params: dict, form_data: dict, mappings: dict[str, Callable]) -> dict:
+def apply_model_params_to_body(
+    params: dict,
+    form_data: dict,
+    mappings: dict[str, Callable],
+    overwrite: bool = True,
+) -> dict:
     if not params:
         return form_data
 
     for key, value in params.items():
         if value is not None:
+            if not overwrite and key in form_data:
+                continue
+
             if key in mappings:
                 cast_func = mappings[key]
                 if isinstance(cast_func, Callable):
@@ -83,7 +91,11 @@ def remove_open_webui_params(params: dict) -> dict:
 
 
 # inplace function: form_data is modified
-def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
+OPENAI_TOKEN_LIMIT_PARAMS = {'max_tokens', 'max_completion_tokens'}
+
+
+def apply_model_params_to_body_openai(params: dict, form_data: dict, overwrite: bool = True) -> dict:
+    params = copy.deepcopy(params or {})
     params = remove_open_webui_params(params)
 
     custom_params = params.pop('custom_params', {})
@@ -101,11 +113,15 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         # If there are custom parameters, we need to apply them first
         params = deep_update(params, custom_params)
 
+    if not overwrite and any(key in form_data for key in OPENAI_TOKEN_LIMIT_PARAMS):
+        params = {key: value for key, value in params.items() if key not in OPENAI_TOKEN_LIMIT_PARAMS}
+
     mappings = {
         'temperature': float,
         'top_p': float,
         'min_p': float,
         'max_tokens': int,
+        'max_completion_tokens': int,
         'frequency_penalty': float,
         'presence_penalty': float,
         'reasoning_effort': str,
@@ -114,10 +130,11 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         'logit_bias': lambda x: x,
         'response_format': dict,
     }
-    return apply_model_params_to_body(params, form_data, mappings)
+    return apply_model_params_to_body(params, form_data, mappings, overwrite=overwrite)
 
 
-def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+def apply_model_params_to_body_ollama(params: dict, form_data: dict, overwrite: bool = True) -> dict:
+    params = copy.deepcopy(params or {})
     params = remove_open_webui_params(params)
 
     custom_params = params.pop('custom_params', {})
@@ -188,12 +205,21 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
 
     for key, value in ollama_root_params.items():
         if (param := params.get(key, None)) is not None:
+            if not overwrite and key in form_data:
+                del params[key]
+                continue
+
             # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
             form_data[key] = value(param)
             del params[key]
 
     # Unlike OpenAI, Ollama does not support params directly in the body
-    form_data['options'] = apply_model_params_to_body(params, (form_data.get('options', {}) or {}), mappings)
+    form_data['options'] = apply_model_params_to_body(
+        params,
+        (form_data.get('options', {}) or {}),
+        mappings,
+        overwrite=overwrite,
+    )
     return form_data
 
 

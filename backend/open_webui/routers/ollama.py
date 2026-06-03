@@ -1018,6 +1018,10 @@ async def generate_chat_completion(
     model_id = payload['model']
     model_info = await Models.get_model_by_id(model_id)
 
+    default_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+    if default_params:
+        payload = apply_model_params_to_body_ollama(default_params, payload, overwrite=False)
+
     if model_info is not None:
         if model_info.base_model_id:
             base_model_id = request.base_model_id if hasattr(request, 'base_model_id') else model_info.base_model_id
@@ -1110,6 +1114,11 @@ async def generate_openai_completion(
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
+
+    default_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+    if default_params:
+        payload = apply_model_params_to_body_openai(default_params, payload, overwrite=False)
+
     if model_info is not None:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
@@ -1163,6 +1172,11 @@ async def generate_openai_chat_completion(
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
+
+    default_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+    if default_params:
+        payload = apply_model_params_to_body_openai(default_params, payload, overwrite=False)
+
     if model_info is not None:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id

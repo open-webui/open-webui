@@ -1077,6 +1077,10 @@ async def generate_chat_completion(
     model_id = form_data.get('model')
     model_info = await Models.get_model_by_id(model_id)
 
+    default_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+    if default_params:
+        payload = apply_model_params_to_body_openai(default_params, payload, overwrite=False)
+
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:

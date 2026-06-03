@@ -265,6 +265,10 @@ async def generate_function_chat_completion(request, form_data, user, models: di
     }
     extra_params['__tools__'] = metadata.get('tools', {})
 
+    default_params = getattr(request.app.state.config, 'DEFAULT_MODEL_PARAMS', None) or {}
+    if default_params:
+        form_data = apply_model_params_to_body_openai(default_params, form_data, overwrite=False)
+
     if model_info:
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
