@@ -18,6 +18,23 @@
 	export let channel = null;
 
 	export let onClose = () => {};
+	export let onPinUpdate = (messageId, pinned) => {};
+	export let pinUpdate = null;
+
+	let lastAppliedPinUpdate = null;
+
+	$: if (pinUpdate && pinUpdate !== lastAppliedPinUpdate && messages) {
+		lastAppliedPinUpdate = pinUpdate;
+		messages = messages.map((message) => {
+			if (message.id === pinUpdate.messageId) {
+				return {
+					...message,
+					is_pinned: pinUpdate.pinned
+				};
+			}
+			return message;
+		});
+	}
 
 	let messages = null;
 	let top = false;
@@ -196,6 +213,7 @@
 					{messages}
 					{replyToMessage}
 					thread={true}
+					{onPinUpdate}
 					onReply={async (message) => {
 						replyToMessage = message;
 

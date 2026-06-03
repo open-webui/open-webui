@@ -37,6 +37,7 @@
 	export let onLoad: Function = () => {};
 	export let onReply: Function = () => {};
 	export let onThread: Function = () => {};
+	export let onPinUpdate: Function = () => {};
 
 	let messagesLoading = false;
 
@@ -165,20 +166,24 @@
 					onReply(message);
 				}}
 				onPin={async (message) => {
+					const newPinned = !message.is_pinned;
+
 					messages = messages.map((m) => {
 						if (m.id === message.id) {
-							m.is_pinned = !m.is_pinned;
-							m.pinned_by = !m.is_pinned ? null : $user?.id;
-							m.pinned_at = !m.is_pinned ? null : Date.now() * 1000000;
+							m.is_pinned = newPinned;
+							m.pinned_by = newPinned ? $user?.id : null;
+							m.pinned_at = newPinned ? Date.now() * 1000000 : null;
 						}
 						return m;
 					});
+
+					onPinUpdate(message.id, newPinned);
 
 					const updatedMessage = await pinMessage(
 						localStorage.token,
 						message.channel_id,
 						message.id,
-						message.is_pinned
+						newPinned
 					).catch((error) => {
 						toast.error(`${error}`);
 						return null;

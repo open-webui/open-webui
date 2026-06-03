@@ -40,6 +40,7 @@
 
 	let replyToMessage = null;
 	let threadId = null;
+	let lastPinUpdate = null;
 
 	let typingUsers = [];
 	let typingUsersTimeout = {};
@@ -315,6 +316,7 @@
 						}
 						return message;
 					});
+					lastPinUpdate = { messageId, pinned };
 				}}
 				onUpdate={async () => {
 					channel = await getChannelById(localStorage.token, id).catch((error) => {
@@ -343,6 +345,9 @@
 									replyToMessage = message;
 									await tick();
 									chatInputElement?.focus();
+								}}
+								onPinUpdate={(messageId, pinned) => {
+									lastPinUpdate = { messageId, pinned };
 								}}
 								onThread={(id) => {
 									threadId = id;
@@ -406,6 +411,18 @@
 						<Thread
 							{threadId}
 							{channel}
+							pinUpdate={lastPinUpdate}
+							onPinUpdate={(messageId, pinned) => {
+								messages = messages.map((message) => {
+									if (message.id === messageId) {
+										return {
+											...message,
+											is_pinned: pinned
+										};
+									}
+									return message;
+								});
+							}}
 							onClose={() => {
 								threadId = null;
 							}}
@@ -428,6 +445,18 @@
 					<Thread
 						{threadId}
 						{channel}
+						pinUpdate={lastPinUpdate}
+						onPinUpdate={(messageId, pinned) => {
+							messages = messages.map((message) => {
+								if (message.id === messageId) {
+									return {
+										...message,
+										is_pinned: pinned
+									};
+								}
+								return message;
+							});
+						}}
 						onClose={() => {
 							threadId = null;
 						}}
