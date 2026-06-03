@@ -114,6 +114,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import { getBanners } from '$lib/apis/configs';
+	import { appendTaskIds, canClearTaskIds } from './taskIds';
 
 	export let chatIdProp = '';
 
@@ -176,7 +177,8 @@
 		currentId: null
 	};
 
-	let taskIds = null;
+	let taskIds: string[] | null = null;
+	let taskIdsGeneration = 0;
 
 	// Chat Input
 	let prompt = '';
@@ -1554,13 +1556,17 @@
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
+		const completionTaskIdsGeneration = taskIdsGeneration;
+
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
 		if ($chatId == _chatId && !$temporaryChatEnabled) {
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
-		taskIds = null;
+		if (canClearTaskIds(completionTaskIdsGeneration, taskIdsGeneration)) {
+			taskIds = null;
+		}
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -2529,10 +2535,9 @@
 			} else {
 				// Backend returns task_ids (multi-model) or task_id (single model)
 				const newTaskIds = res.task_ids ?? (res.task_id ? [res.task_id] : []);
-				if (taskIds) {
-					taskIds.push(...newTaskIds);
-				} else {
-					taskIds = newTaskIds;
+				if (newTaskIds.length > 0) {
+					taskIds = appendTaskIds(taskIds, newTaskIds);
+					taskIdsGeneration += 1;
 				}
 
 				// Backend returns chat_id for new chats — set store + URL.
