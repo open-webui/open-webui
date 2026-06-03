@@ -285,6 +285,35 @@ ENABLE_DIRECT_CONNECTIONS = ConfigVar(
 )
 
 ####################################
+# SUBSCRIPTIONS (USDT billing)
+####################################
+
+ENABLE_SUBSCRIPTIONS = ConfigVar(
+    'ENABLE_SUBSCRIPTIONS',
+    'subscription.enable',
+    os.getenv('ENABLE_SUBSCRIPTIONS', 'True').lower() == 'true',
+)
+
+# Base URL of the Java payment_service (context-path /api). Reachable from the app
+# nodes at the payment node's private IP; see SESSION-HANDOFF §12.
+PAYMENT_SERVICE_URL = ConfigVar(
+    'PAYMENT_SERVICE_URL',
+    'subscription.payment_service_url',
+    os.getenv('PAYMENT_SERVICE_URL', 'http://172.31.1.81:7120/api'),
+)
+
+# Chains offered on the subscription checkout. chainId values match the payment_service.
+SUBSCRIPTION_CHAINS = ConfigVar(
+    'SUBSCRIPTION_CHAINS',
+    'subscription.chains',
+    [
+        {'id': '1', 'name': 'Ethereum (ERC20)'},
+        {'id': '56', 'name': 'BSC (BEP20)'},
+        {'id': '728126428', 'name': 'TRON (TRC20)'},
+    ],
+)
+
+####################################
 # OLLAMA_BASE_URL
 ####################################
 

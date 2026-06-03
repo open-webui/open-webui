@@ -171,6 +171,9 @@ from open_webui.config import (
     ENABLE_COMMUNITY_SHARING,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
+    ENABLE_SUBSCRIPTIONS,
+    PAYMENT_SERVICE_URL,
+    SUBSCRIPTION_CHAINS,
     ENABLE_EVALUATION_ARENA_MODELS,
     ENABLE_FOLDERS,
     ENABLE_FOLLOW_UP_GENERATION,
@@ -477,6 +480,11 @@ from open_webui.models.functions import Functions
 from open_webui.models.messages import Messages
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
+from open_webui.utils.subscription import (
+    enforce_subscription_access,
+    filter_models_by_tier,
+    get_user_tier,
+)
 from open_webui.routers import (
     analytics,
     audio,
@@ -503,6 +511,7 @@ from open_webui.routers import (
     retrieval,
     scim,
     skills,
+    subscriptions,
     tasks,
     terminals,
     tools,
@@ -660,6 +669,14 @@ async def lifespan(app: FastAPI):
     # when the first user lands on the / route.
     log.info('Installing external dependencies of functions and tools...')
     await install_tool_and_function_dependencies()
+
+    # Seed default subscription tiers (no-op if any tier already exists)
+    try:
+        from open_webui.utils.subscription import seed_default_tiers
+
+        await seed_default_tiers()
+    except Exception:
+        log.exception('Subscription tier seeding failed')
 
     app.state.redis = get_redis_client(async_mode=True)
 
@@ -840,6 +857,16 @@ app.state.TERMINAL_SERVERS = []
 ########################################
 
 app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
+
+########################################
+#
+# SUBSCRIPTIONS (USDT billing)
+#
+########################################
+
+app.state.config.ENABLE_SUBSCRIPTIONS = ENABLE_SUBSCRIPTIONS
+app.state.config.PAYMENT_SERVICE_URL = PAYMENT_SERVICE_URL
+app.state.config.SUBSCRIPTION_CHAINS = SUBSCRIPTION_CHAINS
 
 ########################################
 #
@@ -1425,6 +1452,7 @@ app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
+app.include_router(subscriptions.router, prefix='/api/v1/subscriptions', tags=['subscriptions'])
 
 
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
@@ -1518,6 +1546,12 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
         )
 
     models = await get_filtered_models(models, user)
+
+    # Subscription tier model allow-list (UX: hide models not in the user's plan).
+    # The hard gate is enforced at completion time. Admins see all models.
+    if getattr(request.app.state.config, 'ENABLE_SUBSCRIPTIONS', True) and user.role != 'admin':
+        tier, _ = await get_user_tier(user.id)
+        models = filter_models_by_tier(models, tier)
 
     log.debug(
         f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
@@ -1686,6 +1720,12 @@ async def chat_completion(
 
             model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
+
+            # Subscription tier enforcement: model allow-list + daily message quota.
+            # No-op for admins / when subscriptions are disabled. Internal task
+            # completions (title/tag generation) use the tasks router, so they are
+            # not counted against the user's quota here.
+            await enforce_subscription_access(request, user, model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
