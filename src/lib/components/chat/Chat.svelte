@@ -177,6 +177,21 @@
 
 	let taskIds = null;
 
+	const getResolvedWorkspaceId = () => workspaceIdProp ?? $activeWorkspaceId ?? null;
+
+	const isWorkspaceRoute = () => $page.url.pathname.startsWith('/workspaces/');
+
+	const requireWorkspaceIdForWorkspaceRoute = () => {
+		const workspaceId = getResolvedWorkspaceId();
+		if (isWorkspaceRoute() && !workspaceId) {
+			const message = $i18n.t('Unable to resolve workspace for this chat. Please refresh and try again.');
+			toast.error(message);
+			throw new Error(message);
+		}
+
+		return isWorkspaceRoute() ? workspaceId : null;
+	};
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -545,8 +560,13 @@
 					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
-					currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					const workspaceId = requireWorkspaceIdForWorkspaceRoute();
+					if (workspaceId) {
+						workspaceChatsRefreshKey.update((value) => value + 1);
+					} else {
+						currentChatPage.set(1);
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					}
 				} else if (type === 'chat:tags') {
 					chat = await getChatById(localStorage.token, $chatId);
 					allTags.set(await getAllTags(localStorage.token));
@@ -1580,16 +1600,26 @@
 
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
-					messages: messages,
-					history: history,
-					params: params,
-					files: chatFiles
-				});
+				const workspaceId = requireWorkspaceIdForWorkspaceRoute();
+				chat = await updateChatById(
+					localStorage.token,
+					_chatId,
+					{
+						models: selectedModels,
+						messages: messages,
+						history: history,
+						params: params,
+						files: chatFiles
+					},
+					{ workspaceId }
+				);
 
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				if (workspaceId) {
+					workspaceChatsRefreshKey.update((value) => value + 1);
+				} else {
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
 			}
 		}
 	};
@@ -1907,6 +1937,8 @@
 	//////////////////////////
 
 	const submitPrompt = async (inputContent, inputFiles) => {
+		requireWorkspaceIdForWorkspaceRoute();
+
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -2403,6 +2435,8 @@
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
 
+		const resolvedWorkspaceId = requireWorkspaceIdForWorkspaceRoute();
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -2440,7 +2474,8 @@
 
 				session_id: $socket?.id,
 				chat_id: _chatId || undefined,
-				folder_id: $selectedFolder?.id ?? undefined,
+				folder_id: resolvedWorkspaceId ? null : ($selectedFolder?.id ?? undefined),
+				...(resolvedWorkspaceId ? { workspace_id: resolvedWorkspaceId } : {}),
 
 				id: responseMessageId,
 				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
@@ -2514,18 +2549,31 @@
 				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
 					await chatId.set(res.chat_id);
 					if (!$temporaryChatEnabled) {
-						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
-						currentChatPage.set(1);
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+						const chatPath = resolvedWorkspaceId
+							? `/workspaces/${resolvedWorkspaceId}/c/${res.chat_id}`
+							: `/c/${res.chat_id}`;
+						window.history.replaceState(history.state, '', chatPath);
+
+						if (resolvedWorkspaceId) {
+							workspaceChatsRefreshKey.update((value) => value + 1);
+						} else {
+							currentChatPage.set(1);
+							await chats.set(await getChatList(localStorage.token, $currentChatPage));
+						}
 
 						// Persist chat-level params (system prompt, advanced
 						// params) that the backend doesn't receive in the
 						// chat completion request.  Files are now persisted
 						// by the backend at chat creation time.
 						if (Object.keys(params).length > 0) {
-							await updateChatById(localStorage.token, res.chat_id, {
-								params: params
-							});
+							await updateChatById(
+								localStorage.token,
+								res.chat_id,
+								{
+									params: params
+								},
+								{ workspaceId: resolvedWorkspaceId }
+							);
 						}
 					}
 				}
@@ -2772,7 +2820,7 @@
 		let _chatId = $chatId;
 
 		if (!$temporaryChatEnabled) {
-			const workspaceId = workspaceIdProp ?? $activeWorkspaceId ?? null;
+			const workspaceId = requireWorkspaceIdForWorkspaceRoute();
 			chat = await createNewChat(
 				localStorage.token,
 				{
@@ -2786,7 +2834,7 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				$selectedFolder?.id,
+				workspaceId ? null : $selectedFolder?.id,
 				workspaceId
 			);
 
@@ -2818,13 +2866,19 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
-					history: history,
-					messages: createMessagesList(history, history.currentId),
-					params: params,
-					files: chatFiles
-				});
+				const workspaceId = requireWorkspaceIdForWorkspaceRoute();
+				chat = await updateChatById(
+					localStorage.token,
+					_chatId,
+					{
+						models: selectedModels,
+						history: history,
+						messages: createMessagesList(history, history.currentId),
+						params: params,
+						files: chatFiles
+					},
+					{ workspaceId }
+				);
 			}
 		}
 	};
@@ -2873,8 +2927,12 @@
 			);
 
 			if (res) {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				if (workspaceId) {
+					workspaceChatsRefreshKey.update((value) => value + 1);
+				} else {
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
 				await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
 				toast.success($i18n.t('Chat moved successfully'));
@@ -3033,7 +3091,7 @@
 								const title =
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-								const workspaceId = workspaceIdProp ?? $activeWorkspaceId ?? null;
+								const workspaceId = requireWorkspaceIdForWorkspaceRoute();
 								const savedChat = await createNewChat(
 									localStorage.token,
 									{

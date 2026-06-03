@@ -1114,18 +1114,30 @@ async def update_chat_by_id(
 ):
     # Company custom: Team Workspaces V1 — workspace chats are writable by member/manager
     raw_chat = await Chats.get_chat_by_id(id, db=db)
+    incoming_workspace_id = form_data.workspace_id or form_data.chat.get('workspace_id')
     if raw_chat and raw_chat.workspace_id is not None:
         await assert_chat_write_allowed(raw_chat, user, db)
+        if incoming_workspace_id and incoming_workspace_id != raw_chat.workspace_id:
+            await assert_workspace_chat_create_allowed(incoming_workspace_id, user, db)
         updated_chat = {**raw_chat.chat, **form_data.chat}
         for msg in updated_chat.get('history', {}).get('messages', {}).values():
             if msg.get('role') == 'assistant' and msg.get('output'):
                 msg['content'] = serialize_output(msg['output'])
-        chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
+        chat = await Chats.update_chat_by_id(
+            id,
+            updated_chat,
+            db=db,
+            workspace_id=incoming_workspace_id or raw_chat.workspace_id,
+            update_workspace=bool(incoming_workspace_id),
+        )
         return ChatResponse(**chat.model_dump())
 
-    # Existing private-chat path (unmodified)
+    # Existing private-chat path (unmodified unless a validated workspace_id is provided)
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        if incoming_workspace_id:
+            await assert_workspace_chat_create_allowed(incoming_workspace_id, user, db)
+            form_data.folder_id = None
         updated_chat = {**chat.chat, **form_data.chat}
 
         # Re-derive content from output for assistant messages so that
@@ -1135,7 +1147,15 @@ async def update_chat_by_id(
             if msg.get('role') == 'assistant' and msg.get('output'):
                 msg['content'] = serialize_output(msg['output'])
 
-        chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
+        chat = await Chats.update_chat_by_id(
+            id,
+            updated_chat,
+            db=db,
+            workspace_id=incoming_workspace_id,
+            folder_id=form_data.folder_id,
+            update_workspace=bool(incoming_workspace_id),
+            update_folder=form_data.folder_id is not None,
+        )
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
