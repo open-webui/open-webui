@@ -359,6 +359,9 @@ OLLAMA_BASE_URLS = ConfigVar('OLLAMA_BASE_URLS', 'ollama.base_urls', OLLAMA_BASE
 
 try:
     ollama_api_configs = json.loads(os.getenv('OLLAMA_API_CONFIGS', '{}'))
+    if not isinstance(ollama_api_configs, dict):
+        log.warning('OLLAMA_API_CONFIGS must be a JSON object, ignoring')
+        ollama_api_configs = {}
 except Exception as e:
     log.exception(f'Error loading OLLAMA_API_CONFIGS: {e}')
     ollama_api_configs = {}
@@ -410,6 +413,9 @@ OPENAI_API_BASE_URLS = ConfigVar('OPENAI_API_BASE_URLS', 'openai.api_base_urls',
 
 try:
     openai_api_configs = json.loads(os.getenv('OPENAI_API_CONFIGS', '{}'))
+    if not isinstance(openai_api_configs, dict):
+        log.warning('OPENAI_API_CONFIGS must be a JSON object, ignoring')
+        openai_api_configs = {}
 except Exception as e:
     log.exception(f'Error loading OPENAI_API_CONFIGS: {e}')
     openai_api_configs = {}
