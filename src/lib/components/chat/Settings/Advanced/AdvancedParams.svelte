@@ -34,6 +34,7 @@
 		mirostat_tau: null,
 		repeat_last_n: null,
 		tfs_z: null,
+		typical_p: null,
 		repeat_penalty: null,
 		use_mmap: null,
 		use_mlock: null,
@@ -1073,6 +1074,62 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="2"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Locally typical sampling selects tokens based on how "typical" they are relative to the expected information content of the text. A value of 1.0 disables this setting.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs">
+					{'typical_p'}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.typical_p = (params?.typical_p ?? null) === null ? 1 : null;
+					}}
+				>
+					{#if (params?.typical_p ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.typical_p ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="0"
+						max="1"
+						step="0.05"
+						bind:value={params.typical_p}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.typical_p}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="0"
+						max="1"
 						step="any"
 					/>
 				</div>

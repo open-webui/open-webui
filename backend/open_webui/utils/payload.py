@@ -161,6 +161,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         'repeat_last_n': int,
         'top_k': int,
         'min_p': float,
+        'typical_p': float,
         'repeat_penalty': float,
         'presence_penalty': float,
         'frequency_penalty': float,
