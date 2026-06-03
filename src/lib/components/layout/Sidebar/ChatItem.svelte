@@ -35,7 +35,8 @@
 		currentChatPage,
 		tags,
 		selectedFolder,
-		activeChatIds
+		activeChatIds,
+		activeWorkspaceId
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -455,6 +456,7 @@
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
+				activeWorkspaceId.set(null);
 				dispatch('select');
 
 				if ($selectedFolder) {

@@ -48,7 +48,9 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-		desktopEvent
+		desktopEvent,
+		activeWorkspaceId,
+		workspaceChatsRefreshKey
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -2769,6 +2771,7 @@
 		let _chatId = $chatId;
 
 		if (!$temporaryChatEnabled) {
+			const workspaceId = $activeWorkspaceId;
 			chat = await createNewChat(
 				localStorage.token,
 				{
@@ -2782,18 +2785,24 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				$selectedFolder?.id
+				$selectedFolder?.id,
+				workspaceId
 			);
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			const chatPath = workspaceId ? `/workspaces/${workspaceId}/c/${_chatId}` : `/c/${_chatId}`;
+			window.history.replaceState(history.state, '', chatPath);
 
 			await tick();
 
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			currentChatPage.set(1);
+			if (workspaceId) {
+				workspaceChatsRefreshKey.update((value) => value + 1);
+			} else {
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				currentChatPage.set(1);
+			}
 
 			selectedFolder.set(null);
 		} else {
@@ -3023,6 +3032,7 @@
 								const title =
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
+								const workspaceId = $activeWorkspaceId;
 								const savedChat = await createNewChat(
 									localStorage.token,
 									{
@@ -3034,15 +3044,22 @@
 										messages: messages,
 										timestamp: Date.now()
 									},
-									null
+									null,
+									workspaceId
 								);
 
 								if (savedChat) {
 									temporaryChatEnabled.set(false);
 									chatId.set(savedChat.id);
-									chats.set(await getChatList(localStorage.token, $currentChatPage));
+									if (workspaceId) {
+										workspaceChatsRefreshKey.update((value) => value + 1);
+									} else {
+										chats.set(await getChatList(localStorage.token, $currentChatPage));
+									}
 
-									await goto(`/c/${savedChat.id}`);
+									await goto(
+										workspaceId ? `/workspaces/${workspaceId}/c/${savedChat.id}` : `/c/${savedChat.id}`
+									);
 									toast.success($i18n.t('Conversation saved successfully'));
 								}
 							} catch (error) {
