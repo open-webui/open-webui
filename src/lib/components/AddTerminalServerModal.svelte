@@ -199,6 +199,8 @@
 
 		// Remove trailing slash
 		url = url.replace(/\/$/, '');
+		// Bearer key whitespace breaks the terminal WebSocket auth (HTTP headers strip it, JSON doesn't)
+		key = key.trim();
 
 		// Save policy to orchestrator if applicable
 		if (serverType === 'orchestrator' && !direct && policyId) {
