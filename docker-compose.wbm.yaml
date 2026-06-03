@@ -1,0 +1,17 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chat-ai
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./data:/app/backend/data
+    environment:
+      - 'ENABLE_OLLAMA_API=False'
+      - 'WEBUI_NAME=Creative Studio AI'
+      - 'WEBUI_BRANDING_BYPASS=True'
+      - 'RAG_SYSTEM_CONTEXT=True'
+      - 'WEBUI_SECRET_KEY=!@*xt3l8jt(hj!s20odlbo%y_u-0-54-o_i5iyyp5jqa2$()8c'
+    restart: unless-stopped
