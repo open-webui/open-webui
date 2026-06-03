@@ -26,7 +26,8 @@ class ERROR_MESSAGES(str, Enum):
     EMAIL_TAKEN = 'Uh-oh! This email is already registered. Sign in with your existing account or choose another email to start anew.'
     USERNAME_TAKEN = 'Uh-oh! This username is already registered. Please choose another username.'
     PASSWORD_TOO_LONG = (
-        'Uh-oh! The password you entered is too long. Please make sure your password is less than 72 bytes long.'
+        'Uh-oh! The password you entered is too long. When using bcrypt, passwords must be 72 bytes or fewer. '
+        'Set PASSWORD_HASH_ALGORITHM=argon2 to remove this limit.'
     )
     COMMAND_TAKEN = 'Uh-oh! This command is already registered. Please choose another command string.'
     FILE_EXISTS = 'Uh-oh! This file is already registered. Please choose another file.'
