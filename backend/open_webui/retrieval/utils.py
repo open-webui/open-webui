@@ -1374,6 +1374,23 @@ async def get_sources_from_items(
                 'documents': [[doc.get('content') for doc in item.get('docs')]],
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
+        elif item.get('type') == 'web_search':
+            web_search_collection_names = []
+            if item.get('collection_name'):
+                web_search_collection_names.append(item['collection_name'])
+            if item.get('collection_names'):
+                web_search_collection_names.extend(item['collection_names'])
+
+            allowed_web_search_collection_names = getattr(
+                getattr(request, 'state', None),
+                'web_search_collection_names',
+                set(),
+            )
+            collection_names.extend(
+                name
+                for name in web_search_collection_names
+                if isinstance(name, str) and name in allowed_web_search_collection_names
+            )
         elif item.get('collection_name'):
             if BYPASS_RETRIEVAL_ACCESS_CONTROL:
                 collection_names.append(item['collection_name'])
