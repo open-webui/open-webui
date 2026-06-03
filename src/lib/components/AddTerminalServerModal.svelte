@@ -17,7 +17,7 @@
 		verifyTerminalServerConnection,
 		putOrchestratorPolicy
 	} from '$lib/apis/configs';
-	import { getTerminalConfig } from '$lib/apis/terminal';
+	import { getTerminalConfig, normalizeTerminalToken } from '$lib/apis/terminal';
 
 	export let show = false;
 	export let edit = false;
@@ -107,6 +107,7 @@
 
 	const verifyHandler = async () => {
 		const _url = url.replace(/\/$/, '');
+		const normalizedKey = normalizeTerminalToken(key);
 		if (!_url) {
 			toast.error($i18n.t('Please enter a valid URL'));
 			return;
@@ -118,7 +119,7 @@
 				// System connection: proxy through backend to avoid CORS / key exposure
 				const result = await verifyTerminalServerConnection(localStorage.token, {
 					url: _url,
-					key,
+					key: normalizedKey,
 					auth_type
 				});
 				const type = result?.type ?? null;
@@ -147,7 +148,7 @@
 				}
 			} else {
 				// Direct connection: verify from browser
-				const res = await getTerminalConfig(_url, key);
+				const res = await getTerminalConfig(_url, normalizedKey);
 				if (res) {
 					toast.success($i18n.t('Server connection verified'));
 				} else {
@@ -199,11 +200,18 @@
 
 		// Remove trailing slash
 		url = url.replace(/\/$/, '');
+		const normalizedKey = normalizeTerminalToken(key);
 
 		// Save policy to orchestrator if applicable
 		if (serverType === 'orchestrator' && !direct && policyId) {
 			try {
-				await putOrchestratorPolicy(localStorage.token, url, key, policyId, buildPolicyData());
+				await putOrchestratorPolicy(
+					localStorage.token,
+					url,
+					normalizedKey,
+					policyId,
+					buildPolicyData()
+				);
 			} catch (err) {
 				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
 				return;
@@ -213,7 +221,7 @@
 		const result = {
 			...(!direct && id.trim() ? { id: id.trim() } : {}),
 			url,
-			key,
+			key: normalizedKey,
 			name,
 			path,
 			auth_type,

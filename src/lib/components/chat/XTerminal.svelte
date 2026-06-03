@@ -7,6 +7,7 @@
 
 	import { terminalServers, settings, selectedTerminalId, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { normalizeTerminalToken } from '$lib/apis/terminal';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -52,7 +53,7 @@
 
 		connecting = true;
 
-		const token = localStorage.getItem('token') ?? '';
+		const token = normalizeTerminalToken(localStorage.getItem('token') ?? '');
 
 		try {
 			let sessionId: string;
@@ -64,7 +65,7 @@
 				const base = info.baseUrl.replace(/\/$/, '');
 				const directTerminals = ($settings?.terminalServers ?? []).filter((s: any) => s.url);
 				const directMatch = directTerminals.find((s: any) => s.url === $selectedTerminalId);
-				const apiKey = directMatch?.key ?? '';
+				const apiKey = normalizeTerminalToken(directMatch?.key ?? '');
 				authToken = apiKey;
 
 				// Create session
@@ -106,7 +107,7 @@
 			ws.onopen = () => {
 				// First-message auth (no token in URL)
 				if (ws) {
-					ws.send(JSON.stringify({ type: 'auth', token: authToken }));
+					ws.send(JSON.stringify({ type: 'auth', token: normalizeTerminalToken(authToken) }));
 				}
 				connected = true;
 				connecting = false;
