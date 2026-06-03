@@ -3864,6 +3864,12 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
+            # One usage object per LLM call. A native tool-call loop makes
+            # several calls for a single visible message; we keep every call's
+            # object so the persisted `usage` is the full list (the UI renders
+            # only the last; analytics sums the list). `usage` above stays the
+            # last call, used for the live per-chunk events during streaming.
+            usage_calls = []
             prior_output = []
             last_response_id = None
 
@@ -3921,9 +3927,14 @@ async def streaming_chat_response_handler(response, ctx):
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal usage
+                    nonlocal usage_calls
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
+
+                    # Usage reported by *this* LLM call (one segment of a native
+                    # tool-call loop). Appended to usage_calls when the call ends.
+                    segment_usage = None
 
                     response_tool_calls = []
 
@@ -4054,6 +4065,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         if response_metadata.get('usage'):
                                             response_metadata['usage'] = normalize_usage(response_metadata['usage'])
                                             usage = response_metadata['usage']
+                                            segment_usage = usage
 
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
@@ -4073,6 +4085,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     raw_usage.update(data.get('timings', {}))  # llama.cpp
                                     if raw_usage:
                                         usage = normalize_usage(raw_usage)
+                                        segment_usage = usage
                                         await event_emitter(
                                             {
                                                 'type': 'chat:completion',
@@ -4504,6 +4517,11 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
                         if responses_api_tool_calls:
                             tool_calls.append(_split_tool_calls(responses_api_tool_calls))
+
+                    # Record this call's usage. Across a tool loop this builds
+                    # the list of every call's usage object that gets persisted.
+                    if segment_usage:
+                        usage_calls.append(segment_usage)
 
                 try:
                     await stream_body_handler(response, form_data)
@@ -5111,12 +5129,19 @@ async def streaming_chat_response_handler(response, ctx):
                     if not metadata.get('chat_id', '').startswith('channel:')
                     else ''
                 )
+
+                # Persist the full per-call usage: a list when the turn made
+                # several LLM calls (native tool loop), or the single object
+                # otherwise. The UI renders only the last call; analytics sums
+                # the list; outlet() filters can read every call.
+                usage_final = usage_calls if len(usage_calls) > 1 else (usage_calls[0] if usage_calls else None)
+
                 data = {
                     'done': True,
                     'content': serialize_output(output),
                     'output': output,
                     'title': title,
-                    **({'usage': usage} if usage else {}),
+                    **({'usage': usage_final} if usage_final else {}),
                 }
 
                 if not metadata.get('chat_id', '').startswith('channel:'):
@@ -5129,14 +5154,14 @@ async def streaming_chat_response_handler(response, ctx):
                                 'done': True,
                                 'content': serialize_output(output),
                                 'output': output,
-                                **({'usage': usage} if usage else {}),
+                                **({'usage': usage_final} if usage_final else {}),
                             },
                         )
-                    elif usage:
+                    elif usage_final:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
-                            {'done': True, 'usage': usage},
+                            {'done': True, 'usage': usage_final},
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5171,7 +5196,9 @@ async def streaming_chat_response_handler(response, ctx):
                 ctx['assistant_message'] = {
                     'content': serialize_output(output),
                     'output': output,
-                    **({'usage': usage} if usage else {}),
+                    # Full per-call usage so outlet() filters can read every
+                    # tool-turn (a list for tool loops, else a single object).
+                    **({'usage': usage_final} if usage_final else {}),
                 }
                 await outlet_filter_handler(ctx)
                 await background_tasks_handler(ctx)

@@ -15,6 +15,7 @@ from sqlalchemy import (
     Index,
     Integer,
     Text,
+    case,
     cast,
     delete,
     func,
@@ -45,28 +46,67 @@ def _normalize_timestamp(timestamp: int) -> float:
     return timestamp
 
 
-def get_usage(data: dict) -> Optional[dict]:
-    """Extract and normalize usage from message data."""
+def get_usage(data: dict):
+    """Extract and normalize usage from message data.
+
+    A native tool-call loop persists one usage object per LLM call, so usage
+    may be a *list* of objects; a normal turn is a single object. Returns the
+    same shape it was given (list or dict), normalized, or None.
+    """
     usage = data.get('usage') or (data.get('info') or {}).get('usage')
-    return normalize_usage(usage) if usage else None
+    if not usage:
+        return None
+    if isinstance(usage, list):
+        return [normalize_usage(u) for u in usage if u]
+    return normalize_usage(usage)
 
 
 def _token_columns(dialect: str):
     """Return (input_tokens, output_tokens) SQL column expressions.
 
-    Falls back to OpenAI-style keys (prompt_tokens / completion_tokens)
-    when the normalized keys are absent.
+    ``usage`` is normally a single object, but a native tool-call loop stores
+    a list with one usage object per LLM call. When it's a list, sum the
+    tokens across the calls so analytics counts the true total; when it's an
+    object, read it directly. Falls back to OpenAI-style keys (prompt_tokens /
+    completion_tokens) when the normalized keys are absent.
     """
     if dialect == 'sqlite':
-        extract = lambda key: cast(func.json_extract(ChatMessage.usage, f'$.{key}'), Integer)
+        scalar = lambda key: cast(func.json_extract(ChatMessage.usage, f'$.{key}'), Integer)
+        is_list = func.json_type(ChatMessage.usage) == 'array'
+
+        def list_sum(norm, fallback):
+            elem = func.json_each(ChatMessage.usage).table_valued('value', joins_implicitly=True)
+            token = func.coalesce(
+                cast(func.json_extract(elem.c.value, f'$.{norm}'), Integer),
+                cast(func.json_extract(elem.c.value, f'$.{fallback}'), Integer),
+            )
+            return select(func.coalesce(func.sum(token), 0)).scalar_subquery()
+
     elif dialect == 'postgresql':
-        extract = lambda key: cast(func.json_extract_path_text(ChatMessage.usage, key), Integer)
+        scalar = lambda key: cast(func.json_extract_path_text(ChatMessage.usage, key), Integer)
+        is_list = func.json_typeof(ChatMessage.usage) == 'array'
+
+        def list_sum(norm, fallback):
+            elem = func.json_array_elements(ChatMessage.usage).table_valued('value', joins_implicitly=True)
+            token = func.coalesce(
+                cast(func.json_extract_path_text(elem.c.value, norm), Integer),
+                cast(func.json_extract_path_text(elem.c.value, fallback), Integer),
+            )
+            return select(func.coalesce(func.sum(token), 0)).scalar_subquery()
+
     else:
         raise NotImplementedError(f'Unsupported dialect: {dialect}')
 
+    def column(norm, fallback):
+        # Per row: sum the per-call list, or read the single object.
+        return case(
+            (is_list, list_sum(norm, fallback)),
+            else_=func.coalesce(scalar(norm), scalar(fallback)),
+        )
+
     return (
-        func.coalesce(extract('input_tokens'), extract('prompt_tokens')),
-        func.coalesce(extract('output_tokens'), extract('completion_tokens')),
+        column('input_tokens', 'prompt_tokens'),
+        column('output_tokens', 'completion_tokens'),
     )
 
 
@@ -140,7 +180,7 @@ class ChatMessageModel(BaseModel):
     done: bool = True
     status_history: Optional[list] = None
     error: Optional[dict | str] = None
-    usage: Optional[dict] = None
+    usage: Optional[dict | list] = None  # list = one object per call (tool loops)
     created_at: int
     updated_at: int
 
@@ -194,11 +234,16 @@ class ChatMessageTable:
                     existing.error = data.get('error')
                 # Extract and normalize usage
                 usage = get_usage(data)
-                if usage:
-                    # Deep-merge: preserve existing keys not present in new data
-                    # This prevents background tasks (follow-ups, title, tags)
-                    # from accidentally clearing the primary response's token counts
-                    existing.usage = {**(existing.usage or {}), **usage}
+                if usage is not None:
+                    if isinstance(usage, dict) and not isinstance(existing.usage, list):
+                        # Deep-merge: preserve existing keys not present in new data
+                        # This prevents background tasks (follow-ups, title, tags)
+                        # from accidentally clearing the primary response's token counts
+                        existing.usage = {**(existing.usage or {}), **usage}
+                    else:
+                        # Native tool loop persists a list (one object per LLM
+                        # call) — store it as-is rather than dict-merging.
+                        existing.usage = usage
                 existing.updated_at = now
                 await db.commit()
                 await db.refresh(existing)

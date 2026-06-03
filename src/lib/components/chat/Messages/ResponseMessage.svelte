@@ -113,6 +113,9 @@
 			load_duration?: number;
 			usage?: unknown;
 		};
+		// Single object for a normal turn, or one object per LLM call for a
+		// native tool-call loop (the UI shows only the last call).
+		usage?: Record<string, any> | Record<string, any>[];
 		annotation?: { type: string; rating: number };
 	}
 
@@ -135,6 +138,11 @@
 			}
 		}
 	}
+
+	// A native tool-call loop persists `usage` as a list (one object per LLM
+	// call); only the final call is the visible answer, so show that one. A
+	// normal turn keeps `usage` as a single object.
+	$: usageInfo = Array.isArray(message?.usage) ? message.usage.at(-1) : message?.usage;
 
 	export let siblings;
 
@@ -1142,11 +1150,11 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage}
+								{#if usageInfo}
 									<Tooltip
-										content={message.usage
+										content={usageInfo
 											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
+													JSON.stringify(usageInfo, null, 2)
 														.replace(/"([^(")"]+)":/g, '$1:')
 														.slice(1, -1)
 														.split('\n')
