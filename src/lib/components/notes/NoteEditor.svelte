@@ -618,6 +618,7 @@ ${content}
 		});
 
 		if (res) {
+			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			toast.success($i18n.t('Note deleted successfully'));
 			goto('/notes');
 		} else {
