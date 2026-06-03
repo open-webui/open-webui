@@ -3,7 +3,8 @@
 	import { marked } from 'marked';
 
 	import { getAdminDetails } from '$lib/apis/auths';
-	import { onMount, tick, getContext } from 'svelte';
+	import { performSignOut } from '$lib/utils/signout';
+	import { onMount, getContext } from 'svelte';
 	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
@@ -69,10 +70,8 @@
 
 					<button
 						class="text-xs text-center w-full mt-2 text-gray-400 underline"
-						on:click={async () => {
-							localStorage.removeItem('token');
-							location.href = '/auth';
-						}}>{$i18n.t('Sign Out')}</button
+						type="button"
+						on:click={performSignOut}>{$i18n.t('Sign Out')}</button
 					>
 				</div>
 			</div>
