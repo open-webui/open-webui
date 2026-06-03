@@ -2474,8 +2474,11 @@
 
 				session_id: $socket?.id,
 				chat_id: _chatId || undefined,
-				folder_id: resolvedWorkspaceId ? null : ($selectedFolder?.id ?? undefined),
-				...(resolvedWorkspaceId ? { workspace_id: resolvedWorkspaceId } : {}),
+				...(resolvedWorkspaceId
+					? { workspace_id: resolvedWorkspaceId }
+					: $selectedFolder?.id
+						? { folder_id: $selectedFolder.id }
+						: {}),
 
 				id: responseMessageId,
 				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
