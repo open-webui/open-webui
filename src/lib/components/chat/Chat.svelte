@@ -1556,11 +1556,15 @@
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
+		const capturedTaskIds = taskIds;
 		if ($chatId == _chatId && !$temporaryChatEnabled) {
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
-		taskIds = null;
+		// Don't clobber task ids a concurrent sendMessage registered while we were suspended.
+		if (taskIds === capturedTaskIds) {
+			taskIds = null;
+		}
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -2529,11 +2533,8 @@
 			} else {
 				// Backend returns task_ids (multi-model) or task_id (single model)
 				const newTaskIds = res.task_ids ?? (res.task_id ? [res.task_id] : []);
-				if (taskIds) {
-					taskIds.push(...newTaskIds);
-				} else {
-					taskIds = newTaskIds;
-				}
+				// New array each write so the snapshot guard in chatCompletedHandler can detect it.
+				taskIds = [...(taskIds ?? []), ...newTaskIds];
 
 				// Backend returns chat_id for new chats — set store + URL.
 				// Only update if the user hasn't navigated to a different chat
