@@ -1595,7 +1595,11 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
             files = form_data.get('files', [])
 
             if results.get('collection_names'):
+                web_search_collection_names = set(
+                    getattr(request.state, 'web_search_collection_names', set())
+                )
                 for col_idx, collection_name in enumerate(results.get('collection_names')):
+                    web_search_collection_names.add(collection_name)
                     files.append(
                         {
                             'collection_name': collection_name,
@@ -1605,6 +1609,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
                             'queries': queries,
                         }
                     )
+                request.state.web_search_collection_names = web_search_collection_names
             elif results.get('docs'):
                 # Invoked when bypass embedding and retrieval is set to True
                 docs = results['docs']
