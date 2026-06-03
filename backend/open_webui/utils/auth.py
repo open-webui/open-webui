@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from typing import Optional, Union
 
 import bcrypt
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 import jwt
 import pytz
 import requests
@@ -25,6 +27,7 @@ from open_webui.env import (
     ENABLE_PASSWORD_VALIDATION,
     LICENSE_BLOB,
     OFFLINE_MODE,
+    PASSWORD_HASH_ALGORITHM,
     PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
@@ -157,17 +160,21 @@ def get_license_data(app, key):
 bearer_security = HTTPBearer(auto_error=False)
 
 
+_argon2_hasher = PasswordHasher()
+
+
 def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt"""
+    """Hash a password using the configured algorithm (bcrypt or argon2)."""
+    if PASSWORD_HASH_ALGORITHM == 'argon2':
+        return _argon2_hasher.hash(password)
+    # bcrypt default
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def validate_password(password: str) -> bool:
-    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
-    if len(password.encode('utf-8')) > 72:
-        raise Exception(
-            ERROR_MESSAGES.PASSWORD_TOO_LONG,
-        )
+    # bcrypt silently truncates passwords longer than 72 bytes; reject them explicitly.
+    if PASSWORD_HASH_ALGORITHM == 'bcrypt' and len(password.encode('utf-8')) > 72:
+        raise Exception(ERROR_MESSAGES.PASSWORD_TOO_LONG)
 
     if ENABLE_PASSWORD_VALIDATION:
         if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
@@ -177,14 +184,18 @@ def validate_password(password: str) -> bool:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return (
-        bcrypt.checkpw(
-            plain_password.encode('utf-8'),
-            hashed_password.encode('utf-8'),
-        )
-        if hashed_password
-        else None
+    """Verify a password against its hash, auto-detecting bcrypt or argon2."""
+    if not hashed_password:
+        return False
+    if hashed_password.startswith('$argon2'):
+        try:
+            return _argon2_hasher.verify(hashed_password, plain_password)
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            return False
+    # Fall back to bcrypt for existing hashes
+    return bcrypt.checkpw(
+        plain_password.encode('utf-8'),
+        hashed_password.encode('utf-8'),
     )
 
 
