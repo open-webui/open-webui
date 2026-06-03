@@ -196,6 +196,10 @@
 						} catch (error) {
 							console.log('Error parsing dataTransfer:', error);
 						}
+
+						// Only process the first non-file item; all share the same
+						// text/plain payload, so continuing would duplicate the move.
+						break;
 					}
 				}
 			}
@@ -233,6 +237,7 @@
 				id: folderId
 			})
 		);
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
 
 		dragged = true;
 		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
