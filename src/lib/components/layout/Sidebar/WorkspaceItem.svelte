@@ -10,9 +10,12 @@
 		showSidebar,
 		activeWorkspaceId,
 		chatId,
-		workspaceChatsRefreshKey
+		workspaceChatsRefreshKey,
+		user,
+		governanceCapabilities
 	} from '$lib/stores';
 	import { getWorkspaceChats } from '$lib/apis/workspaces';
+	import { canManageWorkspace, canWriteWorkspace } from '$lib/utils/governance';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Users from '$lib/components/icons/Users.svelte';
@@ -27,6 +30,8 @@
 	let open = false;
 	let chats: any[] = [];
 	let lastRefreshKey = -1;
+	$: canWrite = canWriteWorkspace(workspace, $user, $governanceCapabilities);
+	$: canManage = canManageWorkspace(workspace, $user, $governanceCapabilities);
 
 	const openWorkspace = async () => {
 		open = !open;
@@ -88,14 +93,16 @@
 
 		<div class="flex items-center gap-1 shrink-0">
 			<!-- Manage button (hover only) -->
-			<button
-				type="button"
-				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto invisible group-hover:visible"
-				title={$i18n.t('Manage workspace')}
-				on:click|stopPropagation={onManage}
-			>
-				<Cog6 className="size-3.5" />
-			</button>
+			{#if canManage}
+				<button
+					type="button"
+					class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto invisible group-hover:visible"
+					title={$i18n.t('Manage workspace')}
+					on:click|stopPropagation={onManage}
+				>
+					<Cog6 className="size-3.5" />
+				</button>
+			{/if}
 
 			<!-- Chevron -->
 			<svg
@@ -116,15 +123,17 @@
 	<!-- Chat list (shown when workspace is open) -->
 	{#if open}
 		<div class="ml-2 mt-0.5 flex flex-col gap-0.5">
-			<button
-				type="button"
-				class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
-				       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
-				       line-clamp-1 cursor-pointer select-none"
-				on:click={newWorkspaceChat}
-			>
-				<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
-			</button>
+			{#if canWrite}
+				<button
+					type="button"
+					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
+					       line-clamp-1 cursor-pointer select-none"
+					on:click={newWorkspaceChat}
+				>
+					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
+				</button>
+			{/if}
 			{#if chats.length === 0}
 				<div class="px-3 py-1 text-xs text-gray-400 dark:text-gray-600 italic">
 					{$i18n.t('No chats yet')}

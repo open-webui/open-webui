@@ -36,6 +36,10 @@ from open_webui.models.workspaces import (
     WORKSPACE_ROLE_MANAGER,
 )
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.governance import (
+    assert_workspace_create_allowed,
+    can_access_all_workspaces,
+)
 
 log = logging.getLogger(__name__)
 
@@ -57,17 +61,38 @@ async def assert_workspace_access(
     Raise 403/404 if the user does not have the required access level.
     Returns the membership row on success.
 
-    NOTE: Admin platform role does NOT bypass workspace membership in V1.
-          CEOs/admins must be explicitly added as members. If the deploying
-          team later decides admins should see all workspaces, add
-          ``user.role == 'admin'`` bypass here and document it.
+    NOTE: Workspace chat read/write requires explicit membership unless the
+          user has CEO all-workspace access. Platform admins bypass only
+          workspace management actions so they can create/update/delete
+          workspaces and manage members operationally.
     """
     workspace = await Workspaces.get_by_id(workspace_id, db=db)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     member = await WorkspaceMembers.get(workspace_id, user.id, db=db)
+    all_workspace_access = await can_access_all_workspaces(user, db=db)
+
+    if required_action == "manage" and (getattr(user, "role", None) == "admin" or all_workspace_access):
+        return member or WorkspaceMemberModel(
+            id="governance",
+            workspace_id=workspace_id,
+            user_id=user.id,
+            role=WORKSPACE_ROLE_MANAGER,
+            created_at=0,
+            updated_at=0,
+        )
+
     if member is None:
+        if all_workspace_access and required_action in {"read", "write"}:
+            return WorkspaceMemberModel(
+                id="governance",
+                workspace_id=workspace_id,
+                user_id=user.id,
+                role=WORKSPACE_ROLE_MANAGER,
+                created_at=0,
+                updated_at=0,
+            )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     if required_action == "write" and member.role not in WORKSPACE_WRITE_ROLES:
@@ -112,7 +137,9 @@ async def create_workspace(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Create a new workspace; creator is automatically added as manager (atomic)."""
+    """Create a new workspace; admin-only; creator is automatically added as manager (atomic)."""
+    await assert_workspace_create_allowed(user, db=db)
+
     try:
         now = int(time.time())
         ws_id = str(uuid_lib.uuid4())
@@ -152,7 +179,10 @@ async def list_workspaces(
 ):
     """List workspaces the current user is a member of, each with my_role populated."""
     try:
-        workspace_list = await Workspaces.get_for_user(user.id, db=db)
+        if getattr(user, "role", None) == "admin" or await can_access_all_workspaces(user, db=db):
+            workspace_list = await Workspaces.get_all(db=db)
+        else:
+            workspace_list = await Workspaces.get_for_user(user.id, db=db)
         return [await _workspace_response(ws, user.id, db) for ws in workspace_list]
     except Exception as e:
         log.exception(e)
@@ -211,8 +241,13 @@ async def list_workspace_members(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """List all members with display_name and email; accessible to all workspace members."""
-    await assert_workspace_access(workspace_id, user, "read", db)
+    """List all members with display_name and email; accessible to members and admins."""
+    if getattr(user, "role", None) == "admin" or await can_access_all_workspaces(user, db=db):
+        workspace = await Workspaces.get_by_id(workspace_id, db=db)
+        if workspace is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    else:
+        await assert_workspace_access(workspace_id, user, "read", db)
     members = await WorkspaceMembers.list_members(workspace_id, db=db)
     return [await _member_response(m, db) for m in members]
 

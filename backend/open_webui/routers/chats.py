@@ -37,6 +37,11 @@ from pydantic import BaseModel
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.governance import (
+    assert_private_chat_allowed,
+    can_access_all_workspaces,
+    can_use_private_chat,
+)
 from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
 
 # Company custom: Team Workspaces V1
@@ -75,8 +80,14 @@ async def _ws_check(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     member = await WorkspaceMembers.get(chat.workspace_id, user.id, db=db)
+    all_workspace_access = await can_access_all_workspaces(user, db=db)
     if member is None:
+        if all_workspace_access and not require_manage:
+            return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    if all_workspace_access and not require_manage:
+        return
 
     if require_manage and member.role not in WORKSPACE_MANAGE_ROLES:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
@@ -88,8 +99,9 @@ async def _ws_check(
 async def assert_chat_read_allowed(chat, user, db: AsyncSession) -> None:
     """
     READ gate for workspace chats.
-    Requires: active workspace + active membership (any role, including viewer).
-    No-op for private chats — preserve existing private-chat logic in each route.
+    Requires: active workspace + active membership (any role, including viewer)
+    or CEO all-workspace access. No-op for private chats — preserve existing
+    private-chat logic in each route.
     """
     await _ws_check(chat, user, db)
 
@@ -97,10 +109,9 @@ async def assert_chat_read_allowed(chat, user, db: AsyncSession) -> None:
 async def assert_chat_write_allowed(chat, user, db: AsyncSession) -> None:
     """
     WRITE gate for workspace chats.
-    Requires: active workspace + membership with manager or member role.
-    Viewer role is explicitly blocked from all mutations (pin, archive, tag,
-    folder, message update, content update).
-    No-op for private chats.
+    Requires: active workspace plus manager/member role, or CEO all-workspace
+    access. Viewer role is explicitly blocked from all mutations (pin, archive,
+    tag, folder, message update, content update). No-op for private chats.
     """
     await _ws_check(chat, user, db, require_write=True)
 
@@ -108,12 +119,15 @@ async def assert_chat_write_allowed(chat, user, db: AsyncSession) -> None:
 async def assert_workspace_chat_create_allowed(workspace_id: str, user, db: AsyncSession) -> None:
     """
     CREATE gate for chats created with a workspace_id.
-    Requires an active workspace and a member/manager role. Platform admin role
-    does not bypass explicit workspace membership in Team Workspaces V1.
+    Requires an active workspace plus member/manager role, or CEO all-workspace
+    access. Platform admin role does not bypass explicit workspace chat access.
     """
     workspace = await Workspaces.get_by_id(workspace_id, db=db)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if await can_access_all_workspaces(user, db=db):
+        return
 
     member = await WorkspaceMembers.get(workspace_id, user.id, db=db)
     if member is None or member.role not in WORKSPACE_WRITE_ROLES:
@@ -151,6 +165,9 @@ async def get_session_user_chat_list(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
+        if not await can_use_private_chat(user, db=db):
+            return []
+
         if page is not None:
             limit = 60
             skip = (page - 1) * limit
@@ -188,6 +205,9 @@ async def get_session_user_chat_usage_stats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not await can_use_private_chat(user, db=db):
+        return ChatUsageStatsListResponse(items=[], total=0)
+
     try:
         limit = items_per_page
         skip = (page - 1) * limit
@@ -666,6 +686,8 @@ async def create_new_chat(
     if form_data.workspace_id is not None:
         await assert_workspace_chat_create_allowed(form_data.workspace_id, user, db)
         form_data.folder_id = None
+    else:
+        await assert_private_chat_allowed(user, db=db)
 
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
@@ -686,6 +708,8 @@ async def import_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await assert_private_chat_allowed(user, db=db)
+
     try:
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
         return chats
@@ -706,6 +730,9 @@ async def search_user_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     if page is None:
         page = 1
 
@@ -738,6 +765,9 @@ async def search_user_chats(
 async def get_chats_by_folder_id(
     folder_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     folder_ids = [folder_id]
     children_folders = await Folders.get_children_folders_by_id_and_user_id(folder_id, user.id, db=db)
     if children_folders:
@@ -756,6 +786,9 @@ async def get_chat_list_by_folder_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     try:
         limit = 10
         skip = (page - 1) * limit
@@ -778,6 +811,8 @@ async def get_chat_list_by_folder_id(
 
 @router.get('/pinned', response_model=list[ChatTitleIdResponse])
 async def get_user_pinned_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    if not await can_use_private_chat(user, db=db):
+        return []
     return await Chats.get_pinned_chats_by_user_id(user.id, db=db)
 
 
@@ -820,7 +855,8 @@ async def generate_chat_export_ndjson(user_id: str):
 
 
 @router.get('/all')
-async def get_user_chats(user=Depends(get_verified_user)):
+async def get_user_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await assert_private_chat_allowed(user, db=db)
     return StreamingResponse(
         generate_chat_export_ndjson(user.id),
         media_type='application/x-ndjson',
@@ -834,6 +870,8 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 @router.get('/all/archived', response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    if not await can_use_private_chat(user, db=db):
+        return []
     return [ChatResponse(**chat.model_dump()) for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)]
 
 
@@ -844,6 +882,9 @@ async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSess
 
 @router.get('/all/tags', response_model=list[TagModel])
 async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     try:
         tags = await Tags.get_tags_by_user_id(user.id, db=db)
         return tags
@@ -888,6 +929,9 @@ async def get_archived_session_user_chat_list(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     if page is None:
         page = 1
 
@@ -918,6 +962,7 @@ async def get_archived_session_user_chat_list(
 
 @router.post('/archive/all', response_model=bool)
 async def archive_all_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await assert_private_chat_allowed(user, db=db)
     return await Chats.archive_all_chats_by_user_id(user.id, db=db)
 
 
@@ -928,6 +973,7 @@ async def archive_all_chats(user=Depends(get_verified_user), db: AsyncSession = 
 
 @router.post('/unarchive/all', response_model=bool)
 async def unarchive_all_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await assert_private_chat_allowed(user, db=db)
     return await Chats.unarchive_all_chats_by_user_id(user.id, db=db)
 
 
@@ -945,6 +991,9 @@ async def get_shared_session_user_chat_list(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     if page is None:
         page = 1
 
@@ -1054,6 +1103,9 @@ async def get_user_chat_list_by_tag_name(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not await can_use_private_chat(user, db=db):
+        return []
+
     chats = await Chats.get_chat_list_by_user_id_and_tag_name(
         user.id, form_data.name, form_data.skip, form_data.limit, db=db
     )
@@ -1095,6 +1147,7 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
                 chat = await Chats.get_chat_by_id(id, db=db)
 
     if chat:
+        await assert_private_chat_allowed(user, db=db)
         return ChatResponse(**chat.model_dump())
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1132,9 +1185,11 @@ async def update_chat_by_id(
         )
         return ChatResponse(**chat.model_dump())
 
-    # Existing private-chat path (unmodified unless a validated workspace_id is provided)
+    # Existing private-chat path (unless moving into a validated workspace)
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        if not incoming_workspace_id:
+            await assert_private_chat_allowed(user, db=db)
         if incoming_workspace_id:
             await assert_workspace_chat_create_allowed(incoming_workspace_id, user, db)
             form_data.folder_id = None
@@ -1386,6 +1441,7 @@ async def clone_chat_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        await assert_private_chat_allowed(user, db=db)
         # Company custom: Team Workspaces V1 — workspace chats cannot be cloned out of the workspace
         await assert_workspace_chat_not_shareable(chat)
         updated_chat = {
@@ -1472,6 +1528,8 @@ async def clone_shared_chat_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
+    await assert_private_chat_allowed(user, db=db)
+
     updated_chat = {
         **chat.chat,
         'originalChatId': chat.id,
@@ -1554,6 +1612,7 @@ async def share_chat_by_id(
     if chat:
         # Company custom: Team Workspaces V1 — block public sharing for workspace chats
         await assert_workspace_chat_not_shareable(chat)
+        await assert_private_chat_allowed(user, db=db)
         if chat.share_id:
             # Re-snapshot existing share
             shared = await SharedChats.update(chat.share_id, db=db)

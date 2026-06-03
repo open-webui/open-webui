@@ -22,6 +22,7 @@
 	export let show = false;
 	export let workspace: any = null;
 	export let currentUserRole: 'manager' | 'member' | 'viewer' | null = null;
+	export let canManageMembers = false;
 	export let onUpdate: () => void = () => {};
 	export let onDeleted: () => void = () => {};
 
@@ -33,8 +34,12 @@
 	let searchQuery = '';
 	let searchResults: any[] = [];
 	let searching = false;
+	let resolvingAdd = false;
 	let addingUserId: string | null = null;
 	let addRole: 'manager' | 'member' | 'viewer' = 'member';
+
+	$: canManage = canManageMembers || currentUserRole === 'manager';
+	$: addInProgress = resolvingAdd || addingUserId !== null;
 
 	let showDeleteConfirm = false;
 
@@ -54,6 +59,30 @@
 		}
 	};
 
+	const normalizeUsersResponse = (res: any) => (Array.isArray(res) ? res : (res?.users ?? []));
+	const memberIds = () => new Set(members.map((m) => m.user_id));
+	const isExistingMember = (user: any) => memberIds().has(user?.id);
+	const userLabel = (user: any) => user?.email ?? user?.name ?? user?.id ?? '';
+	const readableError = (error: any) => {
+		const message = error?.detail ?? error?.message ?? `${error}`;
+		return typeof message === 'string' ? message : JSON.stringify(message);
+	};
+
+	const searchUsersByQuery = async (query: string, showSpinner = true) => {
+		if (showSpinner) {
+			searching = true;
+		}
+
+		try {
+			const res = await searchUsers(localStorage.token, query);
+			return normalizeUsersResponse(res);
+		} finally {
+			if (showSpinner) {
+				searching = false;
+			}
+		}
+	};
+
 	let searchTimeout: ReturnType<typeof setTimeout>;
 	const onSearchInput = () => {
 		clearTimeout(searchTimeout);
@@ -62,34 +91,84 @@
 			return;
 		}
 		searchTimeout = setTimeout(async () => {
-			searching = true;
 			try {
-				const res = await searchUsers(localStorage.token, searchQuery.trim());
-				const memberIds = new Set(members.map((m) => m.user_id));
-				searchResults = (res ?? []).filter((u: any) => !memberIds.has(u.id));
+				const users = await searchUsersByQuery(searchQuery.trim());
+				const ids = memberIds();
+				searchResults = users.filter((u: any) => !ids.has(u.id));
 			} catch (e) {
 				searchResults = [];
-			} finally {
-				searching = false;
+				toast.error(readableError(e));
 			}
 		}, 300);
 	};
 
-	const addMember = async (userId: string) => {
-		addingUserId = userId;
+	const addMember = async (user: any) => {
+		if (!user?.id) {
+			toast.error($i18n.t('User not found'));
+			return;
+		}
+
+		if (isExistingMember(user)) {
+			toast.error($i18n.t('User is already in this workspace.'));
+			return;
+		}
+
+		addingUserId = user.id;
 		try {
 			await addWorkspaceMember(localStorage.token, workspace.id, {
-				user_id: userId,
+				user_id: user.id,
 				role: addRole
 			});
 			toast.success($i18n.t('Member added'));
 			searchQuery = '';
 			searchResults = [];
 			await loadMembers();
+			onUpdate();
 		} catch (e) {
-			toast.error(`${e}`);
+			const message = readableError(e);
+			toast.error(message.includes('already') ? $i18n.t('User is already in this workspace.') : message);
 		} finally {
 			addingUserId = null;
+		}
+	};
+
+	const addTypedMember = async () => {
+		const query = searchQuery.trim();
+		if (!query || addInProgress) {
+			return;
+		}
+
+		clearTimeout(searchTimeout);
+		resolvingAdd = true;
+		try {
+			const users = await searchUsersByQuery(query, false);
+			const lowerQuery = query.toLowerCase();
+			const exactEmail = users.find((u: any) => (u.email ?? '').toLowerCase() === lowerQuery);
+			const candidates = exactEmail ? [exactEmail] : users;
+			const nonMembers = candidates.filter((u: any) => !isExistingMember(u));
+
+			if (exactEmail && isExistingMember(exactEmail)) {
+				toast.error($i18n.t('User is already in this workspace.'));
+				return;
+			}
+
+			if (nonMembers.length === 1) {
+				await addMember(nonMembers[0]);
+				return;
+			}
+
+			if (users.length === 0 || nonMembers.length === 0) {
+				toast.error($i18n.t('User not found'));
+				searchResults = [];
+				return;
+			}
+
+			searchResults = nonMembers;
+			toast.info($i18n.t('Multiple users found. Select a user from the list.'));
+		} catch (e) {
+			toast.error(readableError(e));
+		} finally {
+			resolvingAdd = false;
 		}
 	};
 
@@ -159,8 +238,8 @@
 			</button>
 		</div>
 
-		<!-- Add member (managers only) -->
-		{#if currentUserRole === 'manager'}
+		<!-- Add member (workspace managers, admins, and CEO all-access users) -->
+		{#if canManage}
 			<div class="flex flex-col gap-2">
 				<label class="text-sm font-medium dark:text-gray-300">{$i18n.t('Add member')}</label>
 				<div class="flex gap-2">
@@ -168,10 +247,17 @@
 						<input
 							bind:value={searchQuery}
 							on:input={onSearchInput}
-							class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+							on:keydown={(event) => {
+								if (event.key === 'Enter') {
+									event.preventDefault();
+									addTypedMember();
+								}
+							}}
+							disabled={addInProgress}
+							class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
 							placeholder={$i18n.t('Search by name or email…')}
 						/>
-						{#if searching}
+						{#if searching || resolvingAdd}
 							<div class="absolute right-2 top-1/2 -translate-y-1/2">
 								<Spinner className="size-3.5" />
 							</div>
@@ -179,7 +265,8 @@
 					</div>
 					<select
 						bind:value={addRole}
-						class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm dark:text-white focus:outline-none"
+						disabled={addInProgress}
+						class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm dark:text-white focus:outline-none disabled:opacity-60"
 					>
 						{#each ROLES as r}
 							<option value={r}>{$i18n.t(r)}</option>
@@ -192,9 +279,9 @@
 						{#each searchResults as u}
 							<button
 								type="button"
-								class="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-200"
-								disabled={addingUserId === u.id}
-								on:click={() => addMember(u.id)}
+								class="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-200 disabled:opacity-60"
+								disabled={addInProgress}
+								on:click={() => addMember(u)}
 							>
 								<div class="flex items-center gap-2 overflow-hidden">
 									<img
@@ -204,7 +291,7 @@
 									/>
 									<div class="overflow-hidden text-left">
 										<div class="line-clamp-1 font-medium">{u.name}</div>
-										<div class="line-clamp-1 text-xs text-gray-400">{u.email}</div>
+										<div class="line-clamp-1 text-xs text-gray-400">{userLabel(u)}</div>
 									</div>
 								</div>
 								{#if addingUserId === u.id}
@@ -254,7 +341,7 @@
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
-								{#if currentUserRole === 'manager'}
+								{#if canManage}
 									<select
 										value={member.role}
 										class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 py-0.5 text-xs dark:text-white focus:outline-none"
@@ -292,8 +379,8 @@
 			{/if}
 		</div>
 
-		<!-- Danger zone (managers only) -->
-		{#if currentUserRole === 'manager'}
+		<!-- Danger zone (workspace managers, admins, and CEO all-access users) -->
+		{#if canManage}
 			<div class="border-t border-gray-100 dark:border-gray-800 pt-3">
 				<button
 					type="button"

@@ -37,7 +37,8 @@
 		showFileNavPath,
 		showFileNavDir,
 		pyodideWorker,
-		desktopEvent
+		desktopEvent,
+		governanceCapabilities
 	} from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
@@ -53,6 +54,7 @@
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
 	import { getSessionUser, updateUserTimezone, userSignOut } from '$lib/apis/auths';
+	import { getGovernanceCapabilities } from '$lib/apis/governance';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 	import {
@@ -748,6 +750,7 @@
 		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
 			const res = await userSignOut();
 			user.set(null);
+			governanceCapabilities.set(null);
 			localStorage.removeItem('token');
 
 			location.href = res?.redirect_url ?? '/auth';
@@ -1037,6 +1040,11 @@
 
 					if (sessionUser) {
 						await user.set(sessionUser);
+						const capabilities = await getGovernanceCapabilities(localStorage.token).catch((error) => {
+							console.error('Error loading governance capabilities:', error);
+							return null;
+						});
+						governanceCapabilities.set(capabilities);
 						try {
 							await config.set(await getBackendConfig());
 						} catch (error) {
@@ -1060,6 +1068,7 @@
 						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
+						governanceCapabilities.set(null);
 						localStorage.removeItem('token');
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}

@@ -91,6 +91,7 @@ from open_webui.routers import (
     folders,
     configs,
     groups,
+    governance,
     files,
     functions,
     memories,
@@ -110,6 +111,7 @@ from open_webui.routers import (
 # Company custom: Team Workspaces V1
 from open_webui.routers import workspaces
 from open_webui.models.workspaces import Workspaces, WorkspaceMembers, WORKSPACE_WRITE_ROLES
+from open_webui.utils.governance import assert_private_chat_allowed, can_access_all_workspaces
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -1450,6 +1452,7 @@ app.include_router(skills.router, prefix='/api/v1/skills', tags=['skills'])
 app.include_router(memories.router, prefix='/api/v1/memories', tags=['memories'])
 app.include_router(folders.router, prefix='/api/v1/folders', tags=['folders'])
 app.include_router(groups.router, prefix='/api/v1/groups', tags=['groups'])
+app.include_router(governance.router, prefix='/api/v1/governance', tags=['governance'])
 app.include_router(files.router, prefix='/api/v1/files', tags=['files'])
 app.include_router(functions.router, prefix='/api/v1/functions', tags=['functions'])
 app.include_router(evaluations.router, prefix='/api/v1/evaluations', tags=['evaluations'])
@@ -1819,9 +1822,11 @@ async def chat_completion(
             member = await WorkspaceMembers.get(metadata['workspace_id'], user.id)
             if workspace is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-            if member is None or member.role not in WORKSPACE_WRITE_ROLES:
+            if not await can_access_all_workspaces(user) and (member is None or member.role not in WORKSPACE_WRITE_ROLES):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
             metadata['folder_id'] = None
+        elif is_new_chat:
+            await assert_private_chat_allowed(user)
 
         if is_new_chat:
             metadata['chat_id'] = str(uuid4())
@@ -1909,18 +1914,28 @@ async def chat_completion(
                         )
 
                     if existing_chat.workspace_id is not None:
+                        if metadata.get('workspace_id') and metadata['workspace_id'] != existing_chat.workspace_id:
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                            )
                         ws = await Workspaces.get_by_id(existing_chat.workspace_id)
                         member = await WorkspaceMembers.get(existing_chat.workspace_id, user.id)
-                        if ws is None or member is None or member.role not in WORKSPACE_WRITE_ROLES:
+                        if ws is None or (
+                            not await can_access_all_workspaces(user)
+                            and (member is None or member.role not in WORKSPACE_WRITE_ROLES)
+                        ):
                             raise HTTPException(
                                 status_code=status.HTTP_404_NOT_FOUND,
                                 detail=ERROR_MESSAGES.DEFAULT(),
                             )
-                    elif existing_chat.user_id != user.id and user.role != 'admin':
-                        raise HTTPException(
-                            status_code=status.HTTP_404_NOT_FOUND,
-                            detail=ERROR_MESSAGES.DEFAULT(),
-                        )
+                    else:
+                        await assert_private_chat_allowed(user)
+                        if existing_chat.user_id != user.id and user.role != 'admin':
+                            raise HTTPException(
+                                status_code=status.HTTP_404_NOT_FOUND,
+                                detail=ERROR_MESSAGES.DEFAULT(),
+                            )
 
                     # Persist chat-level files (knowledge collections, docs, etc.)
                     # The old frontend saveChatHandler did this on every message;
@@ -2071,7 +2086,10 @@ async def chat_completion(
                             if _error_chat.workspace_id is not None:
                                 _ws = await Workspaces.get_by_id(_error_chat.workspace_id)
                                 _mbr = await WorkspaceMembers.get(_error_chat.workspace_id, user.id)
-                                _can_write = _ws is not None and _mbr is not None and _mbr.role in WORKSPACE_WRITE_ROLES
+                                _can_write = _ws is not None and (
+                                    await can_access_all_workspaces(user)
+                                    or (_mbr is not None and _mbr.role in WORKSPACE_WRITE_ROLES)
+                                )
                             else:
                                 _can_write = _error_chat.user_id == user.id or user.role == 'admin'
 
@@ -2351,7 +2369,7 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if chat.workspace_id is not None:
             ws = await Workspaces.get_by_id(chat.workspace_id)
             member = await WorkspaceMembers.get(chat.workspace_id, user.id)
-            if ws is None or member is None:
+            if ws is None or (member is None and not await can_access_all_workspaces(user)):
                 return {'task_ids': []}
         elif chat.user_id != user.id and user.role != 'admin':
             return {'task_ids': []}
@@ -2377,7 +2395,10 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if chat.workspace_id is not None:
             ws = await Workspaces.get_by_id(chat.workspace_id)
             member = await WorkspaceMembers.get(chat.workspace_id, user.id)
-            if ws is None or member is None or member.role not in WORKSPACE_WRITE_ROLES:
+            if ws is None or (
+                not await can_access_all_workspaces(user)
+                and (member is None or member.role not in WORKSPACE_WRITE_ROLES)
+            ):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
         elif chat.user_id != user.id and user.role != 'admin':
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
