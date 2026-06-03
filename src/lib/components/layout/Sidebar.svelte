@@ -32,7 +32,8 @@
 		activeChatIds,
 		// Company custom: Team Workspaces V1
 		workspaces,
-		activeWorkspaceId
+		activeWorkspaceId,
+		governanceCapabilities
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -82,6 +83,7 @@
 	import Code from '../icons/Code.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import { canCreateWorkspace, canManageWorkspace, canUsePrivateChat } from '$lib/utils/governance';
 
 	const BREAKPOINT = 768;
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
@@ -112,6 +114,7 @@
 	let showManageMembers = false;
 	let managingWorkspace: any = null;
 	let managingWorkspaceRole: 'manager' | 'member' | 'viewer' | null = null;
+	let managingWorkspaceCanManage = false;
 
 	let folders = {};
 	let folderRegistry = {};
@@ -119,6 +122,8 @@
 	let newFolderId = null;
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
+	$: privateChatAllowed = canUsePrivateChat($user, $governanceCapabilities);
+	$: workspaceCreateAllowed = canCreateWorkspace($user, $governanceCapabilities);
 
 	const isMenuItemVisible = (id) => {
 		switch (id) {
@@ -783,15 +788,16 @@
 		}
 	}}
 />
-
-<button
-	id="sidebar-new-chat-button"
-	class="hidden"
-	on:click={() => {
-		goto('/');
-		newChatHandler();
-	}}
-/>
+{#if privateChatAllowed}
+	<button
+		id="sidebar-new-chat-button"
+		class="hidden"
+		on:click={() => {
+			goto('/');
+			newChatHandler();
+		}}
+	/>
+{/if}
 
 <svelte:window
 	on:mousemove={(e) => {
@@ -839,8 +845,9 @@
 			</div>
 
 			<div class="-mt-[0.5px]">
-				<div class="">
-					<Tooltip content={$i18n.t('New Chat')} placement="right">
+				{#if privateChatAllowed}
+					<div class="">
+						<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							href="/"
@@ -859,7 +866,8 @@
 							</div>
 						</a>
 					</Tooltip>
-				</div>
+					</div>
+				{/if}
 
 				<div>
 					<Tooltip content={$i18n.t('Search')} placement="right">
@@ -1030,9 +1038,15 @@
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
-					href="/"
+					href={privateChatAllowed ? '/' : '/workspaces'}
 					draggable="false"
-					on:click={newChatHandler}
+					on:click={(e) => {
+						if (privateChatAllowed) newChatHandler();
+						else {
+							e.preventDefault();
+							goto('/workspaces');
+						}
+					}}
 				>
 					<img
 						crossorigin="anonymous"
@@ -1042,7 +1056,17 @@
 					/>
 				</a>
 
-				<a href="/" class="flex flex-1 px-0.5" on:click={newChatHandler}>
+				<a
+					href={privateChatAllowed ? '/' : '/workspaces'}
+					class="flex flex-1 px-0.5"
+					on:click={(e) => {
+						if (privateChatAllowed) newChatHandler();
+						else {
+							e.preventDefault();
+							goto('/workspaces');
+						}
+					}}
+				>
 					<div
 						id="sidebar-webui-name"
 						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
@@ -1087,7 +1111,8 @@
 				}}
 			>
 				<div class="pb-1.5">
-					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+					{#if privateChatAllowed}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
 							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -1106,7 +1131,8 @@
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
 						</a>
-					</div>
+						</div>
+					{/if}
 
 					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<button
@@ -1329,9 +1355,11 @@
 						name={$i18n.t('Team Workspaces')}
 						chevron={false}
 						dragAndDrop={false}
-						onAdd={async () => {
-							showCreateWorkspace = true;
-						}}
+						onAdd={workspaceCreateAllowed
+							? async () => {
+								showCreateWorkspace = true;
+							}
+							: null}
 						onAddLabel={$i18n.t('New Workspace')}
 					>
 						{#each $workspaces as ws (ws.id)}
@@ -1339,8 +1367,9 @@
 								workspace={ws}
 								onManage={() => {
 									managingWorkspace = ws;
-									// Use backend-provided my_role (set by /api/v1/workspaces/ list endpoint)
+									// Use backend-provided my_role plus backend governance capabilities.
 									managingWorkspaceRole = ws.my_role ?? null;
+									managingWorkspaceCanManage = canManageWorkspace(ws, $user, $governanceCapabilities);
 									showManageMembers = true;
 								}}
 							/>
@@ -1365,9 +1394,11 @@
 					bind:show={showManageMembers}
 					workspace={managingWorkspace}
 					currentUserRole={managingWorkspaceRole}
+					canManageMembers={managingWorkspaceCanManage}
 					onUpdate={initWorkspaces}
 					onDeleted={() => {
 						managingWorkspace = null;
+						managingWorkspaceCanManage = false;
 						activeWorkspaceId.set(null);
 					}}
 				/>
@@ -1426,11 +1457,12 @@
 					</Folder>
 				{/if}
 
-				<Folder
-					id="sidebar-chats"
-					className="px-2 mt-0.5"
-					name={$i18n.t('Chats')}
-					chevron={false}
+				{#if privateChatAllowed}
+					<Folder
+						id="sidebar-chats"
+						className="px-2 mt-0.5"
+						name={$i18n.t('Chats')}
+						chevron={false}
 					on:change={async (e) => {
 						selectedFolder.set(null);
 					}}
@@ -1665,6 +1697,7 @@
 						</div>
 					</div>
 				</Folder>
+				{/if}
 			</div>
 
 			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">

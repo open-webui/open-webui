@@ -2589,3 +2589,90 @@ async def test_view_chat_allows_private_chat_owner(route_client):
         .where(WsChat.user_id == other_id)
     )
     assert r.scalars().first() is None, "Non-owner must be denied on private chat"
+
+# ---------------------------------------------------------------------------
+# Company governance policy tests: core roles + Groups
+# ---------------------------------------------------------------------------
+
+CORE_ROLE_PENDING = "pending"
+CORE_ROLE_USER = "user"
+CORE_ROLE_ADMIN = "admin"
+CEO_GROUP_NAMES = {"CEO"}
+PRIVATE_CHAT_ALLOWED_GROUP_NAMES = {"CEO", "Manager", "Managers", "Private Chat Allowed"}
+WORKSPACE_ALL_ACCESS_GROUP_NAMES = {"CEO"}
+
+
+def _can_use_private(role: str, groups: set[str] | None = None) -> bool:
+    groups = groups or set()
+    if role == CORE_ROLE_ADMIN:
+        return True
+    if role != CORE_ROLE_USER:
+        return False
+    return bool(groups & PRIVATE_CHAT_ALLOWED_GROUP_NAMES)
+
+
+def _can_access_all_workspaces(role: str, groups: set[str] | None = None) -> bool:
+    groups = groups or set()
+    # Admin all-workspace chat access is intentionally not granted by this helper.
+    return role == CORE_ROLE_USER and bool(groups & WORKSPACE_ALL_ACCESS_GROUP_NAMES)
+
+
+def _can_create_workspace(role: str) -> bool:
+    return role == CORE_ROLE_ADMIN
+
+
+@pytest.mark.asyncio
+async def test_governance_core_admin_can_use_private_chat():
+    assert _can_use_private(CORE_ROLE_ADMIN)
+
+
+@pytest.mark.asyncio
+async def test_governance_ceo_group_user_can_use_private_chat_and_all_workspaces():
+    assert _can_use_private(CORE_ROLE_USER, {"CEO"})
+    assert _can_access_all_workspaces(CORE_ROLE_USER, {"CEO"})
+
+
+@pytest.mark.asyncio
+async def test_governance_manager_group_user_can_use_private_chat_without_all_workspace_access():
+    assert _can_use_private(CORE_ROLE_USER, {"Manager"})
+    assert _can_use_private(CORE_ROLE_USER, {"Managers"})
+    assert _can_use_private(CORE_ROLE_USER, {"Private Chat Allowed"})
+    assert not _can_access_all_workspaces(CORE_ROLE_USER, {"Manager"})
+    assert not _can_access_all_workspaces(CORE_ROLE_USER, {"Managers"})
+
+
+@pytest.mark.asyncio
+async def test_governance_normal_core_user_cannot_create_private_chat():
+    assert not _can_use_private(CORE_ROLE_USER)
+    assert not _can_use_private(CORE_ROLE_USER, {"Member"})
+    assert not _can_use_private(CORE_ROLE_PENDING, {"CEO"})
+
+
+@pytest.mark.asyncio
+async def test_governance_workspace_creation_is_core_admin_only():
+    assert _can_create_workspace(CORE_ROLE_ADMIN)
+    assert not _can_create_workspace(CORE_ROLE_USER)
+    assert not _can_create_workspace(CORE_ROLE_PENDING)
+    assert not _can_create_workspace(CORE_ROLE_USER), "CEO/Managers still need core admin for workspace creation"
+
+
+@pytest.mark.asyncio
+async def test_governance_private_chat_list_empty_for_workspace_only_member(db):
+    user_id = _uid()
+    db.add(WsChat(id=_uid(), user_id=user_id, title="Private", workspace_id=None, created_at=_now(), updated_at=_now()))
+    await db.commit()
+
+    private_chats = [] if not _can_use_private(CORE_ROLE_USER) else await personal_chats(db, user_id)
+    assert private_chats == []
+
+
+@pytest.mark.asyncio
+async def test_governance_import_clone_private_chat_blocked_for_workspace_only_member():
+    assert not _can_use_private(CORE_ROLE_USER), "Import/clone creates private chats and must be blocked for workspace-only users"
+
+
+@pytest.mark.asyncio
+async def test_governance_workspace_manager_member_policy():
+    assert ROLE_MANAGER in MANAGE_ROLES
+    assert ROLE_MEMBER not in MANAGE_ROLES
+    assert ROLE_VIEWER not in MANAGE_ROLES

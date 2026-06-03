@@ -206,6 +206,19 @@ class WorkspacesTable:
             )
             return [WorkspaceModel.model_validate(r) for r in result.scalars().all()]
 
+
+    async def get_all(
+        self, db: Optional[AsyncSession] = None
+    ) -> list[WorkspaceModel]:
+        """Return all non-deleted workspaces for operational/all-access views."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Workspace)
+                .where(Workspace.deleted_at.is_(None))
+                .order_by(Workspace.updated_at.desc())
+            )
+            return [WorkspaceModel.model_validate(r) for r in result.scalars().all()]
+
     async def update(
         self,
         workspace_id: str,
