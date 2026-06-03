@@ -927,15 +927,15 @@ def get_embedding_function(
     concurrent_requests=0,
 ) -> Awaitable:
     if embedding_engine == '':
-        if embedding_function is None:
-            raise ValueError(
-                'No embedding model is loaded. Set RAG_EMBEDDING_MODEL to a valid '
-                'SentenceTransformer model name, or configure an external '
-                'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
-            )
-
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
+            # Deferred so a missing local model degrades RAG instead of crashing boot.
+            if embedding_function is None:
+                raise ValueError(
+                    'No embedding model is loaded. Set RAG_EMBEDDING_MODEL to a valid '
+                    'SentenceTransformer model name, or configure an external '
+                    'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
+                )
             return await asyncio.to_thread(
                 (
                     lambda query, prefix=None: embedding_function.encode(
