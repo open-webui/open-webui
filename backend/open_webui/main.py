@@ -1674,6 +1674,14 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     return await generate_embeddings(request, form_data, user)
 
 
+def is_temporary_chat_id(chat_id) -> bool:
+    return isinstance(chat_id, str) and (chat_id.startswith('local:') or chat_id.startswith('channel:'))
+
+
+def is_persisted_chat_id(chat_id) -> bool:
+    return isinstance(chat_id, str) and chat_id != '' and not is_temporary_chat_id(chat_id)
+
+
 @app.post('/api/chat/completions')
 @app.post('/api/v1/chat/completions')  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
@@ -1766,15 +1774,24 @@ async def chat_completion(
             form_data.pop('id', None)
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
+        chat_id = form_data.pop('chat_id', None)
+        chat_id = chat_id.strip() if isinstance(chat_id, str) and chat_id.strip() else None
+
+        folder_id = form_data.pop('folder_id', None)
+        folder_id = folder_id.strip() if isinstance(folder_id, str) and folder_id.strip() else None
+
+        workspace_id = form_data.pop('workspace_id', None)
+        workspace_id = workspace_id.strip() if isinstance(workspace_id, str) and workspace_id.strip() else None
+
         metadata = {
             'user_id': user.id,
-            'chat_id': form_data.pop('chat_id', None),
+            'chat_id': chat_id,
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
             'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
-            'folder_id': form_data.pop('folder_id', None),
-            'workspace_id': form_data.pop('workspace_id', None),
+            'folder_id': folder_id,
+            'workspace_id': workspace_id,
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
             'tool_servers': form_data.pop('tool_servers', None),
@@ -1811,9 +1828,7 @@ async def chat_completion(
 
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
-            if not chat_id.startswith('local:') and not chat_id.startswith(
-                'channel:'
-            ):  # temporary/channel chats are not stored
+            if is_persisted_chat_id(chat_id):  # temporary/channel chats are not stored
                 if is_new_chat:
                     # Build the full history upfront with ALL assistant placeholders
                     user_message = metadata.get('user_message') or {}
@@ -2046,7 +2061,7 @@ async def chat_completion(
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
-                    if not metadata['chat_id'].startswith('local:') and not metadata['chat_id'].startswith('channel:'):
+                    if is_persisted_chat_id(metadata.get('chat_id')):
                         # Company custom: Team Workspaces V1 — re-verify write access before
                         # writing error payload. An auth failure earlier in the pipeline must
                         # not be followed by an unguarded DB write into the same chat.
@@ -2323,7 +2338,7 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
 
 @app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    if is_temporary_chat_id(chat_id):
         socket_id = chat_id[len('local:') :]
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
@@ -2349,7 +2364,7 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    if is_temporary_chat_id(chat_id):
         socket_id = chat_id[len('local:') :]
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':

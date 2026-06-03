@@ -25,6 +25,14 @@ from fastapi.responses import HTMLResponse
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
+
+def is_temporary_chat_id(chat_id: Any) -> bool:
+    return isinstance(chat_id, str) and (chat_id.startswith('local:') or chat_id.startswith('channel:'))
+
+
+def is_persisted_chat_id(chat_id: Any) -> bool:
+    return isinstance(chat_id, str) and chat_id != '' and not is_temporary_chat_id(chat_id)
+
 from open_webui.utils.misc import is_string_allowed
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
@@ -1708,7 +1716,7 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     """
     Add file URLs to messages for native function calling.
     """
-    if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    if not is_persisted_chat_id(chat_id):
         return messages
 
     chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -1764,7 +1772,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
 
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    if is_temporary_chat_id(chat_id):
         message_list = form_data.get('messages', [])
     else:
         chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -2296,7 +2304,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
 
-    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
+    if is_persisted_chat_id(chat_id) and user_message_id:
         db_messages = await load_messages_from_db(chat_id, user_message_id)
         if db_messages:
             # Continue: frontend sends assistant_message_id when continuing
@@ -2394,14 +2402,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Uses lightweight column query — only fetches folder_id, not the full chat JSON blob
     chat_id = metadata.get('chat_id', None)
     folder_id = None
-    if chat_id and user:
+    if is_persisted_chat_id(chat_id) and user:
         folder_id = await Chats.get_chat_folder_id(chat_id, user.id)
 
     # Fallback: use folder_id from metadata (temporary chats have no DB record)
     if not folder_id:
         folder_id = metadata.get('folder_id', None)
 
-    if folder_id and user:
+    if isinstance(folder_id, str) and folder_id.strip() and user:
         folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
 
         if folder and folder.data:
@@ -3058,11 +3066,7 @@ async def background_tasks_handler(ctx):
     message = None
     messages = []
 
-    if (
-        'chat_id' in metadata
-        and not metadata['chat_id'].startswith('local:')
-        and not metadata['chat_id'].startswith('channel:')
-    ):
+    if is_persisted_chat_id(metadata.get('chat_id')):
         messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
         message = messages_map.get(metadata['message_id']) if messages_map else None
 
@@ -3142,9 +3146,7 @@ async def background_tasks_handler(ctx):
                             }
                         )
 
-                        if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
-                            'chat_id', ''
-                        ).startswith('channel:'):
+                        if is_persisted_chat_id(metadata.get('chat_id')):
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
                                 metadata['message_id'],
@@ -3156,9 +3158,7 @@ async def background_tasks_handler(ctx):
                     except Exception as e:
                         pass
 
-            if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith(
-                'channel:'
-            ):  # Only update titles and tags for non-temp chats
+            if is_persisted_chat_id(metadata.get('chat_id')):  # Only update titles and tags for non-temp chats
                 if TASKS.TITLE_GENERATION in tasks:
                     user_message = get_last_user_message(messages)
                     if user_message and len(user_message) > 100:
@@ -3282,7 +3282,7 @@ async def outlet_filter_handler(ctx):
     if not chat_id or not message_id:
         return
 
-    is_temp_chat = chat_id.startswith('local:') or chat_id.startswith('channel:')
+    is_temp_chat = is_temporary_chat_id(chat_id)
 
     try:
         messages_map = None
@@ -3424,7 +3424,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 log.error('Provider returned error (non-streaming): %s', error)
 
-                if not metadata['chat_id'].startswith('channel:'):
+                if is_persisted_chat_id(metadata.get('chat_id')):
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
@@ -3440,7 +3440,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-            if 'selected_model_id' in response_data and not metadata['chat_id'].startswith('channel:'):
+            if 'selected_model_id' in response_data and is_persisted_chat_id(metadata.get('chat_id')):
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata['chat_id'],
                     metadata['message_id'],
@@ -3463,7 +3463,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     title = (
                         await Chats.get_chat_title_by_id(metadata['chat_id'])
-                        if not metadata['chat_id'].startswith('channel:')
+                        if is_persisted_chat_id(metadata.get('chat_id'))
                         else ''
                     )
 
@@ -3496,7 +3496,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
-                    if not metadata['chat_id'].startswith('channel:'):
+                    if is_persisted_chat_id(metadata.get('chat_id')):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -4362,7 +4362,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             if end:
                                                 break
 
-                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata['chat_id'].startswith('channel:'):
+                                        if ENABLE_REALTIME_CHAT_SAVE and is_persisted_chat_id(metadata.get('chat_id')):
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata['chat_id'],
@@ -5040,7 +5040,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 title = (
                     await Chats.get_chat_title_by_id(metadata['chat_id'])
-                    if not metadata['chat_id'].startswith('channel:')
+                    if is_persisted_chat_id(metadata.get('chat_id'))
                     else ''
                 )
                 data = {
@@ -5051,7 +5051,7 @@ async def streaming_chat_response_handler(response, ctx):
                     **({'usage': usage} if usage else {}),
                 }
 
-                if not metadata['chat_id'].startswith('channel:'):
+                if is_persisted_chat_id(metadata.get('chat_id')):
                     if not ENABLE_REALTIME_CHAT_SAVE:
                         # Save message in the database
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5122,7 +5122,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
-                    if not metadata['chat_id'].startswith('channel:'):
+                    if is_persisted_chat_id(metadata.get('chat_id')):
                         if not ENABLE_REALTIME_CHAT_SAVE:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
