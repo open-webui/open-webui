@@ -134,6 +134,12 @@ async def calculate_timestamp(
 
         from dateutil.relativedelta import relativedelta
 
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        days_ago = int(days_ago)
+        weeks_ago = int(weeks_ago)
+        months_ago = int(months_ago)
+        years_ago = int(years_ago)
+
         now = datetime.datetime.now(datetime.timezone.utc)
         current_ts = int(now.timestamp())
 
@@ -171,6 +177,12 @@ async def calculate_timestamp(
     except ImportError:
         # Fallback without dateutil
         import datetime
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        days_ago = int(days_ago)
+        weeks_ago = int(weeks_ago)
+        months_ago = int(months_ago)
+        years_ago = int(years_ago)
 
         now = datetime.datetime.now(datetime.timezone.utc)
         current_ts = int(now.timestamp())
@@ -227,6 +239,9 @@ async def search_web(
     try:
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count) if count is not None else None
 
         configured = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT
         max_count = 5 if configured is None else configured
@@ -610,6 +625,9 @@ async def search_memories(
         return json.dumps({'error': 'Request context not available'})
 
     try:
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+
         user = UserModel(**__user__) if __user__ else None
 
         results = await query_memory(
@@ -799,6 +817,11 @@ async def search_notes(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+        start_timestamp = int(start_timestamp) if start_timestamp is not None else None
+        end_timestamp = int(end_timestamp) if end_timestamp is not None else None
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
@@ -1078,6 +1101,11 @@ async def search_chats(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+        start_timestamp = int(start_timestamp) if start_timestamp is not None else None
+        end_timestamp = int(end_timestamp) if end_timestamp is not None else None
         user_id = __user__.get('id')
 
         chats = await Chats.get_chats_by_user_id_and_search_text(
@@ -1224,6 +1252,9 @@ async def search_channels(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
         user_id = __user__.get('id')
 
         # Get all channels the user has access to
@@ -1280,6 +1311,11 @@ async def search_channel_messages(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+        start_timestamp = int(start_timestamp) if start_timestamp is not None else None
+        end_timestamp = int(end_timestamp) if end_timestamp is not None else None
         user_id = __user__.get('id')
 
         # Get all channels the user has access to
@@ -1506,6 +1542,10 @@ async def list_knowledge_bases(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+        skip = int(skip)
         from open_webui.models.knowledge import Knowledges
 
         user_id = __user__.get('id')
@@ -1565,6 +1605,10 @@ async def search_knowledge_bases(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+        skip = int(skip)
         from open_webui.models.knowledge import Knowledges
 
         user_id = __user__.get('id')
@@ -1628,6 +1672,10 @@ async def search_knowledge_files(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
+        skip = int(skip)
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
@@ -1977,6 +2025,12 @@ async def view_file(
     offset = max(offset, 0)
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        offset = int(offset)
+        max_chars = int(max_chars)
+        start_line = int(start_line) if start_line is not None else None
+        end_line = int(end_line) if end_line is not None else None
         from open_webui.models.files import Files
 
         user_id = __user__.get('id')
@@ -2092,6 +2146,12 @@ async def view_knowledge_file(
     offset = max(offset, 0)
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        offset = int(offset)
+        max_chars = int(max_chars)
+        start_line = int(start_line) if start_line is not None else None
+        end_line = int(end_line) if end_line is not None else None
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
@@ -2241,6 +2301,10 @@ async def list_knowledge(
     count = min(count, 200)
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        skip = int(skip)
+        count = int(count)
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
@@ -2379,6 +2443,9 @@ async def query_knowledge_files(
                 knowledge_ids = [knowledge_ids]
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
@@ -2538,6 +2605,9 @@ async def query_knowledge_bases(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
         import heapq
 
         from open_webui.models.knowledge import Knowledges
@@ -3019,6 +3089,9 @@ async def list_automations(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
         from open_webui.models.automations import Automations
         from open_webui.models.users import Users
         from open_webui.utils.automations import next_n_runs_ns
@@ -3242,6 +3315,9 @@ async def search_calendar_events(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        count = int(count)
         from open_webui.models.calendar import CalendarEvents
 
         user_id = __user__.get('id')
@@ -3345,6 +3421,9 @@ async def create_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        reminder_minutes = int(reminder_minutes) if reminder_minutes is not None else None
         from open_webui.models.calendar import CalendarEventForm, CalendarEvents, Calendars
 
         user_id = __user__.get('id')
@@ -3472,6 +3551,9 @@ async def update_calendar_event(
         return json.dumps({'error': 'User context not available'})
 
     try:
+
+        # Coerce numeric params from native tool calling (may arrive as strings)
+        reminder_minutes = int(reminder_minutes) if reminder_minutes is not None else None
         from open_webui.models.access_grants import AccessGrants
         from open_webui.models.calendar import CalendarEvents, CalendarEventUpdateForm, Calendars
         from open_webui.models.groups import Groups
