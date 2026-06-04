@@ -667,6 +667,17 @@ async def signin(
         )
 
     if user:
+        if request.app.state.config.WEBHOOK_URL:
+            await post_webhook(
+                request.app.state.WEBUI_NAME,
+                request.app.state.config.WEBHOOK_URL,
+                WEBHOOK_MESSAGES.USER_LOGIN(user.name),
+                {
+                    'action': 'login',
+                    'message': WEBHOOK_MESSAGES.USER_LOGIN(user.name),
+                    'user': user.model_dump_json(exclude_none=True),
+                },
+            )
         return await create_session_response(request, user, db, response, set_cookie=True)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
