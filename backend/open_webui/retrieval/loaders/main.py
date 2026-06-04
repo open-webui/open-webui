@@ -530,7 +530,11 @@ class Loader:
                 api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
                 file_path=file_path,
             )
-        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+        elif (
+            self.engine == 'paddleocr_vl'
+            and self.kwargs.get('PADDLEOCR_VL_TOKEN') != ''
+            and file_ext in ['pdf', 'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'webp']
+        ):
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
