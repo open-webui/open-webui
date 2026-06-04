@@ -9,6 +9,9 @@
 	export let suggestionTags = [];
 	export let disabled = false;
 
+	$: tagNames = new Set(tags.map((t) => t.name));
+	$: filteredSuggestionTags = suggestionTags.filter((t) => !tagNames.has(t.name));
+
 	let inputValue = '';
 
 	const addTag = () => {
@@ -36,12 +39,25 @@
 				? 'px-0.5'
 				: ''} text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
 			placeholder={$i18n.t('Add a tag...')}
+			list="suggestionTagOptions"
 			on:keydown={(event) => {
 				if (event.key === 'Enter' || event.key === ' ') {
 					event.preventDefault();
 					addTag();
 				}
 			}}
+			on:input={() => {
+				const value = inputValue.trim();
+				if (value !== '' && filteredSuggestionTags.some((t) => t.name === value)) {
+					addTag();
+				}
+			}}
 		/>
 	{/if}
+
+	<datalist id="suggestionTagOptions">
+		{#each filteredSuggestionTags as tag}
+			<option value={tag.name} />
+		{/each}
+	</datalist>
 </div>
