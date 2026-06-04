@@ -12,6 +12,14 @@ class MESSAGES(str, Enum):
 class WEBHOOK_MESSAGES(str, Enum):
     DEFAULT = lambda msg='': f'{msg if msg else ""}'
     USER_SIGNUP = lambda username='': f'New user signed up: {username}' if username else 'New user signed up'
+    USER_LOGIN = lambda username='': f'User logged in: {username}' if username else 'User logged in'
+    USER_LOGOUT = lambda username='': f'User logged out: {username}' if username else 'User logged out'
+    USER_DELETE = lambda username='': f'User deleted: {username}' if username else 'User deleted'
+    CHAT_CREATE = lambda title='': f'New chat created: {title}' if title else 'New chat created'
+    CHAT_DELETE = lambda title='': f'Chat deleted: {title}' if title else 'Chat deleted'
+    MODEL_ADD = lambda model='': f'Model added: {model}' if model else 'Model added'
+    MODEL_DELETE = lambda model='': f'Model deleted: {model}' if model else 'Model deleted'
+    FILE_UPLOAD = lambda filename='': f'File uploaded: {filename}' if filename else 'File uploaded'
 
 
 class ERROR_MESSAGES(str, Enum):
