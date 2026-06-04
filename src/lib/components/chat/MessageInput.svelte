@@ -32,6 +32,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 		config,
 		showCallOverlay,
 		tools,
+		skills,
 		toolServers,
 		terminalServers,
 		user as _user,
@@ -63,6 +64,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
@@ -74,6 +76,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 
 	import ToolServersModal from './ToolServersModal.svelte';
+	import SkillsModal from './SkillsModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -85,6 +88,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
+	import Keyframes from '../icons/Keyframes.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 	import LightBulb from '../icons/LightBulb.svelte';
 	import Check from '../icons/Check.svelte';
@@ -139,6 +143,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	export let files = [];
 
 	export let selectedToolIds = [];
+	export let selectedSkillIds = [];
 	export let selectedFilterIds = [];
 
 	export let imageGenerationEnabled = false;
@@ -233,6 +238,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 				};
 			}),
 		selectedToolIds,
+		selectedSkillIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
@@ -475,6 +481,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	let suggestions = null;
 
 	let showTools = false;
+	let showSkills = false;
 
 	let loaded = false;
 	let recording = false;
@@ -564,6 +571,9 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 
 	let showToolsButton = false;
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
+
+	let showSkillsButton = false;
+	$: showSkillsButton = ($skills ?? []).some((skill) => skill.is_active);
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -1155,6 +1165,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 			}
 
 			tools.set(await getTools(localStorage.token));
+			skills.set(await getSkills(localStorage.token));
 		};
 		initialize();
 
@@ -1177,6 +1188,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 </script>
 
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+<SkillsModal bind:show={showSkills} {selectedSkillIds} />
 
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
@@ -1717,15 +1729,17 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 											chatInput?.focus();
 										}}
 									>
-										<div
+										<button
+											type="button"
 											id="input-menu-button"
 											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											aria-label={$i18n.t('More')}
 										>
 											<PlusAlt className="size-5.5" />
-										</div>
+										</button>
 									</InputMenu>
 
-									<Dropdown
+										<Dropdown
 									bind:show={showThinkingDropdown}
 									side="bottom"
 									align="start"
@@ -1895,7 +1909,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 									</div>
 								</Dropdown>
 
-									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div
 											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
 										/>
@@ -1907,6 +1921,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 											{showImageGenerationButton}
 											{showCodeInterpreterButton}
 											bind:selectedToolIds
+											bind:selectedSkillIds
 											bind:selectedFilterIds
 											bind:webSearchEnabled
 											bind:imageGenerationEnabled
@@ -1926,12 +1941,14 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 												chatInput?.focus();
 											}}
 										>
-											<div
+											<button
+												type="button"
 												id="integration-menu-button"
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												aria-label={$i18n.t('Integrations')}
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
-											</div>
+											</button>
 										</IntegrationsMenu>
 									{/if}
 
@@ -1975,6 +1992,29 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 
 													<span class="text-sm">
 														{(selectedToolIds ?? []).length}
+													</span>
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if (selectedSkillIds ?? []).length > 0}
+											<Tooltip
+												content={$i18n.t('{{COUNT}} Available Skills', {
+													COUNT: (selectedSkillIds ?? []).length
+												})}
+											>
+												<button
+													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
+													aria-label="Available Skills"
+													type="button"
+													on:click={() => {
+														showSkills = !showSkills;
+													}}
+												>
+													<Keyframes className="size-4" strokeWidth="1.75" />
+
+													<span class="text-sm">
+														{(selectedSkillIds ?? []).length}
 													</span>
 												</button>
 											</Tooltip>
