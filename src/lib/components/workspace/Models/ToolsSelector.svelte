@@ -6,6 +6,7 @@
 	export let tools = [];
 
 	let _tools = {};
+	let searchQuery = '';
 
 	export let selectedToolIds = [];
 
@@ -21,6 +22,12 @@
 			return acc;
 		}, {});
 	});
+
+	$: filteredToolKeys = Object.keys(_tools).filter((id) => {
+		if (!searchQuery.trim()) return true;
+		const q = searchQuery.toLowerCase();
+		return _tools[id].name?.toLowerCase().includes(q) || _tools[id].id?.toLowerCase().includes(q);
+	});
 </script>
 
 <div>
@@ -28,10 +35,21 @@
 		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Tools')}</div>
 	</div>
 
+	{#if Object.keys(_tools).length > 10}
+		<div class="mb-2">
+			<input
+				class="w-full text-sm bg-transparent outline-none border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-1.5 placeholder-gray-400"
+				type="text"
+				placeholder={$i18n.t('Search tools...')}
+				bind:value={searchQuery}
+			/>
+		</div>
+	{/if}
+
 	<div class="flex flex-col mb-1">
 		{#if tools.length > 0}
 			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_tools) as tool, toolIdx}
+				{#each filteredToolKeys as tool, toolIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox

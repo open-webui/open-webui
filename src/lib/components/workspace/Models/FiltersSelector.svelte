@@ -7,6 +7,14 @@
 
 	export let filters = [];
 	export let selectedFilterIds = [];
+
+	let searchQuery = '';
+
+	$: filteredFilters = filters.filter((filter) => {
+		if (!searchQuery.trim()) return true;
+		const q = searchQuery.toLowerCase();
+		return filter.name?.toLowerCase().includes(q) || filter.id?.toLowerCase().includes(q);
+	});
 </script>
 
 {#if filters.length > 0}
@@ -15,10 +23,21 @@
 			<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Filters')}</div>
 		</div>
 
+		{#if filters.length > 10}
+			<div class="mb-2">
+				<input
+					class="w-full text-sm bg-transparent outline-none border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-1.5 placeholder-gray-400"
+					type="text"
+					placeholder={$i18n.t('Search filters...')}
+					bind:value={searchQuery}
+				/>
+			</div>
+		{/if}
+
 		<!-- TODO: Filter order matters -->
 		<div class="flex flex-col">
 			<div class=" flex items-center flex-wrap">
-				{#each filters as filter}
+				{#each filteredFilters as filter}
 					{@const isSelected = filter.is_global || selectedFilterIds.includes(filter.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">

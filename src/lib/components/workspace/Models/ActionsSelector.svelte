@@ -9,6 +9,7 @@
 	export let selectedActionIds = [];
 
 	let _actions = {};
+	let searchQuery = '';
 
 	onMount(() => {
 		_actions = actions.reduce((acc, action) => {
@@ -20,6 +21,14 @@
 			return acc;
 		}, {});
 	});
+
+	$: filteredActionKeys = Object.keys(_actions).filter((id) => {
+		if (!searchQuery.trim()) return true;
+		const q = searchQuery.toLowerCase();
+		return (
+			_actions[id].name?.toLowerCase().includes(q) || _actions[id].id?.toLowerCase().includes(q)
+		);
+	});
 </script>
 
 {#if actions.length > 0}
@@ -28,9 +37,20 @@
 			<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Actions')}</div>
 		</div>
 
+		{#if Object.keys(_actions).length > 10}
+			<div class="mb-2">
+				<input
+					class="w-full text-sm bg-transparent outline-none border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-1.5 placeholder-gray-400"
+					type="text"
+					placeholder={$i18n.t('Search actions...')}
+					bind:value={searchQuery}
+				/>
+			</div>
+		{/if}
+
 		<div class="flex flex-col">
 			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_actions) as action, actionIdx}
+				{#each filteredActionKeys as action, actionIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
