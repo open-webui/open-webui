@@ -34,22 +34,37 @@ def upgrade():
         return
 
     if dialect == 'postgresql':
-        op.execute(
-            f'CREATE INDEX {INDEX_NAME} ON file '
-            "((meta -> 'data' ->> 'knowledge_id')) "
-            "WHERE (data ->> 'status') IN ('pending', 'processing')"
-        )
+        # CONCURRENTLY avoids an ACCESS EXCLUSIVE lock while the index builds,
+        # which matters on large `file` tables (file.data holds full extracted
+        # document content). It cannot run inside a transaction, so use an
+        # autocommit block.
+        with op.get_context().autocommit_block():
+            op.execute(
+                f'CREATE INDEX CONCURRENTLY IF NOT EXISTS {INDEX_NAME} ON file '
+                "((meta -> 'data' ->> 'knowledge_id')) "
+                "WHERE (data ->> 'status') IN ('pending', 'processing')"
+            )
     elif dialect == 'sqlite':
+        # Expression/path must match exactly what SQLAlchemy emits for the
+        # SQLite dialect (nested JSON_EXTRACT/JSON_QUOTE, double-quoted path
+        # keys), otherwise SQLite will not use this index for the ORM query.
         op.execute(
             f'CREATE INDEX {INDEX_NAME} ON file '
-            "(json_extract(meta, '$.data.knowledge_id')) "
-            "WHERE json_extract(data, '$.status') IN ('pending', 'processing')"
+            '(JSON_EXTRACT(JSON_QUOTE(JSON_EXTRACT(meta, \'$."data"\')), \'$."knowledge_id"\')) '
+            'WHERE JSON_EXTRACT(data, \'$."status"\') IN (\'pending\', \'processing\')'
         )
 
 
 def downgrade():
     conn = op.get_bind()
+    dialect = conn.dialect.name
     existing_indexes = {idx['name'] for idx in sa.inspect(conn).get_indexes('file')}
 
-    if INDEX_NAME in existing_indexes:
+    if INDEX_NAME not in existing_indexes:
+        return
+
+    if dialect == 'postgresql':
+        with op.get_context().autocommit_block():
+            op.execute(f'DROP INDEX CONCURRENTLY IF EXISTS {INDEX_NAME}')
+    else:
         op.drop_index(INDEX_NAME, table_name='file')
