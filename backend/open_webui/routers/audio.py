@@ -12,7 +12,7 @@ import os
 import uuid
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import aiofiles
 import aiohttp
@@ -26,7 +26,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -70,6 +70,51 @@ AZURE_MAX_FILE_SIZE: int = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024
 
 SPEECH_CACHE_DIR = CACHE_DIR / 'audio' / 'speech'
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+TRANSCRIPTION_RESPONSE_FORMATS = {'json', 'text', 'srt', 'verbose_json', 'vtt'}
+PLAIN_TEXT_TRANSCRIPTION_RESPONSE_FORMATS = {'text', 'srt', 'vtt'}
+TRANSCRIPTION_RESPONSE_MEDIA_TYPES = {
+    'text': 'text/plain',
+    'srt': 'application/x-subrip',
+    'vtt': 'text/vtt',
+}
+
+
+def normalize_transcription_response_format(response_format: Optional[str]) -> str:
+    if response_format is None:
+        return 'json'
+
+    normalized = response_format.strip().lower()
+    if not normalized:
+        return 'json'
+
+    if normalized not in TRANSCRIPTION_RESPONSE_FORMATS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Invalid response_format. Must be one of: {", ".join(sorted(TRANSCRIPTION_RESPONSE_FORMATS))}',
+        )
+
+    return normalized
+
+
+def extract_transcript_text(result: Any) -> str:
+    if isinstance(result, str):
+        return result.strip()
+
+    if isinstance(result, dict):
+        return str(result.get('text', '')).strip()
+
+    return ''
+
+
+def merge_transcription_results(results: list[Any], response_format: str) -> Any:
+    if len(results) == 1:
+        return results[0]
+
+    separator = '\n\n' if response_format in {'srt', 'vtt'} else ' '
+    return {
+        'text': separator.join([text for text in (extract_transcript_text(result) for result in results) if text]),
+    }
 
 
 def is_audio_conversion_required(file_path):
@@ -645,7 +690,7 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
     return data
 
 
-async def _transcribe_openai(request, file_path, filename, languages, file_dir, id, user=None):
+async def _transcribe_openai(request, file_path, filename, languages, file_dir, id, response_format=None, user=None):
     """Transcribe audio via an OpenAI-compatible STT endpoint."""
     r = None
     try:
@@ -654,6 +699,8 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
             payload = {'model': request.app.state.config.STT_MODEL}
             if language:
                 payload['language'] = language
+            if response_format:
+                payload['response_format'] = response_format
 
             headers = {'Authorization': f'Bearer {request.app.state.config.STT_OPENAI_API_KEY}'}
             if user and ENABLE_FORWARD_USER_INFO_HEADERS:
@@ -674,10 +721,14 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                 break
 
         r.raise_for_status()
-        data = await r.json()
+        if response_format in PLAIN_TEXT_TRANSCRIPTION_RESPONSE_FORMATS:
+            data = await r.text()
+        else:
+            data = await r.json()
 
-        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
-            await f.write(json.dumps(data))
+        cache_path = os.path.join(file_dir, f'{id}.{response_format}' if isinstance(data, str) else f'{id}.json')
+        async with aiofiles.open(cache_path, 'w') as f:
+            await f.write(data if isinstance(data, str) else json.dumps(data))
         return data
     except Exception as e:
         log.exception(e)
@@ -875,6 +926,7 @@ async def transcription_handler(request, file_path, metadata, user=None):
     id = filename.split('.')[0]
 
     metadata = metadata or {}
+    response_format = metadata.get('response_format')
 
     languages = [
         metadata.get('language', None) if not WHISPER_LANGUAGE else WHISPER_LANGUAGE,
@@ -884,7 +936,7 @@ async def transcription_handler(request, file_path, metadata, user=None):
     if request.app.state.config.STT_ENGINE == '':
         return await _transcribe_whisper(request, file_path, languages, file_dir, id)
     elif request.app.state.config.STT_ENGINE == 'openai':
-        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user)
+        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, response_format, user)
     elif request.app.state.config.STT_ENGINE == 'deepgram':
         return await _transcribe_deepgram(request, file_path, languages, file_dir, id)
     elif request.app.state.config.STT_ENGINE == 'azure':
@@ -1030,6 +1082,7 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
 
 async def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
     log.info(f'transcribe: {file_path} {metadata}')
+    response_format = normalize_transcription_response_format((metadata or {}).get('response_format'))
 
     if BYPASS_PYDUB_PREPROCESSING:
         log.info('Bypassing pydub preprocessing (BYPASS_PYDUB_PREPROCESSING=true)')
@@ -1059,19 +1112,16 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
                 detail=ERROR_MESSAGES.DEFAULT(e),
             )
 
-    results = []
     try:
         tasks = [transcription_handler(request, chunk_path, metadata, user) for chunk_path in chunk_paths]
-        for coro in asyncio.as_completed(tasks):
-            try:
-                results.append(await coro)
-            except HTTPException:
-                raise
-            except Exception as transcribe_exc:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f'Error transcribing chunk: {transcribe_exc}',
-                )
+        results = await asyncio.gather(*tasks)
+    except HTTPException:
+        raise
+    except Exception as transcribe_exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Error transcribing chunk: {transcribe_exc}',
+        )
     finally:
         # Clean up only the temporary chunks, never the original file
         for chunk_path in chunk_paths:
@@ -1081,9 +1131,7 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
                 except Exception:
                     pass
 
-    return {
-        'text': ' '.join([result['text'] for result in results]),
-    }
+    return merge_transcription_results(results, response_format)
 
 
 def compress_audio(file_path):
@@ -1151,6 +1199,7 @@ async def transcription(
     request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
+    response_format: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
     if user.role != 'admin' and not await has_permission(
@@ -1197,12 +1246,24 @@ async def transcription(
             f.write(contents)
 
         try:
-            metadata = None
+            metadata = {}
+            normalized_response_format = normalize_transcription_response_format(response_format)
+            response_format_provided = bool(response_format and response_format.strip())
 
             if language:
-                metadata = {'language': language}
+                metadata['language'] = language
+            if response_format_provided:
+                metadata['response_format'] = normalized_response_format
 
-            result = await transcribe(request, file_path, metadata, user)
+            result = await transcribe(request, file_path, metadata or None, user)
+
+            if response_format_provided and normalized_response_format in PLAIN_TEXT_TRANSCRIPTION_RESPONSE_FORMATS:
+                return PlainTextResponse(
+                    content=result if isinstance(result, str) else extract_transcript_text(result),
+                    media_type=TRANSCRIPTION_RESPONSE_MEDIA_TYPES[normalized_response_format],
+                )
+            if response_format_provided:
+                return result
 
             return {
                 **result,
