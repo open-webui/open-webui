@@ -29,6 +29,7 @@
 	import TerminalSelector from './TerminalSelector.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import { getModelTags } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -106,6 +107,7 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	export let suggestionTags: { name: string }[] = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -254,6 +256,26 @@
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
 			await functions.set(await getFunctions(localStorage.token));
+		}
+
+		if (suggestionTags.length === 0) {
+			if (preset) {
+				// Workspace context: use workspace-only tags API
+				const modelTags = await getModelTags(localStorage.token).catch(() => null);
+				if (modelTags) {
+					suggestionTags = modelTags.map((t) => ({ name: t }));
+				}
+			} else {
+				// Admin context: compute tags from all models in the store
+				const tagSet = new Set<string>();
+				for (const m of $models) {
+					for (const t of m?.info?.meta?.tags ?? []) {
+						const name = typeof t === 'string' ? t : t?.name;
+						if (name) tagSet.add(name);
+					}
+				}
+				suggestionTags = [...tagSet].sort().map((t) => ({ name: t }));
+			}
 		}
 
 		// Fetch admin-configured default model metadata so the editor
@@ -651,6 +673,7 @@
 								<div class="">
 									<Tags
 										tags={info?.meta?.tags ?? []}
+										{suggestionTags}
 										on:delete={(e) => {
 											const tagName = e.detail;
 											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
