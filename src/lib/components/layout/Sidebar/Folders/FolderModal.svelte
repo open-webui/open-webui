@@ -1,22 +1,27 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { user, config } from '$lib/stores';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import { getFolderById } from '$lib/apis/folders';
+	import { normalizeFolderModelIds } from './folder-models';
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let onSubmit: Function = (e) => {};
+	export let onSubmit: (payload: {
+		name: string;
+		meta: { background_image_url: string | null };
+		data: { system_prompt: string; files: unknown[]; model_ids?: string[] };
+		parent_id?: string | null;
+	}) => Promise<void> | void = () => {};
 
 	export let folderId = null;
 	export let parentId = null;
@@ -31,6 +36,7 @@
 		system_prompt: '',
 		files: []
 	};
+	let selectedModels = [''];
 
 	let loading = false;
 
@@ -53,10 +59,15 @@
 			return;
 		}
 
+		const normalizedModelIds = normalizeFolderModelIds(selectedModels);
+
 		await onSubmit({
 			name,
 			meta,
-			data,
+			data: {
+				...data,
+				model_ids: normalizedModelIds
+			},
 			parent_id: edit ? undefined : parentId
 		});
 		show = false;
@@ -78,6 +89,7 @@
 				system_prompt: '',
 				files: []
 			};
+			selectedModels = folder.data?.model_ids?.length ? folder.data.model_ids : [''];
 		}
 
 		focusInput();
@@ -105,6 +117,7 @@
 			system_prompt: '',
 			files: []
 		};
+		selectedModels = [''];
 	}
 </script>
 
@@ -227,6 +240,16 @@
 							</div>
 						</div>
 					{/if}
+
+					<div class="my-3">
+						<div class="mb-2 text-xs text-gray-500">{$i18n.t('Default Model')}</div>
+						<div class="w-full max-w-full">
+							<ModelSelector bind:selectedModels showSetDefault={false} />
+						</div>
+						<div class="mt-1 text-xs text-gray-500">
+							{$i18n.t('Leave model field empty to use the default model.')}
+						</div>
+					</div>
 
 					<div class="my-2">
 						<Knowledge bind:selectedItems={data.files}>
