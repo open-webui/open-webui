@@ -2189,6 +2189,35 @@ def get_reasoning_format(model: dict) -> str | None:
     return None
 
 
+def _is_useful(message: dict) -> bool:
+    """
+    Return True if an assistant message carries any meaningful payload.
+
+    An assistant message that has no content, no tool_calls, and no output
+    is a leftover from a failed stream (e.g. content="" with done=false).
+    Strict OpenAI-compatible providers (Azure, etc.) reject such messages,
+    permanently breaking the chat on reload.  Non-assistant messages are
+    always considered useful.
+    """
+    if message.get('role') != 'assistant':
+        return True
+
+    # Non-empty text content (string or multipart list)
+    content = message.get('content')
+    if content:
+        return True
+
+    # Tool-call requests
+    if message.get('tool_calls'):
+        return True
+
+    # Structured output items (checked on the original message, before stripping)
+    if message.get('output'):
+        return True
+
+    return False
+
+
 def process_messages_with_output(
     messages: list[dict],
     reasoning_format: str | None = None,
@@ -2215,7 +2244,8 @@ def process_messages_with_output(
 
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != 'output'}
-        processed.append(clean_message)
+        if _is_useful(message):
+            processed.append(clean_message)
 
     return processed
 
