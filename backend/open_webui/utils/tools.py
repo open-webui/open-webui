@@ -163,6 +163,66 @@ async def build_tool_server_headers(
     return headers, cookies
 
 
+def _unwrap_optional(annotation: Any) -> Any:
+    """Return the single concrete type of an Optional[...] / Union[..., None]
+    annotation, or the annotation unchanged when it is not such a union."""
+    if get_origin(annotation) is Union:
+        non_none = [arg for arg in get_args(annotation) if arg is not type(None)]
+        if len(non_none) == 1:
+            return non_none[0]
+    return annotation
+
+
+def _coerce_str_to_annotation(value: str, annotation: Any) -> Any:
+    """Best-effort coercion of a string value to the scalar type it declares.
+
+    Models using native function calling sometimes emit numeric/boolean
+    parameters as strings (e.g. ``"1"`` instead of ``1``). Without coercion,
+    tools that declare ``int``/``float``/``bool`` parameters raise ``TypeError``
+    on comparisons/arithmetic. Returns the original value unchanged when
+    coercion does not apply or fails.
+    """
+    target = _unwrap_optional(annotation)
+
+    if target is bool:
+        lowered = value.strip().lower()
+        if lowered in ('true', '1', 'yes', 'on'):
+            return True
+        if lowered in ('false', '0', 'no', 'off'):
+            return False
+        return value
+    if target is int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            try:
+                # Tolerate integral floats such as "1.0"
+                return int(float(value))
+            except (TypeError, ValueError):
+                return value
+    if target is float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+    return value
+
+
+def coerce_arguments_to_type_hints(kwargs: dict, type_hints: dict) -> dict:
+    """Coerce string-valued arguments to the scalar types declared in
+    ``type_hints`` (best-effort, leaving values unchanged on failure)."""
+    if not type_hints:
+        return kwargs
+    return {
+        key: (
+            _coerce_str_to_annotation(value, type_hints[key])
+            if isinstance(value, str) and key in type_hints
+            else value
+        )
+        for key, value in kwargs.items()
+    }
+
+
 # Let no function be called without need, and let what
 # it yields justify the cost of running it.
 async def get_async_tool_function_and_apply_extra_params(
@@ -170,6 +230,15 @@ async def get_async_tool_function_and_apply_extra_params(
 ) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
+
+    # Pre-compute parameter type hints so model-supplied arguments can be
+    # coerced to their declared scalar types at call time. Native function
+    # calling can pass numeric/boolean values as strings, which would
+    # otherwise raise TypeError inside tools that expect int/float/bool.
+    try:
+        type_hints = get_type_hints(function)
+    except Exception:
+        type_hints = {}
     partial_func = partial(function, **extra_params)
 
     # Remove the 'frozen' keyword arguments from the signature
@@ -188,12 +257,12 @@ async def get_async_tool_function_and_apply_extra_params(
         # wrap the functools.partial as python-genai has trouble with it
         # https://github.com/googleapis/python-genai/issues/907
         async def new_function(*args, **kwargs):
-            return await partial_func(*args, **kwargs)
+            return await partial_func(*args, **coerce_arguments_to_type_hints(kwargs, type_hints))
 
     else:
         # Make it a coroutine function when it is not already
         async def new_function(*args, **kwargs):
-            return partial_func(*args, **kwargs)
+            return partial_func(*args, **coerce_arguments_to_type_hints(kwargs, type_hints))
 
     update_wrapper(new_function, function)
     new_function.__signature__ = new_sig
