@@ -680,7 +680,7 @@ class ConfigForm(BaseModel):
     MINERU_API_MODE: str | None = None
     MINERU_API_URL: str | None = None
     MINERU_API_KEY: str | None = None
-    MINERU_API_TIMEOUT: str | None = None
+    MINERU_API_TIMEOUT: int | str | None = None
     MINERU_PARAMS: dict | None = None
     MINERU_FILE_EXTENSIONS: list[str] | None = None
 
