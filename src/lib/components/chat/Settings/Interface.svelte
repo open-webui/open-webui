@@ -78,6 +78,8 @@
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
 
+	let compactToolbar = false;
+
 	let imageCompression = false;
 	let imageCompressionSize = {
 		width: '',
@@ -263,6 +265,8 @@
 
 		showFloatingActionButtons = $settings?.showFloatingActionButtons ?? true;
 		floatingActionButtons = $settings?.floatingActionButtons ?? null;
+
+		compactToolbar = $settings?.compactToolbar ?? false;
 
 		imageCompression = $settings?.imageCompression ?? false;
 		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
@@ -1110,6 +1114,25 @@
 							bind:state={showFloatingActionButtons}
 							on:change={() => {
 								saveSettings({ showFloatingActionButtons });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="compact-toolbar-label" class=" self-center text-xs">
+						{$i18n.t('Compact Action Toolbar')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="compact-toolbar-label"
+							tooltip={true}
+							bind:state={compactToolbar}
+							on:change={() => {
+								saveSettings({ compactToolbar });
 							}}
 						/>
 					</div>

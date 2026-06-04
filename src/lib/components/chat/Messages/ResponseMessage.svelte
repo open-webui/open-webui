@@ -64,6 +64,8 @@
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import OutputEditView from './OutputEditView.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
 	interface MessageType {
 		id: string;
@@ -166,6 +168,7 @@
 	let contentContainerElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
+	let showActions = false;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -1451,36 +1454,93 @@
 										{/if}
 									{/if}
 
-									{#each model?.actions ?? [] as action}
-										<Tooltip content={action.name} placement="bottom">
+									{#if $settings?.compactToolbar && (model?.actions ?? []).length > 0}
+										<Tooltip
+											content={showActions ? $i18n.t('Hide Actions') : $i18n.t('More Actions')}
+											placement="bottom"
+										>
 											<button
 												type="button"
-												aria-label={action.name}
+												aria-label={showActions ? $i18n.t('Hide Actions') : $i18n.t('More Actions')}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
-													actionMessage(action.id, message);
+													showActions = !showActions;
 												}}
 											>
-												{#if action?.icon}
-													<div class="size-4">
-														<img
-															src={action.icon}
-															class="w-4 h-4 {action.icon.includes('data:image/svg')
-																? 'dark:invert-[80%]'
-																: ''}"
-															style="fill: currentColor;"
-															alt={action.name}
-															draggable="false"
-														/>
-													</div>
+												{#if showActions}
+													<ChevronLeft className="size-4" strokeWidth="2.3" />
 												{:else}
-													<Sparkles strokeWidth="2.1" className="size-4" />
+													<ChevronRight className="size-4" strokeWidth="2.3" />
 												{/if}
 											</button>
 										</Tooltip>
-									{/each}
+
+										{#if showActions}
+											{#each model?.actions ?? [] as action}
+												<Tooltip content={action.name} placement="bottom">
+													<button
+														type="button"
+														aria-label={action.name}
+														class="{isLastMessage || ($settings?.highContrastMode ?? false)
+															? 'visible'
+															: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+														on:click={() => {
+															actionMessage(action.id, message);
+														}}
+													>
+														{#if action?.icon}
+															<div class="size-4">
+																<img
+																	src={action.icon}
+																	class="w-4 h-4 {action.icon.includes('data:image/svg')
+																		? 'dark:invert-[80%]'
+																		: ''}"
+																	style="fill: currentColor;"
+																	alt={action.name}
+																	draggable="false"
+																/>
+															</div>
+														{:else}
+															<Sparkles strokeWidth="2.1" className="size-4" />
+														{/if}
+													</button>
+												</Tooltip>
+											{/each}
+										{/if}
+									{:else}
+										{#each model?.actions ?? [] as action}
+											<Tooltip content={action.name} placement="bottom">
+												<button
+													type="button"
+													aria-label={action.name}
+													class="{isLastMessage || ($settings?.highContrastMode ?? false)
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														actionMessage(action.id, message);
+													}}
+												>
+													{#if action?.icon}
+														<div class="size-4">
+															<img
+																src={action.icon}
+																class="w-4 h-4 {action.icon.includes('data:image/svg')
+																	? 'dark:invert-[80%]'
+																	: ''}"
+																style="fill: currentColor;"
+																alt={action.name}
+																draggable="false"
+															/>
+														</div>
+													{:else}
+														<Sparkles strokeWidth="2.1" className="size-4" />
+													{/if}
+												</button>
+											</Tooltip>
+										{/each}
+									{/if}
 								{/if}
 							{/if}
 						{/if}
