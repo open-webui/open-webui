@@ -2215,6 +2215,16 @@ def process_messages_with_output(
 
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != 'output'}
+
+        # Skip empty assistant messages that would break strict providers
+        if message.get('role') == 'assistant':
+            content = clean_message.get('content', '')
+            has_content = content and str(content).strip()
+            has_tool_calls = bool(clean_message.get('tool_calls'))
+            has_output = bool(message.get('output'))
+            if not has_content and not has_tool_calls and not has_output:
+                continue
+
         processed.append(clean_message)
 
     return processed
