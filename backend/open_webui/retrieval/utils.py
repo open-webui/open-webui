@@ -1250,6 +1250,16 @@ async def get_sources_from_items(
                     'documents': [[content]],
                     'metadatas': [[{'url': item.get('url'), 'name': item.get('url')}]],
                 }
+        elif item.get('type') == 'web_search':
+            if item.get('docs'):
+                query_result = {
+                    'documents': [[doc.get('content') for doc in item.get('docs')]],
+                    'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
+                }
+            elif item.get('collection_name'):
+                collection_names.append(item['collection_name'])
+            elif item.get('collection_names'):
+                collection_names.extend(item['collection_names'])
         elif item.get('type') == 'file':
             if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 if item.get('file', {}).get('data', {}).get('content', ''):
