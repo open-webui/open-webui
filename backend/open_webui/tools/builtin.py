@@ -129,6 +129,28 @@ async def calculate_timestamp(
     :param years_ago: Number of years to subtract from current time (default: 0)
     :return: JSON with current_timestamp and calculated_timestamp (both in seconds)
     """
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(days_ago, str):
+        try:
+            days_ago = int(days_ago)
+        except ValueError:
+            days_ago = 0
+    if isinstance(weeks_ago, str):
+        try:
+            weeks_ago = int(weeks_ago)
+        except ValueError:
+            weeks_ago = 0
+    if isinstance(months_ago, str):
+        try:
+            months_ago = int(months_ago)
+        except ValueError:
+            months_ago = 0
+    if isinstance(years_ago, str):
+        try:
+            years_ago = int(years_ago)
+        except ValueError:
+            years_ago = 0
+
     try:
         import datetime
 
@@ -230,6 +252,12 @@ async def search_web(
 
         configured = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT
         max_count = 5 if configured is None else configured
+        # Coerce parameters from LLM tool calls (may come as strings)
+        if isinstance(count, str):
+            try:
+                count = int(count)
+            except ValueError:
+                count = None
         count = max(1, min(count, max_count)) if count is not None else max_count
 
         results = await _search_web(__request__, engine, query, user)
@@ -606,6 +634,13 @@ async def search_memories(
     :param count: Number of memories to return (default 5)
     :return: JSON with matching memories and their dates
     """
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+
     if __request__ is None:
         return json.dumps({'error': 'Request context not available'})
 
@@ -797,6 +832,23 @@ async def search_notes(
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+    if isinstance(start_timestamp, str):
+        try:
+            start_timestamp = int(start_timestamp)
+        except ValueError:
+            start_timestamp = None
+    if isinstance(end_timestamp, str):
+        try:
+            end_timestamp = int(end_timestamp)
+        except ValueError:
+            end_timestamp = None
 
     try:
         user_id = __user__.get('id')
@@ -1077,6 +1129,23 @@ async def search_chats(
     if not __user__:
         return json.dumps({'error': 'User context not available'})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+    if isinstance(start_timestamp, str):
+        try:
+            start_timestamp = int(start_timestamp)
+        except ValueError:
+            start_timestamp = None
+    if isinstance(end_timestamp, str):
+        try:
+            end_timestamp = int(end_timestamp)
+        except ValueError:
+            end_timestamp = None
+
     try:
         user_id = __user__.get('id')
 
@@ -1223,6 +1292,13 @@ async def search_channels(
     if not __user__:
         return json.dumps({'error': 'User context not available'})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+
     try:
         user_id = __user__.get('id')
 
@@ -1278,6 +1354,23 @@ async def search_channel_messages(
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 10
+    if isinstance(start_timestamp, str):
+        try:
+            start_timestamp = int(start_timestamp)
+        except ValueError:
+            start_timestamp = None
+    if isinstance(end_timestamp, str):
+        try:
+            end_timestamp = int(end_timestamp)
+        except ValueError:
+            end_timestamp = None
 
     try:
         user_id = __user__.get('id')
@@ -1505,6 +1598,18 @@ async def list_knowledge_bases(
     if not __user__:
         return json.dumps({'error': 'User context not available'})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 10
+    if isinstance(skip, str):
+        try:
+            skip = int(skip)
+        except ValueError:
+            skip = 0
+
     try:
         from open_webui.models.knowledge import Knowledges
 
@@ -1563,6 +1668,18 @@ async def search_knowledge_bases(
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+    if isinstance(skip, str):
+        try:
+            skip = int(skip)
+        except ValueError:
+            skip = 0
 
     try:
         from open_webui.models.knowledge import Knowledges
@@ -1626,6 +1743,18 @@ async def search_knowledge_files(
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+    if isinstance(skip, str):
+        try:
+            skip = int(skip)
+        except ValueError:
+            skip = 0
 
     try:
         from open_webui.models.access_grants import AccessGrants
@@ -2537,6 +2666,13 @@ async def query_knowledge_bases(
     if not __user__:
         return json.dumps({'error': 'User context not available'})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5
+
     try:
         import heapq
 
@@ -3017,6 +3153,13 @@ async def list_automations(
 
     if not __user__:
         return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 10
 
     try:
         from open_webui.models.automations import Automations
