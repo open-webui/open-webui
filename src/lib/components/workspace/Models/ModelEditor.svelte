@@ -4,6 +4,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
+	import { getWebSearchReadiness, parseModelParameterSize } from '$lib/utils/models';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -18,6 +19,7 @@
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
+	import WebSearchReadiness from '$lib/components/workspace/Models/WebSearchReadiness.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -107,6 +109,16 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+
+	// Web Search readiness for the selected base model (local/Ollama models only). This is a
+	// warning-only signal shown next to the capability; it never changes the saved settings.
+	$: webSearchBaseModel = $models.find((m) => m.id === (info?.base_model_id || id));
+	$: webSearchReadiness = getWebSearchReadiness({
+		isLocal: webSearchBaseModel?.owned_by === 'ollama',
+		parameterSizeB: parseModelParameterSize(webSearchBaseModel),
+		contextLength: parseInt(`${params?.num_ctx ?? ''}`) || null,
+		capabilityEnabled: !!capabilities?.web_search
+	});
 
 	const submitHandler = async () => {
 		loading = true;
@@ -819,6 +831,10 @@
 
 					<div class="my-4">
 						<Capabilities bind:capabilities />
+
+						{#if capabilities?.web_search && webSearchBaseModel?.owned_by === 'ollama'}
+							<WebSearchReadiness readiness={webSearchReadiness} />
+						{/if}
 					</div>
 
 					{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}

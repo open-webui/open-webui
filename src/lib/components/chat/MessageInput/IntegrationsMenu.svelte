@@ -4,6 +4,7 @@
 
 	import {
 		config,
+		models,
 		user,
 		tools as _tools,
 		skills as _skills,
@@ -12,6 +13,7 @@
 		toolServers,
 		terminalServers
 	} from '$lib/stores';
+	import { getWebSearchReadiness, parseModelParameterSize } from '$lib/utils/models';
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
 	import { deleteOAuthSession } from '$lib/apis/auths';
@@ -72,6 +74,22 @@
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
+
+	// Warn (hover-only) when a selected local model is likely too small for reliable Web Search.
+	$: webSearchLimited =
+		showWebSearchButton &&
+		selectedModels.some((modelId) => {
+			const model = $models.find((m) => m.id === modelId);
+			if (!model) return false;
+			return (
+				getWebSearchReadiness({
+					isLocal: model?.owned_by === 'ollama',
+					parameterSizeB: parseModelParameterSize(model),
+					contextLength: null,
+					capabilityEnabled: true
+				}).state === 'limited'
+			);
+		});
 
 	const init = async () => {
 		if ($_tools === null) {
@@ -281,6 +299,14 @@
 
 										<div class=" truncate">{$i18n.t('Web Search')}</div>
 									</div>
+
+									{#if webSearchLimited}
+										<div
+											class="pl-6 truncate text-xs text-left text-yellow-600 dark:text-yellow-500"
+										>
+											{$i18n.t('May be unreliable on this model')}
+										</div>
+									{/if}
 								</div>
 
 								<div class=" shrink-0">
