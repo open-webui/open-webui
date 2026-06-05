@@ -2471,7 +2471,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if 'files' in folder.data:
                 # Defensive: filter to entries the caller can still read.
                 allowed_files = await get_accessible_folder_files(folder.data['files'], user)
-                if metadata.get('params', {}).get('function_calling') != 'native':
+                if metadata.get('params', {}).get('function_calling') == 'legacy':
                     form_data['files'] = [
                         *allowed_files,
                         *form_data.get('files', []),
@@ -2485,7 +2485,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data['messages'])
     model_knowledge = model.get('info', {}).get('meta', {}).get('knowledge', False)
 
-    if model_knowledge and metadata.get('params', {}).get('function_calling') != 'native':
+    if model_knowledge and metadata.get('params', {}).get('function_calling') == 'legacy':
         await event_emitter(
             {
                 'type': 'status',
@@ -2563,17 +2563,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if 'memory' in features and features['memory']:
             # Skip forced memory injection when native FC is enabled - model can use memory tools
-            if metadata.get('params', {}).get('function_calling') != 'native':
+            if metadata.get('params', {}).get('function_calling') == 'legacy':
                 form_data = await chat_memory_handler(request, form_data, extra_params, user)
 
         if 'web_search' in features and features['web_search']:
             # Skip forced RAG web search when native FC is enabled - model can use web_search tool
-            if metadata.get('params', {}).get('function_calling') != 'native':
+            if metadata.get('params', {}).get('function_calling') == 'legacy':
                 form_data = await chat_web_search_handler(request, form_data, extra_params, user)
 
         if 'image_generation' in features and features['image_generation']:
             # Skip forced image generation when native FC is enabled - model can use generate_image tool
-            if metadata.get('params', {}).get('function_calling') != 'native':
+            if metadata.get('params', {}).get('function_calling') == 'legacy':
                 form_data = await chat_image_generation_handler(request, form_data, extra_params, user)
 
         if 'code_interpreter' in features and features['code_interpreter']:
@@ -2581,7 +2581,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
-            if metadata.get('params', {}).get('function_calling') != 'native':
+            if metadata.get('params', {}).get('function_calling') == 'legacy':
                 prompt = (
                     request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
                     if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ''
@@ -2843,7 +2843,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         builtin_tools_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
             'builtin_tools', True
         )
-        if metadata.get('params', {}).get('function_calling') == 'native' and builtin_tools_enabled:
+        if metadata.get('params', {}).get('function_calling') != 'legacy' and builtin_tools_enabled:
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
             form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
@@ -2866,7 +2866,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # (e.g. pipe functions) can access all tools including MCP and builtins.
             metadata['tools'] = tools_dict
 
-            if metadata.get('params', {}).get('function_calling') == 'native':
+            if metadata.get('params', {}).get('function_calling') != 'legacy':
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
