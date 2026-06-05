@@ -1,25 +1,20 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
-
-	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
 
 	import { onMount, tick } from 'svelte';
 
 	import { writable } from 'svelte/store';
-	import { models, theme, user } from '$lib/stores';
+	import { models, user, chatId } from '$lib/stores';
 
 	import '@xyflow/svelte/dist/style.css';
 
 	import CustomNode from './Node.svelte';
 	import Flow from './Flow.svelte';
-	import XMark from '../../icons/XMark.svelte';
-	import ArrowLeft from '../../icons/ArrowLeft.svelte';
 
-	const { width, height } = useStore();
+	const { width, height, viewport } = useStore();
 
-	const { fitView, getViewport } = useSvelteFlow();
+	const { fitView, setViewport } = useSvelteFlow();
 	const nodesInitialized = useNodesInitialized();
 
 	export let history;
@@ -27,6 +22,10 @@
 	export let onNodeClick;
 
 	let selectedMessageId = null;
+	let viewportPinned = false;
+	let isInitialized = false;
+	let viewportSaveTimeout;
+	let unsubs = [];
 
 	const nodes = writable([]);
 	const edges = writable([]);
@@ -45,11 +44,48 @@
 		focusNode();
 	}
 
+	$: if (isInitialized) {
+		try {
+			localStorage.setItem('overviewPinned', String(viewportPinned));
+		} catch (e) {
+			console.warn('Failed to save pinned state to local storage', e);
+		}
+	}
+
+	$: if (isInitialized && $viewport && $chatId) {
+		clearTimeout(viewportSaveTimeout);
+		const vp = $viewport;
+		const id = $chatId;
+		viewportSaveTimeout = setTimeout(() => {
+			try {
+				let viewports = JSON.parse(localStorage.getItem('overviewViewports') || '{}');
+
+				// Delete and re-insert to maintain insertion order for LRU eviction
+				if (id in viewports) {
+					delete viewports[id];
+				}
+
+				viewports[id] = vp;
+
+				const keys = Object.keys(viewports);
+				if (keys.length > 50) {
+					delete viewports[keys[0]];
+				}
+
+				localStorage.setItem('overviewViewports', JSON.stringify(viewports));
+			} catch (e) {
+				console.warn('Failed to save viewport to local storage', e);
+			}
+		}, 300);
+	}
+
 	const focusNode = async () => {
-		if (selectedMessageId === null) {
-			await fitView({ nodes: [{ id: history.currentId }] });
-		} else {
-			await fitView({ nodes: [{ id: selectedMessageId }] });
+		if (isInitialized && !viewportPinned) {
+			if (selectedMessageId === null) {
+				await fitView({ nodes: [{ id: history.currentId }] });
+			} else {
+				await fitView({ nodes: [{ id: selectedMessageId }] });
+			}
 		}
 
 		selectedMessageId = null;
@@ -135,37 +171,73 @@
 
 	const setLayoutDirection = (direction) => {
 		layoutDirection = direction;
+		try {
+			localStorage.setItem('overviewLayoutDirection', direction);
+		} catch (e) {
+			console.warn('Failed to save layout direction to local storage', e);
+		}
 		drawFlow(layoutDirection);
 	};
 
 	onMount(() => {
+		try {
+			viewportPinned = localStorage.getItem('overviewPinned') === 'true';
+			layoutDirection = localStorage.getItem('overviewLayoutDirection') || 'vertical';
+		} catch (e) {
+			viewportPinned = false;
+			layoutDirection = 'vertical';
+		}
 		drawFlow(layoutDirection);
 
-		nodesInitialized.subscribe(async (initialized) => {
-			if (initialized) {
-				await tick();
-				const res = await fitView({ nodes: [{ id: history.currentId }] });
-			}
-		});
+		unsubs.push(
+			nodesInitialized.subscribe(async (initialized) => {
+				if (initialized) {
+					await tick();
+					
+					let restored = false;
+					if ($chatId) {
+						try {
+							const viewports = JSON.parse(localStorage.getItem('overviewViewports') || '{}');
+							const saved = viewports[$chatId];
 
-		width.subscribe((value) => {
-			if (value) {
-				// fitView();
-				fitView({ nodes: [{ id: history.currentId }] });
-			}
-		});
+							if (saved) {
+								const { x, y, zoom } = saved;
+								await setViewport({ x, y, zoom });
+								restored = true;
+							}
+						} catch (e) {
+							// Ignored
+						}
+					}
 
-		height.subscribe((value) => {
-			if (value) {
-				// fitView();
-				fitView({ nodes: [{ id: history.currentId }] });
-			}
-		});
+					if (!restored) {
+						await fitView({ nodes: [{ id: history.currentId }] });
+					}
+					isInitialized = true;
+				}
+			})
+		);
+
+		unsubs.push(
+			width.subscribe((value) => {
+				if (isInitialized && value && !viewportPinned) {
+					fitView({ nodes: [{ id: history.currentId }] });
+				}
+			})
+		);
+
+		unsubs.push(
+			height.subscribe((value) => {
+				if (isInitialized && value && !viewportPinned) {
+					fitView({ nodes: [{ id: history.currentId }] });
+				}
+			})
+		);
 	});
 
 	onDestroy(() => {
-		console.log('Overview destroyed');
-
+		unsubs.forEach((unsub) => unsub());
+		clearTimeout(viewportSaveTimeout);
 		nodes.set([]);
 		edges.set([]);
 	});
@@ -178,10 +250,13 @@
 			{nodeTypes}
 			{edges}
 			{setLayoutDirection}
-			on:nodeclick={(e) => {
-				onNodeClick(e.detail);
-				selectedMessageId = e.detail.node.data.message.id;
-				fitView({ nodes: [{ id: selectedMessageId }] });
+			bind:viewportPinned
+			onNodeClick={(detail) => {
+				onNodeClick?.(detail);
+				selectedMessageId = detail.node.data.message.id;
+				if (!viewportPinned) {
+					fitView({ nodes: [{ id: selectedMessageId }] });
+				}
 			}}
 		/>
 	{/if}

@@ -1,7 +1,7 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
 
-	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
 	import { theme } from '$lib/stores';
 	import {
@@ -11,22 +11,23 @@
 		BackgroundVariant,
 		ControlButton
 	} from '@xyflow/svelte';
-	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
-	import Bars3BottomLeft from '$lib/components/icons/Bars3BottomLeft.svelte';
 	import AlignVertical from '$lib/components/icons/AlignVertical.svelte';
 	import AlignHorizontal from '$lib/components/icons/AlignHorizontal.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 
 	export let nodes;
 	export let nodeTypes;
 	export let edges;
 	export let setLayoutDirection;
+	export let viewportPinned = false;
+	export let onNodeClick;
 </script>
 
 <SvelteFlow
 	{nodes}
 	{nodeTypes}
 	{edges}
-	fitView
 	minZoom={0.001}
 	colorMode={$theme.includes('dark')
 		? 'dark'
@@ -37,12 +38,20 @@
 			: 'light'}
 	nodesConnectable={false}
 	nodesDraggable={false}
-	on:nodeclick={(e) => dispatch('nodeclick', e.detail)}
-	oninit={() => {
-		console.log('Flow initialized');
-	}}
+	on:nodeclick={(e) => onNodeClick?.(e.detail)}
+	oninit={() => {}}
 >
 	<Controls showLock={false}>
+		<ControlButton
+			on:click={() => (viewportPinned = !viewportPinned)}
+			title={viewportPinned ? $i18n.t('Viewport Pinned') : $i18n.t('Viewport Unpinned')}
+		>
+			{#if viewportPinned}
+				<Pin />
+			{:else}
+				<PinSlash />
+			{/if}
+		</ControlButton>
 		<ControlButton on:click={() => setLayoutDirection('vertical')} title="Vertical Layout">
 			<AlignVertical className="size-4" />
 		</ControlButton>
