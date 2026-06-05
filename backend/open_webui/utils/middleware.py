@@ -1792,6 +1792,46 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     system_message_content = ''
 
+    if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
+        try:
+            res = await generate_image_prompt(
+                request,
+                {
+                    'model': form_data['model'],
+                    'messages': form_data['messages'],
+                    'chat_id': metadata.get('chat_id'),
+                },
+                user,
+            )
+
+            # Handle JSONResponse from error paths
+            if isinstance(res, JSONResponse):
+                try:
+                    error_body = json.loads(res.body)
+                    detail = error_body.get('detail', 'Image prompt generation failed')
+                except Exception:
+                    detail = 'Image prompt generation failed'
+                raise Exception(detail)
+
+            response = res['choices'][0]['message']['content']
+
+            try:
+                bracket_start = response.rfind('{')
+                bracket_end = response.rfind('}') + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception('No JSON object found in the response')
+
+                response = response[bracket_start:bracket_end]
+                response = json.loads(response)
+                prompt = response.get('prompt', [])
+            except Exception as e:
+                prompt = user_message
+
+        except Exception as e:
+            log.exception(e)
+            prompt = user_message
+
     if len(input_images) > 0 and request.app.state.config.ENABLE_IMAGE_EDIT:
         # Edit image(s)
         try:
@@ -1852,45 +1892,6 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     else:
         # Create image(s)
-        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
-            try:
-                res = await generate_image_prompt(
-                    request,
-                    {
-                        'model': form_data['model'],
-                        'messages': form_data['messages'],
-                        'chat_id': metadata.get('chat_id'),
-                    },
-                    user,
-                )
-
-                # Handle JSONResponse from error paths
-                if isinstance(res, JSONResponse):
-                    try:
-                        error_body = json.loads(res.body)
-                        detail = error_body.get('detail', 'Image prompt generation failed')
-                    except Exception:
-                        detail = 'Image prompt generation failed'
-                    raise Exception(detail)
-
-                response = res['choices'][0]['message']['content']
-
-                try:
-                    bracket_start = response.rfind('{')
-                    bracket_end = response.rfind('}') + 1
-
-                    if bracket_start == -1 or bracket_end == -1:
-                        raise Exception('No JSON object found in the response')
-
-                    response = response[bracket_start:bracket_end]
-                    response = json.loads(response)
-                    prompt = response.get('prompt', [])
-                except Exception as e:
-                    prompt = user_message
-
-            except Exception as e:
-                log.exception(e)
-                prompt = user_message
 
         try:
             images = await image_generations(
