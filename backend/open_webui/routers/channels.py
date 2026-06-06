@@ -1036,6 +1036,13 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
         ):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
+    # Thread parent / reply target must belong to this channel (no cross-channel binding).
+    for ref_id in (form_data.parent_id, form_data.reply_to_id):
+        if ref_id:
+            ref = await Messages.get_message_by_id(ref_id, include_thread_replies=False, db=db)
+            if not ref or ref.channel_id != channel.id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
     try:
         message = await Messages.insert_new_message(form_data, channel.id, user.id, db=db)
         if message:
