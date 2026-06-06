@@ -38,9 +38,10 @@ from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import decode_token
+from open_webui.utils.auth import decode_token, is_token_revoked
 from open_webui.utils.redis import (
     build_sentinel_url,
+    get_redis_client,
     get_redis_connection,
     get_sentinels_from_env,
 )
@@ -338,11 +339,22 @@ async def usage(sid, data):
         }
 
 
+# Realtime auth must honour Redis token revocation (sign-out / OIDC back-channel), not just signature/expiry.
+AUTH_REVOCATION_REDIS = get_redis_client(async_mode=True)
+
+
+async def _decode_valid_token(token):
+    data = decode_token(token)
+    if data is not None and await is_token_revoked(AUTH_REVOCATION_REDIS, data):
+        return None
+    return data
+
+
 @sio.event
 async def connect(sid, environ, auth):
     user = None
     if auth and 'token' in auth:
-        data = decode_token(auth['token'])
+        data = await _decode_valid_token(auth['token'])
 
         if data is not None and 'id' in data:
             user = await Users.get_user_by_id(data['id'])
@@ -369,7 +381,7 @@ async def user_join(sid, data):
     if not auth or 'token' not in auth:
         return
 
-    token_data = decode_token(auth['token'])
+    token_data = await _decode_valid_token(auth['token'])
     if token_data is None or 'id' not in token_data:
         return
 
@@ -438,7 +450,7 @@ async def join_note(sid, data):
     if not auth or 'token' not in auth:
         return
 
-    token_data = decode_token(auth['token'])
+    token_data = await _decode_valid_token(auth['token'])
     if token_data is None or 'id' not in token_data:
         return
 

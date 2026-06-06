@@ -213,36 +213,41 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
-async def is_valid_token(request, decoded) -> bool:
+async def is_token_revoked(redis, decoded) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
     2. Per-user (revoked_at) — used by OIDC back-channel logout when
        individual jti values are unknown; rejects tokens with iat <= revoked_at.
     """
-    if request.app.state.redis:
-        # Per-token revocation
-        jti = decoded.get('jti')
-        if jti:
-            revoked = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
-            if revoked:
-                return False
+    if not redis:
+        return False
 
-        # Per-user revocation (OIDC back-channel logout)
-        user_id = decoded.get('id')
-        if user_id:
-            revoked_at = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
-            if revoked_at:
-                try:
-                    revoked_at_ts = int(revoked_at)
-                    token_iat = decoded.get('iat')
-                    # No iat means legacy token — reject since we can't verify issue time
-                    if token_iat is None or token_iat <= revoked_at_ts:
-                        return False
-                except (ValueError, TypeError):
-                    pass
+    # Per-token revocation
+    jti = decoded.get('jti')
+    if jti:
+        if await redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked'):
+            return True
 
-    return True
+    # Per-user revocation (OIDC back-channel logout)
+    user_id = decoded.get('id')
+    if user_id:
+        revoked_at = await redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
+        if revoked_at:
+            try:
+                revoked_at_ts = int(revoked_at)
+                token_iat = decoded.get('iat')
+                # No iat means legacy token — reject since we can't verify issue time
+                if token_iat is None or token_iat <= revoked_at_ts:
+                    return True
+            except (ValueError, TypeError):
+                pass
+
+    return False
+
+
+async def is_valid_token(request, decoded) -> bool:
+    return not await is_token_revoked(request.app.state.redis, decoded)
 
 
 async def invalidate_token(request, token):

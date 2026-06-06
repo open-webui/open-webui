@@ -206,7 +206,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     import asyncio
     import json
 
-    from open_webui.utils.auth import decode_token
+    from open_webui.utils.auth import decode_token, is_token_revoked
 
     # First-message authentication
     try:
@@ -218,6 +218,9 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         token = payload.get('token', '')
         data = decode_token(token)
         if data is None or 'id' not in data:
+            await ws.close(code=4001, reason='Invalid token')
+            return None
+        if await is_token_revoked(ws.app.state.redis, data):
             await ws.close(code=4001, reason='Invalid token')
             return None
         user = await Users.get_user_by_id(data['id'])
