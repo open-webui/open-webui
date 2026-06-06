@@ -2156,6 +2156,24 @@ async def convert_url_images_to_base64(form_data, user=None):
     return form_data
 
 
+def _is_empty_assistant(msg: dict) -> bool:
+    """Return True if an assistant message has no useful content."""
+    if msg.get('role') != 'assistant':
+        return False
+    if msg.get('output'):
+        return False
+    c = msg.get('content')
+    if isinstance(c, str):
+        return not c.strip()
+    if isinstance(c, list):
+        return not any(
+            (p.get('type') != 'text') or p.get('text', '').strip()
+            for p in c
+            if isinstance(p, dict)
+        )
+    return True
+
+
 async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
     Load the message chain from DB up to message_id,
@@ -2169,7 +2187,10 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
-    return [{k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files')} for msg in db_messages]
+    messages = [{k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files')} for msg in db_messages]
+
+    # Filter out empty assistant messages that would break strict providers
+    return [msg for msg in messages if not _is_empty_assistant(msg)]
 
 
 def get_reasoning_format(model: dict) -> str | None:
@@ -2215,6 +2236,11 @@ def process_messages_with_output(
 
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != 'output'}
+
+        # Skip empty assistant messages
+        if clean_message.get('role') == 'assistant' and _is_empty_assistant(clean_message):
+            continue
+
         processed.append(clean_message)
 
     return processed
@@ -4403,7 +4429,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             if end:
                                                 break
 
-                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
+                                        if output and ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
                                             'channel:'
                                         ):
                                             # Save message in the database

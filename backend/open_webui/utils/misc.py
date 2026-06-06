@@ -537,8 +537,7 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
                 for block in content
                 if not (isinstance(block, dict) and block.get('type') == 'text' and not block.get('text', '').strip())
             ]
-            if cleaned:
-                message['content'] = cleaned
+            message['content'] = cleaned
     return messages
 
 
