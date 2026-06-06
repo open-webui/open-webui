@@ -65,7 +65,7 @@ If you want to report something that does not fulfill our rules and guidelines l
 
 However, effective immediately, we will **not** accept low-effort vulnerability reports. Ensure that **submissions are constructive, actionable, reproducible, well documented and adhere to the following guidelines**:
 
-**Definition:** **Security boundaries.** Throughout this policy, "the security boundaries" means the five we recognize: Confidentiality, Integrity, Availability, Authenticity, and Non-repudiation. We interpret these broadly — equivalent concepts from other security frameworks fall within them. A valid vulnerability must cross at least one of them against a party other than the reporter.
+**Security boundaries:** Throughout this policy, "the security boundaries" means the five we recognize: Confidentiality, Integrity, Availability, Authenticity, and Non-repudiation. We interpret these broadly — equivalent concepts from other security frameworks fall within them. A valid vulnerability must cross at least one of them against a party other than the reporter.
 
 1. **Report MUST be a vulnerability:** A security vulnerability is an exploitable weakness where the system behaves in an unintended way, allowing attackers to bypass security controls, gain unauthorized access, execute arbitrary code, or escalate privileges. Configuration options, missing features, and expected protocol behavior are not vulnerabilities. A vulnerability must cross at least one of the security boundaries (defined above).
 
@@ -121,7 +121,7 @@ Your remediation guidance can include, for example:
 > [!IMPORTANT]
 > **For administrators:** Treat the `workspace.tools` permission as **root-equivalent access**. Only grant it to users you would trust with direct access to your server. If you enable this permission for untrusted users, you are accepting the risk of arbitrary code execution on your host. For more details, see our [Plugin Security documentation](https://docs.openwebui.com/features/extensibility/plugin/).
 
-11. **Legacy Code Paths Are Out of Scope:** Open WebUI maintains some code paths that are explicitly marked as **legacy** in the official documentation. Paths documented as legacy in the official documentation are out of scope under this rule; the documentation is authoritative as to what is legacy. Legacy paths remain available — sometimes still the default — purely for **backwards-compatibility reasons**, not because they are the supported or maintained surface. The supported replacement is the migration target, and security and functional work happens on the replacement, not the legacy path. Reports describing a security boundary issue **on a legacy code path that does not also reproduce on the supported replacement** are out of scope under this rule.
+11. **Legacy Code Paths Are Out of Scope:** Open WebUI maintains some code paths that are explicitly marked as legacy in the official documentation, which is authoritative as to what is legacy. Legacy paths remain available — sometimes still the default — purely for backwards-compatibility reasons, not because they are the supported or maintained surface. The supported replacement is the migration target, and security and functional work happens on the replacement, not the legacy path. Reports describing a security boundary issue on a legacy code path that does not also reproduce on the supported replacement are usually out of scope under this rule.
 
 > [!NOTE]
 > If you find a security issue that:
