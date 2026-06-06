@@ -4070,7 +4070,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                                     # Normalize usage data to standard format
                                     raw_usage = data.get('usage', {}) or {}
-                                    raw_usage.update(data.get('timings', {}))  # llama.cpp
+                                    raw_usage.update(data.get('timings', {}) or {})
                                     if raw_usage:
                                         usage = normalize_usage(raw_usage)
                                         await event_emitter(
