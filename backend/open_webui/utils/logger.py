@@ -178,6 +178,8 @@ def start_logger():
             _json_sink,
             level=GLOBAL_LOG_LEVEL,
             filter=audit_filter,
+            backtrace=True,
+            diagnose=False,
         )
     else:
         logger.add(
@@ -185,6 +187,8 @@ def start_logger():
             level=GLOBAL_LOG_LEVEL,
             format=stdout_format,
             filter=audit_filter,
+            backtrace=True,
+            diagnose=False,
         )
     if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
