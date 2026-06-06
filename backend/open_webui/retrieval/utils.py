@@ -171,7 +171,7 @@ def _is_text_content_type(content_type: str) -> bool:
 
 
 def get_content_from_url(request, url: str) -> str:
-    from open_webui.retrieval.web.utils import validate_url
+    from open_webui.retrieval.web.utils import validate_url, _SSRFSafeAdapter
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
@@ -194,7 +194,11 @@ def get_content_from_url(request, url: str) -> str:
     # re-validation would let an attacker reach private IPs (RFC1918, loopback,
     # cloud-metadata 169.254.169.254) via a public host that redirects internally.
     try:
-        response = requests.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
+        # Probe through the connect-time SSRF guard; bare requests.get re-resolves (DNS-rebinding gap).
+        session = requests.Session()
+        session.mount('http://', _SSRFSafeAdapter())
+        session.mount('https://', _SSRFSafeAdapter())
+        response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')
     except Exception:
