@@ -380,7 +380,7 @@ PAGE_SIZE = 50
 async def list_files(
     user=Depends(get_verified_user),
     page: int = Query(1, ge=1, description='Page number (1-indexed)'),
-    content: bool = Query(True),
+    content: bool = Query(False),
     db: AsyncSession = Depends(get_async_session),
 ):
     skip = (page - 1) * PAGE_SIZE
@@ -407,7 +407,7 @@ async def search_files(
         ...,
         description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
-    content: bool = Query(True),
+    content: bool = Query(False),
     skip: int = Query(0, ge=0, description='Number of files to skip'),
     limit: int = Query(100, ge=1, le=1000, description='Maximum number of files to return'),
     user=Depends(get_verified_user),
