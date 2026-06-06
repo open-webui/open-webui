@@ -17,7 +17,11 @@ A fix counts as already-existing regardless of which branch it lives on — incl
 Two specific patterns this covers, both of which we reject:
 
 - Filing a report for a bug found in an **older version** that was already resolved by the time of the current supported version.
-- **Monitoring our commit history** for fix commits and filing a report for the issue a commit already addresses. We have observed (automated) monitoring of our public commits that produced reports against fixes after we already committed them; this rule exists to reject that pattern. A fix that is already written is not a vulnerability you discovered.
+- **Monitoring our commit history** for fix commits and filing a report for the issue a commit already addresses. We have observed (automated) monitoring of our public commits that produced reports against fixes after we already committed them; this rule exists to reject that pattern.
+
+> [!TIP]
+> **Before reporting, check whether your finding still reproduces on the `dev` branch** (and any other active development branch).
+> We develop in the open, and a fix may already be committed there ahead of a release. Confirming this first saves you the effort of writing up a report we'd have to close as already-fixed.
 
 ## Good-faith reports that aren't vulnerabilities
 
@@ -141,15 +145,25 @@ Your remediation guidance can include, for example:
 **Non-compliant submissions may be closed, and repeat or extreme violators may be banned from submitting reports.** Our goal is to foster a constructive reporting environment where quality submissions promote better security for all users.
 If you want to report something that does not fulfill our rules and guidelines laid out here, you can still report it and we will handle it, [see our good faith reporting section for more information](#good-faith-reports-that-arent-vulnerabilities).
 
+## What a Valid Report Gets You
+
+If your report describes a real vulnerability under this policy, here's what you can expect from us:
+
+- **Credit on the advisory.** You're named as the reporter on the published advisory. Where multiple reporters each demonstrated a distinct vector, every one of you is credited (see [Report Handling](#report-handling)).
+- **Coordinated disclosure.** We won't publish out from under you while you're still working the issue with us. Status moves visibly on the advisory itself — including the CVE request — and GitHub notifies you of those updates, so you can follow it through to publication.
+- **A real fix, handled responsibly.** For findings with broad or severe real-world impact, we may hold publication for up to ~2 weeks after the patched release so administrators can update before details are public.
+
+We're a small volunteer team, so what we *can't* offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
+
 ## Expected Timeframe
 
 We aim to triage new reports, ship fixes, and publish advisories promptly. However, due to the very high volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by a high number of (AI-generated) reports — our capacity to respond is limited. Open WebUI is a community-driven project maintained by a small team, and security reports are handled alongside all other project responsibilities.
 
-**Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means we have not yet had the capacity to address it. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
+**Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means we have not yet had the capacity to address it. Feel free to post a follow-up comment on your advisory for visibility if you feel your report may have been lost; we'll get to you as soon as our capacity allows. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
 
 **We do not accept reporter-imposed publishing deadlines.** We coordinate disclosure on our own schedule, and we will triage, fix, and publish as fast as we reasonably can. Externally-imposed hard timelines do not speed this up — they do the opposite: they pull our limited time away from actually fixing issues and toward managing a clock, **at the expense of every other report (even ones that might be more serious)** in the queue and the project as a whole. A deadline attached to your report will not change when or how fast it is handled.
 
-For findings we judge to have **broad or severe real-world impact** — regardless of CVSS score — we may hold off on publishing for **1–2 weeks** after the patched version is released, to give administrators time to update their instances.
+For findings we judge to have **broad or severe real-world impact** — regardless of CVSS score — we may hold off on publishing for a couple of days, max ~2 weeks after the patched version is released, to give administrators time to update their instances.
 
 ## Report Handling
 
@@ -205,4 +219,4 @@ For any other immediate concerns and questions, please create an issue in our [i
 
 ---
 
-_Last updated on **2026-06-06**._
+_Last updated on **2026-06-07**._
