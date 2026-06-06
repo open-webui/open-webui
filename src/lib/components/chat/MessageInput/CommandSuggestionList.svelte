@@ -3,6 +3,7 @@
 	import Knowledge from './Commands/Knowledge.svelte';
 	import Models from './Commands/Models.svelte';
 	import Skills from './Commands/Skills.svelte';
+	import Emojis from './Commands/Emojis.svelte';
 
 	export let char = '';
 	export let query = '';
@@ -131,6 +132,22 @@
 						onSelect({
 							type: 'skill',
 							data: data
+						});
+					}
+				}}
+			/>
+		{:else if char === ':'}
+			<Emojis
+				bind:this={suggestionElement}
+				{query}
+				bind:filteredItems
+				onSelect={(e) => {
+					const { type, data } = e;
+
+					if (type === 'emoji') {
+						command({
+							id: data.name,
+							label: data.shortCodes[0]
 						});
 					}
 				}}

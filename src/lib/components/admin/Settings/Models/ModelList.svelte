@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Sortable from 'sortablejs';
 
-	import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte';
+	import { createEventDispatcher, getContext, onMount, onDestroy, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { models } from '$lib/stores';
@@ -13,22 +13,20 @@
 	let sortable = null;
 	let modelListElement = null;
 
-	const positionChangeHandler = () => {
-		// Read new order from DOM
-		const newOrder = Array.from(modelListElement.children).map((child) =>
-			child.id.replace('model-item-', '')
-		);
+	const positionChangeHandler = (event) => {
+		const { oldIndex, newIndex, item } = event;
 
-		// Revert SortableJS DOM manipulation so Svelte stays in control of the DOM
-		if (sortable) {
-			sortable.sort(
-				modelIds.map((id) => `model-item-${id}`),
-				true
-			);
-		}
+		// Revert SortableJS's DOM manipulation so Svelte doesn't get out of sync.
+		// Svelte expects the DOM to match its virtual DOM before it applies state updates.
+		const parent = item.parentNode;
+		const target = parent.children[oldIndex < newIndex ? oldIndex : oldIndex + 1];
+		parent.insertBefore(item, target);
 
-		// Update reactive data — Svelte will re-render with the new order
-		modelIds = newOrder;
+		// Now apply the logical state update, letting Svelte handle the real DOM move.
+		const updatedIds = [...modelIds];
+		const [movedId] = updatedIds.splice(oldIndex, 1);
+		updatedIds.splice(newIndex, 0, movedId);
+		modelIds = updatedIds;
 	};
 
 	const initSortable = () => {
@@ -41,15 +39,20 @@
 			sortable = new Sortable(modelListElement, {
 				animation: 150,
 				handle: '.model-item-handle',
-				onUpdate: async (event) => {
-					positionChangeHandler();
+				onUpdate: (event) => {
+					positionChangeHandler(event);
 				}
 			});
 		}
 	};
 
+	$: if (modelIds && modelListElement) {
+		tick().then(() => {
+			initSortable();
+		});
+	}
+
 	onMount(() => {
-		// Wait a tick for the {#if} block to render and bind modelListElement
 		tick().then(() => {
 			initSortable();
 		});

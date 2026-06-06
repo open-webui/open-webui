@@ -6,6 +6,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 
 	import { updateUserSettings } from '$lib/apis/users';
+	import equal from 'fast-deep-equal';
 	const i18n = getContext('i18n');
 
 	export let selectedModels = [''];
@@ -43,7 +44,7 @@
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
 
-		if (JSON.stringify(_selectedModels) !== JSON.stringify(selectedModels)) {
+		if (!equal(_selectedModels, selectedModels)) {
 			selectedModels = _selectedModels;
 		}
 	}

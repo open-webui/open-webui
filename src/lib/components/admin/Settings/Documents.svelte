@@ -184,6 +184,13 @@
 			toast.error($i18n.t('Mistral OCR API Key required.'));
 			return;
 		}
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'paddleocr_vl' &&
+			RAGConfig.PADDLEOCR_VL_BASE_URL === ''
+		) {
+			toast.error($i18n.t('PaddleOCR-vl API URL required.'));
+			return;
+		}
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
@@ -356,6 +363,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="paddleocr_vl">{$i18n.t('PaddleOCR-vl')}</option>
 									<option value="mineru">{$i18n.t('MinerU')}</option>
 								</select>
 							</div>
@@ -655,6 +663,19 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
+								/>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'paddleocr_vl'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter PaddleOCR-vl API Base URL')}
+									bind:value={RAGConfig.PADDLEOCR_VL_BASE_URL}
+								/>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter PaddleOCR-vl API Token')}
+									bind:value={RAGConfig.PADDLEOCR_VL_TOKEN}
+									required={false}
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
@@ -1186,6 +1207,23 @@
 							{/if}
 
 							<div class="  mb-2.5 flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('Reranking Batch Size')}
+								</div>
+
+								<div class="">
+									<input
+										bind:value={RAGConfig.RAG_RERANKING_BATCH_SIZE}
+										type="number"
+										class=" bg-transparent text-center w-14 outline-none"
+										min="1"
+										max="16000"
+										step="1"
+									/>
+								</div>
+							</div>
+
+							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
 								<div class="flex items-center relative">
 									<input
@@ -1332,6 +1370,14 @@
 									/>
 								</Tooltip>
 							</div>
+
+							{#if RAGConfig.RAG_TEMPLATE && (RAGConfig.RAG_TEMPLATE.match(/\[context\]/g) || []).length + (RAGConfig.RAG_TEMPLATE.match(/\{\{CONTEXT\}\}/g) || []).length > 1}
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'This template contains multiple context placeholders ([context] or {{CONTEXT}}). Context will be injected at each occurrence.'
+									)}
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/if}

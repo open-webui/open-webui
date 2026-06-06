@@ -169,13 +169,18 @@ Based on the user's instruction, update and enhance the existing notes or select
 				: '') +
 			(selectedContent ? `\n<selection>${selectedContent?.text}</selection>` : '');
 
+		// Filter out empty assistant placeholder messages to avoid sending
+		// an empty trailing assistant message as "response prefill", which is
+		// incompatible with enable_thinking in llama.cpp and similar backends.
+		const filteredMessages = messages.filter((m) => !(m.role === 'assistant' && m.content === ''));
+
 		const chatMessages = JSON.parse(
 			JSON.stringify([
 				{
 					role: 'system',
 					content: `${system}`
 				},
-				...messages
+				...filteredMessages
 			])
 		);
 

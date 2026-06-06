@@ -21,6 +21,7 @@
 
 	export let show = false;
 	export let onUpdate = () => {};
+	export let onDelete: (id: string) => void = () => {};
 
 	let loading = false;
 	let chatList: any[] | null = null;
@@ -157,6 +158,9 @@
 	{chatListLoading}
 	onUpdate={() => {
 		init();
+	}}
+	onDelete={(id) => {
+		onDelete(id);
 	}}
 	loadHandler={loadMoreChats}
 	{unarchiveHandler}

@@ -8,6 +8,7 @@
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
+	import colonFenceExtension from '$lib/utils/marked/colon-fence-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import footnoteExtension from '$lib/utils/marked/footnote-extension';
@@ -23,6 +24,7 @@
 	export let paragraphTag = 'p';
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowEmbeds = true;
 
 	export let sourceIds = [];
 
@@ -48,6 +50,7 @@
 	marked.use(markedExtension(options));
 	marked.use(citationExtension(options));
 	marked.use(footnoteExtension(options));
+	marked.use(colonFenceExtension(options));
 	marked.use(disableSingleTilde);
 	marked.use({
 		extensions: [
@@ -86,7 +89,7 @@
 	$: updateHandler(content);
 
 	// Throttle parsing to once per animation frame while streaming
-	$: onDestroy(() => {
+	onDestroy(() => {
 		cancelAnimationFrame(pendingUpdate);
 	});
 </script>
@@ -102,6 +105,7 @@
 		{editCodeBlock}
 		{sourceIds}
 		{topPadding}
+		{allowEmbeds}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

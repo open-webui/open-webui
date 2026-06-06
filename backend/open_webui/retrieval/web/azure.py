@@ -40,20 +40,17 @@ def search_azure(
         from azure.search.documents import SearchClient
     except ImportError:
         log.error(
-            "azure-search-documents package is not installed. "
-            "Install it with: pip install azure-search-documents"
+            'azure-search-documents package is not installed. Install it with: pip install azure-search-documents'
         )
         raise ImportError(
-            "azure-search-documents is required for Azure AI Search. "
-            "Install it with: pip install azure-search-documents"
+            'azure-search-documents is required for Azure AI Search. '
+            'Install it with: pip install azure-search-documents'
         )
 
     try:
         # Create search client with API key authentication
         credential = AzureKeyCredential(api_key)
-        search_client = SearchClient(
-            endpoint=endpoint, index_name=index_name, credential=credential
-        )
+        search_client = SearchClient(endpoint=endpoint, index_name=index_name, credential=credential)
 
         # Perform the search
         results = search_client.search(search_text=query, top=count)
@@ -68,42 +65,42 @@ def search_azure(
 
             # Try to find URL field (common names)
             link = (
-                result_dict.get("url")
-                or result_dict.get("link")
-                or result_dict.get("uri")
-                or result_dict.get("metadata_storage_path")
-                or ""
+                result_dict.get('url')
+                or result_dict.get('link')
+                or result_dict.get('uri')
+                or result_dict.get('metadata_storage_path')
+                or ''
             )
 
             # Try to find title field (common names)
             title = (
-                result_dict.get("title")
-                or result_dict.get("name")
-                or result_dict.get("metadata_title")
-                or result_dict.get("metadata_storage_name")
+                result_dict.get('title')
+                or result_dict.get('name')
+                or result_dict.get('metadata_title')
+                or result_dict.get('metadata_storage_name')
                 or None
             )
 
             # Try to find content/snippet field (common names)
             snippet = (
-                result_dict.get("content")
-                or result_dict.get("snippet")
-                or result_dict.get("description")
-                or result_dict.get("summary")
-                or result_dict.get("text")
+                result_dict.get('content')
+                or result_dict.get('snippet')
+                or result_dict.get('description')
+                or result_dict.get('summary')
+                or result_dict.get('text')
                 or None
             )
 
             # Truncate snippet if too long
             if snippet and len(snippet) > 500:
-                snippet = snippet[:497] + "..."
+                snippet = snippet[:497] + '...'
 
             if link:  # Only add if we found a valid link
                 search_results.append(
                     {
-                        "link": link,
-                        "title": title,
-                        "snippet": snippet,
+                        'link': link,
+                        'title': title,
+                        'snippet': snippet,
                     }
                 )
 
@@ -114,13 +111,13 @@ def search_azure(
         # Convert to SearchResult objects
         return [
             SearchResult(
-                link=result["link"],
-                title=result.get("title"),
-                snippet=result.get("snippet"),
+                link=result['link'],
+                title=result.get('title'),
+                snippet=result.get('snippet'),
             )
             for result in search_results
         ]
 
     except Exception as ex:
-        log.error(f"Azure AI Search error: {ex}")
+        log.error(f'Azure AI Search error: {ex}')
         raise ex

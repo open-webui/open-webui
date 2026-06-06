@@ -305,6 +305,17 @@ self.onmessage = async (event) => {
 			break;
 		}
 
+		case 'fs:sync': {
+			// Re-read from IndexedDB into memory to pick up externally written files
+			(self.pyodide.FS as any).syncfs(true, (err: Error | null) => {
+				if (err) {
+					console.error('Error syncing from IndexedDB:', err);
+				}
+				self.postMessage({ id, type: 'fs:sync', success: !err });
+			});
+			break;
+		}
+
 		default:
 			console.warn('Unknown message type:', type);
 	}

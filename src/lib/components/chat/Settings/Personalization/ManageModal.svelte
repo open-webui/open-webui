@@ -9,10 +9,18 @@
 	import AddMemoryModal from './AddMemoryModal.svelte';
 	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { error } from '@sveltejs/kit';
 	import EditMemoryModal from './EditMemoryModal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
@@ -22,12 +30,46 @@
 	let memories = [];
 	let loading = true;
 
+	let query = '';
+	let orderBy = 'updated_at';
+	let direction = 'desc';
+
+	const setSortKey = (key: string) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = 'asc';
+		}
+	};
+
 	let showAddMemoryModal = false;
 	let showEditMemoryModal = false;
 
 	let selectedMemory = null;
 
 	let showClearConfirmDialog = false;
+	let showDeleteConfirm = false;
+
+	$: filteredMemories = query
+		? memories.filter((m) => m.content?.toLowerCase().includes(query.toLowerCase()))
+		: memories;
+
+	$: sortedMemories = [...filteredMemories].sort((a, b) => {
+		let aVal, bVal;
+		if (orderBy === 'content') {
+			aVal = (a.content ?? '').toLowerCase();
+			bVal = (b.content ?? '').toLowerCase();
+		} else {
+			aVal = a.updated_at ?? 0;
+			bVal = b.updated_at ?? 0;
+		}
+		if (direction === 'asc') {
+			return aVal > bVal ? 1 : -1;
+		} else {
+			return aVal < bVal ? 1 : -1;
+		}
+	});
 
 	let onClearConfirmed = async () => {
 		const res = await deleteMemoriesByUserId(localStorage.token).catch((error) => {
@@ -52,145 +94,177 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Memory')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
-		</div>
+		<!-- Header -->
+		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
+			<div class="flex items-center gap-2">
+				<div class="text-lg font-medium">{$i18n.t('Memory')}</div>
 
-		<div class="flex flex-col w-full px-5 pb-5 dark:text-gray-200">
-			<div
-				class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[28rem] max-h-screen rounded-xl mb-4 mt-1"
-			>
-				{#if memories.length > 0}
-					<div class="text-left text-sm w-full mb-4 overflow-y-scroll">
-						<div class="relative overflow-x-auto">
-							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
-								<thead
-									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 border-gray-50 dark:border-gray-850/30"
-								>
-									<tr>
-										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-										<th scope="col" class="px-3 py-2 hidden md:flex">
-											{$i18n.t('Last Modified')}
-										</th>
-										<th scope="col" class="px-3 py-2 text-right" />
-									</tr>
-								</thead>
-								<tbody>
-									{#each memories as memory}
-										<tr class="border-b border-gray-50 dark:border-gray-850/30 items-center">
-											<td class="px-3 py-1">
-												<div class="line-clamp-1">
-													{memory.content}
-												</div>
-											</td>
-											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
-												<div class="my-auto whitespace-nowrap">
-													{dayjs(memory.updated_at * 1000).format('LLL')}
-												</div>
-											</td>
-											<td class="px-3 py-1">
-												<div class="flex justify-end w-full">
-													<Tooltip content="Edit">
-														<button
-															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-															on:click={() => {
-																selectedMemory = memory;
-																showEditMemoryModal = true;
-															}}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																fill="none"
-																viewBox="0 0 24 24"
-																stroke-width="1.5"
-																stroke="currentColor"
-																class="w-4 h-4 s-FoVA_WMOgxUD"
-																><path
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																	d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-																	class="s-FoVA_WMOgxUD"
-																/></svg
-															>
-														</button>
-													</Tooltip>
-
-													<Tooltip content="Delete">
-														<button
-															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-															on:click={async () => {
-																const res = await deleteMemoryById(
-																	localStorage.token,
-																	memory.id
-																).catch((error) => {
-																	toast.error(`${error}`);
-																	return null;
-																});
-
-																if (res) {
-																	toast.success($i18n.t('Memory deleted successfully'));
-																	memories = await getMemories(localStorage.token);
-																}
-															}}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																fill="none"
-																viewBox="0 0 24 24"
-																stroke-width="1.5"
-																stroke="currentColor"
-																class="w-4 h-4"
-															>
-																<path
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																	d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-																/>
-															</svg>
-														</button>
-													</Tooltip>
-												</div>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				{:else}
-					<div class="text-center flex h-full text-sm w-full">
-						<div class=" my-auto pb-10 px-4 w-full text-gray-500">
-							{$i18n.t('Memories accessible by LLMs will be shown here.')}
-						</div>
+				{#if !loading}
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{memories.length}
 					</div>
 				{/if}
 			</div>
-			<div class="flex text-sm font-medium gap-1.5">
+
+			<button class="self-center" on:click={() => (show = false)}>
+				<XMark className="size-5" />
+			</button>
+		</div>
+
+		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
+			<!-- Search -->
+			<div class="flex flex-1 items-center w-full mb-1">
+				<div class="self-center ml-1 mr-3">
+					<Search className="size-3.5" />
+				</div>
+				<input
+					class="w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+					bind:value={query}
+					placeholder={$i18n.t('Search Memories')}
+					maxlength="500"
+				/>
+
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] bg-transparent">
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Memories List -->
+			<div class="flex flex-col w-full">
+				{#if !loading}
+					{#if sortedMemories.length === 0}
+						<div
+							class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full flex justify-center items-center"
+						>
+							{#if memories.length === 0}
+								{$i18n.t('Memories accessible by LLMs will be shown here.')}
+							{:else}
+								{$i18n.t('No results found')}
+							{/if}
+						</div>
+					{:else}
+						{#if sortedMemories.length > 0}
+							<div class="flex text-xs font-medium mb-1">
+								<button
+									class="px-1.5 py-1 cursor-pointer select-none basis-3/5"
+									on:click={() => setSortKey('content')}
+								>
+									<div class="flex gap-1.5 items-center">
+										{$i18n.t('Content')}
+										{#if orderBy === 'content'}
+											<span class="font-normal">
+												{#if direction === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											</span>
+										{:else}
+											<span class="invisible">
+												<ChevronUp className="size-2" />
+											</span>
+										{/if}
+									</div>
+								</button>
+								<button
+									class="px-1.5 py-1 cursor-pointer select-none hidden sm:flex sm:basis-2/5 justify-end"
+									on:click={() => setSortKey('updated_at')}
+								>
+									<div class="flex gap-1.5 items-center">
+										{$i18n.t('Updated at')}
+										{#if orderBy === 'updated_at'}
+											<span class="font-normal">
+												{#if direction === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											</span>
+										{:else}
+											<span class="invisible">
+												<ChevronUp className="size-2" />
+											</span>
+										{/if}
+									</div>
+								</button>
+							</div>
+						{/if}
+
+						<div class="text-left text-sm w-full max-h-[28rem] overflow-y-auto">
+							{#each sortedMemories as memory (memory.id)}
+								<div
+									class="w-full flex justify-between items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 transition cursor-pointer"
+									on:click={() => {
+										selectedMemory = memory;
+										showEditMemoryModal = true;
+									}}
+								>
+									<div class="flex-1 min-w-0 pr-2">
+										<div class="text-ellipsis line-clamp-1">{memory.content}</div>
+										<div class="text-xs text-gray-500 dark:text-gray-400">
+											{dayjs(memory.updated_at * 1000).format('MMM D, YYYY')}
+										</div>
+									</div>
+
+									<div class="flex items-center shrink-0">
+										<div
+											class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap mr-2"
+										>
+											{dayjs(memory.updated_at * 1000).format('h:mm A')}
+										</div>
+
+										<div class="flex text-gray-600 dark:text-gray-300">
+											<Tooltip content={$i18n.t('Edit')}>
+												<button
+													class="self-center w-fit text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+													on:click={(e) => {
+														e.stopPropagation();
+														selectedMemory = memory;
+														showEditMemoryModal = true;
+													}}
+												>
+													<Pencil className="size-4" />
+												</button>
+											</Tooltip>
+
+											<Tooltip content={$i18n.t('Delete')}>
+												<button
+													class="self-center w-fit text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+													on:click={(e) => {
+														e.stopPropagation();
+														selectedMemory = memory;
+														showDeleteConfirm = true;
+													}}
+												>
+													<GarbageBin className="size-4" strokeWidth="1.5" />
+												</button>
+											</Tooltip>
+										</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{:else}
+					<div class="w-full flex justify-center items-center min-h-20">
+						<Spinner className="size-4" />
+					</div>
+				{/if}
+			</div>
+
+			<!-- Footer -->
+			<div class="flex justify-between items-center text-sm mt-2">
 				<button
-					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
-					on:click={() => {
-						showAddMemoryModal = true;
-					}}>{$i18n.t('Add Memory')}</button
-				>
-				<button
-					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-100 dark:outline-red-800 rounded-3xl"
+					class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:underline transition"
 					on:click={() => {
 						if (memories.length > 0) {
 							showClearConfirmDialog = true;
@@ -198,6 +272,13 @@
 							toast.error($i18n.t('No memories to clear'));
 						}
 					}}>{$i18n.t('Clear memory')}</button
+				>
+
+				<button
+					class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
+					on:click={() => {
+						showAddMemoryModal = true;
+					}}>{$i18n.t('Add Memory')}</button
 				>
 			</div>
 		</div>
@@ -213,6 +294,35 @@
 		showClearConfirmDialog = false;
 	}}
 />
+
+<ConfirmDialog
+	title={$i18n.t('Delete Memory?')}
+	show={showDeleteConfirm}
+	on:confirm={async () => {
+		const res = await deleteMemoryById(localStorage.token, selectedMemory.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Memory deleted successfully'));
+			memories = await getMemories(localStorage.token);
+		}
+		showDeleteConfirm = false;
+	}}
+	on:cancel={() => {
+		showDeleteConfirm = false;
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1">
+		{$i18n.t('Are you sure you want to delete this memory? This action cannot be undone.')}
+		<div
+			class=" mt-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 text-black dark:text-white whitespace-pre-wrap break-words max-h-32 overflow-y-auto"
+		>
+			{selectedMemory?.content}
+		</div>
+	</div>
+</ConfirmDialog>
 
 <AddMemoryModal
 	bind:show={showAddMemoryModal}

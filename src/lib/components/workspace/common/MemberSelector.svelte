@@ -21,6 +21,7 @@
 	export let includeGroups = true;
 	export let includeUsers = true;
 	export let pagination = false;
+	export let includeSessionUser = false;
 
 	export let groupIds = [];
 	export let userIds = [];
@@ -245,7 +246,7 @@
 
 							<div>
 								{#each users as user, userIdx (user.id)}
-									{#if user?.id !== $_user?.id}
+									{#if includeSessionUser || user?.id !== $_user?.id}
 										<button
 											class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
 											type="button"

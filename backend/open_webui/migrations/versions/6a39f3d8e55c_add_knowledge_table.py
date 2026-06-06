@@ -11,37 +11,37 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column, select
 import json
 
-revision = "6a39f3d8e55c"
-down_revision = "c0fbf31ca0db"
+revision = '6a39f3d8e55c'
+down_revision = 'c0fbf31ca0db'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
     # Creating the 'knowledge' table
-    print("Creating knowledge table")
+    print('Creating knowledge table')
     knowledge_table = op.create_table(
-        "knowledge",
-        sa.Column("id", sa.Text(), primary_key=True),
-        sa.Column("user_id", sa.Text(), nullable=False),
-        sa.Column("name", sa.Text(), nullable=False),
-        sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("data", sa.JSON(), nullable=True),
-        sa.Column("meta", sa.JSON(), nullable=True),
-        sa.Column("created_at", sa.BigInteger(), nullable=False),
-        sa.Column("updated_at", sa.BigInteger(), nullable=True),
+        'knowledge',
+        sa.Column('id', sa.Text(), primary_key=True),
+        sa.Column('user_id', sa.Text(), nullable=False),
+        sa.Column('name', sa.Text(), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('data', sa.JSON(), nullable=True),
+        sa.Column('meta', sa.JSON(), nullable=True),
+        sa.Column('created_at', sa.BigInteger(), nullable=False),
+        sa.Column('updated_at', sa.BigInteger(), nullable=True),
     )
 
-    print("Migrating data from document table to knowledge table")
+    print('Migrating data from document table to knowledge table')
     # Representation of the existing 'document' table
     document_table = table(
-        "document",
-        column("collection_name", sa.String()),
-        column("user_id", sa.String()),
-        column("name", sa.String()),
-        column("title", sa.Text()),
-        column("content", sa.Text()),
-        column("timestamp", sa.BigInteger()),
+        'document',
+        column('collection_name', sa.String()),
+        column('user_id', sa.String()),
+        column('name', sa.String()),
+        column('title', sa.Text()),
+        column('content', sa.Text()),
+        column('timestamp', sa.BigInteger()),
     )
 
     # Select all from existing document table
@@ -64,9 +64,9 @@ def upgrade():
                 user_id=doc.user_id,
                 description=doc.name,
                 meta={
-                    "legacy": True,
-                    "document": True,
-                    "tags": json.loads(doc.content or "{}").get("tags", []),
+                    'legacy': True,
+                    'document': True,
+                    'tags': json.loads(doc.content or '{}').get('tags', []),
                 },
                 name=doc.title,
                 created_at=doc.timestamp,
@@ -76,4 +76,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table("knowledge")
+    op.drop_table('knowledge')

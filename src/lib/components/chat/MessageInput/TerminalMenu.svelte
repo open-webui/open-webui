@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { settings, showSettings, terminalServers, selectedTerminalId, user } from '$lib/stores';
 	import { getToolServersData } from '$lib/apis';
@@ -92,7 +90,7 @@
 </script>
 
 <div class="flex items-center translate-x-0.5">
-	<Dropdown bind:show>
+	<Dropdown bind:show align="end">
 		<Tooltip content={$i18n.t('Terminal')} placement="top">
 			<button
 				type="button"
@@ -104,20 +102,14 @@
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px] capitalize"
-						>{selectedLabel}</span
-					>
+					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px]">{selectedLabel}</span>
 				{/if}
 			</button>
 		</Tooltip>
 
 		<div slot="content">
-			<DropdownMenu.Content
-				class="w-full max-w-56 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
-				sideOffset={4}
-				side="bottom"
-				align="end"
-				transition={flyAndScale}
+			<div
+				class="min-w-56 max-w-56 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 			>
 				<!-- Direct terminals (gated by permission) -->
 				{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
@@ -133,7 +125,7 @@
 								class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
 								on:click|stopPropagation={() => {
 									show = false;
-									showSettings.set(true);
+									showSettings.set('tools');
 								}}
 							>
 								<svg
@@ -254,7 +246,7 @@
 						</button>
 					{/each}
 				{/if}
-			</DropdownMenu.Content>
+			</div>
 		</div>
 	</Dropdown>
 </div>

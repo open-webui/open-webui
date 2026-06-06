@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import { getContext, onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { config, user, tools as _tools, mobile, knowledge } from '$lib/stores';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
@@ -24,6 +22,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import PageEdit from '$lib/components/icons/PageEdit.svelte';
 	import Chats from './InputMenu/Chats.svelte';
+	import Files from './InputMenu/Files.svelte';
 	import Notes from './InputMenu/Notes.svelte';
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
@@ -122,13 +121,8 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu.Content
-			class="w-full max-w-70 rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
-			sideOffset={4}
-			alignOffset={-6}
-			side="bottom"
-			align="start"
-			transition={flyAndScale}
+		<div
+			class="w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
@@ -140,20 +134,22 @@
 								: ''}
 						className="w-full"
 					>
-						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+						<button
+							class="flex w-full gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							type="button"
 							on:click={() => {
 								if (fileUploadEnabled) {
 									uploadFilesHandler();
+									show = false;
 								}
 							}}
 						>
 							<Clip />
 
 							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
-						</DropdownMenu.Item>
+						</button>
 					</Tooltip>
 
 					<Tooltip
@@ -164,10 +160,11 @@
 								: ''}
 						className="w-full"
 					>
-						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50  rounded-xl {!fileUploadEnabled
+						<button
+							class="flex w-full gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							type="button"
 							on:click={() => {
 								if (fileUploadEnabled) {
 									if (!detectMobile()) {
@@ -179,12 +176,13 @@
 											cameraInputElement.click();
 										}
 									}
+									show = false;
 								}
 							}}
 						>
 							<Camera />
 							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-						</DropdownMenu.Item>
+						</button>
 					</Tooltip>
 
 					<Tooltip
@@ -193,19 +191,53 @@
 							: ''}
 						className="w-full"
 					>
-						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!webUploadEnabled
+						<button
+							class="flex w-full gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!webUploadEnabled
 								? 'opacity-50'
 								: ''}"
+							type="button"
 							on:click={() => {
 								if (webUploadEnabled) {
 									showAttachWebpageModal = true;
+									show = false;
 								}
 							}}
 						>
 							<GlobeAlt />
 							<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
-						</DropdownMenu.Item>
+						</button>
+					</Tooltip>
+
+					<Tooltip
+						content={fileUploadCapableModels.length !== selectedModels.length
+							? $i18n.t('Model(s) do not support file upload')
+							: !fileUploadEnabled
+								? $i18n.t('You do not have permission to upload files.')
+								: ''}
+						className="w-full"
+					>
+						<button
+							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								? 'opacity-50'
+								: ''}"
+							on:click={() => {
+								if (fileUploadEnabled) {
+									tab = 'files';
+								}
+							}}
+						>
+							<DocumentArrowUp />
+
+							<div class="flex items-center w-full justify-between">
+								<div class="line-clamp-1">
+									{$i18n.t('Attach Files')}
+								</div>
+
+								<div class="text-gray-500">
+									<ChevronRight />
+								</div>
+							</div>
+						</button>
 					</Tooltip>
 
 					{#if $config?.features?.enable_notes ?? false}
@@ -302,10 +334,12 @@
 
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}
-							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+							<button
+								class="flex w-full gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+								type="button"
 								on:click={() => {
 									uploadGoogleDriveHandler();
+									show = false;
 								}}
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="w-4">
@@ -335,7 +369,7 @@
 									/>
 								</svg>
 								<div class="line-clamp-1">{$i18n.t('Google Drive')}</div>
-							</DropdownMenu.Item>
+							</button>
 						{/if}
 
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
@@ -484,6 +518,25 @@
 
 					<Notes {onSelect} />
 				</div>
+			{:else if tab === 'files'}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+
+						<div class="flex items-center w-full justify-between">
+							<div>
+								{$i18n.t('Files')}
+							</div>
+						</div>
+					</button>
+
+					<Files {onSelect} />
+				</div>
 			{:else if tab === 'chats'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
@@ -521,23 +574,27 @@
 					</button>
 
 					{#if $config?.features?.enable_onedrive_personal}
-						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
+						<button
+							class="flex w-full gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
+							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
+								show = false;
 							}}
 						>
 							<div class="flex flex-col">
 								<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
 							</div>
-						</DropdownMenu.Item>
+						</button>
 					{/if}
 
 					{#if $config?.features?.enable_onedrive_business}
-						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
+						<button
+							class="flex w-full gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
+							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
+								show = false;
 							}}
 						>
 							<div class="flex flex-col">
@@ -546,10 +603,10 @@
 								</div>
 								<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
 							</div>
-						</DropdownMenu.Item>
+						</button>
 					{/if}
 				</div>
 			{/if}
-		</DropdownMenu.Content>
+		</div>
 	</div>
 </Dropdown>

@@ -34,12 +34,12 @@ def setup(app: FastAPI, db_engine: Engine):
         # Add basic auth header only if both username and password are not empty
         headers = []
         if OTEL_BASIC_AUTH_USERNAME and OTEL_BASIC_AUTH_PASSWORD:
-            auth_string = f"{OTEL_BASIC_AUTH_USERNAME}:{OTEL_BASIC_AUTH_PASSWORD}"
+            auth_string = f'{OTEL_BASIC_AUTH_USERNAME}:{OTEL_BASIC_AUTH_PASSWORD}'
             auth_header = b64encode(auth_string.encode()).decode()
-            headers = [("authorization", f"Basic {auth_header}")]
+            headers = [('authorization', f'Basic {auth_header}')]
 
         # otlp export
-        if OTEL_OTLP_SPAN_EXPORTER == "http":
+        if OTEL_OTLP_SPAN_EXPORTER == 'http':
             exporter = HttpOTLPSpanExporter(
                 endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
                 headers=headers,
@@ -55,4 +55,4 @@ def setup(app: FastAPI, db_engine: Engine):
 
     # set up metrics only if enabled
     if ENABLE_OTEL_METRICS:
-        setup_metrics(app, resource)
+        setup_metrics(app, resource, db_engine)

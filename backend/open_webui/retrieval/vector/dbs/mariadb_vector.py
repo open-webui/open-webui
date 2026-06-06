@@ -47,8 +47,8 @@ def _embedding_to_f32_bytes(vec: List[float]) -> bytes:
     byte sequence. We use array('f') to avoid a numpy dependency and byteswap on
     big-endian platforms for portability.
     """
-    a = array.array("f", [float(x) for x in vec])  # float32
-    if sys.byteorder != "little":
+    a = array.array('f', [float(x) for x in vec])  # float32
+    if sys.byteorder != 'little':
         a.byteswap()
     return a.tobytes()
 
@@ -68,7 +68,7 @@ def _safe_json(v: Any) -> Dict[str, Any]:
         return v
     if isinstance(v, (bytes, bytearray)):
         try:
-            v = v.decode("utf-8")
+            v = v.decode('utf-8')
         except Exception:
             return {}
     if isinstance(v, str):
@@ -105,16 +105,16 @@ class MariaDBVectorClient(VectorDBBase):
         """
         self.db_url = (db_url or MARIADB_VECTOR_DB_URL).strip()
         self.vector_length = int(vector_length)
-        self.distance_strategy = (distance_strategy or "cosine").strip().lower()
+        self.distance_strategy = (distance_strategy or 'cosine').strip().lower()
         self.index_m = int(index_m)
 
-        if self.distance_strategy not in {"cosine", "euclidean"}:
+        if self.distance_strategy not in {'cosine', 'euclidean'}:
             raise ValueError("distance_strategy must be 'cosine' or 'euclidean'")
 
-        if not self.db_url.lower().startswith("mariadb+mariadbconnector://"):
+        if not self.db_url.lower().startswith('mariadb+mariadbconnector://'):
             raise ValueError(
-                "MariaDBVectorClient requires mariadb+mariadbconnector:// (official MariaDB driver) "
-                "to ensure qmark paramstyle and correct VECTOR binding."
+                'MariaDBVectorClient requires mariadb+mariadbconnector:// (official MariaDB driver) '
+                'to ensure qmark paramstyle and correct VECTOR binding.'
             )
 
         if isinstance(MARIADB_VECTOR_POOL_SIZE, int):
@@ -129,9 +129,7 @@ class MariaDBVectorClient(VectorDBBase):
                     poolclass=QueuePool,
                 )
             else:
-                self.engine = create_engine(
-                    self.db_url, pool_pre_ping=True, poolclass=NullPool
-                )
+                self.engine = create_engine(self.db_url, pool_pre_ping=True, poolclass=NullPool)
         else:
             self.engine = create_engine(self.db_url, pool_pre_ping=True)
         self._init_schema()
@@ -185,7 +183,7 @@ class MariaDBVectorClient(VectorDBBase):
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    log.exception(f"Error during database initialization: {e}")
+                    log.exception(f'Error during database initialization: {e}')
                     raise
 
     def _check_vector_length(self) -> None:
@@ -197,19 +195,19 @@ class MariaDBVectorClient(VectorDBBase):
         """
         with self._connect() as conn:
             with conn.cursor() as cur:
-                cur.execute("SHOW CREATE TABLE document_chunk")
+                cur.execute('SHOW CREATE TABLE document_chunk')
                 row = cur.fetchone()
                 if not row or len(row) < 2:
                     return
                 ddl = row[1]
-                m = re.search(r"vector\\((\\d+)\\)", ddl, flags=re.IGNORECASE)
+                m = re.search(r'vector\\((\\d+)\\)', ddl, flags=re.IGNORECASE)
                 if not m:
                     return
                 existing = int(m.group(1))
                 if existing != int(self.vector_length):
                     raise Exception(
-                        f"VECTOR_LENGTH {self.vector_length} does not match existing vector column dimension {existing}. "
-                        "Cannot change vector size after initialization without migrating the data."
+                        f'VECTOR_LENGTH {self.vector_length} does not match existing vector column dimension {existing}. '
+                        'Cannot change vector size after initialization without migrating the data.'
                     )
 
     def adjust_vector_length(self, vector: List[float]) -> List[float]:
@@ -227,11 +225,7 @@ class MariaDBVectorClient(VectorDBBase):
         """
         Return the MariaDB Vector distance function name for the configured strategy.
         """
-        return (
-            "vec_distance_cosine"
-            if self.distance_strategy == "cosine"
-            else "vec_distance_euclidean"
-        )
+        return 'vec_distance_cosine' if self.distance_strategy == 'cosine' else 'vec_distance_euclidean'
 
     def _score_from_dist(self, dist: float) -> float:
         """
@@ -240,7 +234,7 @@ class MariaDBVectorClient(VectorDBBase):
         - cosine: score ~= 1 - cosine_distance, clamped to [0, 1]
         - euclidean: score = 1 / (1 + dist)
         """
-        if self.distance_strategy == "cosine":
+        if self.distance_strategy == 'cosine':
             score = 1.0 - dist
             if score < 0.0:
                 score = 0.0
@@ -260,48 +254,48 @@ class MariaDBVectorClient(VectorDBBase):
           - {"$or":  [ ... ]}
         """
         if not expr or not isinstance(expr, dict):
-            return "", []
+            return '', []
 
-        if "$and" in expr:
+        if '$and' in expr:
             parts: List[str] = []
             params: List[Any] = []
-            for e in expr.get("$and") or []:
+            for e in expr.get('$and') or []:
                 s, p = self._build_filter_sql_qmark(e)
                 if s:
                     parts.append(s)
                     params.extend(p)
-            return ("(" + " AND ".join(parts) + ")") if parts else "", params
+            return ('(' + ' AND '.join(parts) + ')') if parts else '', params
 
-        if "$or" in expr:
+        if '$or' in expr:
             parts: List[str] = []
             params: List[Any] = []
-            for e in expr.get("$or") or []:
+            for e in expr.get('$or') or []:
                 s, p = self._build_filter_sql_qmark(e)
                 if s:
                     parts.append(s)
                     params.extend(p)
-            return ("(" + " OR ".join(parts) + ")") if parts else "", params
+            return ('(' + ' OR '.join(parts) + ')') if parts else '', params
 
         clauses: List[str] = []
         params: List[Any] = []
         for key, value in expr.items():
-            if key.startswith("$"):
+            if key.startswith('$'):
                 continue
             json_expr = f"JSON_UNQUOTE(JSON_EXTRACT(vmetadata, '$.{key}'))"
-            if isinstance(value, dict) and "$in" in value:
-                vals = [str(v) for v in (value.get("$in") or [])]
+            if isinstance(value, dict) and '$in' in value:
+                vals = [str(v) for v in (value.get('$in') or [])]
                 if not vals:
-                    clauses.append("0=1")
+                    clauses.append('0=1')
                     continue
                 ors = []
                 for v in vals:
-                    ors.append(f"{json_expr} = ?")
+                    ors.append(f'{json_expr} = ?')
                     params.append(v)
-                clauses.append("(" + " OR ".join(ors) + ")")
+                clauses.append('(' + ' OR '.join(ors) + ')')
             else:
-                clauses.append(f"{json_expr} = ?")
+                clauses.append(f'{json_expr} = ?')
                 params.append(str(value))
-        return ("(" + " AND ".join(clauses) + ")") if clauses else "", params
+        return ('(' + ' AND '.join(clauses) + ')') if clauses else '', params
 
     def insert(self, collection_name: str, items: List[VectorItem]) -> None:
         """
@@ -322,15 +316,15 @@ class MariaDBVectorClient(VectorDBBase):
                     """
                     params: List[Tuple[Any, ...]] = []
                     for item in items:
-                        v = self.adjust_vector_length(item["vector"])
+                        v = self.adjust_vector_length(item['vector'])
                         emb = _embedding_to_f32_bytes(v)
-                        meta = process_metadata(item.get("metadata") or {})
+                        meta = process_metadata(item.get('metadata') or {})
                         params.append(
                             (
-                                item["id"],
+                                item['id'],
                                 emb,
                                 collection_name,
-                                item.get("text"),
+                                item.get('text'),
                                 json.dumps(meta),
                             )
                         )
@@ -338,7 +332,7 @@ class MariaDBVectorClient(VectorDBBase):
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    log.exception(f"Error during insert: {e}")
+                    log.exception(f'Error during insert: {e}')
                     raise
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
@@ -365,15 +359,15 @@ class MariaDBVectorClient(VectorDBBase):
                     """
                     params: List[Tuple[Any, ...]] = []
                     for item in items:
-                        v = self.adjust_vector_length(item["vector"])
+                        v = self.adjust_vector_length(item['vector'])
                         emb = _embedding_to_f32_bytes(v)
-                        meta = process_metadata(item.get("metadata") or {})
+                        meta = process_metadata(item.get('metadata') or {})
                         params.append(
                             (
-                                item["id"],
+                                item['id'],
                                 emb,
                                 collection_name,
-                                item.get("text"),
+                                item.get('text'),
                                 json.dumps(meta),
                             )
                         )
@@ -381,7 +375,7 @@ class MariaDBVectorClient(VectorDBBase):
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    log.exception(f"Error during upsert: {e}")
+                    log.exception(f'Error during upsert: {e}')
                     raise
 
     def search(
@@ -415,10 +409,10 @@ class MariaDBVectorClient(VectorDBBase):
             with self._connect() as conn:
                 with conn.cursor() as cur:
                     fsql, fparams = self._build_filter_sql_qmark(filter or {})
-                    where = "collection_name = ?"
+                    where = 'collection_name = ?'
                     base_params: List[Any] = [collection_name]
                     if fsql:
-                        where = where + " AND " + fsql
+                        where = where + ' AND ' + fsql
                         base_params.extend(fparams)
 
                     sql = f"""
@@ -460,26 +454,24 @@ class MariaDBVectorClient(VectorDBBase):
                         metadatas=metadatas,
                     )
         except Exception as e:
-            log.exception(f"[MARIADB_VECTOR] search() failed: {e}")
+            log.exception(f'[MARIADB_VECTOR] search() failed: {e}')
             return None
 
-    def query(
-        self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None
-    ) -> Optional[GetResult]:
+    def query(self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None) -> Optional[GetResult]:
         """
         Retrieve documents by metadata filter (non-vector query).
         """
         with self._connect() as conn:
             with conn.cursor() as cur:
                 fsql, fparams = self._build_filter_sql_qmark(filter or {})
-                where = "collection_name = ?"
+                where = 'collection_name = ?'
                 params: List[Any] = [collection_name]
                 if fsql:
-                    where = where + " AND " + fsql
+                    where = where + ' AND ' + fsql
                     params.extend(fparams)
-                sql = f"SELECT id, text, vmetadata FROM document_chunk WHERE {where}"
+                sql = f'SELECT id, text, vmetadata FROM document_chunk WHERE {where}'
                 if limit is not None:
-                    sql += " LIMIT ?"
+                    sql += ' LIMIT ?'
                     params.append(int(limit))
                 cur.execute(sql, params)
                 rows = cur.fetchall()
@@ -490,18 +482,16 @@ class MariaDBVectorClient(VectorDBBase):
                 metadatas = [[_safe_json(r[2]) for r in rows]]
                 return GetResult(ids=ids, documents=documents, metadatas=metadatas)
 
-    def get(
-        self, collection_name: str, limit: Optional[int] = None
-    ) -> Optional[GetResult]:
+    def get(self, collection_name: str, limit: Optional[int] = None) -> Optional[GetResult]:
         """
         Retrieve documents in a collection without filtering (optionally limited).
         """
         with self._connect() as conn:
             with conn.cursor() as cur:
-                sql = "SELECT id, text, vmetadata FROM document_chunk WHERE collection_name = ?"
+                sql = 'SELECT id, text, vmetadata FROM document_chunk WHERE collection_name = ?'
                 params: List[Any] = [collection_name]
                 if limit is not None:
-                    sql += " LIMIT ?"
+                    sql += ' LIMIT ?'
                     params.append(int(limit))
                 cur.execute(sql, params)
                 rows = cur.fetchall()
@@ -526,12 +516,12 @@ class MariaDBVectorClient(VectorDBBase):
         with self._connect() as conn:
             with conn.cursor() as cur:
                 try:
-                    where = ["collection_name = ?"]
+                    where = ['collection_name = ?']
                     params: List[Any] = [collection_name]
 
                     if ids:
-                        ph = ", ".join(["?"] * len(ids))
-                        where.append(f"id IN ({ph})")
+                        ph = ', '.join(['?'] * len(ids))
+                        where.append(f'id IN ({ph})')
                         params.extend(ids)
 
                     if filter:
@@ -540,12 +530,12 @@ class MariaDBVectorClient(VectorDBBase):
                             where.append(fsql)
                             params.extend(fparams)
 
-                    sql = "DELETE FROM document_chunk WHERE " + " AND ".join(where)
+                    sql = 'DELETE FROM document_chunk WHERE ' + ' AND '.join(where)
                     cur.execute(sql, params)
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    log.exception(f"Error during delete: {e}")
+                    log.exception(f'Error during delete: {e}')
                     raise
 
     def reset(self) -> None:
@@ -555,11 +545,11 @@ class MariaDBVectorClient(VectorDBBase):
         with self._connect() as conn:
             with conn.cursor() as cur:
                 try:
-                    cur.execute("TRUNCATE TABLE document_chunk")
+                    cur.execute('TRUNCATE TABLE document_chunk')
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    log.exception(f"Error during reset: {e}")
+                    log.exception(f'Error during reset: {e}')
                     raise
 
     def has_collection(self, collection_name: str) -> bool:
@@ -570,7 +560,7 @@ class MariaDBVectorClient(VectorDBBase):
             with self._connect() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "SELECT 1 FROM document_chunk WHERE collection_name = ? LIMIT 1",
+                        'SELECT 1 FROM document_chunk WHERE collection_name = ? LIMIT 1',
                         (collection_name,),
                     )
                     return cur.fetchone() is not None
@@ -590,4 +580,4 @@ class MariaDBVectorClient(VectorDBBase):
         try:
             self.engine.dispose()
         except Exception as e:
-            log.exception(f"Error during dispose the underlying SQLAlchemy engine: {e}")
+            log.exception(f'Error during dispose the underlying SQLAlchemy engine: {e}')

@@ -14,6 +14,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Tags from './common/Tags.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -35,9 +36,12 @@
 	let auth_type = 'bearer';
 
 	let connectionType = 'external';
-	let azure = false;
+	let provider = '';
 	$: azure =
-		(url.includes('azure.') || url.includes('cognitive.microsoft.com')) && !direct ? true : false;
+		provider === 'azure' ||
+		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
+			!direct &&
+			provider === '');
 
 	let prefixId = '';
 	let enable = true;
@@ -52,6 +56,7 @@
 	let modelIds = [];
 
 	let loading = false;
+	let showDeleteConfirmDialog = false;
 
 	const verifyOllamaHandler = async () => {
 		// remove trailing slash from url
@@ -96,7 +101,7 @@
 				key,
 				config: {
 					auth_type,
-					azure: azure,
+					...(provider ? { provider } : azure ? { azure: true } : {}),
 					api_version: apiVersion,
 					...(_headers ? { headers: _headers } : {})
 				}
@@ -184,7 +189,8 @@
 				connection_type: connectionType,
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
-				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {}),
+				...(provider ? { provider } : !ollama && azure ? { azure: true } : {}),
+				...(azure ? { api_version: apiVersion } : {}),
 				...(apiType ? { api_type: apiType } : {})
 			}
 		};
@@ -221,7 +227,7 @@
 				connectionType = connection.config?.connection_type ?? 'local';
 			} else {
 				connectionType = connection.config?.connection_type ?? 'external';
-				azure = connection.config?.azure ?? false;
+				provider = connection.config?.provider ?? (connection.config?.azure ? 'azure' : '');
 				apiVersion = connection.config?.api_version ?? '';
 				apiType = connection.config?.api_type ?? '';
 			}
@@ -489,22 +495,22 @@
 						{#if !ollama && !direct}
 							<div class="flex flex-row justify-between items-center w-full mt-2">
 								<label
-									for="prefix-id-input"
+									for="provider-select"
 									class={`mb-0.5 text-xs text-gray-500
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-									>{$i18n.t('Provider Type')}</label
+									>{$i18n.t('Provider')}</label
 								>
 
 								<div>
-									<button
-										on:click={() => {
-											azure = !azure;
-										}}
-										type="button"
-										class=" text-xs text-gray-700 dark:text-gray-300"
+									<select
+										id="provider-select"
+										bind:value={provider}
+										class="text-xs text-gray-700 dark:text-gray-300 bg-transparent outline-hidden"
 									>
-										{azure ? $i18n.t('Azure OpenAI') : $i18n.t('OpenAI')}
-									</button>
+										<option value="">{$i18n.t('Default')}</option>
+										<option value="azure">{$i18n.t('Azure OpenAI')}</option>
+										<option value="llama.cpp">{$i18n.t('llama.cpp')}</option>
+									</select>
 								</div>
 							</div>
 						{/if}
@@ -684,19 +690,20 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
-						{#if edit}
-							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
-								type="button"
-								on:click={() => {
-									onDelete();
-									show = false;
-								}}
-							>
-								{$i18n.t('Delete')}
-							</button>
-						{/if}
+					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div>
+							{#if edit}
+								<button
+									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+									type="button"
+									on:click={() => {
+										showDeleteConfirmDialog = true;
+									}}
+								>
+									{$i18n.t('Delete')}
+								</button>
+							{/if}
+						</div>
 
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
@@ -719,3 +726,15 @@
 		</div>
 	</div>
 </Modal>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	message={$i18n.t(
+		'Are you sure you want to delete this connection? This action cannot be undone.'
+	)}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => {
+		onDelete();
+		show = false;
+	}}
+/>

@@ -6,7 +6,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { extractFrontmatter } from '$lib/utils';
+	import { extractFrontmatter, nameToId } from '$lib/utils';
 
 	export let show = false;
 
@@ -42,7 +42,7 @@
 			toast.success(successMessage);
 
 			let func = res;
-			func.id = func.id || func.name.replace(/\s+/g, '_').toLowerCase();
+			func.id = func.id || nameToId(func.name);
 
 			const frontmatter = extractFrontmatter(res.content); // Ensure frontmatter is extracted
 

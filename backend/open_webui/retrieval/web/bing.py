@@ -21,48 +21,44 @@ def search_bing(
     filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     mkt = locale
-    params = {"q": query, "mkt": mkt, "count": count}
-    headers = {"Ocp-Apim-Subscription-Key": subscription_key}
+    params = {'q': query, 'mkt': mkt, 'count': count}
+    headers = {'Ocp-Apim-Subscription-Key': subscription_key}
 
     try:
         response = requests.get(endpoint, headers=headers, params=params)
         response.raise_for_status()
         json_response = response.json()
-        results = json_response.get("webPages", {}).get("value", [])
+        results = json_response.get('webPages', {}).get('value', [])
         if filter_list:
             results = get_filtered_results(results, filter_list)
         return [
             SearchResult(
-                link=result["url"],
-                title=result.get("name"),
-                snippet=result.get("snippet"),
+                link=result['url'],
+                title=result.get('name'),
+                snippet=result.get('snippet'),
             )
             for result in results
         ]
     except Exception as ex:
-        log.error(f"Error: {ex}")
+        log.error(f'Error: {ex}')
         raise ex
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Search Bing from the command line.")
+    parser = argparse.ArgumentParser(description='Search Bing from the command line.')
     parser.add_argument(
-        "query",
+        'query',
         type=str,
-        default="Top 10 international news today",
-        help="The search query.",
+        default='Top 10 international news today',
+        help='The search query.',
     )
+    parser.add_argument('--count', type=int, default=10, help='Number of search results to return.')
+    parser.add_argument('--filter', nargs='*', help='List of filters to apply to the search results.')
     parser.add_argument(
-        "--count", type=int, default=10, help="Number of search results to return."
-    )
-    parser.add_argument(
-        "--filter", nargs="*", help="List of filters to apply to the search results."
-    )
-    parser.add_argument(
-        "--locale",
+        '--locale',
         type=str,
-        default="en-US",
-        help="The locale to use for the search, maps to market in api",
+        default='en-US',
+        help='The locale to use for the search, maps to market in api',
     )
 
     args = parser.parse_args()
