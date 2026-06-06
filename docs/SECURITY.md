@@ -183,11 +183,7 @@ We credit only the earliest filer of a given vulnerability:
 
 Vulnerability reports submitted through GitHub Security Advisories are **private and confidential**. Public disclosure of **ANY** details related to a submitted vulnerability report is **STRICTLY PROHIBITED** until the advisory has been **fully published** — not merely when a CVE ID has been assigned, but when the advisory itself is publicly visible.
 
-This prohibition applies to **all channels**, including but not limited to:
-
-- Comments on pull requests, issues, or discussions (on GitHub or elsewhere)
-- Social media, blogs, forums, or any other website
-- Discord, Reddit, or any other platform, website or service
+This prohibition applies to **all channels**, including but not limited to social media (Discord, Reddit or any other platform), blogs, forums, or any other website or service.
 
 This confidential, responsible disclosure process exists to give us time to fix bugs, publish fixes and alert users once a fix is ready. The entire premise of responsible disclosure is to **protect users from vulnerabilities**. Therefore, premature disclosure undermines the security of all Open WebUI users and **violates the trust** inherent in the responsible disclosure process. **Reporters who prematurely publicly disclose vulnerability details before official publication <ins>WILL BE PERMANENTLY BANNED from future reporting.</ins>**
 
@@ -200,18 +196,7 @@ You can use the following channels:
 - **Configuration help:** Ask the community for help and guidance on our [Discord Server](https://discord.gg/5rJgQTnV4s) or on [Reddit](https://www.reddit.com/r/OpenWebUI/)
 - **General issues:** Use our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
 - **Bugs:** Report bugs to our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
-
-**Examples of non-vulnerability, still security related concerns:**
-
-- Suggestions for better default configuration values
-- Security hardening recommendations
-- Deployment best practices guidance
-- Unclear configuration instructions
-- Need for additional security documentation
-- Feature requests for optional security enhancements (2FA, audit logging, etc.)
-- General security questions about production deployment
-
-Please use the adequate channel for your specific issue - e.g. best-practice guidance or additional documentation needs into the [Documentation Repository](https://github.com/open-webui/docs), and feature requests into the Main Repository as an issue or discussion.
+- **Best-practice guidance:** Help expand the [Documentation](https://github.com/open-webui/docs).
 
 We regularly audit our internal processes and system architecture for vulnerabilities using a combination of automated and manual testing techniques. We are also planning to implement SAST and SCA scans in our project soon.
 
