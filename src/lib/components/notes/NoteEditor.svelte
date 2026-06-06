@@ -1438,7 +1438,45 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				bind:show={showPanel}
 				bind:selectedModelId
 				bind:files
-				onUpdate={() => {
+				onUpdate={(updatedFiles) => {
+					if (editor) {
+						editor.storage.files = updatedFiles;
+
+						// Remove orphaned image nodes whose files were deleted
+						const fileIds = new Set(updatedFiles.map((f) => f.id));
+						const { state } = editor;
+						const nodesToRemove = [];
+
+						state.doc.descendants((node, pos) => {
+							if (node.type.name === 'image' && node.attrs.src?.startsWith('data://')) {
+								const refId = node.attrs.src.replace('data://', '');
+								if (!fileIds.has(refId)) {
+									nodesToRemove.push({ from: pos, to: pos + node.nodeSize });
+								}
+							}
+						});
+
+						if (nodesToRemove.length > 0) {
+							// Delete in reverse order to preserve positions
+							let tr = state.tr;
+							for (let i = nodesToRemove.length - 1; i >= 0; i--) {
+								tr = tr.delete(nodesToRemove[i].from, nodesToRemove[i].to);
+							}
+							editor.view.dispatch(tr);
+						}
+
+						// Refresh remaining image nodes
+						for (const file of updatedFiles) {
+							if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
+								const img = document.getElementById(`image:${file.id}`);
+								if (img) {
+									img.dispatchEvent(new CustomEvent('data'));
+								}
+							}
+						}
+					}
+
+					note.data.files = updatedFiles.length > 0 ? updatedFiles : null;
 					changeDebounceHandler();
 				}}
 			/>
