@@ -145,10 +145,13 @@ export const uploadDir = async (token: string) => {
 	return res;
 };
 
-export const getFiles = async (token: string = '') => {
+export const getFiles = async (token: string = '', content: boolean = false) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('content', String(content));
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -180,7 +183,8 @@ export const searchFiles = async (
 	token: string,
 	filename: string = '*',
 	skip: number = 0,
-	limit: number = 50
+	limit: number = 50,
+	content: boolean = false
 ) => {
 	let error = null;
 
@@ -188,6 +192,7 @@ export const searchFiles = async (
 	searchParams.append('filename', filename);
 	searchParams.append('skip', String(skip));
 	searchParams.append('limit', String(limit));
+	searchParams.append('content', String(content));
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/search?${searchParams.toString()}`, {
 		method: 'GET',
