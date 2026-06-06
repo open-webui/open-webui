@@ -94,6 +94,12 @@ PYTHONPATH=. WEBUI_SECRET_KEY="$(cat .webui_secret_key)" ./venv/bin/python3.11 -
 export PYTHONPATH=. && export WEBUI_SECRET_KEY="$(cat .webui_secret_key)" && export RAG_SYSTEM_CONTEXT=True && export PYTHONUNBUFFERED=1 && exec ./venv/bin/python3.11 -u -m uvicorn open_webui.main:app --host 212.41.21.72 --port 8503 --reload > webui.log 2>&1
 
 
+export PYTHONPATH=. && export WEBUI_SECRET_KEY="$(cat .webui_secret_key)" && export RAG_SYSTEM_CONTEXT=True && export PYTHONUNBUFFERED=1 && exec python3.11 -u -m uvicorn open_webui.main:app --host 87.228.65.110 --port 8503 --reload 
+
+
+export PYTHONPATH=. && export WEBUI_SECRET_KEY="$(cat .webui_secret_key)" && export RAG_SYSTEM_CONTEXT=True && export PYTHONUNBUFFERED=1 && exec python3.11 -u -m uvicorn open_webui.main:app --host 87.228.65.110 --port 9503 --reload 
+
+
 
 ТЕСТ - ЗАПУСК В КОНТЕЙНЕРЕ, ПОКА НЕ ОТЛАЖЕНО СОВСЕМ
 ./venv/bin/python3.10 -m pip install youtube-transcript-api scholarly habanero arxiv openrouteservice pygments yfinance>=0.2.66 pandas>=2.2.0 pydantic>=2.0.0 requests>=2.28.0
@@ -106,8 +112,9 @@ docker compose -f _docker-compose.local.yml up --build
 
 **RUN INSIDE CONTAINER!!**
 
+docker run -it --name balabanov_open_web --net=host -v /home/balabanov/:/home/ python:3.11 bash -f
 
-
+python-docx openpyxl python-pptx aiohttp pdflatex weasyprint
 
 
 
