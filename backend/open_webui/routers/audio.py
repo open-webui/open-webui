@@ -467,8 +467,8 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
     output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
     ssml = (
-        f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">'
-        f'<voice name="{language}">{html.escape(payload["input"])}</voice>'
+        f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{html.escape(locale)}">'
+        f'<voice name="{html.escape(language)}">{html.escape(payload["input"])}</voice>'
         f'</speak>'
     )
 
