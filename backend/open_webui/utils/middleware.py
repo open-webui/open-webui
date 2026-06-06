@@ -2220,7 +2220,8 @@ def process_messages_with_output(
     return processed
 
 
-SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)\|?[^>]*>')
+# non-capturing optional |label avoids quadratic ReDoS backtracking
+SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)(?:\|[^>]*)?>')
 
 
 def _get_text_parts(message: dict) -> list[str]:
@@ -2244,7 +2245,8 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
 
 def strip_skill_mentions(messages: list[dict]) -> None:
     """Replace <$skillId|label> mention tags with the label in message content in-place."""
-    strip_re = re.compile(r'<\$[^|>]+\|?([^>]*)>')
+    # non-capturing optional |label avoids quadratic ReDoS backtracking
+    strip_re = re.compile(r'<\$[^|>]+(?:\|([^>]*))?>')
     for message in messages:
         content = message.get('content')
         if isinstance(content, str) and strip_re.search(content):
