@@ -13,7 +13,8 @@
 		showEmbeds
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
-	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+	import { createMessagesList } from '$lib/utils';
+	import { removeCitationMarkersOutsideCode } from '$lib/utils/citations';
 
 	/**
 	 * Extracts all top-level <details>...</details> blocks from content,
@@ -229,9 +230,7 @@
 		<Markdown
 			{id}
 			content={model?.info?.meta?.capabilities?.citations == false
-				? replaceOutsideCode(content, (segment) =>
-						segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
-					)
+				? removeCitationMarkersOutsideCode(content)
 				: content}
 			{model}
 			{save}

@@ -18,6 +18,9 @@ __pycache__/
 CLAUDE.md
 # C extensions
 *.so
+.npm-cache/
+.pip-cache/
+.tmp/
 
 # Pyodide distribution
 static/pyodide/*
