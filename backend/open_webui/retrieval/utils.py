@@ -37,6 +37,7 @@ from open_webui.utils.misc import get_message_list
 
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.utils.document_context import enrich_documents_with_context
 
 
 from open_webui.env import (
@@ -1249,6 +1250,14 @@ async def get_sources_from_items(
             extracted_collections.extend(collection_names)
 
         if query_result:
+            if query_result.get("documents") and query_result.get("metadatas"):
+                enriched_documents, enriched_metadatas = enrich_documents_with_context(
+                    query_result["documents"][0],
+                    query_result["metadatas"][0],
+                )
+                query_result["documents"][0] = enriched_documents
+                query_result["metadatas"][0] = enriched_metadatas
+
             if "data" in item:
                 del item["data"]
             query_results.append({**query_result, "file": item})

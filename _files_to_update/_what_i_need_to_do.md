@@ -36,3 +36,12 @@ except ImportError:
     + replace Open WebUI with Geomas in index.html
 7) yarn install + yarn run build 
 
+смреджить knowledge 
+
++ CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 20
+
++ убрать
+   view_file,
+    view_knowledge_file,
+    в tool.py
+
