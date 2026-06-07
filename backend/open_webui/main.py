@@ -732,10 +732,25 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
+    # Start admin-only Extension functions (lifecycle + global asset injection).
+    try:
+        from open_webui.utils.extensions import startup_extensions
+
+        await startup_extensions(app)
+    except Exception as e:
+        log.warning(f'Failed to start extensions: {e}')
+
     # Mark application as ready to accept traffic from a startup perspective.
     app.state.startup_complete = True
 
     yield
+
+    try:
+        from open_webui.utils.extensions import shutdown_extensions
+
+        await shutdown_extensions(app)
+    except Exception as e:
+        log.warning(f'Failed to shut down extensions: {e}')
 
     # Shutdown: clean up shared resources
     from open_webui.utils.session_pool import close_session

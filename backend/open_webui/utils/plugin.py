@@ -285,6 +285,8 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
             return module.Filter(), 'filter', frontmatter
         elif hasattr(module, 'Action'):
             return module.Action(), 'action', frontmatter
+        elif hasattr(module, 'Extension'):
+            return module.Extension(), 'extension', frontmatter
         else:
             raise Exception('No Function class found in the module')
     except Exception as e:

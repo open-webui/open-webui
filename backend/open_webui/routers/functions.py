@@ -260,12 +260,22 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
 
 
 @router.post('/id/{id}/toggle', response_model=FunctionModel | None)
-async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def toggle_function_by_id(
+    request: Request, id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
         function = await Functions.update_function_by_id(id, {'is_active': not function.is_active}, db=db)
 
         if function:
+            if function.type == 'extension':
+                # Apply enable/disable at runtime so it takes effect without a restart.
+                try:
+                    from open_webui.utils.extensions import set_extension_active
+
+                    await set_extension_active(request.app, function, function.is_active)
+                except Exception as e:
+                    log.exception(f'Failed to toggle extension {id}: {e}')
             return function
         else:
             raise HTTPException(
