@@ -301,7 +301,7 @@ async def update_password(
                 validate_password(form_data.new_password)
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
-            hashed = get_password_hash(form_data.new_password)
+            hashed = await get_password_hash(form_data.new_password)
             return await Auths.update_user_password_by_id(user.id, hashed, db=db)
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
@@ -696,7 +696,7 @@ async def signup_handler(
     # Insert with default role first to avoid TOCTOU race on first signup.
     # If has_users() is checked before insert, concurrent requests during
     # first-user registration can all see an empty table and each get admin.
-    hashed = get_password_hash(password)
+    hashed = await get_password_hash(password)
 
     user = await Auths.insert_new_auth(
         email=email.lower(),
@@ -922,7 +922,7 @@ async def add_user(
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-        hashed = get_password_hash(form_data.password)
+        hashed = await get_password_hash(form_data.password)
         user = await Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,

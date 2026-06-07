@@ -157,9 +157,11 @@ def get_license_data(app, key):
 bearer_security = HTTPBearer(auto_error=False)
 
 
-def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+async def get_password_hash(password: str) -> str:
+    """Hash a password using bcrypt in a thread pool (non-blocking)."""
+    import asyncio
+
+    return (await asyncio.to_thread(bcrypt.hashpw, password.encode('utf-8'), bcrypt.gensalt())).decode('utf-8')
 
 
 def validate_password(password: str) -> bool:
@@ -483,7 +485,7 @@ async def create_admin_user(email: str, password: str, name: str = 'Admin'):
 
     log.info(f'Creating admin account from environment variables: {email}')
     try:
-        hashed = get_password_hash(password)
+        hashed = await get_password_hash(password)
         user = await Auths.insert_new_auth(
             email=email.lower(),
             password=hashed,
