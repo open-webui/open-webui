@@ -40,6 +40,7 @@
 	let loading = false;
 
 	let showCreateModal = false;
+	let cloneFrom: AutomationResponse | null = null;
 
 	let showDeleteConfirm = false;
 	let deleteTarget: AutomationResponse | null = null;
@@ -63,6 +64,10 @@
 	// Immediate response to page/filter changes (gate behind loaded)
 	$: if (loaded && page && statusFilter !== undefined) {
 		getAutomationList();
+	}
+
+	$: if (!showCreateModal) {
+		cloneFrom = null;
 	}
 
 	const getAutomationList = async () => {
@@ -137,6 +142,14 @@
 
 		page = 1;
 		getAutomationList();
+	};
+
+	const cloneHandler = (automation: AutomationResponse) => {
+		cloneFrom = {
+			...automation,
+			name: `${automation.name} (Clone)`
+		};
+		showCreateModal = true;
 	};
 
 	const formatRRule = (rrule: string): string => {
@@ -227,6 +240,7 @@
 <AutomationModal
 	bind:show={showCreateModal}
 	automation={null}
+	{cloneFrom}
 	on:save={(e) => {
 		getAutomationList();
 		if (e.detail?.id) {
@@ -273,6 +287,7 @@
 							<button
 								class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 								on:click={() => {
+									cloneFrom = null;
 									showCreateModal = true;
 								}}
 							>
@@ -429,6 +444,9 @@
 										<AutomationMenu
 											editHandler={() => {
 												goto(`/automations/${automation.id}`);
+											}}
+											cloneHandler={() => {
+												cloneHandler(automation);
 											}}
 											runHandler={() => {
 												runNowHandler(automation);
