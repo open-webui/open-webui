@@ -32,7 +32,7 @@
 	let widescreenMode = false;
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
-	let userLocation = false;
+	let userLocation = true;
 
 	// Interface
 	let defaultModelId = '';
@@ -80,8 +80,8 @@
 
 	let imageCompression = true;
 	let imageCompressionSize = {
-		width: '1024',
-		height: '1024'
+		width: '',
+		height: ''
 	};
 	let imageCompressionInChannels = true;
 
