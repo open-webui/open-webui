@@ -288,7 +288,8 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
     )
 
     if form_data.stt.ENGINE == '':
-        request.app.state.faster_whisper_model = set_faster_whisper_model(
+        request.app.state.faster_whisper_model = await asyncio.to_thread(
+            set_faster_whisper_model,
             form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
         )
     else:
@@ -458,7 +459,7 @@ async def _tts_transformers(request, payload, file_path, file_body_path, user):
     import soundfile as sf
     import torch
 
-    load_speech_pipeline(request)
+    await asyncio.to_thread(load_speech_pipeline, request)
 
     embeddings = request.app.state.speech_speaker_embeddings_dataset
     model_name = await Config.get('audio.tts.model')
@@ -580,7 +581,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 async def _transcribe_whisper(request, file_path, languages, file_dir, id):
     if request.app.state.faster_whisper_model is None:
-        request.app.state.faster_whisper_model = set_faster_whisper_model(await Config.get('audio.stt.whisper_model'))
+        request.app.state.faster_whisper_model = await asyncio.to_thread(
+            set_faster_whisper_model, await Config.get('audio.stt.whisper_model')
+        )
 
     model = request.app.state.faster_whisper_model
 
