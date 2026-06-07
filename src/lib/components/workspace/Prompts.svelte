@@ -468,6 +468,9 @@
 									</button>
 								</Tooltip>
 								<PromptMenu
+									editHandler={() => {
+										goto(`/workspace/prompts/${prompt.id}`);
+									}}
 									shareHandler={() => {
 										shareHandler(prompt);
 									}}
