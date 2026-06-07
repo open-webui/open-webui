@@ -148,7 +148,7 @@ class AuthsTable:
             credential = await session.get(Auth, resolved.id)
             if not credential or not credential.active:
                 return
-            if not verify_password(credential.password):
+            if not await verify_password(credential.password):
                 return
             return resolved
 

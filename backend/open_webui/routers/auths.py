@@ -290,9 +290,12 @@ async def update_password(
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
+        async def _verify(pw):
+            return await verify_password(form_data.password, pw)
+
         user = await Auths.authenticate_user(
             session_user.email,
-            lambda pw: verify_password(form_data.password, pw),
+            _verify,
             db=db,
         )
 
@@ -621,10 +624,13 @@ async def signin(
         admin_email = 'admin@localhost'
         admin_password = 'admin'
 
+        async def _verify_admin(pw):
+            return await verify_password(admin_password, pw)
+
         if await Users.get_user_by_email(admin_email.lower(), db=db):
             user = await Auths.authenticate_user(
                 admin_email.lower(),
-                lambda pw: verify_password(admin_password, pw),
+                _verify_admin,
                 db=db,
             )
         else:
@@ -641,7 +647,7 @@ async def signin(
 
             user = await Auths.authenticate_user(
                 admin_email.lower(),
-                lambda pw: verify_password(admin_password, pw),
+                _verify_admin,
                 db=db,
             )
     else:
@@ -660,9 +666,12 @@ async def signin(
             # decode safely — ignore incomplete UTF-8 sequences
             form_data.password = password_bytes.decode('utf-8', errors='ignore')
 
+        async def _verify_signin(pw):
+            return await verify_password(form_data.password, pw)
+
         user = await Auths.authenticate_user(
             form_data.email.lower(),
-            lambda pw: verify_password(form_data.password, pw),
+            _verify_signin,
             db=db,
         )
 
