@@ -30,47 +30,21 @@
 
 	let accessGrants = [];
 	let showAccessControlModal = false;
-	let hasManualEdit = false;
-	let hasManualName = false;
-	let hasManualDescription = false;
-	let isFrontmatterDetected = false;
+	$: if (!edit && !clone && name) {
+		id = slugify(name);
+	}
 
-	// Auto-detect frontmatter and fill name/description in create mode
-	$: if (!edit && content) {
+	const handleContentInput = () => {
+		if (edit) return;
 		const fm = parseFrontmatter(content);
-		if (fm.name) {
-			isFrontmatterDetected = true;
-			if (!hasManualName) {
-				name = formatSkillName(fm.name);
-			}
-			if (!hasManualEdit) {
-				id = fm.name;
-			}
-		} else {
-			isFrontmatterDetected = false;
+		if (fm.name && !name) {
+			name = formatSkillName(fm.name);
+			id = fm.name;
 		}
-		if (fm.description && !hasManualDescription) {
+		if (fm.description && !description) {
 			description = fm.description;
 		}
-	} else if (!edit && !content) {
-		isFrontmatterDetected = false;
-	}
-
-	$: if (!edit && !hasManualEdit && !isFrontmatterDetected) {
-		id = name !== '' ? slugify(name) : '';
-	}
-
-	function handleIdInput(e: Event) {
-		hasManualEdit = true;
-	}
-
-	function handleNameInput(e: Event) {
-		hasManualName = true;
-	}
-
-	function handleDescriptionInput(e: Event) {
-		hasManualDescription = true;
-	}
+	};
 
 	const submitHandler = async () => {
 		if (disabled) {
@@ -100,10 +74,6 @@
 			description = skill.description || '';
 			content = skill.content || '';
 			accessGrants = skill?.access_grants === undefined ? [] : skill?.access_grants;
-
-			if (name) hasManualName = true;
-			if (description) hasManualDescription = true;
-			if (id) hasManualEdit = true;
 		}
 	});
 </script>
@@ -156,7 +126,6 @@
 									placeholder={$i18n.t('Skill Name')}
 									aria-label={$i18n.t('Skill Name')}
 									bind:value={name}
-									on:input={handleNameInput}
 									required
 									{disabled}
 								/>
@@ -202,7 +171,6 @@
 									placeholder={$i18n.t('Skill ID')}
 									aria-label={$i18n.t('Skill ID')}
 									bind:value={id}
-									on:input={handleIdInput}
 									required
 									disabled={edit}
 								/>
@@ -220,7 +188,6 @@
 								placeholder={$i18n.t('Skill Description')}
 								aria-label={$i18n.t('Skill Description')}
 								bind:value={description}
-								on:input={handleDescriptionInput}
 								{disabled}
 							/>
 						</Tooltip>
@@ -240,6 +207,7 @@
 								<textarea
 									class="w-full flex-1 text-xs bg-transparent outline-hidden resize-none font-mono px-4 py-3"
 									bind:value={content}
+									on:input={handleContentInput}
 									placeholder={$i18n.t('Enter skill instructions in markdown...')}
 									aria-label={$i18n.t('Skill Instructions')}
 									required

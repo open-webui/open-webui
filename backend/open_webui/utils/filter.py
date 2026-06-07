@@ -1,11 +1,11 @@
 import inspect
 import logging
 
-from open_webui.utils.plugin import (
-    load_function_module_by_id,
-    get_function_module_from_cache,
-)
 from open_webui.models.functions import Functions
+from open_webui.utils.plugin import (
+    get_function_module_from_cache,
+    load_function_module_by_id,
+)
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ async def get_function_module(request, function_id, load_from_db=True):
     """
     Get the function module by its ID.
     """
-    function_module, _, _ = await get_function_module_from_cache(request, function_id, load_from_db)
+    function_module, _, _ = await get_function_module_from_cache(request, function_id, load_from_db=load_from_db)
     return function_module
 
 

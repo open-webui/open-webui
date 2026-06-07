@@ -97,6 +97,10 @@
 						<!-- {$i18n.t('Only active when the chat input is in focus.')} -->
 						<!-- {$i18n.t('Only active when the chat input is in focus and an LLM is generating a response.')} -->
 						<!-- {$i18n.t('Only can be triggered when the chat input is in focus.')} -->
+
+						<!-- {$i18n.t('Voice')} -->
+						<!-- {$i18n.t('Toggle Mute')} -->
+						<!-- {$i18n.t('Only active during Voice Mode.')} -->
 						{#each items as shortcut}
 							<div class="col-span-1 flex items-start">
 								<ShortcutItem {shortcut} {isMac} />

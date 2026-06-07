@@ -302,6 +302,8 @@
 	let bubbleMenuElement: Element | null = null;
 	let element: Element | null = null;
 
+	let pendingUpdate = null;
+
 	const options = {
 		throwOnError: false
 	};
@@ -737,6 +739,17 @@
 				StarterKit.configure({
 					link: link,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
+					// When rich text is on, ListKit + CodeBlockLowlight provide these.
+					// Disable StarterKit's equivalents to avoid duplicate extension names.
+					...(richText
+						? {
+								codeBlock: false,
+								bulletList: false,
+								orderedList: false,
+								listItem: false,
+								listKeymap: false
+							}
+						: {}),
 					// When rich text is off, disable Strike from StarterKit so we can
 					// re-add it below without its Mod-Shift-s shortcut (which conflicts
 					// with the Toggle Sidebar shortcut). When rich text is on, the user
@@ -855,9 +868,18 @@
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
 			onTransaction: () => {
-				// force re-render so `editor.isActive` works as expected
-				editor = editor;
 				if (!editor) return;
+
+				// Defer Svelte reactivity trigger to rAF so we don't interleave
+				// DOM reads/writes with ProseMirror's updateStateInner.
+				if (!pendingUpdate) {
+					pendingUpdate = requestAnimationFrame(() => {
+						pendingUpdate = null;
+						if (editor && !editor.isDestroyed) {
+							editor = editor;
+						}
+					});
+				}
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
@@ -1223,6 +1245,10 @@
 	});
 
 	onDestroy(() => {
+		if (pendingUpdate) {
+			cancelAnimationFrame(pendingUpdate);
+		}
+
 		if (provider) {
 			provider.destroy();
 		}

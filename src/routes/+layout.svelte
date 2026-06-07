@@ -109,8 +109,11 @@
 	let syncStatsEventData = null;
 
 	let heartbeatInterval = null;
+	let disconnectToastTimer = null;
+	let disconnectWarningShown = false;
 
 	const BREAKPOINT = 768;
+	const DISCONNECT_TOAST_DELAY_MS = 2000;
 
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
@@ -133,9 +136,19 @@
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
 
+			// Cancel any pending disconnect toast if we reconnected quickly
+			if (disconnectToastTimer) {
+				clearTimeout(disconnectToastTimer);
+				disconnectToastTimer = null;
+			}
+
 			if (hasConnectedOnce) {
 				socketConnected.set(true);
-				toast.success($i18n.t('Reconnected'));
+				// Only show "Reconnected" if the user actually saw the disconnect warning
+				if (disconnectWarningShown) {
+					toast.success($i18n.t('Reconnected'));
+					disconnectWarningShown = false;
+				}
 			}
 			hasConnectedOnce = true;
 
@@ -193,7 +206,18 @@
 		_socket.on('disconnect', (reason, details) => {
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
 			socketConnected.set(false);
-			toast.warning($i18n.t('Connection lost. Reconnecting...'));
+
+			// Delay showing the disconnect toast so brief interruptions
+			// (e.g. mobile tab backgrounding) don't flash a nuisance warning
+			if (disconnectToastTimer) {
+				clearTimeout(disconnectToastTimer);
+			}
+			disconnectWarningShown = false;
+			disconnectToastTimer = setTimeout(() => {
+				disconnectToastTimer = null;
+				disconnectWarningShown = true;
+				toast.warning($i18n.t('Connection lost. Reconnecting...'));
+			}, DISCONNECT_TOAST_DELAY_MS);
 
 			if (heartbeatInterval) {
 				clearInterval(heartbeatInterval);
@@ -483,56 +507,18 @@
 			return;
 		}
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground) {
-			if (type === 'chat:completion') {
-				const { done, content, title } = data;
-				const displayTitle = title || $i18n.t('New Chat');
-
-				if (done) {
-					if ($settings?.notificationSoundAlways ?? false) {
-						playingNotificationSound.set(true);
-
-						const audio = new Audio(`/audio/notification.mp3`);
-						audio.play().finally(() => {
-							// Ensure the global state is reset after the sound finishes
-							playingNotificationSound.set(false);
-						});
-					}
-
-					if ($isLastActiveTab) {
-						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${displayTitle} • Open WebUI`, {
-								body: content,
-								icon: `${WEBUI_BASE_URL}/static/favicon.png`
-							});
-						}
-					}
-
-					toast.custom(NotificationToast, {
-						componentProps: {
-							onClick: () => {
-								goto(`/c/${event.chat_id}`);
-							},
-							content: content,
-							title: displayTitle
-						},
-						duration: 15000,
-						unstyled: true
-					});
-				}
-			} else if (type === 'chat:title') {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			} else if (type === 'chat:tags') {
-				tags.set(await getAllTags(localStorage.token));
-			}
-		} else if (data?.session_id === $socket.id) {
+		// Session-targeted RPC calls (code execution, tool calls, direct completion)
+		// must ALWAYS be processed regardless of active chat or tab visibility,
+		// because the backend's sio.call blocks waiting for our callback response.
+		if (data?.session_id === $socket.id) {
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb, data.files || []);
+				return;
 			} else if (type === 'execute:tool') {
 				console.log('execute:tool', data);
 				executeTool(data, cb, event.chat_id);
+				return;
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
@@ -618,8 +604,55 @@
 						done: true
 					});
 				}
-			} else {
-				console.log('chatEventHandler', event);
+				return;
+			}
+		}
+
+		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground) {
+			if (type === 'chat:completion') {
+				const { done, content, title } = data;
+				const displayTitle = title || $i18n.t('New Chat');
+
+				if (done) {
+					if (
+						($settings?.notificationSound ?? true) &&
+						($settings?.notificationSoundAlways ?? false)
+					) {
+						playingNotificationSound.set(true);
+
+						const audio = new Audio(`/audio/notification.mp3`);
+						audio.play().finally(() => {
+							// Ensure the global state is reset after the sound finishes
+							playingNotificationSound.set(false);
+						});
+					}
+
+					if ($isLastActiveTab) {
+						if ($settings?.notificationEnabled ?? false) {
+							new Notification(`${displayTitle} • Open WebUI`, {
+								body: content,
+								icon: `${WEBUI_BASE_URL}/static/favicon.png`
+							});
+						}
+					}
+
+					toast.custom(NotificationToast, {
+						componentProps: {
+							onClick: () => {
+								goto(`/c/${event.chat_id}`);
+							},
+							content: content,
+							title: displayTitle
+						},
+						duration: 15000,
+						unstyled: true
+					});
+				}
+			} else if (type === 'chat:title') {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} else if (type === 'chat:tags') {
+				tags.set(await getAllTags(localStorage.token));
 			}
 		}
 	};
@@ -821,7 +854,8 @@
 				if (event.data.action === 'add') {
 					await addOpenAIConnection(token, {
 						url: event.data.url,
-						key: event.data.key
+						key: event.data.key,
+						config: event.data.config
 					});
 				} else if (event.data.action === 'remove') {
 					await removeOpenAIConnection(token, event.data.url);
@@ -963,7 +997,11 @@
 				if (userSettings) {
 					settings.set(userSettings.ui);
 				} else {
-					settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+					try {
+						settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+					} catch {
+						settings.set({});
+					}
 				}
 				setTextScale($settings?.textScale ?? 1);
 

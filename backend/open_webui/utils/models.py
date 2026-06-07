@@ -1,37 +1,28 @@
-import copy
-import time
-import logging
 import asyncio
+import copy
+import logging
 import sys
 
 from aiocache import cached
 from fastapi import Request
-
-from open_webui.socket.utils import RedisDict
-from open_webui.routers import openai, ollama
-from open_webui.functions import get_function_models
-
-
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
-
-
-from open_webui.utils.plugin import (
-    load_function_module_by_id,
-    get_function_module_from_cache,
-)
-from open_webui.utils.access_control import has_access, has_base_model_access
-
-
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
-
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
+from open_webui.functions import get_function_models
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.functions import Functions
+from open_webui.models.groups import Groups
+from open_webui.models.models import Models
 from open_webui.models.users import UserModel
+from open_webui.routers import ollama, openai
+from open_webui.socket.utils import RedisDict
+from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.plugin import (
+    get_function_module_from_cache,
+    load_function_module_by_id,
+)
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -44,9 +35,10 @@ async def fetch_ollama_models(request: Request, user: UserModel = None):
             'id': model['model'],
             'name': model['name'],
             'object': 'model',
-            'created': int(time.time()),
+            'created': 0,
             'owned_by': 'ollama',
             'ollama': model,
+            'loaded': 'expires_at' in model,
             'connection_type': model.get('connection_type', 'local'),
             'tags': model.get('tags', []),
         }
@@ -107,7 +99,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         'meta': model['meta'],
                     },
                     'object': 'model',
-                    'created': int(time.time()),
+                    'created': 0,
                     'owned_by': 'arena',
                     'arena': True,
                 }
@@ -123,7 +115,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         'meta': DEFAULT_ARENA_MODEL['meta'],
                     },
                     'object': 'model',
-                    'created': int(time.time()),
+                    'created': 0,
                     'owned_by': 'arena',
                     'arena': True,
                 }
@@ -199,6 +191,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 'connection_type': connection_type,
                 'preset': True,
                 **({'pipe': pipe} if pipe is not None else {}),
+                **({'provider': base_model.get('provider')} if base_model and base_model.get('provider') else {}),
+                **({'loaded': base_model.get('loaded')} if base_model and base_model.get('loaded') is not None else {}),
             }
 
             info = custom_model.model_dump()
@@ -287,9 +281,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # imported/custom model configs may reference tools or filters the user
     # hasn't installed, and trying to load those would cause persistent
     # "Failed to load function module" log spam on every model refresh.
-    for function_id in functions_by_id:
+    for function_id, function in functions_by_id.items():
         try:
-            await get_function_module_from_cache(request, function_id)
+            await get_function_module_from_cache(request, function_id, function=function)
         except Exception as e:
             log.debug(f'Failed to load function module for {function_id}: {e}')
 
