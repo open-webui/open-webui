@@ -35,6 +35,10 @@ log = logging.getLogger(__name__)
 EXTENSIONS_SUBDIR = 'extensions'
 STARTUP_TIMEOUT = 30  # seconds; a hung hook must not stall boot/shutdown
 
+# Active extension modules keyed by function id. Mirrors app.state.EXTENSIONS but
+# lives at module level so post_webhook can dispatch without an app handle.
+_ACTIVE: dict = {}
+
 
 def _assets_dir() -> Path:
     d = Path(STATIC_DIR) / EXTENSIONS_SUBDIR
@@ -97,6 +101,7 @@ async def _activate(app, function) -> bool:
             'priority': int((frontmatter or {}).get('priority', 0) or 0),
             'assets': await _collect_assets(module),
         }
+        _ACTIVE[function.id] = module
         log.info(f'Extension started: {function.id}')
         return True
     except Exception:
@@ -105,6 +110,7 @@ async def _activate(app, function) -> bool:
 
 
 async def _deactivate(app, function_id) -> None:
+    _ACTIVE.pop(function_id, None)
     entry = app.state.EXTENSIONS.pop(function_id, None)
     if not entry:
         return
@@ -162,6 +168,7 @@ def regenerate_assets(app) -> None:
 async def startup_extensions(app) -> None:
     """Called once from the lifespan, after dependency install."""
     app.state.EXTENSIONS = {}
+    _ACTIVE.clear()
     if SAFE_MODE:
         log.info('SAFE_MODE: skipping extension startup')
         regenerate_assets(app)
@@ -195,3 +202,17 @@ async def set_extension_active(app, function, is_active: bool) -> None:
     else:
         await _deactivate(app, function.id)
     regenerate_assets(app)
+
+
+async def dispatch_webhook(name, message, event_data) -> None:
+    """Fan a webhook event out to every active extension exposing on_webhook.
+    Called from post_webhook regardless of whether an outbound URL is set.
+    Best-effort: a failing handler must not break webhook delivery."""
+    for function_id, module in list(_ACTIVE.items()):
+        hook = getattr(module, 'on_webhook', None)
+        if hook is None:
+            continue
+        try:
+            await _maybe_await(hook(name, message, event_data))
+        except Exception:
+            log.exception(f'Extension on_webhook failed: {function_id}')

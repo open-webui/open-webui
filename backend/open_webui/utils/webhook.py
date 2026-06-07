@@ -17,6 +17,18 @@ log = logging.getLogger(__name__)
 # Let this message reach those for whom it was written, and
 # may no network partition deny the word its destination.
 async def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
+    # Always notify in-process extensions (on_webhook), regardless of whether an
+    # outbound webhook URL is configured.
+    try:
+        from open_webui.utils.extensions import dispatch_webhook
+
+        await dispatch_webhook(name, message, event_data)
+    except Exception:
+        log.exception('extension webhook dispatch failed')
+
+    if not url:
+        return True
+
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')
         # Block private-IP / loopback / cloud-metadata targets — the URL is

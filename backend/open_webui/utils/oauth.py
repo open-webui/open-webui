@@ -1742,17 +1742,18 @@ class OAuthManager:
                         await Users.update_user_role_by_id(user.id, 'admin', db=db)
                         user = await Users.get_user_by_id(user.id, db=db)
 
-                    if auth_manager_config.WEBHOOK_URL:
-                        await post_webhook(
-                            WEBUI_NAME,
-                            auth_manager_config.WEBHOOK_URL,
-                            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                            {
-                                'action': 'signup',
-                                'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                                'user': user.model_dump_json(exclude_none=True),
-                            },
-                        )
+                    # Unconditional: post_webhook posts to the URL only if set,
+                    # but always dispatches to extensions (on_webhook).
+                    await post_webhook(
+                        WEBUI_NAME,
+                        auth_manager_config.WEBHOOK_URL,
+                        WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        {
+                            'action': 'signup',
+                            'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                            'user': user.model_dump_json(exclude_none=True),
+                        },
+                    )
 
                     await apply_default_group_assignment(request.app.state.config.DEFAULT_GROUP_ID, user.id, db=db)
 
