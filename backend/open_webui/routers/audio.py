@@ -28,6 +28,8 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+
+# pydub needs stdlib audioop (gone in 3.13); keep requires-python capped < 3.13
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from pydub.utils import mediainfo
