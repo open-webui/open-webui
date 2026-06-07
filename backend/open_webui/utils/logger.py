@@ -185,6 +185,8 @@ def start_logger():
             level=GLOBAL_LOG_LEVEL,
             format=stdout_format,
             filter=audit_filter,
+            diagnose=False,  # prevents local variable values (incl. secrets) from appearing in tracebacks
+            backtrace=True,
         )
     if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
