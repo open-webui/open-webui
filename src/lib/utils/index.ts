@@ -2105,6 +2105,22 @@ export const getCodeBlockContents = (content: string): object => {
 			}))
 	};
 };
+
+export const hasRenderableArtifactContent = (content: string): boolean => {
+	const { codeBlocks, htmlGroups } = getCodeBlockContents(content) as {
+		codeBlocks: Array<{ lang: string; code: string }>;
+		htmlGroups: Array<{ html: string; css: string; js: string }>;
+	};
+
+	if (htmlGroups?.length > 0) {
+		return true;
+	}
+
+	return codeBlocks.some(
+		(block) => block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))
+	);
+};
+
 export const parseFrontmatter = (content) => {
 	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (match) {

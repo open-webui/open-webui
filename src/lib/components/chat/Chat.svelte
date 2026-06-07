@@ -64,6 +64,7 @@
 		processDetails,
 		removeAllDetails,
 		getCodeBlockContents,
+		hasRenderableArtifactContent,
 		isYoutubeUrl,
 		displayFileHandler
 	} from '$lib/utils';
@@ -546,19 +547,30 @@
 				} else if (type === 'chat:outlet') {
 					// Outlet filter ran on backend — sync in-memory state
 					const outletMessages = data.messages ?? [];
+					let shouldOpenArtifacts = false;
 					for (const msg of outletMessages) {
 						if (msg?.id && history.messages[msg.id]) {
 							const existing = history.messages[msg.id];
 							if (existing.content !== msg.content) {
+								const hadArtifacts = hasRenderableArtifactContent(existing.content ?? '');
+								const hasArtifacts = hasRenderableArtifactContent(msg.content ?? '');
 								history.messages[msg.id] = {
 									...existing,
 									originalContent: existing.content,
 									...msg
 								};
+								if (($settings?.detectArtifacts ?? true) && !$mobile && $chatId && !hadArtifacts && hasArtifacts) {
+									shouldOpenArtifacts = true;
+								}
 							}
 						}
 					}
 					history = history;
+					if (shouldOpenArtifacts) {
+						await tick();
+						showArtifacts.set(true);
+						showControls.set(true);
+					}
 					return; // Patches history.messages directly; skip the trailing write-back.
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
@@ -1096,50 +1108,54 @@
 
 	$: onHistoryChange(history);
 
-	const getContents = () => {
-		const messages = history ? createMessagesList(history, history.currentId) : [];
-		let contents = [];
-		messages.forEach((message) => {
-			if (message?.role !== 'user' && message?.content) {
-				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
-					message.content
-				);
+	const buildArtifactContentsFromMessage = (content) => {
+		const { codeBlocks, htmlGroups } = getCodeBlockContents(content);
+		const contents = [];
 
-				if (htmlGroups && htmlGroups.length > 0) {
-					htmlGroups.forEach((group) => {
-						const renderedContent = `
+		if (htmlGroups && htmlGroups.length > 0) {
+			htmlGroups.forEach((group) => {
+				const renderedContent = `
                         <!DOCTYPE html>
                         <html lang="en">
                         <head>
                             <meta charset="UTF-8">
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-							<${''}style>
-								body {
-									background-color: white; /* Ensure the iframe has a white background */
-								}
+					<${''}style>
+						body {
+							background-color: white; /* Ensure the iframe has a white background */
+						}
 
-								${group.css}
-							</${''}style>
+						${group.css}
+					</${''}style>
                         </head>
                         <body>
                             ${group.html}
 
-							<${''}script>
+					<${''}script>
                             	${group.js}
-							</${''}script>
+					</${''}script>
                         </body>
                         </html>
                     `;
-						contents = [...contents, { type: 'iframe', content: renderedContent }];
-					});
-				} else {
-					// Check for SVG content
-					for (const block of codeBlocks) {
-						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
-							contents = [...contents, { type: 'svg', content: block.code }];
-						}
-					}
+				contents.push({ type: 'iframe', content: renderedContent });
+			});
+		} else {
+			for (const block of codeBlocks) {
+				if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
+					contents.push({ type: 'svg', content: block.code });
 				}
+			}
+		}
+
+		return contents;
+	};
+
+	const getContents = () => {
+		const messages = history ? createMessagesList(history, history.currentId) : [];
+		let contents = [];
+		messages.forEach((message) => {
+			if (message?.role !== 'user' && message?.content) {
+				contents = [...contents, ...buildArtifactContentsFromMessage(message.content)];
 			}
 		});
 
