@@ -5,12 +5,16 @@ set -euo pipefail
 # Container entry point for Open WebUI.
 # Handles secret key generation, optional Ollama/CUDA/Playwright setup,
 # HuggingFace Space deployment, and launches the uvicorn server.
+#
+# Keep this script compatible with older bash versions (e.g., bundled with macOS: Avoid Bash 4+
+# features such as `${VAR,,}`. For lowercasing use the `lowercase` helper below).
 # ---------------------------------------------------------------------------
+lowercase() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
 
-# Default optional env vars that we test below with bash's `,,` lowercase
-# expansion. The two can't be combined inline (`${VAR:-default,,}` makes
-# the default literal `,,`), so we normalise once up front and the simple
-# `${VAR,,}` form stays safe under `set -u` everywhere else.
+# Default optional env vars that we test below. This keeps them safe under
+# `set -u` while preserving empty-string defaults.
 : "${WEB_LOADER_ENGINE:=}" "${USE_OLLAMA_DOCKER:=}" "${USE_CUDA_DOCKER:=}"
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
@@ -18,7 +22,7 @@ cd "$SCRIPT_DIR" || exit 1
 
 # ── Playwright browser installation (if configured) ──────────────────────────
 
-if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
+if [[ "$(lowercase "$WEB_LOADER_ENGINE")" == "playwright" ]]; then
   if [[ -z "${PLAYWRIGHT_WS_URL:-}" ]]; then
     echo "Installing Playwright Chromium browser..."
     playwright install chromium
@@ -47,14 +51,14 @@ fi
 
 # ── Ollama (bundled Docker image) ────────────────────────────────────────────
 
-if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
+if [[ "$(lowercase "$USE_OLLAMA_DOCKER")" == "true" ]]; then
   echo "Starting bundled ollama serve..."
   ollama serve &
 fi
 
 # ── CUDA library paths ──────────────────────────────────────────────────────
 
-if [[ "${USE_CUDA_DOCKER,,}" == "true" ]]; then
+if [[ "$(lowercase "$USE_CUDA_DOCKER")" == "true" ]]; then
   echo "CUDA enabled — extending LD_LIBRARY_PATH for torch/cudnn libraries."
   export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib"
 fi
