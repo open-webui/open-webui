@@ -60,6 +60,7 @@
 	export let createdAt: number | null = null;
 	export let updatedAt: number | null = null;
 	export let lastReadAt: number | null = null;
+	export let workspaceId: string | null = null;
 
 	export let selected = false;
 	export let shiftKey = false;
@@ -454,12 +455,16 @@
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{id}"
+			href={workspaceId ? `/workspaces/${workspaceId}/c/${id}` : `/c/${id}`}
 			on:click={() => {
-				activeWorkspaceId.set(null);
+				if (workspaceId) {
+					activeWorkspaceId.set(workspaceId);
+				} else {
+					activeWorkspaceId.set(null);
+				}
 				dispatch('select');
 
-				if ($selectedFolder) {
+				if ($selectedFolder && !workspaceId) {
 					selectedFolder.set(null);
 				}
 

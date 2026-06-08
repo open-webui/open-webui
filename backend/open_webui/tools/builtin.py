@@ -1140,6 +1140,7 @@ async def view_chat(
         if chat.workspace_id is not None:
             # Workspace chat: membership is the only source of truth.
             from open_webui.models.workspaces import Workspaces, WorkspaceMembers
+
             ws = await Workspaces.get_by_id(chat.workspace_id)
             if ws is None:
                 return json.dumps({'error': 'Chat not found or access denied'})

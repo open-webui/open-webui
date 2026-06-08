@@ -1,6 +1,8 @@
 <!-- Company custom: Team Workspaces V1 -->
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
 
 	import {
@@ -8,16 +10,17 @@
 		addWorkspaceMember,
 		updateWorkspaceMember,
 		removeWorkspaceMember,
-		deleteWorkspace
+		deleteWorkspace,
+		setWorkspaceDefaultModel
 	} from '$lib/apis/workspaces';
 	import { searchUsers } from '$lib/apis/users';
-	import { workspaces } from '$lib/stores';
+	import { models, workspaces } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let show = false;
 	export let workspace: any = null;
@@ -37,9 +40,12 @@
 	let resolvingAdd = false;
 	let addingUserId: string | null = null;
 	let addRole: 'manager' | 'member' | 'viewer' = 'member';
+	let defaultModelId = '';
+	let savingDefaultModel = false;
 
 	$: canManage = canManageMembers || currentUserRole === 'manager';
 	$: addInProgress = resolvingAdd || addingUserId !== null;
+	$: defaultModelId = workspace?.meta?.default_model_id ?? '';
 
 	let showDeleteConfirm = false;
 
@@ -126,7 +132,9 @@
 			onUpdate();
 		} catch (e) {
 			const message = readableError(e);
-			toast.error(message.includes('already') ? $i18n.t('User is already in this workspace.') : message);
+			toast.error(
+				message.includes('already') ? $i18n.t('User is already in this workspace.') : message
+			);
 		} finally {
 			addingUserId = null;
 		}
@@ -204,6 +212,39 @@
 			toast.error(`${e}`);
 		}
 	};
+
+	const saveDefaultModel = async () => {
+		if (!workspace?.id || !canManage) {
+			return;
+		}
+
+		savingDefaultModel = true;
+		try {
+			const res = await setWorkspaceDefaultModel(
+				localStorage.token,
+				workspace.id,
+				defaultModelId || null
+			);
+			workspace = {
+				...workspace,
+				meta: {
+					...(workspace.meta ?? {}),
+					default_model_id: res?.model_id ?? undefined
+				}
+			};
+			workspaces.update((items: any) =>
+				items.map((item: any) =>
+					item.id === workspace.id ? { ...item, meta: workspace.meta } : item
+				)
+			);
+			toast.success($i18n.t('Workspace default model updated'));
+			onUpdate();
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			savingDefaultModel = false;
+		}
+	};
 </script>
 
 <ConfirmDialog
@@ -237,6 +278,31 @@
 				</svg>
 			</button>
 		</div>
+
+		{#if canManage}
+			<div class="flex flex-col gap-2">
+				<label class="text-sm font-medium dark:text-gray-300">{$i18n.t('Default model')}</label>
+				<div class="flex gap-2">
+					<select
+						bind:value={defaultModelId}
+						class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+					>
+						<option value="">{$i18n.t('Use global default')}</option>
+						{#each ($models ?? []).filter((model: any) => !model?.info?.meta?.hidden) as model (model.id)}
+							<option value={model.id}>{model.name ?? model.id}</option>
+						{/each}
+					</select>
+					<button
+						type="button"
+						disabled={savingDefaultModel}
+						class="px-3 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm disabled:opacity-60"
+						on:click={saveDefaultModel}
+					>
+						{savingDefaultModel ? $i18n.t('Saving...') : $i18n.t('Save')}
+					</button>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Add member (workspace managers, admins, and CEO all-access users) -->
 		{#if canManage}

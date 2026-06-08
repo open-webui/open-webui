@@ -5,14 +5,26 @@
 	import RecursiveFolder from './RecursiveFolder.svelte';
 	import { chatId, selectedFolder } from '$lib/stores';
 
-	export let folderRegistry = {};
+	type FolderItem = {
+		id: string;
+		name: string;
+		parent_id?: string | null;
+		workspace_id?: string | null;
+		childrenIds?: string[];
+	};
 
-	export let folders = {};
+	export let folderRegistry: Record<string, { setFolderItems?: () => void }> = {};
+
+	export let folders: Record<string, FolderItem> = {};
 	export let shiftKey = false;
+	export let folderApis: Record<string, unknown> = {};
+	export let selectFolderPath = '/';
+	export let workspaceId: string | null = null;
+	export let folderReadOnly = false;
 
-	export let onDelete = (folderId) => {};
+	export let onDelete = (folderId: string) => {};
 
-	let folderList = [];
+	let folderList: string[] = [];
 	// Get the list of folders that have no parent, sorted by name alphabetically
 	$: folderList = Object.keys(folders)
 		.filter((key) => folders[key].parent_id === null)
@@ -23,15 +35,15 @@
 			})
 		);
 
-	const onItemMove = (e) => {
+	const onItemMove = (e: { originFolderId?: string }) => {
 		if (e.originFolderId) {
-			folderRegistry[e.originFolderId]?.setFolderItems();
+			folderRegistry[e.originFolderId]?.setFolderItems?.();
 		}
 	};
 
 	const loadFolderItems = () => {
 		for (const folderId of Object.keys(folders)) {
-			folderRegistry[folderId]?.setFolderItems();
+			folderRegistry[folderId]?.setFolderItems?.();
 		}
 	};
 
@@ -47,6 +59,10 @@
 		{folders}
 		{folderId}
 		{shiftKey}
+		{folderApis}
+		{selectFolderPath}
+		{workspaceId}
+		{folderReadOnly}
 		{onDelete}
 		{onItemMove}
 		on:import={(e) => {

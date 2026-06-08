@@ -18,7 +18,7 @@ export const createNewChat = async (
 		},
 		body: JSON.stringify({
 			chat: chat,
-			folder_id: workspaceId ? null : (folderId ?? null),
+			folder_id: folderId ?? null,
 			...(workspaceId ? { workspace_id: workspaceId } : {})
 		})
 	})
@@ -1049,7 +1049,10 @@ export const updateChatById = async (
 	token: string,
 	id: string,
 	chat: object,
-	{ workspaceId = null, folderId = undefined }: { workspaceId?: string | null; folderId?: string | null } = {}
+	{
+		workspaceId = null,
+		folderId = undefined
+	}: { workspaceId?: string | null; folderId?: string | null } = {}
 ) => {
 	let error = null;
 
@@ -1062,8 +1065,8 @@ export const updateChatById = async (
 		},
 		body: JSON.stringify({
 			chat: chat,
-			...(workspaceId ? { workspace_id: workspaceId, folder_id: null } : {}),
-			...(folderId !== undefined && !workspaceId ? { folder_id: folderId } : {})
+			...(workspaceId ? { workspace_id: workspaceId } : {}),
+			...(folderId !== undefined ? { folder_id: folderId } : {})
 		})
 	})
 		.then(async (res) => {

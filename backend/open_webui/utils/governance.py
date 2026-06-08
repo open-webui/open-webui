@@ -13,13 +13,13 @@ from open_webui.internal.db import get_async_db_context
 from open_webui.models.groups import Group, GroupMember
 from open_webui.models.workspaces import Workspaces
 
-CEO_GROUP_NAMES = {"CEO"}
-PRIVATE_CHAT_ALLOWED_GROUP_NAMES = {"CEO", "Manager", "Managers", "Private Chat Allowed"}
-WORKSPACE_ALL_ACCESS_GROUP_NAMES = {"CEO"}
-WORKSPACE_CREATE_ALLOWED_CORE_ROLES = {"admin"}
+CEO_GROUP_NAMES = {'CEO'}
+PRIVATE_CHAT_ALLOWED_GROUP_NAMES = {'CEO', 'Manager', 'Managers', 'Private Chat Allowed'}
+WORKSPACE_ALL_ACCESS_GROUP_NAMES = {'CEO'}
+WORKSPACE_CREATE_ALLOWED_CORE_ROLES = {'admin'}
 
-PRIVATE_CHAT_DISABLED_MESSAGE = "Private chats are disabled for your role. Please use a Team Workspace."
-NO_WORKSPACE_ASSIGNMENT_MESSAGE = "Please contact admin to assign you to a Team Workspace."
+PRIVATE_CHAT_DISABLED_MESSAGE = 'Private chats are disabled for your role. Please use a Team Workspace.'
+NO_WORKSPACE_ASSIGNMENT_MESSAGE = 'Please contact admin to assign you to a Team Workspace.'
 
 
 async def user_in_any_group(user_id: str, group_names: set[str], db: AsyncSession | None = None) -> bool:
@@ -38,10 +38,10 @@ async def user_in_any_group(user_id: str, group_names: set[str], db: AsyncSessio
 
 
 async def can_use_private_chat(user, db: AsyncSession | None = None) -> bool:
-    role = getattr(user, "role", None)
-    if role == "admin":
+    role = getattr(user, 'role', None)
+    if role == 'admin':
         return True
-    if role != "user":
+    if role != 'user':
         return False
     return await user_in_any_group(user.id, PRIVATE_CHAT_ALLOWED_GROUP_NAMES, db=db)
 
@@ -53,17 +53,17 @@ async def can_access_all_workspaces(user, db: AsyncSession | None = None) -> boo
     not weakened accidentally. Admins receive separate operational management
     bypasses in workspace member-management routes.
     """
-    if getattr(user, "role", None) != "user":
+    if getattr(user, 'role', None) != 'user':
         return False
     return await user_in_any_group(user.id, WORKSPACE_ALL_ACCESS_GROUP_NAMES, db=db)
 
 
 async def can_create_workspace(user, db: AsyncSession | None = None) -> bool:
-    return getattr(user, "role", None) in WORKSPACE_CREATE_ALLOWED_CORE_ROLES
+    return getattr(user, 'role', None) in WORKSPACE_CREATE_ALLOWED_CORE_ROLES
 
 
 async def user_has_workspace_assignment(user, db: AsyncSession | None = None) -> bool:
-    if not getattr(user, "id", None):
+    if not getattr(user, 'id', None):
         return False
     return bool(await Workspaces.get_for_user(user.id, db=db))
 
@@ -84,5 +84,5 @@ async def assert_workspace_create_allowed(user, db: AsyncSession | None = None) 
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Only admins can create Team Workspaces.",
+        detail='Only admins can create Team Workspaces.',
     )

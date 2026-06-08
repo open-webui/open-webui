@@ -528,6 +528,7 @@ async def chat_events(sid, data):
         chat = await Chats.get_chat_by_id(data['chat_id'])
         if chat and chat.workspace_id is not None:
             from open_webui.models.workspaces import Workspaces, WorkspaceMembers
+
             ws = await Workspaces.get_by_id(chat.workspace_id)
             if ws is None:
                 return

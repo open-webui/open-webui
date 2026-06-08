@@ -39,7 +39,7 @@ def upgrade() -> None:
         sa.Column('user_id', sa.String(), nullable=False),
         sa.Column('name', sa.Text(), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('meta', sa.Text(), nullable=True),   # JSON stored as Text (JSONField)
+        sa.Column('meta', sa.Text(), nullable=True),  # JSON stored as Text (JSONField)
         sa.Column('created_at', sa.BigInteger(), nullable=False),
         sa.Column('updated_at', sa.BigInteger(), nullable=False),
         sa.Column('deleted_at', sa.BigInteger(), nullable=True),

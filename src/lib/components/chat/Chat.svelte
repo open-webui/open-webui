@@ -113,6 +113,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import { getBanners } from '$lib/apis/configs';
+	import { getWorkspaceDefaultModel } from '$lib/apis/workspaces';
 
 	export let chatIdProp = '';
 	export let workspaceIdProp: string | null = null;
@@ -184,12 +185,27 @@
 	const requireWorkspaceIdForWorkspaceRoute = () => {
 		const workspaceId = getResolvedWorkspaceId();
 		if (isWorkspaceRoute() && !workspaceId) {
-			const message = $i18n.t('Unable to resolve workspace for this chat. Please refresh and try again.');
+			const message = $i18n.t(
+				'Unable to resolve workspace for this chat. Please refresh and try again.'
+			);
 			toast.error(message);
 			throw new Error(message);
 		}
 
 		return isWorkspaceRoute() ? workspaceId : null;
+	};
+
+	const getSelectedFolderIdForChat = (workspaceId: string | null = null) => {
+		const folder = $selectedFolder as { id?: string; workspace_id?: string | null } | null;
+		if (!folder?.id) {
+			return null;
+		}
+
+		if (workspaceId) {
+			return folder.workspace_id === workspaceId ? folder.id : null;
+		}
+
+		return !folder.workspace_id ? folder.id : null;
 	};
 
 	// Chat Input
@@ -1189,7 +1205,15 @@
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if ($selectedFolder?.data?.model_ids) {
+			const workspaceId = isWorkspaceRoute() ? getResolvedWorkspaceId() : null;
+			const workspaceDefaultModelId = workspaceId
+				? ((await getWorkspaceDefaultModel(localStorage.token, workspaceId).catch(() => null))
+						?.model_id ?? null)
+				: null;
+
+			if (workspaceDefaultModelId && availableModels.includes(workspaceDefaultModelId)) {
+				selectedModels = [workspaceDefaultModelId];
+			} else if ($selectedFolder?.data?.model_ids) {
 				// Set from folder model IDs
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
@@ -1611,7 +1635,7 @@
 						params: params,
 						files: chatFiles
 					},
-					{ workspaceId }
+					{ workspaceId, folderId: getSelectedFolderIdForChat(workspaceId) ?? undefined }
 				);
 
 				if (workspaceId) {
@@ -2475,7 +2499,12 @@
 				session_id: $socket?.id,
 				chat_id: _chatId || undefined,
 				...(resolvedWorkspaceId
-					? { workspace_id: resolvedWorkspaceId }
+					? {
+							workspace_id: resolvedWorkspaceId,
+							...(getSelectedFolderIdForChat(resolvedWorkspaceId)
+								? { folder_id: getSelectedFolderIdForChat(resolvedWorkspaceId) }
+								: {})
+						}
 					: $selectedFolder?.id
 						? { folder_id: $selectedFolder.id }
 						: {}),
@@ -2575,7 +2604,10 @@
 								{
 									params: params
 								},
-								{ workspaceId: resolvedWorkspaceId }
+								{
+									workspaceId: resolvedWorkspaceId,
+									folderId: getSelectedFolderIdForChat(resolvedWorkspaceId) ?? undefined
+								}
 							);
 						}
 					}
@@ -2837,7 +2869,7 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				workspaceId ? null : $selectedFolder?.id,
+				getSelectedFolderIdForChat(workspaceId),
 				workspaceId
 			);
 
@@ -2856,7 +2888,9 @@
 				currentChatPage.set(1);
 			}
 
-			selectedFolder.set(null);
+			if (!workspaceId) {
+				selectedFolder.set(null);
+			}
 		} else {
 			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
 			await chatId.set(_chatId);
@@ -2880,7 +2914,7 @@
 						params: params,
 						files: chatFiles
 					},
-					{ workspaceId }
+					{ workspaceId, folderId: getSelectedFolderIdForChat(workspaceId) ?? undefined }
 				);
 			}
 		}
@@ -2922,6 +2956,7 @@
 
 	const moveChatHandler = async (chatId, folderId) => {
 		if (chatId && folderId) {
+			const workspaceId = getResolvedWorkspaceId();
 			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
 				(error) => {
 					toast.error(`${error}`);
@@ -3106,7 +3141,7 @@
 										messages: messages,
 										timestamp: Date.now()
 									},
-									null,
+									getSelectedFolderIdForChat(workspaceId),
 									workspaceId
 								);
 
@@ -3120,7 +3155,9 @@
 									}
 
 									await goto(
-										workspaceId ? `/workspaces/${workspaceId}/c/${savedChat.id}` : `/c/${savedChat.id}`
+										workspaceId
+											? `/workspaces/${workspaceId}/c/${savedChat.id}`
+											: `/c/${savedChat.id}`
 									);
 									toast.success($i18n.t('Conversation saved successfully'));
 								}

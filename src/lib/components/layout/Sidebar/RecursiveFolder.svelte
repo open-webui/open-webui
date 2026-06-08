@@ -50,6 +50,11 @@
 	export let folders;
 	export let folderId;
 	export let shiftKey = false;
+	export let folderApis = {};
+	export let selectFolderPath = '/';
+	/** @type {string | null} */
+	export let workspaceId = null;
+	export let folderReadOnly = false;
 
 	export let className = '';
 
@@ -59,6 +64,20 @@
 
 	export let onDelete = (e) => {};
 	export let onItemMove = (e) => {};
+
+	let api;
+	$: api = {
+		deleteFolderById,
+		updateFolderIsExpandedById,
+		updateFolderById,
+		updateFolderParentIdById,
+		getFolderById,
+		createNewFolder,
+		getChatsByFolderId,
+		getChatListByFolderId,
+		updateChatFolderIdById,
+		...folderApis
+	};
 
 	let folderElement;
 
@@ -106,6 +125,9 @@
 							// Read the JSON file with FileReader
 							const reader = new FileReader();
 							reader.onload = async function (event) {
+								if (folderReadOnly) {
+									return;
+								}
 								try {
 									const fileContent = JSON.parse(event.target.result);
 									open = true;
@@ -136,17 +158,20 @@
 							const { type, id, item } = data;
 
 							if (type === 'folder') {
+								if (folderReadOnly) {
+									return;
+								}
 								open = true;
 								if (id === folderId) {
 									return;
 								}
 								// Move the folder
-								const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
-									(error) => {
+								const res = await api
+									.updateFolderParentIdById(localStorage.token, id, folderId)
+									.catch((error) => {
 										toast.error(`${error}`);
 										return null;
-									}
-								);
+									});
 
 								if (res) {
 									dispatch('update');
@@ -174,14 +199,12 @@
 								}
 
 								// Move the chat
-								const res = await updateChatFolderIdById(
-									localStorage.token,
-									chat.id,
-									folderId
-								).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
+								const res = await api
+									.updateChatFolderIdById(localStorage.token, chat.id, folderId)
+									.catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
 
 								onItemMove({
 									originFolderId: chat.folder_id,
@@ -223,6 +246,10 @@
 
 	const onDragStart = (event) => {
 		event.stopPropagation();
+		if (folderReadOnly) {
+			event.preventDefault();
+			return;
+		}
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
 		// Set the data to be transferred
@@ -294,12 +321,16 @@
 	let showDeleteConfirm = false;
 
 	const deleteHandler = async () => {
-		const res = await deleteFolderById(localStorage.token, folderId, deleteFolderContents).catch(
-			(error) => {
+		if (folderReadOnly) {
+			return;
+		}
+
+		const res = await api
+			.deleteFolderById(localStorage.token, folderId, deleteFolderContents)
+			.catch((error) => {
 				toast.error(`${error}`);
 				return null;
-			}
-		);
+			});
 
 		if (res) {
 			toast.success($i18n.t('Folder deleted successfully'));
@@ -308,6 +339,10 @@
 	};
 
 	const updateHandler = async ({ name, meta, data }) => {
+		if (folderReadOnly) {
+			return;
+		}
+
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -318,16 +353,18 @@
 		name = name.trim();
 		folders[folderId].name = name;
 
-		const res = await updateFolderById(localStorage.token, folderId, {
-			name,
-			...(meta ? { meta } : {}),
-			...(data ? { data } : {})
-		}).catch((error) => {
-			toast.error(`${error}`);
+		const res = await api
+			.updateFolderById(localStorage.token, folderId, {
+				name,
+				...(meta ? { meta } : {}),
+				...(data ? { data } : {})
+			})
+			.catch((error) => {
+				toast.error(`${error}`);
 
-			folders[folderId].name = currentName;
-			return null;
-		});
+				folders[folderId].name = currentName;
+				return null;
+			});
 
 		if (res) {
 			folders[folderId].name = name;
@@ -339,7 +376,7 @@
 			toast.success($i18n.t('Folder updated successfully'));
 
 			if ($selectedFolder?.id === folderId) {
-				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+				const folder = await api.getFolderById(localStorage.token, folderId).catch((error) => {
 					toast.error(`${error}`);
 					return null;
 				});
@@ -353,12 +390,16 @@
 	};
 
 	const isExpandedUpdateHandler = async () => {
-		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
-			(error) => {
+		if (folderReadOnly) {
+			return;
+		}
+
+		const res = await api
+			.updateFolderIsExpandedById(localStorage.token, folderId, open)
+			.catch((error) => {
 				toast.error(`${error}`);
 				return null;
-			}
-		);
+			});
 	};
 
 	let isExpandedUpdateTimeout;
@@ -374,7 +415,7 @@
 	export const setFolderItems = async () => {
 		await tick();
 		if (open) {
-			chats = await getChatListByFolderId(localStorage.token, folderId).catch((error) => {
+			chats = await api.getChatListByFolderId(localStorage.token, folderId).catch((error) => {
 				toast.error(`${error}`);
 				return [];
 			});
@@ -388,6 +429,10 @@
 	}
 
 	const renameHandler = async () => {
+		if (folderReadOnly) {
+			return;
+		}
+
 		console.log('Edit');
 		await tick();
 		name = folders[folderId].name;
@@ -404,7 +449,7 @@
 	};
 
 	const exportHandler = async () => {
-		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
+		const chats = await api.getChatsByFolderId(localStorage.token, folderId).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -420,6 +465,10 @@
 	};
 
 	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+		if (folderReadOnly) {
+			return;
+		}
+
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -427,15 +476,17 @@
 
 		name = name.trim();
 
-		const res = await createNewFolder(localStorage.token, {
-			name,
-			data,
-			meta,
-			parent_id
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const res = await api
+			.createNewFolder(localStorage.token, {
+				name,
+				data,
+				meta,
+				parent_id
+			})
+			.catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
 		if (res) {
 			toast.success($i18n.t('Folder created successfully'));
@@ -491,7 +542,7 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={folderElement} class="relative {className}" draggable="true">
+<div bind:this={folderElement} class="relative {className}" draggable={!folderReadOnly}>
 	{#if draggedOver}
 		<div
 			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
@@ -515,11 +566,13 @@
 					? 'bg-gray-100 dark:bg-gray-900 selected'
 					: ''}"
 				on:dblclick={(e) => {
-					if (clickTimer) {
-						clearTimeout(clickTimer); // cancel the single-click action
-						clickTimer = null;
+					if (!folderReadOnly) {
+						if (clickTimer) {
+							clearTimeout(clickTimer); // cancel the single-click action
+							clickTimer = null;
+						}
+						renameHandler();
 					}
-					renameHandler();
 				}}
 				on:click={async (e) => {
 					(e) => e.stopPropagation();
@@ -529,7 +582,7 @@
 					}
 
 					clickTimer = setTimeout(async () => {
-						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+						const folder = await api.getFolderById(localStorage.token, folderId).catch((error) => {
 							toast.error(`${error}`);
 							return null;
 						});
@@ -538,7 +591,7 @@
 							await selectedFolder.set(folder);
 						}
 
-						await goto('/');
+						await goto(selectFolderPath);
 
 						if ($mobile) {
 							showSidebar.set(!$showSidebar);
@@ -614,29 +667,31 @@
 					{/if}
 				</div>
 
-				<button
-					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-				>
-					<FolderMenu
-						onEdit={() => {
-							showFolderModal = true;
-						}}
-						onDelete={() => {
-							showDeleteConfirm = true;
-						}}
-						onExport={() => {
-							exportHandler();
-						}}
-						onCreateSub={() => {
-							createSubFolderParentId = folderId;
-							showCreateSubFolderModal = true;
-						}}
+				{#if !folderReadOnly}
+					<button
+						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					>
-						<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
-							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-						</div>
-					</FolderMenu>
-				</button>
+						<FolderMenu
+							onEdit={() => {
+								showFolderModal = true;
+							}}
+							onDelete={() => {
+								showDeleteConfirm = true;
+							}}
+							onExport={() => {
+								exportHandler();
+							}}
+							onCreateSub={() => {
+								createSubFolderParentId = folderId;
+								showCreateSubFolderModal = true;
+							}}
+						>
+							<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
+								<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+							</div>
+						</FolderMenu>
+					</button>
+				{/if}
 			</div>
 		</div>
 
@@ -661,6 +716,10 @@
 								{folders}
 								folderId={childFolder.id}
 								{shiftKey}
+								{folderApis}
+								{selectFolderPath}
+								{workspaceId}
+								{folderReadOnly}
 								parentDragged={dragged}
 								{onItemMove}
 								{onDelete}
@@ -685,6 +744,7 @@
 							updatedAt={chat.updated_at}
 							lastReadAt={chat.last_read_at}
 							{shiftKey}
+							{workspaceId}
 							on:change={(e) => {
 								dispatch('change', e.detail);
 							}}

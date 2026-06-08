@@ -25,13 +25,13 @@ from fastapi.responses import HTMLResponse
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
-
 def is_temporary_chat_id(chat_id: Any) -> bool:
     return isinstance(chat_id, str) and (chat_id.startswith('local:') or chat_id.startswith('channel:'))
 
 
 def is_persisted_chat_id(chat_id: Any) -> bool:
     return isinstance(chat_id, str) and chat_id != '' and not is_temporary_chat_id(chat_id)
+
 
 from open_webui.utils.misc import is_string_allowed
 from open_webui.models.oauth_sessions import OAuthSessions

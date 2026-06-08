@@ -1040,10 +1040,12 @@
 
 					if (sessionUser) {
 						await user.set(sessionUser);
-						const capabilities = await getGovernanceCapabilities(localStorage.token).catch((error) => {
-							console.error('Error loading governance capabilities:', error);
-							return null;
-						});
+						const capabilities = await getGovernanceCapabilities(localStorage.token).catch(
+							(error) => {
+								console.error('Error loading governance capabilities:', error);
+								return null;
+							}
+						);
 						governanceCapabilities.set(capabilities);
 						try {
 							await config.set(await getBackendConfig());

@@ -27,6 +27,7 @@ async def _filter_private_chat_ids(chat_ids: list[str], db: AsyncSession) -> lis
             result.append(chat_id)
     return result
 
+
 log = logging.getLogger(__name__)
 
 
