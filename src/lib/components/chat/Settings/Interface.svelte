@@ -32,7 +32,7 @@
 	let widescreenMode = false;
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
-	let userLocation = true;
+	let userLocation = false;
 
 	// Interface
 	let defaultModelId = '';
