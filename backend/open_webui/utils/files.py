@@ -58,7 +58,7 @@ async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
             # called only on the originally-submitted URL; following 3xx redirects
             # without re-validation would let an attacker reach private IPs via a
             # public host that redirects internally (e.g. cloud-metadata exfil).
-            validate_url(url)
+            await asyncio.to_thread(validate_url, url)
             # Fetch through an SSRF-safe session that re-checks the connect-time IP, so a
             # rebinding DNS answer that passed validate_url cannot reach an internal address.
             async with get_ssrf_safe_session() as session:
