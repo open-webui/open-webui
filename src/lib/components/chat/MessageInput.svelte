@@ -472,40 +472,29 @@
 	export let placeholder = '';
 
 	let visionCapableModels = [];
-	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
-	);
-
 	let fileUploadCapableModels = [];
-	$: fileUploadCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.file_upload ?? true
-	);
-
 	let webSearchCapableModels = [];
-	$: webSearchCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
-	);
-
 	let imageGenerationCapableModels = [];
-	$: imageGenerationCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.image_generation ?? true
-	);
-
 	let codeInterpreterCapableModels = [];
-	$: codeInterpreterCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
-	);
-
 	let terminalCapableModels = [];
-	$: terminalCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.terminal ?? true
-	);
+
+	$: {
+		const modelIds = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
+		const resolvedCaps = modelIds.map(
+			(id) => $models.find((m) => m.id === id)?.info?.meta?.capabilities ?? {}
+		);
+
+		visionCapableModels = modelIds.filter((_, i) => resolvedCaps[i].vision ?? true);
+		fileUploadCapableModels = modelIds.filter((_, i) => resolvedCaps[i].file_upload ?? true);
+		webSearchCapableModels = modelIds.filter((_, i) => resolvedCaps[i].web_search ?? true);
+		imageGenerationCapableModels = modelIds.filter(
+			(_, i) => resolvedCaps[i].image_generation ?? true
+		);
+		codeInterpreterCapableModels = modelIds.filter(
+			(_, i) => resolvedCaps[i].code_interpreter ?? true
+		);
+		terminalCapableModels = modelIds.filter((_, i) => resolvedCaps[i].terminal ?? true);
+	}
 
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
