@@ -29,6 +29,7 @@ from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
 
 from open_webui.models.chats import Chats
+
 # Company custom: Team Workspaces V1
 from open_webui.models.workspaces import Workspaces, WorkspaceMembers
 from open_webui.models.notes import Notes

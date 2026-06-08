@@ -108,6 +108,7 @@ from open_webui.routers import (
     automations,
     calendar,
 )
+
 # Company custom: Team Workspaces V1
 from open_webui.routers import workspaces
 from open_webui.models.workspaces import Workspaces, WorkspaceMembers, WORKSPACE_WRITE_ROLES
@@ -1822,7 +1823,9 @@ async def chat_completion(
             member = await WorkspaceMembers.get(metadata['workspace_id'], user.id)
             if workspace is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-            if not await can_access_all_workspaces(user) and (member is None or member.role not in WORKSPACE_WRITE_ROLES):
+            if not await can_access_all_workspaces(user) and (
+                member is None or member.role not in WORKSPACE_WRITE_ROLES
+            ):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
             metadata['folder_id'] = None
         elif is_new_chat:
