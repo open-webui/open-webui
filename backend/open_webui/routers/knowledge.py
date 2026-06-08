@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import time
 import zipfile
 from typing import List, Optional
 from urllib.parse import quote
@@ -308,10 +309,13 @@ async def reindex_knowledge_files(
         )
 
     knowledge_bases = await Knowledges.get_knowledge_bases(db=db)
+    total_kbs = len(knowledge_bases)
+    total_files = await Knowledges.count_knowledge_files(db=db)
+    log.info(f'Starting reindexing for {total_kbs} knowledge bases ({total_files} files total)')
+    start_time = time.monotonic()
+    global_file_idx = 0
 
-    log.info(f'Starting reindexing for {len(knowledge_bases)} knowledge bases')
-
-    for knowledge_base in knowledge_bases:
+    for idx, knowledge_base in enumerate(knowledge_bases):
         try:
             files = await Knowledges.get_files_by_id(knowledge_base.id, db=db)
             try:
@@ -323,6 +327,18 @@ async def reindex_knowledge_files(
 
             failed_files = []
             for file in files:
+                global_file_idx += 1
+                elapsed = time.monotonic() - start_time
+                if global_file_idx > 1 and total_files > 0:
+                    avg = elapsed / (global_file_idx - 1)
+                    eta_seconds = round(avg * (total_files - global_file_idx + 1))
+                    eta_str = f', ETA: {eta_seconds}s'
+                else:
+                    eta_str = ''
+                log.info(
+                    f'[KB {idx + 1}/{total_kbs}] {knowledge_base.name}'
+                    f' — file {global_file_idx}/{total_files}{eta_str}: {file.filename}'
+                )
                 try:
                     await process_file(
                         request,
@@ -345,7 +361,8 @@ async def reindex_knowledge_files(
             for failed in failed_files:
                 log.warning(f'File ID: {failed["file_id"]}, Error: {failed["error"]}')
 
-    log.info(f'Reindexing completed.')
+    elapsed_total = round(time.monotonic() - start_time)
+    log.info(f'Reindexing completed in {elapsed_total}s.')
     return True
 
 

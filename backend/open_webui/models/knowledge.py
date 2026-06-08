@@ -634,6 +634,15 @@ class KnowledgeTable:
         except Exception:
             return []
 
+    async def count_knowledge_files(self, db: Optional[AsyncSession] = None) -> int:
+        """Return the total number of files linked across all knowledge bases."""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(func.count()).select_from(KnowledgeFile))
+                return result.scalar() or 0
+        except Exception:
+            return 0
+
     async def get_file_metadatas_by_id(
         self, knowledge_id: str, db: Optional[AsyncSession] = None
     ) -> list[FileMetadataResponse]:
