@@ -14,6 +14,7 @@
 	} from '$lib/stores';
 
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { savePendingOAuthState } from '$lib/utils/oauth-pending-state';
 	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -390,8 +391,12 @@
 									let parts = toolId.split(':');
 									let serverId = parts?.at(-1) ?? toolId;
 
-									// Persist the tool ID so we can re-enable it after OAuth redirect
-									sessionStorage.setItem('pendingOAuthToolId', toolId);
+									// Persist the tool and model selection so OAuth can return the user
+									// to the same chat/tool context after redirect.
+									savePendingOAuthState({
+										toolId,
+										selectedModels
+									});
 
 									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
 									window.open(authUrl, '_self', 'noopener');

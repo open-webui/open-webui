@@ -63,6 +63,7 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { savePendingOAuthState } from '$lib/utils/oauth-pending-state';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -1917,7 +1918,10 @@
 											<Tooltip content={$i18n.t('Click to connect')} placement="top">
 												<button
 													on:click|preventDefault={() => {
-														sessionStorage.setItem('pendingOAuthToolId', pendingTool.id);
+														savePendingOAuthState({
+															toolId: pendingTool.id,
+															selectedModels
+														});
 														const authUrl = getOAuthClientAuthorizationUrl(
 															pendingTool.serverId,
 															pendingTool.authType ?? 'mcp'

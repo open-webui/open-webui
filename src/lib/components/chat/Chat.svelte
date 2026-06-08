@@ -68,6 +68,7 @@
 		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { applyPendingOAuthState, consumePendingOAuthState } from '$lib/utils/oauth-pending-state';
 
 	import {
 		archiveChatById,
@@ -1313,14 +1314,15 @@
 				.filter((id) => id);
 		}
 
-		// Restore tool selection after OAuth redirect
-		const pendingToolId = sessionStorage.getItem('pendingOAuthToolId');
-		if (pendingToolId) {
-			sessionStorage.removeItem('pendingOAuthToolId');
-			if (!selectedToolIds.includes(pendingToolId)) {
-				selectedToolIds = [...selectedToolIds, pendingToolId];
-			}
-		}
+		// Restore model + tool selection after OAuth redirect.
+		const restoredPendingOAuthState = applyPendingOAuthState({
+			availableModels,
+			selectedModels,
+			selectedToolIds,
+			pendingState: consumePendingOAuthState()
+		});
+		selectedModels = restoredPendingOAuthState.selectedModels;
+		selectedToolIds = restoredPendingOAuthState.selectedToolIds;
 
 		if ($page.url.searchParams.get('call') === 'true') {
 			showCallOverlay.set(true);
