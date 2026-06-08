@@ -923,7 +923,23 @@
 											}}
 											on:keydown={async (e) => {
 												e = e.detail.event;
-												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+
+												if (e.key === 'Escape') {
+													replyToMessage = null;
+													return;
+												}
+
+												if (e.ctrlKey && e.key === 'Enter') {
+													submitHandler();
+													return;
+												}
+
+												if (e.key === 'Enter' && !e.shiftKey) {
+													if (content !== '' || files.length > 0) {
+														submitHandler();
+													}
+													return;
+												}
 
 												const suggestionsContainerElement =
 													document.getElementById('suggestions-container');
@@ -953,14 +969,10 @@
 														}
 													}
 												}
-
-												if (e.key === 'Escape') {
-													console.info('Escape');
-													replyToMessage = null;
-												}
 											}}
-											on:paste={async (e) => {
-												e = e.detail.event;
+											on:paste={async (e) => { 
+													e = e.detail.event;
+
 												console.log(e);
 
 												const clipboardData = e.clipboardData || window.clipboardData;
