@@ -531,7 +531,8 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
                 config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key
                 config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version
 
-        request.app.state.ef = get_ef(
+        request.app.state.ef = await asyncio.to_thread(
+            get_ef,
             config.RAG_EMBEDDING_ENGINE,
             config.RAG_EMBEDDING_MODEL,
         )
@@ -1154,7 +1155,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
                 config.ENABLE_RAG_HYBRID_SEARCH
                 and not config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
-                request.app.state.rf = get_rf(
+                request.app.state.rf = await asyncio.to_thread(
+                    get_rf,
                     config.RAG_RERANKING_ENGINE,
                     config.RAG_RERANKING_MODEL,
                     config.RAG_EXTERNAL_RERANKER_URL,
