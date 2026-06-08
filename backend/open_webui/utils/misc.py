@@ -130,6 +130,58 @@ def get_content_from_message(message: dict) -> str | None:
     return None
 
 
+def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
+    """Drop unpaired tool_use / tool_result from a reconstructed conversation.
+
+    Stored output can be incomplete — a tool result may be missing (e.g. the
+    knowledge base was updated mid-chat, or the call was interrupted), or a
+    tool call may be missing while its result survived.  Strict providers
+    (Anthropic, AWS Bedrock Converse) reject either direction of mismatch.
+
+    Well-formed output is unaffected: every id pairs, so nothing is stripped.
+    """
+    completed_tool_call_ids = {
+        message['tool_call_id'] for message in messages if message.get('role') == 'tool' and message.get('tool_call_id')
+    }
+    requested_tool_call_ids = {
+        tool_call['id']
+        for message in messages
+        for tool_call in message.get('tool_calls') or ()
+        if message.get('role') == 'assistant' and tool_call.get('id')
+    }
+
+    reconciled_messages = []
+    for message in messages:
+        role = message.get('role')
+
+        # Orphan tool result — no assistant ever claimed this call_id.
+        if role == 'tool' and message.get('tool_call_id') not in requested_tool_call_ids:
+            continue
+
+        # Non-assistant or no tool_calls — pass through unchanged.
+        if role != 'assistant' or not message.get('tool_calls'):
+            reconciled_messages.append(message)
+            continue
+
+        # Keep only tool_calls whose id received a tool-role response.
+        valid_tool_calls = [
+            tool_call for tool_call in message['tool_calls'] if tool_call.get('id') in completed_tool_call_ids
+        ]
+
+        if valid_tool_calls:
+            reconciled_messages.append({**message, 'tool_calls': valid_tool_calls})
+            continue
+
+        # All tool_calls were orphans — keep the message only if it
+        # carries meaningful text or reasoning content.
+        content = message.get('content', '')
+        has_meaningful_content = content.strip() if isinstance(content, str) else content
+        if has_meaningful_content or message.get('reasoning_content'):
+            reconciled_messages.append({key: value for key, value in message.items() if key != 'tool_calls'})
+
+    return reconciled_messages
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -296,7 +348,7 @@ def convert_output_to_messages(
     # Flush remaining content/tool_calls
     flush_pending()
 
-    return messages
+    return reconcile_tool_pairs(messages)
 
 
 def get_last_user_message(messages: list[dict]) -> str | None:
@@ -653,7 +705,7 @@ def sanitize_data_for_db(obj):
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        if '\x00' not in json.dumps(obj, ensure_ascii=False):
+        if '\\u0000' not in json.dumps(obj, ensure_ascii=False):
             return obj
     except (TypeError, ValueError):
         pass

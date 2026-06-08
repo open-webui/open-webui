@@ -1,10 +1,12 @@
+"""Tag models and database operations."""
+
 from __future__ import annotations
 
 import logging
 import time
 import uuid
-from typing import Optional
 
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, Index, PrimaryKeyConstraint, String, delete, select
@@ -13,16 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-####################
-# Tag DB Schema
-# To name a thing is to claim it. The creator has
-# already named everything stored in this table.
-####################
-class Tag(Base):
+class Tag(Base):  # database table mapping for tag entity
     __tablename__ = 'tag'
     id = Column(String)
-    name = Column(String)
-    user_id = Column(String)
+    name = Column(String, index=True)  # tag label
+    user_id = Column(String, index=True)  # user identifier
     meta = Column(JSON, nullable=True)
 
     __table_args__ = (
@@ -39,10 +36,10 @@ class TagModel(BaseModel):
     name: str
     user_id: str
     meta: dict | None = None
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
 
-####################
+# --- tag schema forms ---
 # Forms
 ####################
 
@@ -53,22 +50,24 @@ class TagChatIdForm(BaseModel):
 
 
 class TagTable:
-    async def insert_new_tag(self, name: str, user_id: str, db: AsyncSession | None = None) -> TagModel | None:
+    async def insert_new_tag(
+        self,
+        name: str,
+        user_id: str,
+        db: AsyncSession | None = None,
+    ) -> TagModel | None:
+        """Create a new tag, deriving the id from the name."""
         async with get_async_db_context(db) as db:
-            id = name.replace(' ', '_').lower()
-            tag = TagModel(**{'id': id, 'user_id': user_id, 'name': name})
+            tag_id = name.replace(' ', '_').lower()
             try:
-                result = Tag(**tag.model_dump())
-                db.add(result)
+                record = Tag(id=tag_id, user_id=user_id, name=name)
+                db.add(record)
                 await db.commit()
-                await db.refresh(result)
-                if result:
-                    return TagModel.model_validate(result)
-                else:
-                    return None
+                await db.refresh(record)
+                return TagModel.model_validate(record) if record else None
             except Exception as e:
-                log.exception(f'Error inserting a new tag: {e}')
-                return None
+                log.exception('Error inserting tag %r: %s', name, e)
+                return None  # insertion failed
 
     async def get_tag_by_name_and_user_id(
         self, name: str, user_id: str, db: AsyncSession | None = None
@@ -137,4 +136,4 @@ class TagTable:
                 await db.commit()
 
 
-Tags = TagTable()
+Tags = TagTable()  # singleton tag repository

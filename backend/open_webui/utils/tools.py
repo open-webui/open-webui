@@ -101,6 +101,68 @@ from pydantic.fields import FieldInfo
 log = logging.getLogger(__name__)
 
 
+async def build_tool_server_headers(
+    connection: dict,
+    request,
+    user,
+    server_id: str = '',
+    metadata: dict | None = None,
+    extra_params: dict | None = None,
+) -> tuple[dict, dict]:
+    """Build auth headers and cookies for a tool server connection.
+
+    Handles bearer, session, system_oauth, and oauth_2.1 auth types plus
+    custom header interpolation and user-info forwarding.
+    Shared by MCP and OpenAPI paths.
+
+    Returns (headers, cookies).
+    """
+    extra_params = extra_params or {}
+    metadata = metadata or {}
+
+    auth_type = connection.get('auth_type', 'bearer')
+    headers = {}
+    cookies = {}
+
+    if auth_type == 'bearer':
+        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+    elif auth_type == 'session':
+        cookies = request.cookies if hasattr(request, 'cookies') else {}
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif auth_type == 'system_oauth':
+        cookies = request.cookies if hasattr(request, 'cookies') else {}
+        oauth_token = extra_params.get('__oauth_token__', None)
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+    elif auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+        try:
+            splits = server_id.split(':')
+            oauth_server_id = splits[-1] if len(splits) > 1 else server_id
+            connection_type = connection.get('type', 'openapi')
+            oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(
+                user.id, f'{connection_type}:{oauth_server_id}'
+            )
+            if oauth_token:
+                headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+        except Exception as e:
+            log.error(f'Error getting OAuth token: {e}')
+
+    # Interpolate template vars in custom connection headers
+    connection_headers = connection.get('headers', None)
+    if connection_headers and isinstance(connection_headers, dict):
+        headers.update(get_custom_headers(connection_headers, user, metadata))
+
+    # Add user info headers if enabled
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
+        if metadata.get('chat_id'):
+            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata['chat_id']
+        if metadata.get('message_id'):
+            headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata['message_id']
+
+    return headers, cookies
+
+
 # Let no function be called without need, and let what
 # it yields justify the cost of running it.
 async def get_async_tool_function_and_apply_extra_params(
@@ -166,8 +228,11 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     # Get user's group memberships for access control checks
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
+    # Batch-fetch all DB tools in one query instead of one per tool_id
+    tool_models = await Tools.get_tools_by_ids(tool_ids)
+
     for tool_id in tool_ids:
-        tool = await Tools.get_tool_by_id(tool_id)
+        tool = tool_models.get(tool_id)
         if tool:
             # Check access control for local tools
             if (
@@ -309,41 +374,16 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                                 # Skip this function
                                 continue
 
-                        auth_type = tool_server_connection.get('auth_type', 'bearer')
-
-                        cookies = {}
-                        headers = {
-                            'Content-Type': 'application/json',
-                        }
-
-                        if auth_type == 'bearer':
-                            headers['Authorization'] = f'Bearer {tool_server_connection.get("key", "")}'
-                        elif auth_type == 'none':
-                            # No authentication
-                            pass
-                        elif auth_type == 'session':
-                            cookies = request.cookies
-                            headers['Authorization'] = f'Bearer {request.state.token.credentials}'
-                        elif auth_type == 'system_oauth':
-                            cookies = request.cookies
-                            oauth_token = extra_params.get('__oauth_token__', None)
-                            if oauth_token:
-                                headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
-
-                        connection_headers = tool_server_connection.get('headers', None)
-                        if connection_headers and isinstance(connection_headers, dict):
-                            metadata = extra_params.get('__metadata__', {})
-                            custom_headers = get_custom_headers(connection_headers, user, metadata)
-                            headers.update(custom_headers)
-
-                        # Add user info headers if enabled
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                            headers = include_user_info_headers(headers, user)
-                            metadata = extra_params.get('__metadata__', {})
-                            if metadata and metadata.get('chat_id'):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
-                            if metadata and metadata.get('message_id'):
-                                headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
+                        metadata = extra_params.get('__metadata__', {})
+                        headers, cookies = await build_tool_server_headers(
+                            tool_server_connection,
+                            request,
+                            user,
+                            server_id=server_id,
+                            metadata=metadata,
+                            extra_params=extra_params,
+                        )
+                        headers.setdefault('Content-Type', 'application/json')
 
                         async def make_tool_function(function_name, tool_server_data, headers):
                             async def tool_function(**kwargs):
@@ -448,7 +488,9 @@ async def get_builtin_tools(
                 builtin_functions.append(query_knowledge_bases)
                 builtin_functions.append(search_knowledge_bases)
         elif model_knowledge:
-            builtin_functions.extend([list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files])
+            builtin_functions.extend(
+                [list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files]
+            )
 
             knowledge_types = {item.get('type') for item in model_knowledge}
             if 'file' in knowledge_types or 'collection' in knowledge_types:
@@ -456,11 +498,17 @@ async def get_builtin_tools(
             if 'note' in knowledge_types:
                 builtin_functions.append(view_note)
         else:
-            builtin_functions.extend([
-                list_knowledge_bases, search_knowledge_bases, query_knowledge_bases,
-                grep_knowledge_files, search_knowledge_files, query_knowledge_files,
-                view_knowledge_file,
-            ])
+            builtin_functions.extend(
+                [
+                    list_knowledge_bases,
+                    search_knowledge_bases,
+                    query_knowledge_bases,
+                    grep_knowledge_files,
+                    search_knowledge_files,
+                    query_knowledge_files,
+                    view_knowledge_file,
+                ]
+            )
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):
@@ -1477,7 +1525,7 @@ async def execute_tool_server(
 
     except Exception as err:
         error = str(err)
-        log.exception(f'API Request Error: {error}')
+        log.warning(f'API Request Error: {error}')
         return ({'error': error}, None)
 
 

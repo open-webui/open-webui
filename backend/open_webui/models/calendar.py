@@ -695,12 +695,19 @@ class CalendarEventTable:
         self,
         now_ns: int,
         default_lookahead_ns: int,
+        grace_ns: int = 0,
         db: Optional[AsyncSession] = None,
     ) -> list[tuple[CalendarEventModel, Optional[str]]]:
         """Events starting between now and now + lookahead, for alert processing.
 
         Per-event lookahead is read from meta.alert_minutes (falls back to
         default_lookahead_ns).  Returns (event, user_timezone) pairs.
+
+        *grace_ns* widens the SQL lower bound so that events whose start_at
+        is up to *grace_ns* nanoseconds in the past are still fetched.  This
+        ensures "At time of event" alerts (alert_minutes=0) are not missed
+        when the scheduler polls a few seconds after the event's exact start
+        time.
         """
         from open_webui.models.users import User as UserRow
 
@@ -715,7 +722,7 @@ class CalendarEventTable:
                 .outerjoin(UserRow, UserRow.id == CalendarEvent.user_id)
                 .filter(
                     CalendarEvent.is_cancelled == False,
-                    CalendarEvent.start_at >= now_ns,
+                    CalendarEvent.start_at >= now_ns - grace_ns,
                     CalendarEvent.start_at <= upper,
                 )
             )

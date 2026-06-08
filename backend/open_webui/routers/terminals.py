@@ -35,7 +35,14 @@ def _sanitize_proxy_path(path: str) -> str | None:
     Trailing slashes are preserved — many upstream frameworks treat
     ``/path`` and ``/path/`` differently.
     """
-    decoded = unquote(path)
+    # Decode until stable: a single unquote pass leaves %252e%252e as %2e%2e,
+    # which the upstream then re-decodes into '..', bypassing the check below.
+    decoded = path
+    for _ in range(8):
+        once = unquote(decoded)
+        if once == decoded:
+            break
+        decoded = once
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
@@ -324,11 +331,20 @@ async def ws_terminal(
                 except Exception:
                     pass
 
-            await asyncio.gather(
-                _client_to_upstream(),
-                _upstream_to_client(),
-                return_exceptions=True,
-            )
+            # End the proxy as soon as either direction finishes (e.g. a
+            # graceful upstream CLOSE) and cancel the sibling, which would
+            # otherwise hang on a blocked ws.receive() until the browser leaves.
+            tasks = [
+                asyncio.create_task(_client_to_upstream()),
+                asyncio.create_task(_upstream_to_client()),
+            ]
+            _done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
     finally:

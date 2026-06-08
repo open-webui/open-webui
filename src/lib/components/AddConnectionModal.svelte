@@ -41,7 +41,8 @@
 		provider === 'azure' ||
 		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
 			!direct &&
-			provider === '');
+			provider === '' &&
+			!/\/openai\/v1(\/|$)/.test(url));
 
 	let prefixId = '';
 	let enable = true;
@@ -101,7 +102,8 @@
 				key,
 				config: {
 					auth_type,
-					...(provider ? { provider } : azure ? { azure: true } : {}),
+					...(provider ? { provider } : {}),
+					...(azure ? { azure: true } : {}),
 					api_version: apiVersion,
 					...(_headers ? { headers: _headers } : {})
 				}
@@ -189,7 +191,8 @@
 				connection_type: connectionType,
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
-				...(provider ? { provider } : !ollama && azure ? { azure: true } : {}),
+				...(provider ? { provider } : {}),
+				...(!ollama && azure ? { azure: true } : {}),
 				...(azure ? { api_version: apiVersion } : {}),
 				...(apiType ? { api_type: apiType } : {})
 			}
@@ -390,9 +393,7 @@
 												<option value="session">{$i18n.t('Session')}</option>
 												{#if !direct}
 													<option value="system_oauth">{$i18n.t('OAuth')}</option>
-													{#if azure}
-														<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
-													{/if}
+													<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
 												{/if}
 											{/if}
 										</select>
@@ -521,7 +522,7 @@
 									<label
 										for="api-version-input"
 										class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+										${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 										>{$i18n.t('API Version')}</label
 									>
 

@@ -261,7 +261,6 @@
 								<td class=" px-3 py-1">
 									{dayjs(user.last_active_at * 1000).fromNow()}
 								</td>
-
 							</tr>
 						{/each}
 					</tbody>

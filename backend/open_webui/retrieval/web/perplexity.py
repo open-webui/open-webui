@@ -2,6 +2,7 @@ import logging
 from typing import Literal, Optional
 
 import requests
+from open_webui.env import VERSION
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 
 MODELS = Literal[
@@ -64,6 +65,7 @@ def search_perplexity(
         headers = {
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json',
+            'X-Pplx-Integration': f'open-webui/{VERSION}',
         }
 
         # Make the API request

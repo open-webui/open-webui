@@ -95,7 +95,9 @@ def upgrade() -> None:
     inspector.clear_cache()
     if 'calendar_event_attendee' in inspector.get_table_names():
         if not _index_exists(inspector, 'ix_calendar_event_attendee_user', 'calendar_event_attendee'):
-            op.create_index('ix_calendar_event_attendee_user', 'calendar_event_attendee', ['user_id', 'status'], unique=False)
+            op.create_index(
+                'ix_calendar_event_attendee_user', 'calendar_event_attendee', ['user_id', 'status'], unique=False
+            )
 
 
 def downgrade() -> None:

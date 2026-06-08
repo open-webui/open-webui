@@ -80,6 +80,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
 
                 return WeaviateClient()
+            case VectorType.VALKEY:
+                from open_webui.retrieval.vector.dbs.valkey import ValkeyClient
+
+                return ValkeyClient()
             case _:
                 raise ValueError(f'Unsupported vector type: {vector_type}')
 

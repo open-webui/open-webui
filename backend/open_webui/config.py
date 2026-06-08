@@ -199,9 +199,7 @@ if frontend_loader.exists():
         logging.error(f'An error occurred: {e}')
 
 
-####################################
-# STORAGE PROVIDER
-####################################
+# --- Storage Provider ---
 
 STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # defaults to local, s3
 STORAGE_LOCAL_CACHE = os.getenv('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
@@ -948,6 +946,15 @@ log.info(f'VECTOR_DB: {VECTOR_DB}')
 S3_VECTOR_BUCKET_NAME = os.getenv('S3_VECTOR_BUCKET_NAME', None)
 S3_VECTOR_REGION = os.getenv('S3_VECTOR_REGION', None)
 
+# Valkey Vector Store
+VALKEY_URL = os.getenv('VALKEY_URL', '')
+VALKEY_COLLECTION_PREFIX = os.getenv('VALKEY_COLLECTION_PREFIX', 'open_webui')
+VALKEY_INDEX_TYPE = os.getenv('VALKEY_INDEX_TYPE', 'HNSW').upper()
+VALKEY_DISTANCE_METRIC = os.getenv('VALKEY_DISTANCE_METRIC', 'COSINE').upper()
+VALKEY_HNSW_M = int(os.getenv('VALKEY_HNSW_M', '16'))
+VALKEY_HNSW_EF_CONSTRUCTION = int(os.getenv('VALKEY_HNSW_EF_CONSTRUCTION', '200'))
+VALKEY_HNSW_EF_RUNTIME = int(os.getenv('VALKEY_HNSW_EF_RUNTIME', '10'))
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
@@ -1109,6 +1116,12 @@ MINERU_PARAMS = ConfigVar(
     'MINERU_PARAMS',
     'rag.mineru_params',
     mineru_params,
+)
+
+MINERU_FILE_EXTENSIONS = ConfigVar(
+    'MINERU_FILE_EXTENSIONS',
+    'rag.mineru_file_extensions',
+    [ext.strip() for ext in os.getenv('MINERU_FILE_EXTENSIONS', 'pdf').split(',') if ext.strip()],
 )
 
 EXTERNAL_DOCUMENT_LOADER_URL = ConfigVar(
@@ -1912,6 +1925,24 @@ YOUCOM_API_KEY = ConfigVar(
     'YOUCOM_API_KEY',
     'rag.web.search.youcom_api_key',
     os.getenv('YOUCOM_API_KEY', ''),
+)
+
+LINKUP_API_KEY = ConfigVar(
+    'LINKUP_API_KEY',
+    'rag.web.search.linkup_api_key',
+    os.getenv('LINKUP_API_KEY', ''),
+)
+
+linkup_search_params = os.getenv('LINKUP_SEARCH_PARAMS', '')
+try:
+    linkup_search_params = json.loads(linkup_search_params)
+except json.JSONDecodeError:
+    linkup_search_params = {}
+
+LINKUP_SEARCH_PARAMS = ConfigVar(
+    'LINKUP_SEARCH_PARAMS',
+    'rag.web.search.linkup_search_params',
+    linkup_search_params,
 )
 
 ####################################
@@ -3428,6 +3459,12 @@ ENABLE_OAUTH_SIGNUP = ConfigVar(
     'ENABLE_OAUTH_SIGNUP',
     'oauth.enable_signup',
     os.getenv('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true',
+)
+
+OAUTH_AUTO_REDIRECT = ConfigVar(
+    'OAUTH_AUTO_REDIRECT',
+    'oauth.auto_redirect',
+    os.getenv('OAUTH_AUTO_REDIRECT', 'False').lower() == 'true',
 )
 
 OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = ConfigVar(

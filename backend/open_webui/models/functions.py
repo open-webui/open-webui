@@ -1,9 +1,11 @@
+"""Function (filter/action/pipe) models, forms, and database operations."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict
@@ -12,29 +14,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# Functions DB Schema
-# Each function here is a promise made. Let no promise
-# go unkept, and let none be called who cannot answer.
-####################
 
-
-class Function(Base):
+class Function(Base):  # database table mapping
     __tablename__ = 'function'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
-    name = Column(Text)
-    type = Column(Text)
-    content = Column(Text)
-    meta = Column(JSONField)
-    valves = Column(JSONField)
-    is_active = Column(Boolean)
-    is_global = Column(Boolean)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    user_id = Column(String, index=True)  # creator user id
+    name = Column(Text, nullable=False)  # function identifier
+    type = Column(Text, nullable=False)  # function type (pipe, filter, etc.)
+    content = Column(Text, nullable=True)  # Python source code
+    meta = Column(JSONField, nullable=True)  # function metadata
+    valves = Column(JSONField, nullable=True)  # function configuration valves
+    is_active = Column(Boolean, default=False)  # function activation status
+    is_global = Column(Boolean)  # if True, applied to every chat automatically
+    updated_at = Column(BigInteger)  # epoch seconds
+    created_at = Column(BigInteger)  # epoch seconds
 
-    __table_args__ = (Index('is_global_idx', 'is_global'),)
+    __table_args__ = (Index('is_global_idx', 'is_global'),)  # speed up global-function lookups
 
 
 class FunctionMeta(BaseModel):
@@ -55,9 +51,10 @@ class FunctionModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
 
+# --- form / schema definitions ---
 class FunctionWithValvesModel(BaseModel):
     id: str
     user_id: str
@@ -430,4 +427,4 @@ class FunctionsTable:
                 return False
 
 
-Functions = FunctionsTable()
+Functions = FunctionsTable()  # singleton functions engine

@@ -101,9 +101,7 @@ def upgrade():
 
         # Check if shared_chat record already exists (idempotent)
         existing_shared = conn.execute(
-            sa.select(shared_chat_t.c.id).where(
-                shared_chat_t.c.id == share_token
-            )
+            sa.select(shared_chat_t.c.id).where(shared_chat_t.c.id == share_token)
         ).fetchone()
 
         if not existing_shared:

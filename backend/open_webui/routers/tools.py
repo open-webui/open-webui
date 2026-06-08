@@ -329,6 +329,7 @@ async def create_new_tools(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Create a new tool from user-supplied Python source code."""
     if user.role != 'admin' and not (
         await has_permission(user.id, 'workspace.tools', request.app.state.config.USER_PERMISSIONS, db=db)
         or await has_permission(
@@ -455,6 +456,7 @@ async def update_tools_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Update an existing tool's source code and metadata."""
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(

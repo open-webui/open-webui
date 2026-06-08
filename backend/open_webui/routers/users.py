@@ -383,21 +383,25 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user), db: Asy
 
 
 @router.post('/user/info/update', response_model=dict | None)
-async def update_user_info_by_session_user(
-    form_data: dict, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+async def update_user_info_by_session_user(  # PATCH-style merge
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
-    # Merges against the auth-time snapshot of user.info. The previous pre-merge
-    # refetch only narrowed (did not eliminate) the lost-update window on concurrent
-    # same-user writes; real safety needs row locking or a version column.
-    existing_info = user.info or {}
-    updated = await Users.update_user_by_id(user.id, {'info': {**existing_info, **form_data}}, db=db)
-    if updated:
-        return updated.info
-    else:
+    """Merge caller-supplied fields into the current user's info dict.
+
+    Uses the auth-time snapshot of ``user.info`` as the merge base.  This does
+    NOT eliminate lost-update races on concurrent same-user writes; real safety
+    would need row locking or an optimistic-concurrency version column.
+    """
+    merged_info = {**(user.info or {}), **form_data}
+    updated = await Users.update_user_by_id(user.id, {'info': merged_info}, db=db)
+    if not updated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+    return updated.info
 
 
 ############################
@@ -539,7 +543,7 @@ async def get_user_active_status_by_id(
 async def update_user_by_id(
     user_id: str,
     form_data: UserUpdateForm,
-    session_user=Depends(get_admin_user),
+    session_user: UserModel = Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     # Prevent modification of the primary admin user by other admins
@@ -743,27 +747,15 @@ async def get_user_preview(
         'user': {'id': target_user.id, 'name': target_user.name},
         'groups': [{'id': g.id, 'name': g.name} for g in user_groups],
         'models': {
-            'items': [
-                {'id': m.id, 'name': m.name}
-                for m in active_models
-                if m.id in accessible_model_ids
-            ],
+            'items': [{'id': m.id, 'name': m.name} for m in active_models if m.id in accessible_model_ids],
             'total': len(active_models),
         },
         'knowledge': {
-            'items': [
-                {'id': k.id, 'name': k.name}
-                for k in all_knowledge
-                if k.id in accessible_knowledge_ids
-            ],
+            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.id in accessible_knowledge_ids],
             'total': len(all_knowledge),
         },
         'tools': {
-            'items': [
-                {'id': t.id, 'name': t.name}
-                for t in all_tools
-                if t.id in accessible_tool_ids
-            ],
+            'items': [{'id': t.id, 'name': t.name} for t in all_tools if t.id in accessible_tool_ids],
             'total': len(all_tools),
         },
     }

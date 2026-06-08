@@ -19,9 +19,13 @@ from typing import (
 )
 
 import aiohttp
+import aiohttp.resolver
 import certifi
 import requests
+import urllib3.connection
+import urllib3.connectionpool
 import validators
+from requests.adapters import HTTPAdapter
 from fastapi.concurrency import run_in_threadpool
 from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
 from langchain_community.document_loaders.base import BaseLoader
@@ -94,7 +98,7 @@ def validate_url(url: Union[str, Sequence[str]]):
             # Get IPv4 and IPv6 addresses
             ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
             # Check if any of the resolved addresses are private
-            # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
+            # DNS rebinding is mitigated at the connection layer; see _SSRFSafeResolver / _SSRFSafeAdapter
             for ip in ipv4_addresses + ipv6_addresses:
                 addr = ipaddress.ip_address(ip)
                 if not addr.is_global:
@@ -116,6 +120,81 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
             log.debug(f'Invalid URL {u}: {str(e)}')
             continue
     return valid_urls
+
+
+def _ssrf_safe_new_conn(self):
+    """Resolve DNS, validate all IPs are global, connect to validated IP.
+
+    Replaces urllib3's _new_conn so the DNS lookup that feeds the actual TCP
+    connect is the same one we validate — no second resolution, no rebinding
+    window.
+    """
+    host = getattr(self, '_dns_host', self.host)
+    port = self.port
+    infos = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
+    if not infos:
+        raise OSError(f'getaddrinfo for {host!r} returned empty list')
+    if not ENABLE_RAG_LOCAL_WEB_FETCH:
+        for _, _, _, _, sa in infos:
+            if not ipaddress.ip_address(sa[0]).is_global:
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    err = None
+    for fam, typ, proto, _, sa in infos:
+        sock = None
+        try:
+            sock = socket.socket(fam, typ, proto)
+            if self.timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
+                sock.settimeout(self.timeout)
+            if getattr(self, 'source_address', None):
+                sock.bind(self.source_address)
+            for opt in getattr(self, 'socket_options', None) or ():
+                sock.setsockopt(*opt)
+            sock.connect(sa)
+            return sock
+        except OSError as exc:
+            err = exc
+            if sock is not None:
+                sock.close()
+    raise err or OSError(f'connect to {host!r}:{port} failed')
+
+
+class _SafeHTTPConn(urllib3.connection.HTTPConnection):
+    _new_conn = _ssrf_safe_new_conn
+
+
+class _SafeHTTPSConn(urllib3.connection.HTTPSConnection):
+    _new_conn = _ssrf_safe_new_conn
+
+
+class _SafeHTTPPool(urllib3.connectionpool.HTTPConnectionPool):
+    ConnectionCls = _SafeHTTPConn
+
+
+class _SafeHTTPSPool(urllib3.connectionpool.HTTPSConnectionPool):
+    ConnectionCls = _SafeHTTPSConn
+
+
+class _SSRFSafeAdapter(HTTPAdapter):
+    """requests transport adapter that validates resolved IPs at connect time."""
+
+    def init_poolmanager(self, *args, **kwargs):
+        super().init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = {
+            'http': _SafeHTTPPool,
+            'https': _SafeHTTPSPool,
+        }
+
+
+class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
+    """aiohttp resolver that rejects non-global IPs unless local fetch is on."""
+
+    async def resolve(self, host, port=0, family=socket.AF_INET):
+        results = await super().resolve(host, port, family)
+        if not ENABLE_RAG_LOCAL_WEB_FETCH:
+            for entry in results:
+                if not ipaddress.ip_address(entry['host']).is_global:
+                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        return results
 
 
 def extract_metadata(soup, url):
@@ -421,6 +500,62 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         self.trust_env = trust_env
         self.playwright_timeout = playwright_timeout
 
+    def _intercept_navigation_sync(self, route, request=None):
+        req = request or route.request
+
+        if req.resource_type != 'document':
+            route.continue_()
+            return
+
+        try:
+            validate_url(req.url)
+        except Exception:
+            route.abort()
+            return
+
+        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
+            resp = route.fetch()
+        else:
+            try:
+                resp = route.fetch(max_redirects=0)
+            except TypeError:
+                route.abort()
+                return
+
+            if 300 <= resp.status < 400:
+                route.abort()
+                return
+
+        route.fulfill(response=resp)
+
+    async def _intercept_navigation(self, route, request=None):
+        req = request or route.request
+
+        if req.resource_type != 'document':
+            await route.continue_()
+            return
+
+        try:
+            await run_in_threadpool(validate_url, req.url)
+        except Exception:
+            await route.abort()
+            return
+
+        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
+            resp = await route.fetch()
+        else:
+            try:
+                resp = await route.fetch(max_redirects=0)
+            except TypeError:
+                await route.abort()
+                return
+
+            if 300 <= resp.status < 400:
+                await route.abort()
+                return
+
+        await route.fulfill(response=resp)
+
     def lazy_load(self) -> Iterator[Document]:
         """Safely load URLs synchronously with support for remote browser."""
         from playwright.sync_api import sync_playwright
@@ -436,6 +571,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 try:
                     self._safe_process_url_sync(url)
                     page = browser.new_page()
+                    page.route('**/*', self._intercept_navigation_sync)
                     response = page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f'page.goto() returned None for url {url}')
@@ -465,6 +601,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 try:
                     await self._safe_process_url(url)
                     page = await browser.new_page()
+                    await page.route('**/*', self._intercept_navigation)
                     response = await page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f'page.goto() returned None for url {url}')
@@ -512,8 +649,12 @@ class SafeWebBaseLoader(WebBaseLoader):
             'allow_redirects': AIOHTTP_CLIENT_ALLOW_REDIRECTS,
         }
 
+        self.session.mount('http://', _SSRFSafeAdapter())
+        self.session.mount('https://', _SSRFSafeAdapter())
+
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
-        async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
+        connector = aiohttp.TCPConnector(resolver=_SSRFSafeResolver())
+        async with aiohttp.ClientSession(trust_env=self.trust_env, connector=connector) as session:
             for i in range(retries):
                 try:
                     kwargs: Dict = dict(

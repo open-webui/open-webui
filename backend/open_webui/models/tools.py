@@ -1,9 +1,11 @@
+"""Tool models, forms, and database operations."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
+# local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -14,26 +16,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# Tools DB Schema
-# A tool that fails silently is worse than one that
-# refuses outright. Let each one here be honest in its work.
-####################
 
-
-class Tool(Base):
+class Tool(Base):  # database table definition
     __tablename__ = 'tool'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
-    name = Column(Text)
-    content = Column(Text)
-    specs = Column(JSONField)
-    meta = Column(JSONField)
-    valves = Column(JSONField)
+    user_id = Column(String, index=True)  # owner user id
+    name = Column(Text)  # human-readable label
+    content = Column(Text)  # Python source code
+    specs = Column(JSONField)  # OpenAPI-style function specs
+    meta = Column(JSONField)  # description, manifest, etc.
+    valves = Column(JSONField)  # admin-configurable runtime parameters
 
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger, nullable=False)  # modification timestamp
+    created_at = Column(BigInteger, index=True)  # creation timestamp
 
 
 class ToolMeta(BaseModel):
@@ -53,10 +49,10 @@ class ToolModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)  # enables ORM mapping
 
 
-####################
+# --- tool request forms ---
 # Forms
 ####################
 
@@ -141,15 +137,35 @@ class ToolsTable:
                     return None
             except Exception as e:
                 log.exception(f'Error creating a new tool: {e}')
-                return None
+                return None  # creation failed
 
-    async def get_tool_by_id(self, id: str, db: AsyncSession | None = None) -> ToolModel | None:
-        try:
-            async with get_async_db_context(db) as db:
-                tool = await db.get(Tool, id)
-                return await self._to_tool_model(tool, db=db) if tool else None
+    async def get_tool_by_id(
+        self,
+        id: str,
+        db: AsyncSession | None = None,
+    ) -> ToolModel | None:
+        """Fetch a single tool by primary key, including access grants."""
+        try:  # single PK lookup + access grants
+            async with get_async_db_context(db) as session:
+                tool = await session.get(Tool, id)
+                if not tool:
+                    return None
+                return await self._to_tool_model(tool, db=session)
         except Exception:
             return None
+
+    async def get_tools_by_ids(self, tool_ids: list[str], db: AsyncSession | None = None) -> dict[str, ToolModel]:
+        """Batch-fetch multiple tools by ID, returning a dict keyed by tool ID."""
+        if not tool_ids:
+            return {}
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Tool).where(Tool.id.in_(tool_ids)))
+            tools = result.scalars().all()
+            grants_map = await AccessGrants.get_grants_by_resources('tool', [tool.id for tool in tools], db=db)
+            return {
+                tool.id: await self._to_tool_model(tool, access_grants=grants_map.get(tool.id, []), db=db)
+                for tool in tools
+            }
 
     async def get_tools(self, defer_content: bool = False, db: AsyncSession | None = None) -> list[ToolUserModel]:
         async with get_async_db_context(db) as db:
@@ -299,4 +315,4 @@ class ToolsTable:
             return False
 
 
-Tools = ToolsTable()
+Tools = ToolsTable()  # singleton tool registry

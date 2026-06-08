@@ -115,11 +115,12 @@ export const searchKnowledgeBases = async (
 
 export const searchKnowledgeFiles = async (
 	token: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
-	page: number = 1
+	query?: string | null,
+	viewOption?: string | null,
+	orderBy?: string | null,
+	direction?: string | null,
+	page: number = 1,
+	includeContent: boolean = false
 ) => {
 	let error = null;
 
@@ -129,6 +130,7 @@ export const searchKnowledgeFiles = async (
 	if (orderBy) searchParams.append('order_by', orderBy);
 	if (direction) searchParams.append('direction', direction);
 	searchParams.append('page', page.toString());
+	if (includeContent) searchParams.append('include_content', 'true');
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/knowledge/search/files?${searchParams.toString()}`,
@@ -197,12 +199,13 @@ export const getKnowledgeById = async (token: string, id: string) => {
 export const searchKnowledgeFilesById = async (
 	token: string,
 	id: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
+	query?: string | null,
+	viewOption?: string | null,
+	orderBy?: string | null,
+	direction?: string | null,
 	page: number = 1,
-	directoryId?: string | null = undefined
+	directoryId?: string | null,
+	includeContent: boolean = false
 ) => {
 	let error = null;
 
@@ -216,6 +219,7 @@ export const searchKnowledgeFilesById = async (
 	if (directoryId !== undefined) {
 		searchParams.append('directory_id', directoryId ?? '');
 	}
+	if (includeContent) searchParams.append('include_content', 'true');
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/knowledge/${id}/files?${searchParams.toString()}`,
@@ -244,6 +248,50 @@ export const searchKnowledgeFilesById = async (
 
 	if (error) {
 		throw error;
+	}
+
+	return res;
+};
+
+export const getPendingKnowledgeFiles = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/files/pending`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return [];
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const streamPendingKnowledgeFiles = async (token: string, id: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/files/pending?stream=true`, {
+		method: 'GET',
+		headers: {
+			Accept: 'text/event-stream',
+			authorization: `Bearer ${token}`
+		}
+	});
+
+	if (!res.ok) {
+		throw new Error('Failed to stream pending files');
 	}
 
 	return res;
@@ -459,6 +507,79 @@ export const resetKnowledgeById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const syncKnowledgeDiff = async (
+	token: string,
+	id: string,
+	manifest: Array<{ filename: string; path: string; checksum: string; size: number }>
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/sync/diff`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ manifest })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const syncKnowledgeCleanup = async (
+	token: string,
+	id: string,
+	fileIds: string[],
+	dirIds: string[] = []
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/sync/cleanup`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ file_ids: fileIds, dir_ids: dirIds })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

@@ -447,6 +447,7 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     and comparing the three origin components eliminates those
     attack vectors.
     """
+
     def _default_port(scheme: str) -> int:
         return 443 if scheme == 'https' else 80
 
@@ -455,8 +456,7 @@ def _is_same_origin(url: str, base_url: str) -> bool:
     return (
         parsed.scheme == trusted.scheme
         and parsed.hostname == trusted.hostname
-        and (parsed.port or _default_port(parsed.scheme))
-        == (trusted.port or _default_port(trusted.scheme))
+        and (parsed.port or _default_port(parsed.scheme)) == (trusted.port or _default_port(trusted.scheme))
     )
 
 
@@ -626,7 +626,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
 
@@ -676,7 +676,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
 
@@ -743,7 +743,8 @@ async def image_generations(
                     headers = {'Authorization': f'Bearer {request.app.state.config.COMFYUI_API_KEY}'}
 
                 image_data, content_type = await get_image_data(
-                    image['url'], headers,
+                    image['url'],
+                    headers,
                     trusted_base_url=request.app.state.config.COMFYUI_BASE_URL,
                 )
                 _, url = await upload_image(
@@ -785,7 +786,7 @@ async def image_generations(
                 headers={'authorization': get_automatic1111_api_auth(request)},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                res = await r.json()
+                res = await r.json(content_type=None)
             log.debug(f'res: {res}')
 
             images = []
@@ -960,7 +961,7 @@ async def image_edits(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
             for image in res['data']:
@@ -1015,7 +1016,7 @@ async def image_edits(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
-                res = await r.json()
+                res = await r.json(content_type=None)
 
             images = []
             for image in res['candidates']:
@@ -1102,7 +1103,8 @@ async def image_edits(
                     headers = {'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY}'}
 
                 image_data, content_type = await get_image_data(
-                    image_url, headers,
+                    image_url,
+                    headers,
                     trusted_base_url=request.app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL,
                 )
                 _, url = await upload_image(

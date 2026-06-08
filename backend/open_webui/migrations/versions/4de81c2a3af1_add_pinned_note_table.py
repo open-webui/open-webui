@@ -52,13 +52,18 @@ def upgrade() -> None:
             column('created_at', sa.BigInteger),
         )
 
-        notes = conn.execute(select(note_table.c.id, note_table.c.user_id).where(note_table.c.is_pinned == True)).fetchall()
+        notes = conn.execute(
+            select(note_table.c.id, note_table.c.user_id).where(note_table.c.is_pinned == True)
+        ).fetchall()
 
         if notes:
             now = int(time.time_ns())
             conn.execute(
                 insert(pinned_note_table),
-                [{'id': str(uuid.uuid4()), 'user_id': note[1], 'note_id': note[0], 'created_at': now} for note in notes],
+                [
+                    {'id': str(uuid.uuid4()), 'user_id': note[1], 'note_id': note[0], 'created_at': now}
+                    for note in notes
+                ],
             )
 
         with op.batch_alter_table('note', schema=None) as batch_op:

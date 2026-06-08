@@ -5,7 +5,8 @@ export const uploadFile = async (
 	token: string,
 	file: File,
 	metadata?: object | null,
-	process?: boolean | null
+	process?: boolean | null,
+	stream: boolean = true
 ) => {
 	const data = new FormData();
 	data.append('file', file);
@@ -42,7 +43,7 @@ export const uploadFile = async (
 		throw error;
 	}
 
-	if (res) {
+	if (res && stream) {
 		const status = await getFileProcessStatus(token, res.id);
 
 		if (status && status.ok) {

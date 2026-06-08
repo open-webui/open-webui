@@ -336,29 +336,16 @@ async def preview_group_access(
     return {
         'group': {'id': group.id, 'name': group.name},
         'models': {
-            'items': [
-                {'id': m.id, 'name': m.name}
-                for m in active_models
-                if m.id in accessible_model_ids
-            ],
+            'items': [{'id': m.id, 'name': m.name} for m in active_models if m.id in accessible_model_ids],
             'total': len(active_models),
         },
         'knowledge': {
-            'items': [
-                {'id': k.id, 'name': k.name}
-                for k in all_knowledge
-                if k.id in accessible_knowledge_ids
-            ],
+            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.id in accessible_knowledge_ids],
             'total': len(all_knowledge),
         },
         'tools': {
-            'items': [
-                {'id': t.id, 'name': t.name}
-                for t in all_tools
-                if t.id in accessible_tool_ids
-            ],
+            'items': [{'id': t.id, 'name': t.name} for t in all_tools if t.id in accessible_tool_ids],
             'total': len(all_tools),
         },
         'permissions': group.permissions or {},
     }
-

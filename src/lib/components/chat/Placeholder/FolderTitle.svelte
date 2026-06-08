@@ -11,7 +11,12 @@
 
 	import { selectedFolder } from '$lib/stores';
 
-	import { deleteFolderById, getFolderById, updateFolderById } from '$lib/apis/folders';
+	import {
+		deleteFolderById,
+		getFolderById,
+		updateFolderById,
+		createNewFolder
+	} from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
@@ -30,6 +35,7 @@
 	export let onDelete: Function = (folderId) => {};
 
 	let showFolderModal = false;
+	let showCreateSubFolderModal = false;
 	let showDeleteConfirm = false;
 	let deleteFolderContents = true;
 
@@ -127,6 +133,30 @@
 
 		saveAs(blob, `folder-${folder.name}-export-${Date.now()}.json`);
 	};
+
+	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		name = name.trim();
+
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data,
+			meta,
+			parent_id
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Folder created successfully'));
+			onUpdate();
+		}
+	};
 </script>
 
 {#if folder}
@@ -135,6 +165,12 @@
 		edit={true}
 		folderId={folder.id}
 		onSubmit={updateHandler}
+	/>
+
+	<FolderModal
+		bind:show={showCreateSubFolderModal}
+		parentId={folder.id}
+		onSubmit={createSubFolderHandler}
 	/>
 
 	<DeleteConfirmDialog
@@ -146,11 +182,11 @@
 	>
 		<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
 			<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
-				NAME: folders[folderId].name
+				NAME: folder.name
 			})} -->
 
 			{$i18n.t(`Are you sure you want to delete "{{NAME}}"?`, {
-				NAME: folders[folderId].name
+				NAME: folder.name
 			})}
 		</div>
 
@@ -201,6 +237,9 @@
 				}}
 				onExport={() => {
 					exportHandler();
+				}}
+				onCreateSubFolder={() => {
+					showCreateSubFolderModal = true;
 				}}
 			>
 				<button

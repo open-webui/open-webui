@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import zipfile
@@ -12,7 +13,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.files import FileMetadataResponse, FileModel, Files
+from open_webui.models.files import FileMetadataResponse, FileModel, FileModelResponse, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
     KnowledgeDirectoryForm,
@@ -216,6 +217,7 @@ async def search_knowledge_bases(
 @router.get('/search/files', response_model=KnowledgeFileListResponse)
 async def search_knowledge_files(
     query: str | None = None,
+    include_content: bool = Query(False, description='Include file content in search (expensive).'),
     page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -227,6 +229,8 @@ async def search_knowledge_files(
     filter = {}
     if query:
         filter['query'] = query
+    if include_content:
+        filter['include_content'] = True
 
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     if groups:
@@ -549,6 +553,71 @@ async def update_knowledge_access_by_id(
 
 
 ############################
+# GetPendingKnowledgeFiles
+############################
+
+
+@router.get('/{id}/files/pending')
+async def get_pending_knowledge_files(
+    id: str,
+    stream: bool = Query(False),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return files that are being processed for this knowledge base but not yet linked.
+
+    After a file is uploaded with ``knowledge_id`` in its metadata, the backend
+    processes it in a background task before linking it to the ``knowledge_file``
+    join table.  During this window the file is invisible to the normal file
+    list endpoint.  This endpoint exposes those in-flight files so the frontend
+    can show them with a processing indicator even after a page reload.
+
+    When ``stream=true``, returns an SSE stream that polls every 3 seconds
+    and emits the current pending file list.  Closes when no files remain.
+    """
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        user.role == 'admin'
+        or knowledge.user_id == user.id
+        or await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='knowledge',
+            resource_id=knowledge.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if not stream:
+        return await Files.get_pending_files_for_knowledge(id, db=db)
+
+    async def event_stream(knowledge_id: str):
+        MAX_POLL_DURATION = 3600  # 1 hour max
+        for _ in range(MAX_POLL_DURATION // 3):
+            pending = await Files.get_pending_files_for_knowledge(knowledge_id)
+            data = [f.model_dump() for f in pending]
+            yield f'data: {json.dumps(data)}\n\n'
+            if len(pending) == 0:
+                break
+            await asyncio.sleep(3)
+
+    return StreamingResponse(
+        event_stream(id),
+        media_type='text/event-stream',
+    )
+
+
+############################
 # GetKnowledgeFilesById
 ############################
 
@@ -557,11 +626,13 @@ async def update_knowledge_access_by_id(
 async def get_knowledge_files_by_id(
     id: str,
     query: str | None = None,
+    include_content: bool = Query(False, description='Include file content in search (expensive).'),
     view_option: str | None = None,
     order_by: str | None = None,
     direction: str | None = None,
     directory_id: str | None = Query(None, description='Filter by directory ID. Pass empty string for root.'),
     page: int | None = 1,
+    limit: int | None = Query(None, description='Page size (admin only). Defaults to 30.'),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -590,12 +661,18 @@ async def get_knowledge_files_by_id(
 
     page = max(page, 1)
 
-    limit = 30
+    # Allow admins to configure page size; non-admins always get the default
+    if user.role == 'admin' and limit is not None:
+        limit = max(1, limit)
+    else:
+        limit = PAGE_ITEM_COUNT
     skip = (page - 1) * limit
 
     filter = {}
     if query:
         filter['query'] = query
+    if include_content:
+        filter['include_content'] = True
     if view_option:
         filter['view_option'] = view_option
     if order_by:
@@ -846,10 +923,7 @@ async def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-    # Only the file owner or an admin may permanently delete the underlying
-    # file.  Collaborators with KB write access can unlink a file from the
-    # knowledge base but must not be able to destroy files they do not own,
-    # as the same file may be referenced by other KBs and chats.
+    # Anyone with write permission or higher can delete files
     if delete_file and (file.user_id == user.id or user.role == 'admin'):
         try:
             # Remove the file's collection from vector database
@@ -949,7 +1023,10 @@ async def delete_knowledge_by_id(
 
 @router.post('/{id}/reset', response_model=KnowledgeResponse | None)
 async def reset_knowledge_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str,
+    include_directories: bool = Query(True),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -980,8 +1057,187 @@ async def reset_knowledge_by_id(
         log.debug(e)
         pass
 
-    knowledge = await Knowledges.reset_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
     return knowledge
+
+
+############################
+# SyncKnowledgeDiff
+############################
+
+
+class FileManifestEntry(BaseModel):
+    filename: str  # basename: "readme.md"
+    path: str  # relative dir: "docs/api" or "" for root
+    checksum: str  # SHA-256 of raw bytes
+    size: int
+
+
+class SyncDiffForm(BaseModel):
+    manifest: list[FileManifestEntry]
+
+
+class SyncDiffResponse(BaseModel):
+    added: list[dict]  # [{filename, path}] — new files
+    modified: list[dict]  # [{filename, path, stale_file_id}] — changed files
+    deleted: list[dict]  # [{file_id, filename}] — files to remove
+    mkdir: list[str]  # directory paths to create
+    rmdir: list[str]  # directory IDs to remove
+    unmodified_count: int
+    directory_map: dict[str, str]  # existing path → directory ID
+
+
+@router.post('/{id}/sync/diff', response_model=SyncDiffResponse)
+async def sync_knowledge_diff(
+    id: str,
+    form_data: SyncDiffForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Compare a local file manifest against the knowledge base to determine
+    which files need uploading, removing, and which directories to create/remove.
+    """
+    await _verify_knowledge_write_access(id, user, db)
+
+    # ── Index existing state ──
+    knowledge_files = await Knowledges.get_files_with_directory_ids(id, db=db)
+    existing_directories = await Knowledges.get_all_directories(id, db=db)
+
+    # Build directory path lookups
+    directory_path_by_id: dict[str, str] = {}
+    directory_id_by_path: dict[str, str] = {}
+    for directory in existing_directories:
+        segments = [directory.name]
+        parent_id = directory.parent_id
+        while parent_id:
+            parent = next((d for d in existing_directories if d.id == parent_id), None)
+            if not parent:
+                break
+            segments.insert(0, parent.name)
+            parent_id = parent.parent_id
+        full_path = '/'.join(segments)
+        directory_path_by_id[directory.id] = full_path
+        directory_id_by_path[full_path] = directory.id
+
+    # Index existing files by (path, filename) → {file_id, checksum}
+    indexed_files: dict[tuple[str, str], dict] = {}
+    for file_model, directory_id in knowledge_files:
+        file_path = directory_path_by_id.get(directory_id, '') if directory_id else ''
+        stored_checksum = (file_model.meta or {}).get('file_hash')
+        indexed_files[(file_path, file_model.filename)] = {
+            'file_id': file_model.id,
+            'checksum': stored_checksum,
+        }
+
+    # ── Diff files ──
+    added: list[dict] = []
+    modified: list[dict] = []
+    deleted: list[dict] = []
+    unmodified_count = 0
+    manifest_keys: set[tuple[str, str]] = set()
+
+    for entry in form_data.manifest:
+        key = (entry.path, entry.filename)
+        manifest_keys.add(key)
+
+        if key not in indexed_files:
+            added.append({'filename': entry.filename, 'path': entry.path})
+        elif indexed_files[key]['checksum'] != entry.checksum:
+            modified.append(
+                {
+                    'filename': entry.filename,
+                    'path': entry.path,
+                    'stale_file_id': indexed_files[key]['file_id'],
+                }
+            )
+        else:
+            unmodified_count += 1
+
+    for key, file_info in indexed_files.items():
+        if key not in manifest_keys:
+            deleted.append({'file_id': file_info['file_id'], 'filename': key[1]})
+
+    # ── Diff directories ──
+    required_directory_paths: set[str] = set()
+    for entry in form_data.manifest:
+        if entry.path:
+            segments = entry.path.split('/')
+            for depth in range(len(segments)):
+                required_directory_paths.add('/'.join(segments[: depth + 1]))
+
+    mkdir = sorted([p for p in required_directory_paths if p not in directory_id_by_path], key=lambda p: p.count('/'))
+
+    orphaned_directory_paths = set(directory_id_by_path) - required_directory_paths
+    rmdir = [directory_id_by_path[p] for p in orphaned_directory_paths]
+
+    return SyncDiffResponse(
+        added=added,
+        modified=modified,
+        deleted=deleted,
+        mkdir=mkdir,
+        rmdir=rmdir,
+        unmodified_count=unmodified_count,
+        directory_map=directory_id_by_path,
+    )
+
+
+############################
+# SyncKnowledgeCleanup
+############################
+
+
+class SyncCleanupForm(BaseModel):
+    file_ids: list[str]  # file IDs to delete
+    dir_ids: list[str] = []  # directory IDs to rmdir
+
+
+@router.post('/{id}/sync/cleanup')
+async def sync_knowledge_cleanup(
+    id: str,
+    form_data: SyncCleanupForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Remove stale files and orphaned directories from a knowledge base
+    after an incremental sync.
+    """
+    await _verify_knowledge_write_access(id, user, db)
+
+    # ── Remove deleted files ──
+    for file_id in form_data.file_ids:
+        file = await Files.get_file_by_id(file_id, db=db)
+        if not file:
+            continue
+
+        await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
+
+        try:
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'file_id': file_id})
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
+        except Exception:
+            pass
+
+        try:
+            collection_name = f'file-{file_id}'
+            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name):
+                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name)
+        except Exception:
+            pass
+
+        if file.user_id == user.id or user.role == 'admin':
+            await Files.delete_file_by_id(file_id, db=db)
+            try:
+                await asyncio.to_thread(Storage.delete_file, file.path)
+            except Exception:
+                pass
+
+    # ── Remove orphaned directories (children before parents) ──
+    for dir_id in reversed(form_data.dir_ids):
+        await Knowledges.delete_directory(dir_id, move_files_to_parent=False, db=db)
+
+    return {'status': True}
 
 
 ############################
@@ -1046,6 +1302,23 @@ async def add_files_to_knowledge_batch(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
+    # Filter out files already linked to this knowledge base to prevent
+    # duplicate embeddings in the vector DB (issue #10679).
+    new_entries = []
+    for form in form_data:
+        if not await Knowledges.has_file(knowledge_id=id, file_id=form.file_id, db=db):
+            new_entries.append(form)
+
+    if not new_entries:
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+        )
+
+    # Narrow the file list to only new files for processing
+    new_file_ids = {form.file_id for form in new_entries}
+    files = [f for f in files if f.id in new_file_ids]
+
     # Process files
     try:
         result = await process_files_batch(
@@ -1060,8 +1333,15 @@ async def add_files_to_knowledge_batch(
 
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
+    dir_map = {form.file_id: form.directory_id for form in new_entries}
     for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+        await Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id,
+            file_id=file_id,
+            user_id=user.id,
+            directory_id=dir_map.get(file_id),
+            db=db,
+        )
 
     # If there were any errors, include them in the response
     if result.errors:
@@ -1152,9 +1432,7 @@ class KnowledgeFileMoveForm(BaseModel):
     directory_id: Optional[str] = None
 
 
-async def _verify_knowledge_write_access(
-    id: str, user, db: AsyncSession
-):
+async def _verify_knowledge_write_access(id: str, user, db: AsyncSession):
     """Verify the user has write access to the knowledge base. Returns the knowledge model."""
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -1304,4 +1582,3 @@ async def move_file_in_knowledge(
             detail='Failed to move file.',
         )
     return {'status': True}
-

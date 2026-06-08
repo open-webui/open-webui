@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -60,7 +61,11 @@ from open_webui.utils.access_control.files import has_access_to_file
 
 
 def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
-    """Check if a file is likely a text file by reading a chunk and validating UTF-8.
+    """Check if a file is likely a text file by reading a chunk and decoding it.
+
+    Tries UTF-8 first, then falls back to Latin-1 (which accepts every byte
+    in 0x00–0xFF) so that legacy-encoded files from Windows environments are
+    not misclassified as binary.
 
     This catches files whose extensions are mis-mapped by mimetypes/browsers
     (e.g. TypeScript .ts → video/mp2t) without maintaining an extension whitelist.
@@ -74,9 +79,15 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         # Null bytes are a strong indicator of binary content
         if b'\x00' in chunk:
             return False
-        chunk.decode('utf-8')
+        try:
+            chunk.decode('utf-8')
+        except UnicodeDecodeError:
+            # Latin-1 always succeeds (every byte is valid), so this
+            # effectively just means "the file has no null bytes and is
+            # therefore likely text, even if not valid UTF-8".
+            chunk.decode('latin-1')
         return True
-    except (UnicodeDecodeError, Exception):
+    except Exception:
         return False
 
 
@@ -112,15 +123,12 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            stt_supported = getattr(
-                request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', []
-            )
+            stt_supported = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
 
             if content_type and strict_match_mime_type(stt_supported, content_type):
                 # Audio / STT-supported files → transcribe then index
                 file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
-                result = await asyncio.to_thread(
-                    transcribe,
+                result = await transcribe(
                     request,
                     file_path_processed,
                     file_metadata,
@@ -151,23 +159,40 @@ async def process_uploaded_file(
                         db=db_session,
                     )
                 else:
-                    raise Exception(
-                        f'File type {content_type} is not supported for processing'
-                    )
+                    raise Exception(f'File type {content_type} is not supported for processing')
 
             else:
                 # Documents, or any file when an external engine is configured
                 if not content_type:
-                    log.info(
-                        f'File type {file.content_type} is not provided, '
-                        'but trying to process anyway'
-                    )
+                    log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),
                     user=user,
                     db=db_session,
                 )
+
+            # Auto-link to Knowledge Collection when uploaded from one (#24807).
+            # Mirrors POST /knowledge/{id}/file/add so linking doesn't depend
+            # on the frontend staying connected after upload.
+            knowledge_id = file_metadata.get('knowledge_id')
+            if knowledge_id:
+                try:
+                    await Knowledges.add_file_to_knowledge_by_id(
+                        knowledge_id=knowledge_id,
+                        file_id=file_item.id,
+                        user_id=user.id,
+                        directory_id=file_metadata.get('directory_id'),
+                    )
+                    await process_file(
+                        request,
+                        ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                        user=user,
+                        db=db_session,
+                    )
+                    log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+                except Exception as e:
+                    log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
 
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')
@@ -270,6 +295,10 @@ async def upload_file_handler(
             },
         )
 
+        # SHA-256 of raw uploaded bytes for incremental sync diffing.
+        # If the client pre-computed and sent file_hash, use that.
+        file_hash = file_metadata.get('file_hash') or hashlib.sha256(contents).hexdigest()
+
         file_item = await Files.insert_new_file(
             user.id,
             FileForm(
@@ -284,6 +313,7 @@ async def upload_file_handler(
                         'name': name,
                         'content_type': (file.content_type if isinstance(file.content_type, str) else None),
                         'size': len(contents),
+                        'file_hash': file_hash,
                         'data': file_metadata,
                     },
                 }
