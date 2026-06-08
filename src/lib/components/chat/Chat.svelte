@@ -1556,11 +1556,20 @@
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
+		// Snapshot taskIds before any await so we can tell whether a concurrent
+		// sendMessage assigned new IDs while this handler was suspended.
+		const capturedTaskIds = taskIds;
 		if ($chatId == _chatId && !$temporaryChatEnabled) {
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
-		taskIds = null;
+		// Only clear taskIds if sendMessage has not assigned a new set since we
+		// were dispatched. Without this guard, a fire-and-forget handler resuming
+		// after its getChatList await would overwrite IDs set by a concurrent
+		// sendMessage, making the stop-generation button non-functional.
+		if (taskIds === capturedTaskIds) {
+			taskIds = null;
+		}
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
