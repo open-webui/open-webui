@@ -132,7 +132,9 @@
 			onUpdate();
 		} catch (e) {
 			const message = readableError(e);
-			toast.error(message.includes('already') ? $i18n.t('User is already in this workspace.') : message);
+			toast.error(
+				message.includes('already') ? $i18n.t('User is already in this workspace.') : message
+			);
 		} finally {
 			addingUserId = null;
 		}
@@ -218,7 +220,11 @@
 
 		savingDefaultModel = true;
 		try {
-			const res = await setWorkspaceDefaultModel(localStorage.token, workspace.id, defaultModelId || null);
+			const res = await setWorkspaceDefaultModel(
+				localStorage.token,
+				workspace.id,
+				defaultModelId || null
+			);
 			workspace = {
 				...workspace,
 				meta: {
@@ -227,7 +233,9 @@
 				}
 			};
 			workspaces.update((items: any) =>
-				items.map((item: any) => (item.id === workspace.id ? { ...item, meta: workspace.meta } : item))
+				items.map((item: any) =>
+					item.id === workspace.id ? { ...item, meta: workspace.meta } : item
+				)
 			);
 			toast.success($i18n.t('Workspace default model updated'));
 			onUpdate();

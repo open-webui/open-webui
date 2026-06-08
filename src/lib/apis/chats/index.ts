@@ -1049,7 +1049,10 @@ export const updateChatById = async (
 	token: string,
 	id: string,
 	chat: object,
-	{ workspaceId = null, folderId = undefined }: { workspaceId?: string | null; folderId?: string | null } = {}
+	{
+		workspaceId = null,
+		folderId = undefined
+	}: { workspaceId?: string | null; folderId?: string | null } = {}
 ) => {
 	let error = null;
 

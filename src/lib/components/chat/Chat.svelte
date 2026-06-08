@@ -185,7 +185,9 @@
 	const requireWorkspaceIdForWorkspaceRoute = () => {
 		const workspaceId = getResolvedWorkspaceId();
 		if (isWorkspaceRoute() && !workspaceId) {
-			const message = $i18n.t('Unable to resolve workspace for this chat. Please refresh and try again.');
+			const message = $i18n.t(
+				'Unable to resolve workspace for this chat. Please refresh and try again.'
+			);
 			toast.error(message);
 			throw new Error(message);
 		}
@@ -1205,8 +1207,8 @@
 		} else {
 			const workspaceId = isWorkspaceRoute() ? getResolvedWorkspaceId() : null;
 			const workspaceDefaultModelId = workspaceId
-				? ((await getWorkspaceDefaultModel(localStorage.token, workspaceId).catch(() => null))?.model_id ??
-					null)
+				? ((await getWorkspaceDefaultModel(localStorage.token, workspaceId).catch(() => null))
+						?.model_id ?? null)
 				: null;
 
 			if (workspaceDefaultModelId && availableModels.includes(workspaceDefaultModelId)) {
@@ -3153,7 +3155,9 @@
 									}
 
 									await goto(
-										workspaceId ? `/workspaces/${workspaceId}/c/${savedChat.id}` : `/c/${savedChat.id}`
+										workspaceId
+											? `/workspaces/${workspaceId}/c/${savedChat.id}`
+											: `/c/${savedChat.id}`
 									);
 									toast.success($i18n.t('Conversation saved successfully'));
 								}

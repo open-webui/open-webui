@@ -166,12 +166,12 @@
 									return;
 								}
 								// Move the folder
-								const res = await api.updateFolderParentIdById(localStorage.token, id, folderId).catch(
-									(error) => {
+								const res = await api
+									.updateFolderParentIdById(localStorage.token, id, folderId)
+									.catch((error) => {
 										toast.error(`${error}`);
 										return null;
-									}
-								);
+									});
 
 								if (res) {
 									dispatch('update');
@@ -199,14 +199,12 @@
 								}
 
 								// Move the chat
-								const res = await api.updateChatFolderIdById(
-									localStorage.token,
-									chat.id,
-									folderId
-								).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
+								const res = await api
+									.updateChatFolderIdById(localStorage.token, chat.id, folderId)
+									.catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
 
 								onItemMove({
 									originFolderId: chat.folder_id,
@@ -327,12 +325,12 @@
 			return;
 		}
 
-		const res = await api.deleteFolderById(localStorage.token, folderId, deleteFolderContents).catch(
-			(error) => {
+		const res = await api
+			.deleteFolderById(localStorage.token, folderId, deleteFolderContents)
+			.catch((error) => {
 				toast.error(`${error}`);
 				return null;
-			}
-		);
+			});
 
 		if (res) {
 			toast.success($i18n.t('Folder deleted successfully'));
@@ -355,16 +353,18 @@
 		name = name.trim();
 		folders[folderId].name = name;
 
-		const res = await api.updateFolderById(localStorage.token, folderId, {
-			name,
-			...(meta ? { meta } : {}),
-			...(data ? { data } : {})
-		}).catch((error) => {
-			toast.error(`${error}`);
+		const res = await api
+			.updateFolderById(localStorage.token, folderId, {
+				name,
+				...(meta ? { meta } : {}),
+				...(data ? { data } : {})
+			})
+			.catch((error) => {
+				toast.error(`${error}`);
 
-			folders[folderId].name = currentName;
-			return null;
-		});
+				folders[folderId].name = currentName;
+				return null;
+			});
 
 		if (res) {
 			folders[folderId].name = name;
@@ -394,12 +394,12 @@
 			return;
 		}
 
-		const res = await api.updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
-			(error) => {
+		const res = await api
+			.updateFolderIsExpandedById(localStorage.token, folderId, open)
+			.catch((error) => {
 				toast.error(`${error}`);
 				return null;
-			}
-		);
+			});
 	};
 
 	let isExpandedUpdateTimeout;
@@ -476,15 +476,17 @@
 
 		name = name.trim();
 
-		const res = await api.createNewFolder(localStorage.token, {
-			name,
-			data,
-			meta,
-			parent_id
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const res = await api
+			.createNewFolder(localStorage.token, {
+				name,
+				data,
+				meta,
+				parent_id
+			})
+			.catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
 		if (res) {
 			toast.success($i18n.t('Folder created successfully'));

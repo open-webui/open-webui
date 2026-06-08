@@ -124,7 +124,11 @@ export const getWorkspaceDefaultModel = async (
 	token: string,
 	workspaceId: string
 ): Promise<{ model_id?: string | null }> =>
-	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/default-model`, { method: 'GET' }, token);
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/default-model`,
+		{ method: 'GET' },
+		token
+	);
 
 export const setWorkspaceDefaultModel = async (
 	token: string,
@@ -215,8 +219,16 @@ export const createWorkspaceFolder = async (
 		token
 	);
 
-export const getWorkspaceFolderById = async (token: string, workspaceId: string, folderId: string) =>
-	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}`, { method: 'GET' }, token);
+export const getWorkspaceFolderById = async (
+	token: string,
+	workspaceId: string,
+	folderId: string
+) =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}`,
+		{ method: 'GET' },
+		token
+	);
 
 export const updateWorkspaceFolderById = async (
 	token: string,

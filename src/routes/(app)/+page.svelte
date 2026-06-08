@@ -21,7 +21,9 @@
 {:else}
 	<div class="h-full w-full flex items-center justify-center px-6">
 		<div class="max-w-lg text-center space-y-3">
-			<h1 class="text-xl font-semibold dark:text-white">Please select a Team Workspace to start a chat.</h1>
+			<h1 class="text-xl font-semibold dark:text-white">
+				Please select a Team Workspace to start a chat.
+			</h1>
 			<p class="text-sm text-gray-500 dark:text-gray-400">
 				{#if ($workspaces ?? []).length === 0}
 					Please contact admin to assign you to a Team Workspace.

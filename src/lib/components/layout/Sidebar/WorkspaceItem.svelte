@@ -135,7 +135,8 @@
 
 	$: folderApis = {
 		createNewFolder: (token: string, form: any) => createWorkspaceFolder(token, workspace.id, form),
-		getFolderById: (token: string, folderId: string) => getWorkspaceFolderById(token, workspace.id, folderId),
+		getFolderById: (token: string, folderId: string) =>
+			getWorkspaceFolderById(token, workspace.id, folderId),
 		updateFolderById: (token: string, folderId: string, form: any) =>
 			updateWorkspaceFolderById(token, workspace.id, folderId, form),
 		updateFolderParentIdById: (token: string, folderId: string, parentId?: string | null) =>

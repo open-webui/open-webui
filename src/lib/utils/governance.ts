@@ -37,10 +37,15 @@ export const canWriteWorkspace = (
 	workspace: { my_role?: string | null } | null | undefined,
 	user: { role?: string } | null | undefined,
 	capabilities: GovernanceCapabilities | null | undefined
-) => canAccessAllWorkspaces(user, capabilities) || ['manager', 'member'].includes(workspace?.my_role ?? '');
+) =>
+	canAccessAllWorkspaces(user, capabilities) ||
+	['manager', 'member'].includes(workspace?.my_role ?? '');
 
 export const canManageWorkspace = (
 	workspace: { my_role?: string | null } | null | undefined,
 	user: { role?: string } | null | undefined,
 	capabilities: GovernanceCapabilities | null | undefined
-) => user?.role === 'admin' || canAccessAllWorkspaces(user, capabilities) || workspace?.my_role === 'manager';
+) =>
+	user?.role === 'admin' ||
+	canAccessAllWorkspaces(user, capabilities) ||
+	workspace?.my_role === 'manager';
