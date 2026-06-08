@@ -390,7 +390,7 @@
 		}
 	};
 
-	const persistWorkspaceFolderContext = (folder: any) => {
+	const persistWorkspaceFolderContext = (folder) => {
 		if (workspaceId && folder?.id && folder.workspace_id === workspaceId) {
 			localStorage.setItem(`workspace:${workspaceId}:selected-folder-id`, folder.id);
 		}
