@@ -217,23 +217,23 @@
 			{#if canWrite}
 				<button
 					type="button"
-					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					class="group/chat flex w-full rounded-xl px-2 py-1 text-sm
 					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
-					       line-clamp-1 cursor-pointer select-none"
+					       line-clamp-1 cursor-pointer select-none text-left"
 					on:click={newWorkspaceChat}
 				>
-					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
+					+ {$i18n.t('New Chat')}
 				</button>
 			{/if}
 			{#if canManage}
 				<button
 					type="button"
-					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					class="group/chat flex w-full rounded-xl px-2 py-1 text-sm
 					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
-					       line-clamp-1 cursor-pointer select-none"
+					       line-clamp-1 cursor-pointer select-none text-left"
 					on:click={() => (showCreateFolderModal = true)}
 				>
-					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Folder')}</span>
+					+ {$i18n.t('New Folder')}
 				</button>
 			{/if}
 			<Folders
