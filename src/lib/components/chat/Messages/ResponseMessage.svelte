@@ -125,12 +125,21 @@
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
-			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
-			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
 			if (message.content !== source.content || message.done !== source.done) {
-				message = structuredClone(source);
+				// Streaming fast path: use Object.assign to sync fields that change
+				// during streaming instead of deep-cloning the entire message object
+				// on every token. Object.assign avoids per-property $$invalidate
+				// calls that Svelte 4 compiles for direct property assignments.
+				Object.assign(message, {
+					content: source.content,
+					done: source.done,
+					sources: source.sources,
+					code_executions: source.code_executions,
+					statusHistory: source.statusHistory
+				});
+				message = message;
 			} else if (!equal(message, source)) {
-				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
+				// Structural change (annotations, files, embeds, etc.): full clone
 				message = structuredClone(source);
 			}
 		}
