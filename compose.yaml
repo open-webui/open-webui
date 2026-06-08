@@ -1,0 +1,76 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./data:/app/backend/data  # 修改点：现在数据会保存在当前目录的 data 文件夹中
+    environment:
+      # --- Connect to vLLM (OpenAI-compatible) ---
+      - ENABLE_OLLAMA_API=false
+      - OPENAI_API_BASE_URLS=${VLLM_OPENAI_BASE_URL}
+      - OPENAI_API_KEYS=${VLLM_OPENAI_API_KEY}
+      - ENABLE_PERSISTENT_CONFIG=${ENABLE_PERSISTENT_CONFIG}
+      - OFFLINE_MODE=${OFFLINE_MODE}
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE}
+      - RAG_EMBEDDING_ENGINE=${RAG_EMBEDDING_ENGINE}
+      - RAG_EMBEDDING_MODEL=${RAG_EMBEDDING_MODEL}
+      - RAG_OPENAI_API_BASE_URL=${RAG_OPENAI_API_BASE_URL}
+      - RAG_OPENAI_API_KEY=${RAG_OPENAI_API_KEY}
+      - RAG_RERANKING_MODEL=${RAG_RERANKING_MODEL}
+      - BYPASS_EMBEDDING_AND_RETRIEVAL=${BYPASS_EMBEDDING_AND_RETRIEVAL}
+      - ENABLE_RAG_HYBRID_SEARCH=${ENABLE_RAG_HYBRID_SEARCH}
+      - RAG_EMBEDDING_BATCH_SIZE=${RAG_EMBEDDING_BATCH_SIZE}
+      - CHUNK_SIZE=${CHUNK_SIZE}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP}
+      - TIKTOKEN_ENCODING_NAME=${TIKTOKEN_ENCODING_NAME}
+      - ENABLE_MEMORIES=${ENABLE_MEMORIES}
+      - USER_PERMISSIONS_FEATURES_MEMORIES=${USER_PERMISSIONS_FEATURES_MEMORIES}
+      - USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS=${USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS}
+      - USER_PERMISSIONS_CHAT_FILE_UPLOAD=${USER_PERMISSIONS_CHAT_FILE_UPLOAD}
+      - USER_PERMISSIONS_CHAT_WEB_UPLOAD=${USER_PERMISSIONS_CHAT_WEB_UPLOAD}
+
+      # --- OpenAI 兼容 API ---
+      - ENABLE_API_KEYS=${ENABLE_API_KEYS}
+      - USER_PERMISSIONS_FEATURES_API_KEYS=${USER_PERMISSIONS_FEATURES_API_KEYS}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP}
+
+      # --- LDAP ---
+      - ENABLE_LDAP=true
+      - LDAP_SERVER_LABEL=Company LDAP
+      - LDAP_SERVER_HOST=cnt-dcp03.luxgroup.net
+      - LDAP_SERVER_PORT=389
+      - LDAP_USE_TLS=false
+      - LDAP_VALIDATE_CERT=false
+
+      # 用于 Bind 的服务账号（你提供的 DN）
+      - LDAP_APP_DN=${LDAP_APP_DN}
+      - LDAP_APP_PASSWORD=${LDAP_APP_PASSWORD}
+
+      # 下面两项需要你确认/调整（AD 常见值和 OpenLDAP 不一样）
+      - LDAP_SEARCH_BASE=${LDAP_SEARCH_BASE}
+      - LDAP_ATTRIBUTE_FOR_USERNAME=${LDAP_ATTRIBUTE_FOR_USERNAME}
+      - LDAP_ATTRIBUTE_FOR_MAIL=${LDAP_ATTRIBUTE_FOR_MAIL}
+      - DEFAULT_USER_ROLE=${DEFAULT_USER_ROLE}
+      - DEFAULT_GROUP_ID=${DEFAULT_GROUP_ID}
+
+      # 可选：额外过滤条件（例如只允许某 OU/组），不需要可留空
+      - LDAP_SEARCH_FILTERS=${LDAP_SEARCH_FILTERS}
+
+      # --- Security ---
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
