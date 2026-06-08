@@ -710,10 +710,7 @@ class ChatTable:
             async with get_async_db_context(db) as db:
                 # Company custom: Team Workspaces V1 — only unarchive private chats
                 await db.execute(
-                    update(Chat)
-                    .filter_by(user_id=user_id)
-                    .filter(Chat.workspace_id.is_(None))
-                    .values(archived=False)
+                    update(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None)).values(archived=False)
                 )
                 await db.commit()
                 return True
@@ -763,10 +760,7 @@ class ChatTable:
             async with get_async_db_context(db) as db:
                 # Company custom: Team Workspaces V1 — only archive private chats
                 await db.execute(
-                    update(Chat)
-                    .filter_by(user_id=user_id)
-                    .filter(Chat.workspace_id.is_(None))
-                    .values(archived=True)
+                    update(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None)).values(archived=True)
                 )
                 await db.commit()
                 return True
@@ -783,9 +777,11 @@ class ChatTable:
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             # Company custom: Team Workspaces V1 — exclude workspace chats from personal archived list
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(
-                user_id=user_id, archived=True
-            ).filter(Chat.workspace_id.is_(None))
+            stmt = (
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at)
+                .filter_by(user_id=user_id, archived=True)
+                .filter(Chat.workspace_id.is_(None))
+            )
 
             if filter:
                 query_key = filter.get('query')
@@ -850,9 +846,11 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id).filter_by(
-                user_id=user_id
-            ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
+            stmt = (
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id)
+                .filter_by(user_id=user_id)
+                .filter(Chat.workspace_id.is_(None))
+            )  # Company custom: Team Workspaces V1
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
@@ -952,7 +950,7 @@ class ChatTable:
         skip: Optional[int] = None,
         limit: Optional[int] = None,
         db: Optional[AsyncSession] = None,
-    ) -> list["ChatTitleIdResponse"]:
+    ) -> list['ChatTitleIdResponse']:
         async with get_async_db_context(db) as db:
             stmt = (
                 select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id)
@@ -1061,9 +1059,7 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(
-                    select(Chat.folder_id)
-                    .filter_by(id=id, user_id=user_id)
-                    .filter(Chat.workspace_id.is_(None))
+                    select(Chat.folder_id).filter_by(id=id, user_id=user_id).filter(Chat.workspace_id.is_(None))
                 )
                 row = result.first()
                 return row[0] if row else None
@@ -1193,7 +1189,8 @@ class ChatTable:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 # Company custom: Team Workspaces V1 — exclude workspace chats from personal archived list
-                select(Chat).filter_by(user_id=user_id, archived=True)
+                select(Chat)
+                .filter_by(user_id=user_id, archived=True)
                 .filter(Chat.workspace_id.is_(None))
                 .order_by(Chat.updated_at.desc())
             )
@@ -1502,9 +1499,11 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
-                user_id=user_id
-            ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
+            stmt = (
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                .filter_by(user_id=user_id)
+                .filter(Chat.workspace_id.is_(None))
+            )  # Company custom: Team Workspaces V1
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await db.connection()
@@ -1695,20 +1694,12 @@ class ChatTable:
 
                 # Company custom: Team Workspaces V1 — only delete private (non-workspace) chats.
                 # Workspace chats belong to the workspace and must survive a user account wipe.
-                private_ids_stmt = (
-                    select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
-                )
+                private_ids_stmt = select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
                 await db.execute(
-                    update(AutomationRun)
-                    .filter(AutomationRun.chat_id.in_(private_ids_stmt))
-                    .values(chat_id=None)
+                    update(AutomationRun).filter(AutomationRun.chat_id.in_(private_ids_stmt)).values(chat_id=None)
                 )
-                await db.execute(
-                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(private_ids_stmt))
-                )
-                await db.execute(
-                    delete(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
-                )
+                await db.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(private_ids_stmt)))
+                await db.execute(delete(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None)))
                 await db.commit()
 
                 return True
@@ -1723,18 +1714,14 @@ class ChatTable:
                 # Company custom: Team Workspaces V1 — folders are a private-chat feature;
                 # workspace chats cannot be in a personal folder, so the filter is defensive.
                 chat_ids_stmt = (
-                    select(Chat.id)
-                    .filter_by(user_id=user_id, folder_id=folder_id)
-                    .filter(Chat.workspace_id.is_(None))
+                    select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id).filter(Chat.workspace_id.is_(None))
                 )
                 await db.execute(
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
                 await db.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
                 await db.execute(
-                    delete(Chat)
-                    .filter_by(user_id=user_id, folder_id=folder_id)
-                    .filter(Chat.workspace_id.is_(None))
+                    delete(Chat).filter_by(user_id=user_id, folder_id=folder_id).filter(Chat.workspace_id.is_(None))
                 )
                 await db.commit()
 
@@ -1811,9 +1798,7 @@ class ChatTable:
                 # whose original Chat is private (workspace_id IS NULL). Workspace chats
                 # cannot be shared (blocked at router), but stale pre-guard rows must not
                 # be swept up by a private-account bulk cleanup.
-                private_chat_ids_stmt = (
-                    select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
-                )
+                private_chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None))
                 await db.execute(
                     delete(SharedChatTable).where(
                         and_(
@@ -1827,10 +1812,7 @@ class ChatTable:
                 # Workspace chats cannot have share_id (blocked at router), but we guard
                 # explicitly so bulk account wipe never touches workspace chat rows.
                 await db.execute(
-                    update(Chat)
-                    .filter_by(user_id=user_id)
-                    .filter(Chat.workspace_id.is_(None))
-                    .values(share_id=None)
+                    update(Chat).filter_by(user_id=user_id).filter(Chat.workspace_id.is_(None)).values(share_id=None)
                 )
                 await db.commit()
 

@@ -182,7 +182,9 @@ class FolderTable:
             async with get_async_db_context(db) as db:
                 # Check if folder exists
                 result = await db.execute(
-                    select(Folder).filter_by(parent_id=parent_id, user_id=user_id, workspace_id=None).filter(Folder.name.ilike(name))
+                    select(Folder)
+                    .filter_by(parent_id=parent_id, user_id=user_id, workspace_id=None)
+                    .filter(Folder.name.ilike(name))
                 )
                 folder = result.scalars().first()
 
@@ -215,7 +217,9 @@ class FolderTable:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(
-                    select(Folder).filter_by(parent_id=parent_id, workspace_id=workspace_id).filter(Folder.name.ilike(name))
+                    select(Folder)
+                    .filter_by(parent_id=parent_id, workspace_id=workspace_id)
+                    .filter(Folder.name.ilike(name))
                 )
                 folder = result.scalars().first()
                 return FolderModel.model_validate(folder) if folder else None
@@ -502,7 +506,9 @@ class FolderTable:
                 folder_ids.append(folder.id)
 
                 async def delete_children(folder):
-                    folder_children = await self.get_folders_by_parent_id_and_workspace_id(folder.id, workspace_id, db=db)
+                    folder_children = await self.get_folders_by_parent_id_and_workspace_id(
+                        folder.id, workspace_id, db=db
+                    )
                     for folder_child in folder_children:
                         await delete_children(folder_child)
                         folder_ids.append(folder_child.id)

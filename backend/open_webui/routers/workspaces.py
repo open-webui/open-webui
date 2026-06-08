@@ -91,9 +91,9 @@ async def assert_workspace_access(
     member = await WorkspaceMembers.get(workspace_id, user.id, db=db)
     all_workspace_access = await can_access_all_workspaces(user, db=db)
 
-    if required_action == "manage" and (getattr(user, "role", None) == "admin" or all_workspace_access):
+    if required_action == 'manage' and (getattr(user, 'role', None) == 'admin' or all_workspace_access):
         return member or WorkspaceMemberModel(
-            id="governance",
+            id='governance',
             workspace_id=workspace_id,
             user_id=user.id,
             role=WORKSPACE_ROLE_MANAGER,
@@ -102,9 +102,9 @@ async def assert_workspace_access(
         )
 
     if member is None:
-        if all_workspace_access and required_action in {"read", "write"}:
+        if all_workspace_access and required_action in {'read', 'write'}:
             return WorkspaceMemberModel(
-                id="governance",
+                id='governance',
                 workspace_id=workspace_id,
                 user_id=user.id,
                 role=WORKSPACE_ROLE_MANAGER,
@@ -113,10 +113,10 @@ async def assert_workspace_access(
             )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
-    if required_action == "write" and member.role not in WORKSPACE_WRITE_ROLES:
+    if required_action == 'write' and member.role not in WORKSPACE_WRITE_ROLES:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
-    if required_action == "manage" and member.role not in WORKSPACE_MANAGE_ROLES:
+    if required_action == 'manage' and member.role not in WORKSPACE_MANAGE_ROLES:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     return member
@@ -154,21 +154,25 @@ async def assert_workspace_folder_parent_valid(
         return
 
     if folder_id is not None and folder_id == parent_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Folder cannot be its own parent")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Folder cannot be its own parent')
 
     parent = await Folders.get_folder_by_id_and_workspace_id(parent_id, workspace_id, db=db)
     if parent is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent folder must be in the same workspace")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail='Parent folder must be in the same workspace'
+        )
 
     seen = {folder_id} if folder_id else set()
     current = parent
     while current.parent_id:
         if current.parent_id in seen:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Circular folder nesting is not allowed")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail='Circular folder nesting is not allowed'
+            )
         seen.add(current.parent_id)
         current = await Folders.get_folder_by_id_and_workspace_id(current.parent_id, workspace_id, db=db)
         if current is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent folder chain is invalid")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Parent folder chain is invalid')
 
 
 ####################
@@ -224,7 +228,7 @@ async def list_workspaces(
 ):
     """List workspaces the current user is a member of, each with my_role populated."""
     try:
-        if getattr(user, "role", None) == "admin" or await can_access_all_workspaces(user, db=db):
+        if getattr(user, 'role', None) == 'admin' or await can_access_all_workspaces(user, db=db):
             workspace_list = await Workspaces.get_all(db=db)
         else:
             workspace_list = await Workspaces.get_for_user(user.id, db=db)
@@ -241,7 +245,7 @@ async def get_workspace(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get workspace details; only accessible to members."""
-    await assert_workspace_access(workspace_id, user, "read", db)
+    await assert_workspace_access(workspace_id, user, 'read', db)
     workspace = await Workspaces.get_by_id(workspace_id, db=db)
     return await _workspace_response(workspace, user.id, db)
 
@@ -254,7 +258,7 @@ async def update_workspace(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update workspace name/description/meta; manager only."""
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     workspace = await Workspaces.update(workspace_id, form_data, db=db)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -268,7 +272,7 @@ async def delete_workspace(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Soft-delete workspace; manager only."""
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     ok = await Workspaces.soft_delete(workspace_id, db=db)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -287,12 +291,12 @@ async def list_workspace_members(
     db: AsyncSession = Depends(get_async_session),
 ):
     """List all members with display_name and email; accessible to members and admins."""
-    if getattr(user, "role", None) == "admin" or await can_access_all_workspaces(user, db=db):
+    if getattr(user, 'role', None) == 'admin' or await can_access_all_workspaces(user, db=db):
         workspace = await Workspaces.get_by_id(workspace_id, db=db)
         if workspace is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     else:
-        await assert_workspace_access(workspace_id, user, "read", db)
+        await assert_workspace_access(workspace_id, user, 'read', db)
     members = await WorkspaceMembers.list_members(workspace_id, db=db)
     return [await _member_response(m, db) for m in members]
 
@@ -305,25 +309,23 @@ async def add_workspace_member(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Add a member by user_id; manager only."""
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
 
-    if form_data.role not in ("manager", "member", "viewer"):
+    if form_data.role not in ('manager', 'member', 'viewer'):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be one of: manager, member, viewer",
+            detail='Role must be one of: manager, member, viewer',
         )
 
     # Verify the target user exists
     target_user = await Users.get_user_by_id(form_data.user_id)
     if target_user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
 
     # Prevent duplicate membership
     existing = await WorkspaceMembers.get(workspace_id, form_data.user_id, db=db)
     if existing is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="User is already a member"
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User is already a member')
 
     try:
         member = await WorkspaceMembers.add(workspace_id, form_data.user_id, form_data.role, db=db)
@@ -342,12 +344,12 @@ async def update_workspace_member(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update a member's role; manager only."""
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
 
-    if form_data.role not in ("manager", "member", "viewer"):
+    if form_data.role not in ('manager', 'member', 'viewer'):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be one of: manager, member, viewer",
+            detail='Role must be one of: manager, member, viewer',
         )
 
     # P0: prevent demoting the last manager
@@ -358,12 +360,12 @@ async def update_workspace_member(
             if manager_count <= 1:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Cannot demote the last manager. Promote another member first.",
+                    detail='Cannot demote the last manager. Promote another member first.',
                 )
 
     updated = await WorkspaceMembers.update_role(workspace_id, target_user_id, form_data.role, db=db)
     if updated is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Member not found')
     return await _member_response(updated, db)
 
 
@@ -375,7 +377,7 @@ async def remove_workspace_member(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Remove a member; manager only."""
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
 
     # P0: prevent removing the last manager
     current = await WorkspaceMembers.get(workspace_id, target_user_id, db=db)
@@ -384,12 +386,12 @@ async def remove_workspace_member(
         if manager_count <= 1:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Cannot remove the last manager. Promote another member first.",
+                detail='Cannot remove the last manager. Promote another member first.',
             )
 
     ok = await WorkspaceMembers.remove(workspace_id, target_user_id, db=db)
     if not ok:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Member not found')
     return {'detail': 'Member removed'}
 
 
@@ -405,10 +407,10 @@ async def get_workspace_default_model(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Read workspace default model; accessible to workspace readers."""
-    await assert_workspace_access(workspace_id, user, "read", db)
+    await assert_workspace_access(workspace_id, user, 'read', db)
     workspace = await Workspaces.get_by_id(workspace_id, db=db)
     meta = workspace.meta or {}
-    return WorkspaceDefaultModelResponse(model_id=meta.get("default_model_id"))
+    return WorkspaceDefaultModelResponse(model_id=meta.get('default_model_id'))
 
 
 @router.put('/{workspace_id}/default-model', response_model=WorkspaceDefaultModelResponse)
@@ -419,12 +421,12 @@ async def set_workspace_default_model(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Set workspace default model; manager only."""
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     model_id = form_data.model_id.strip() if form_data.model_id else None
     workspace = await Workspaces.update_default_model_id(workspace_id, model_id, db=db)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
-    return WorkspaceDefaultModelResponse(model_id=(workspace.meta or {}).get("default_model_id"))
+    return WorkspaceDefaultModelResponse(model_id=(workspace.meta or {}).get('default_model_id'))
 
 
 ####################
@@ -438,12 +440,14 @@ async def list_workspace_folders(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "read", db)
+    await assert_workspace_access(workspace_id, user, 'read', db)
     folders = await Folders.get_folders_by_workspace_id(workspace_id, db=db)
 
     folder_list = []
     for folder in folders:
-        if folder.parent_id and not await Folders.get_folder_by_id_and_workspace_id(folder.parent_id, workspace_id, db=db):
+        if folder.parent_id and not await Folders.get_folder_by_id_and_workspace_id(
+            folder.parent_id, workspace_id, db=db
+        ):
             folder = await Folders.update_folder_parent_id_by_id_and_workspace_id(folder.id, workspace_id, None, db=db)
         folder_list.append(FolderNameIdResponse(**folder.model_dump()))
 
@@ -457,7 +461,7 @@ async def create_workspace_folder(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     await assert_workspace_folder_parent_valid(workspace_id, None, form_data.parent_id, db)
 
     folder = await Folders.get_folder_by_parent_id_and_workspace_id_and_name(
@@ -486,7 +490,7 @@ async def get_workspace_folder(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "read", db)
+    await assert_workspace_access(workspace_id, user, 'read', db)
     folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
     if not folder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -501,7 +505,7 @@ async def update_workspace_folder(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
     if not folder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -533,7 +537,7 @@ async def update_workspace_folder_parent(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
     if not folder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -567,7 +571,7 @@ async def update_workspace_folder_expanded(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     folder = await Folders.update_folder_is_expanded_by_id_and_workspace_id(
         folder_id, workspace_id, form_data.is_expanded, db=db
     )
@@ -584,7 +588,7 @@ async def list_workspace_folder_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "read", db)
+    await assert_workspace_access(workspace_id, user, 'read', db)
     folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
     if not folder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -607,7 +611,7 @@ async def delete_workspace_folder(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_access(workspace_id, user, 'manage', db)
     folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
     if not folder:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -634,7 +638,7 @@ async def list_workspace_chats(
     db: AsyncSession = Depends(get_async_session),
 ):
     """List chats inside a workspace; member/viewer/manager access."""
-    await assert_workspace_access(workspace_id, user, "read", db)
+    await assert_workspace_access(workspace_id, user, 'read', db)
 
     skip = None
     limit = None
@@ -643,9 +647,7 @@ async def list_workspace_chats(
         skip = (page - 1) * limit
 
     try:
-        return await Chats.get_chat_title_id_list_by_workspace_id(
-            workspace_id, skip=skip, limit=limit, db=db
-        )
+        return await Chats.get_chat_title_id_list_by_workspace_id(workspace_id, skip=skip, limit=limit, db=db)
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -659,11 +661,11 @@ async def create_workspace_chat(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new chat inside the workspace; member or manager access."""
-    await assert_workspace_access(workspace_id, user, "write", db)
+    await assert_workspace_access(workspace_id, user, 'write', db)
     if form_data.folder_id:
         folder = await Folders.get_folder_by_id_and_workspace_id(form_data.folder_id, workspace_id, db=db)
         if folder is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Folder must be in the same workspace")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Folder must be in the same workspace')
 
     try:
         form_data.workspace_id = workspace_id

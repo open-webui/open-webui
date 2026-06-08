@@ -31,9 +31,9 @@ log = logging.getLogger(__name__)
 # Workspace roles
 ####################
 
-WORKSPACE_ROLE_MANAGER = "manager"
-WORKSPACE_ROLE_MEMBER = "member"
-WORKSPACE_ROLE_VIEWER = "viewer"
+WORKSPACE_ROLE_MANAGER = 'manager'
+WORKSPACE_ROLE_MEMBER = 'member'
+WORKSPACE_ROLE_VIEWER = 'viewer'
 
 WORKSPACE_WRITE_ROLES = {WORKSPACE_ROLE_MANAGER, WORKSPACE_ROLE_MEMBER}
 WORKSPACE_MANAGE_ROLES = {WORKSPACE_ROLE_MANAGER}
@@ -45,10 +45,10 @@ WORKSPACE_MANAGE_ROLES = {WORKSPACE_ROLE_MANAGER}
 
 
 class Workspace(Base):
-    __tablename__ = "workspace"
+    __tablename__ = 'workspace'
 
     id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String, nullable=False)       # creator
+    user_id = Column(String, nullable=False)  # creator
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     meta = Column(JSONField, nullable=True)
@@ -58,19 +58,19 @@ class Workspace(Base):
 
 
 class WorkspaceMember(Base):
-    __tablename__ = "workspace_member"
+    __tablename__ = 'workspace_member'
 
     id = Column(String, primary_key=True, unique=True)
     workspace_id = Column(String, nullable=False)
     user_id = Column(String, nullable=False)
-    role = Column(String, nullable=False)          # manager | member | viewer
+    role = Column(String, nullable=False)  # manager | member | viewer
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),
-        Index("ws_member_workspace_id_idx", "workspace_id"),
-        Index("ws_member_user_id_idx", "user_id"),
+        UniqueConstraint('workspace_id', 'user_id', name='uq_workspace_member'),
+        Index('ws_member_workspace_id_idx', 'workspace_id'),
+        Index('ws_member_user_id_idx', 'user_id'),
     )
 
 
@@ -167,9 +167,7 @@ class WorkspaceMemberResponse(BaseModel):
 
 
 class WorkspacesTable:
-    async def create(
-        self, user_id: str, form_data: WorkspaceForm, db: Optional[AsyncSession] = None
-    ) -> WorkspaceModel:
+    async def create(self, user_id: str, form_data: WorkspaceForm, db: Optional[AsyncSession] = None) -> WorkspaceModel:
         async with get_async_db_context(db) as db:
             now = int(time.time())
             ws = Workspace(
@@ -186,18 +184,14 @@ class WorkspacesTable:
             await db.refresh(ws)
             return WorkspaceModel.model_validate(ws)
 
-    async def get_by_id(
-        self, workspace_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[WorkspaceModel]:
+    async def get_by_id(self, workspace_id: str, db: Optional[AsyncSession] = None) -> Optional[WorkspaceModel]:
         async with get_async_db_context(db) as db:
             row = await db.get(Workspace, workspace_id)
             if row is None or row.deleted_at is not None:
                 return None
             return WorkspaceModel.model_validate(row)
 
-    async def get_for_user(
-        self, user_id: str, db: Optional[AsyncSession] = None
-    ) -> list[WorkspaceModel]:
+    async def get_for_user(self, user_id: str, db: Optional[AsyncSession] = None) -> list[WorkspaceModel]:
         """Return all non-deleted workspaces where user_id is a member."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -214,16 +208,11 @@ class WorkspacesTable:
             )
             return [WorkspaceModel.model_validate(r) for r in result.scalars().all()]
 
-
-    async def get_all(
-        self, db: Optional[AsyncSession] = None
-    ) -> list[WorkspaceModel]:
+    async def get_all(self, db: Optional[AsyncSession] = None) -> list[WorkspaceModel]:
         """Return all non-deleted workspaces for operational/all-access views."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Workspace)
-                .where(Workspace.deleted_at.is_(None))
-                .order_by(Workspace.updated_at.desc())
+                select(Workspace).where(Workspace.deleted_at.is_(None)).order_by(Workspace.updated_at.desc())
             )
             return [WorkspaceModel.model_validate(r) for r in result.scalars().all()]
 
@@ -261,9 +250,9 @@ class WorkspacesTable:
 
             meta = dict(row.meta or {})
             if model_id:
-                meta["default_model_id"] = model_id
+                meta['default_model_id'] = model_id
             else:
-                meta.pop("default_model_id", None)
+                meta.pop('default_model_id', None)
 
             row.meta = meta
             row.updated_at = int(time.time())
@@ -271,9 +260,7 @@ class WorkspacesTable:
             await db.refresh(row)
             return WorkspaceModel.model_validate(row)
 
-    async def soft_delete(
-        self, workspace_id: str, db: Optional[AsyncSession] = None
-    ) -> bool:
+    async def soft_delete(self, workspace_id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
             row = await db.get(Workspace, workspace_id)
             if row is None:
@@ -324,9 +311,7 @@ class WorkspaceMembersTable:
             row = result.scalars().first()
             return WorkspaceMemberModel.model_validate(row) if row else None
 
-    async def list_members(
-        self, workspace_id: str, db: Optional[AsyncSession] = None
-    ) -> list[WorkspaceMemberModel]:
+    async def list_members(self, workspace_id: str, db: Optional[AsyncSession] = None) -> list[WorkspaceMemberModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(WorkspaceMember)
@@ -360,14 +345,15 @@ class WorkspaceMembersTable:
             await db.refresh(row)
             return WorkspaceMemberModel.model_validate(row)
 
-    async def count_managers(
-        self, workspace_id: str, db: Optional[AsyncSession] = None
-    ) -> int:
+    async def count_managers(self, workspace_id: str, db: Optional[AsyncSession] = None) -> int:
         """Return the number of members with manager role."""
         async with get_async_db_context(db) as db:
             from sqlalchemy import func
+
             result = await db.execute(
-                select(func.count()).select_from(WorkspaceMember).where(
+                select(func.count())
+                .select_from(WorkspaceMember)
+                .where(
                     and_(
                         WorkspaceMember.workspace_id == workspace_id,
                         WorkspaceMember.role == WORKSPACE_ROLE_MANAGER,

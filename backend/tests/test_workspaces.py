@@ -38,8 +38,9 @@ Base = declarative_base()
 # Minimal ORM mirrors (same schema as production models)
 # ---------------------------------------------------------------------------
 
+
 class WsWorkspace(Base):
-    __tablename__ = "workspace"
+    __tablename__ = 'workspace'
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
     name = Column(Text, nullable=False)
@@ -51,7 +52,7 @@ class WsWorkspace(Base):
 
 
 class WsWorkspaceMember(Base):
-    __tablename__ = "workspace_member"
+    __tablename__ = 'workspace_member'
     id = Column(String, primary_key=True)
     workspace_id = Column(String, nullable=False)
     user_id = Column(String, nullable=False)
@@ -59,13 +60,13 @@ class WsWorkspaceMember(Base):
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
     __table_args__ = (
-        UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),
-        Index("ws_member_workspace_id_idx", "workspace_id"),
+        UniqueConstraint('workspace_id', 'user_id', name='uq_workspace_member'),
+        Index('ws_member_workspace_id_idx', 'workspace_id'),
     )
 
 
 class WsChat(Base):
-    __tablename__ = "chat"
+    __tablename__ = 'chat'
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
     title = Column(Text, nullable=False)
@@ -77,7 +78,7 @@ class WsChat(Base):
 
 
 class WsFolder(Base):
-    __tablename__ = "folder"
+    __tablename__ = 'folder'
     id = Column(String, primary_key=True)
     parent_id = Column(String, nullable=True)
     workspace_id = Column(String, nullable=True)
@@ -91,9 +92,9 @@ class WsFolder(Base):
 # Role constants (mirrors production)
 # ---------------------------------------------------------------------------
 
-ROLE_MANAGER = "manager"
-ROLE_MEMBER = "member"
-ROLE_VIEWER = "viewer"
+ROLE_MANAGER = 'manager'
+ROLE_MEMBER = 'member'
+ROLE_VIEWER = 'viewer'
 
 WRITE_ROLES = {ROLE_MANAGER, ROLE_MEMBER}
 MANAGE_ROLES = {ROLE_MANAGER}
@@ -103,6 +104,7 @@ MANAGE_ROLES = {ROLE_MANAGER}
 # Minimal CRUD helpers
 # ---------------------------------------------------------------------------
 
+
 def _uid():
     return str(uuid.uuid4())
 
@@ -111,7 +113,7 @@ def _now():
     return int(time.time())
 
 
-async def create_workspace(db: AsyncSession, creator_id: str, name: str = "WS") -> WsWorkspace:
+async def create_workspace(db: AsyncSession, creator_id: str, name: str = 'WS') -> WsWorkspace:
     ws = WsWorkspace(id=_uid(), user_id=creator_id, name=name, created_at=_now(), updated_at=_now())
     db.add(ws)
     await db.commit()
@@ -120,8 +122,9 @@ async def create_workspace(db: AsyncSession, creator_id: str, name: str = "WS") 
 
 
 async def add_member(db: AsyncSession, workspace_id: str, user_id: str, role: str) -> WsWorkspaceMember:
-    m = WsWorkspaceMember(id=_uid(), workspace_id=workspace_id, user_id=user_id, role=role,
-                          created_at=_now(), updated_at=_now())
+    m = WsWorkspaceMember(
+        id=_uid(), workspace_id=workspace_id, user_id=user_id, role=role, created_at=_now(), updated_at=_now()
+    )
     db.add(m)
     await db.commit()
     await db.refresh(m)
@@ -131,8 +134,7 @@ async def add_member(db: AsyncSession, workspace_id: str, user_id: str, role: st
 async def get_member(db: AsyncSession, workspace_id: str, user_id: str):
     r = await db.execute(
         select(WsWorkspaceMember).where(
-            and_(WsWorkspaceMember.workspace_id == workspace_id,
-                 WsWorkspaceMember.user_id == user_id)
+            and_(WsWorkspaceMember.workspace_id == workspace_id, WsWorkspaceMember.user_id == user_id)
         )
     )
     return r.scalars().first()
@@ -141,10 +143,13 @@ async def get_member(db: AsyncSession, workspace_id: str, user_id: str):
 async def workspaces_for_user(db: AsyncSession, user_id: str):
     r = await db.execute(
         select(WsWorkspace)
-        .join(WsWorkspaceMember, and_(
-            WsWorkspaceMember.workspace_id == WsWorkspace.id,
-            WsWorkspaceMember.user_id == user_id,
-        ))
+        .join(
+            WsWorkspaceMember,
+            and_(
+                WsWorkspaceMember.workspace_id == WsWorkspace.id,
+                WsWorkspaceMember.user_id == user_id,
+            ),
+        )
         .where(WsWorkspace.deleted_at.is_(None))
     )
     return r.scalars().all()
@@ -152,20 +157,14 @@ async def workspaces_for_user(db: AsyncSession, user_id: str):
 
 async def workspace_chats(db: AsyncSession, workspace_id: str):
     r = await db.execute(
-        select(WsChat)
-        .where(WsChat.workspace_id == workspace_id)
-        .where(WsChat.archived == False)  # noqa
+        select(WsChat).where(WsChat.workspace_id == workspace_id).where(WsChat.archived == False)  # noqa
     )
     return r.scalars().all()
 
 
 async def personal_chats(db: AsyncSession, user_id: str):
     """Personal chats: belongs to user AND workspace_id IS NULL."""
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     return r.scalars().all()
 
 
@@ -178,9 +177,9 @@ async def set_workspace_default_model(db: AsyncSession, workspace_id: str, user_
         return False, 404
     meta = dict(ws.meta or {})
     if model_id:
-        meta["default_model_id"] = model_id
+        meta['default_model_id'] = model_id
     else:
-        meta.pop("default_model_id", None)
+        meta.pop('default_model_id', None)
     ws.meta = meta
     ws.updated_at = _now()
     await db.commit()
@@ -243,7 +242,7 @@ async def validate_workspace_folder_parent(
 
 
 def resolve_workspace_default_model(workspace, available_models: set[str], fallback: list[str]):
-    model_id = (workspace.meta or {}).get("default_model_id")
+    model_id = (workspace.meta or {}).get('default_model_id')
     if model_id and model_id in available_models:
         return [model_id]
     return fallback
@@ -253,16 +252,17 @@ def resolve_workspace_default_model(workspace, available_models: set[str], fallb
 # Pytest fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="module")
+
+@pytest.fixture(scope='module')
 def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope='module')
 async def db():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine('sqlite+aiosqlite:///:memory:')
     factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -274,6 +274,7 @@ async def db():
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_creator_becomes_manager(db):
@@ -293,7 +294,7 @@ async def test_non_member_cannot_see_workspace(db):
     creator_id = _uid()
     stranger_id = _uid()
 
-    ws = await create_workspace(db, creator_id, name="Private")
+    ws = await create_workspace(db, creator_id, name='Private')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
     stranger_workspaces = await workspaces_for_user(db, stranger_id)
@@ -306,7 +307,7 @@ async def test_added_member_sees_workspace(db):
     creator_id = _uid()
     member_id = _uid()
 
-    ws = await create_workspace(db, creator_id, name="Shared")
+    ws = await create_workspace(db, creator_id, name='Shared')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, member_id, ROLE_MEMBER)
 
@@ -317,38 +318,38 @@ async def test_added_member_sees_workspace(db):
 @pytest.mark.asyncio
 async def test_workspace_default_model_persists_for_manager(db):
     creator_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Default Model")
+    ws = await create_workspace(db, creator_id, name='Default Model')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    ok, code = await set_workspace_default_model(db, ws.id, creator_id, "model-a")
+    ok, code = await set_workspace_default_model(db, ws.id, creator_id, 'model-a')
 
     await db.refresh(ws)
     assert ok is True
     assert code == 200
-    assert ws.meta["default_model_id"] == "model-a"
+    assert ws.meta['default_model_id'] == 'model-a'
 
 
 @pytest.mark.asyncio
 async def test_workspace_default_model_falls_back_when_unavailable(db):
     creator_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Fallback")
-    ws.meta = {"default_model_id": "missing-model"}
+    ws = await create_workspace(db, creator_id, name='Fallback')
+    ws.meta = {'default_model_id': 'missing-model'}
     await db.commit()
 
-    selected = resolve_workspace_default_model(ws, {"model-a"}, ["model-a"])
+    selected = resolve_workspace_default_model(ws, {'model-a'}, ['model-a'])
 
-    assert selected == ["model-a"]
+    assert selected == ['model-a']
 
 
 @pytest.mark.asyncio
 async def test_member_cannot_update_workspace_default_model(db):
     creator_id = _uid()
     member_id = _uid()
-    ws = await create_workspace(db, creator_id, name="No Default Mutation")
+    ws = await create_workspace(db, creator_id, name='No Default Mutation')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, member_id, ROLE_MEMBER)
 
-    ok, code = await set_workspace_default_model(db, ws.id, member_id, "model-a")
+    ok, code = await set_workspace_default_model(db, ws.id, member_id, 'model-a')
 
     assert ok is False
     assert code == 403
@@ -357,11 +358,11 @@ async def test_member_cannot_update_workspace_default_model(db):
 @pytest.mark.asyncio
 async def test_nested_workspace_folder_creation_works(db):
     creator_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Folders")
+    ws = await create_workspace(db, creator_id, name='Folders')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    root, root_code = await create_workspace_folder(db, ws.id, creator_id, "Marketing")
-    child, child_code = await create_workspace_folder(db, ws.id, creator_id, "YaoHui", parent_id=root.id)
+    root, root_code = await create_workspace_folder(db, ws.id, creator_id, 'Marketing')
+    child, child_code = await create_workspace_folder(db, ws.id, creator_id, 'YaoHui', parent_id=root.id)
 
     assert root_code == 201
     assert child_code == 201
@@ -372,13 +373,13 @@ async def test_nested_workspace_folder_creation_works(db):
 @pytest.mark.asyncio
 async def test_cross_workspace_parent_rejected(db):
     creator_id = _uid()
-    ws_a = await create_workspace(db, creator_id, name="A")
-    ws_b = await create_workspace(db, creator_id, name="B")
+    ws_a = await create_workspace(db, creator_id, name='A')
+    ws_b = await create_workspace(db, creator_id, name='B')
     await add_member(db, ws_a.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws_b.id, creator_id, ROLE_MANAGER)
-    root_a, _ = await create_workspace_folder(db, ws_a.id, creator_id, "A Root")
+    root_a, _ = await create_workspace_folder(db, ws_a.id, creator_id, 'A Root')
 
-    folder, code = await create_workspace_folder(db, ws_b.id, creator_id, "B Child", parent_id=root_a.id)
+    folder, code = await create_workspace_folder(db, ws_b.id, creator_id, 'B Child', parent_id=root_a.id)
 
     assert folder is None
     assert code == 400
@@ -387,10 +388,10 @@ async def test_cross_workspace_parent_rejected(db):
 @pytest.mark.asyncio
 async def test_self_and_circular_parent_rejected(db):
     creator_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Cycles")
+    ws = await create_workspace(db, creator_id, name='Cycles')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
-    root, _ = await create_workspace_folder(db, ws.id, creator_id, "Root")
-    child, _ = await create_workspace_folder(db, ws.id, creator_id, "Child", parent_id=root.id)
+    root, _ = await create_workspace_folder(db, ws.id, creator_id, 'Root')
+    child, _ = await create_workspace_folder(db, ws.id, creator_id, 'Child', parent_id=root.id)
 
     ok_self, self_code = await validate_workspace_folder_parent(db, ws.id, root.id, root.id)
     root.parent_id = child.id
@@ -407,11 +408,11 @@ async def test_self_and_circular_parent_rejected(db):
 async def test_viewer_cannot_create_workspace_folder(db):
     creator_id = _uid()
     viewer_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Viewer")
+    ws = await create_workspace(db, creator_id, name='Viewer')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    folder, code = await create_workspace_folder(db, ws.id, viewer_id, "Blocked")
+    folder, code = await create_workspace_folder(db, ws.id, viewer_id, 'Blocked')
 
     assert folder is None
     assert code == 403
@@ -421,11 +422,11 @@ async def test_viewer_cannot_create_workspace_folder(db):
 async def test_member_cannot_create_workspace_folder(db):
     creator_id = _uid()
     member_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Member Folder Block")
+    ws = await create_workspace(db, creator_id, name='Member Folder Block')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, member_id, ROLE_MEMBER)
 
-    folder, code = await create_workspace_folder(db, ws.id, member_id, "Blocked")
+    folder, code = await create_workspace_folder(db, ws.id, member_id, 'Blocked')
 
     assert folder is None
     assert code == 403
@@ -476,8 +477,7 @@ async def test_manager_add_remove_member(db):
 
     await db.execute(
         delete(WsWorkspaceMember).where(
-            and_(WsWorkspaceMember.workspace_id == ws.id,
-                 WsWorkspaceMember.user_id == new_member_id)
+            and_(WsWorkspaceMember.workspace_id == ws.id, WsWorkspaceMember.user_id == new_member_id)
         )
     )
     await db.commit()
@@ -510,8 +510,9 @@ async def test_workspace_chat_excluded_from_personal_list(db):
     ws_id = _uid()
 
     # Insert a workspace chat
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     await db.commit()
 
@@ -525,8 +526,9 @@ async def test_workspace_chat_appears_in_workspace_list(db):
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat 2",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Chat 2', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     await db.commit()
 
@@ -539,8 +541,9 @@ async def test_private_chat_not_in_workspace_list(db):
     """Private chat (workspace_id IS NULL) must NOT appear in any workspace's list."""
     user_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     await db.commit()
 
@@ -554,7 +557,7 @@ async def test_soft_deleted_workspace_hidden(db):
     """Soft-deleted workspace must not appear in user list."""
     creator_id = _uid()
 
-    ws = await create_workspace(db, creator_id, name="Deleted WS")
+    ws = await create_workspace(db, creator_id, name='Deleted WS')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
     # Soft-delete
@@ -588,12 +591,13 @@ async def test_workspace_chat_share_block_logic():
     In production, the share endpoint raises 403 when chat.workspace_id is not None.
     This test verifies the condition that triggers the block.
     """
+
     class FakeChat:
-        workspace_id = "ws-123"
+        workspace_id = 'ws-123'
 
     chat = FakeChat()
     # The guard: if chat.workspace_id is not None → block
-    assert chat.workspace_id is not None, "Block condition must be True for workspace chats"
+    assert chat.workspace_id is not None, 'Block condition must be True for workspace chats'
 
 
 # ---------------------------------------------------------------------------
@@ -626,15 +630,15 @@ async def test_workspace_response_has_my_role_field():
         my_role: str | None = None  # the field added in contract fix
 
     # my_role is None by default (not a member context)
-    r1 = FakeWorkspaceResponse(id="1", user_id="u1", name="WS", created_at=0, updated_at=0)
+    r1 = FakeWorkspaceResponse(id='1', user_id='u1', name='WS', created_at=0, updated_at=0)
     assert r1.my_role is None
 
     # my_role is populated by the router
-    r2 = FakeWorkspaceResponse(id="1", user_id="u1", name="WS", created_at=0, updated_at=0, my_role="manager")
-    assert r2.my_role == "manager"
+    r2 = FakeWorkspaceResponse(id='1', user_id='u1', name='WS', created_at=0, updated_at=0, my_role='manager')
+    assert r2.my_role == 'manager'
 
-    r3 = FakeWorkspaceResponse(id="1", user_id="u1", name="WS", created_at=0, updated_at=0, my_role="viewer")
-    assert r3.my_role == "viewer"
+    r3 = FakeWorkspaceResponse(id='1', user_id='u1', name='WS', created_at=0, updated_at=0, my_role='viewer')
+    assert r3.my_role == 'viewer'
 
 
 @pytest.mark.asyncio
@@ -654,19 +658,24 @@ async def test_workspace_member_response_has_display_fields():
 
     # Without enrichment (user lookup failed) — falls back gracefully
     r1 = FakeWorkspaceMemberResponse(
-        id="m1", workspace_id="ws1", user_id="u1", role="member", created_at=0, updated_at=0
+        id='m1', workspace_id='ws1', user_id='u1', role='member', created_at=0, updated_at=0
     )
     assert r1.display_name is None
     assert r1.email is None
 
     # With enrichment from users table
     r2 = FakeWorkspaceMemberResponse(
-        id="m1", workspace_id="ws1", user_id="u1", role="member",
-        created_at=0, updated_at=0,
-        display_name="Alice Smith", email="alice@example.com"
+        id='m1',
+        workspace_id='ws1',
+        user_id='u1',
+        role='member',
+        created_at=0,
+        updated_at=0,
+        display_name='Alice Smith',
+        email='alice@example.com',
     )
-    assert r2.display_name == "Alice Smith"
-    assert r2.email == "alice@example.com"
+    assert r2.display_name == 'Alice Smith'
+    assert r2.email == 'alice@example.com'
 
 
 @pytest.mark.asyncio
@@ -683,13 +692,13 @@ async def test_my_role_reflects_actual_membership(db):
     creator_member = await get_member(db, ws.id, creator_id)
     viewer_member = await get_member(db, ws.id, viewer_id)
 
-    assert creator_member.role == ROLE_MANAGER, "Creator must be manager"
-    assert viewer_member.role == ROLE_VIEWER, "CEO added as viewer must be viewer"
+    assert creator_member.role == ROLE_MANAGER, 'Creator must be manager'
+    assert viewer_member.role == ROLE_VIEWER, 'CEO added as viewer must be viewer'
 
     # Non-member has no membership row → my_role must be None
     stranger_id = _uid()
     stranger_member = await get_member(db, ws.id, stranger_id)
-    assert stranger_member is None, "Non-member must have no membership row"
+    assert stranger_member is None, 'Non-member must have no membership row'
 
 
 @pytest.mark.asyncio
@@ -710,7 +719,7 @@ async def test_my_role_not_heuristic_for_promoted_non_creator(db):
     result = await get_member(db, ws.id, promoted_id)
     # The heuristic (ws.user_id === current_user.id) would return 'member' here
     # because promoted_id != creator_id. The backend-sourced my_role is correct.
-    assert result.role == ROLE_MANAGER, "Backend must return promoted role, not heuristic"
+    assert result.role == ROLE_MANAGER, 'Backend must return promoted role, not heuristic'
 
 
 # ---------------------------------------------------------------------------
@@ -731,6 +740,7 @@ from httpx import AsyncClient
 # ---------------------------------------------------------------------------
 # Shared ORM helpers used by the minimal route app
 # ---------------------------------------------------------------------------
+
 
 async def _get_workspace(db: AsyncSession, ws_id: str):
     row = await db.get(WsWorkspace, ws_id)
@@ -753,9 +763,10 @@ async def _get_shared(db: AsyncSession, share_id: str):
 # Additional ORM mirror: SharedChat (needed for share/clone tests)
 # ---------------------------------------------------------------------------
 
+
 class WsSharedChat(Base):
-    __tablename__ = "shared_chat"
-    id = Column(String, primary_key=True)    # share_id
+    __tablename__ = 'shared_chat'
+    id = Column(String, primary_key=True)  # share_id
     chat_id = Column(String, nullable=False)  # → WsChat.id
     user_id = Column(String, nullable=False)
     created_at = Column(BigInteger, nullable=False)
@@ -768,6 +779,7 @@ class WsSharedChat(Base):
 # ---------------------------------------------------------------------------
 # Minimal route app factory (built fresh per test session)
 # ---------------------------------------------------------------------------
+
 
 def _assert_ws_mutation_allowed(chat, member, workspace):
     """
@@ -820,12 +832,13 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         workspace = await _get_workspace(db, ws_id)
         if workspace is None:
-            raise FHTTPException(status_code=404, detail="workspace not found")
+            raise FHTTPException(status_code=404, detail='workspace not found')
         member = await get_member(db, ws_id, user_id)
         if member is None or member.role not in WRITE_ROLES:
-            raise FHTTPException(status_code=403, detail="access prohibited")
-        chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat",
-                      workspace_id=ws_id, created_at=_now(), updated_at=_now())
+            raise FHTTPException(status_code=403, detail='access prohibited')
+        chat = WsChat(
+            id=_uid(), user_id=user_id, title='WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+        )
         db.add(chat)
         await db.commit()
         return {'id': chat.id, 'workspace_id': ws_id}
@@ -840,13 +853,19 @@ def _build_app(get_db_fn):
         if workspace_id is not None:
             workspace = await _get_workspace(db, workspace_id)
             if workspace is None:
-                raise FHTTPException(status_code=404, detail="workspace not found")
+                raise FHTTPException(status_code=404, detail='workspace not found')
             member = await get_member(db, workspace_id, user_id)
             if member is None or member.role not in WRITE_ROLES:
-                raise FHTTPException(status_code=403, detail="access prohibited")
+                raise FHTTPException(status_code=403, detail='access prohibited')
 
-        chat = WsChat(id=_uid(), user_id=user_id, title="Private Chat",
-                      workspace_id=workspace_id, created_at=_now(), updated_at=_now())
+        chat = WsChat(
+            id=_uid(),
+            user_id=user_id,
+            title='Private Chat',
+            workspace_id=workspace_id,
+            created_at=_now(),
+            updated_at=_now(),
+        )
         db.add(chat)
         await db.commit()
         return {'id': chat.id, 'workspace_id': chat.workspace_id}
@@ -857,12 +876,11 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=404, detail="chat not found")
+            raise FHTTPException(status_code=404, detail='chat not found')
         if chat.workspace_id is not None:
-            raise FHTTPException(status_code=403, detail="Workspace chats cannot be shared")
+            raise FHTTPException(status_code=403, detail='Workspace chats cannot be shared')
         share_id = _uid()
-        shared = WsSharedChat(id=share_id, chat_id=chat_id, user_id=user_id,
-                              created_at=_now(), updated_at=_now())
+        shared = WsSharedChat(id=share_id, chat_id=chat_id, user_id=user_id, created_at=_now(), updated_at=_now())
         db.add(shared)
         await db.commit()
         return {'share_id': share_id}
@@ -885,15 +903,15 @@ def _build_app(get_db_fn):
             chat = await _get_chat(db, share_id)  # share_id used as chat_id
             admin_fallback = True
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
 
         # Workspace block — mirrors production P0-1 fix
         if shared:
             original = await _get_chat(db, shared.chat_id)
             if original and original.workspace_id is not None:
-                raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+                raise FHTTPException(status_code=403, detail='Workspace chats are not publicly accessible')
         elif admin_fallback and chat.workspace_id is not None:
-            raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+            raise FHTTPException(status_code=403, detail='Workspace chats are not publicly accessible')
 
         return {'chat_id': shared.chat_id if shared else share_id}
 
@@ -911,17 +929,18 @@ def _build_app(get_db_fn):
             chat = await _get_chat(db, share_id)
             admin_fallback = True
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
 
         if shared:
             original = await _get_chat(db, shared.chat_id)
             if original and original.workspace_id is not None:
-                raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+                raise FHTTPException(status_code=403, detail='Workspace chats are not publicly accessible')
         elif admin_fallback and chat.workspace_id is not None:
-            raise FHTTPException(status_code=403, detail="Workspace chats are not publicly accessible")
+            raise FHTTPException(status_code=403, detail='Workspace chats are not publicly accessible')
 
-        clone = WsChat(id=_uid(), user_id=user_id, title="Clone",
-                       workspace_id=None, created_at=_now(), updated_at=_now())
+        clone = WsChat(
+            id=_uid(), user_id=user_id, title='Clone', workspace_id=None, created_at=_now(), updated_at=_now()
+        )
         db.add(clone)
         await db.commit()
         return {'id': clone.id}
@@ -932,13 +951,13 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
         if chat.workspace_id is not None:
             workspace = await _get_workspace(db, chat.workspace_id)
             member = await get_member(db, chat.workspace_id, user_id)
             ok, code = _assert_ws_read_allowed(chat, member, workspace)
             if not ok:
-                raise FHTTPException(status_code=code, detail="access prohibited")
+                raise FHTTPException(status_code=code, detail='access prohibited')
         return {'id': chat.id, 'workspace_id': chat.workspace_id}
 
     # ── GET /chats/{chat_id}/pinned ──────────────────────────────────────────
@@ -947,13 +966,13 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
         if chat.workspace_id is not None:
             workspace = await _get_workspace(db, chat.workspace_id)
             member = await get_member(db, chat.workspace_id, user_id)
             ok, code = _assert_ws_read_allowed(chat, member, workspace)
             if not ok:
-                raise FHTTPException(status_code=code, detail="access prohibited")
+                raise FHTTPException(status_code=code, detail='access prohibited')
         return {'pinned': False}
 
     # ── GET /chats/{chat_id}/tags ────────────────────────────────────────────
@@ -962,13 +981,13 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
         if chat.workspace_id is not None:
             workspace = await _get_workspace(db, chat.workspace_id)
             member = await get_member(db, chat.workspace_id, user_id)
             ok, code = _assert_ws_read_allowed(chat, member, workspace)
             if not ok:
-                raise FHTTPException(status_code=code, detail="access prohibited")
+                raise FHTTPException(status_code=code, detail='access prohibited')
         return {'tags': []}
 
     # ── DELETE /chats/{chat_id}/share ────────────────────────────────────────
@@ -977,9 +996,9 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
         if chat.workspace_id is not None:
-            raise FHTTPException(status_code=403, detail="Workspace chats cannot be shared")
+            raise FHTTPException(status_code=403, detail='Workspace chats cannot be shared')
         return {'ok': True}
 
     # ── POST /shared/{chat_id}/access/update ─────────────────────────────────
@@ -988,9 +1007,9 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=404, detail="not found")
+            raise FHTTPException(status_code=404, detail='not found')
         if chat.workspace_id is not None:
-            raise FHTTPException(status_code=403, detail="Workspace chats cannot be shared")
+            raise FHTTPException(status_code=403, detail='Workspace chats cannot be shared')
         return {'ok': True}
 
     # ── Mutation routes ──────────────────────────────────────────────────────
@@ -1002,12 +1021,12 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None or chat.user_id != user_id:
-            raise FHTTPException(status_code=401, detail="not found or not owner")
+            raise FHTTPException(status_code=401, detail='not found or not owner')
         workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
         member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
         ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
         if not ok:
-            raise FHTTPException(status_code=code, detail="access prohibited")
+            raise FHTTPException(status_code=code, detail='access prohibited')
         return {'pinned': True}
 
     @app.post('/chats/{chat_id}/archive', status_code=200)
@@ -1015,12 +1034,12 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None or chat.user_id != user_id:
-            raise FHTTPException(status_code=401, detail="not found or not owner")
+            raise FHTTPException(status_code=401, detail='not found or not owner')
         workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
         member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
         ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
         if not ok:
-            raise FHTTPException(status_code=code, detail="access prohibited")
+            raise FHTTPException(status_code=code, detail='access prohibited')
         return {'archived': True}
 
     @app.post('/chats/{chat_id}/tags', status_code=200)
@@ -1028,12 +1047,12 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None or chat.user_id != user_id:
-            raise FHTTPException(status_code=401, detail="not found or not owner")
+            raise FHTTPException(status_code=401, detail='not found or not owner')
         workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
         member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
         ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
         if not ok:
-            raise FHTTPException(status_code=code, detail="access prohibited")
+            raise FHTTPException(status_code=code, detail='access prohibited')
         return {'tag': tag}
 
     @app.post('/chats/{chat_id}/folder', status_code=200)
@@ -1041,12 +1060,12 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None or chat.user_id != user_id:
-            raise FHTTPException(status_code=401, detail="not found or not owner")
+            raise FHTTPException(status_code=401, detail='not found or not owner')
         workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
         member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
         ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
         if not ok:
-            raise FHTTPException(status_code=code, detail="access prohibited")
+            raise FHTTPException(status_code=code, detail='access prohibited')
         return {'folder_id': folder_id}
 
     @app.post('/chats/{chat_id}/update', status_code=200)
@@ -1054,14 +1073,14 @@ def _build_app(get_db_fn):
         db = get_db_fn()
         chat = await _get_chat(db, chat_id)
         if chat is None:
-            raise FHTTPException(status_code=401, detail="not found")
+            raise FHTTPException(status_code=401, detail='not found')
         workspace = await _get_workspace(db, chat.workspace_id) if chat.workspace_id else None
         member = await get_member(db, chat.workspace_id, user_id) if chat.workspace_id else None
         ok, code = _assert_ws_mutation_allowed(chat, member, workspace)
         if not ok:
-            raise FHTTPException(status_code=code, detail="access prohibited")
+            raise FHTTPException(status_code=code, detail='access prohibited')
         if chat.workspace_id is None and chat.user_id != user_id:
-            raise FHTTPException(status_code=401, detail="not owner")
+            raise FHTTPException(status_code=401, detail='not owner')
         return {'updated': True}
 
     return app
@@ -1071,17 +1090,18 @@ def _build_app(get_db_fn):
 # Route-level test fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="module")
+
+@pytest.fixture(scope='module')
 def route_event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope='module')
 async def route_db():
     """Separate in-memory DB for route-level tests (includes shared_chat table)."""
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine('sqlite+aiosqlite:///:memory:')
     factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -1090,21 +1110,23 @@ async def route_db():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope='module')
 async def route_client(route_db):
     """httpx AsyncClient wired to the minimal FastAPI app with the route_db session."""
+
     def get_db():
         return route_db
 
     app = _build_app(get_db)
     transport = httpx.ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url='http://test') as client:
         yield client, route_db
 
 
 # ---------------------------------------------------------------------------
 # Scenario 1: Non-member cannot create workspace chat
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_non_member_cannot_create_workspace_chat(route_client):
@@ -1115,13 +1137,14 @@ async def test_route_non_member_cannot_create_workspace_chat(route_client):
     ws = await create_workspace(db, creator_id)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    resp = await client.post(f"/workspaces/{ws.id}/chats", params={"user_id": stranger_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/workspaces/{ws.id}/chats', params={'user_id': stranger_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 2: Member can create workspace chat
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_member_can_create_workspace_chat(route_client):
@@ -1133,8 +1156,8 @@ async def test_route_member_can_create_workspace_chat(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, member_id, ROLE_MEMBER)
 
-    resp = await client.post(f"/workspaces/{ws.id}/chats", params={"user_id": member_id})
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/workspaces/{ws.id}/chats', params={'user_id': member_id})
+    assert resp.status_code == 201, f'Expected 201, got {resp.status_code}: {resp.text}'
     data = resp.json()
     assert data['workspace_id'] == ws.id
 
@@ -1142,6 +1165,7 @@ async def test_route_member_can_create_workspace_chat(route_client):
 # ---------------------------------------------------------------------------
 # Scenario 3: Viewer cannot create workspace chat
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_viewer_cannot_create_workspace_chat(route_client):
@@ -1153,13 +1177,14 @@ async def test_route_viewer_cannot_create_workspace_chat(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    resp = await client.post(f"/workspaces/{ws.id}/chats", params={"user_id": viewer_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/workspaces/{ws.id}/chats', params={'user_id': viewer_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 4: Workspace chat cannot be shared
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_workspace_chat_cannot_be_shared(route_client):
@@ -1167,19 +1192,19 @@ async def test_route_workspace_chat_cannot_be_shared(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(id=_uid(), user_id=user_id, title='WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now())
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/share", params={"user_id": user_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/share', params={'user_id': user_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 5: GET /share/{share_id} cannot expose workspace chat
 #             (P0-1: resolved via original chat, not snapshot)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_share_route_cannot_expose_workspace_chat(route_client):
@@ -1188,19 +1213,17 @@ async def test_route_share_route_cannot_expose_workspace_chat(route_client):
     ws_id = _uid()
 
     # Create a workspace chat that somehow has a share record (e.g. pre-existing data)
-    chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(id=_uid(), user_id=user_id, title='WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now())
     db.add(chat)
     # Simulate a stale share entry where the snapshot might not carry workspace_id
     share_id = _uid()
-    shared = WsSharedChat(id=share_id, chat_id=chat.id, user_id=user_id,
-                          created_at=_now(), updated_at=_now())
+    shared = WsSharedChat(id=share_id, chat_id=chat.id, user_id=user_id, created_at=_now(), updated_at=_now())
     db.add(shared)
     await db.commit()
 
     # Route resolves original chat → sees workspace_id → must return 403
-    resp = await client.get(f"/share/{share_id}")
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/share/{share_id}')
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
@@ -1208,28 +1231,30 @@ async def test_route_share_route_cannot_expose_workspace_chat(route_client):
 #             (P0-1: resolved via original chat, not snapshot)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_route_clone_shared_cannot_expose_workspace_chat(route_client):
     client, db = route_client
     user_id = _uid()
     ws_id = _uid()
 
-    chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat 2",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Chat 2', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     share_id = _uid()
-    shared = WsSharedChat(id=share_id, chat_id=chat.id, user_id=user_id,
-                          created_at=_now(), updated_at=_now())
+    shared = WsSharedChat(id=share_id, chat_id=chat.id, user_id=user_id, created_at=_now(), updated_at=_now())
     db.add(shared)
     await db.commit()
 
-    resp = await client.post(f"/chats/{share_id}/clone/shared", params={"user_id": _uid()})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{share_id}/clone/shared', params={'user_id': _uid()})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 7: Soft-deleted workspace chat cannot be read
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_soft_deleted_workspace_chat_cannot_be_read(route_client):
@@ -1237,12 +1262,13 @@ async def test_route_soft_deleted_workspace_chat_cannot_be_read(route_client):
     creator_id = _uid()
     member_id = _uid()
 
-    ws = await create_workspace(db, creator_id, name="Soon Deleted")
+    ws = await create_workspace(db, creator_id, name='Soon Deleted')
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, member_id, ROLE_MEMBER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="WS Chat 3",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=creator_id, title='WS Chat 3', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
@@ -1251,28 +1277,30 @@ async def test_route_soft_deleted_workspace_chat_cannot_be_read(route_client):
     await db.commit()
 
     # Even a former member should be blocked
-    resp = await client.get(f"/chats/{chat.id}", params={"user_id": member_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/chats/{chat.id}', params={'user_id': member_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 8: Normal private chat creation still works
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_route_private_chat_creation_works(route_client):
     client, db = route_client
     user_id = _uid()
 
-    resp = await client.post("/chats/new", params={"user_id": user_id})
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+    resp = await client.post('/chats/new', params={'user_id': user_id})
+    assert resp.status_code == 201, f'Expected 201, got {resp.status_code}: {resp.text}'
     data = resp.json()
-    assert data['workspace_id'] is None, "Private chat must not have workspace_id"
+    assert data['workspace_id'] is None, 'Private chat must not have workspace_id'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 8b: /chats/new can create a workspace chat with valid write access
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_chat_new_with_workspace_id_saves_workspace_id(route_client):
@@ -1284,10 +1312,10 @@ async def test_route_chat_new_with_workspace_id_saves_workspace_id(route_client)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, member_id, ROLE_MEMBER)
 
-    resp = await client.post("/chats/new", params={"user_id": member_id, "workspace_id": ws.id})
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
+    resp = await client.post('/chats/new', params={'user_id': member_id, 'workspace_id': ws.id})
+    assert resp.status_code == 201, f'Expected 201, got {resp.status_code}: {resp.text}'
     data = resp.json()
-    assert data['workspace_id'] == ws.id, "Valid workspace_id must be persisted"
+    assert data['workspace_id'] == ws.id, 'Valid workspace_id must be persisted'
 
 
 @pytest.mark.asyncio
@@ -1299,13 +1327,14 @@ async def test_route_chat_new_rejects_workspace_id_without_permission(route_clie
     ws = await create_workspace(db, creator_id)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    resp = await client.post("/chats/new", params={"user_id": stranger_id, "workspace_id": ws.id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post('/chats/new', params={'user_id': stranger_id, 'workspace_id': ws.id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # Scenario 9: Normal private chat sharing still works
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_private_chat_sharing_works(route_client):
@@ -1313,13 +1342,12 @@ async def test_route_private_chat_sharing_works(route_client):
     user_id = _uid()
 
     # Create a private chat
-    chat = WsChat(id=_uid(), user_id=user_id, title="Private",
-                  workspace_id=None, created_at=_now(), updated_at=_now())
+    chat = WsChat(id=_uid(), user_id=user_id, title='Private', workspace_id=None, created_at=_now(), updated_at=_now())
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/share", params={"user_id": user_id})
-    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/share', params={'user_id': user_id})
+    assert resp.status_code == 200, f'Expected 200, got {resp.status_code}: {resp.text}'
     data = resp.json()
     assert 'share_id' in data
 
@@ -1327,6 +1355,7 @@ async def test_route_private_chat_sharing_works(route_client):
 # ---------------------------------------------------------------------------
 # P0 new: admin bypass scenarios (P0-1)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_admin_cannot_expose_workspace_chat_via_share(route_client):
@@ -1338,14 +1367,20 @@ async def test_route_admin_cannot_expose_workspace_chat_via_share(route_client):
     creator_id = _uid()
     ws_id = _uid()
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Admin Share Test",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Admin Share Test',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
     # Admin passes the chat.id directly as share_id (no shared record exists)
-    resp = await client.get(f"/share/{chat.id}", params={"is_admin": "true"})
-    assert resp.status_code == 403, f"Expected 403 (admin fallback blocked), got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/share/{chat.id}', params={'is_admin': 'true'})
+    assert resp.status_code == 403, f'Expected 403 (admin fallback blocked), got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1357,28 +1392,35 @@ async def test_route_admin_cannot_clone_workspace_chat_via_shared(route_client):
     creator_id = _uid()
     ws_id = _uid()
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Admin Clone Test",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Admin Clone Test',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/clone/shared",
-                             params={"user_id": _uid(), "is_admin": "true"})
-    assert resp.status_code == 403, f"Expected 403 (admin fallback blocked), got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/clone/shared', params={'user_id': _uid(), 'is_admin': 'true'})
+    assert resp.status_code == 403, f'Expected 403 (admin fallback blocked), got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # P0 new: deleted-workspace mutation scenarios (P0-2)
 # ---------------------------------------------------------------------------
 
+
 async def _setup_deleted_ws_chat(db: AsyncSession):
     """Helper: create a workspace, add creator as member, create a chat, soft-delete the workspace."""
     creator_id = _uid()
-    ws = await create_workspace(db, creator_id, name="Mutation Test WS")
+    ws = await create_workspace(db, creator_id, name='Mutation Test WS')
     await add_member(db, ws.id, creator_id, ROLE_MEMBER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Mutation Chat",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=creator_id, title='Mutation Chat', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
@@ -1394,8 +1436,8 @@ async def test_route_deleted_workspace_chat_cannot_be_pinned(route_client):
     client, db = route_client
     user_id, chat = await _setup_deleted_ws_chat(db)
 
-    resp = await client.post(f"/chats/{chat.id}/pin", params={"user_id": user_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/pin', params={'user_id': user_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1404,8 +1446,8 @@ async def test_route_deleted_workspace_chat_cannot_be_archived(route_client):
     client, db = route_client
     user_id, chat = await _setup_deleted_ws_chat(db)
 
-    resp = await client.post(f"/chats/{chat.id}/archive", params={"user_id": user_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/archive', params={'user_id': user_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1414,8 +1456,8 @@ async def test_route_deleted_workspace_chat_cannot_be_tagged(route_client):
     client, db = route_client
     user_id, chat = await _setup_deleted_ws_chat(db)
 
-    resp = await client.post(f"/chats/{chat.id}/tags", params={"user_id": user_id, "tag": "important"})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/tags', params={'user_id': user_id, 'tag': 'important'})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1424,9 +1466,8 @@ async def test_route_deleted_workspace_chat_cannot_be_moved_to_folder(route_clie
     client, db = route_client
     user_id, chat = await _setup_deleted_ws_chat(db)
 
-    resp = await client.post(f"/chats/{chat.id}/folder",
-                             params={"user_id": user_id, "folder_id": "folder-99"})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/folder', params={'user_id': user_id, 'folder_id': 'folder-99'})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1435,14 +1476,15 @@ async def test_route_deleted_workspace_chat_cannot_be_updated(route_client):
     client, db = route_client
     user_id, chat = await _setup_deleted_ws_chat(db)
 
-    resp = await client.post(f"/chats/{chat.id}/update", params={"user_id": user_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/update', params={'user_id': user_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # New scenarios: viewer read/write, former-member, deleted-workspace pinned/tags,
 # DELETE share, access/update
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_viewer_can_read_workspace_chat(route_client):
@@ -1455,13 +1497,19 @@ async def test_route_viewer_can_read_workspace_chat(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Viewer Read Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Viewer Read Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.get(f"/chats/{chat.id}", params={"user_id": viewer_id})
-    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/chats/{chat.id}', params={'user_id': viewer_id})
+    assert resp.status_code == 200, f'Expected 200, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1475,13 +1523,14 @@ async def test_route_viewer_cannot_pin_workspace_chat(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Pin Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=viewer_id, title='Viewer Pin Test', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/pin", params={"user_id": viewer_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/pin', params={'user_id': viewer_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1495,13 +1544,19 @@ async def test_route_viewer_cannot_archive_workspace_chat(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Archive Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=viewer_id,
+        title='Viewer Archive Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/archive", params={"user_id": viewer_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/archive', params={'user_id': viewer_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1515,13 +1570,14 @@ async def test_route_viewer_cannot_add_tag_to_workspace_chat(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Tag Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=viewer_id, title='Viewer Tag Test', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/tags", params={"user_id": viewer_id, "tag": "vip"})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/tags', params={'user_id': viewer_id, 'tag': 'vip'})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1535,14 +1591,19 @@ async def test_route_viewer_cannot_move_workspace_chat_to_folder(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
 
-    chat = WsChat(id=_uid(), user_id=viewer_id, title="Viewer Folder Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=viewer_id,
+        title='Viewer Folder Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/chats/{chat.id}/folder",
-                             params={"user_id": viewer_id, "folder_id": "f-vip"})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/chats/{chat.id}/folder', params={'user_id': viewer_id, 'folder_id': 'f-vip'})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1556,22 +1617,27 @@ async def test_route_former_member_cannot_read_pinned_status(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, former_id, ROLE_MEMBER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Former Member Pinned Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Former Member Pinned Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
     # Remove the member
     await db.execute(
         delete(WsWorkspaceMember).where(
-            and_(WsWorkspaceMember.workspace_id == ws.id,
-                 WsWorkspaceMember.user_id == former_id)
+            and_(WsWorkspaceMember.workspace_id == ws.id, WsWorkspaceMember.user_id == former_id)
         )
     )
     await db.commit()
 
-    resp = await client.get(f"/chats/{chat.id}/pinned", params={"user_id": former_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/chats/{chat.id}/pinned', params={'user_id': former_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1583,16 +1649,22 @@ async def test_route_soft_deleted_workspace_blocks_pinned_read(route_client):
     ws = await create_workspace(db, creator_id)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Deleted WS Pinned Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Deleted WS Pinned Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
     ws.deleted_at = _now()
     await db.commit()
 
-    resp = await client.get(f"/chats/{chat.id}/pinned", params={"user_id": creator_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/chats/{chat.id}/pinned', params={'user_id': creator_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1604,16 +1676,22 @@ async def test_route_soft_deleted_workspace_blocks_tag_read(route_client):
     ws = await create_workspace(db, creator_id)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Deleted WS Tags Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Deleted WS Tags Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
     ws.deleted_at = _now()
     await db.commit()
 
-    resp = await client.get(f"/chats/{chat.id}/tags", params={"user_id": creator_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.get(f'/chats/{chat.id}/tags', params={'user_id': creator_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1623,13 +1701,19 @@ async def test_route_delete_share_rejects_workspace_chat(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    chat = WsChat(id=_uid(), user_id=user_id, title="WS Delete Share Test",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='WS Delete Share Test',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.delete(f"/chats/{chat.id}/share", params={"user_id": user_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.delete(f'/chats/{chat.id}/share', params={'user_id': user_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 @pytest.mark.asyncio
@@ -1639,18 +1723,25 @@ async def test_route_shared_access_update_rejects_workspace_chat(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    chat = WsChat(id=_uid(), user_id=user_id, title="WS Access Update Test",
-                  workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='WS Access Update Test',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
-    resp = await client.post(f"/shared/{chat.id}/access/update", params={"user_id": user_id})
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    resp = await client.post(f'/shared/{chat.id}/access/update', params={'user_id': user_id})
+    assert resp.status_code == 403, f'Expected 403, got {resp.status_code}: {resp.text}'
 
 
 # ---------------------------------------------------------------------------
 # P0: model/list/export surface isolation tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_route_personal_list_excludes_workspace_chats(route_client):
@@ -1659,24 +1750,22 @@ async def test_route_personal_list_excludes_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="My Private Chat",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="My WS Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='My Private Chat', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='My WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
 
     # personal list endpoint strips workspace_id IS NULL
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     personal = r.scalars().all()
     ids = [c.id for c in personal]
-    assert private_chat.id in ids, "Private chat must appear in personal list"
-    assert ws_chat.id not in ids, "Workspace chat must NOT appear in personal list"
+    assert private_chat.id in ids, 'Private chat must appear in personal list'
+    assert ws_chat.id not in ids, 'Workspace chat must NOT appear in personal list'
 
 
 @pytest.mark.asyncio
@@ -1689,20 +1778,18 @@ async def test_route_pinned_list_excludes_workspace_chats(route_client):
     # Represent pinned by adding a 'pinned' column in WsChat — we test the filter condition
     # directly since the test app's WsChat doesn't track pinned state in the schema.
     # The invariant: workspace_id IS NULL filter must exclude the workspace chat.
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Pinned WS Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Pinned Private Chat",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Pinned WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Pinned Private Chat', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
     # Simulate what get_pinned_chats_by_user_id does (with workspace_id IS NULL filter)
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     pinned_candidates = [c.id for c in r.scalars().all()]
     assert private_chat.id in pinned_candidates
     assert ws_chat.id not in pinned_candidates
@@ -1715,20 +1802,23 @@ async def test_route_archived_list_excludes_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Archived WS Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Archived Private Chat",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Archived WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
+    private_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='Archived Private Chat',
+        workspace_id=None,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
     # Simulate what get_archived_chats_by_user_id does (with workspace_id IS NULL filter)
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     archived_candidates = [c.id for c in r.scalars().all()]
     assert private_chat.id in archived_candidates
     assert ws_chat.id not in archived_candidates
@@ -1737,15 +1827,16 @@ async def test_route_archived_list_excludes_workspace_chats(route_client):
 @pytest.mark.asyncio
 async def test_route_stats_export_rejects_workspace_chat(route_client):
     """GET /stats/export/{chat_id} must reject workspace chats (403 or route guards)."""
+
     # This test verifies the guard condition directly: workspace_id IS NOT NULL → block.
     class FakeChat:
-        workspace_id = "ws-123"
-        user_id = "u-1"
+        workspace_id = 'ws-123'
+        user_id = 'u-1'
 
     chat = FakeChat()
     # The guard: workspace chat must be caught before user_id check
     blocked = chat.workspace_id is not None
-    assert blocked, "Stats export must block workspace chats"
+    assert blocked, 'Stats export must block workspace chats'
 
 
 @pytest.mark.asyncio
@@ -1756,19 +1847,21 @@ async def test_route_shared_list_excludes_workspace_originals(route_client):
     ws_id = _uid()
 
     # Create a workspace chat with a stale shared record (simulates pre-guard data)
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Shared Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Shared Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     # Create a private chat with a valid shared record
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Shared Chat",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Private Shared Chat', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
-    ws_share = WsSharedChat(id=_uid(), chat_id=ws_chat.id, user_id=user_id,
-                            created_at=_now(), updated_at=_now())
-    private_share = WsSharedChat(id=_uid(), chat_id=private_chat.id, user_id=user_id,
-                                 created_at=_now(), updated_at=_now())
+    ws_share = WsSharedChat(id=_uid(), chat_id=ws_chat.id, user_id=user_id, created_at=_now(), updated_at=_now())
+    private_share = WsSharedChat(
+        id=_uid(), chat_id=private_chat.id, user_id=user_id, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_share)
     db.add(private_share)
     await db.commit()
@@ -1780,8 +1873,8 @@ async def test_route_shared_list_excludes_workspace_originals(route_client):
         .where(WsSharedChat.user_id == user_id)
     )
     visible = [s.id for s in r.scalars().all()]
-    assert ws_share.id not in visible, "Stale workspace shared record must not appear in GET /shared"
-    assert private_share.id in visible, "Private shared record must appear in GET /shared"
+    assert ws_share.id not in visible, 'Stale workspace shared record must not appear in GET /shared'
+    assert private_share.id in visible, 'Private shared record must appear in GET /shared'
 
 
 @pytest.mark.asyncio
@@ -1791,8 +1884,14 @@ async def test_route_admin_export_documents_includes_all(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Admin Export WS Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='Admin Export WS Chat',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(ws_chat)
     await db.commit()
 
@@ -1800,12 +1899,13 @@ async def test_route_admin_export_documents_includes_all(route_client):
     # This test confirms workspace chats appear in the unrestricted admin query.
     r = await db.execute(select(WsChat))
     all_chats = [c.id for c in r.scalars().all()]
-    assert ws_chat.id in all_chats, "Admin export must include workspace chats by design"
+    assert ws_chat.id in all_chats, 'Admin export must include workspace chats by design'
 
 
 # ---------------------------------------------------------------------------
 # P0: private-surface mutation isolation tests (workspace_id IS NULL enforcement)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_model_personal_search_excludes_workspace_chats(route_client):
@@ -1814,10 +1914,12 @@ async def test_model_personal_search_excludes_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=user_id, title="Searchable Private",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Searchable WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='Searchable Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Searchable WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
@@ -1842,20 +1944,18 @@ async def test_model_folder_chat_list_excludes_workspace_chats(route_client):
     folder_id = _uid()
     ws_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=user_id, title="Folder Private",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Folder WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='Folder Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Folder WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
 
     # Mirror production filter (folder_id=folder_id, user_id, workspace_id IS NULL)
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     results = [c.id for c in r.scalars().all()]
     assert private.id in results
     assert ws_chat.id not in results
@@ -1868,20 +1968,18 @@ async def test_model_multi_folder_chat_list_excludes_workspace_chats(route_clien
     user_id = _uid()
     ws_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=user_id, title="MultiFolderPrivate",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="MultiFolderWS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='MultiFolderPrivate', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='MultiFolderWS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
 
     # Mirror: Chat.folder_id.in_(...) AND user_id AND workspace_id IS NULL
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     results = [c.id for c in r.scalars().all()]
     assert private.id in results
     assert ws_chat.id not in results
@@ -1894,28 +1992,26 @@ async def test_model_delete_all_does_not_delete_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=user_id, title="ToDelete Private",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="ToDelete WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='ToDelete Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='ToDelete WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
 
     # Delete only private chats (workspace_id IS NULL)
-    await db.execute(
-        delete(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    await db.execute(delete(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     await db.commit()
 
     # Private chat must be gone; workspace chat must survive
     r = await db.execute(select(WsChat).where(WsChat.id == private.id))
-    assert r.scalars().first() is None, "Private chat must be deleted"
+    assert r.scalars().first() is None, 'Private chat must be deleted'
 
     r = await db.execute(select(WsChat).where(WsChat.id == ws_chat.id))
-    assert r.scalars().first() is not None, "Workspace chat must NOT be deleted"
+    assert r.scalars().first() is not None, 'Workspace chat must NOT be deleted'
 
 
 @pytest.mark.asyncio
@@ -1925,29 +2021,29 @@ async def test_model_archive_all_does_not_archive_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=user_id, title="ArchiveAll Private",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="ArchiveAll WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='ArchiveAll Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='ArchiveAll WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
 
     # Archive only private chats
     from sqlalchemy import update as sa_update
+
     await db.execute(
-        sa_update(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-        .values(archived=True)
+        sa_update(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)).values(archived=True)
     )
     await db.commit()
 
     await db.refresh(private)
     await db.refresh(ws_chat)
 
-    assert private.archived is True, "Private chat must be archived"
-    assert ws_chat.archived is False, "Workspace chat must NOT be archived"
+    assert private.archived is True, 'Private chat must be archived'
+    assert ws_chat.archived is False, 'Workspace chat must NOT be archived'
 
 
 @pytest.mark.asyncio
@@ -1958,29 +2054,41 @@ async def test_model_unarchive_all_does_not_touch_workspace_chats(route_client):
     ws_id = _uid()
 
     # Start both chats as archived
-    private = WsChat(id=_uid(), user_id=user_id, title="UnarchiveAll Private",
-                     workspace_id=None, archived=True, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="UnarchiveAll WS",
-                     workspace_id=ws_id, archived=True, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='UnarchiveAll Private',
+        workspace_id=None,
+        archived=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    ws_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='UnarchiveAll WS',
+        workspace_id=ws_id,
+        archived=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
 
     # Unarchive only private chats
     from sqlalchemy import update as sa_update
+
     await db.execute(
-        sa_update(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-        .values(archived=False)
+        sa_update(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)).values(archived=False)
     )
     await db.commit()
 
     await db.refresh(private)
     await db.refresh(ws_chat)
 
-    assert private.archived is False, "Private chat must be unarchived"
-    assert ws_chat.archived is True, "Workspace chat must remain archived"
+    assert private.archived is False, 'Private chat must be unarchived'
+    assert ws_chat.archived is True, 'Workspace chat must remain archived'
 
 
 @pytest.mark.asyncio
@@ -1991,24 +2099,22 @@ async def test_model_delete_folder_chats_does_not_delete_workspace_chats(route_c
     folder_id = _uid()
     ws_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=user_id, title="FolderDel Private",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="FolderDel WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='FolderDel Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='FolderDel WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
 
     # Mirror delete_chats_by_user_id_and_folder_id with workspace guard
-    await db.execute(
-        delete(WsChat)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    await db.execute(delete(WsChat).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     await db.commit()
 
     r = await db.execute(select(WsChat).where(WsChat.id == ws_chat.id))
-    assert r.scalars().first() is not None, "Workspace chat must NOT be deleted by folder delete"
+    assert r.scalars().first() is not None, 'Workspace chat must NOT be deleted by folder delete'
 
 
 @pytest.mark.asyncio
@@ -2022,10 +2128,12 @@ async def test_model_move_folder_chats_does_not_move_workspace_chats(route_clien
 
     from sqlalchemy import update as sa_update
 
-    private = WsChat(id=_uid(), user_id=user_id, title="FolderMove Private",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="FolderMove WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=user_id, title='FolderMove Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='FolderMove WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     db.add(ws_chat)
     await db.commit()
@@ -2042,12 +2150,13 @@ async def test_model_move_folder_chats_does_not_move_workspace_chats(route_clien
     await db.commit()
 
     await db.refresh(ws_chat)
-    assert ws_chat.workspace_id == ws_id, "Workspace chat workspace_id must not be changed by folder move"
+    assert ws_chat.workspace_id == ws_id, 'Workspace chat workspace_id must not be changed by folder move'
 
 
 # ---------------------------------------------------------------------------
 # P0: completions / task / shared-deletion isolation tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_completions_former_member_denied(route_client):
@@ -2060,16 +2169,16 @@ async def test_completions_former_member_denied(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, former_id, ROLE_MEMBER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Completion Chat",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=creator_id, title='Completion Chat', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
     # Remove former_id from workspace
     await db.execute(
         delete(WsWorkspaceMember).where(
-            and_(WsWorkspaceMember.workspace_id == ws.id,
-                 WsWorkspaceMember.user_id == former_id)
+            and_(WsWorkspaceMember.workspace_id == ws.id, WsWorkspaceMember.user_id == former_id)
         )
     )
     await db.commit()
@@ -2080,7 +2189,7 @@ async def test_completions_former_member_denied(route_client):
     active_ws = r.scalars().first()
 
     allowed = active_ws is not None and member is not None and member.role in WRITE_ROLES
-    assert not allowed, "Former member must be denied completion access"
+    assert not allowed, 'Former member must be denied completion access'
 
 
 @pytest.mark.asyncio
@@ -2092,8 +2201,14 @@ async def test_completions_deleted_workspace_denied(route_client):
     ws = await create_workspace(db, creator_id)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Deleted WS Completion",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Deleted WS Completion',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
@@ -2105,7 +2220,7 @@ async def test_completions_deleted_workspace_denied(route_client):
     active_ws = r.scalars().first()
 
     allowed = active_ws is not None
-    assert not allowed, "Deleted workspace must deny completion access"
+    assert not allowed, 'Deleted workspace must deny completion access'
 
 
 @pytest.mark.asyncio
@@ -2119,8 +2234,14 @@ async def test_completions_admin_cannot_bypass_workspace(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     # admin_id is NOT added to the workspace
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Admin Bypass Test",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Admin Bypass Test',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
@@ -2131,7 +2252,7 @@ async def test_completions_admin_cannot_bypass_workspace(route_client):
 
     # Admin is not a member → denied even with admin role
     allowed = active_ws is not None and member is not None and member.role in WRITE_ROLES
-    assert not allowed, "Admin platform role must not bypass workspace membership for completions"
+    assert not allowed, 'Admin platform role must not bypass workspace membership for completions'
 
 
 @pytest.mark.asyncio
@@ -2145,15 +2266,15 @@ async def test_task_list_former_member_denied(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, former_id, ROLE_MEMBER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Task Chat",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=creator_id, title='Task Chat', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
     await db.execute(
         delete(WsWorkspaceMember).where(
-            and_(WsWorkspaceMember.workspace_id == ws.id,
-                 WsWorkspaceMember.user_id == former_id)
+            and_(WsWorkspaceMember.workspace_id == ws.id, WsWorkspaceMember.user_id == former_id)
         )
     )
     await db.commit()
@@ -2164,7 +2285,7 @@ async def test_task_list_former_member_denied(route_client):
     active_ws = r.scalars().first()
 
     allowed = active_ws is not None and member is not None
-    assert not allowed, "Former member must be denied task list access"
+    assert not allowed, 'Former member must be denied task list access'
 
 
 @pytest.mark.asyncio
@@ -2178,15 +2299,15 @@ async def test_task_stop_former_member_denied(route_client):
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
     await add_member(db, ws.id, former_id, ROLE_MEMBER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Task Stop Chat",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(), user_id=creator_id, title='Task Stop Chat', workspace_id=ws.id, created_at=_now(), updated_at=_now()
+    )
     db.add(chat)
     await db.commit()
 
     await db.execute(
         delete(WsWorkspaceMember).where(
-            and_(WsWorkspaceMember.workspace_id == ws.id,
-                 WsWorkspaceMember.user_id == former_id)
+            and_(WsWorkspaceMember.workspace_id == ws.id, WsWorkspaceMember.user_id == former_id)
         )
     )
     await db.commit()
@@ -2197,7 +2318,7 @@ async def test_task_stop_former_member_denied(route_client):
     active_ws = r.scalars().first()
 
     allowed = active_ws is not None and member is not None and member.role in WRITE_ROLES
-    assert not allowed, "Former member must be denied task stop access"
+    assert not allowed, 'Former member must be denied task stop access'
 
 
 @pytest.mark.asyncio
@@ -2210,10 +2331,12 @@ async def test_bulk_shared_deletion_ignores_workspace_chats(route_client):
     from sqlalchemy import update as sa_update
 
     # Give both chats a non-null share_id to verify it is only cleared on private chats
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Bulk Del Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Bulk Del WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Bulk Del Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Bulk Del WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
@@ -2231,14 +2354,15 @@ async def test_bulk_shared_deletion_ignores_workspace_chats(route_client):
     await db.refresh(private_chat)
     await db.refresh(ws_chat)
 
-    assert private_chat.archived is True, "Private chat must be affected by bulk operation"
-    assert ws_chat.archived is False, "Workspace chat must NOT be affected by bulk operation"
+    assert private_chat.archived is True, 'Private chat must be affected by bulk operation'
+    assert ws_chat.archived is False, 'Workspace chat must NOT be affected by bulk operation'
 
 
 # ---------------------------------------------------------------------------
 # P0: final blocker tests — error-handler mutation, analytics, folder lookup,
 # shared-snapshot cleanup
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_error_handler_denied_workspace_completion_no_write(route_client):
@@ -2253,8 +2377,14 @@ async def test_error_handler_denied_workspace_completion_no_write(route_client):
     ws = await create_workspace(db, creator_id)
     await add_member(db, ws.id, creator_id, ROLE_MANAGER)
 
-    chat = WsChat(id=_uid(), user_id=creator_id, title="Error Handler Chat",
-                  workspace_id=ws.id, created_at=_now(), updated_at=_now())
+    chat = WsChat(
+        id=_uid(),
+        user_id=creator_id,
+        title='Error Handler Chat',
+        workspace_id=ws.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(chat)
     await db.commit()
 
@@ -2265,7 +2395,7 @@ async def test_error_handler_denied_workspace_completion_no_write(route_client):
 
     # non_member_id is not in the workspace → _can_write must be False
     can_write = active_ws is not None and member is not None and (member.role if member else None) in WRITE_ROLES
-    assert not can_write, "Error handler must not write for non-member workspace chat"
+    assert not can_write, 'Error handler must not write for non-member workspace chat'
 
 
 @pytest.mark.asyncio
@@ -2274,14 +2404,15 @@ async def test_error_handler_private_chat_write_allowed(route_client):
     client, db = route_client
     owner_id = _uid()
 
-    private = WsChat(id=_uid(), user_id=owner_id, title="Private Error Chat",
-                     workspace_id=None, created_at=_now(), updated_at=_now())
+    private = WsChat(
+        id=_uid(), user_id=owner_id, title='Private Error Chat', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(private)
     await db.commit()
 
     # Mirror: workspace_id is None → fall through to owner check
     can_write = private.user_id == owner_id  # owner, not admin needed
-    assert can_write, "Private chat owner must still receive error writes"
+    assert can_write, 'Private chat owner must still receive error writes'
 
 
 @pytest.mark.asyncio
@@ -2291,23 +2422,23 @@ async def test_analytics_excludes_workspace_chat_tags(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Analytics Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Analytics WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Analytics Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Analytics WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
 
     # Mirror analytics guard: only include chats where workspace_id IS NULL
     r = await db.execute(
-        select(WsChat)
-        .where(WsChat.id.in_([private_chat.id, ws_chat.id]))
-        .where(WsChat.workspace_id.is_(None))
+        select(WsChat).where(WsChat.id.in_([private_chat.id, ws_chat.id])).where(WsChat.workspace_id.is_(None))
     )
     visible_to_analytics = [c.id for c in r.scalars().all()]
     assert private_chat.id in visible_to_analytics
-    assert ws_chat.id not in visible_to_analytics, "Workspace chat must not appear in analytics tag aggregation"
+    assert ws_chat.id not in visible_to_analytics, 'Workspace chat must not appear in analytics tag aggregation'
 
 
 @pytest.mark.asyncio
@@ -2319,8 +2450,9 @@ async def test_get_chat_folder_id_returns_none_for_workspace_chat(route_client):
     folder_id = _uid()
 
     # Workspace chat — has a folder_id set but must not be surfaced via private folder path
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Folder WS Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Folder WS Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     await db.commit()
 
@@ -2332,7 +2464,7 @@ async def test_get_chat_folder_id_returns_none_for_workspace_chat(route_client):
         .where(WsChat.workspace_id.is_(None))
     )
     row = r.first()
-    assert row is None, "get_chat_folder_id must return None for workspace chats"
+    assert row is None, 'get_chat_folder_id must return None for workspace chats'
 
 
 @pytest.mark.asyncio
@@ -2342,19 +2474,26 @@ async def test_delete_shared_chats_ignores_workspace_snapshots(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Shared Cleanup Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Shared Cleanup WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='Shared Cleanup Private',
+        workspace_id=None,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Shared Cleanup WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
 
-    private_share = WsSharedChat(id=_uid(), chat_id=private_chat.id, user_id=user_id,
-                                 created_at=_now(), updated_at=_now())
+    private_share = WsSharedChat(
+        id=_uid(), chat_id=private_chat.id, user_id=user_id, created_at=_now(), updated_at=_now()
+    )
     # stale workspace share (pre-guard data, should survive cleanup)
-    ws_share = WsSharedChat(id=_uid(), chat_id=ws_chat.id, user_id=user_id,
-                            created_at=_now(), updated_at=_now())
+    ws_share = WsSharedChat(id=_uid(), chat_id=ws_chat.id, user_id=user_id, created_at=_now(), updated_at=_now())
     db.add(private_share)
     db.add(ws_share)
     await db.commit()
@@ -2372,10 +2511,10 @@ async def test_delete_shared_chats_ignores_workspace_snapshots(route_client):
     await db.commit()
 
     r = await db.execute(select(WsSharedChat).where(WsSharedChat.id == private_share.id))
-    assert r.scalars().first() is None, "Private shared snapshot must be deleted"
+    assert r.scalars().first() is None, 'Private shared snapshot must be deleted'
 
     r = await db.execute(select(WsSharedChat).where(WsSharedChat.id == ws_share.id))
-    assert r.scalars().first() is not None, "Workspace shared snapshot must NOT be deleted"
+    assert r.scalars().first() is not None, 'Workspace shared snapshot must NOT be deleted'
 
 
 # ---------------------------------------------------------------------------
@@ -2390,26 +2529,24 @@ async def test_analytics_messages_by_chat_id_excludes_workspace_chat(route_clien
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Chat Msg",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Chat Msg",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Chat Msg', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Private Chat Msg', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
     # Mirror analytics guard: workspace chat must be excluded (workspace_id IS NOT NULL → empty)
     for chat in [ws_chat, private_chat]:
-        r = await db.execute(
-            select(WsChat)
-            .where(WsChat.id == chat.id)
-            .where(WsChat.workspace_id.is_(None))
-        )
+        r = await db.execute(select(WsChat).where(WsChat.id == chat.id).where(WsChat.workspace_id.is_(None)))
         row = r.scalars().first()
         if chat.workspace_id is not None:
-            assert row is None, "Workspace chat must not pass analytics messages filter"
+            assert row is None, 'Workspace chat must not pass analytics messages filter'
         else:
-            assert row is not None, "Private chat must pass analytics messages filter"
+            assert row is not None, 'Private chat must pass analytics messages filter'
 
 
 @pytest.mark.asyncio
@@ -2419,25 +2556,23 @@ async def test_analytics_messages_by_user_id_excludes_workspace_chats(route_clie
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS User Msg",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private User Msg",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS User Msg', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Private User Msg', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
     # Simulate the filter: given a list of chat_ids (from user messages), only keep private ones
     candidate_ids = [ws_chat.id, private_chat.id]
-    r = await db.execute(
-        select(WsChat.id)
-        .where(WsChat.id.in_(candidate_ids))
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat.id).where(WsChat.id.in_(candidate_ids)).where(WsChat.workspace_id.is_(None)))
     private_ids = {row for row in r.scalars().all()}
 
-    assert ws_chat.id not in private_ids, "Workspace chat must be stripped from user message analytics"
-    assert private_chat.id in private_ids, "Private chat must remain in user message analytics"
+    assert ws_chat.id not in private_ids, 'Workspace chat must be stripped from user message analytics'
+    assert private_chat.id in private_ids, 'Private chat must remain in user message analytics'
 
 
 @pytest.mark.asyncio
@@ -2447,25 +2582,23 @@ async def test_analytics_model_chat_list_excludes_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Model Chat",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Model Chat",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Model Chat', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Private Model Chat', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
     # Simulate _filter_private_chat_ids: only chats with workspace_id IS NULL survive
     all_chat_ids = [ws_chat.id, private_chat.id]
-    r = await db.execute(
-        select(WsChat.id)
-        .where(WsChat.id.in_(all_chat_ids))
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat.id).where(WsChat.id.in_(all_chat_ids)).where(WsChat.workspace_id.is_(None)))
     filtered = list(r.scalars().all())
 
-    assert ws_chat.id not in filtered, "Workspace chat ID must not appear in model chat browser"
-    assert private_chat.id in filtered, "Private chat must appear in model chat browser"
+    assert ws_chat.id not in filtered, 'Workspace chat ID must not appear in model chat browser'
+    assert private_chat.id in filtered, 'Private chat must appear in model chat browser'
 
 
 @pytest.mark.asyncio
@@ -2475,25 +2608,23 @@ async def test_analytics_feedback_history_excludes_workspace_chats(route_client)
     user_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="WS Feedback",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Private Feedback",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='WS Feedback', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Private Feedback', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
 
     # Simulate _filter_private_chat_ids applied before feedback aggregation
     model_chat_ids = [ws_chat.id, private_chat.id]
-    r = await db.execute(
-        select(WsChat.id)
-        .where(WsChat.id.in_(model_chat_ids))
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat.id).where(WsChat.id.in_(model_chat_ids)).where(WsChat.workspace_id.is_(None)))
     ids_for_feedback = list(r.scalars().all())
 
-    assert ws_chat.id not in ids_for_feedback, "Workspace chat must be excluded from feedback history aggregation"
-    assert private_chat.id in ids_for_feedback, "Private chat must be included in feedback history aggregation"
+    assert ws_chat.id not in ids_for_feedback, 'Workspace chat must be excluded from feedback history aggregation'
+    assert private_chat.id in ids_for_feedback, 'Private chat must be included in feedback history aggregation'
 
 
 @pytest.mark.asyncio
@@ -2502,29 +2633,28 @@ async def test_analytics_private_chat_always_visible(route_client):
     client, db = route_client
     user_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Visible Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Visible Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     await db.commit()
 
     # All three analytics filters use workspace_id IS NULL — verify private chat passes all
-    for label in ("messages", "model_chats", "feedback_history"):
-        r = await db.execute(
-            select(WsChat)
-            .where(WsChat.id == private_chat.id)
-            .where(WsChat.workspace_id.is_(None))
-        )
+    for label in ('messages', 'model_chats', 'feedback_history'):
+        r = await db.execute(select(WsChat).where(WsChat.id == private_chat.id).where(WsChat.workspace_id.is_(None)))
         row = r.scalars().first()
-        assert row is not None, f"Private chat must pass analytics {label} filter"
+        assert row is not None, f'Private chat must pass analytics {label} filter'
 
 
 # ---------------------------------------------------------------------------
 # Analytics aggregate / tag / folder / socket — additional isolation tests
 # ---------------------------------------------------------------------------
 
+
 class WsChatMessage(Base):
     """Mirror of chat_message table for aggregate analytics tests."""
-    __tablename__ = "chat_message_ws_test"
+
+    __tablename__ = 'chat_message_ws_test'
     id = Column(String, primary_key=True)
     chat_id = Column(String, nullable=False)
     user_id = Column(String, nullable=True)
@@ -2540,23 +2670,21 @@ async def test_tag_filtered_list_excludes_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Tag Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Tag WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Tag Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Tag WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
 
     # Mirror get_chat_list_by_user_id_and_tag_name filter
-    r = await db.execute(
-        select(WsChat.id)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat.id).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     visible = {row for row in r.scalars().all()}
-    assert private_chat.id in visible, "Private chat must appear in tag-filtered list"
-    assert ws_chat.id not in visible, "Workspace chat must not appear in tag-filtered list"
+    assert private_chat.id in visible, 'Private chat must appear in tag-filtered list'
+    assert ws_chat.id not in visible, 'Workspace chat must not appear in tag-filtered list'
 
 
 @pytest.mark.asyncio
@@ -2566,22 +2694,20 @@ async def test_chat_list_by_user_id_excludes_workspace_chats(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="List Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="List WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='List Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='List WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
 
-    r = await db.execute(
-        select(WsChat.id)
-        .where(WsChat.user_id == user_id)
-        .where(WsChat.workspace_id.is_(None))
-    )
+    r = await db.execute(select(WsChat.id).where(WsChat.user_id == user_id).where(WsChat.workspace_id.is_(None)))
     visible = {row for row in r.scalars().all()}
-    assert private_chat.id in visible, "Private chat must appear in chat list by user_id"
-    assert ws_chat.id not in visible, "Workspace chat must not appear in chat list by user_id"
+    assert private_chat.id in visible, 'Private chat must appear in chat list by user_id'
+    assert ws_chat.id not in visible, 'Workspace chat must not appear in chat list by user_id'
 
 
 @pytest.mark.asyncio
@@ -2592,10 +2718,22 @@ async def test_folder_assignment_rejects_workspace_chat(route_client):
     ws_id = _uid()
     folder_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Folder WS Assignment",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Folder Private Assignment",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='Folder WS Assignment',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    private_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='Folder Private Assignment',
+        workspace_id=None,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(ws_chat)
     db.add(private_chat)
     await db.commit()
@@ -2606,15 +2744,11 @@ async def test_folder_assignment_rejects_workspace_chat(route_client):
         .where(WsChat.id == ws_chat.id)
         .where(WsChat.workspace_id.is_(None))  # route checks this before update
     )
-    assert r.scalars().first() is None, "Workspace chat must fail folder assignment guard"
+    assert r.scalars().first() is None, 'Workspace chat must fail folder assignment guard'
 
     # Private chat passes the guard
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.id == private_chat.id)
-        .where(WsChat.workspace_id.is_(None))
-    )
-    assert r.scalars().first() is not None, "Private chat must pass folder assignment guard"
+    r = await db.execute(select(WsChat).where(WsChat.id == private_chat.id).where(WsChat.workspace_id.is_(None)))
+    assert r.scalars().first() is not None, 'Private chat must pass folder assignment guard'
 
 
 @pytest.mark.asyncio
@@ -2627,12 +2761,14 @@ async def test_analytics_aggregate_excludes_workspace_messages(route_client):
     client, db = route_client
     user_id = _uid()
     ws_id = _uid()
-    model_id = "test-model"
+    model_id = 'test-model'
 
-    private_chat = WsChat(id=_uid(), user_id=user_id, title="Agg Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="Agg WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Agg Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
+    ws_chat = WsChat(
+        id=_uid(), user_id=user_id, title='Agg WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     db.add(ws_chat)
     await db.commit()
@@ -2640,14 +2776,12 @@ async def test_analytics_aggregate_excludes_workspace_messages(route_client):
     # Simulate: given messages from both chats, only count those from private chats
     chat_ids_with_messages = [private_chat.id, ws_chat.id]
     r = await db.execute(
-        select(WsChat.id)
-        .where(WsChat.id.in_(chat_ids_with_messages))
-        .where(WsChat.workspace_id.is_(None))
+        select(WsChat.id).where(WsChat.id.in_(chat_ids_with_messages)).where(WsChat.workspace_id.is_(None))
     )
     private_chat_ids = set(r.scalars().all())
 
-    assert private_chat.id in private_chat_ids, "Private chat messages must be counted in analytics"
-    assert ws_chat.id not in private_chat_ids, "Workspace chat messages must be excluded from analytics aggregates"
+    assert private_chat.id in private_chat_ids, 'Private chat messages must be counted in analytics'
+    assert ws_chat.id not in private_chat_ids, 'Workspace chat messages must be excluded from analytics aggregates'
 
 
 @pytest.mark.asyncio
@@ -2662,26 +2796,23 @@ async def test_socket_last_read_at_non_owner_member_safe(route_client):
     non_owner_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=owner_id, title="Socket WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=owner_id, title='Socket WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     await db.commit()
 
     # Non-owner: must not match the user_id check in update_chat_last_read_at_by_id
     r = await db.execute(
-        select(WsChat)
-        .where(WsChat.id == ws_chat.id)
-        .where(WsChat.user_id == non_owner_id)  # mirrors helper guard
+        select(WsChat).where(WsChat.id == ws_chat.id).where(WsChat.user_id == non_owner_id)  # mirrors helper guard
     )
-    assert r.scalars().first() is None, "Non-owner workspace member must fail last_read_at ownership check"
+    assert r.scalars().first() is None, 'Non-owner workspace member must fail last_read_at ownership check'
 
     # Owner: passes ownership check — but socket handler also verifies workspace membership
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.id == ws_chat.id)
-        .where(WsChat.user_id == owner_id)
+    r = await db.execute(select(WsChat).where(WsChat.id == ws_chat.id).where(WsChat.user_id == owner_id))
+    assert r.scalars().first() is not None, (
+        'Owner passes ownership check (socket handler adds workspace membership guard)'
     )
-    assert r.scalars().first() is not None, "Owner passes ownership check (socket handler adds workspace membership guard)"
 
 
 # ---------------------------------------------------------------------------
@@ -2696,8 +2827,9 @@ async def test_view_chat_denies_former_workspace_owner(route_client):
     owner_id = _uid()
     ws_id = _uid()
 
-    ws_chat = WsChat(id=_uid(), user_id=owner_id, title="ViewChat WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws_chat = WsChat(
+        id=_uid(), user_id=owner_id, title='ViewChat WS', workspace_id=ws_id, created_at=_now(), updated_at=_now()
+    )
     db.add(ws_chat)
     await db.commit()
 
@@ -2708,7 +2840,7 @@ async def test_view_chat_denies_former_workspace_owner(route_client):
         .where(WsWorkspaceMember.workspace_id == ws_id)
         .where(WsWorkspaceMember.user_id == owner_id)
     )
-    assert member_row.scalars().first() is None, "No membership row → access must be denied even for owner"
+    assert member_row.scalars().first() is None, 'No membership row → access must be denied even for owner'
 
 
 @pytest.mark.asyncio
@@ -2718,22 +2850,24 @@ async def test_view_chat_denies_deleted_workspace(route_client):
     user_id = _uid()
     ws_id = _uid()
 
-    ws = WsWorkspace(id=ws_id, user_id=user_id, name="Deleted WS",
-                     created_at=_now(), updated_at=_now(),
-                     deleted_at=_now())  # soft-deleted
-    ws_chat = WsChat(id=_uid(), user_id=user_id, title="ViewChat Deleted WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
+    ws = WsWorkspace(
+        id=ws_id, user_id=user_id, name='Deleted WS', created_at=_now(), updated_at=_now(), deleted_at=_now()
+    )  # soft-deleted
+    ws_chat = WsChat(
+        id=_uid(),
+        user_id=user_id,
+        title='ViewChat Deleted WS',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
     db.add(ws)
     db.add(ws_chat)
     await db.commit()
 
     # Simulate Workspaces.get_by_id which filters deleted_at IS NULL
-    r = await db.execute(
-        select(WsWorkspace)
-        .where(WsWorkspace.id == ws_id)
-        .where(WsWorkspace.deleted_at.is_(None))
-    )
-    assert r.scalars().first() is None, "Soft-deleted workspace must cause view_chat to deny access"
+    r = await db.execute(select(WsWorkspace).where(WsWorkspace.id == ws_id).where(WsWorkspace.deleted_at.is_(None)))
+    assert r.scalars().first() is None, 'Soft-deleted workspace must cause view_chat to deny access'
 
 
 @pytest.mark.asyncio
@@ -2744,24 +2878,28 @@ async def test_view_chat_allows_active_workspace_member(route_client):
     member_id = _uid()
     ws_id = _uid()
 
-    ws = WsWorkspace(id=ws_id, user_id=owner_id, name="Active WS",
-                     created_at=_now(), updated_at=_now(), deleted_at=None)
-    ws_chat = WsChat(id=_uid(), user_id=owner_id, title="ViewChat Active WS",
-                     workspace_id=ws_id, created_at=_now(), updated_at=_now())
-    member = WsWorkspaceMember(id=_uid(), workspace_id=ws_id, user_id=member_id,
-                               role=ROLE_MEMBER, created_at=_now(), updated_at=_now())
+    ws = WsWorkspace(
+        id=ws_id, user_id=owner_id, name='Active WS', created_at=_now(), updated_at=_now(), deleted_at=None
+    )
+    ws_chat = WsChat(
+        id=_uid(),
+        user_id=owner_id,
+        title='ViewChat Active WS',
+        workspace_id=ws_id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    member = WsWorkspaceMember(
+        id=_uid(), workspace_id=ws_id, user_id=member_id, role=ROLE_MEMBER, created_at=_now(), updated_at=_now()
+    )
     db.add(ws)
     db.add(ws_chat)
     db.add(member)
     await db.commit()
 
     # Workspace exists and is active
-    r = await db.execute(
-        select(WsWorkspace)
-        .where(WsWorkspace.id == ws_id)
-        .where(WsWorkspace.deleted_at.is_(None))
-    )
-    assert r.scalars().first() is not None, "Active workspace must exist"
+    r = await db.execute(select(WsWorkspace).where(WsWorkspace.id == ws_id).where(WsWorkspace.deleted_at.is_(None)))
+    assert r.scalars().first() is not None, 'Active workspace must exist'
 
     # Member row exists → access allowed
     r = await db.execute(
@@ -2769,7 +2907,7 @@ async def test_view_chat_allows_active_workspace_member(route_client):
         .where(WsWorkspaceMember.workspace_id == ws_id)
         .where(WsWorkspaceMember.user_id == member_id)
     )
-    assert r.scalars().first() is not None, "Active member must be allowed by view_chat"
+    assert r.scalars().first() is not None, 'Active member must be allowed by view_chat'
 
 
 @pytest.mark.asyncio
@@ -2779,8 +2917,9 @@ async def test_view_chat_allows_private_chat_owner(route_client):
     owner_id = _uid()
     other_id = _uid()
 
-    private_chat = WsChat(id=_uid(), user_id=owner_id, title="ViewChat Private",
-                          workspace_id=None, created_at=_now(), updated_at=_now())
+    private_chat = WsChat(
+        id=_uid(), user_id=owner_id, title='ViewChat Private', workspace_id=None, created_at=_now(), updated_at=_now()
+    )
     db.add(private_chat)
     await db.commit()
 
@@ -2791,26 +2930,23 @@ async def test_view_chat_allows_private_chat_owner(route_client):
         .where(WsChat.user_id == owner_id)
         .where(WsChat.workspace_id.is_(None))
     )
-    assert r.scalars().first() is not None, "Private chat owner must still be allowed"
+    assert r.scalars().first() is not None, 'Private chat owner must still be allowed'
 
     # Non-owner blocked
-    r = await db.execute(
-        select(WsChat)
-        .where(WsChat.id == private_chat.id)
-        .where(WsChat.user_id == other_id)
-    )
-    assert r.scalars().first() is None, "Non-owner must be denied on private chat"
+    r = await db.execute(select(WsChat).where(WsChat.id == private_chat.id).where(WsChat.user_id == other_id))
+    assert r.scalars().first() is None, 'Non-owner must be denied on private chat'
+
 
 # ---------------------------------------------------------------------------
 # Company governance policy tests: core roles + Groups
 # ---------------------------------------------------------------------------
 
-CORE_ROLE_PENDING = "pending"
-CORE_ROLE_USER = "user"
-CORE_ROLE_ADMIN = "admin"
-CEO_GROUP_NAMES = {"CEO"}
-PRIVATE_CHAT_ALLOWED_GROUP_NAMES = {"CEO", "Manager", "Managers", "Private Chat Allowed"}
-WORKSPACE_ALL_ACCESS_GROUP_NAMES = {"CEO"}
+CORE_ROLE_PENDING = 'pending'
+CORE_ROLE_USER = 'user'
+CORE_ROLE_ADMIN = 'admin'
+CEO_GROUP_NAMES = {'CEO'}
+PRIVATE_CHAT_ALLOWED_GROUP_NAMES = {'CEO', 'Manager', 'Managers', 'Private Chat Allowed'}
+WORKSPACE_ALL_ACCESS_GROUP_NAMES = {'CEO'}
 
 
 def _can_use_private(role: str, groups: set[str] | None = None) -> bool:
@@ -2839,24 +2975,24 @@ async def test_governance_core_admin_can_use_private_chat():
 
 @pytest.mark.asyncio
 async def test_governance_ceo_group_user_can_use_private_chat_and_all_workspaces():
-    assert _can_use_private(CORE_ROLE_USER, {"CEO"})
-    assert _can_access_all_workspaces(CORE_ROLE_USER, {"CEO"})
+    assert _can_use_private(CORE_ROLE_USER, {'CEO'})
+    assert _can_access_all_workspaces(CORE_ROLE_USER, {'CEO'})
 
 
 @pytest.mark.asyncio
 async def test_governance_manager_group_user_can_use_private_chat_without_all_workspace_access():
-    assert _can_use_private(CORE_ROLE_USER, {"Manager"})
-    assert _can_use_private(CORE_ROLE_USER, {"Managers"})
-    assert _can_use_private(CORE_ROLE_USER, {"Private Chat Allowed"})
-    assert not _can_access_all_workspaces(CORE_ROLE_USER, {"Manager"})
-    assert not _can_access_all_workspaces(CORE_ROLE_USER, {"Managers"})
+    assert _can_use_private(CORE_ROLE_USER, {'Manager'})
+    assert _can_use_private(CORE_ROLE_USER, {'Managers'})
+    assert _can_use_private(CORE_ROLE_USER, {'Private Chat Allowed'})
+    assert not _can_access_all_workspaces(CORE_ROLE_USER, {'Manager'})
+    assert not _can_access_all_workspaces(CORE_ROLE_USER, {'Managers'})
 
 
 @pytest.mark.asyncio
 async def test_governance_normal_core_user_cannot_create_private_chat():
     assert not _can_use_private(CORE_ROLE_USER)
-    assert not _can_use_private(CORE_ROLE_USER, {"Member"})
-    assert not _can_use_private(CORE_ROLE_PENDING, {"CEO"})
+    assert not _can_use_private(CORE_ROLE_USER, {'Member'})
+    assert not _can_use_private(CORE_ROLE_PENDING, {'CEO'})
 
 
 @pytest.mark.asyncio
@@ -2864,13 +3000,13 @@ async def test_governance_workspace_creation_is_core_admin_only():
     assert _can_create_workspace(CORE_ROLE_ADMIN)
     assert not _can_create_workspace(CORE_ROLE_USER)
     assert not _can_create_workspace(CORE_ROLE_PENDING)
-    assert not _can_create_workspace(CORE_ROLE_USER), "CEO/Managers still need core admin for workspace creation"
+    assert not _can_create_workspace(CORE_ROLE_USER), 'CEO/Managers still need core admin for workspace creation'
 
 
 @pytest.mark.asyncio
 async def test_governance_private_chat_list_empty_for_workspace_only_member(db):
     user_id = _uid()
-    db.add(WsChat(id=_uid(), user_id=user_id, title="Private", workspace_id=None, created_at=_now(), updated_at=_now()))
+    db.add(WsChat(id=_uid(), user_id=user_id, title='Private', workspace_id=None, created_at=_now(), updated_at=_now()))
     await db.commit()
 
     private_chats = [] if not _can_use_private(CORE_ROLE_USER) else await personal_chats(db, user_id)
@@ -2879,7 +3015,9 @@ async def test_governance_private_chat_list_empty_for_workspace_only_member(db):
 
 @pytest.mark.asyncio
 async def test_governance_import_clone_private_chat_blocked_for_workspace_only_member():
-    assert not _can_use_private(CORE_ROLE_USER), "Import/clone creates private chats and must be blocked for workspace-only users"
+    assert not _can_use_private(CORE_ROLE_USER), (
+        'Import/clone creates private chats and must be blocked for workspace-only users'
+    )
 
 
 @pytest.mark.asyncio

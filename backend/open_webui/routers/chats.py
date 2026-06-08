@@ -61,6 +61,7 @@ router = APIRouter()
 #   • Workspace must exist and not be soft-deleted.
 #   • User must be an explicit, active workspace member.
 
+
 async def _ws_check(
     chat,
     user,
@@ -143,7 +144,7 @@ async def assert_workspace_folder_id_allowed(
         return
     folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
     if folder is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Folder must be in the same workspace")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Folder must be in the same workspace')
 
 
 async def assert_workspace_chat_not_shareable(chat) -> None:
@@ -157,8 +158,9 @@ async def assert_workspace_chat_not_shareable(chat) -> None:
     if chat.workspace_id is not None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Workspace chats cannot be publicly shared in V1.",
+            detail='Workspace chats cannot be publicly shared in V1.',
         )
+
 
 ############################
 # GetChatList
