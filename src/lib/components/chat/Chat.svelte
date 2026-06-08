@@ -2505,8 +2505,8 @@
 								? { folder_id: getSelectedFolderIdForChat(resolvedWorkspaceId) }
 								: {})
 						}
-					: getSelectedFolderIdForChat(null)
-						? { folder_id: getSelectedFolderIdForChat(null) }
+					: $selectedFolder?.id
+						? { folder_id: $selectedFolder.id }
 						: {}),
 
 				id: responseMessageId,
