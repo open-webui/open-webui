@@ -54,6 +54,14 @@ export type WorkspaceChatResponse = {
 	updated_at: number;
 	created_at: number;
 	last_read_at?: number | null;
+	folder_id?: string | null;
+};
+
+export type WorkspaceFolderForm = {
+	name?: string;
+	data?: Record<string, any>;
+	meta?: Record<string, any>;
+	parent_id?: string | null;
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -111,6 +119,23 @@ export const updateWorkspace = async (token: string, id: string, form: Workspace
 
 export const deleteWorkspace = async (token: string, id: string) =>
 	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${id}`, { method: 'DELETE' }, token);
+
+export const getWorkspaceDefaultModel = async (
+	token: string,
+	workspaceId: string
+): Promise<{ model_id?: string | null }> =>
+	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/default-model`, { method: 'GET' }, token);
+
+export const setWorkspaceDefaultModel = async (
+	token: string,
+	workspaceId: string,
+	modelId: string | null
+): Promise<{ model_id?: string | null }> =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/default-model`,
+		{ method: 'PUT', body: JSON.stringify({ model_id: modelId }) },
+		token
+	);
 
 // ── Members ──────────────────────────────────────────────────────────────────
 
@@ -174,3 +199,84 @@ export const createWorkspaceChat = async (token: string, workspaceId: string, ch
 		{ method: 'POST', body: JSON.stringify({ chat }) },
 		token
 	);
+
+export const getWorkspaceFolders = async (token: string, workspaceId: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders`, { method: 'GET' }, token) ??
+	[];
+
+export const createWorkspaceFolder = async (
+	token: string,
+	workspaceId: string,
+	folderForm: WorkspaceFolderForm
+) =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders`,
+		{ method: 'POST', body: JSON.stringify(folderForm) },
+		token
+	);
+
+export const getWorkspaceFolderById = async (token: string, workspaceId: string, folderId: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}`, { method: 'GET' }, token);
+
+export const updateWorkspaceFolderById = async (
+	token: string,
+	workspaceId: string,
+	folderId: string,
+	folderForm: WorkspaceFolderForm
+) =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}/update`,
+		{ method: 'POST', body: JSON.stringify(folderForm) },
+		token
+	);
+
+export const updateWorkspaceFolderParentIdById = async (
+	token: string,
+	workspaceId: string,
+	folderId: string,
+	parentId?: string | null
+) =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}/update/parent`,
+		{ method: 'POST', body: JSON.stringify({ parent_id: parentId ?? null }) },
+		token
+	);
+
+export const updateWorkspaceFolderIsExpandedById = async (
+	token: string,
+	workspaceId: string,
+	folderId: string,
+	isExpanded: boolean
+) =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}/update/expanded`,
+		{ method: 'POST', body: JSON.stringify({ is_expanded: isExpanded }) },
+		token
+	);
+
+export const getWorkspaceChatListByFolderId = async (
+	token: string,
+	workspaceId: string,
+	folderId: string,
+	page: number = 1
+) =>
+	apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}/chats?page=${page}`,
+		{ method: 'GET' },
+		token
+	) ?? [];
+
+export const deleteWorkspaceFolderById = async (
+	token: string,
+	workspaceId: string,
+	folderId: string,
+	deleteContents: boolean
+) => {
+	const searchParams = new URLSearchParams();
+	searchParams.append('delete_contents', deleteContents ? 'true' : 'false');
+	return apiFetch(
+		`${WEBUI_API_BASE_URL}/workspaces/${workspaceId}/folders/${folderId}?${searchParams.toString()}`,
+		{ method: 'DELETE' },
+		token
+	);
+};

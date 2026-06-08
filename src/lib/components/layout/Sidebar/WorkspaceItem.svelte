@@ -1,6 +1,8 @@
 <!-- Company custom: Team Workspaces V1 -->
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -14,13 +16,33 @@
 		user,
 		governanceCapabilities
 	} from '$lib/stores';
-	import { getWorkspaceChats } from '$lib/apis/workspaces';
+	import {
+		createWorkspaceFolder,
+		deleteWorkspaceFolderById,
+		getWorkspaceChatListByFolderId,
+		getWorkspaceChats,
+		getWorkspaceFolderById,
+		getWorkspaceFolders,
+		updateWorkspaceFolderById,
+		updateWorkspaceFolderIsExpandedById,
+		updateWorkspaceFolderParentIdById
+	} from '$lib/apis/workspaces';
+	import { updateChatFolderIdById } from '$lib/apis/chats';
 	import { canManageWorkspace, canWriteWorkspace } from '$lib/utils/governance';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Users from '$lib/components/icons/Users.svelte';
+	import Folders from './Folders.svelte';
+	import FolderModal from './Folders/FolderModal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
+
+	type FolderFormPayload = {
+		name?: string;
+		data?: Record<string, unknown>;
+		meta?: Record<string, unknown>;
+		parent_id?: string | null;
+	};
 
 	export let workspace: any;
 	export let onManage: () => void = () => {};
@@ -29,7 +51,11 @@
 
 	let open = false;
 	let chats: any[] = [];
+	let folders: Record<string, any> = {};
+	let folderRegistry: Record<string, any> = {};
+	let showCreateFolderModal = false;
 	let lastRefreshKey = -1;
+	let folderApis: Record<string, any>;
 	$: canWrite = canWriteWorkspace(workspace, $user, $governanceCapabilities);
 	$: canManage = canManageWorkspace(workspace, $user, $governanceCapabilities);
 
@@ -39,7 +65,7 @@
 
 		if (open) {
 			lastRefreshKey = $workspaceChatsRefreshKey;
-			await refreshChats();
+			await refreshWorkspace();
 		}
 	};
 
@@ -49,7 +75,7 @@
 
 	$: if (open && $workspaceChatsRefreshKey !== lastRefreshKey) {
 		lastRefreshKey = $workspaceChatsRefreshKey;
-		refreshChats();
+		refreshWorkspace();
 	}
 
 	const newWorkspaceChat = async () => {
@@ -60,15 +86,79 @@
 		if ($mobile) showSidebar.set(false);
 	};
 
-	const refreshChats = async () => {
+	const buildFolderTree = (folderList: any[]) => {
+		const nextFolders: Record<string, any> = {};
+		for (const folder of folderList) {
+			nextFolders[folder.id] = { ...(nextFolders[folder.id] || {}), ...folder };
+		}
+		for (const folder of folderList) {
+			if (folder.parent_id) {
+				if (!nextFolders[folder.parent_id]) {
+					nextFolders[folder.parent_id] = {};
+				}
+				nextFolders[folder.parent_id].childrenIds = nextFolders[folder.parent_id].childrenIds
+					? [...nextFolders[folder.parent_id].childrenIds, folder.id]
+					: [folder.id];
+			}
+		}
+		return nextFolders;
+	};
+
+	const refreshWorkspace = async () => {
 		try {
-			const result = await getWorkspaceChats(localStorage.token, workspace.id);
-			chats = result ?? [];
+			const [chatResult, folderResult] = await Promise.all([
+				getWorkspaceChats(localStorage.token, workspace.id),
+				getWorkspaceFolders(localStorage.token, workspace.id)
+			]);
+			chats = (chatResult ?? []).filter((chat: any) => !chat.folder_id);
+			folders = buildFolderTree(folderResult ?? []);
 		} catch (e) {
 			toast.error(`${e}`);
 		}
 	};
+
+	const createFolder = async ({ name, data, meta, parent_id }: FolderFormPayload) => {
+		name = name?.trim();
+		if (!name) {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		await createWorkspaceFolder(localStorage.token, workspace.id, {
+			name,
+			data,
+			meta,
+			parent_id
+		});
+		await refreshWorkspace();
+	};
+
+	$: folderApis = {
+		createNewFolder: (token: string, form: any) => createWorkspaceFolder(token, workspace.id, form),
+		getFolderById: (token: string, folderId: string) => getWorkspaceFolderById(token, workspace.id, folderId),
+		updateFolderById: (token: string, folderId: string, form: any) =>
+			updateWorkspaceFolderById(token, workspace.id, folderId, form),
+		updateFolderParentIdById: (token: string, folderId: string, parentId?: string | null) =>
+			updateWorkspaceFolderParentIdById(token, workspace.id, folderId, parentId ?? null),
+		updateFolderIsExpandedById: (token: string, folderId: string, isExpanded: boolean) =>
+			updateWorkspaceFolderIsExpandedById(token, workspace.id, folderId, isExpanded),
+		deleteFolderById: (token: string, folderId: string, deleteContents: boolean) =>
+			deleteWorkspaceFolderById(token, workspace.id, folderId, deleteContents),
+		getChatListByFolderId: (token: string, folderId: string, page: number = 1) =>
+			getWorkspaceChatListByFolderId(token, workspace.id, folderId, page),
+		getChatsByFolderId: (token: string, folderId: string) =>
+			getWorkspaceChatListByFolderId(token, workspace.id, folderId),
+		updateChatFolderIdById
+	};
 </script>
+
+<FolderModal
+	bind:show={showCreateFolderModal}
+	onSubmit={async (folder: FolderFormPayload) => {
+		await createFolder(folder);
+		showCreateFolderModal = false;
+	}}
+/>
 
 <div class="w-full {className}">
 	<!-- Workspace header row -->
@@ -134,7 +224,29 @@
 					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
 				</button>
 			{/if}
-			{#if chats.length === 0}
+			{#if canManage}
+				<button
+					type="button"
+					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
+					       line-clamp-1 cursor-pointer select-none"
+					on:click={() => (showCreateFolderModal = true)}
+				>
+					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Folder')}</span>
+				</button>
+			{/if}
+			<Folders
+				bind:folderRegistry
+				{folders}
+				{folderApis}
+				workspaceId={workspace.id}
+				folderReadOnly={!canManage}
+				selectFolderPath={`/workspaces/${workspace.id}`}
+				onDelete={refreshWorkspace}
+				on:update={refreshWorkspace}
+				on:change={refreshWorkspace}
+			/>
+			{#if chats.length === 0 && Object.keys(folders).length === 0}
 				<div class="px-3 py-1 text-xs text-gray-400 dark:text-gray-600 italic">
 					{$i18n.t('No chats yet')}
 				</div>

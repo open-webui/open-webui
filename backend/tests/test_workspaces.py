@@ -26,6 +26,7 @@ from sqlalchemy import (
     select,
     delete,
     and_,
+    JSON,
 )
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
@@ -43,6 +44,7 @@ class WsWorkspace(Base):
     user_id = Column(String, nullable=False)
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
+    meta = Column(JSON, nullable=True)
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
     deleted_at = Column(BigInteger, nullable=True)
@@ -68,7 +70,19 @@ class WsChat(Base):
     user_id = Column(String, nullable=False)
     title = Column(Text, nullable=False)
     archived = Column(Boolean, default=False)
+    folder_id = Column(String, nullable=True)
     workspace_id = Column(String, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+
+class WsFolder(Base):
+    __tablename__ = "folder"
+    id = Column(String, primary_key=True)
+    parent_id = Column(String, nullable=True)
+    workspace_id = Column(String, nullable=True)
+    user_id = Column(String, nullable=False)
+    name = Column(Text, nullable=False)
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
@@ -155,6 +169,86 @@ async def personal_chats(db: AsyncSession, user_id: str):
     return r.scalars().all()
 
 
+async def set_workspace_default_model(db: AsyncSession, workspace_id: str, user_id: str, model_id: str | None):
+    member = await get_member(db, workspace_id, user_id)
+    if member is None or member.role not in MANAGE_ROLES:
+        return False, 403
+    ws = await _get_workspace(db, workspace_id)
+    if ws is None:
+        return False, 404
+    meta = dict(ws.meta or {})
+    if model_id:
+        meta["default_model_id"] = model_id
+    else:
+        meta.pop("default_model_id", None)
+    ws.meta = meta
+    ws.updated_at = _now()
+    await db.commit()
+    return True, 200
+
+
+async def create_workspace_folder(
+    db: AsyncSession,
+    workspace_id: str,
+    user_id: str,
+    name: str,
+    parent_id: str | None = None,
+    require_manage: bool = True,
+):
+    member = await get_member(db, workspace_id, user_id)
+    allowed_roles = MANAGE_ROLES if require_manage else WRITE_ROLES
+    if member is None or member.role not in allowed_roles:
+        return None, 403
+    ok, code = await validate_workspace_folder_parent(db, workspace_id, None, parent_id)
+    if not ok:
+        return None, code
+    folder = WsFolder(
+        id=_uid(),
+        parent_id=parent_id,
+        workspace_id=workspace_id,
+        user_id=user_id,
+        name=name,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db.add(folder)
+    await db.commit()
+    await db.refresh(folder)
+    return folder, 201
+
+
+async def validate_workspace_folder_parent(
+    db: AsyncSession,
+    workspace_id: str,
+    folder_id: str | None,
+    parent_id: str | None,
+):
+    if parent_id is None:
+        return True, 200
+    if folder_id and folder_id == parent_id:
+        return False, 400
+    parent = await db.get(WsFolder, parent_id)
+    if parent is None or parent.workspace_id != workspace_id:
+        return False, 400
+    seen = {folder_id} if folder_id else set()
+    current = parent
+    while current.parent_id:
+        if current.parent_id in seen:
+            return False, 400
+        seen.add(current.parent_id)
+        current = await db.get(WsFolder, current.parent_id)
+        if current is None or current.workspace_id != workspace_id:
+            return False, 400
+    return True, 200
+
+
+def resolve_workspace_default_model(workspace, available_models: set[str], fallback: list[str]):
+    model_id = (workspace.meta or {}).get("default_model_id")
+    if model_id and model_id in available_models:
+        return [model_id]
+    return fallback
+
+
 # ---------------------------------------------------------------------------
 # Pytest fixtures
 # ---------------------------------------------------------------------------
@@ -218,6 +312,123 @@ async def test_added_member_sees_workspace(db):
 
     member_workspaces = await workspaces_for_user(db, member_id)
     assert any(w.id == ws.id for w in member_workspaces)
+
+
+@pytest.mark.asyncio
+async def test_workspace_default_model_persists_for_manager(db):
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Default Model")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    ok, code = await set_workspace_default_model(db, ws.id, creator_id, "model-a")
+
+    await db.refresh(ws)
+    assert ok is True
+    assert code == 200
+    assert ws.meta["default_model_id"] == "model-a"
+
+
+@pytest.mark.asyncio
+async def test_workspace_default_model_falls_back_when_unavailable(db):
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Fallback")
+    ws.meta = {"default_model_id": "missing-model"}
+    await db.commit()
+
+    selected = resolve_workspace_default_model(ws, {"model-a"}, ["model-a"])
+
+    assert selected == ["model-a"]
+
+
+@pytest.mark.asyncio
+async def test_member_cannot_update_workspace_default_model(db):
+    creator_id = _uid()
+    member_id = _uid()
+    ws = await create_workspace(db, creator_id, name="No Default Mutation")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, member_id, ROLE_MEMBER)
+
+    ok, code = await set_workspace_default_model(db, ws.id, member_id, "model-a")
+
+    assert ok is False
+    assert code == 403
+
+
+@pytest.mark.asyncio
+async def test_nested_workspace_folder_creation_works(db):
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Folders")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+
+    root, root_code = await create_workspace_folder(db, ws.id, creator_id, "Marketing")
+    child, child_code = await create_workspace_folder(db, ws.id, creator_id, "YaoHui", parent_id=root.id)
+
+    assert root_code == 201
+    assert child_code == 201
+    assert child.parent_id == root.id
+    assert child.workspace_id == ws.id
+
+
+@pytest.mark.asyncio
+async def test_cross_workspace_parent_rejected(db):
+    creator_id = _uid()
+    ws_a = await create_workspace(db, creator_id, name="A")
+    ws_b = await create_workspace(db, creator_id, name="B")
+    await add_member(db, ws_a.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws_b.id, creator_id, ROLE_MANAGER)
+    root_a, _ = await create_workspace_folder(db, ws_a.id, creator_id, "A Root")
+
+    folder, code = await create_workspace_folder(db, ws_b.id, creator_id, "B Child", parent_id=root_a.id)
+
+    assert folder is None
+    assert code == 400
+
+
+@pytest.mark.asyncio
+async def test_self_and_circular_parent_rejected(db):
+    creator_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Cycles")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    root, _ = await create_workspace_folder(db, ws.id, creator_id, "Root")
+    child, _ = await create_workspace_folder(db, ws.id, creator_id, "Child", parent_id=root.id)
+
+    ok_self, self_code = await validate_workspace_folder_parent(db, ws.id, root.id, root.id)
+    root.parent_id = child.id
+    await db.commit()
+    ok_cycle, cycle_code = await validate_workspace_folder_parent(db, ws.id, child.id, root.id)
+
+    assert ok_self is False
+    assert self_code == 400
+    assert ok_cycle is False
+    assert cycle_code == 400
+
+
+@pytest.mark.asyncio
+async def test_viewer_cannot_create_workspace_folder(db):
+    creator_id = _uid()
+    viewer_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Viewer")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, viewer_id, ROLE_VIEWER)
+
+    folder, code = await create_workspace_folder(db, ws.id, viewer_id, "Blocked")
+
+    assert folder is None
+    assert code == 403
+
+
+@pytest.mark.asyncio
+async def test_member_cannot_create_workspace_folder(db):
+    creator_id = _uid()
+    member_id = _uid()
+    ws = await create_workspace(db, creator_id, name="Member Folder Block")
+    await add_member(db, ws.id, creator_id, ROLE_MANAGER)
+    await add_member(db, ws.id, member_id, ROLE_MEMBER)
+
+    folder, code = await create_workspace_folder(db, ws.id, member_id, "Blocked")
+
+    assert folder is None
+    assert code == 403
 
 
 @pytest.mark.asyncio

@@ -12,11 +12,19 @@ import time
 import uuid as uuid_lib
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
 from open_webui.models.chats import ChatForm, ChatResponse, ChatTitleIdResponse, Chats
+from open_webui.models.folders import (
+    FolderForm,
+    FolderModel,
+    FolderNameIdResponse,
+    FolderUpdateForm,
+    Folders,
+)
 from open_webui.models.users import Users
 from open_webui.models.workspaces import (
     WORKSPACE_MANAGE_ROLES,
@@ -24,6 +32,8 @@ from open_webui.models.workspaces import (
     Workspace,
     WorkspaceMember,
     WorkspaceForm,
+    WorkspaceDefaultModelForm,
+    WorkspaceDefaultModelResponse,
     WorkspaceMemberForm,
     WorkspaceMemberModel,
     WorkspaceMemberResponse,
@@ -44,6 +54,14 @@ from open_webui.utils.governance import (
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class FolderParentIdForm(BaseModel):
+    parent_id: Optional[str] = None
+
+
+class FolderIsExpandedForm(BaseModel):
+    is_expanded: bool
 
 
 ####################
@@ -124,6 +142,33 @@ async def _member_response(m: WorkspaceMemberModel, db: AsyncSession) -> Workspa
         display_name = user_obj.name
         email = user_obj.email
     return WorkspaceMemberResponse(**m.model_dump(), display_name=display_name, email=email)
+
+
+async def assert_workspace_folder_parent_valid(
+    workspace_id: str,
+    folder_id: Optional[str],
+    parent_id: Optional[str],
+    db: AsyncSession,
+) -> None:
+    if parent_id is None:
+        return
+
+    if folder_id is not None and folder_id == parent_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Folder cannot be its own parent")
+
+    parent = await Folders.get_folder_by_id_and_workspace_id(parent_id, workspace_id, db=db)
+    if parent is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent folder must be in the same workspace")
+
+    seen = {folder_id} if folder_id else set()
+    current = parent
+    while current.parent_id:
+        if current.parent_id in seen:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Circular folder nesting is not allowed")
+        seen.add(current.parent_id)
+        current = await Folders.get_folder_by_id_and_workspace_id(current.parent_id, workspace_id, db=db)
+        if current is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent folder chain is invalid")
 
 
 ####################
@@ -349,6 +394,234 @@ async def remove_workspace_member(
 
 
 ####################
+# Workspace defaults
+####################
+
+
+@router.get('/{workspace_id}/default-model', response_model=WorkspaceDefaultModelResponse)
+async def get_workspace_default_model(
+    workspace_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Read workspace default model; accessible to workspace readers."""
+    await assert_workspace_access(workspace_id, user, "read", db)
+    workspace = await Workspaces.get_by_id(workspace_id, db=db)
+    meta = workspace.meta or {}
+    return WorkspaceDefaultModelResponse(model_id=meta.get("default_model_id"))
+
+
+@router.put('/{workspace_id}/default-model', response_model=WorkspaceDefaultModelResponse)
+async def set_workspace_default_model(
+    workspace_id: str,
+    form_data: WorkspaceDefaultModelForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Set workspace default model; manager only."""
+    await assert_workspace_access(workspace_id, user, "manage", db)
+    model_id = form_data.model_id.strip() if form_data.model_id else None
+    workspace = await Workspaces.update_default_model_id(workspace_id, model_id, db=db)
+    if workspace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    return WorkspaceDefaultModelResponse(model_id=(workspace.meta or {}).get("default_model_id"))
+
+
+####################
+# Workspace folders
+####################
+
+
+@router.get('/{workspace_id}/folders', response_model=list[FolderNameIdResponse])
+async def list_workspace_folders(
+    workspace_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "read", db)
+    folders = await Folders.get_folders_by_workspace_id(workspace_id, db=db)
+
+    folder_list = []
+    for folder in folders:
+        if folder.parent_id and not await Folders.get_folder_by_id_and_workspace_id(folder.parent_id, workspace_id, db=db):
+            folder = await Folders.update_folder_parent_id_by_id_and_workspace_id(folder.id, workspace_id, None, db=db)
+        folder_list.append(FolderNameIdResponse(**folder.model_dump()))
+
+    return folder_list
+
+
+@router.post('/{workspace_id}/folders', response_model=FolderModel)
+async def create_workspace_folder(
+    workspace_id: str,
+    form_data: FolderForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "manage", db)
+    await assert_workspace_folder_parent_valid(workspace_id, None, form_data.parent_id, db)
+
+    folder = await Folders.get_folder_by_parent_id_and_workspace_id_and_name(
+        form_data.parent_id, workspace_id, form_data.name, db=db
+    )
+    if folder:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+        )
+
+    form_data.workspace_id = workspace_id
+    folder = await Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
+    if not folder:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Error creating folder'),
+        )
+    return folder
+
+
+@router.get('/{workspace_id}/folders/{folder_id}', response_model=FolderModel)
+async def get_workspace_folder(
+    workspace_id: str,
+    folder_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "read", db)
+    folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    return folder
+
+
+@router.post('/{workspace_id}/folders/{folder_id}/update', response_model=FolderModel)
+async def update_workspace_folder(
+    workspace_id: str,
+    folder_id: str,
+    form_data: FolderUpdateForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "manage", db)
+    folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if form_data.name is not None:
+        existing_folder = await Folders.get_folder_by_parent_id_and_workspace_id_and_name(
+            folder.parent_id, workspace_id, form_data.name, db=db
+        )
+        if existing_folder and existing_folder.id != folder_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+            )
+
+    updated = await Folders.update_folder_by_id_and_workspace_id(folder_id, workspace_id, form_data, db=db)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Error updating folder'),
+        )
+    return updated
+
+
+@router.post('/{workspace_id}/folders/{folder_id}/update/parent', response_model=FolderModel)
+async def update_workspace_folder_parent(
+    workspace_id: str,
+    folder_id: str,
+    form_data: FolderParentIdForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "manage", db)
+    folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    await assert_workspace_folder_parent_valid(workspace_id, folder_id, form_data.parent_id, db)
+    existing_folder = await Folders.get_folder_by_parent_id_and_workspace_id_and_name(
+        form_data.parent_id, workspace_id, folder.name, db=db
+    )
+    if existing_folder and existing_folder.id != folder_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+        )
+
+    updated = await Folders.update_folder_parent_id_by_id_and_workspace_id(
+        folder_id, workspace_id, form_data.parent_id, db=db
+    )
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Error updating folder'),
+        )
+    return updated
+
+
+@router.post('/{workspace_id}/folders/{folder_id}/update/expanded', response_model=FolderModel)
+async def update_workspace_folder_expanded(
+    workspace_id: str,
+    folder_id: str,
+    form_data: FolderIsExpandedForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "manage", db)
+    folder = await Folders.update_folder_is_expanded_by_id_and_workspace_id(
+        folder_id, workspace_id, form_data.is_expanded, db=db
+    )
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    return folder
+
+
+@router.get('/{workspace_id}/folders/{folder_id}/chats', response_model=list[ChatTitleIdResponse])
+async def list_workspace_folder_chats(
+    workspace_id: str,
+    folder_id: str,
+    page: Optional[int] = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "read", db)
+    folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    skip = None
+    limit = None
+    if page is not None:
+        limit = 60
+        skip = (page - 1) * limit
+    return await Chats.get_chat_title_id_list_by_workspace_id_and_folder_id(
+        workspace_id, folder_id, skip=skip, limit=limit, db=db
+    )
+
+
+@router.delete('/{workspace_id}/folders/{folder_id}')
+async def delete_workspace_folder(
+    workspace_id: str,
+    folder_id: str,
+    delete_contents: Optional[bool] = True,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await assert_workspace_access(workspace_id, user, "manage", db)
+    folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    folder_ids = await Folders.delete_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    for deleted_folder_id in folder_ids:
+        if delete_contents:
+            await Chats.delete_chats_by_workspace_id_and_folder_id(workspace_id, deleted_folder_id, db=db)
+        else:
+            await Chats.move_chats_by_workspace_id_and_folder_id(workspace_id, deleted_folder_id, None, db=db)
+    return True
+
+
+####################
 # Workspace chats
 ####################
 
@@ -387,11 +660,13 @@ async def create_workspace_chat(
 ):
     """Create a new chat inside the workspace; member or manager access."""
     await assert_workspace_access(workspace_id, user, "write", db)
+    if form_data.folder_id:
+        folder = await Folders.get_folder_by_id_and_workspace_id(form_data.folder_id, workspace_id, db=db)
+        if folder is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Folder must be in the same workspace")
 
     try:
         form_data.workspace_id = workspace_id
-        # Ensure no folder_id bleeds into workspace chats in V1
-        form_data.folder_id = None
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
         return ChatResponse(**chat.model_dump())
     except Exception as e:

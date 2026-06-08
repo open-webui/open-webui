@@ -134,6 +134,18 @@ async def assert_workspace_chat_create_allowed(workspace_id: str, user, db: Asyn
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
 
+async def assert_workspace_folder_id_allowed(
+    workspace_id: str,
+    folder_id: Optional[str],
+    db: AsyncSession,
+) -> None:
+    if folder_id is None:
+        return
+    folder = await Folders.get_folder_by_id_and_workspace_id(folder_id, workspace_id, db=db)
+    if folder is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Folder must be in the same workspace")
+
+
 async def assert_workspace_chat_not_shareable(chat) -> None:
     """
     SHARE gate: workspace chats do not support public sharing, access grants,
@@ -685,7 +697,7 @@ async def create_new_chat(
     # persisting it. Missing workspace_id preserves existing private-chat behavior.
     if form_data.workspace_id is not None:
         await assert_workspace_chat_create_allowed(form_data.workspace_id, user, db)
-        form_data.folder_id = None
+        await assert_workspace_folder_id_allowed(form_data.workspace_id, form_data.folder_id, db)
     else:
         await assert_private_chat_allowed(user, db=db)
 
@@ -1172,6 +1184,8 @@ async def update_chat_by_id(
         await assert_chat_write_allowed(raw_chat, user, db)
         if incoming_workspace_id and incoming_workspace_id != raw_chat.workspace_id:
             await assert_workspace_chat_create_allowed(incoming_workspace_id, user, db)
+        effective_workspace_id = incoming_workspace_id or raw_chat.workspace_id
+        await assert_workspace_folder_id_allowed(effective_workspace_id, form_data.folder_id, db)
         updated_chat = {**raw_chat.chat, **form_data.chat}
         for msg in updated_chat.get('history', {}).get('messages', {}).values():
             if msg.get('role') == 'assistant' and msg.get('output'):
@@ -1180,8 +1194,10 @@ async def update_chat_by_id(
             id,
             updated_chat,
             db=db,
-            workspace_id=incoming_workspace_id or raw_chat.workspace_id,
+            workspace_id=effective_workspace_id,
+            folder_id=form_data.folder_id,
             update_workspace=bool(incoming_workspace_id),
+            update_folder=form_data.folder_id is not None,
         )
         return ChatResponse(**chat.model_dump())
 
@@ -1192,7 +1208,7 @@ async def update_chat_by_id(
             await assert_private_chat_allowed(user, db=db)
         if incoming_workspace_id:
             await assert_workspace_chat_create_allowed(incoming_workspace_id, user, db)
-            form_data.folder_id = None
+            await assert_workspace_folder_id_allowed(incoming_workspace_id, form_data.folder_id, db)
         updated_chat = {**chat.chat, **form_data.chat}
 
         # Re-derive content from output for assistant messages so that
@@ -1773,10 +1789,13 @@ async def update_chat_folder_id_by_id(
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         await assert_chat_write_allowed(chat, user, db)
-        # Company custom: Team Workspaces V1 — workspace chats cannot be assigned to personal folders
         if chat.workspace_id is not None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-        chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
+            await assert_workspace_folder_id_allowed(chat.workspace_id, form_data.folder_id, db)
+            chat = await Chats.update_chat_folder_id_by_id_and_workspace_id(
+                id, chat.workspace_id, form_data.folder_id, db=db
+            )
+        else:
+            chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())

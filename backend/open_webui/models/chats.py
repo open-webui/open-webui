@@ -188,6 +188,7 @@ class ChatTitleIdResponse(BaseModel):
     updated_at: int
     created_at: int
     last_read_at: Optional[int] = None
+    folder_id: Optional[str] = None
 
 
 class SharedChatResponse(BaseModel):
@@ -414,9 +415,7 @@ class ChatTable:
 
                 if update_workspace:
                     chat_item.workspace_id = workspace_id
-                    if workspace_id is not None:
-                        chat_item.folder_id = None
-                if update_folder and workspace_id is None:
+                if update_folder:
                     chat_item.folder_id = folder_id
 
                 chat_item.updated_at = int(time.time())
@@ -851,7 +850,7 @@ class ChatTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
+            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id).filter_by(
                 user_id=user_id
             ).filter(Chat.workspace_id.is_(None))  # Company custom: Team Workspaces V1
             if not include_archived:
@@ -890,6 +889,7 @@ class ChatTable:
                         'updated_at': chat[2],
                         'created_at': chat[3],
                         'last_read_at': chat[4],
+                        'folder_id': chat[5],
                     }
                 )
                 for chat in all_chats
@@ -955,7 +955,7 @@ class ChatTable:
     ) -> list["ChatTitleIdResponse"]:
         async with get_async_db_context(db) as db:
             stmt = (
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id)
                 .where(Chat.workspace_id == workspace_id)
                 .where(Chat.archived == False)  # noqa: E712
                 .order_by(Chat.updated_at.desc(), Chat.id)
@@ -973,6 +973,7 @@ class ChatTable:
                         'updated_at': r[2],
                         'created_at': r[3],
                         'last_read_at': r[4],
+                        'folder_id': r[5],
                     }
                 )
                 for r in result.all()
@@ -1129,12 +1130,51 @@ class ChatTable:
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
                 # Company custom: Team Workspaces V1 — exclude workspace chats from personal pinned list
                 .filter(Chat.workspace_id.is_(None))
                 .order_by(Chat.updated_at.desc())
             )
+            all_chats = result.all()
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        'id': chat[0],
+                        'title': chat[1],
+                        'updated_at': chat[2],
+                        'created_at': chat[3],
+                        'last_read_at': chat[4],
+                        'folder_id': chat[5],
+                    }
+                )
+                for chat in all_chats
+            ]
+
+    async def get_chat_title_id_list_by_workspace_id_and_folder_id(
+        self,
+        workspace_id: str,
+        folder_id: str,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> list[ChatTitleIdResponse]:
+        async with get_async_db_context(db) as db:
+            stmt = (
+                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                .where(Chat.workspace_id == workspace_id)
+                .where(Chat.folder_id == folder_id)
+                .filter(or_(Chat.pinned == False, Chat.pinned == None))
+                .filter_by(archived=False)
+                .order_by(Chat.updated_at.desc(), Chat.id)
+            )
+
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+
+            result = await db.execute(stmt)
             all_chats = result.all()
             return [
                 ChatTitleIdResponse.model_validate(
@@ -1426,6 +1466,23 @@ class ChatTable:
         except Exception:
             return None
 
+    async def update_chat_folder_id_by_id_and_workspace_id(
+        self, id: str, workspace_id: str, folder_id: Optional[str], db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                chat = await db.get(Chat, id)
+                if chat is None or chat.workspace_id != workspace_id:
+                    return None
+                chat.folder_id = folder_id
+                chat.updated_at = int(time.time())
+                chat.pinned = False
+                await db.commit()
+                await db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
+
     async def get_chat_tags_by_id_and_user_id(
         self, id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> list[TagModel]:
@@ -1678,6 +1735,43 @@ class ChatTable:
                     delete(Chat)
                     .filter_by(user_id=user_id, folder_id=folder_id)
                     .filter(Chat.workspace_id.is_(None))
+                )
+                await db.commit()
+
+                return True
+        except Exception:
+            return False
+
+    async def delete_chats_by_workspace_id_and_folder_id(
+        self, workspace_id: str, folder_id: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        try:
+            async with get_async_db_context(db) as db:
+                chat_ids_stmt = select(Chat.id).filter_by(workspace_id=workspace_id, folder_id=folder_id)
+                await db.execute(
+                    update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
+                )
+                await db.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
+                await db.execute(delete(Chat).filter_by(workspace_id=workspace_id, folder_id=folder_id))
+                await db.commit()
+
+                return True
+        except Exception:
+            return False
+
+    async def move_chats_by_workspace_id_and_folder_id(
+        self,
+        workspace_id: str,
+        folder_id: str,
+        new_folder_id: Optional[str],
+        db: Optional[AsyncSession] = None,
+    ) -> bool:
+        try:
+            async with get_async_db_context(db) as db:
+                await db.execute(
+                    update(Chat)
+                    .filter_by(workspace_id=workspace_id, folder_id=folder_id)
+                    .values(folder_id=new_folder_id)
                 )
                 await db.commit()
 

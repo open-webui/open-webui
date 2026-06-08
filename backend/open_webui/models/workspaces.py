@@ -129,6 +129,14 @@ class WorkspaceMemberUpdateForm(BaseModel):
     role: str
 
 
+class WorkspaceDefaultModelForm(BaseModel):
+    model_id: Optional[str] = None
+
+
+class WorkspaceDefaultModelResponse(BaseModel):
+    model_id: Optional[str] = None
+
+
 class WorkspaceResponse(BaseModel):
     id: str
     user_id: str
@@ -235,6 +243,29 @@ class WorkspacesTable:
                 row.description = form_data.description
             if form_data.meta is not None:
                 row.meta = form_data.meta
+            row.updated_at = int(time.time())
+            await db.commit()
+            await db.refresh(row)
+            return WorkspaceModel.model_validate(row)
+
+    async def update_default_model_id(
+        self,
+        workspace_id: str,
+        model_id: Optional[str],
+        db: Optional[AsyncSession] = None,
+    ) -> Optional[WorkspaceModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Workspace, workspace_id)
+            if row is None or row.deleted_at is not None:
+                return None
+
+            meta = dict(row.meta or {})
+            if model_id:
+                meta["default_model_id"] = model_id
+            else:
+                meta.pop("default_model_id", None)
+
+            row.meta = meta
             row.updated_at = int(time.time())
             await db.commit()
             await db.refresh(row)
