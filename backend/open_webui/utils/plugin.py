@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import logging
 import os
 import re
@@ -214,7 +216,7 @@ async def load_tool_module_by_id(tool_id, content=None):
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
-        install_frontmatter_requirements(frontmatter.get('requirements', ''))
+        await asyncio.to_thread(install_frontmatter_requirements, frontmatter.get('requirements', ''))
 
     module_name = f'tool_{tool_id}'
     module = types.ModuleType(module_name)
@@ -258,7 +260,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         await Functions.update_function_by_id(function_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
-        install_frontmatter_requirements(frontmatter.get('requirements', ''))
+        await asyncio.to_thread(install_frontmatter_requirements, frontmatter.get('requirements', ''))
 
     module_name = f'function_{function_id}'
     module = types.ModuleType(module_name)
