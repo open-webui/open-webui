@@ -382,10 +382,17 @@
 				});
 
 				if (folder) {
+					persistWorkspaceFolderContext(folder);
 					await selectedFolder.set(folder);
 				}
 			}
 			dispatch('update');
+		}
+	};
+
+	const persistWorkspaceFolderContext = (folder) => {
+		if (workspaceId && folder?.id && folder.workspace_id === workspaceId) {
+			localStorage.setItem(`workspace:${workspaceId}:selected-folder-id`, folder.id);
 		}
 	};
 
@@ -575,7 +582,7 @@
 					}
 				}}
 				on:click={async (e) => {
-					(e) => e.stopPropagation();
+					e.stopPropagation();
 					if (clickTimer) {
 						clearTimeout(clickTimer);
 						clickTimer = null;

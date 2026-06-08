@@ -4,12 +4,14 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import {
 		mobile,
 		showSidebar,
+		selectedFolder,
 		activeWorkspaceId,
 		chatId,
 		workspaceChatsRefreshKey,
@@ -59,6 +61,39 @@
 	$: canWrite = canWriteWorkspace(workspace, $user, $governanceCapabilities);
 	$: canManage = canManageWorkspace(workspace, $user, $governanceCapabilities);
 
+	const workspaceFolderContextKey = () => `workspace:${workspace.id}:selected-folder-id`;
+
+	const clearWorkspaceFolderContext = async () => {
+		if (browser) {
+			localStorage.removeItem(workspaceFolderContextKey());
+		}
+
+		const folder = $selectedFolder as { workspace_id?: string | null } | null;
+		if (!folder || folder.workspace_id === workspace.id) {
+			await selectedFolder.set(null);
+		}
+	};
+
+	const restoreWorkspaceFolderContext = async () => {
+		if (!browser || !$page.url.pathname.startsWith(`/workspaces/${workspace.id}`)) {
+			return;
+		}
+
+		const folderId = localStorage.getItem(workspaceFolderContextKey());
+		if (!folderId) {
+			return;
+		}
+
+		const folder = folders[folderId];
+		if (folder?.workspace_id === workspace.id) {
+			if (($selectedFolder as { id?: string } | null)?.id !== folderId) {
+				await selectedFolder.set(folder);
+			}
+		} else {
+			localStorage.removeItem(workspaceFolderContextKey());
+		}
+	};
+
 	const openWorkspace = async () => {
 		open = !open;
 		activeWorkspaceId.set(open ? workspace.id : null);
@@ -67,6 +102,11 @@
 			lastRefreshKey = $workspaceChatsRefreshKey;
 			await refreshWorkspace();
 		}
+	};
+
+	const selectWorkspaceRoot = async () => {
+		activeWorkspaceId.set(workspace.id);
+		await clearWorkspaceFolderContext();
 	};
 
 	$: if ($activeWorkspaceId === workspace.id && !open) {
@@ -112,6 +152,7 @@
 			]);
 			chats = (chatResult ?? []).filter((chat: any) => !chat.folder_id);
 			folders = buildFolderTree(folderResult ?? []);
+			await restoreWorkspaceFolderContext();
 		} catch (e) {
 			toast.error(`${e}`);
 		}
@@ -170,8 +211,16 @@
 		       dark:text-gray-400 text-gray-600 select-none"
 		role="button"
 		tabindex="0"
-		on:click={openWorkspace}
-		on:keydown={(e) => e.key === 'Enter' && openWorkspace()}
+		on:click={async () => {
+			await selectWorkspaceRoot();
+			await openWorkspace();
+		}}
+		on:keydown={async (e) => {
+			if (e.key === 'Enter') {
+				await selectWorkspaceRoot();
+				await openWorkspace();
+			}
+		}}
 	>
 		<div class="flex items-center gap-1.5 overflow-hidden">
 			<!-- Workspace icon -->
@@ -217,23 +266,23 @@
 			{#if canWrite}
 				<button
 					type="button"
-					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					class="group/chat flex items-center justify-start gap-1.5 w-full rounded-xl px-2 py-1 text-left text-sm
 					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
 					       line-clamp-1 cursor-pointer select-none"
 					on:click={newWorkspaceChat}
 				>
-					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
+					<span class="line-clamp-1 text-left">+ {$i18n.t('New Chat')}</span>
 				</button>
 			{/if}
 			{#if canManage}
 				<button
 					type="button"
-					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					class="group/chat flex items-center justify-start gap-1.5 w-full rounded-xl px-2 py-1 text-left text-sm
 					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
 					       line-clamp-1 cursor-pointer select-none"
 					on:click={() => (showCreateFolderModal = true)}
 				>
-					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Folder')}</span>
+					<span class="line-clamp-1 text-left">+ {$i18n.t('New Folder')}</span>
 				</button>
 			{/if}
 			<Folders
@@ -264,6 +313,7 @@
 						       line-clamp-1 cursor-pointer select-none"
 						on:click={() => {
 							activeWorkspaceId.set(workspace.id);
+							clearWorkspaceFolderContext();
 							if ($mobile) showSidebar.set(false);
 						}}
 					>
