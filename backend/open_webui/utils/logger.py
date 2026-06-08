@@ -185,6 +185,7 @@ def start_logger():
             level=GLOBAL_LOG_LEVEL,
             format=stdout_format,
             filter=audit_filter,
+            diagnose=False,
         )
     if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
