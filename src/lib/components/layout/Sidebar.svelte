@@ -1346,66 +1346,7 @@
 					</Folder>
 				{/if}
 
-				<!-- Company custom: Team Workspaces V1 -->
-				{#if $workspaces?.length > 0 || true}
-					<Folder
-						id="sidebar-workspaces"
-						bind:open={showWorkspaces}
-						className="px-2 mt-0.5"
-						name={$i18n.t('Team Workspaces')}
-						chevron={false}
-						dragAndDrop={false}
-						onAdd={workspaceCreateAllowed
-							? async () => {
-									showCreateWorkspace = true;
-								}
-							: null}
-						onAddLabel={$i18n.t('New Workspace')}
-					>
-						{#each $workspaces as ws (ws.id)}
-							<WorkspaceItem
-								workspace={ws}
-								onManage={() => {
-									managingWorkspace = ws;
-									// Use backend-provided my_role plus backend governance capabilities.
-									managingWorkspaceRole = ws.my_role ?? null;
-									managingWorkspaceCanManage = canManageWorkspace(
-										ws,
-										$user,
-										$governanceCapabilities
-									);
-									showManageMembers = true;
-								}}
-							/>
-						{:else}
-							<div class="px-3 py-1 text-xs text-gray-400 dark:text-gray-600 italic">
-								{$i18n.t('No workspaces yet')}
-							</div>
-						{/each}
-					</Folder>
-				{/if}
-
-				<!-- Company custom: Team Workspaces V1 — modals -->
-				<WorkspaceModal
-					bind:show={showCreateWorkspace}
-					onSubmit={async () => {
-						await initWorkspaces();
-						showWorkspaces = true;
-					}}
-				/>
-
-				<ManageMembersModal
-					bind:show={showManageMembers}
-					workspace={managingWorkspace}
-					currentUserRole={managingWorkspaceRole}
-					canManageMembers={managingWorkspaceCanManage}
-					onUpdate={initWorkspaces}
-					onDeleted={() => {
-						managingWorkspace = null;
-						managingWorkspaceCanManage = false;
-						activeWorkspaceId.set(null);
-					}}
-				/>
+				<!-- Company custom: Team Workspaces V1 — hidden (workspace UI disabled) -->
 
 				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
 					<Folder

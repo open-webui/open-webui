@@ -38,12 +38,9 @@ async def user_in_any_group(user_id: str, group_names: set[str], db: AsyncSessio
 
 
 async def can_use_private_chat(user, db: AsyncSession | None = None) -> bool:
+    # Company patch: private chats restored for all authenticated users.
     role = getattr(user, 'role', None)
-    if role == 'admin':
-        return True
-    if role != 'user':
-        return False
-    return await user_in_any_group(user.id, PRIVATE_CHAT_ALLOWED_GROUP_NAMES, db=db)
+    return role in ('admin', 'user')
 
 
 async def can_access_all_workspaces(user, db: AsyncSession | None = None) -> bool:
@@ -69,14 +66,8 @@ async def user_has_workspace_assignment(user, db: AsyncSession | None = None) ->
 
 
 async def assert_private_chat_allowed(user, db: AsyncSession | None = None) -> None:
-    if await can_use_private_chat(user, db=db):
-        return
-
-    detail = PRIVATE_CHAT_DISABLED_MESSAGE
-    if not await user_has_workspace_assignment(user, db=db):
-        detail = NO_WORKSPACE_ASSIGNMENT_MESSAGE
-
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    # Company patch: private chats restored for all authenticated users; no-op.
+    return
 
 
 async def assert_workspace_create_allowed(user, db: AsyncSession | None = None) -> None:
