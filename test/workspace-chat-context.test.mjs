@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { resolveChatFolderId, resolveNewChatPath } from '../src/lib/utils/workspaceChatContext.ts';
+import {
+	resolveChatFolderId,
+	resolveFolderWorkspaceId,
+	resolveNewChatPath
+} from '../src/lib/utils/workspaceChatContext.ts';
 
 test('workspace root chat creation uses null folder_id', () => {
 	assert.equal(
@@ -83,4 +87,30 @@ test('workspace chat new-chat navigation stays inside the workspace route', () =
 
 test('private chat new-chat navigation stays private', () => {
 	assert.equal(resolveNewChatPath('/c/chat-1', null), '/');
+});
+
+// Regression: folder object without workspace_id falls back to activeWorkspaceId
+test('resolveFolderWorkspaceId uses folder.workspace_id when present', () => {
+	assert.equal(
+		resolveFolderWorkspaceId({ folder: { workspace_id: 'ws-1' }, activeWorkspaceId: 'ws-2' }),
+		'ws-1'
+	);
+});
+
+test('resolveFolderWorkspaceId falls back to activeWorkspaceId when folder.workspace_id is null', () => {
+	assert.equal(
+		resolveFolderWorkspaceId({ folder: { workspace_id: null }, activeWorkspaceId: 'ws-1' }),
+		'ws-1'
+	);
+});
+
+test('resolveFolderWorkspaceId falls back to activeWorkspaceId when folder has no workspace_id field', () => {
+	assert.equal(
+		resolveFolderWorkspaceId({ folder: { id: 'folder-yh' }, activeWorkspaceId: 'ws-1' }),
+		'ws-1'
+	);
+});
+
+test('resolveFolderWorkspaceId returns null when both sources are absent', () => {
+	assert.equal(resolveFolderWorkspaceId({ folder: null, activeWorkspaceId: null }), null);
 });
