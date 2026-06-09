@@ -444,6 +444,20 @@ async def search_files(
 
 
 ############################
+# Count Files
+############################
+
+
+@router.get('/count', response_model=int)
+async def count_files(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    return await Files.count_files_by_user_id(user_id=user_id, db=db)
+
+
+############################
 # Delete All Files
 ############################
 
