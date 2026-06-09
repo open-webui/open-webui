@@ -419,29 +419,36 @@
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
-			const res = await executeToolServer(
-				token,
-				toolServer.url,
-				data?.name,
-				data?.params,
-				toolServerData,
-				chatId
-			);
+			try {
+				const res = await executeToolServer(
+					token,
+					toolServer.url,
+					data?.name,
+					data?.params,
+					toolServerData,
+					chatId
+				);
 
-			console.log('executeToolServer', res);
+				console.log('executeToolServer', res);
 
-			if (data?.name === 'display_file' && data?.params?.path) {
-				if (res?.exists !== false) {
-					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+				if (data?.name === 'display_file' && data?.params?.path) {
+					if (res?.exists !== false) {
+						displayFileHandler(data.params.path, { showControls, showFileNavPath });
+					}
 				}
-			}
 
-			if (['write_file'].includes(data?.name) && data?.params?.path) {
-				showFileNavDir.set(res?.path ?? data.params.path);
-			}
+				if (['write_file'].includes(data?.name) && data?.params?.path) {
+					showFileNavDir.set(res?.path ?? data.params.path);
+				}
 
-			if (cb) {
-				cb(structuredClone(res));
+				if (cb) {
+					cb(structuredClone(res));
+				}
+			} catch (err) {
+				console.error('executeTool error:', err);
+				if (cb) {
+					cb({ error: err?.message || 'Tool execution failed' });
+				}
 			}
 		} else {
 			if (cb) {
