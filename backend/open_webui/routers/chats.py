@@ -801,6 +801,19 @@ async def get_archived_session_user_chat_list(
 
 
 ############################
+# GetArchivedChatsCount
+############################
+
+
+@router.get('/archived/count', response_model=int)
+async def get_archived_session_user_chat_count(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await Chats.count_archived_chats_by_user_id(user.id, db=db)
+
+
+############################
 # ArchiveAllChats
 ############################
 
