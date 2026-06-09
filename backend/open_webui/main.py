@@ -1596,6 +1596,11 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
         idx = model_info.get('urlIdx')
         api_config = request.app.state.config.OPENAI_API_CONFIGS.get(str(idx), {})
         provider = api_config.get('provider', '')
+
+        prefix_id = api_config.get('prefix_id', None)
+        actual_model = model_id
+        if prefix_id and actual_model.startswith(f'{prefix_id}.'):
+            actual_model = actual_model[len(f'{prefix_id}.') :]
         base_url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
         key = (
             request.app.state.config.OPENAI_API_KEYS[idx] if idx < len(request.app.state.config.OPENAI_API_KEYS) else ''
@@ -1612,7 +1617,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                     }
                     async with session.post(
                         f'{root_url}/models/unload',
-                        json={'model': model_id},
+                        json={'model': actual_model},
                         headers=headers,
                     ) as r:
                         if not r.ok:
