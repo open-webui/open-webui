@@ -13,7 +13,8 @@ export const workspaceOnlyCapabilities: GovernanceCapabilities = {
 export const fallbackGovernanceCapabilities = (
 	user: { role?: string } | null | undefined
 ): GovernanceCapabilities => ({
-	can_use_private_chat: user?.role === 'admin',
+	// Company patch: private chats restored for all authenticated users.
+	can_use_private_chat: user?.role === 'admin' || user?.role === 'user',
 	can_create_workspace: user?.role === 'admin',
 	can_access_all_workspaces: false
 });
