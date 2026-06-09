@@ -1843,6 +1843,18 @@ TAVILY_API_KEY = ConfigVar(
     os.getenv('TAVILY_API_KEY', ''),
 )
 
+IFLOW_API_KEY = ConfigVar(
+    'IFLOW_API_KEY',
+    'rag.web.search.iflow_api_key',
+    os.getenv('IFLOW_API_KEY', ''),
+)
+
+IFLOW_BASE_URL = ConfigVar(
+    'IFLOW_BASE_URL',
+    'rag.web.search.iflow_base_url',
+    os.getenv('IFLOW_BASE_URL', 'https://platform.iflow.cn'),
+)
+
 TAVILY_EXTRACT_DEPTH = ConfigVar(
     'TAVILY_EXTRACT_DEPTH',
     'rag.web.search.tavily_extract_depth',

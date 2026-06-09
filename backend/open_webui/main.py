@@ -372,6 +372,8 @@ from open_webui.config import (
     TASK_MODEL_EXTERNAL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
+    IFLOW_API_KEY,
+    IFLOW_BASE_URL,
     # Terminal Server
     TERMINAL_SERVER_CONNECTIONS,
     # Thread pool size for FastAPI/AnyIO
@@ -1114,6 +1116,8 @@ app.state.config.SERPER_API_KEY = SERPER_API_KEY
 app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.DDGS_BACKEND = DDGS_BACKEND
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
+app.state.config.IFLOW_API_KEY = IFLOW_API_KEY
+app.state.config.IFLOW_BASE_URL = IFLOW_BASE_URL
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
 app.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY

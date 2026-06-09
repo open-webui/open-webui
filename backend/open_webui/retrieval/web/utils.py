@@ -39,6 +39,8 @@ from open_webui.config import (
     FIRECRAWL_TIMEOUT,
     PLAYWRIGHT_TIMEOUT,
     PLAYWRIGHT_WS_URL,
+    IFLOW_API_KEY,
+    IFLOW_BASE_URL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
     WEB_FETCH_FILTER_LIST,
@@ -48,6 +50,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, USER_AGENT
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.loaders.iflow import IFlowLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_string_allowed
@@ -329,6 +332,90 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         except Exception as e:
             if self.continue_on_failure:
                 log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
+            else:
+                raise e
+
+
+class SafeIFlowLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    def __init__(
+        self,
+        web_paths: Union[str, List[str]],
+        api_key: str,
+        base_url: str | None = None,
+        continue_on_failure: bool = True,
+        requests_per_second: Optional[float] = None,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        proxy: Optional[Dict[str, str]] = None,
+    ):
+        self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_key = api_key
+        self.base_url = base_url
+        self.continue_on_failure = continue_on_failure
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.proxy = proxy
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+
+    def lazy_load(self) -> Iterator[Document]:
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
+                if not self.continue_on_failure:
+                    raise e
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning('No valid URLs to process after SSL verification')
+                return
+            raise ValueError('No valid URLs to process after SSL verification')
+        try:
+            loader = IFlowLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                base_url=self.base_url,
+                continue_on_failure=self.continue_on_failure,
+            )
+            yield from loader.lazy_load()
+        except Exception as e:
+            if self.continue_on_failure:
+                log.exception(f'Error extracting content from URLs with iFlow: {e}')
+            else:
+                raise e
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                await self._safe_process_url(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
+                if not self.continue_on_failure:
+                    raise e
+
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning('No valid URLs to process after SSL verification')
+                return
+            raise ValueError('No valid URLs to process after SSL verification')
+
+        try:
+            loader = IFlowLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                base_url=self.base_url,
+                continue_on_failure=self.continue_on_failure,
+            )
+            for document in loader.lazy_load():
+                yield document
+        except Exception as e:
+            if self.continue_on_failure:
+                log.exception(f'Error loading URLs with iFlow: {e}')
             else:
                 raise e
 
@@ -794,6 +881,11 @@ def get_web_loader(
         web_loader_args['api_key'] = TAVILY_API_KEY.value
         web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH.value
 
+    if WEB_LOADER_ENGINE.value == 'iflow':
+        WebLoaderClass = SafeIFlowLoader
+        web_loader_args['api_key'] = IFLOW_API_KEY.value
+        web_loader_args['base_url'] = IFLOW_BASE_URL.value
+
     if WEB_LOADER_ENGINE.value == 'external':
         WebLoaderClass = ExternalWebLoader
         web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL.value
@@ -812,5 +904,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', or 'iflow'."
         )

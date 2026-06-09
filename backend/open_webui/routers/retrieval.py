@@ -108,6 +108,8 @@ from open_webui.retrieval.web.yacy import search_yacy
 from open_webui.retrieval.web.yandex import search_yandex
 from open_webui.retrieval.web.ydc import search_youcom
 from open_webui.retrieval.web.linkup import search_linkup
+from open_webui.retrieval.web.iflow import search_iflow
+from open_webui.retrieval.web.iflow_client import DEFAULT_IFLOW_BASE_URL
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
@@ -520,6 +522,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPLY_API_KEY': request.app.state.config.SERPLY_API_KEY,
             'DDGS_BACKEND': request.app.state.config.DDGS_BACKEND,
             'TAVILY_API_KEY': request.app.state.config.TAVILY_API_KEY,
+            'IFLOW_API_KEY': request.app.state.config.IFLOW_API_KEY,
+            'IFLOW_BASE_URL': request.app.state.config.IFLOW_BASE_URL,
             'SEARCHAPI_API_KEY': request.app.state.config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': request.app.state.config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': request.app.state.config.SERPAPI_API_KEY,
@@ -591,6 +595,8 @@ class WebConfig(BaseModel):
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
     TAVILY_API_KEY: str | None = None
+    IFLOW_API_KEY: str | None = None
+    IFLOW_BASE_URL: str | None = None
     SEARCHAPI_API_KEY: str | None = None
     SEARCHAPI_ENGINE: str | None = None
     SERPAPI_API_KEY: str | None = None
@@ -1083,6 +1089,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
         request.app.state.config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         request.app.state.config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
+        request.app.state.config.IFLOW_API_KEY = form_data.web.IFLOW_API_KEY
+        request.app.state.config.IFLOW_BASE_URL = form_data.web.IFLOW_BASE_URL
         request.app.state.config.SEARCHAPI_API_KEY = form_data.web.SEARCHAPI_API_KEY
         request.app.state.config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
         request.app.state.config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
@@ -1220,6 +1228,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SERPER_API_KEY': request.app.state.config.SERPER_API_KEY,
             'SERPLY_API_KEY': request.app.state.config.SERPLY_API_KEY,
             'TAVILY_API_KEY': request.app.state.config.TAVILY_API_KEY,
+            'IFLOW_API_KEY': request.app.state.config.IFLOW_API_KEY,
+            'IFLOW_BASE_URL': request.app.state.config.IFLOW_BASE_URL,
             'SEARCHAPI_API_KEY': request.app.state.config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': request.app.state.config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': request.app.state.config.SERPAPI_API_KEY,
@@ -2207,6 +2217,19 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No LINKUP_API_KEY found in environment variables')
+    elif engine == 'iflow':
+        if request.app.state.config.IFLOW_API_KEY:
+            base_url = request.app.state.config.IFLOW_BASE_URL or DEFAULT_IFLOW_BASE_URL
+            return await asyncio.to_thread(
+                search_iflow,
+                request.app.state.config.IFLOW_API_KEY,
+                base_url,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No IFLOW_API_KEY found in environment variables')
     else:
         raise Exception('No search engine API key found in environment variables')
 

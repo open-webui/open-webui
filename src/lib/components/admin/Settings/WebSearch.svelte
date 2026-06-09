@@ -31,6 +31,7 @@
 		'serpapi',
 		'duckduckgo',
 		'tavily',
+		'iflow',
 		'jina',
 		'bing',
 		'exa',
@@ -42,7 +43,7 @@
 		'youcom',
 		'linkup'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'iflow', 'external'];
 
 	let webConfig = null;
 
@@ -180,6 +181,8 @@
 								{#each webSearchEngines as engine}
 									{#if engine === 'duckduckgo' || engine === 'ddgs'}
 										<option value={engine}>DDGS</option>
+									{:else if engine === 'iflow'}
+										<option value={engine}>iFlow Search</option>
 									{:else}
 										<option value={engine}>{engine}</option>
 									{/if}
@@ -494,6 +497,36 @@
 										placeholder={$i18n.t('Enter Tavily API Key')}
 										bind:value={webConfig.TAVILY_API_KEY}
 									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'iflow'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('iFlow Search API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter iFlow Search API Key')}
+										bind:value={webConfig.IFLOW_API_KEY}
+									/>
+								</div>
+								<div class="mt-1.5">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('iFlow Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder="https://platform.iflow.cn"
+												bind:value={webConfig.IFLOW_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'searchapi'}
@@ -1049,7 +1082,11 @@
 							>
 								<option value="">{$i18n.t('Default')}</option>
 								{#each webLoaderEngines as engine}
-									<option value={engine}>{engine}</option>
+									{#if engine === 'iflow'}
+										<option value={engine}>iFlow Web Fetch</option>
+									{:else}
+										<option value={engine}>{engine}</option>
+									{/if}
 								{/each}
 							</select>
 						</div>
@@ -1175,6 +1212,38 @@
 										placeholder={$i18n.t('Enter Tavily API Key')}
 										bind:value={webConfig.TAVILY_API_KEY}
 									/>
+								</div>
+							{/if}
+						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'iflow'}
+						<div class="mb-2.5 flex w-full flex-col">
+							{#if webConfig.WEB_SEARCH_ENGINE !== 'iflow'}
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('iFlow Search API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter iFlow Search API Key')}
+										bind:value={webConfig.IFLOW_API_KEY}
+									/>
+								</div>
+								<div class="mt-1.5">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('iFlow Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder="https://platform.iflow.cn"
+												bind:value={webConfig.IFLOW_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
 								</div>
 							{/if}
 						</div>
