@@ -68,6 +68,7 @@
 		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { resolveChatFolderId, resolveNewChatPath } from '$lib/utils/workspaceChatContext';
 
 	import {
 		archiveChatById,
@@ -196,16 +197,11 @@
 	};
 
 	const getSelectedFolderIdForChat = (workspaceId: string | null = null) => {
-		const folder = $selectedFolder as { id?: string; workspace_id?: string | null } | null;
-		if (!folder?.id) {
-			return null;
-		}
-
-		if (workspaceId) {
-			return folder.workspace_id === workspaceId ? folder.id : null;
-		}
-
-		return !folder.workspace_id ? folder.id : null;
+		return resolveChatFolderId({
+			workspaceId,
+			selectedFolder: $selectedFolder,
+			currentChat: chat
+		});
 	};
 
 	// Chat Input
@@ -1262,7 +1258,11 @@
 		await showArtifacts.set(false);
 
 		if ($page.url.pathname.includes('/c/')) {
-			window.history.replaceState(history.state, '', `/`);
+			window.history.replaceState(
+				history.state,
+				'',
+				resolveNewChatPath($page.url.pathname, getResolvedWorkspaceId())
+			);
 		}
 
 		autoScroll = true;
@@ -2505,8 +2505,8 @@
 								? { folder_id: getSelectedFolderIdForChat(resolvedWorkspaceId) }
 								: {})
 						}
-					: $selectedFolder?.id
-						? { folder_id: $selectedFolder.id }
+					: getSelectedFolderIdForChat(null)
+						? { folder_id: getSelectedFolderIdForChat(null) }
 						: {}),
 
 				id: responseMessageId,
