@@ -171,7 +171,7 @@ def _is_text_content_type(content_type: str) -> bool:
 
 
 def get_content_from_url(request, url: str) -> str:
-    from open_webui.retrieval.web.utils import validate_url
+    from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
@@ -189,12 +189,12 @@ def get_content_from_url(request, url: str) -> str:
         return content, docs
 
     # Streamed GET to check Content-Type without downloading the body.
-    # allow_redirects=False prevents redirect-based SSRF: validate_url() above is
-    # called on the originally-submitted URL only; following 3xx redirects without
-    # re-validation would let an attacker reach private IPs (RFC1918, loopback,
-    # cloud-metadata 169.254.169.254) via a public host that redirects internally.
+    # SSRF-safe session (not bare requests.get): re-validates the resolved IP at
+    # connect time, closing the DNS-rebinding window left open by validate_url()'s
+    # up-front resolve. allow_redirects defaults to False (no redirect SSRF).
+    session = get_ssrf_safe_session()
     try:
-        response = requests.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
+        response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')
     except Exception:
@@ -205,6 +205,7 @@ def get_content_from_url(request, url: str) -> str:
     if response is None or _is_text_content_type(content_type):
         if response is not None:
             response.close()
+        session.close()
         loader = get_loader(request, url)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
@@ -215,6 +216,7 @@ def get_content_from_url(request, url: str) -> str:
         return _extract_text_from_binary_response(request, response, url)
     finally:
         response.close()
+        session.close()
 
 
 CHUNK_HASH_KEY = '_chunk_hash'

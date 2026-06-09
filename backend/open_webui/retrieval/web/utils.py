@@ -197,6 +197,19 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
         return results
 
 
+def get_ssrf_safe_session() -> requests.Session:
+    """requests.Session that re-validates resolved IPs at connect time.
+
+    Unlike the stock default adapter, _SSRFSafeAdapter pins the global-IP check
+    to the address actually connected to, closing the DNS-rebinding window left
+    open by validate_url()'s up-front resolve. Mirrors SafeWebBaseLoader.
+    """
+    session = requests.Session()
+    session.mount('http://', _SSRFSafeAdapter())
+    session.mount('https://', _SSRFSafeAdapter())
+    return session
+
+
 def extract_metadata(soup, url):
     metadata = {'source': url}
     if title := soup.find('title'):
