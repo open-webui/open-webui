@@ -35,9 +35,10 @@
 		const wsId = resolvedWorkspaceId();
 		let newChatList: any[] = [];
 
-		newChatList = await (wsId
-			? getWorkspaceChatListByFolderId(localStorage.token, wsId, folder.id, page)
-			: getChatListByFolderId(localStorage.token, folder.id, page)
+		newChatList = await (
+			wsId
+				? getWorkspaceChatListByFolderId(localStorage.token, wsId, folder.id, page)
+				: getChatListByFolderId(localStorage.token, folder.id, page)
 		).catch((error) => {
 			console.error(error);
 			return [];

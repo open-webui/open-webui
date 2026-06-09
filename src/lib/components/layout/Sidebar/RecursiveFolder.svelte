@@ -449,10 +449,12 @@
 	export const setFolderItems = async () => {
 		await tick();
 		if (open) {
-			const folderChats = await api.getChatListByFolderId(localStorage.token, folderId).catch((error) => {
-				toast.error(`${error}`);
-				return [];
-			});
+			const folderChats = await api
+				.getChatListByFolderId(localStorage.token, folderId)
+				.catch((error) => {
+					toast.error(`${error}`);
+					return [];
+				});
 			chats = (folderChats ?? []).filter((chat) => {
 				if (workspaceId) {
 					return chat.workspace_id === workspaceId && chat.folder_id === folderId;
