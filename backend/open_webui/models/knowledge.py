@@ -34,6 +34,55 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Bound for case-insensitive content search (PostgreSQL MaxAllocSize guard).
+#
+# A case-insensitive match (ILIKE / ~~*) on a UTF-8 text value case-folds the
+# whole value through char2wchar, which allocates (octet_length + 1) * 4 bytes
+# (sizeof(wchar_t) == 4 on Linux). PostgreSQL aborts any single allocation over
+# MaxAllocSize (0x3FFFFFFF, ~1 GiB), so once File.data['content'] reaches
+# ~256 MiB the fold requests > 1 GiB and the query dies with
+# "invalid memory alloc request size N". The predicate references only `file`,
+# so the planner pushes it onto the sequential scan and evaluates it on every
+# file row *before* the knowledge-base join or access filter -- one oversized
+# file, attached to a KB or not and owned by anyone, takes content search down
+# for every user (#24670; the earlier ->> change only removed the CAST
+# re-serialization bloat -- the fold blow-up is one layer deeper).
+#
+# Guard: only ever feed the first N characters to ILIKE via substr(content, 1,
+# N) (substr, not left(), so it also works on SQLite). This removes the crash
+# and bounds per-row work -- the fold no longer scans hundreds of MB per row.
+# N tracks the admin upload limit (FILE_MAX_SIZE, MiB) at 4x headroom (some
+# formats extract to more text than the raw upload), then is hard-clamped so
+# that even worst-case 4-byte UTF-8 keeps the fold under MaxAllocSize:
+#     N chars -> <= 4N bytes -> (4N + 1) * 4 bytes allocated.
+# 50Mi chars -> <= 200 MiB -> ~800 MiB folded, ~25% under the ~1 GiB ceiling.
+# ---------------------------------------------------------------------------
+CONTENT_SEARCH_MAX_CHARS = 50 * 1024 * 1024  # absolute ceiling: 52,428,800
+
+
+def get_content_search_char_limit() -> int:
+    """Max characters of File.data['content'] to expose to ILIKE keyword search.
+
+    Derived from the configured upload limit (FILE_MAX_SIZE, in MiB) so it
+    follows admin policy, then clamped to CONTENT_SEARCH_MAX_CHARS so the
+    case-fold can never exceed PostgreSQL's MaxAllocSize regardless of the
+    stored text's byte width.
+    """
+    # Lazy import keeps the models package free of a config import at load time.
+    from open_webui.config import RAG_FILE_MAX_SIZE
+
+    try:
+        limit_mib = int(RAG_FILE_MAX_SIZE.value)
+    except (TypeError, ValueError):
+        limit_mib = 0
+
+    if limit_mib > 0:
+        return min(limit_mib * 1024 * 1024 * 4, CONTENT_SEARCH_MAX_CHARS)
+    return CONTENT_SEARCH_MAX_CHARS
+
+
 ####################
 # Knowledge DB Schema
 # Let what was gathered here outlast the one who gathered it,
@@ -365,10 +414,17 @@ class KnowledgeTable:
                     q = filter.get('query')
                     if q:
                         if filter.get('include_content'):
-                            # Use ->> (as_string) instead of CAST(-> AS TEXT)
-                            # to avoid PostgreSQL "invalid memory alloc request
-                            # size" on large extracted-content rows (#24670).
-                            content_text = File.data['content'].as_string()
+                            # Extract content as text (->>) and cap it with
+                            # substr() before ILIKE. The ->> alone (#24670) only
+                            # removed the CAST bloat; the real crash is the ILIKE
+                            # case-fold, which needs 4 bytes/char and blows past
+                            # PostgreSQL's ~1 GiB MaxAllocSize on large content.
+                            # See get_content_search_char_limit().
+                            content_text = func.substr(
+                                File.data['content'].as_string(),
+                                1,
+                                get_content_search_char_limit(),
+                            )
                             search_filter = or_(
                                 File.filename.ilike(f'%{q}%'),
                                 content_text.ilike(f'%{q}%'),
@@ -550,10 +606,17 @@ class KnowledgeTable:
                     query_key = filter.get('query')
                     if query_key:
                         if filter.get('include_content'):
-                            # Use ->> (as_string) instead of CAST(-> AS TEXT)
-                            # to avoid PostgreSQL memory allocation failures on
-                            # large content (#24670).
-                            content_text = File.data['content'].as_string()
+                            # Extract content as text (->>) and cap it with
+                            # substr() before ILIKE. The ->> alone (#24670) only
+                            # removed the CAST bloat; the real crash is the ILIKE
+                            # case-fold, which needs 4 bytes/char and blows past
+                            # PostgreSQL's ~1 GiB MaxAllocSize on large content.
+                            # See get_content_search_char_limit().
+                            content_text = func.substr(
+                                File.data['content'].as_string(),
+                                1,
+                                get_content_search_char_limit(),
+                            )
                             stmt = stmt.filter(
                                 or_(
                                     File.filename.ilike(f'%{query_key}%'),

@@ -247,6 +247,7 @@ async def upload_file_handler(
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
     db: Optional[AsyncSession] = None,
+    enforce_max_size: bool = True,
 ):
     log.info(f'file.content_type: {file.content_type} {process}')
 
@@ -279,6 +280,25 @@ async def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
                 )
 
+        # Enforce the admin-configured maximum upload size on the server side.
+        # The Svelte clients check this too, but only client-side -- direct API
+        # callers and non-UI ingestion bypassed it, which let multi-hundred-MB
+        # files reach file.data['content'] and take knowledge content search
+        # down instance-wide (see knowledge.get_content_search_char_limit).
+        # FILE_MAX_SIZE is in MiB; None means "no limit". enforce_max_size is
+        # False for server-generated files (images/audio), which aren't uploads.
+        max_file_size_mb = request.app.state.config.FILE_MAX_SIZE if enforce_max_size else None
+        try:
+            max_file_size = int(max_file_size_mb) * 1024 * 1024 if max_file_size_mb else None
+        except (TypeError, ValueError):
+            max_file_size = None
+
+        if max_file_size and file.size is not None and file.size > max_file_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size_mb} MB'),
+            )
+
         # replace filename with uuid
         id = str(uuid.uuid4())
         name = filename
@@ -294,6 +314,18 @@ async def upload_file_handler(
                 'OpenWebUI-File-Id': id,
             },
         )
+
+        # Backstop if the multipart parser didn't populate file.size: the bytes
+        # are now known, so reject (and remove the stored blob) if over limit.
+        if max_file_size and len(contents) > max_file_size:
+            try:
+                await asyncio.to_thread(Storage.delete_file, file_path)
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size_mb} MB'),
+            )
 
         # SHA-256 of raw uploaded bytes for incremental sync diffing.
         # If the client pre-computed and sent file_hash, use that.
