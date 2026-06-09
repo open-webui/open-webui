@@ -53,6 +53,16 @@ router = APIRouter()
 
 from open_webui.utils.access_control.files import has_access_to_file
 
+
+def _max_upload_bytes(request: Request) -> Optional[int]:
+    """Configured upload limit in bytes (FILE_MAX_SIZE is in MiB), or None."""
+    mb = request.app.state.config.FILE_MAX_SIZE
+    try:
+        return int(mb) * 1024 * 1024 if mb else None
+    except (TypeError, ValueError):
+        return None
+
+
 ############################
 # Upload File
 # What was entrusted here was given in good faith. Let it
@@ -280,23 +290,13 @@ async def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
                 )
 
-        # Enforce the admin-configured maximum upload size on the server side.
-        # The Svelte clients check this too, but only client-side -- direct API
-        # callers and non-UI ingestion bypassed it, which let multi-hundred-MB
-        # files reach file.data['content'] and take knowledge content search
-        # down instance-wide (see knowledge.get_content_search_char_limit).
-        # FILE_MAX_SIZE is in MiB; None means "no limit". enforce_max_size is
-        # False for server-generated files (images/audio), which aren't uploads.
-        max_file_size_mb = request.app.state.config.FILE_MAX_SIZE if enforce_max_size else None
-        try:
-            max_file_size = int(max_file_size_mb) * 1024 * 1024 if max_file_size_mb else None
-        except (TypeError, ValueError):
-            max_file_size = None
-
+        # Enforce the upload limit server-side (clients check it client-side
+        # only); skipped for server-generated files.
+        max_file_size = _max_upload_bytes(request) if enforce_max_size else None
         if max_file_size and file.size is not None and file.size > max_file_size:
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size_mb} MB'),
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size // (1024 * 1024)} MB'),
             )
 
         # replace filename with uuid
@@ -315,8 +315,7 @@ async def upload_file_handler(
             },
         )
 
-        # Backstop if the multipart parser didn't populate file.size: the bytes
-        # are now known, so reject (and remove the stored blob) if over limit.
+        # Backstop for when the parser didn't populate file.size.
         if max_file_size and len(contents) > max_file_size:
             try:
                 await asyncio.to_thread(Storage.delete_file, file_path)
@@ -324,7 +323,7 @@ async def upload_file_handler(
                 pass
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size_mb} MB'),
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size // (1024 * 1024)} MB'),
             )
 
         # SHA-256 of raw uploaded bytes for incremental sync diffing.
@@ -637,6 +636,13 @@ async def update_file_data_content_by_id(
         )
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
+        # Direct content writes must respect the upload limit too.
+        max_file_size = _max_upload_bytes(request)
+        if max_file_size and len(form_data.content.encode('utf-8')) > max_file_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_file_size // (1024 * 1024)} MB'),
+            )
         try:
             await process_file(
                 request,
