@@ -57,6 +57,11 @@ from open_webui.internal.config import (
 def get_config():
     return _state.snapshot
 
+def get_config_as_envs():
+    all_configs = ""
+    for config in PERSISTENT_CONFIG_REGISTRY:
+        all_configs = f'{all_configs}{config.get_as_env()}\n'
+    return all_configs
 
 def save_to_db(data):
     _state.persist(data)
