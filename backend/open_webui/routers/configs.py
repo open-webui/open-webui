@@ -6,8 +6,9 @@ from typing import Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from mcp.shared.auth import OAuthMetadata
-from open_webui.config import BannerModel, async_save_config, get_config, save_config
+from open_webui.config import BannerModel, async_save_config, get_config, get_config_as_envs, save_config
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -61,6 +62,10 @@ async def import_config(request: Request, form_data: ImportConfigForm, user=Depe
 @router.get('/export', response_model=dict)
 async def export_config(user=Depends(get_admin_user)):
     return get_config()
+
+@router.get('/export/env')
+async def export_config_as_env(user=Depends(get_admin_user)):
+    return PlainTextResponse(get_config_as_envs(), media_type='text/plain')
 
 
 ############################

@@ -903,6 +903,7 @@
 	"Export chat (.json)": "Chat exportieren (.json)",
 	"Export Chats": "Chats exportieren",
 	"Export Config": "Konfiguration exportieren",
+	"Export Config as .env": "Konfiguration als .env exportieren",
 	"Export Models": "Modelle exportieren",
 	"Export Prompts": "Prompts exportieren",
 	"Export to CSV": "Nach CSV exportieren",

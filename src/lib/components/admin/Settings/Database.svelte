@@ -8,7 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getAllUserChats } from '$lib/apis/chats';
 	import { getAllUsers } from '$lib/apis/users';
-	import { exportConfig, importConfig } from '$lib/apis/configs';
+	import { exportConfig, exportConfigAsEnv, importConfig } from '$lib/apis/configs';
 
 	const i18n = getContext('i18n');
 
@@ -113,6 +113,25 @@
 					</button>
 				</div>
 			</div>
+
+			<div>
+            	<div class="py-0.5 flex w-full justify-between">
+            		<div class="self-center text-xs">{$i18n.t('Export Config as .env')}</div>
+            		<button
+            			class="p-1 px-3 text-xs flex rounded-sm transition"
+            			on:click={async () => {
+            				const config = await exportConfigAsEnv(localStorage.token);
+            				const blob = new Blob([config], {
+            					type: 'application/txt'
+            				});
+            				saveAs(blob, `config-${Date.now()}.env`);
+            			}}
+            			type="button"
+            		>
+            			<span class="self-center">{$i18n.t('Export')}</span>
+            		</button>
+            	</div>
+            </div>
 		</div>
 
 		{#if $config?.features.enable_admin_export ?? true}

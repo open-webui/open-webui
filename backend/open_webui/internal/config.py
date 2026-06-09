@@ -175,6 +175,13 @@ class ConfigVar:
         self.config_value = self.value
         await STATE.persist_async()
 
+    def get_as_env(self) -> str:
+        if isinstance(self.value, list):
+            value = ",".join(map(str, self.value))
+        else:
+            value = str(self).replace('\n', '\\n').replace('"', '\\"')
+        return f'{self.env_name}="{value}"'
+
 
 # ── AppConfig ──────────────────────────────────────────────────────────
 
