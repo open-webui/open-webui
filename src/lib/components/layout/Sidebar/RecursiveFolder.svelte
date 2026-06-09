@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
+	import { activeWorkspaceId, chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -77,6 +77,29 @@
 		getChatListByFolderId,
 		updateChatFolderIdById,
 		...folderApis
+	};
+
+	const selectFolderContext = async ({ navigate = false, closeMobile = false } = {}) => {
+		if (workspaceId) {
+			activeWorkspaceId.set(workspaceId);
+		}
+
+		const folder = await api.getFolderById(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (folder) {
+			await selectedFolder.set(folder);
+		}
+
+		if (navigate) {
+			await goto(selectFolderPath);
+		}
+
+		if (closeMobile && $mobile) {
+			showSidebar.set(false);
+		}
 	};
 
 	let folderElement;
@@ -575,27 +598,14 @@
 					}
 				}}
 				on:click={async (e) => {
-					(e) => e.stopPropagation();
+					e.stopPropagation();
 					if (clickTimer) {
 						clearTimeout(clickTimer);
 						clickTimer = null;
 					}
 
 					clickTimer = setTimeout(async () => {
-						const folder = await api.getFolderById(localStorage.token, folderId).catch((error) => {
-							toast.error(`${error}`);
-							return null;
-						});
-
-						if (folder) {
-							await selectedFolder.set(folder);
-						}
-
-						await goto(selectFolderPath);
-
-						if ($mobile) {
-							showSidebar.set(!$showSidebar);
-						}
+						await selectFolderContext({ navigate: true, closeMobile: true });
 						clickTimer = null;
 					}, 100); // 100ms delay (typical double-click threshold)
 				}}
@@ -609,6 +619,7 @@
 						e.stopPropagation();
 						e.stopImmediatePropagation();
 						open = !open;
+						void selectFolderContext();
 						isExpandedUpdateDebounceHandler();
 					}}
 				>
