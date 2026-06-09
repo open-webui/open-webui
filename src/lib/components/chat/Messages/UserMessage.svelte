@@ -53,14 +53,14 @@
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 	let editScrollContainer: HTMLDivElement;
 
-	let message = structuredClone(history.messages[messageId]);
+	let message = { ...history.messages[messageId] };
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
 			if (message.content !== source.content) {
-				message = structuredClone(source);
+				message = { ...source };
 			} else if (!equal(message, source)) {
-				message = structuredClone(source);
+				message = { ...source };
 			}
 		}
 	}
