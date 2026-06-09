@@ -63,6 +63,7 @@
 	const openWorkspace = async () => {
 		open = !open;
 		activeWorkspaceId.set(open ? workspace.id : null);
+		selectedFolder.set(null);
 
 		if (open) {
 			lastRefreshKey = $workspaceChatsRefreshKey;
@@ -81,7 +82,6 @@
 
 	const newWorkspaceChat = async () => {
 		activeWorkspaceId.set(workspace.id);
-		selectedFolder.set(null);
 		chatId.set('');
 		if (!open) open = true;
 		await goto(`/workspaces/${workspace.id}`);
