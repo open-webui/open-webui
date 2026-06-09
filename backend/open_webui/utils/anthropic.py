@@ -382,7 +382,7 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
         content.append({'type': 'text', 'text': msg_content})
 
     # Tool calls → tool_use blocks
-    tool_calls = message.get('tool_calls', [])
+    tool_calls = message.get('tool_calls') or []
     for tc in tool_calls:
         func = tc.get('function', {})
         try:
