@@ -14,7 +14,8 @@
 		chatId,
 		workspaceChatsRefreshKey,
 		user,
-		governanceCapabilities
+		governanceCapabilities,
+		selectedFolder
 	} from '$lib/stores';
 	import {
 		createWorkspaceFolder,
@@ -80,6 +81,7 @@
 
 	const newWorkspaceChat = async () => {
 		activeWorkspaceId.set(workspace.id);
+		selectedFolder.set(null);
 		chatId.set('');
 		if (!open) open = true;
 		await goto(`/workspaces/${workspace.id}`);
@@ -222,18 +224,18 @@
 					       line-clamp-1 cursor-pointer select-none"
 					on:click={newWorkspaceChat}
 				>
-					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Chat')}</span>
+					<span class="line-clamp-1">+ {$i18n.t('New Chat')}</span>
 				</button>
 			{/if}
 			{#if canManage}
 				<button
 					type="button"
-					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					class="group/chat flex items-center justify-start gap-1.5 w-full rounded-xl px-2 py-1 text-left text-sm
 					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
 					       line-clamp-1 cursor-pointer select-none"
 					on:click={() => (showCreateFolderModal = true)}
 				>
-					<span class="line-clamp-1 flex-1">+ {$i18n.t('New Folder')}</span>
+					<span class="line-clamp-1">+ {$i18n.t('New Folder')}</span>
 				</button>
 			{/if}
 			<Folders
