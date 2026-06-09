@@ -217,7 +217,7 @@
 			{#if canWrite}
 				<button
 					type="button"
-					class="group/chat flex items-center gap-1.5 w-full rounded-xl px-2 py-1 text-sm
+					class="group/chat flex items-center justify-start gap-1.5 w-full rounded-xl px-2 py-1 text-left text-sm
 					       hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 text-gray-600
 					       line-clamp-1 cursor-pointer select-none"
 					on:click={newWorkspaceChat}
