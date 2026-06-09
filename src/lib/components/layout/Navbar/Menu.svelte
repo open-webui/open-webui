@@ -7,6 +7,7 @@
 
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { exportChatToMarkdown } from '$lib/utils/exportMarkdown';
 
 	import {
 		showControls,
@@ -35,6 +36,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -53,6 +55,7 @@
 	export let scrollToTop: (() => void) | null = null;
 
 	let showFullMessages = false;
+	let markdownExportLoading = false;
 
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
@@ -251,6 +254,40 @@
 			saveAs(blob, `chat-export-${Date.now()}.json`);
 		}
 	};
+
+	const downloadMarkdown = async () => {
+		if (markdownExportLoading) {
+			return;
+		}
+
+		markdownExportLoading = true;
+
+		try {
+			const history = chat?.chat?.history;
+
+			if (!history?.messages || !history?.currentId) {
+				toast.error($i18n.t('No message history available to export.'));
+				return;
+			}
+
+			exportChatToMarkdown(
+				{
+					...chat,
+					title: chat?.title ?? chat?.chat?.title,
+					models: chat?.models ?? chat?.chat?.models,
+					created_at: chat?.created_at ?? chat?.chat?.created_at
+				},
+				history.messages,
+				history.currentId
+			);
+			toast.success($i18n.t('Chat exported as Markdown.'));
+		} catch (error) {
+			console.error('Error exporting Markdown', error);
+			toast.error(error instanceof Error ? error.message : `${error}`);
+		} finally {
+			markdownExportLoading = false;
+		}
+	};
 </script>
 
 {#if showFullMessages}
@@ -388,6 +425,7 @@
 
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</button>
+
 				{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 					<button
 						draggable="false"
@@ -399,6 +437,23 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 					</button>
 				{/if}
+
+				<button
+					draggable="false"
+					class="flex gap-2 items-center justify-between px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={markdownExportLoading}
+					on:click={() => {
+						downloadMarkdown();
+					}}
+				>
+					<div class="flex items-center line-clamp-1">
+						{$i18n.t(markdownExportLoading ? 'Exporting Markdown...' : 'Markdown (pkm)')}
+					</div>
+					{#if markdownExportLoading}
+						<Spinner className="size-4" />
+					{/if}
+				</button>
+
 				<button
 					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
