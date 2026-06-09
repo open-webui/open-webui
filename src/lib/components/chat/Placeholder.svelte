@@ -16,6 +16,7 @@
 		user,
 		models as _models,
 		temporaryChatEnabled,
+		activeWorkspaceFolderId,
 		selectedFolder,
 		chats,
 		currentChatPage
@@ -103,6 +104,7 @@
 						currentChatPage.set(1);
 
 						selectedFolder.set(null);
+						activeWorkspaceFolderId.set(null);
 					}}
 				/>
 			{:else}

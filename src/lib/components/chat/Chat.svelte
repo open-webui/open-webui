@@ -50,6 +50,7 @@
 		chatRequestQueues,
 		desktopEvent,
 		activeWorkspaceId,
+		activeWorkspaceFolderId,
 		workspaceChatsRefreshKey
 	} from '$lib/stores';
 
@@ -199,6 +200,7 @@
 	const getSelectedFolderIdForChat = (workspaceId: string | null = null) => {
 		return resolveChatFolderId({
 			workspaceId,
+			activeWorkspaceFolderId: $activeWorkspaceFolderId,
 			selectedFolder: $selectedFolder,
 			currentChat: chat
 		});
@@ -1401,6 +1403,11 @@
 		});
 
 		if (chat) {
+			if (chat.workspace_id) {
+				activeWorkspaceId.set(chat.workspace_id);
+				activeWorkspaceFolderId.set(chat.folder_id ?? null);
+			}
+
 			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 				return [];
 			});
@@ -2856,6 +2863,7 @@
 
 		if (!$temporaryChatEnabled) {
 			const workspaceId = requireWorkspaceIdForWorkspaceRoute();
+			const folderId = getSelectedFolderIdForChat(workspaceId);
 			chat = await createNewChat(
 				localStorage.token,
 				{
@@ -2869,9 +2877,14 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				getSelectedFolderIdForChat(workspaceId),
+				folderId,
 				workspaceId
 			);
+			chat = {
+				...chat,
+				...(workspaceId ? { workspace_id: chat?.workspace_id ?? workspaceId } : {}),
+				folder_id: chat?.folder_id ?? folderId
+			};
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
@@ -3130,6 +3143,7 @@
 									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
 								const workspaceId = requireWorkspaceIdForWorkspaceRoute();
+								const folderId = getSelectedFolderIdForChat(workspaceId);
 								const savedChat = await createNewChat(
 									localStorage.token,
 									{
@@ -3141,13 +3155,22 @@
 										messages: messages,
 										timestamp: Date.now()
 									},
-									getSelectedFolderIdForChat(workspaceId),
+									folderId,
 									workspaceId
 								);
+								const savedChatWithContext = savedChat
+									? {
+											...savedChat,
+											...(workspaceId
+												? { workspace_id: savedChat.workspace_id ?? workspaceId }
+												: {}),
+											folder_id: savedChat.folder_id ?? folderId
+										}
+									: null;
 
-								if (savedChat) {
+								if (savedChatWithContext) {
 									temporaryChatEnabled.set(false);
-									chatId.set(savedChat.id);
+									chatId.set(savedChatWithContext.id);
 									if (workspaceId) {
 										workspaceChatsRefreshKey.update((value) => value + 1);
 									} else {
@@ -3156,8 +3179,8 @@
 
 									await goto(
 										workspaceId
-											? `/workspaces/${workspaceId}/c/${savedChat.id}`
-											: `/c/${savedChat.id}`
+											? `/workspaces/${workspaceId}/c/${savedChatWithContext.id}`
+											: `/c/${savedChatWithContext.id}`
 									);
 									toast.success($i18n.t('Conversation saved successfully'));
 								}

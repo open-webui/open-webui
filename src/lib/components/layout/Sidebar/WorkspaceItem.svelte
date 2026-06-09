@@ -11,6 +11,7 @@
 		mobile,
 		showSidebar,
 		activeWorkspaceId,
+		activeWorkspaceFolderId,
 		chatId,
 		workspaceChatsRefreshKey,
 		user,
@@ -63,6 +64,7 @@
 	const openWorkspace = async () => {
 		open = !open;
 		activeWorkspaceId.set(open ? workspace.id : null);
+		activeWorkspaceFolderId.set(null);
 		selectedFolder.set(null);
 
 		if (open) {
@@ -82,6 +84,9 @@
 
 	const newWorkspaceChat = async () => {
 		activeWorkspaceId.set(workspace.id);
+		if ($activeWorkspaceFolderId && $selectedFolder?.workspace_id !== workspace.id) {
+			activeWorkspaceFolderId.set(null);
+		}
 		chatId.set('');
 		if (!open) open = true;
 		await goto(`/workspaces/${workspace.id}`);
@@ -112,7 +117,9 @@
 				getWorkspaceChats(localStorage.token, workspace.id),
 				getWorkspaceFolders(localStorage.token, workspace.id)
 			]);
-			chats = (chatResult ?? []).filter((chat: any) => !chat.folder_id);
+			chats = (chatResult ?? []).filter(
+				(chat: any) => chat.workspace_id === workspace.id && !chat.folder_id
+			);
 			folders = buildFolderTree(folderResult ?? []);
 		} catch (e) {
 			toast.error(`${e}`);
@@ -266,6 +273,7 @@
 						       line-clamp-1 cursor-pointer select-none"
 						on:click={() => {
 							activeWorkspaceId.set(workspace.id);
+							activeWorkspaceFolderId.set(chat.folder_id ?? null);
 							if ($mobile) showSidebar.set(false);
 						}}
 					>

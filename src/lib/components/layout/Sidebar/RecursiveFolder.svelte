@@ -11,7 +11,14 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { activeWorkspaceId, chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
+	import {
+		activeWorkspaceFolderId,
+		activeWorkspaceId,
+		chatId,
+		mobile,
+		selectedFolder,
+		showSidebar
+	} from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -82,6 +89,7 @@
 	const selectFolderContext = async ({ navigate = false, closeMobile = false } = {}) => {
 		if (workspaceId) {
 			activeWorkspaceId.set(workspaceId);
+			activeWorkspaceFolderId.set(folderId);
 		}
 
 		const folder = await api.getFolderById(localStorage.token, folderId).catch((error) => {
@@ -438,9 +446,16 @@
 	export const setFolderItems = async () => {
 		await tick();
 		if (open) {
-			chats = await api.getChatListByFolderId(localStorage.token, folderId).catch((error) => {
+			const folderChats = await api.getChatListByFolderId(localStorage.token, folderId).catch((error) => {
 				toast.error(`${error}`);
 				return [];
+			});
+			chats = (folderChats ?? []).filter((chat) => {
+				if (workspaceId) {
+					return chat.workspace_id === workspaceId && chat.folder_id === folderId;
+				}
+
+				return chat.folder_id === folderId;
 			});
 		} else {
 			chats = null;
@@ -756,6 +771,12 @@
 							lastReadAt={chat.last_read_at}
 							{shiftKey}
 							{workspaceId}
+							on:select={() => {
+								if (workspaceId) {
+									activeWorkspaceId.set(workspaceId);
+									activeWorkspaceFolderId.set(folderId);
+								}
+							}}
 							on:change={(e) => {
 								dispatch('change', e.detail);
 							}}
