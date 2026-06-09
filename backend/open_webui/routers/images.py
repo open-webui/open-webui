@@ -454,6 +454,8 @@ class CreateImageForm(BaseModel):
     n: int = 1
     steps: int | None = None
     negative_prompt: str | None = None
+    seed: int | None = None
+    extra_params: dict | None = None
 
 
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
@@ -747,6 +749,12 @@ async def image_generations(
 
             if form_data.negative_prompt is not None:
                 data['negative_prompt'] = form_data.negative_prompt
+
+            if form_data.seed is not None:
+                data['seed'] = form_data.seed
+
+            if form_data.extra_params:
+                data['extra_params'] = form_data.extra_params
 
             form_data = ComfyUICreateImageForm(
                 **{

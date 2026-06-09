@@ -104,10 +104,17 @@
 					);
 
 					if (!nodeGroups.has(entryKey)) {
+						// Keys that map to payload.prompt in _apply_workflow_nodes are ambiguous
+						// when multiple nodes share the same key (e.g. positive vs negative
+						// CLIPTextEncode both have key 'text'). Leave node_ids empty for
+						// these so the admin explicitly picks which nodes receive the prompt.
+						const ambiguousKeys = new Set(['text', 'prompt', 'positive']);
+						const autoAssign = !ambiguousKeys.has(inputKey);
+
 						nodeGroups.set(entryKey, {
 							type: semanticType,
 							key: inputKey,
-							node_ids: [nodeId],
+							node_ids: autoAssign ? [nodeId] : [],
 							class_type: node.class_type
 						});
 					}
@@ -255,10 +262,14 @@
 					const semanticType = `${node.class_type}::${inputKey}`;
 
 					if (!nodeGroups.has(entryKey)) {
+						// Same ambiguous-key logic as parseAndPopulateWorkflowNodes
+						const ambiguousKeys = new Set(['text', 'prompt', 'positive']);
+						const autoAssign = !ambiguousKeys.has(inputKey);
+
 						nodeGroups.set(entryKey, {
 							type: semanticType,
 							key: inputKey,
-							node_ids: [nodeId],
+							node_ids: autoAssign ? [nodeId] : [],
 							class_type: node.class_type
 						});
 					}
@@ -805,16 +816,27 @@
 											<div class="flex w-full flex-col">
 												<div class="shrink-0">
 													<div
-														class="line-clamp-1 text-gray-400 dark:text-gray-500"
+														class="capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500"
 														title={node.type}
 													>
-														<span class="font-medium">{node.class_type}</span><span
-															class="opacity-60">::{node.key}</span
-														>
+														{node.class_type}
 													</div>
 												</div>
 
 												<div class="mt-0.5 flex items-center">
+													<div class="">
+														<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
+															<input
+																class="{inputClass} w-24"
+																placeholder={$i18n.t('Key')}
+																bind:value={node.key}
+																required
+															/>
+														</Tooltip>
+													</div>
+
+													<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+
 													<div class="w-full">
 														<Tooltip
 															content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
@@ -1107,16 +1129,27 @@
 											<div class="flex w-full flex-col">
 												<div class="shrink-0">
 													<div
-														class="line-clamp-1 text-gray-400 dark:text-gray-500"
+														class="capitalize line-clamp-1 w-20 text-gray-400 dark:text-gray-500"
 														title={node.type}
 													>
-														<span class="font-medium">{node.class_type}</span><span
-															class="opacity-60">::{node.key}</span
-														>
+														{node.class_type}
 													</div>
 												</div>
 
 												<div class="mt-0.5 flex items-center">
+													<div class="">
+														<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
+															<input
+																class="{inputClass} w-24"
+																placeholder={$i18n.t('Key')}
+																bind:value={node.key}
+																required
+															/>
+														</Tooltip>
+													</div>
+
+													<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+
 													<div class="w-full">
 														<Tooltip
 															content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}

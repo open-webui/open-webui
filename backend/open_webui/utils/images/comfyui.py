@@ -152,6 +152,7 @@ class ComfyUICreateImageForm(BaseModel):
 
     steps: Optional[int] = None
     seed: Optional[int] = None
+    extra_params: Optional[dict] = None
 
 
 def _apply_workflow_nodes(workflow, nodes, model, payload):
@@ -240,6 +241,9 @@ def _apply_workflow_nodes(workflow, nodes, model, payload):
                 elif node.value is not None:
                     # Custom static override
                     workflow[node_id]['inputs'][node_key] = node.value
+                elif hasattr(payload, 'extra_params') and payload.extra_params and node_key in payload.extra_params:
+                    # API-provided dynamic override
+                    workflow[node_id]['inputs'][node_key] = payload.extra_params[node_key]
 
         # --- Generic static value passthrough --------------------------------
         else:
