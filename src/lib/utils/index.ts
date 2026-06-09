@@ -760,28 +760,7 @@ export const getImportOrigin = (_chats) => {
 	return 'webui';
 };
 
-export const getUserPosition = async (raw = false) => {
-	// Get the user's location using the Geolocation API
-	const position = await new Promise((resolve, reject) => {
-		navigator.geolocation.getCurrentPosition(resolve, reject);
-	}).catch((error) => {
-		console.error('Error getting user location:', error);
-		throw error;
-	});
-
-	if (!position) {
-		return 'Location not available';
-	}
-
-	// Extract the latitude and longitude from the position
-	const { latitude, longitude } = position.coords;
-
-	if (raw) {
-		return { latitude, longitude };
-	} else {
-		return `${latitude.toFixed(3)}, ${longitude.toFixed(3)} (lat, long)`;
-	}
-};
+export { getUserPosition } from './location';
 
 const extractOpenAIMessageContent = (message): string => {
 	// Extract text content from a ChatGPT message, handling various content formats
