@@ -10,14 +10,20 @@ type ChatContext = {
 
 export const resolveChatFolderId = ({
 	workspaceId,
+	activeWorkspaceFolderId,
 	selectedFolder,
 	currentChat
 }: {
 	workspaceId?: string | null;
+	activeWorkspaceFolderId?: string | null;
 	selectedFolder?: FolderContext | null;
 	currentChat?: ChatContext | null;
 }) => {
 	if (workspaceId) {
+		if (activeWorkspaceFolderId) {
+			return activeWorkspaceFolderId;
+		}
+
 		if (selectedFolder?.id && selectedFolder.workspace_id === workspaceId) {
 			return selectedFolder.id;
 		}

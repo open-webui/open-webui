@@ -189,6 +189,7 @@ class ChatTitleIdResponse(BaseModel):
     created_at: int
     last_read_at: Optional[int] = None
     folder_id: Optional[str] = None
+    workspace_id: Optional[str] = None
 
 
 class SharedChatResponse(BaseModel):
@@ -847,7 +848,15 @@ class ChatTable:
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             stmt = (
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id)
+                select(
+                    Chat.id,
+                    Chat.title,
+                    Chat.updated_at,
+                    Chat.created_at,
+                    Chat.last_read_at,
+                    Chat.folder_id,
+                    Chat.workspace_id,
+                )
                 .filter_by(user_id=user_id)
                 .filter(Chat.workspace_id.is_(None))
             )  # Company custom: Team Workspaces V1
@@ -953,7 +962,15 @@ class ChatTable:
     ) -> list['ChatTitleIdResponse']:
         async with get_async_db_context(db) as db:
             stmt = (
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.folder_id)
+                select(
+                    Chat.id,
+                    Chat.title,
+                    Chat.updated_at,
+                    Chat.created_at,
+                    Chat.last_read_at,
+                    Chat.folder_id,
+                    Chat.workspace_id,
+                )
                 .where(Chat.workspace_id == workspace_id)
                 .where(Chat.archived == False)  # noqa: E712
                 .order_by(Chat.updated_at.desc(), Chat.id)
@@ -972,6 +989,7 @@ class ChatTable:
                         'created_at': r[3],
                         'last_read_at': r[4],
                         'folder_id': r[5],
+                        'workspace_id': r[6],
                     }
                 )
                 for r in result.all()
@@ -1157,7 +1175,15 @@ class ChatTable:
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as db:
             stmt = (
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                select(
+                    Chat.id,
+                    Chat.title,
+                    Chat.updated_at,
+                    Chat.created_at,
+                    Chat.last_read_at,
+                    Chat.folder_id,
+                    Chat.workspace_id,
+                )
                 .where(Chat.workspace_id == workspace_id)
                 .where(Chat.folder_id == folder_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
@@ -1180,6 +1206,8 @@ class ChatTable:
                         'updated_at': chat[2],
                         'created_at': chat[3],
                         'last_read_at': chat[4],
+                        'folder_id': chat[5],
+                        'workspace_id': chat[6],
                     }
                 )
                 for chat in all_chats
