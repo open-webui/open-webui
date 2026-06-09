@@ -98,7 +98,10 @@
 		});
 
 		if (folder) {
-			await selectedFolder.set(folder);
+			await selectedFolder.set({
+				...folder,
+				workspace_id: folder.workspace_id ?? workspaceId ?? null
+			});
 		}
 
 		if (navigate) {

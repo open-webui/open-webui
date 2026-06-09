@@ -11,6 +11,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getChatListByFolderId } from '$lib/apis/chats';
 	import { getWorkspaceChatListByFolderId } from '$lib/apis/workspaces';
+	import { activeWorkspaceId } from '$lib/stores';
+	import { resolveFolderWorkspaceId } from '$lib/utils/workspaceChatContext';
 
 	export let folder: any = null;
 
@@ -22,15 +24,19 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	const resolvedWorkspaceId = () =>
+		resolveFolderWorkspaceId({ folder, activeWorkspaceId: $activeWorkspaceId });
+
 	const loadChats = async () => {
 		chatListLoading = true;
 
 		page += 1;
 
+		const wsId = resolvedWorkspaceId();
 		let newChatList: any[] = [];
 
-		newChatList = await (folder?.workspace_id
-			? getWorkspaceChatListByFolderId(localStorage.token, folder.workspace_id, folder.id, page)
+		newChatList = await (wsId
+			? getWorkspaceChatListByFolderId(localStorage.token, wsId, folder.id, page)
 			: getChatListByFolderId(localStorage.token, folder.id, page)
 		).catch((error) => {
 			console.error(error);
@@ -51,8 +57,9 @@
 		chatListLoading = false;
 
 		if (folder && folder.id) {
-			const res = await (folder?.workspace_id
-				? getWorkspaceChatListByFolderId(localStorage.token, folder.workspace_id, folder.id, page)
+			const wsId = resolvedWorkspaceId();
+			const res = await (wsId
+				? getWorkspaceChatListByFolderId(localStorage.token, wsId, folder.id, page)
 				: getChatListByFolderId(localStorage.token, folder.id, page));
 
 			if (res) {
