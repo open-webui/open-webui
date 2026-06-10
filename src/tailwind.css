@@ -1,6 +1,7 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 
 @config '../tailwind.config.js';
+@source not '../static/pyodide';
 
 @theme {
 	--color-gray-50: oklch(0.98 0 0);
