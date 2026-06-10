@@ -309,6 +309,7 @@ class ChatTable:
                     'folder_id': form_data.folder_id,
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
+                    'last_read_at': int(time.time()),
                 }
             )
 
@@ -445,7 +446,6 @@ class ChatTable:
                 clean_title = self._clean_null_bytes(title)
                 chat_item.title = clean_title
                 chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
-                chat_item.updated_at = int(time.time())
                 await session.commit()
                 await session.refresh(chat_item)
                 return ChatModel.model_validate(chat_item)
@@ -748,6 +748,7 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.pinned = not chat.pinned
                 chat.updated_at = int(time.time())
+                chat.last_read_at = int(time.time())
                 await session.commit()
                 await session.refresh(chat)
                 return ChatModel.model_validate(chat)
@@ -761,6 +762,7 @@ class ChatTable:
                 chat.archived = not chat.archived
                 chat.folder_id = None
                 chat.updated_at = int(time.time())
+                chat.last_read_at = int(time.time())
                 await session.commit()
                 await session.refresh(chat)
                 return ChatModel.model_validate(chat)
@@ -1377,6 +1379,7 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.folder_id = folder_id
                 chat.updated_at = int(time.time())
+                chat.last_read_at = int(time.time())
                 chat.pinned = False
                 await session.commit()
                 await session.refresh(chat)
