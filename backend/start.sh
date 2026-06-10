@@ -38,7 +38,7 @@ if [[ -z "${WEBUI_SECRET_KEY:-}" && -z "${WEBUI_JWT_SECRET_KEY:-}" ]]; then
 
   if [[ ! -f "$KEY_FILE" ]]; then
     echo "Generating new WEBUI_SECRET_KEY..."
-    head -c 12 /dev/random | base64 > "$KEY_FILE"
+    head -c 24 /dev/random | base64 > "$KEY_FILE"
   fi
 
   echo "Loading WEBUI_SECRET_KEY from ${KEY_FILE}"
