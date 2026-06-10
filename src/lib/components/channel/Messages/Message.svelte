@@ -47,6 +47,7 @@
 
 	export let showUserProfile = true;
 	export let thread = false;
+	export let contextId = null;
 
 	export let replyToMessage = false;
 	export let disabled = false;
@@ -177,7 +178,7 @@
 		{/if}
 
 		<div
-			id="message-{message.id}"
+			id="message-{contextId ? `${contextId}-${message.id}` : message.id}"
 			class="flex flex-col justify-between w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 relative {className
 				? className
 				: `px-5 ${
@@ -314,7 +315,7 @@
 						class="ml-12 flex items-center space-x-2 relative z-0"
 						on:click={() => {
 							const messageElement = document.getElementById(
-								`message-${message.reply_to_message.id}`
+								`message-${contextId ? `${contextId}-${message.reply_to_message.id}` : message.reply_to_message.id}`
 							);
 							if (messageElement) {
 								messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -354,7 +355,7 @@
 
 						<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
 							<Markdown
-								id={`${message.id}-reply-to`}
+								id={`${contextId ? `${contextId}-${message.id}` : message.id}-reply-to`}
 								content={message?.reply_to_message?.content}
 								allowEmbeds={false}
 							/>
@@ -365,7 +366,7 @@
 
 			<div
 				class=" flex w-full message-{message.id} "
-				id="message-{message.id}"
+				id="message-{contextId ? `${contextId}-${message.id}` : message.id}"
 				dir={$settings.chatDirection}
 			>
 				<div class={`shrink-0 mr-1 w-9`}>
@@ -525,7 +526,7 @@
 								<Skeleton />
 							{:else}
 								<Markdown
-									id={message.id}
+									id={contextId ? `${contextId}-${message.id}` : message.id}
 									content={message.content}
 									paragraphTag="span"
 									allowEmbeds={!!message?.meta?.model_id}

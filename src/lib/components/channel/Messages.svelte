@@ -128,6 +128,7 @@
 				{message}
 				{channel}
 				{thread}
+				contextId={id}
 				replyToMessage={replyToMessage?.id === message.id}
 				disabled={!channel?.write_access || message?.temp_id}
 				pending={!!message?.temp_id}
