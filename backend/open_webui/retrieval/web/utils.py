@@ -588,9 +588,15 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                         raise e
                     finally:
                         if page:
-                            page.close()
+                            try:
+                                page.close()
+                            except Exception as e:
+                                log.debug(f"Error closing Playwright page for {url}: {e}", exc_info=True)
             finally:
-                browser.close()
+                try:
+                    browser.close()
+                except Exception as e:
+                    log.debug(f"Error closing Playwright browser: {e}", exc_info=True)
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Safely load URLs asynchronously with support for remote browser."""
@@ -624,9 +630,15 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                         raise e
                     finally:
                         if page:
-                            await page.close()
+                            try:
+                                await page.close()
+                            except Exception as e:
+                                log.debug(f"Error closing Playwright page for {url}: {e}", exc_info=True)
             finally:
-                await browser.close()
+                try:
+                    await browser.close()
+                except Exception as e:
+                    log.debug(f"Error closing Playwright browser: {e}", exc_info=True)
 
 
 class SafeWebBaseLoader(WebBaseLoader):
