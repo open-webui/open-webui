@@ -69,7 +69,7 @@ class ConfigState:
         if data is not None:
             self._data = data
         with get_db() as db:
-            row = db.query(ConfigTable).first()
+            row = db.query(ConfigTable).order_by(ConfigTable.id.desc()).first()
             if row is None:
                 db.add(ConfigTable(data=self._data, version=0))
             else:
@@ -81,7 +81,7 @@ class ConfigState:
         if data is not None:
             self._data = data
         async with get_async_db() as db:
-            result = await db.execute(select(ConfigTable).limit(1))
+            result = await db.execute(select(ConfigTable).order_by(ConfigTable.id.desc()).limit(1))
             row = result.scalars().first()
             if row is None:
                 db.add(ConfigTable(data=self._data, version=0))
