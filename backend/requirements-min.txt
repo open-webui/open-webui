@@ -4,7 +4,7 @@
 fastapi==0.135.1
 uvicorn[standard]==0.41.0
 pydantic==2.12.5
-python-multipart==0.0.22
+python-multipart==0.0.27
 itsdangerous==2.2.0
 
 python-socketio==5.16.1
@@ -13,10 +13,10 @@ cryptography
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.11.0
-authlib==1.6.10
+authlib==1.6.12
 
 requests==2.33.1
-aiohttp==3.13.5 # do not update to 3.13.3 - broken
+aiohttp==3.14.0 # do not update to 3.13.3 - broken
 async-timeout
 aiocache
 aiofiles
@@ -47,12 +47,12 @@ openai
 
 langchain==1.2.10
 langchain-community==0.4.1
-langchain-classic==1.0.1
-langchain-text-splitters==1.1.1
+langchain-classic==1.0.8
+langchain-text-splitters==1.1.2
 
 fake-useragent==2.2.0
 
-chromadb==1.5.2
+chromadb==1.5.9
 black==26.3.1
 pydub
 chardet==5.2.0
