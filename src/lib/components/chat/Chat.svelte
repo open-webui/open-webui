@@ -67,7 +67,7 @@
 		isYoutubeUrl,
 		displayFileHandler
 	} from '$lib/utils';
-	import { AudioQueue } from '$lib/utils/audio';
+	import { AudioQueue, getUndispatchedAudioContentParts } from '$lib/utils/audio';
 
 	import {
 		archiveChatById,
@@ -1754,6 +1754,31 @@
 		}
 	};
 
+	const dispatchChatTTSContentParts = (message, includeLastPart = false) => {
+		const messageContentParts = getMessageContentParts(
+			removeAllDetails(message.content),
+			$config?.audio?.tts?.split_on ?? 'punctuation'
+		);
+
+		for (const { index, content } of getUndispatchedAudioContentParts(
+			messageContentParts,
+			message.lastDispatchedContentPartIndex,
+			includeLastPart
+		)) {
+			message.lastDispatchedContentPartIndex = index;
+			message.lastSentence = content;
+
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: {
+						id: message.id,
+						content
+					}
+				})
+			);
+		}
+	};
+
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
 
@@ -1788,27 +1813,7 @@
 
 					// Emit chat event for TTS (only when call overlay is active)
 					if ($showCallOverlay) {
-						const messageContentParts = getMessageContentParts(
-							removeAllDetails(message.content),
-							$config?.audio?.tts?.split_on ?? 'punctuation'
-						);
-						messageContentParts.pop();
-
-						// dispatch only last sentence and make sure it hasn't been dispatched before
-						if (
-							messageContentParts.length > 0 &&
-							messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-						) {
-							message.lastSentence = messageContentParts[messageContentParts.length - 1];
-							eventTarget.dispatchEvent(
-								new CustomEvent('chat', {
-									detail: {
-										id: message.id,
-										content: messageContentParts[messageContentParts.length - 1]
-									}
-								})
-							);
-						}
+						dispatchChatTTSContentParts(message);
 					}
 				}
 			}
@@ -1824,27 +1829,7 @@
 
 			// Emit chat event for TTS (only when call overlay is active)
 			if ($showCallOverlay) {
-				const messageContentParts = getMessageContentParts(
-					removeAllDetails(message.content),
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				);
-				messageContentParts.pop();
-
-				// dispatch only last sentence and make sure it hasn't been dispatched before
-				if (
-					messageContentParts.length > 0 &&
-					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-				) {
-					message.lastSentence = messageContentParts[messageContentParts.length - 1];
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: {
-								id: message.id,
-								content: messageContentParts[messageContentParts.length - 1]
-							}
-						})
-					);
-				}
+				dispatchChatTTSContentParts(message);
 			}
 		}
 
@@ -1873,18 +1858,7 @@
 
 			// Emit chat event for TTS (only when call overlay is active)
 			if ($showCallOverlay) {
-				let lastMessageContentPart =
-					getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					)?.at(-1) ?? '';
-				if (lastMessageContentPart) {
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: { id: message.id, content: lastMessageContentPart }
-						})
-					);
-				}
+				dispatchChatTTSContentParts(message, true);
 			}
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat:finish', {

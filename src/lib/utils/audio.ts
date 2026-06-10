@@ -1,5 +1,30 @@
 type AudioQueueEvent = 'stop' | 'empty-queue' | 'id-change';
 
+export interface UndispatchedAudioContentPart {
+	index: number;
+	content: string;
+}
+
+/**
+ * Returns the TTS content parts that have not been emitted yet.
+ * While streaming, the trailing part is left pending because it may still be incomplete.
+ */
+export const getUndispatchedAudioContentParts = (
+	contentParts: string[],
+	lastDispatchedIndex = -1,
+	includeLastPart = false
+): UndispatchedAudioContentPart[] => {
+	const normalizedLastDispatchedIndex = Number.isInteger(lastDispatchedIndex)
+		? lastDispatchedIndex
+		: -1;
+	const dispatchableContentParts = includeLastPart ? contentParts : contentParts.slice(0, -1);
+
+	return dispatchableContentParts
+		.map((content, index) => ({ index, content }))
+		.slice(Math.max(0, normalizedLastDispatchedIndex + 1))
+		.filter(({ content }) => content);
+};
+
 interface AudioQueueStopDetail {
 	event: AudioQueueEvent;
 	id: string | null;
