@@ -581,10 +581,19 @@ async def create_new_chat(
 
 @router.post('/import', response_model=list[ChatResponse])
 async def import_chats(
+    request: Request,
     form_data: ChatsImportForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.import_chat', request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     try:
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
         return chats

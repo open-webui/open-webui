@@ -46,6 +46,7 @@ export const DEFAULT_PERMISSIONS = {
 		edit: true,
 		share: true,
 		export: true,
+		import_chat: true,
 		stt: true,
 		tts: true,
 		call: true,

@@ -215,6 +215,7 @@ class ChatPermissions(BaseModel):
     edit: bool = True
     share: bool = True
     export: bool = True
+    import_chat: bool = True
     stt: bool = True
     tts: bool = True
     call: bool = True
