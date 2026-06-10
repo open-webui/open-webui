@@ -629,7 +629,14 @@ class Loader:
                     )
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
-                loader = OutlookMessageLoader(file_path)
+                try:
+                    loader = OutlookMessageLoader(file_path)
+                except Exception:
+                    log.warning(
+                        "Failed to load .msg file with OutlookMessageLoader, "
+                        "falling back to plain text loading."
+                    )
+                    loader = TextLoader(file_path, autodetect_encoding=True)
             elif file_ext == 'odt':
                 try:
                     from langchain_community.document_loaders import UnstructuredODTLoader
