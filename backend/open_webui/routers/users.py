@@ -236,6 +236,7 @@ class FeaturesPermissions(BaseModel):
     memories: bool = True
     automations: bool = False
     calendar: bool = True
+    user_webhooks: bool = False
 
 
 class SettingsPermissions(BaseModel):
