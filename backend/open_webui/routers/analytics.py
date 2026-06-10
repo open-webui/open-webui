@@ -28,6 +28,8 @@ router = APIRouter()
 class ModelAnalyticsEntry(BaseModel):
     model_id: str
     count: int
+    unique_users: int = 0
+    unique_chats: int = 0
 
 
 class ModelAnalyticsResponse(BaseModel):
@@ -65,8 +67,16 @@ async def get_model_analytics(
     counts = await ChatMessages.get_message_count_by_model(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
+    unique_counts = await ChatMessages.get_unique_counts_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
     models = [
-        ModelAnalyticsEntry(model_id=model_id, count=count)
+        ModelAnalyticsEntry(
+            model_id=model_id,
+            count=count,
+            unique_users=unique_counts.get(model_id, {}).get('unique_users', 0),
+            unique_chats=unique_counts.get(model_id, {}).get('unique_chats', 0),
+        )
         for model_id, count in sorted(counts.items(), key=lambda x: -x[1])
     ]
     return ModelAnalyticsResponse(models=models)

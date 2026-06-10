@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Any, Optional
 
-from sqlalchemy import select, delete, func, cast, Integer
+from sqlalchemy import select, delete, func, cast, Integer, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import normalize_usage
@@ -345,6 +345,44 @@ class ChatMessageTable:
             stmt = stmt.group_by(ChatMessage.model_id)
             result = await db.execute(stmt)
             return {row.model_id: row.count for row in result.all()}
+
+    async def get_unique_counts_by_model(
+        self,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> dict[str, dict]:
+        """Count distinct users and chats per model."""
+        async with get_async_db_context(db) as db:
+            from open_webui.models.groups import GroupMember
+
+            stmt = select(
+                ChatMessage.model_id,
+                func.count(distinct(ChatMessage.user_id)).label('unique_users'),
+                func.count(distinct(ChatMessage.chat_id)).label('unique_chats'),
+            ).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.model_id.isnot(None),
+            )
+
+            if start_date:
+                stmt = stmt.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                stmt = stmt.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
+                stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
+
+            stmt = stmt.group_by(ChatMessage.model_id)
+            result = await db.execute(stmt)
+            return {
+                row.model_id: {
+                    'unique_users': row.unique_users,
+                    'unique_chats': row.unique_chats,
+                }
+                for row in result.all()
+            }
 
     async def get_token_usage_by_model(
         self,
