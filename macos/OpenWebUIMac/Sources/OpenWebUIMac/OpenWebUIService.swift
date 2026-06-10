@@ -78,8 +78,12 @@ final class OpenWebUIService: ObservableObject {
         startupTask = nil
 
         guard let process else {
-            status = .stopped
             appendLog("No managed service process to stop.")
+            if case .running(let url, managed: false) = status {
+                status = .running(url, managed: false)
+            } else {
+                status = .stopped
+            }
             return
         }
 

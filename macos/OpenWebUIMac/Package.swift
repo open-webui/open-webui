@@ -11,13 +11,17 @@ let package = Package(
         .executable(name: "OpenWebUIMac", targets: ["OpenWebUIMac"])
     ],
     targets: [
-        .target(name: "OpenWebUIMacCore"),
+        .target(
+            name: "OpenWebUIMacCore",
+            linkerSettings: [
+                .linkedFramework("Security")
+            ]
+        ),
         .executableTarget(
             name: "OpenWebUIMac",
             dependencies: ["OpenWebUIMacCore"],
             linkerSettings: [
-                .linkedFramework("AppKit"),
-                .linkedFramework("WebKit")
+                .linkedFramework("AppKit")
             ]
         ),
         .testTarget(

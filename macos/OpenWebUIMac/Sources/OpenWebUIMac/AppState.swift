@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import OpenWebUIMacCore
 
@@ -6,9 +7,27 @@ final class AppState: ObservableObject {
     let settingsStore: SettingsStore
     let service: OpenWebUIService
 
+    private var cancellables: Set<AnyCancellable> = []
+
     init(settingsStore: SettingsStore = SettingsStore()) {
         self.settingsStore = settingsStore
         self.service = OpenWebUIService()
+
+        settingsStore.objectWillChange
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.objectWillChange.send()
+                }
+            }
+            .store(in: &cancellables)
+
+        service.objectWillChange
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.objectWillChange.send()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func startIfNeeded() {

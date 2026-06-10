@@ -11,6 +11,7 @@ public struct OpenWebUISettings: Codable, Equatable, Sendable {
     public var serviceCommand: String
     public var ollamaBaseURL: String
     public var dataDirectory: String
+    public var apiToken: String
     public var autoStartService: Bool
     public var stopServiceOnQuit: Bool
 
@@ -20,6 +21,7 @@ public struct OpenWebUISettings: Codable, Equatable, Sendable {
         serviceCommand: String = Self.defaultServiceCommand,
         ollamaBaseURL: String = Self.defaultOllamaBaseURL,
         dataDirectory: String = Self.defaultDataDirectory,
+        apiToken: String = "",
         autoStartService: Bool = true,
         stopServiceOnQuit: Bool = true
     ) {
@@ -28,8 +30,37 @@ public struct OpenWebUISettings: Codable, Equatable, Sendable {
         self.serviceCommand = serviceCommand
         self.ollamaBaseURL = ollamaBaseURL
         self.dataDirectory = dataDirectory
+        self.apiToken = apiToken
         self.autoStartService = autoStartService
         self.stopServiceOnQuit = stopServiceOnQuit
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case host
+        case port
+        case serviceCommand
+        case ollamaBaseURL
+        case dataDirectory
+        case apiToken
+        case autoStartService
+        case stopServiceOnQuit
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            host: try container.decodeIfPresent(String.self, forKey: .host) ?? Self.defaultHost,
+            port: try container.decodeIfPresent(Int.self, forKey: .port) ?? Self.defaultPort,
+            serviceCommand: try container.decodeIfPresent(String.self, forKey: .serviceCommand)
+                ?? Self.defaultServiceCommand,
+            ollamaBaseURL: try container.decodeIfPresent(String.self, forKey: .ollamaBaseURL)
+                ?? Self.defaultOllamaBaseURL,
+            dataDirectory: try container.decodeIfPresent(String.self, forKey: .dataDirectory)
+                ?? Self.defaultDataDirectory,
+            apiToken: try container.decodeIfPresent(String.self, forKey: .apiToken) ?? "",
+            autoStartService: try container.decodeIfPresent(Bool.self, forKey: .autoStartService) ?? true,
+            stopServiceOnQuit: try container.decodeIfPresent(Bool.self, forKey: .stopServiceOnQuit) ?? true
+        )
     }
 
     public static var defaultDataDirectory: String {
@@ -66,6 +97,8 @@ public struct OpenWebUISettings: Codable, Equatable, Sendable {
             copy.dataDirectory = Self.defaultDataDirectory
         }
 
+        copy.apiToken = apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+
         return copy
     }
 
@@ -74,8 +107,9 @@ public struct OpenWebUISettings: Codable, Equatable, Sendable {
         components.scheme = "http"
         components.host = host
         components.port = port
+        components.path = "/"
 
-        return components.url ?? URL(string: "http://\(Self.defaultHost):\(Self.defaultPort)")!
+        return components.url ?? URL(string: "http://\(Self.defaultHost):\(Self.defaultPort)/")!
     }
 
     public var healthURL: URL {

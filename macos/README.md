@@ -1,17 +1,26 @@
 # Open WebUI for macOS
 
-This directory contains the first native macOS desktop shell for Open WebUI.
-It keeps the existing SvelteKit/FastAPI application intact and adds a SwiftUI
-launcher that supervises a local Open WebUI service and renders it in a
-`WKWebView`.
+This directory contains the first native macOS desktop client for Open WebUI.
+It keeps the existing FastAPI backend intact and adds a SwiftUI desktop client
+that talks to Open WebUI through the backend API. The app still supervises a
+local Open WebUI service, but the primary chat experience is native macOS UI,
+not a `WKWebView` wrapper.
+
+The target UI reference lives at:
+
+```text
+macos/design/open-webui-macos-native-target.png
+```
 
 ## Current scope
 
-- SwiftUI desktop window with a WebKit view.
+- SwiftUI desktop window with a native three-pane chat workspace.
+- Native chat sessions, message list, composer, model picker, and inspector.
+- Open WebUI API client for `/api/models` and `/api/chat/completions`.
 - Automatic local service startup using `open-webui serve`.
 - Health/readiness polling via `/health` and `/ready`.
-- Settings for host, port, service command, Ollama URL, data directory, startup,
-  and quit behavior.
+- Settings for host, port, API token, service command, Ollama URL, data
+  directory, startup, and quit behavior.
 - Managed service restart/stop commands and an in-app log viewer.
 - Swift unit tests for settings normalization and launch command generation.
 
@@ -58,7 +67,12 @@ notarization, and a DMG/pkg installer.
 
 ## Next release steps
 
+- Persist native chat history through `/api/v1/chats` instead of in-memory
+  sessions only.
+- Add streaming response support and task cancellation.
+- Wire the native Knowledge and Tools inspector controls to backend features.
 - Bundle the built Open WebUI wheel and a standalone Python runtime.
 - Add first-run dependency validation and migration/backup tooling.
 - Add signed and notarized `.app`/DMG release automation.
-- Add UI automation for onboarding, settings, logs, and service lifecycle.
+- Add UI automation for onboarding, settings, logs, service lifecycle, and
+  native chat flows.

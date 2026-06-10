@@ -8,7 +8,8 @@ final class OpenWebUISettingsTests: XCTestCase {
             port: 99_999,
             serviceCommand: "",
             ollamaBaseURL: "",
-            dataDirectory: "~/Open WebUI Test"
+            dataDirectory: "~/Open WebUI Test",
+            apiToken: "  test-token  "
         ).sanitized
 
         XCTAssertEqual(settings.host, OpenWebUISettings.defaultHost)
@@ -16,12 +17,13 @@ final class OpenWebUISettingsTests: XCTestCase {
         XCTAssertEqual(settings.serviceCommand, OpenWebUISettings.defaultServiceCommand)
         XCTAssertEqual(settings.ollamaBaseURL, OpenWebUISettings.defaultOllamaBaseURL)
         XCTAssertFalse(settings.dataDirectory.contains("~"))
+        XCTAssertEqual(settings.apiToken, "test-token")
     }
 
     func testURLsUseConfiguredHostAndPort() {
         let settings = OpenWebUISettings(host: "localhost", port: 5050)
 
-        XCTAssertEqual(settings.rootURL.absoluteString, "http://localhost:5050")
+        XCTAssertEqual(settings.rootURL.absoluteString, "http://localhost:5050/")
         XCTAssertEqual(settings.healthURL.absoluteString, "http://localhost:5050/health")
         XCTAssertEqual(settings.readyURL.absoluteString, "http://localhost:5050/ready")
     }
@@ -29,7 +31,7 @@ final class OpenWebUISettingsTests: XCTestCase {
     func testInvalidURLFallsBackToDefaultAddress() {
         let settings = OpenWebUISettings(host: "not a host", port: 5050)
 
-        XCTAssertEqual(settings.rootURL.absoluteString, "http://127.0.0.1:8080")
+        XCTAssertEqual(settings.rootURL.absoluteString, "http://127.0.0.1:8080/")
     }
 
     func testShellQuoteHandlesSingleQuotes() {
@@ -52,5 +54,23 @@ final class OpenWebUISettingsTests: XCTestCase {
         XCTAssertEqual(plan.environment["OLLAMA_BASE_URL"], "http://127.0.0.1:11434")
         XCTAssertEqual(plan.environment["ENV"], "prod")
         XCTAssertTrue(plan.arguments.last?.contains("--host '127.0.0.1' --port 9090") ?? false)
+    }
+
+    func testSettingsDecodeLegacyPayloadWithoutAPIToken() throws {
+        let data = """
+        {
+          "host": "127.0.0.1",
+          "port": 8080,
+          "serviceCommand": "open-webui serve",
+          "ollamaBaseURL": "http://127.0.0.1:11434",
+          "dataDirectory": "/tmp/open-webui",
+          "autoStartService": true,
+          "stopServiceOnQuit": true
+        }
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(OpenWebUISettings.self, from: data)
+
+        XCTAssertEqual(settings.apiToken, "")
     }
 }

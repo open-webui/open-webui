@@ -54,15 +54,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let rootView = ContentView()
             .environmentObject(appState)
 
+        let visibleFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 820)
+        let windowWidth = min(1200, max(900, visibleFrame.width - 80))
+        let windowHeight = min(820, max(680, visibleFrame.height - 80))
+
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820),
+            contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Open WebUI"
         window.contentViewController = NSHostingController(rootView: rootView)
-        window.center()
+        window.setFrameOrigin(NSPoint(x: 40, y: 80))
         window.makeKeyAndOrderFront(nil)
         self.window = window
     }

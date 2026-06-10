@@ -12,22 +12,43 @@ struct SettingsView: View {
             Text("Settings")
                 .font(.title2.bold())
 
-            Form {
-                TextField("Host", text: $draft.host)
-
-                Stepper(value: $draft.port, in: 1...65_535) {
-                    TextField("Port", value: $draft.port, format: .number)
+            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 12) {
+                settingsRow("Host") {
+                    TextField("127.0.0.1", text: $draft.host)
+                        .textFieldStyle(.roundedBorder)
                 }
 
-                TextField("Service command", text: $draft.serviceCommand)
-                    .textFieldStyle(.roundedBorder)
+                settingsRow("Port") {
+                    HStack {
+                        TextField("8080", value: $draft.port, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                        Stepper("Port", value: $draft.port, in: 1...65_535)
+                            .labelsHidden()
+                    }
+                }
 
-                TextField("Ollama URL", text: $draft.ollamaBaseURL)
-                    .textFieldStyle(.roundedBorder)
+                settingsRow("Service command") {
+                    TextField("open-webui serve", text: $draft.serviceCommand)
+                        .textFieldStyle(.roundedBorder)
+                }
 
-                TextField("Data directory", text: $draft.dataDirectory)
-                    .textFieldStyle(.roundedBorder)
+                settingsRow("API token") {
+                    SecureField("Paste an Open WebUI API token", text: $draft.apiToken)
+                        .textFieldStyle(.roundedBorder)
+                }
 
+                settingsRow("Ollama URL") {
+                    TextField("http://127.0.0.1:11434", text: $draft.ollamaBaseURL)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                settingsRow("Data directory") {
+                    TextField("~/Library/Application Support/Open WebUI Mac", text: $draft.dataDirectory)
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
                 Toggle("Start service when app opens", isOn: $draft.autoStartService)
                 Toggle("Stop managed service on quit", isOn: $draft.stopServiceOnQuit)
             }
@@ -58,9 +79,22 @@ struct SettingsView: View {
             }
         }
         .padding(24)
-        .frame(width: 560)
+        .frame(width: 640)
         .onAppear {
             draft = appState.settingsStore.settings
+        }
+    }
+
+    private func settingsRow<Content: View>(
+        _ label: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        GridRow {
+            Text(label)
+                .foregroundStyle(.secondary)
+                .frame(width: 120, alignment: .trailing)
+            content()
+                .frame(width: 430)
         }
     }
 }
