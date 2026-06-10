@@ -1,19 +1,19 @@
-import random
 import logging
+import random
 import sys
 
 from fastapi import Request
-from open_webui.models.users import UserModel
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.models.models import Models
-from open_webui.utils.models import check_model_access
-from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
-
-from open_webui.routers.openai import embeddings as openai_embeddings
+from open_webui.models.users import UserModel
 from open_webui.routers.ollama import (
-    embed as ollama_embed,
     GenerateEmbedForm,
 )
-
+from open_webui.routers.ollama import (
+    embed as ollama_embed,
+)
+from open_webui.routers.openai import embeddings as openai_embeddings
+from open_webui.utils.models import check_model_access
 from open_webui.utils.payload import convert_embed_payload_openai_to_ollama
 from open_webui.utils.response import convert_embedding_response_ollama_to_openai
 

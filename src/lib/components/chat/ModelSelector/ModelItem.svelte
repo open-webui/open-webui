@@ -125,10 +125,11 @@
 				{#if item.model.loaded}
 					<div class="flex items-center translate-y-[0.5px] px-0.5">
 						<Tooltip
-							content={item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()
+							content={item.model.ollama?.expires_at &&
+							new Date(item.model.ollama?.expires_at * 1000) > new Date()
 								? `${$i18n.t('Unloads {{FROM_NOW}}', {
-									FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
-								})}`
+										FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
+									})}`
 								: `${$i18n.t('Loaded')}`}
 							className="self-end"
 						>
@@ -236,7 +237,7 @@
 	</div>
 
 	<div class="ml-auto pl-2 pr-1 flex items-center gap-1.5 shrink-0">
-	{#if $user?.role === 'admin' && item.model.loaded}
+		{#if $user?.role === 'admin' && item.model.loaded}
 			<Tooltip
 				content={`${$i18n.t('Eject')}`}
 				className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "

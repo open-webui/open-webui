@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 
 
@@ -72,11 +74,11 @@ class ERROR_MESSAGES(str, Enum):
 
     EMPTY_CONTENT = 'The content provided is empty. Please ensure that there is text or data present before proceeding.'
 
-    DB_NOT_SQLITE = 'This feature is only available when running with SQLite databases.'
+    DB_NOT_SQLITE = 'This feature is only available with SQLite databases.'
 
-    INVALID_URL = 'Oops! The URL you provided is invalid. Please double-check and try again.'
+    INVALID_URL = 'The URL you provided is invalid. Please double-check and try again.'
 
-    WEB_SEARCH_ERROR = lambda err='': f'{err if err else "Oops! Something went wrong while searching the web."}'
+    WEB_SEARCH_ERROR = lambda err='': err if err else 'Something went wrong while searching the web.'
 
     OLLAMA_API_DISABLED = 'The Ollama API is disabled. Please enable it to use this feature.'
 

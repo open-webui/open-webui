@@ -1,6 +1,7 @@
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import DOMPurify from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
 
 import dayjs from 'dayjs';
@@ -223,6 +224,76 @@ export const convertMessagesToHistory = (messages) => {
 
 	history.currentId = messageId;
 	return history;
+};
+
+// Repair structurally-malformed history nodes from failed regenerations.
+// A lost assistant placeholder may exist under its map key with only
+// completion fields (content/done/error), missing id/role/parentId.
+// Reconstruct graph fields so already-corrupted chats recover on open.
+export const sanitizeHistory = (history) => {
+	if (!history?.messages || typeof history.messages !== 'object') return;
+
+	// Purge entries that aren't usable objects
+	for (const [id, message] of Object.entries(history.messages)) {
+		if (!message || typeof message !== 'object') {
+			delete history.messages[id];
+		}
+	}
+
+	// Ensure every surviving node has its canonical id and a childrenIds array
+	for (const [id, message] of Object.entries(history.messages)) {
+		if (message.id !== id) message.id = id;
+		if (!Array.isArray(message.childrenIds)) message.childrenIds = [];
+	}
+
+	// Build reverse lookup: parent, indexed by child id
+	const parentByChildId = {};
+	for (const [id, message] of Object.entries(history.messages)) {
+		for (const childId of message.childrenIds) {
+			parentByChildId[childId] = id;
+		}
+	}
+
+	// Reconstruct missing parentId and role
+	for (const [id, message] of Object.entries(history.messages)) {
+		// Well-formed: has role and explicit parentId (null is valid for root)
+		if (message.role && message.parentId !== undefined) continue;
+
+		if (message.parentId === undefined) {
+			message.parentId = parentByChildId[id] ?? null;
+		}
+
+		if (!message.role) {
+			const parent = message.parentId ? history.messages[message.parentId] : null;
+			message.role =
+				parent?.role === 'user'
+					? 'assistant'
+					: parent?.role === 'assistant'
+						? 'user'
+						: message.model || message.usage || message.done !== undefined
+							? 'assistant'
+							: 'user';
+		}
+	}
+
+	// Prune childrenIds referencing deleted/missing nodes
+	for (const message of Object.values(history.messages)) {
+		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
+	}
+
+	// Recover currentId if it points to a missing or incomplete node
+	const currentMessage = history.messages?.[history.currentId];
+	if (!currentMessage?.id || !currentMessage?.role) {
+		let latestLeafId = null;
+		let latestTimestamp = -1;
+		for (const [id, message] of Object.entries(history.messages)) {
+			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
+				latestLeafId = id;
+				latestTimestamp = message.timestamp ?? 0;
+			}
+		}
+		history.currentId = latestLeafId ?? Object.keys(history.messages)[0] ?? null;
+	}
 };
 
 export const getGravatarURL = (email) => {
@@ -511,28 +582,32 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 	} else {
 		let result = false;
 		if (!navigator.clipboard) {
-			const textArea = document.createElement('textarea');
-			textArea.value = text;
+			const span = document.createElement('span');
+			span.textContent = text;
+			span.style.whiteSpace = 'pre';
+			span.style.position = 'fixed';
+			span.style.top = '0';
+			span.style.left = '0';
+			span.style.opacity = '0';
+			document.body.appendChild(span);
 
-			// Avoid scrolling to bottom
-			textArea.style.top = '0';
-			textArea.style.left = '0';
-			textArea.style.position = 'fixed';
-
-			document.body.appendChild(textArea);
-			textArea.focus({ preventScroll: true });
-			textArea.select();
+			const range = document.createRange();
+			range.selectNodeContents(span);
+			const selection = window.getSelection();
+			selection?.removeAllRanges();
+			selection?.addRange(range);
 
 			try {
 				const successful = document.execCommand('copy');
 				const msg = successful ? 'successful' : 'unsuccessful';
 				console.log('Fallback: Copying text command was ' + msg);
-				result = true;
+				result = successful;
 			} catch (err) {
 				console.error('Fallback: Oops, unable to copy', err);
 			}
 
-			document.body.removeChild(textArea);
+			selection?.removeAllRanges();
+			document.body.removeChild(span);
 			return result;
 		}
 
@@ -750,8 +825,7 @@ const convertOpenAIMessages = (convo) => {
 					continue;
 				}
 
-				const model =
-					message['message']?.['metadata']?.['model_slug'] || 'gpt-3.5-turbo';
+				const model = message['message']?.['metadata']?.['model_slug'] || 'gpt-3.5-turbo';
 				const timestamp = message['message']?.['create_time']
 					? Math.floor(message['message']['create_time'])
 					: undefined;
@@ -1374,12 +1448,51 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 				// for primitive types (string, integer, etc.), just use as is
 				break;
 		}
+
+		// Resolve composition keywords (oneOf, anyOf, allOf) which may contain $ref
+		for (const keyword of ['oneOf', 'anyOf', 'allOf']) {
+			if (Array.isArray(schemaRef[keyword])) {
+				schemaObj[keyword] = schemaRef[keyword].map((inner) =>
+					resolveSchema(inner, components, resolvedSchemas)
+				);
+			}
+		}
+
 		return schemaObj;
+	}
+
+	// Handle schemas that only have composition keywords without an explicit type
+	const compositionObj: Record<string, any> = {};
+	let hasComposition = false;
+	for (const keyword of ['oneOf', 'anyOf', 'allOf']) {
+		if (Array.isArray(schemaRef[keyword])) {
+			compositionObj[keyword] = schemaRef[keyword].map((inner) =>
+				resolveSchema(inner, components, resolvedSchemas)
+			);
+			hasComposition = true;
+		}
+	}
+	if (hasComposition) {
+		if (schemaRef.description) compositionObj.description = schemaRef.description;
+		return compositionObj;
 	}
 
 	// fallback for schemas without explicit type
 	return {};
 }
+
+// Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
+// and non-operation path-item fields (summary, description, servers, parameters).
+const OPENAPI_HTTP_METHODS = new Set([
+	'get',
+	'put',
+	'post',
+	'delete',
+	'options',
+	'head',
+	'patch',
+	'trace'
+]);
 
 // Main conversion function
 export const convertOpenApiToToolPayload = (openApiSpec) => {
@@ -1391,11 +1504,24 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 	}
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+		if (!methods || typeof methods !== 'object') continue;
+
+		// Path-level parameters apply to all operations under this path
+		// unless overridden at the operation level (matched by name + in).
+		const pathLevelParams: any[] = Array.isArray((methods as any).parameters)
+			? (methods as any).parameters
+			: [];
+
 		for (const [method, operation] of Object.entries(methods)) {
-			if (operation?.operationId) {
+			if (!OPENAPI_HTTP_METHODS.has(method)) continue;
+			if (!operation || typeof operation !== 'object') continue;
+			if ((operation as any)?.operationId) {
 				const tool = {
-					name: operation.operationId,
-					description: operation.description || operation.summary || 'No description available.',
+					name: (operation as any).operationId,
+					description:
+						(operation as any).description ||
+						(operation as any).summary ||
+						'No description available.',
 					parameters: {
 						type: 'object',
 						properties: {},
@@ -1403,30 +1529,42 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 					}
 				};
 
-				// Extract path and query parameters
-				if (operation.parameters) {
-					operation.parameters.forEach((param) => {
-						const paramName = param?.name;
-						if (!paramName) return;
-						const paramSchema = param?.schema ?? {};
-						let description = paramSchema.description || param.description || '';
-						if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
-							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
-						}
-						tool.parameters.properties[paramName] = {
-							type: paramSchema.type,
-							description: description
-						};
+				// Merge path-level and operation-level parameters.
+				// Operation-level params override path-level params with the
+				// same (name, in) pair per the OpenAPI spec.
+				const opParams: any[] = Array.isArray((operation as any).parameters)
+					? (operation as any).parameters
+					: [];
+				const mergedParams = new Map();
+				for (const param of pathLevelParams) {
+					if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+				}
+				for (const param of opParams) {
+					if (param?.name) mergedParams.set(`${param.name}:${param.in ?? ''}`, param);
+				}
 
-						if (param.required) {
-							tool.parameters.required.push(paramName);
-						}
-					});
+				// Extract path and query parameters
+				for (const param of mergedParams.values()) {
+					const paramName = param?.name;
+					if (!paramName) continue;
+					const paramSchema = param?.schema ?? {};
+					let description = paramSchema.description || param.description || '';
+					if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
+						description += `. Possible values: ${paramSchema.enum.join(', ')}`;
+					}
+					tool.parameters.properties[paramName] = {
+						type: paramSchema.type,
+						description: description
+					};
+
+					if (param.required) {
+						tool.parameters.required.push(paramName);
+					}
 				}
 
 				// Extract and recursively resolve requestBody if available
-				if (operation.requestBody) {
-					const content = operation.requestBody.content;
+				if ((operation as any).requestBody) {
+					const content = (operation as any).requestBody.content;
 					if (content && content['application/json']) {
 						const requestSchema = content['application/json'].schema;
 						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
@@ -1621,7 +1759,42 @@ export const parseJsonValue = (value: string): any => {
 	return value;
 };
 
+type ReadableStreamWithAsyncIterator<T> = ReadableStream<T> & {
+	[Symbol.asyncIterator]?: () => AsyncIterableIterator<T>;
+};
+
+function ensureReadableStreamAsyncIterator() {
+	if (typeof ReadableStream === 'undefined') {
+		return;
+	}
+
+	const prototype = ReadableStream.prototype as ReadableStreamWithAsyncIterator<unknown>;
+	if (prototype[Symbol.asyncIterator]) {
+		return;
+	}
+
+	Object.defineProperty(prototype, Symbol.asyncIterator, {
+		value: async function* (this: ReadableStream<unknown>) {
+			const reader = this.getReader();
+			try {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) {
+						return;
+					}
+					yield value;
+				}
+			} finally {
+				reader.releaseLock();
+			}
+		},
+		configurable: true,
+		writable: true
+	});
+}
+
 async function ensurePDFjsLoaded() {
+	ensureReadableStreamAsyncIterator();
 	if (!window.pdfjsLib) {
 		const pdfjs = await import('pdfjs-dist');
 		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -1769,6 +1942,44 @@ const cleanupMermaidTempElements = (id: string) => {
 	document.getElementById(`i${id}`)?.remove();
 };
 
+// Mermaid runs with securityLevel:'loose', which emits unsanitized SVG (raw javascript: hrefs,
+// HTML labels); strip active content before it reaches any innerHTML/{@html} sink.
+export const sanitizeSvg = (svg: string): string =>
+	DOMPurify.sanitize(svg, {
+		USE_PROFILES: { svg: true, svgFilters: true },
+		WHOLE_DOCUMENT: false,
+		ADD_TAGS: ['style', 'foreignObject'],
+		ADD_ATTR: [
+			'class',
+			'style',
+			'id',
+			'data-*',
+			'viewBox',
+			'preserveAspectRatio',
+			'markerWidth',
+			'markerHeight',
+			'markerUnits',
+			'refX',
+			'refY',
+			'orient',
+			'href',
+			'xlink:href',
+			'dominant-baseline',
+			'text-anchor',
+			'clipPathUnits',
+			'filterUnits',
+			'patternUnits',
+			'patternContentUnits',
+			'maskUnits',
+			'role',
+			'aria-label',
+			'aria-labelledby',
+			'aria-hidden',
+			'tabindex'
+		],
+		SANITIZE_DOM: true
+	});
+
 export const renderMermaidDiagram = async (
 	mermaid: typeof import('mermaid').default,
 	code: string,
@@ -1779,7 +1990,7 @@ export const renderMermaidDiagram = async (
 		const parseResult = await mermaid.parse(code, { suppressErrors: false });
 		if (parseResult) {
 			const { svg } = await mermaid.render(id, code);
-			return svg;
+			return sanitizeSvg(svg);
 		}
 		return '';
 	} finally {

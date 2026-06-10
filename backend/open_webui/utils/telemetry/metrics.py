@@ -20,37 +20,35 @@ from __future__ import annotations
 import datetime
 import logging
 import time
-from typing import Dict, Iterable, List, Optional
 from base64 import b64encode
+from typing import Dict, Iterable, List, Optional
 
 from fastapi import FastAPI, Request
+from open_webui.env import (
+    OTEL_METRICS_BASIC_AUTH_PASSWORD,
+    OTEL_METRICS_BASIC_AUTH_USERNAME,
+    OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
+    OTEL_METRICS_EXPORTER_OTLP_ENDPOINT,
+    OTEL_METRICS_EXPORTER_OTLP_INSECURE,
+    OTEL_METRICS_OTLP_SPAN_EXPORTER,
+    OTEL_SERVICE_NAME,
+)
+from open_webui.models.users import User
 from opentelemetry import metrics
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
     OTLPMetricExporter,
 )
-
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
     OTLPMetricExporter as OTLPHttpMetricExporter,
 )
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.view import View
 from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,
 )
+from opentelemetry.sdk.metrics.view import View
 from opentelemetry.sdk.resources import Resource
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session
-
-from open_webui.env import (
-    OTEL_SERVICE_NAME,
-    OTEL_METRICS_EXPORTER_OTLP_ENDPOINT,
-    OTEL_METRICS_BASIC_AUTH_USERNAME,
-    OTEL_METRICS_BASIC_AUTH_PASSWORD,
-    OTEL_METRICS_OTLP_SPAN_EXPORTER,
-    OTEL_METRICS_EXPORTER_OTLP_INSECURE,
-    OTEL_METRICS_EXPORT_INTERVAL_MILLIS,
-)
-from open_webui.models.users import User
 
 logger = logging.getLogger(__name__)
 

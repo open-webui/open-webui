@@ -283,7 +283,9 @@
 			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
 				{#if showDate && entry.modified}
-					<span class="text-[10px] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
+					<span class="text-[10px] text-gray-400 shrink-0"
+						>{formatRelativeTime(entry.modified)}</span
+					>
 				{/if}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 			{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}

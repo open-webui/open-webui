@@ -155,7 +155,12 @@
 
 				{#if chat.share_id}
 					<div class="mt-3">
-						<AccessControl bind:accessGrants accessRoles={['read']} sharePublic={$user?.permissions?.sharing?.public_chats || $user?.role === 'admin'} onChange={saveAccessGrants} />
+						<AccessControl
+							bind:accessGrants
+							accessRoles={['read']}
+							sharePublic={$user?.permissions?.sharing?.public_chats || $user?.role === 'admin'}
+							onChange={saveAccessGrants}
+						/>
 					</div>
 				{/if}
 

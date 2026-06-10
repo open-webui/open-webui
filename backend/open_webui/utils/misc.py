@@ -1,18 +1,19 @@
+from __future__ import annotations
+
+import collections.abc
 import hashlib
+import json
+import logging
 import re
 import threading
 import time
 import uuid
-import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional, Sequence, Union
-import json
+
 import aiohttp
 import mimeparse
-
-
-import collections.abc
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ def get_allow_block_lists(filter_list):
     return allow_list, block_list
 
 
-def is_string_allowed(string: Union[str, Sequence[str]], filter_list: Optional[list[str]] = None) -> bool:
+def is_string_allowed(string: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
     """
     Checks if a string is allowed based on the provided filter list.
     :param string: The string or sequence of strings to check (e.g., domain or hostname).
@@ -112,14 +113,14 @@ def get_messages_content(messages: list[dict]) -> str:
     return '\n'.join([f'{message["role"].upper()}: {get_content_from_message(message)}' for message in messages])
 
 
-def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
+def get_last_user_message_item(messages: list[dict]) -> dict | None:
     for message in reversed(messages):
         if message['role'] == 'user':
             return message
     return None
 
 
-def get_content_from_message(message: dict) -> Optional[str]:
+def get_content_from_message(message: dict) -> str | None:
     if isinstance(message.get('content'), list):
         for item in message['content']:
             if item['type'] == 'text':
@@ -129,7 +130,63 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
-def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
+def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
+    """Drop unpaired tool_use / tool_result from a reconstructed conversation.
+
+    Stored output can be incomplete — a tool result may be missing (e.g. the
+    knowledge base was updated mid-chat, or the call was interrupted), or a
+    tool call may be missing while its result survived.  Strict providers
+    (Anthropic, AWS Bedrock Converse) reject either direction of mismatch.
+
+    Well-formed output is unaffected: every id pairs, so nothing is stripped.
+    """
+    completed_tool_call_ids = {
+        message['tool_call_id'] for message in messages if message.get('role') == 'tool' and message.get('tool_call_id')
+    }
+    requested_tool_call_ids = {
+        tool_call['id']
+        for message in messages
+        for tool_call in message.get('tool_calls') or ()
+        if message.get('role') == 'assistant' and tool_call.get('id')
+    }
+
+    reconciled_messages = []
+    for message in messages:
+        role = message.get('role')
+
+        # Orphan tool result — no assistant ever claimed this call_id.
+        if role == 'tool' and message.get('tool_call_id') not in requested_tool_call_ids:
+            continue
+
+        # Non-assistant or no tool_calls — pass through unchanged.
+        if role != 'assistant' or not message.get('tool_calls'):
+            reconciled_messages.append(message)
+            continue
+
+        # Keep only tool_calls whose id received a tool-role response.
+        valid_tool_calls = [
+            tool_call for tool_call in message['tool_calls'] if tool_call.get('id') in completed_tool_call_ids
+        ]
+
+        if valid_tool_calls:
+            reconciled_messages.append({**message, 'tool_calls': valid_tool_calls})
+            continue
+
+        # All tool_calls were orphans — keep the message only if it
+        # carries meaningful text or reasoning content.
+        content = message.get('content', '')
+        has_meaningful_content = content.strip() if isinstance(content, str) else content
+        if has_meaningful_content or message.get('reasoning_content'):
+            reconciled_messages.append({key: value for key, value in message.items() if key != 'tool_calls'})
+
+    return reconciled_messages
+
+
+def convert_output_to_messages(
+    output: list,
+    raw: bool = False,
+    reasoning_format: str | None = None,
+) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
 
@@ -139,8 +196,14 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
 
     Args:
         output: List of OR-aligned output items (Responses API format).
-        raw: If True, include reasoning blocks (with original tags) and code
-             interpreter blocks for LLM re-processing follow-ups.
+        raw: If True, include code interpreter blocks for LLM re-processing
+             follow-ups.
+        reasoning_format: How to include reasoning blocks in the output:
+            - None: skip reasoning (default, safe for strict providers).
+            - ``'think_tags'``: wrap in ``<think>`` tags inside content
+              (for Ollama, which expects reasoning as tagged content).
+            - ``'reasoning_content'``: set as ``reasoning_content`` top-level field
+              (for llama.cpp, which routes it via the chat template).
     """
     if not output or not isinstance(output, list):
         return []
@@ -148,19 +211,26 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     messages = []
     pending_tool_calls = []
     pending_content = []
+    pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls
-        if pending_content or pending_tool_calls:
-            messages.append(
-                {
-                    'role': 'assistant',
-                    'content': '\n'.join(pending_content) if pending_content else '',
-                    **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
-                }
-            )
-            pending_content = []
-            pending_tool_calls = []
+        nonlocal pending_content, pending_tool_calls, pending_reasoning
+        if not pending_content and not pending_tool_calls and not pending_reasoning:
+            return
+
+        message = {
+            'role': 'assistant',
+            'content': '\n'.join(pending_content) if pending_content else '',
+            **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
+        }
+
+        if pending_reasoning:
+            message['reasoning_content'] = '\n'.join(pending_reasoning)
+
+        messages.append(message)
+        pending_content = []
+        pending_tool_calls = []
+        pending_reasoning = []
 
     for item in output:
         item_type = item.get('type', '')
@@ -231,27 +301,26 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 )
 
         elif item_type == 'reasoning':
-            if raw:
-                # Include reasoning with original tags for LLM re-processing
-                reasoning_text = ''
-                source_list = item.get('summary', []) or item.get('content', [])
-                for part in source_list:
-                    if part.get('type') == 'output_text':
-                        reasoning_text += part.get('text', '')
-                    elif 'text' in part:
-                        reasoning_text += part.get('text', '')
+            if not reasoning_format:
+                continue
 
-                if reasoning_text:
+            reasoning_text = ''
+            source_list = item.get('summary', []) or item.get('content', [])
+            for part in source_list:
+                if part.get('type') == 'output_text':
+                    reasoning_text += part.get('text', '')
+                elif 'text' in part:
+                    reasoning_text += part.get('text', '')
+
+            if reasoning_text:
+                if reasoning_format == 'think_tags':
+                    # Ollama: embed in content with the item's original tags
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
-                    # NOTE: Some providers (e.g. Moonshot/Kimi K2.5) require
-                    # reasoning_content as a top-level field on assistant
-                    # messages.  This should be handled externally via a
-                    # pipeline filter or connection-level middleware, not
-                    # here — adding it universally breaks strict providers
-                    # (OpenAI, Vertex AI, Azure) that reject unknown fields.
-            # else: skip reasoning blocks for normal LLM messages
+                elif reasoning_format == 'reasoning_content':
+                    # llama.cpp: collect for reasoning_content field
+                    pending_reasoning.append(reasoning_text)
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows
@@ -279,10 +348,10 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     # Flush remaining content/tool_calls
     flush_pending()
 
-    return messages
+    return reconcile_tool_pairs(messages)
 
 
-def get_last_user_message(messages: list[dict]) -> Optional[str]:
+def get_last_user_message(messages: list[dict]) -> str | None:
     message = get_last_user_message_item(messages)
     if message is None:
         return None
@@ -307,21 +376,21 @@ def set_last_user_message_content(content: str, messages: list[dict]) -> list[di
     return messages
 
 
-def get_last_assistant_message_item(messages: list[dict]) -> Optional[dict]:
+def get_last_assistant_message_item(messages: list[dict]) -> dict | None:
     for message in reversed(messages):
         if message['role'] == 'assistant':
             return message
     return None
 
 
-def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
+def get_last_assistant_message(messages: list[dict]) -> str | None:
     for message in reversed(messages):
         if message['role'] == 'assistant':
             return get_content_from_message(message)
     return None
 
 
-def get_system_message(messages: list[dict]) -> Optional[dict]:
+def get_system_message(messages: list[dict]) -> dict | None:
     for message in messages:
         if message['role'] == 'system':
             return message
@@ -332,7 +401,7 @@ def remove_system_message(messages: list[dict]) -> list[dict]:
     return [message for message in messages if message['role'] != 'system']
 
 
-def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]]:
+def pop_system_message(messages: list[dict]) -> tuple[dict | None, list[dict]]:
     return get_system_message(messages), remove_system_message(messages)
 
 
@@ -484,10 +553,10 @@ def openai_chat_message_template(model: str):
 
 def openai_chat_chunk_message_template(
     model: str,
-    content: Optional[str] = None,
-    reasoning_content: Optional[str] = None,
-    tool_calls: Optional[list[dict]] = None,
-    usage: Optional[dict] = None,
+    content: str | None = None,
+    reasoning_content: str | None = None,
+    tool_calls: list[dict | None] = None,
+    usage: dict | None = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template['object'] = 'chat.completion.chunk'
@@ -514,10 +583,10 @@ def openai_chat_chunk_message_template(
 
 def openai_chat_completion_message_template(
     model: str,
-    message: Optional[str] = None,
-    reasoning_content: Optional[str] = None,
-    tool_calls: Optional[list[dict]] = None,
-    usage: Optional[dict] = None,
+    message: str | None = None,
+    reasoning_content: str | None = None,
+    tool_calls: list[dict | None] = None,
+    usage: dict | None = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template['object'] = 'chat.completion'
@@ -636,7 +705,7 @@ def sanitize_data_for_db(obj):
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        if '\x00' not in json.dumps(obj, ensure_ascii=False):
+        if '\\u0000' not in json.dumps(obj, ensure_ascii=False):
             return obj
     except (TypeError, ValueError):
         pass
@@ -708,7 +777,7 @@ def extract_folders_after_data_docs(path):
     return tags
 
 
-def parse_duration(duration: str) -> Optional[timedelta]:
+def parse_duration(duration: str) -> timedelta | None:
     if duration == '-1' or duration == '0':
         return None
 
@@ -825,7 +894,7 @@ def parse_ollama_modelfile(model_text):
     return data
 
 
-def convert_logit_bias_input_to_json(logit_bias_input) -> Optional[str]:
+def convert_logit_bias_input_to_json(logit_bias_input) -> str | None:
     if not logit_bias_input:
         return None
 
@@ -858,7 +927,7 @@ def throttle(interval: float = 10.0):
     """
     Decorator to prevent a function from being called more than once within a specified duration.
     If the function is called again within the duration, it returns None. To avoid returning
-    different types, the return type of the function should be Optional[T].
+    different types, the return type of the function should be T | None.
 
     :param interval: Duration in seconds to wait before allowing the function to be called again.
     """
@@ -886,7 +955,7 @@ def throttle(interval: float = 10.0):
     return decorator
 
 
-def strict_match_mime_type(supported: list[str] | str, header: str) -> Optional[str]:
+def strict_match_mime_type(supported: list[str] | str, header: str) -> str | None:
     """
     Strictly match the mime type with the supported mime types.
 
@@ -931,8 +1000,8 @@ def extract_urls(text: str) -> list[str]:
 # Should this stream falter, it shall be raised again on the
 # third retry. We look for the uptime of the world to come.
 async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
+    response: aiohttp.ClientResponse | None,
+    session: aiohttp.ClientSession | None,
 ):
     if response:
         if not response.closed:

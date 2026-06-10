@@ -34,6 +34,7 @@
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
+	import UserPreviewModal from '$lib/components/admin/UserPreviewModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -54,6 +55,7 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
+	let showUserPreviewModal = false;
 
 	const deleteUserHandler = async (id) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
@@ -398,7 +400,7 @@
 								{/if}
 							</div>
 						</td>
-						<td class=" px-3 py-1"> {user.email} </td>
+						<td class=" px-3 py-1 max-w-48 truncate"> {user.email} </td>
 
 						<td class=" px-3 py-1">
 							{dayjs(user.last_active_at * 1000).fromNow()}
@@ -421,6 +423,39 @@
 											}}
 										>
 											<ChatBubbles />
+										</button>
+									</Tooltip>
+								{/if}
+
+								{#if user.role !== 'admin'}
+									<Tooltip content={$i18n.t('Preview Access')}>
+										<button
+											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Preview Access')}
+											on:click={() => {
+												selectedUser = user;
+												showUserPreviewModal = true;
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+												/>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+												/>
+											</svg>
 										</button>
 									</Tooltip>
 								{/if}
@@ -517,4 +552,12 @@
 			/>
 		</div>
 	{/if}
+{/if}
+
+{#if selectedUser}
+	<UserPreviewModal
+		bind:show={showUserPreviewModal}
+		userId={selectedUser.id}
+		userName={selectedUser.name}
+	/>
 {/if}

@@ -1,25 +1,29 @@
 import json
 import logging
 import time
-from typing import Optional
 import uuid
+from typing import Optional
 
-from sqlalchemy import select, delete, update, func, and_, or_, cast, String
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.env import DEFAULT_GROUP_SHARE_PERMISSION
-
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.files import FileMetadataResponse
-
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Column,
-    Text,
-    JSON,
     ForeignKey,
+    String,
+    Text,
+    and_,
+    cast,
+    delete,
+    func,
+    or_,
+    select,
+    update,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
