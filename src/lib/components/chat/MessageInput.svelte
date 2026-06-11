@@ -80,6 +80,7 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import XMark from '../icons/XMark.svelte';
+	import Cog6 from '../icons/Cog6.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
@@ -511,6 +512,14 @@
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
+
+	// With the `inlineFilterToggles` setting on, every available toggle filter is
+	// shown as a persistent chip (greyed when off, toggled in place); otherwise the
+	// default shows only the selected filters as removable chips.
+	let filterChips = [];
+	$: filterChips = ($settings?.inlineFilterToggles ?? false)
+		? toggleFilters
+		: selectedFilterIds.map((id) => toggleFilters.find((f) => f.id === id)).filter((f) => f);
 
 	let showToolsButton = false;
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
@@ -1791,29 +1800,37 @@
 											</Tooltip>
 										{/if}
 
-										{#each selectedFilterIds as filterId (filterId)}
-											{@const filter = toggleFilters.find((f) => f.id === filterId)}
+										{#each filterChips as filter (filter.id)}
 											{#if filter}
 												<Tooltip content={filter?.name} placement="top">
 													<button
 														on:click|preventDefault={() => {
-															if (
+															if ($settings?.inlineFilterToggles ?? false) {
+																// In-place toggle: flip selection, keep the chip visible.
+																if (selectedFilterIds.includes(filter.id)) {
+																	selectedFilterIds = selectedFilterIds.filter(
+																		(id) => id !== filter.id
+																	);
+																} else {
+																	selectedFilterIds = [...selectedFilterIds, filter.id];
+																}
+															} else if (
 																filter?.has_user_valves &&
 																($_user?.role === 'admin' ||
 																	($_user?.permissions?.chat?.valves ?? true))
 															) {
 																selectedValvesType = 'function';
-																selectedValvesItemId = filterId;
+																selectedValvesItemId = filter.id;
 																showValvesModal = true;
 															} else {
 																selectedFilterIds = selectedFilterIds.filter(
-																	(id) => id !== filterId
+																	(id) => id !== filter.id
 																);
 															}
 														}}
 														type="button"
 														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {selectedFilterIds.includes(
-															filterId
+															filter.id
 														)
 															? 'text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '} capitalize"
@@ -1834,18 +1851,36 @@
 														{/if}
 														<!-- svelte-ignore a11y-click-events-have-key-events -->
 														<!-- svelte-ignore a11y-no-static-element-interactions -->
-														<div
-															class="hidden group-hover:block"
-															on:click={(e) => {
-																e.stopPropagation();
-																e.preventDefault();
-																selectedFilterIds = selectedFilterIds.filter(
-																	(id) => id !== filterId
-																);
-															}}
-														>
-															<XMark className="size-4" strokeWidth="1.75" />
-														</div>
+														{#if $settings?.inlineFilterToggles ?? false}
+															{#if filter?.has_user_valves && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.valves ?? true))}
+																<div
+																	class="hidden group-hover:block"
+																	title={$i18n.t('Settings')}
+																	on:click={(e) => {
+																		e.stopPropagation();
+																		e.preventDefault();
+																		selectedValvesType = 'function';
+																		selectedValvesItemId = filter.id;
+																		showValvesModal = true;
+																	}}
+																>
+																	<Cog6 className="size-4" strokeWidth="1.75" />
+																</div>
+															{/if}
+														{:else}
+															<div
+																class="hidden group-hover:block"
+																on:click={(e) => {
+																	e.stopPropagation();
+																	e.preventDefault();
+																	selectedFilterIds = selectedFilterIds.filter(
+																		(id) => id !== filter.id
+																	);
+																}}
+															>
+																<XMark className="size-4" strokeWidth="1.75" />
+															</div>
+														{/if}
 													</button>
 												</Tooltip>
 											{/if}

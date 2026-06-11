@@ -1152,6 +1152,7 @@
 	"Initials": "",
 	"Inject file content into conversation context": "",
 	"Inject the entire content as context for comprehensive processing, this is recommended for complex queries.": "",
+	"Inline Filter Toggles": "",
 	"Input": "",
 	"Input Key (e.g. text, unet_name, steps)": "",
 	"Input Variables": "",
