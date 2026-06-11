@@ -173,24 +173,26 @@
 									});
 								}
 
-								// Move the chat
-								const res = await updateChatFolderIdById(
-									localStorage.token,
-									chat.id,
-									folderId
-								).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
+								if (chat) {
+									// Move the chat
+									const res = await updateChatFolderIdById(
+										localStorage.token,
+										chat.id,
+										folderId
+									).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
 
-								onItemMove({
-									originFolderId: chat.folder_id,
-									targetFolderId: folderId,
-									e
-								});
+									onItemMove({
+										originFolderId: chat.folder_id,
+										targetFolderId: folderId,
+										e
+									});
 
-								if (res) {
-									dispatch('update');
+									if (res) {
+										dispatch('update');
+									}
 								}
 							}
 						} catch (error) {
