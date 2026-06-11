@@ -224,7 +224,7 @@
 	<EditGroupModal
 		bind:show={showDefaultPermissionsModal}
 		tabs={['permissions']}
-		bind:permissions={defaultPermissions}
+		permissions={defaultPermissions}
 		custom={false}
 		onSubmit={updateDefaultPermissionsHandler}
 	/>

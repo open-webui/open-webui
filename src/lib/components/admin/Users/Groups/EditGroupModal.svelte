@@ -52,9 +52,16 @@
 
 		await onSubmit(group);
 
+		// Update saved snapshot so next open reflects the just-saved state
+		_savedPermissions = JSON.parse(JSON.stringify(permissions));
+
 		loading = false;
 		show = false;
 	};
+
+	// Deep-clone the parent's permissions at creation time so we can
+	// reset on close-without-save without mutating the parent's object.
+	let _savedPermissions = JSON.parse(JSON.stringify(permissions));
 
 	const init = () => {
 		if (group) {
@@ -73,6 +80,9 @@
 			data = group?.data ?? {};
 
 			userCount = group?.member_count ?? 0;
+		} else {
+			// Reset to last-saved permissions (e.g. Default Permissions modal)
+			permissions = JSON.parse(JSON.stringify(_savedPermissions));
 		}
 	};
 
