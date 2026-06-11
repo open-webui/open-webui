@@ -440,6 +440,11 @@ async def get_channel_by_id(
 PAGE_ITEM_COUNT = 30
 
 
+# UserModel fields that must not leak to other channel members: credentials / integration config
+# (settings holds tool-server bearer keys + webhook URLs), identity-provider data, and PII.
+_CHANNEL_MEMBER_PRIVATE_FIELDS = {'settings', 'oauth', 'scim', 'info', 'date_of_birth', 'gender', 'bio'}
+
+
 @router.get('/{id}/members', response_model=UserListResponse)
 async def get_channel_members_by_id(
     request: Request,
@@ -475,7 +480,7 @@ async def get_channel_members_by_id(
         total = len(fetched_users)
 
         return {
-            'users': [UserModelResponse(**u.model_dump(), is_active=Users.is_active(u)) for u in fetched_users],
+            'users': [UserModelResponse(**u.model_dump(exclude=_CHANNEL_MEMBER_PRIVATE_FIELDS), is_active=Users.is_active(u)) for u in fetched_users],
             'total': total,
         }
     else:
@@ -503,7 +508,7 @@ async def get_channel_members_by_id(
         total = result['total']
 
         return {
-            'users': [UserModelResponse(**u.model_dump(), is_active=Users.is_active(u)) for u in fetched_users],
+            'users': [UserModelResponse(**u.model_dump(exclude=_CHANNEL_MEMBER_PRIVATE_FIELDS), is_active=Users.is_active(u)) for u in fetched_users],
             'total': total,
         }
 
