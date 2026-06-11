@@ -111,6 +111,7 @@
 	let inputFiles = null;
 
 	let query = '';
+	let prevQuery = query;
 	let includeContent = false;
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
@@ -143,7 +144,8 @@
 	};
 
 	// Debounce only query changes
-	$: if (query !== undefined) {
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 
 		searchDebounceTimer = setTimeout(() => {

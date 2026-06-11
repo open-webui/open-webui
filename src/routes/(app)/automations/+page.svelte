@@ -45,13 +45,15 @@
 	let deleteTarget: AutomationResponse | null = null;
 
 	let query = '';
+	let prevQuery = query;
 	let statusFilter = 'all';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let page = 1;
 
 	// Debounce only query changes (gate behind loaded to prevent double-fetch on mount)
-	$: if (loaded && query !== undefined) {
+	$: if (loaded && query !== prevQuery) {
+		prevQuery = query;
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
@@ -195,8 +197,6 @@
 		}
 
 		loaded = true;
-		// Explicit initial fetch — reactive blocks will handle subsequent changes
-		await getAutomationList();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);

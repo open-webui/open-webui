@@ -38,6 +38,7 @@
 	let total = null;
 
 	let query = '';
+	let prevQuery = query;
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	let orderBy = 'name'; // default sort key
@@ -80,7 +81,8 @@
 	};
 
 	// Debounce only query changes
-	$: if (query !== undefined && channel !== null) {
+	$: if (query !== prevQuery && channel !== null) {
+		prevQuery = query;
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
 			getUserList();

@@ -24,6 +24,7 @@
 	let show = false;
 
 	let query = '';
+	let prevQuery = query;
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let noteItems = [];
@@ -34,7 +35,8 @@
 
 	$: items = [...noteItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== undefined) {
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getItems();

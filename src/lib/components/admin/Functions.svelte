@@ -71,7 +71,9 @@
 	let functions = null;
 	let filteredItems = [];
 
-	$: if (query !== undefined) {
+	let prevQuery = query;
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			setFilteredItems();

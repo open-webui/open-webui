@@ -45,7 +45,9 @@
 	let allItemsLoaded = false;
 	let itemsLoading = false;
 
-	$: if (query !== undefined) {
+	let prevQuery = query;
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			init();
@@ -146,6 +148,7 @@
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
 		loaded = true;
+		init();
 	});
 </script>
 

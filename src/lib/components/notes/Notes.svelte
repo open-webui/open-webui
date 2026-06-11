@@ -180,7 +180,9 @@
 		await getItemsPage();
 	};
 
-	$: if (query !== undefined) {
+	let prevQuery = query;
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			if (loaded) {

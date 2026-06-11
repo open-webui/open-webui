@@ -41,6 +41,7 @@
 	let total = null;
 
 	let query = '';
+	let prevQuery = query;
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
@@ -63,7 +64,8 @@
 		}
 	};
 
-	$: if (query !== undefined) {
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getUserList();

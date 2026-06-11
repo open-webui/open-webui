@@ -78,8 +78,9 @@
 		}
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	let prevQuery = query;
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
@@ -141,6 +142,7 @@
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
 		loaded = true;
+		loadSkillItems();
 
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
