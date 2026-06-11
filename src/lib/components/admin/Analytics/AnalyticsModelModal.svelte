@@ -150,7 +150,8 @@
 		selectedTab = 'overview';
 		chatList = [];
 		allChatsLoaded = false;
-		selectRange(selectedRange);
+		selectedRange = '30d';
+		loadOverview(30);
 	}
 </script>
 
