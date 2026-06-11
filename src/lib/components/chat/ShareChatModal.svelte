@@ -83,30 +83,18 @@
 
 	export let show = false;
 
-	const isDifferentChat = (_chat) => {
-		if (!chat) {
-			return true;
-		}
-		if (!_chat) {
-			return false;
-		}
-		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
-	};
+	let _loadedChatId = null;
 
-	$: if (show) {
-		(async () => {
-			if (chatId) {
-				const _chat = await getChatById(localStorage.token, chatId);
-				if (isDifferentChat(_chat)) {
-					chat = _chat;
-				}
+	$: if (show && chatId) {
+		if (chatId !== _loadedChatId) {
+			_loadedChatId = chatId;
+			(async () => {
+				chat = await getChatById(localStorage.token, chatId);
 				await loadAccessGrants();
-			} else {
-				chat = null;
-				accessGrants = [];
-				console.log(chat);
-			}
-		})();
+			})();
+		}
+	} else if (!show) {
+		_loadedChatId = null;
 	}
 </script>
 
