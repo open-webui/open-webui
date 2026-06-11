@@ -1,6 +1,8 @@
 # Security Policy
 
 Our goal is to protect Open WebUI's users and their data, and to handle security reports with a clear, consistent, and publicly documented process.
+We want to operate a transparent security process, in which accepted vulnerabilities are published openly as advisories so anyone can see what was found, how it was resolved and most importantly, which version contains a patch for it.
+Our stance: a visible advisory history is evidence of active scrutiny and a disclosure process that works, not a measure of how fragile the software is.
 
 ## Supported Versions
 
