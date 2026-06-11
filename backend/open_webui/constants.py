@@ -86,6 +86,10 @@ class ERROR_MESSAGES(str, Enum):
         f"Oops! The file you're trying to upload is too large. Please upload a file that is less than {size}."
     )
 
+    FILE_NAME_TOO_LONG = lambda max_bytes='': (
+        f'File name is too long (maximum {max_bytes} bytes). Please rename the file and try again.'
+    )
+
     DUPLICATE_CONTENT = 'Duplicate content detected. Please provide unique content to proceed.'
     FILE_NOT_PROCESSED = (
         'Extracted content is not available for this file. Please ensure that the file is processed before proceeding.'
