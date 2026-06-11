@@ -100,7 +100,9 @@
 		}
 	};
 
-	$: if (query !== undefined) {
+	let prevQuery = query;
+	$: if (query !== prevQuery) {
+		prevQuery = query;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			page = 1;
