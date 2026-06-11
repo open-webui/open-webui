@@ -40,7 +40,7 @@ The **CVE Program rules** (and CNA operational rules) are the **baseline** for a
 
 We accept vulnerability reports **only** through [GitHub Security Advisories](https://github.com/open-webui/open-webui/security/advisories/new). Reports submitted through **any** other platform — including but not limited to third-party vulnerability reporting platforms, vulnerability brokers, social media, email, Discord, or Reddit — will not be processed.
 
-This is not a procedural preference. As an open-source project, our security process is built around the same transparency and direct community interaction as the rest of our work, and GitHub Security Advisories is where that process lives. We do not and cannot monitor or engage with external reporting platforms, and reports arriving through them will be closed without review.
+This is not a procedural preference. As a volunteer- and community-driven project, our security process is built around the same transparency and direct community interaction as the rest of our work, and GitHub Security Advisories is where that process lives. We do not and cannot monitor or engage with external reporting platforms, and reports arriving through them will be closed without review.
 
 A report filed on another platform has no standing here: it confers no priority, establishes no filing date, and creates no obligation for us to triage, publish, or otherwise consider it. Only the GitHub Security Advisory record exists for the purposes of this policy — including determining who filed first.
 
