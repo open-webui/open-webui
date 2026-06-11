@@ -560,6 +560,7 @@ from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
 )
 from open_webui.utils.embeddings import generate_embeddings
+from open_webui.utils.errors import UserFacingError, translate_exception
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     build_chat_response_context,
@@ -756,6 +757,28 @@ app = FastAPI(
 
 # Used by readiness checks to gate traffic until startup work is done.
 app.state.startup_complete = False
+
+
+@app.exception_handler(UserFacingError)
+async def user_facing_error_handler(request: Request, exc: UserFacingError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={'detail': exc.message},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Full traceback stays in server logs; users get a safe message plus a
+    # reference ID an admin can grep for.
+    ref_id = uuid4().hex[:8]
+    log.exception(f'Unhandled error [ref: {ref_id}] on {request.method} {request.url.path}')
+
+    detail = translate_exception(exc) or f'Something went wrong (ref: {ref_id})'
+    return JSONResponse(
+        status_code=500,
+        content={'detail': detail},
+    )
 
 # For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)

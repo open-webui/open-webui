@@ -42,6 +42,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import translate_exception
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -279,6 +280,15 @@ async def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
                 )
 
+        # Filesystem filename components are capped at 255 bytes; reserve room
+        # for the uuid4 prefix added below (36 chars + "_").
+        max_filename_bytes = 255 - 37
+        if len(filename.encode('utf-8')) > max_filename_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.FILE_NAME_TOO_LONG(max_filename_bytes),
+            )
+
         # replace filename with uuid
         id = str(uuid.uuid4())
         name = filename
@@ -364,7 +374,7 @@ async def upload_file_handler(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT('Error uploading file'),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error uploading file'),
         )
 
 
