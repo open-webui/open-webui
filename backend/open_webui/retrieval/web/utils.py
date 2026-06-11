@@ -46,7 +46,12 @@ from open_webui.config import (
     WEB_LOADER_TIMEOUT,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, USER_AGENT
+from open_webui.env import (
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
+    USER_AGENT,
+)
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
@@ -195,6 +200,19 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
                 if not ipaddress.ip_address(entry['host']).is_global:
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return results
+
+
+def get_ssrf_safe_session() -> aiohttp.ClientSession:
+    """A one-off aiohttp session that re-validates the connect-time IP via _SSRFSafeResolver,
+    defeating DNS rebinding. Use for validate_url-gated fetches of user-supplied URLs that must
+    not use the shared (rebinding-vulnerable) pool. Use as a context manager so it is closed:
+    ``async with get_ssrf_safe_session() as session: ...``.
+    """
+    return aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(resolver=_SSRFSafeResolver()),
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        trust_env=True,
+    )
 
 
 def extract_metadata(soup, url):
