@@ -197,6 +197,14 @@ async def set_tool_servers_config(
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
 
+    # The write above is fire-and-forget and swallows errors; confirm it reached disk so a
+    # persistence failure fails closed (HTTP 500) instead of returning a silent success.
+    try:
+        await request.app.state.config.commit('TOOL_SERVER_CONNECTIONS')
+    except Exception as e:
+        log.error(f'Failed to persist tool server connections: {e}')
+        raise HTTPException(status_code=500, detail='Failed to persist tool server configuration')
+
     await set_tool_servers(request)
 
     for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:

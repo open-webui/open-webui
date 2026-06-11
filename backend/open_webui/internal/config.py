@@ -233,6 +233,11 @@ class AppConfig:
         except Exception as exc:
             log.error("Async persist failed for '%s': %s", name, exc)
 
+    async def commit(self, name: str) -> None:
+        """Await the durable DB write of one entry, raising on failure (__setattr__'s write is fire-and-forget)."""
+        if _persist_enabled:
+            await self._entries[name].commit_async()
+
     def __getattr__(self, name: str) -> Any:
         entries = super().__getattribute__('_entries')
         if name not in entries:
