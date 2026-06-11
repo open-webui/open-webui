@@ -277,11 +277,22 @@ async def delete_folder_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if await Chats.count_chats_by_folder_id_and_user_id(id, user.id, db=db):
-        chat_delete_permission = await has_permission(
+    # Check for chats in this folder AND all descendant subfolders
+    folder_ids_to_check = [id]
+    children = await Folders.get_children_folders_by_id_and_user_id(id, user.id, db=db)
+    if children:
+        folder_ids_to_check.extend([child.id for child in children])
+
+    has_chats = False
+    for folder_id in folder_ids_to_check:
+        if await Chats.count_chats_by_folder_id_and_user_id(folder_id, user.id, db=db):
+            has_chats = True
+            break
+
+    if has_chats:
+        if user.role != 'admin' and not await has_permission(
             user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS, db=db
-        )
-        if user.role != 'admin' and not chat_delete_permission:
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
