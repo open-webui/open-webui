@@ -1,6 +1,5 @@
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -367,76 +366,36 @@ async def get_model_overview(
 ):
     """Get model overview with feedback history and chat tags."""
 
-    # Get chat IDs that used this model
+    # Single-query feedback aggregation (replaces N+1 per-chat loop)
+    history_raw = await Feedbacks.get_model_evaluation_history(
+        model_id=model_id, days=days, db=db
+    )
+    history = [
+        HistoryEntry(date=entry.date, won=entry.won, lost=entry.lost)
+        for entry in history_raw
+    ]
+
+    # Batch-fetch chats for tag extraction (replaces N+1 per-chat loop)
     chat_ids = await ChatMessages.get_chat_ids_by_model_id(
         model_id=model_id,
         start_date=None,
         end_date=None,
         skip=0,
-        limit=10000,  # Get all chats
+        limit=10000,
         db=db,
     )
 
-    # Get feedback history per day
-    history_counts: dict[str, dict] = defaultdict(lambda: {'won': 0, 'lost': 0})
-
-    # Calculate start date for history
-    now = datetime.now()
-    start_dt = None
-    if days > 0:
-        start_dt = now - timedelta(days=days)
-
-    for chat_id in chat_ids:
-        feedbacks = await Feedbacks.get_feedbacks_by_chat_id(chat_id, db=db)
-        for fb in feedbacks:
-            if fb.data and 'rating' in fb.data:
-                rating = fb.data['rating']
-                fb_date = datetime.fromtimestamp(fb.created_at)
-
-                # Filter by date range
-                if start_dt and fb_date < start_dt:
-                    continue
-
-                date_str = fb_date.strftime('%Y-%m-%d')
-                if rating == 1:
-                    history_counts[date_str]['won'] += 1
-                elif rating == -1:
-                    history_counts[date_str]['lost'] += 1
-
-    # Fill in missing days
-    history = []
-    if history_counts or days > 0:
-        end_dt = now
-        if days > 0:
-            current = start_dt
-        elif history_counts:
-            # Find earliest date
-            min_date = min(history_counts.keys())
-            current = datetime.strptime(min_date, '%Y-%m-%d')
-        else:
-            current = now
-
-        while current <= end_dt:
-            date_str = current.strftime('%Y-%m-%d')
-            counts = history_counts.get(date_str, {'won': 0, 'lost': 0})
-            history.append(
-                HistoryEntry(
-                    date=date_str,
-                    won=counts['won'],
-                    lost=counts['lost'],
-                )
-            )
-            current += timedelta(days=1)
-
-    # Get chat tags
     tag_counts: dict[str, int] = defaultdict(int)
-    for chat_id in chat_ids:
-        chat = await Chats.get_chat_by_id(chat_id, db=db)
-        if chat and chat.meta:
-            for tag in chat.meta.get('tags', []):
-                tag_counts[tag] += 1
+    if chat_ids:
+        chats = await Chats.get_chat_list_by_chat_ids(chat_ids, skip=0, limit=len(chat_ids), db=db)
+        for chat in chats:
+            if chat.meta:
+                for tag in chat.meta.get('tags', []):
+                    tag_counts[tag] += 1
 
-    # Sort by count and take top 10
-    tags = [TagEntry(tag=tag, count=count) for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1])[:10]]
+    tags = [
+        TagEntry(tag=tag, count=count)
+        for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1])[:10]
+    ]
 
     return ModelOverviewResponse(history=history, tags=tags)
