@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import bcrypt
 import logging
 import uuid
 from typing import Optional
@@ -14,6 +15,9 @@ from sqlalchemy import Boolean, Column, String, Text, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+# Equalizes bcrypt cost on the no-user / no-credential paths so signin timing does not reveal account existence (CWE-208).
+_TIMING_EQUALIZER_HASH = bcrypt.hashpw(b'open-webui-timing-equalizer', bcrypt.gensalt()).decode('utf-8')
 
 
 class Auth(Base):  # credential ↔ user linkage
@@ -142,11 +146,13 @@ class AuthsTable:
         log.info('authenticate_user: %s', email)
         resolved = await Users.get_user_by_email(email, db=db)
         if not resolved:
+            verify_password(_TIMING_EQUALIZER_HASH)  # pay the bcrypt cost so response time doesn't reveal account existence
             return
         # load the credential row and verify the password hash
         async with get_async_db_context(db) as session:
             credential = await session.get(Auth, resolved.id)
             if not credential or not credential.active:
+                verify_password(_TIMING_EQUALIZER_HASH)  # equalize cost on this path too
                 return
             if not verify_password(credential.password):
                 return
