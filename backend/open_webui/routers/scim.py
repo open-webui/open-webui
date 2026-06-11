@@ -672,7 +672,10 @@ async def update_user(
     if user_data.emails and len(user_data.emails) > 0:
         update_data['email'] = user_data.emails[0].value
 
-    if user_data.active is not None:
+    # Do not let SCIM's active flag demote an existing admin: a routine IdP sync or misconfiguration
+    # must not silently strip a locally-provisioned admin's role and lock the instance out. Admin
+    # role changes go through the dedicated admin endpoints, not SCIM provisioning.
+    if user_data.active is not None and user.role != 'admin':
         update_data['role'] = 'user' if user_data.active else 'pending'
 
     if user_data.photos and len(user_data.photos) > 0:
@@ -719,7 +722,9 @@ async def patch_user(
 
         if op == 'replace':
             if path == 'active':
-                update_data['role'] = 'user' if value else 'pending'
+                # Same guard as update_user: never demote an existing admin via SCIM.
+                if user.role != 'admin':
+                    update_data['role'] = 'user' if value else 'pending'
             elif path == 'userName':
                 update_data['email'] = value
             elif path == 'displayName':
