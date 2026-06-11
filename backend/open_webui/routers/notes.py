@@ -20,7 +20,6 @@ from open_webui.models.notes import (
     NoteUserResponse,
 )
 from open_webui.models.users import UserResponse, Users
-from open_webui.socket.main import sio
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_permission,
@@ -28,6 +27,7 @@ from open_webui.utils.access_control import (
     has_public_write_access_grant,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.notes import sync_note_update
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -345,10 +345,9 @@ async def update_note_by_id(
         pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
         note.is_pinned = note.id in pinned_note_ids
 
-        await sio.emit(
-            'note-events',
-            note.model_dump(),
-            to=f'note:{note.id}',
+        await sync_note_update(
+            note,
+            clear_document=bool(form_data.data and 'content' in form_data.data),
         )
 
         return note

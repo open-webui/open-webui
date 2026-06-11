@@ -44,6 +44,7 @@
 
 	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
+	import { resolveIncomingNoteContent } from './NoteEditor/noteEventContent';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
@@ -794,6 +795,19 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		if (_note.data && _note.data.files) {
 			files = _note.data.files;
 			note.data.files = files;
+		}
+
+		if (_note.data?.content) {
+			const nextContent = resolveIncomingNoteContent(note.data.content, _note.data.content);
+			const contentChanged = !areContentsEqual(nextContent, note.data.content);
+
+			if (contentChanged) {
+				note.data.content = nextContent;
+
+				if (editor && !editor.isDestroyed) {
+					editor.commands.setContent(note.data.content.html || marked.parse(note.data.content.md || ''));
+				}
+			}
 		}
 
 		if (_note.title && _note.title) {

@@ -24,6 +24,7 @@ from open_webui.models.messages import Message, Messages
 from open_webui.models.notes import Notes
 from open_webui.models.users import UserModel
 from open_webui.retrieval.utils import get_content_from_url
+from open_webui.utils.notes import sync_note_update
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
     CreateImageForm,
@@ -1033,6 +1034,8 @@ async def replace_note_content(
 
         if not updated_note:
             return json.dumps({'error': 'Failed to update note'})
+
+        await sync_note_update(updated_note, clear_document=True)
 
         return json.dumps(
             {
