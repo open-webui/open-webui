@@ -269,6 +269,20 @@ async def update_default_user_permissions(request: Request, form_data: UserPermi
     return request.app.state.config.USER_PERMISSIONS
 
 
+@router.get('/default/permissions/defaults', response_model=UserPermissions)
+async def get_default_user_permissions_defaults(user=Depends(get_admin_user)):
+    from open_webui.config import DEFAULT_USER_PERMISSIONS
+
+    return {
+        'workspace': WorkspacePermissions(**DEFAULT_USER_PERMISSIONS.get('workspace', {})),
+        'sharing': SharingPermissions(**DEFAULT_USER_PERMISSIONS.get('sharing', {})),
+        'access_grants': AccessGrantsPermissions(**DEFAULT_USER_PERMISSIONS.get('access_grants', {})),
+        'chat': ChatPermissions(**DEFAULT_USER_PERMISSIONS.get('chat', {})),
+        'features': FeaturesPermissions(**DEFAULT_USER_PERMISSIONS.get('features', {})),
+        'settings': SettingsPermissions(**DEFAULT_USER_PERMISSIONS.get('settings', {})),
+    }
+
+
 ############################
 # GetUserSettingsBySessionUser
 ############################
