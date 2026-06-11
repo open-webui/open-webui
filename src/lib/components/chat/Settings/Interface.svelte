@@ -68,6 +68,7 @@
 
 	let temporaryChatByDefault = false;
 	let chatFadeStreamingText = true;
+	let legacyMessageSkeleton = false;
 	let collapseCodeBlocks = false;
 	let renderMarkdownInUserMessages = true;
 	let renderMarkdownInAssistantMessages = true;
@@ -217,6 +218,7 @@
 
 		displayMultiModelResponsesInTabs = $settings?.displayMultiModelResponsesInTabs ?? false;
 		chatFadeStreamingText = $settings?.chatFadeStreamingText ?? true;
+		legacyMessageSkeleton = $settings?.legacyMessageSkeleton ?? false;
 
 		richTextInput = $settings?.richTextInput ?? true;
 		showFormattingToolbar = $settings?.showFormattingToolbar ?? false;
@@ -774,6 +776,25 @@
 							bind:state={chatFadeStreamingText}
 							on:change={() => {
 								saveSettings({ chatFadeStreamingText });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="legacy-message-skeleton-label" class=" self-center text-xs">
+						{$i18n.t('Legacy Message Skeleton')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="legacy-message-skeleton-label"
+							tooltip={true}
+							bind:state={legacyMessageSkeleton}
+							on:change={() => {
+								saveSettings({ legacyMessageSkeleton });
 							}}
 						/>
 					</div>

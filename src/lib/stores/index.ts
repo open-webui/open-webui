@@ -215,6 +215,7 @@ type Settings = {
 	scrollOnBranchChange?: boolean;
 	directConnections?: null;
 	chatBubble?: boolean;
+	legacyMessageSkeleton?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
 	conversationMode?: boolean;

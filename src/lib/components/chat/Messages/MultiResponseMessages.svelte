@@ -414,7 +414,7 @@
 
 								<div class="mt-1 markdown-prose w-full min-w-full">
 									{#if (message?.content ?? '') === ''}
-										<Skeleton />
+										<Skeleton legacy={$settings?.legacyMessageSkeleton ?? false} />
 									{:else}
 										<Markdown id={`merged`} content={message.content ?? ''} />
 									{/if}
