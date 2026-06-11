@@ -437,12 +437,8 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         resource = resource_metadata.resource
 
         # Prefer the resource-specific scopes from the Protected Resource Metadata
-        # (RFC 9728 Section 2) over the Authorization Server's scopes_supported
-        # (RFC 8414 Section 2). The AS scopes_supported is a full catalog of every
-        # scope the server can grant across all resources, whereas the PRM
-        # scopes_supported represents what this specific resource requires - making
-        # it the correct, least-privilege source. This mirrors the static-credentials
-        # flow (see #24690).
+        # (RFC 9728) over the AS's full scopes_supported catalog, for least
+        # privilege. Mirrors the static-credentials flow (#24690).
         if resource_metadata.scopes_supported:
             oauth_client_metadata.scope = ' '.join(resource_metadata.scopes_supported)
 
