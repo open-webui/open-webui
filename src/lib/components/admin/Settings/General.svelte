@@ -29,10 +29,10 @@
 
 	export let saveHandler: Function;
 
-	let updateAvailable = null;
+	let updateAvailable = false;
 	let version = {
-		current: '',
-		latest: ''
+		current: WEBUI_VERSION,
+		latest: WEBUI_VERSION
 	};
 
 	let adminConfig = null;
@@ -106,10 +106,6 @@
 	};
 
 	onMount(async () => {
-		if ($config?.features?.enable_version_update_check) {
-			checkForVersionUpdates();
-		}
-
 		await Promise.all([
 			(async () => {
 				adminConfig = await getAdminConfig(localStorage.token);
@@ -129,7 +125,7 @@
 		const ldapConfig = await getLdapConfig(localStorage.token);
 		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
 
-		banners = await getBanners(localStorage.token);
+		banners = [...$_banners];
 	});
 </script>
 
