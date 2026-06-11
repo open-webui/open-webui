@@ -2706,8 +2706,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # When the caller provides an explicit OpenAI-style `tools` array in the
     # request body, skip all server-side tool resolution and pass the caller's
-    # tools through to the model unchanged.
-    if not payload_tools:
+    # tools through to the model unchanged.  The Anthropic /api/v1/messages
+    # endpoint sets client_managed_tools for plugin clients that execute tools
+    # locally — same passthrough rule even when a particular turn omits tools.
+    client_managed_tools = getattr(request.state, 'client_managed_tools', False)
+    if client_managed_tools and not payload_tools:
+        form_data.pop('tools', None)
+    elif not payload_tools:
         # Server side tools
         tool_ids = metadata.get('tool_ids', None)
         # Client side tools

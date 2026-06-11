@@ -2251,6 +2251,11 @@ async def generate_messages(
     # Convert Anthropic payload to OpenAI format
     requested_model = form_data.get('model', '')
 
+    # Plugin clients supply and execute their own tools. Match /api/v1/chat/completions
+    # behaviour: when the caller provides tools, pass them through unchanged and do
+    # not attach Open WebUI server/MCP/builtin tools.
+    request.state.client_managed_tools = True
+
     openai_payload = convert_anthropic_to_openai_payload(form_data)
 
     # Route through the existing chat_completion handler
