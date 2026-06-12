@@ -2313,6 +2313,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if not isinstance(metadata.get('chat_id'), str):
         metadata['chat_id'] = ''
 
+    # Anthropic /api/v1/messages plugin clients manage their own payload.
+    client_managed_tools = getattr(request.state, 'client_managed_tools', False)
+
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
@@ -2407,7 +2410,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
 
     system_message = get_system_message(form_data.get('messages', []))
-    if system_message:  # Chat Controls/User Settings
+    if system_message and not client_managed_tools:  # Chat Controls/User Settings
         try:
             form_data = await apply_system_prompt_to_body(
                 system_message.get('content'), form_data, metadata, user, replace=True
@@ -2462,7 +2465,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if not folder_id:
         folder_id = metadata.get('folder_id', None)
 
-    if folder_id and user:
+    if folder_id and user and not client_managed_tools:
         folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
 
         if folder and folder.data:
@@ -2485,7 +2488,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data['messages'])
     model_knowledge = model.get('info', {}).get('meta', {}).get('knowledge', False)
 
-    if model_knowledge and metadata.get('params', {}).get('function_calling') != 'native':
+    if (
+        model_knowledge
+        and not client_managed_tools
+        and metadata.get('params', {}).get('function_calling') != 'native'
+    ):
         await event_emitter(
             {
                 'type': 'status',
@@ -2526,25 +2533,26 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     variables = form_data.pop('variables', None)
     payload_tools = form_data.get('tools', None)  # snapshot before filters
 
-    # Process the form_data through the pipeline
-    try:
-        form_data = await process_pipeline_inlet_filter(request, form_data, user, models)
-    except Exception as e:
-        raise e
+    # Process the form_data through the pipeline (skip for plugin-managed payloads)
+    if not client_managed_tools:
+        try:
+            form_data = await process_pipeline_inlet_filter(request, form_data, user, models)
+        except Exception as e:
+            raise e
 
-    try:
-        filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        filter_functions = await Functions.get_functions_by_ids(filter_ids)
+        try:
+            filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
+            filter_functions = await Functions.get_functions_by_ids(filter_ids)
 
-        form_data, flags = await process_filter_functions(
-            request=request,
-            filter_functions=filter_functions,
-            filter_type='inlet',
-            form_data=form_data,
-            extra_params=extra_params,
-        )
-    except Exception as e:
-        raise Exception(f'{e}')
+            form_data, flags = await process_filter_functions(
+                request=request,
+                filter_functions=filter_functions,
+                filter_type='inlet',
+                form_data=form_data,
+                extra_params=extra_params,
+            )
+        except Exception as e:
+            raise Exception(f'{e}')
 
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
@@ -2706,8 +2714,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # When the caller provides an explicit OpenAI-style `tools` array in the
     # request body, skip all server-side tool resolution and pass the caller's
-    # tools through to the model unchanged.
-    if not payload_tools:
+    # tools through to the model unchanged. Client-managed clients (e.g.
+    # /api/v1/messages) must not get OWUI tools on turns that omit tools.
+    if client_managed_tools and not payload_tools:
+        form_data.pop('tools', None)
+    elif not payload_tools:
         # Server side tools
         tool_ids = metadata.get('tool_ids', None)
         # Client side tools
@@ -2932,9 +2943,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # to prevent errors from providers like Gemini and Claude
     form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
 
-    # Merge any duplicate system messages into a single message at position 0
-    # to prevent template parsing errors with strict chat templates (e.g. Qwen)
-    form_data['messages'] = merge_system_messages(form_data.get('messages', []))
+    if not client_managed_tools:
+        form_data['messages'] = merge_system_messages(form_data.get('messages', []))
 
     return form_data, metadata, events
 

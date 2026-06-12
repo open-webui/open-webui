@@ -38,7 +38,11 @@ from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access, has_connection_access
-from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
+from open_webui.utils.anthropic import (
+    get_anthropic_forward_headers,
+    get_anthropic_models,
+    is_anthropic_url,
+)
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.misc import (
@@ -209,6 +213,9 @@ async def get_headers_and_cookies(
     if config.get('headers') and isinstance(config.get('headers'), dict):
         custom_headers = get_custom_headers(config.get('headers'), user, metadata)
         headers.update(custom_headers)
+
+    if getattr(request.state, 'client_managed_tools', False):
+        headers.update(get_anthropic_forward_headers(request.headers))
 
     return headers, cookies
 
@@ -1139,7 +1146,7 @@ async def generate_chat_completion(
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
-    if is_openai_new_model(payload['model']):
+    if is_openai_new_model(payload['model']) and not getattr(request.state, 'client_managed_tools', False):
         payload = openai_reasoning_model_handler(payload)
     elif 'api.openai.com' not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility

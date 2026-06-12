@@ -2251,6 +2251,10 @@ async def generate_messages(
     # Convert Anthropic payload to OpenAI format
     requested_model = form_data.get('model', '')
 
+    # Plugin clients manage their own tools/prompts; skip OWUI middleware mutation.
+    request.state.client_managed_tools = True
+    request.state.bypass_system_prompt = True
+
     openai_payload = convert_anthropic_to_openai_payload(form_data)
 
     # Route through the existing chat_completion handler

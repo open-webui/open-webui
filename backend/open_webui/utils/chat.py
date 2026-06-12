@@ -160,11 +160,11 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
-    # Propagate bypass_filter and bypass_system_prompt via request.state so that
-    # downstream route handlers (openai/ollama) can read them without exposing
-    # them as query parameters.
     request.state.bypass_filter = bypass_filter
-    request.state.bypass_system_prompt = bypass_system_prompt
+    if getattr(request.state, 'client_managed_tools', False):
+        request.state.bypass_system_prompt = True
+    else:
+        request.state.bypass_system_prompt = bypass_system_prompt
 
     if hasattr(request.state, 'metadata'):
         if 'metadata' not in form_data:

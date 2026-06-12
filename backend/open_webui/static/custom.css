@@ -1,0 +1,158 @@
+/* Expedient AI Hub Custom Branding */
+
+/* ── Brand tokens: edit here to retheme ── */
+:root {
+	/* Light mode variables */
+	--sidebar-main-lightmode: #262626;
+	--sidebar-hover-lightmode: #d10404;
+	--sidebar-text-lightmode: #ffffff;
+	--sidebar-subheader-lightmode: #f20505;
+	--logo-url-lightmode: url('https://expedient.com/uploads/logo-light.png');
+	--logo-opacity-lightmode: 0.7;
+
+	/* Dark mode variables */
+	--sidebar-main-darkmode: #262626;
+	--sidebar-hover-darkmode: #d10404;
+	--sidebar-text-darkmode: #ffffff;
+	--sidebar-subheader-darkmode: #f20505;
+	--logo-url-darkmode: url('https://expedient.com/uploads/logo-dark.png');
+	--logo-opacity-darkmode: 0.7;
+}
+
+/* ── Solid sidebar background + no red right border on collapsed state ── */
+#sidebar {
+	background-color: var(--sidebar-bg) !important;
+	border-color: transparent !important;
+}
+
+/* ── Less rounded buttons (rounded-xl/2xl → rounded-lg) ── */
+#sidebar .rounded-xl,
+#sidebar .rounded-2xl {
+	border-radius: 0.5rem !important;
+}
+
+/* ── Light mode sidebar ──
+   Resolve mode-specific tokens into generic aliases used by all rules below. */
+html.light #sidebar {
+	--sidebar-bg: var(--sidebar-main-lightmode);
+	--sidebar-hover: var(--sidebar-hover-lightmode);
+	--sidebar-text: var(--sidebar-text-lightmode);
+	--sidebar-accent: var(--sidebar-subheader-lightmode);
+
+	color: var(--sidebar-text) !important;
+	--color-gray-50: var(--sidebar-bg);
+	--color-gray-100: var(--sidebar-hover);
+	--color-gray-200: #3d3d3d;
+	--color-gray-300: #555555;
+	--color-gray-400: var(--sidebar-accent);
+	--color-gray-500: var(--sidebar-accent);
+	--color-gray-600: var(--sidebar-accent);
+	--color-gray-700: var(--sidebar-accent);
+	--color-gray-800: var(--sidebar-text);
+	--color-gray-850: var(--sidebar-bg);
+	--color-gray-900: var(--sidebar-text);
+	--color-gray-950: var(--sidebar-bg);
+}
+
+/* ── Dark mode sidebar ──
+   OWUI JS sets gray-800–950 as inline styles on <html>;
+   our #sidebar declaration wins for all descendants. */
+html.dark #sidebar {
+	--sidebar-bg: var(--sidebar-main-darkmode);
+	--sidebar-hover: var(--sidebar-hover-darkmode);
+	--sidebar-text: var(--sidebar-text-darkmode);
+	--sidebar-accent: var(--sidebar-subheader-darkmode);
+
+	--color-gray-50: var(--sidebar-bg);
+	--color-gray-100: var(--sidebar-hover);
+	--color-gray-200: var(--sidebar-text);
+	--color-gray-300: var(--sidebar-text);
+	--color-gray-400: var(--sidebar-accent);
+	--color-gray-500: var(--sidebar-accent);
+	--color-gray-600: var(--sidebar-accent);
+	--color-gray-700: #555555;
+	--color-gray-800: #3d3d3d;
+	--color-gray-850: var(--sidebar-hover);
+	--color-gray-900: var(--sidebar-hover);
+	--color-gray-950: var(--sidebar-bg);
+}
+
+/* ── Selected state: text on colored background ── */
+#sidebar .selected,
+#sidebar .selected * {
+	color: var(--sidebar-text) !important;
+}
+
+/* ── Hover: solid background + text color ── */
+#sidebar [class*='hover:bg-gray']:hover {
+	background-color: var(--sidebar-hover) !important;
+	color: var(--sidebar-text) !important;
+}
+
+#sidebar [class*='hover:bg-gray']:hover * {
+	color: var(--sidebar-text) !important;
+}
+
+/* ── Chat item hover ── */
+#sidebar-chat-group:hover #sidebar-chat-item {
+	background-color: var(--sidebar-hover) !important;
+}
+
+#sidebar-chat-group:hover #sidebar-chat-item * {
+	color: var(--sidebar-text) !important;
+}
+
+/* Ellipsis gradient: match hover color in dark mode */
+html.dark #sidebar-chat-group:hover #sidebar-chat-item-menu {
+	--color-gray-950: var(--sidebar-hover-darkmode);
+}
+
+/* ── Status indicator border: match sidebar bg so no bleed ── */
+html.light #sidebar .border-white,
+html.dark #sidebar .dark\:border-gray-900 {
+	border-color: var(--sidebar-bg) !important;
+}
+
+/* ── Sidebar header: brand name + close button ── */
+#sidebar #sidebar-webui-name {
+	color: var(--sidebar-accent) !important;
+}
+
+#sidebar button[aria-label='Close Sidebar'] {
+	color: var(--sidebar-text) !important;
+}
+
+/* ===== CHAT BAR LOGO ===== */
+#message-input-container::after {
+	content: '';
+	position: absolute;
+	bottom: 12px;
+	right: 130px;
+	width: 120px;
+	height: 30px;
+	background-repeat: no-repeat !important;
+	background-position: center right !important;
+	background-size: contain !important;
+	pointer-events: none !important;
+	z-index: 0;
+}
+
+/* Light/Dark specific logo and opacity */
+html.light #message-input-container::after {
+	background-image: var(--logo-url-lightmode);
+	opacity: var(--logo-opacity-lightmode);
+}
+
+html.dark #message-input-container::after {
+	background-image: var(--logo-url-darkmode);
+	opacity: var(--logo-opacity-darkmode);
+}
+
+/* Mobile: shrink chat bar logo */
+@media (max-width: 640px) {
+	#message-input-container::after {
+		width: 72px !important;
+		height: 20px !important;
+		right: 130px !important;
+	}
+}
