@@ -178,19 +178,39 @@ async def process_uploaded_file(
             knowledge_id = file_metadata.get('knowledge_id')
             if knowledge_id:
                 try:
-                    await Knowledges.add_file_to_knowledge_by_id(
-                        knowledge_id=knowledge_id,
-                        file_id=file_item.id,
-                        user_id=user.id,
-                        directory_id=file_metadata.get('directory_id'),
+                    # Gate like POST /knowledge/{id}/file/add: a client-supplied
+                    # metadata.knowledge_id must not let a non-writer attach files (CWE-862/863).
+                    knowledge = await Knowledges.get_knowledge_by_id(id=knowledge_id, db=db_session)
+                    can_write = bool(knowledge) and (
+                        knowledge.user_id == user.id
+                        or user.role == 'admin'
+                        or await AccessGrants.has_access(
+                            user_id=user.id,
+                            resource_type='knowledge',
+                            resource_id=knowledge.id,
+                            permission='write',
+                            db=db_session,
+                        )
                     )
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
-                        user=user,
-                        db=db_session,
-                    )
-                    log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+                    if not can_write:
+                        log.warning(
+                            f'Refusing to auto-link file {file_item.id} to knowledge '
+                            f'{knowledge_id}: user {user.id} lacks write access'
+                        )
+                    else:
+                        await Knowledges.add_file_to_knowledge_by_id(
+                            knowledge_id=knowledge_id,
+                            file_id=file_item.id,
+                            user_id=user.id,
+                            directory_id=file_metadata.get('directory_id'),
+                        )
+                        await process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                            user=user,
+                            db=db_session,
+                        )
+                        log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
                 except Exception as e:
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
 
