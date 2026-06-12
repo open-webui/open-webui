@@ -12,14 +12,16 @@ Our stance: a visible advisory history is evidence of active scrutiny and a disc
 | dev              | :x:                |
 | others           | :x:                |
 
-**If an issue is already fixed at the time you file, the report will not be accepted** — it did not contribute to discovering or remediating the issue, and we will not publish an advisory for it.
+**If an issue is already fixed, or already being fixed in the open, at the time you file, the report will not be accepted** — it did not contribute to discovering or remediating the issue, and we will not publish an advisory for it.
 
 A fix counts as already-existing regardless of which branch it lives on — including `dev` — and regardless of whether it was silently resolved in an earlier version. Branch support status (see table above) governs where a vulnerability must be *reproducible*, not whether a fix already exists: a bug live in a supported branch but already fixed in `dev` is still an already-fixed issue under this rule.
 
 Two specific patterns this covers, both of which we reject:
 
 - Filing a report for a bug found in an **older version** that was already resolved by the time of the current supported version.
-- **Monitoring our commit history** for fix commits and filing a report for the issue a commit already addresses. We have observed (automated) monitoring of our public commits that produced reports against fixes after we already committed them; this rule exists to reject that pattern.
+- **Monitoring our public commits or pull requests** and filing a report for an issue they already address or fix. We have observed automated monitoring of our public commits and PRs that produced reports against fixes others had already authored; this rule exists to reject that pattern.
+
+We need not decide whether you discovered the issue independently — we cannot, and it makes no difference. On the provable facts your report duplicates work that is already public and already fixed or being fixed; you filed strictly last, and there is no way to distinguish independent discovery from scraping. Credit for the issue belongs to whoever found or fixed it — who in turn forfeits their own claim to it by disclosing publicly instead of reporting it to us confidentially first. A publicly-disclosed fix therefore earns no advisory, and no credit for anyone.
 
 > [!TIP]
 > **Before reporting, check whether your finding still reproduces on the `dev` branch** (and any other active development branch).
