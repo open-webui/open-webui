@@ -88,6 +88,70 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
 #
 ##############################
 
+# Client headers forwarded to upstream gateways that proxy Anthropic APIs.
+ANTHROPIC_FORWARD_HEADER_NAMES = (
+    'anthropic-beta',
+    'anthropic-version',
+)
+
+# Top-level Anthropic request fields passed through to OpenAI-shaped gateways.
+# Note: `thinking` is intentionally excluded — plugin clients may send adaptive
+# thinking on every request, but OpenAI-shaped gateways reject it for models
+# that do not support it (e.g. Haiku sidecar calls).
+ANTHROPIC_PASSTHROUGH_PARAMS = (
+    'metadata',
+    'top_k',
+    'service_tier',
+)
+
+
+def get_anthropic_forward_headers(request_headers) -> dict[str, str]:
+    """Return Anthropic client headers that should reach the upstream gateway."""
+    return {
+        name: request_headers[name]
+        for name in ANTHROPIC_FORWARD_HEADER_NAMES
+        if request_headers.get(name)
+    }
+
+
+def _copy_cache_control(source: dict, target: dict) -> None:
+    cache_control = source.get('cache_control')
+    if cache_control:
+        target['cache_control'] = cache_control
+
+
+def _finalize_openai_content(openai_content: list) -> str | list:
+    """Flatten single plain text blocks; keep arrays when cache_control is present."""
+    if (
+        len(openai_content) == 1
+        and openai_content[0].get('type') == 'text'
+        and not openai_content[0].get('cache_control')
+    ):
+        return openai_content[0]['text']
+    return openai_content
+
+
+def _anthropic_usage_from_openai(openai_usage: dict) -> dict:
+    usage = {
+        'input_tokens': openai_usage.get('prompt_tokens', 0),
+        'output_tokens': openai_usage.get('completion_tokens', 0),
+    }
+    for key in (
+        'cache_creation_input_tokens',
+        'cache_read_input_tokens',
+        'cache_creation',
+    ):
+        if key in openai_usage:
+            usage[key] = openai_usage[key]
+
+    prompt_details = openai_usage.get('prompt_tokens_details') or {}
+    if isinstance(prompt_details, dict):
+        cached_tokens = prompt_details.get('cached_tokens')
+        if cached_tokens is not None and 'cache_read_input_tokens' not in usage:
+            usage['cache_read_input_tokens'] = cached_tokens
+
+    return usage
+
 
 def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     """
@@ -112,14 +176,27 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
         if isinstance(system, str):
             messages.append({'role': 'system', 'content': system})
         elif isinstance(system, list):
-            # Anthropic supports system as list of content blocks
-            text_parts = []
+            # Preserve block structure (and cache_control) when present.
+            system_blocks = []
             for block in system:
                 if isinstance(block, dict) and block.get('type') == 'text':
-                    text_parts.append(block.get('text', ''))
+                    system_block = {
+                        'type': 'text',
+                        'text': block.get('text', ''),
+                    }
+                    _copy_cache_control(block, system_block)
+                    system_blocks.append(system_block)
                 elif isinstance(block, str):
-                    text_parts.append(block)
-            messages.append({'role': 'system', 'content': '\n'.join(text_parts)})
+                    system_blocks.append({'type': 'text', 'text': block})
+
+            if (
+                len(system_blocks) == 1
+                and system_blocks[0].get('type') == 'text'
+                and not system_blocks[0].get('cache_control')
+            ):
+                messages.append({'role': 'system', 'content': system_blocks[0]['text']})
+            elif system_blocks:
+                messages.append({'role': 'system', 'content': system_blocks})
 
     # Convert messages
     for msg in anthropic_payload.get('messages', []):
@@ -137,12 +214,12 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                 block_type = block.get('type', 'text')
 
                 if block_type == 'text':
-                    openai_content.append(
-                        {
-                            'type': 'text',
-                            'text': block.get('text', ''),
-                        }
-                    )
+                    text_block = {
+                        'type': 'text',
+                        'text': block.get('text', ''),
+                    }
+                    _copy_cache_control(block, text_block)
+                    openai_content.append(text_block)
                 elif block_type == 'image':
                     source = block.get('source', {})
                     if source.get('type') == 'base64':
@@ -195,12 +272,12 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                             content_type = content_block.get('type', 'text')
 
                             if content_type == 'text':
-                                converted_parts.append(
-                                    {
-                                        'type': 'text',
-                                        'text': content_block.get('text', ''),
-                                    }
-                                )
+                                text_part = {
+                                    'type': 'text',
+                                    'text': content_block.get('text', ''),
+                                }
+                                _copy_cache_control(content_block, text_part)
+                                converted_parts.append(text_part)
                             elif content_type == 'image':
                                 source = content_block.get('source', {})
                                 if source.get('type') == 'base64':
@@ -287,21 +364,13 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                 # Assistant message with tool calls
                 msg_dict = {'role': role}
                 if openai_content:
-                    # If there's only text, flatten it
-                    if len(openai_content) == 1 and openai_content[0]['type'] == 'text':
-                        msg_dict['content'] = openai_content[0]['text']
-                    else:
-                        msg_dict['content'] = openai_content
+                    msg_dict['content'] = _finalize_openai_content(openai_content)
                 else:
                     msg_dict['content'] = ''
                 msg_dict['tool_calls'] = tool_calls
                 messages.append(msg_dict)
             elif openai_content:
-                # If there's only a single text block, flatten it to a string
-                if len(openai_content) == 1 and openai_content[0]['type'] == 'text':
-                    messages.append({'role': role, 'content': openai_content[0]['text']})
-                else:
-                    messages.append({'role': role, 'content': openai_content})
+                messages.append({'role': role, 'content': _finalize_openai_content(openai_content)})
         else:
             messages.append({'role': role, 'content': str(content) if content else ''})
 
@@ -323,16 +392,16 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     if 'tools' in anthropic_payload:
         openai_tools = []
         for tool in anthropic_payload['tools']:
-            openai_tools.append(
-                {
-                    'type': 'function',
-                    'function': {
-                        'name': tool.get('name', ''),
-                        'description': tool.get('description', ''),
-                        'parameters': tool.get('input_schema', {}),
-                    },
-                }
-            )
+            openai_tool = {
+                'type': 'function',
+                'function': {
+                    'name': tool.get('name', ''),
+                    'description': tool.get('description', ''),
+                    'parameters': tool.get('input_schema', {}),
+                },
+            }
+            _copy_cache_control(tool, openai_tool)
+            openai_tools.append(openai_tool)
         openai_payload['tools'] = openai_tools
 
     # tool_choice
@@ -349,6 +418,14 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     'type': 'function',
                     'function': {'name': tc.get('name', '')},
                 }
+
+    for param in ANTHROPIC_PASSTHROUGH_PARAMS:
+        if param in anthropic_payload:
+            openai_payload[param] = anthropic_payload[param]
+
+    system_raw = anthropic_payload.get('system')
+    if isinstance(system_raw, list):
+        openai_payload['system'] = system_raw
 
     return openai_payload
 
@@ -382,7 +459,7 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
         content.append({'type': 'text', 'text': msg_content})
 
     # Tool calls → tool_use blocks
-    tool_calls = message.get('tool_calls', [])
+    tool_calls = message.get('tool_calls') or []
     for tc in tool_calls:
         func = tc.get('function', {})
         try:
@@ -398,12 +475,9 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
             }
         )
 
-    # Usage
-    openai_usage = openai_response.get('usage', {})
-    usage = {
-        'input_tokens': openai_usage.get('prompt_tokens', 0),
-        'output_tokens': openai_usage.get('completion_tokens', 0),
-    }
+    # Usage (include prompt-cache token counts when upstream provides them)
+    openai_usage = openai_response.get('usage', {}) or {}
+    usage = _anthropic_usage_from_openai(openai_usage)
 
     return {
         'id': openai_response.get('id', f'msg_{_uuid.uuid4().hex[:24]}'),
@@ -430,8 +504,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     import uuid as _uuid
 
     msg_id = f'msg_{_uuid.uuid4().hex[:24]}'
-    input_tokens = 0
-    output_tokens = 0
+    final_usage: dict = {}
     stop_reason = 'end_turn'
 
     # Track content blocks with a running index.
@@ -486,8 +559,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                 if not choices:
                     # Check for usage in the final chunk
                     if data.get('usage'):
-                        input_tokens = data['usage'].get('prompt_tokens', input_tokens)
-                        output_tokens = data['usage'].get('completion_tokens', output_tokens)
+                        final_usage = data['usage']
                     continue
 
                 delta = choices[0].get('delta', {})
@@ -495,8 +567,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
                 # Update usage if present
                 if data.get('usage'):
-                    input_tokens = data['usage'].get('prompt_tokens', input_tokens)
-                    output_tokens = data['usage'].get('completion_tokens', output_tokens)
+                    final_usage = data['usage']
 
                 # --- Handle text content ---
                 content = delta.get('content')
@@ -593,13 +664,19 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
         yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
 
     # Emit message_delta with stop reason
+    anthropic_usage = _anthropic_usage_from_openai(final_usage) if final_usage else {'output_tokens': 0}
+    if 'input_tokens' not in anthropic_usage:
+        anthropic_usage.setdefault('input_tokens', 0)
+    if 'output_tokens' not in anthropic_usage:
+        anthropic_usage['output_tokens'] = 0
+
     message_delta = {
         'type': 'message_delta',
         'delta': {
             'stop_reason': stop_reason,
             'stop_sequence': None,
         },
-        'usage': {'output_tokens': output_tokens},
+        'usage': anthropic_usage,
     }
     yield f'event: message_delta\ndata: {json.dumps(message_delta)}\n\n'.encode()
 
