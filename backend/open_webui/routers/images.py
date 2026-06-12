@@ -826,9 +826,24 @@ async def image_edits(
     metadata: dict | None = None,
     user=Depends(get_verified_user),
 ):
+    if not request.app.state.config.ENABLE_IMAGE_EDIT:
+        raise HTTPException(
+            status_code=403,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.image_generation', request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     size = None
     width, height = None, None
     metadata = metadata or {}
+
 
     if (request.app.state.config.IMAGE_EDIT_SIZE and 'x' in request.app.state.config.IMAGE_EDIT_SIZE) or (
         form_data.size and 'x' in form_data.size
