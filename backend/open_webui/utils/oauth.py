@@ -70,6 +70,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    MCP_OAUTH_ALLOWED_SCOPES,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
     REDIS_KEY_PREFIX,
@@ -287,6 +288,28 @@ def get_parsed_and_base_url(server_url) -> tuple[urllib.parse.ParseResult, str]:
     return parsed, base_url
 
 
+def _filter_scopes(scopes: list[str]) -> list[str]:
+    """
+    Optionally restrict discovered OAuth scopes to an admin-defined allowlist.
+
+    Set MCP_OAUTH_ALLOWED_SCOPES (space- or comma-separated) to limit which of
+    a server's advertised scopes are actually requested. Some servers advertise
+    broad or mutually-exclusive scopes — e.g. Google's Gmail MCP advertises
+    both gmail.metadata and the full-access mail.google.com scope — and
+    requesting all of them can break operations or over-grant access.
+
+    Scopes are matched exactly; any advertised scope not in the allowlist is
+    dropped. If the env var is unset/empty, all discovered scopes are kept
+    (default behavior).
+    """
+    if not MCP_OAUTH_ALLOWED_SCOPES:
+        return scopes
+    allowed = set(MCP_OAUTH_ALLOWED_SCOPES)
+    filtered = [s for s in scopes if s in allowed]
+    log.debug(f'Scope allowlist active: advertised {scopes} -> requesting {filtered}')
+    return filtered
+
+
 @dataclass
 class ProtectedResourceMetadata:
     """RFC 9728 Protected Resource Metadata fields relevant to OAuth flows."""
@@ -449,7 +472,9 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                                 oauth_client_metadata.scope is None
                                 and oauth_server_metadata.scopes_supported is not None
                             ):
-                                oauth_client_metadata.scope = ' '.join(oauth_server_metadata.scopes_supported)
+                                _scopes = _filter_scopes(oauth_server_metadata.scopes_supported)
+                                if _scopes:
+                                    oauth_client_metadata.scope = ' '.join(_scopes)
 
                             if (
                                 oauth_server_metadata.token_endpoint_auth_methods_supported
@@ -565,7 +590,8 @@ async def get_oauth_client_info_with_static_credentials(
         # Unlike the Authorization Server's scopes_supported (which is a full catalog
         # of every scope the server can grant), the PRM scopes_supported represents
         # what this specific resource requires — making it safe to request them all.
-        scope = ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
+        _scopes = _filter_scopes(resource_metadata.scopes_supported)
+        scope = ' '.join(_scopes) if _scopes else None
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'

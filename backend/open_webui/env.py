@@ -554,6 +554,15 @@ try:
 except (ValueError, TypeError):
     MCP_INITIALIZE_TIMEOUT = 10
 
+# Optional allowlist restricting which OAuth scopes are requested when
+# connecting to an MCP server. Space- or comma-separated list of scope
+# strings; scopes advertised by a server that are not in the list are not
+# requested. Empty/unset keeps the default behavior (request everything
+# the server advertises). Useful for servers that advertise broad or
+# mutually-exclusive scopes, e.g. Google's Gmail MCP advertises both
+# gmail.metadata and the full-access mail.google.com scope.
+MCP_OAUTH_ALLOWED_SCOPES = os.getenv('MCP_OAUTH_ALLOWED_SCOPES', '').replace(',', ' ').split()
+
 
 ####################################
 # AIOHTTP Connection Pool
