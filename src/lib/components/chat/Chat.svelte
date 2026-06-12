@@ -2099,8 +2099,11 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		// Build message_ids map: {model_id: assistant_message_id}
+		// Build message_ids map: {model_key: assistant_message_id}
+		// When the same model ID is selected multiple times (side-by-side with identical models),
+		// disambiguate by appending ::index (e.g., "gemma3:270m::0", "gemma3:270m::1").
 		const messageIdsMap: Record<string, string> = {};
+		const hasDuplicateModels = new Set(selectedModelIds).size !== selectedModelIds.length;
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -2132,7 +2135,10 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
-				messageIdsMap[modelId] = responseMessageId;
+				const mapKey = hasDuplicateModels
+					? `${modelId}::${modelIdx ? modelIdx : _modelIdx}`
+					: modelId;
+				messageIdsMap[mapKey] = responseMessageId;
 			}
 		}
 		history = history;
@@ -2178,7 +2184,8 @@
 		// Single request — backend fans out to all models
 		const primaryModelId = selectedModelIds[0];
 		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
-		const primaryResponseMessageId = messageIdsMap[primaryModelId];
+		const primaryMapKey = hasDuplicateModels ? `${primaryModelId}::0` : primaryModelId;
+		const primaryResponseMessageId = messageIdsMap[primaryMapKey];
 
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);

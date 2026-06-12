@@ -1746,13 +1746,22 @@ async def chat_completion(
         parent_id = form_data.pop('parent_id', None)
         form_data.pop('new_chat', None)  # Legacy field
 
-        # Multi-model: {model_id: assistant_message_id}
+        # Multi-model: {model_key: assistant_message_id}
         # Single-model fallback: built from 'model' + 'id'
+        # Keys may carry a "::N" suffix to disambiguate when the same model
+        # is selected in multiple panes (e.g., "gemma3:270m::0", "gemma3:270m::1").
         message_ids = form_data.pop('message_ids', None)
         if not message_ids:
             message_ids = {model_id: form_data.pop('id', None)}
         else:
             form_data.pop('id', None)
+
+        def _resolve_model_id(key: str) -> str:
+            """Strip the ``::N`` pane-index suffix added by the frontend for
+            side-by-side chats that use the same model in multiple panes."""
+            idx = key.rfind('::')
+            return key[:idx] if idx != -1 else key
+
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
 
@@ -1855,7 +1864,7 @@ async def chat_completion(
                         user_message['childrenIds'] = all_assistant_ids
                         history_messages[user_message_id] = user_message
 
-                    for target_model_id, assistant_message_id in message_ids.items():
+                    for target_model_key, assistant_message_id in message_ids.items():
                         if assistant_message_id:
                             history_messages[assistant_message_id] = {
                                 'id': assistant_message_id,
@@ -1864,7 +1873,7 @@ async def chat_completion(
                                 'role': 'assistant',
                                 'content': '',
                                 'done': False,
-                                'model': target_model_id,
+                                'model': _resolve_model_id(target_model_key),
                                 'timestamp': int(time.time()),
                             }
 
@@ -1875,7 +1884,7 @@ async def chat_completion(
                             chat={
                                 'id': chat_id,
                                 'title': 'New Chat',
-                                'models': list(message_ids.keys()),
+                                'models': [_resolve_model_id(k) for k in message_ids.keys()],
                                 'history': {
                                     'currentId': all_assistant_ids[0] if all_assistant_ids else user_message_id,
                                     'messages': history_messages,
@@ -1986,7 +1995,7 @@ async def chat_completion(
                             )
 
                     # Save each assistant placeholder
-                    for target_model_id, assistant_message_id in message_ids.items():
+                    for target_model_key, assistant_message_id in message_ids.items():
                         if assistant_message_id:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 chat_id,
@@ -1998,7 +2007,7 @@ async def chat_completion(
                                     'role': 'assistant',
                                     'content': '',
                                     'done': False,
-                                    'model': target_model_id,
+                                    'model': _resolve_model_id(target_model_key),
                                     'timestamp': int(time.time()),
                                 },
                             )
@@ -2138,9 +2147,11 @@ async def chat_completion(
         task_ids = []
         chat_id = metadata['chat_id']
 
-        for idx, (target_model_id, assistant_message_id) in enumerate(message_ids.items()):
+        for idx, (target_model_key, assistant_message_id) in enumerate(message_ids.items()):
             if not assistant_message_id:
                 continue
+
+            real_model_id = _resolve_model_id(target_model_key)
 
             # Per-model metadata: own message_id + model
             per_model_metadata = {
@@ -2151,12 +2162,12 @@ async def chat_completion(
             # Per-model form_data: own model
             model_form_data = {
                 **form_data,
-                'model': target_model_id,
+                'model': real_model_id,
                 'metadata': per_model_metadata,
             }
 
             # Resolve the model object for this specific model
-            resolved_model = request.app.state.MODELS.get(target_model_id, model)
+            resolved_model = request.app.state.MODELS.get(real_model_id, model)
 
             # Only the first model runs title/tags generation;
             # subsequent models only run follow-ups.
