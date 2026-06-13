@@ -217,11 +217,20 @@ class FeedbackTable:
         async with get_async_db_context(db) as db:
             stmt = select(Feedback, User).join(User, Feedback.user_id == User.id)
 
+            # Lightweight count: JOIN + WHERE only, no ORDER BY and without
+            # selecting the JSON ``data`` column. Wrapping the full
+            # select(Feedback, User) + JSON-ORDER BY statement in a subquery
+            # just to count rows forces PostgreSQL to materialize the JSON
+            # column and evaluate the JSON-cast ORDER BY, which surfaces as a
+            # 502 on the admin feedback list endpoint. (#25953)
+            count_stmt = select(func.count(Feedback.id)).select_from(Feedback).join(User, Feedback.user_id == User.id)
+
             if filter:
                 # Apply model_id filter (exact match)
                 model_id = filter.get('model_id')
                 if model_id:
                     stmt = stmt.filter(Feedback.data['model_id'].as_string() == model_id)
+                    count_stmt = count_stmt.filter(Feedback.data['model_id'].as_string() == model_id)
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
@@ -251,7 +260,7 @@ class FeedbackTable:
                 stmt = stmt.order_by(Feedback.created_at.desc())
 
             # Count BEFORE pagination
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            count_result = await db.execute(count_stmt)
             total = count_result.scalar()
 
             if skip:
@@ -395,7 +404,15 @@ class FeedbackTable:
                 .order_by(Feedback.updated_at.desc())
             )
 
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
+            # Lightweight count: JOIN + WHERE only, no ORDER BY and without
+            # selecting the JSON ``data`` column (see get_feedback_items). (#25953)
+            count_stmt = (
+                select(func.count(Feedback.id))
+                .select_from(Feedback)
+                .join(User, Feedback.user_id == User.id)
+                .filter(Feedback.user_id == user_id)
+            )
+            count_result = await db.execute(count_stmt)
             total = count_result.scalar()
 
             if skip:
