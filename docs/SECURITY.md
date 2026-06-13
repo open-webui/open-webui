@@ -144,8 +144,6 @@ Your remediation guidance can include, for example:
 >
 > If the same action also affects another user, the operator, the host system, or shared resources, identify that second party clearly in the PoC, and we want to hear about it.
 
-14. **One Vulnerability Per Report:** Each report must describe a **single vulnerability**. If you have found multiple **distinct** vulnerabilities, file them as **separate reports** — one per vulnerability. A CVE identifier maps to exactly one vulnerability, so a single report bundling two or more distinct flaws **cannot be assigned a CVE** even when the individual findings are valid; GitHub will decline the CVE request. Bundling therefore actively prevents us from crediting and publishing your work.
-
 **Non-compliant submissions may be closed, and repeat or extreme violators may be banned from submitting reports.** Our goal is to foster a constructive reporting environment where quality submissions promote better security for all users.
 If you want to report something that does not fulfill our rules and guidelines laid out here, you can still report it and we will handle it, [see our good faith reporting section for more information](#good-faith-reports-that-arent-vulnerabilities).
 
