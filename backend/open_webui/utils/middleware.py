@@ -570,6 +570,18 @@ def serialize_output(output: list) -> str:
                 parts.append(
                     f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>'
                 )
+                # Inject images from code interpreter output directly into chat content
+                if ci_output and isinstance(ci_output, dict):
+                    image_lines = []
+                    for field in ['result', 'stdout']:
+                        field_content = ci_output.get(field, '')
+                        if isinstance(field_content, str):
+                            for line in field_content.splitlines():
+                                stripped = line.strip()
+                                if re.match(r'!\[.*?\]\(/api/v1/', stripped) and stripped not in image_lines:
+                                    image_lines.append(stripped)
+                    if image_lines:
+                        parts.append('\n'.join(image_lines))
             else:
                 parts.append(
                     f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>'
