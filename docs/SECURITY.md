@@ -36,6 +36,16 @@ In line with the CVE rules, we will **not** publish an advisory or mint a CVE fo
 
 Thank you for your report!
 
+## What a Valid Report Gets You
+
+If your report describes a real vulnerability under this policy, here's what you can expect from us:
+
+- **Credit on the advisory.** You're named as the reporter on the published advisory. Where multiple reporters each demonstrated a distinct vector, every one of you is credited (see [Report Handling](#report-handling)).
+- **Coordinated disclosure.** We won't publish out from under you while you're still working the issue with us. Status moves visibly on the advisory itself — including the CVE request — and GitHub notifies you of those updates, so you can follow it through to publication.
+- **A real fix, handled responsibly.** For findings with broad or severe real-world impact, we may hold publication for up to ~2 weeks after the patched release so administrators can update before details are public.
+
+We're a small volunteer team, so what we *can't* offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
+
 ## Alignment with the CVE Program
 
 The **CVE Program rules** (and CNA operational rules) are the **baseline** for all CVE handling here, and this policy operates within them. Under those rules, the determination of whether a report constitutes a security vulnerability in Open WebUI is the vendor's to make; this policy documents the criteria by which we exercise that determination. Where the rules are silent, they still apply; where this policy specifies how we apply them to Open WebUI, it does so as the vendor's published disposition criteria, not as a replacement for or exception to the program rules.
@@ -147,16 +157,6 @@ Your remediation guidance can include, for example:
 **Non-compliant submissions may be closed, and repeat or extreme violators may be banned from submitting reports.** Our goal is to foster a constructive reporting environment where quality submissions promote better security for all users.
 If you want to report something that does not fulfill our rules and guidelines laid out here, you can still report it and we will handle it, [see our good faith reporting section for more information](#good-faith-reports-that-arent-vulnerabilities).
 
-## What a Valid Report Gets You
-
-If your report describes a real vulnerability under this policy, here's what you can expect from us:
-
-- **Credit on the advisory.** You're named as the reporter on the published advisory. Where multiple reporters each demonstrated a distinct vector, every one of you is credited (see [Report Handling](#report-handling)).
-- **Coordinated disclosure.** We won't publish out from under you while you're still working the issue with us. Status moves visibly on the advisory itself — including the CVE request — and GitHub notifies you of those updates, so you can follow it through to publication.
-- **A real fix, handled responsibly.** For findings with broad or severe real-world impact, we may hold publication for up to ~2 weeks after the patched release so administrators can update before details are public.
-
-We're a small volunteer team, so what we *can't* offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
-
 ## Expected Timeframe
 
 We aim to triage new reports, ship fixes, and publish advisories promptly. However, due to the very high volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by a high number of (AI-generated) reports — our capacity to respond is limited. Open WebUI is a community-driven project maintained by a small team, and security reports are handled alongside all other project responsibilities.
@@ -206,4 +206,4 @@ For any other immediate concerns and questions, please create an issue in our [i
 
 ---
 
-_Last updated on **2026-06-07**._
+_Last updated on **2026-06-13**._
