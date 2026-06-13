@@ -27,13 +27,23 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 ## Key Features of Open WebUI ⭐
 
-- 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize, or helm) for a hassle-free experience, with support for both `:ollama` and `:cuda` tagged images.
+- 🚀 **Effortless Setup**: Install seamlessly via pip, uv, Docker, or Kubernetes (kubectl, kustomize, or helm) for a hassle-free experience — with `:ollama` and `:cuda` tagged images available for container deployments.
 
-- 🤝 **Broad Model & API Integration**: Connect any OpenAI-compatible API alongside local Ollama models. Point the API URL at **LMStudio, GroqCloud, Mistral, OpenRouter, and many more** to mix and match providers freely.
+- 🤝 **Broad Model & API Integration**: Connect any OpenAI Completions or Open Responses-compatible API alongside local Ollama models. Point the API URL at **LMStudio, GroqCloud, Mistral, OpenRouter, vLLM, and many more** to mix and match providers freely.
 
 - 🔐 **Granular RBAC & User Groups**: Administrators define detailed roles, groups, and permissions, giving each user exactly the access they should have — secure by default, with tailored experiences per group and admin-only rights for sensitive actions like model creation and pulling.
 
-- 🧩 **Plugin Support — Build Almost Anything**: Extend Open WebUI with native plugins, each specialized for its job: **Filters** to intercept and transform requests and responses, **Actions** to add custom buttons and interactive flows, **Pipes** to build entirely custom models and pipelines with custom logic, and **Tools** to give models real capabilities. With these building blocks you can create custom integrations, rate limits, human-in-the-loop approval popups, data connections, per-user usage budgets, custom interfaces, and much more. If you can imagine it, you can most likely build it.
+- 🧩 **Plugin Support — Build Almost Anything**: Extend Open WebUI with native plugins, each specialized for its job: **Filters** to intercept and transform requests and responses, **Actions** to add custom buttons and interactive flows, **Pipes** to build entirely custom models and pipelines with custom logic, and **Tools** to give models real capabilities. Connect external services through **MCP** (native Streamable HTTP for Model Context Protocol servers), **MCPO**, and **OpenAPI tool servers** (auto-discover tools from any OpenAPI-compatible endpoint). Add **Skills** (Markdown instruction sets that teach models how to approach tasks) and **Prompts** (slash-command templates with typed input variables and versioning). With these building blocks you can create custom integrations, rate limits, human-in-the-loop approval popups, data connections, per-user usage budgets, custom interfaces, and much more. If you can imagine it, you can most likely build it.
+
+- 🤖 **Models & Agents**: Wrap any base model with custom instructions, bound tools, and knowledge to build specialized agents — a "Code Reviewer" with your linting rules baked in, a "Meeting Summarizer" with your company's template, a "Python Tutor" that always uses your style guide. Each agent is a configuration preset (system prompt, tools, knowledge, and parameters in one package), with dynamic variables like `{{ USER_NAME }}` and `{{ CURRENT_DATE }}` injected automatically, per-user/group access control, and global defaults across all models. Build characters and import community presets through [Open WebUI Community](https://openwebui.com/) integration.
+
+- 📝 **Notes**: A dedicated workspace for content that lives outside any single conversation — draft with a rich Markdown/Rich-Text editor and floating formatting toolbar, use AI to rewrite or improve selected text in place, and attach notes to any chat for full-fidelity context injection (no chunking, no vector search). Models can search, read, and update notes autonomously.
+
+- 📢 **Channels**: Real-time shared spaces where your team and AI models think together in one timeline. Tag `@gpt-4o` to draft a plan, then tag `@claude` to critique it — everyone sees both responses. Includes threads, reactions, and pins, public/private/group/DM channels with access control, and AI that can search and synthesize across channels autonomously.
+
+- 🧠 **Persistent Memory**: The AI remembers facts about you across conversations, carrying context from one chat to the next.
+
+- ⏱️ **Automations & Scheduled Prompts**: Schedule prompts to run automatically on recurring schedules, and let models maintain structured task lists to work through multi-step workflows.
 
 - 📱 **Responsive Design & PWA**: Enjoy a seamless experience across desktop, laptop, and mobile, with a Progressive Web App that delivers a native app-like feel and offline access on localhost.
 
@@ -41,11 +51,9 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🎤📹 **Hands-Free Voice/Video Call**: Communicate seamlessly with integrated voice and video calls, using multiple Speech-to-Text providers (Local Whisper, OpenAI, Deepgram, Azure) and Text-to-Speech engines (Azure, ElevenLabs, OpenAI, Transformers, WebAPI) for dynamic, interactive chats.
 
-- 🛠️ **Model Builder**: Easily create custom models in the Workspace — build characters and agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
-
 - 💾 **Persistent Artifact Storage**: Built-in key-value storage API for artifacts, enabling journals, trackers, leaderboards, and collaborative tools with both personal and shared data scopes across sessions.
 
-- 📚 **Local RAG Integration**: Bring Retrieval Augmented Generation right into your chats, backed by your choice of 9 vector databases and multiple content-extraction engines (Tika, Docling, Document Intelligence, Mistral OCR, PaddleOCR-vl, external loaders). Load documents directly into chat or add files to your library and pull them in with the `#` command before a query.
+- 📚 **Local RAG Integration**: Bring Retrieval Augmented Generation right into your chats, backed by your choice of 9 vector databases and multiple content-extraction engines (Tika, Docling, Document Intelligence, Mistral OCR, PaddleOCR-vl, external loaders). Use hybrid search (BM25 + vector) with cross-encoder reranking for precision, or full-context mode to inject entire documents with no chunking. Load documents directly into chat or add files to your library and pull them in with the `#` command before a query — and keep those libraries continuously synced from 45+ external sources with **oikb** (see the Ecosystem section below).
 
 - 🔍 **Web Search for RAG**: Search the web through dozens of providers — `SearXNG`, `Brave Search`, `Kagi`, `Mojeek`, `Tavily`, `Perplexity`, `Firecrawl`, `serpstack`, `serper`, `Serply`, `DuckDuckGo`, `SearchApi`, `SerpApi`, `Bing`, `Jina`, `Exa`, `Sougou`, `Azure AI Search`, `Ollama Cloud`, and more — injecting results directly into the conversation.
 
@@ -54,6 +62,8 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 - 🎨 **Image Generation & Editing**: Create and edit images with multiple engines including OpenAI DALL·E, Gemini, ComfyUI (local), and AUTOMATIC1111 (local), supporting both generation and prompt-based editing workflows.
 
 - ⚙️ **Multi-Model Conversations**: Engage several models at once, harnessing their individual strengths in parallel for the best possible responses.
+
+- 📊 **Usage Analytics & Model Evaluation**: Built-in admin dashboards track message volume, token consumption, and cost across users and models. Evaluate models head-to-head with a built-in arena, A/B testing, and ELO-based leaderboards to find what works best for your team.
 
 - 🗄️ **Flexible Database & Storage**: Choose SQLite (with optional encryption) or PostgreSQL for your database, and store files locally or on S3, Google Cloud Storage, or Azure Blob Storage for scalable deployments.
 
@@ -71,7 +81,27 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🌟 **Continuous Updates**: We're committed to improving Open WebUI with regular updates, fixes, and new features.
 
+- 🛡️ **Transparent Security Process**: Security reports are triaged, fixed, and published as open advisories through a documented responsible-disclosure process — see our [Security Policy](https://github.com/open-webui/open-webui/security).
+
 Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+
+## The Open WebUI Ecosystem 🌐
+
+Open WebUI is the core, surrounded by companion apps and infrastructure that extend what your AI can do, what it can reach, and where you run it:
+
+- ⚡ **Open Terminal — Give Your AI a Real Computer** — [open-webui/open-terminal](https://github.com/open-webui/open-terminal): A self-hosted computing environment that plugs directly into Open WebUI, giving the AI a place to write code, run it, read the output, fix errors, and iterate — all inside the chat. Analyze spreadsheets and PDFs, build and live-preview websites, clone repos and run tests, automate file and system tasks. Run it sandboxed in Docker or bare-metal for full machine access, with a built-in file browser sidebar in Open WebUI.
+
+- 🔐 **Terminals — Per-User Container Orchestration** **· Enterprise** — [open-webui/terminals](https://github.com/open-webui/terminals): Run Open Terminal safely for a whole team. Every user gets their own fully isolated container — separate credentials, resource limits, and network rules — with automatic lifecycle management (spin-up on connect, proxying, limit enforcement, cleanup). Define policy-based environments on Docker or Kubernetes. Per-user isolation makes this the production-grade, hardened way to run Open Terminal for a team.
+> [!IMPORTANT]
+> Production use requires an **Open WebUI Enterprise License with Terminals access**. [Contact the Open WebUI team](https://docs.openwebui.com/enterprise) to get started.
+
+- 💻 **cptr — Talk to Your Computer From Anywhere** — [open-webui/computer](https://github.com/open-webui/computer): A standalone, mobile-first computer and coding agent that runs on the machine you own — files, terminal, and git in a browser tab, reachable from your phone. Connect it into Open WebUI as a model and chat with your own computer directly, or reach it from Telegram, WhatsApp, and more — control your machine and ship from anywhere.
+
+- 🔄 **oikb — Connect Everything** — [open-webui/oikb](https://github.com/open-webui/oikb): Feed your Knowledge Bases from 45+ sources — GitHub, Confluence, ServiceNow, Salesforce, Jira, Slack, SharePoint, Notion, and many more — keeping the tools your team already uses continuously in sync with Open WebUI.
+
+- 🖥️ **Native Desktop App** — [open-webui/desktop](https://github.com/open-webui/desktop): Run Open WebUI as a native app on macOS, Windows, and Linux — no Docker, no terminal, just download and launch. System-wide Spotlight chat bar with screenshot capture, push-to-talk voice from any app, and optional fully-local inference via a built-in llama.cpp engine.
+
+Want to learn more about Open WebUI's Ecosystem? Check out our [Open WebUI documentation](https://docs.openwebui.com) for more details!
 
 ---
 
