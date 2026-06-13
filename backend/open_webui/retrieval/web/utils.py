@@ -148,7 +148,7 @@ def _ssrf_safe_new_conn(self):
             if getattr(self, 'source_address', None):
                 sock.bind(self.source_address)
             for opt in getattr(self, 'socket_options', None) or ():
-                sock.setsockopt(*opt)
+                sock.setsockopt(*opt[:3])
             sock.connect(sa)
             return sock
         except OSError as exc:
