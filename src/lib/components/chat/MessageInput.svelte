@@ -1519,17 +1519,19 @@
 														if (prompt === '' && e.key == 'ArrowUp') {
 															e.preventDefault();
 
-															const userMessageElement = [
-																...document.getElementsByClassName('user-message')
-															]?.at(-1);
+															if (history?.currentId) {
+																const messages = createMessagesList(history, history.currentId);
+																const userMessages = messages.filter((m) => m.role === 'user');
+																if (userMessages.length > 0) {
+																	const lastUserMessage = userMessages[userMessages.length - 1];
+																	prompt = lastUserMessage.content;
 
-															if (userMessageElement) {
-																userMessageElement.scrollIntoView({ block: 'center' });
-																const editButton = [
-																	...document.getElementsByClassName('edit-user-message-button')
-																]?.at(-1);
-
-																editButton?.click();
+																	await tick();
+																	const chatInput = document.getElementById('chat-input');
+																	if (chatInput) {
+																		chatInput.focus();
+																	}
+																}
 															}
 														}
 
