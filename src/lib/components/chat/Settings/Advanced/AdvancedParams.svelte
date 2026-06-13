@@ -150,7 +150,7 @@
 	<div>
 		<Tooltip
 			content={$i18n.t(
-				"Native mode (default) leverages the model's built-in tool-calling capabilities. Legacy mode works with a wider range of models by calling tools once before execution via prompt injection."
+				"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model's built-in tool-calling capabilities, but requires the model to inherently support this feature."
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -162,20 +162,12 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
-						if ((params?.function_calling ?? null) === null) {
-							params.function_calling = 'native';
-						} else if (params.function_calling === 'native') {
-							params.function_calling = 'legacy';
-						} else {
-							params.function_calling = null;
-						}
+						params.function_calling = (params?.function_calling ?? null) === null ? 'native' : null;
 					}}
 					type="button"
 				>
 					{#if params.function_calling === 'native'}
 						<span class="ml-2 self-center">{$i18n.t('Native')}</span>
-					{:else if params.function_calling === 'legacy'}
-						<span class="ml-2 self-center">{$i18n.t('Legacy')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{/if}
