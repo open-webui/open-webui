@@ -222,6 +222,12 @@ This project contains code under multiple licenses. The current codebase include
 If you have any questions, suggestions, or need assistance, please open an issue or join our
 [Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
+## Security 🛡️
+
+If you believe you've found a security vulnerability — or something that isn't strictly a vulnerability but shouldn't be disclosed publicly — [reach out confidentially through our responsible disclosure program on GitHub](https://github.com/open-webui/open-webui/security).
+We accept reports only through GitHub, not through any other platform.
+Thank you for helping us keep Open WebUI secure!
+
 ## Star History
 
 <a href="https://star-history.com/#open-webui/open-webui&Date">
