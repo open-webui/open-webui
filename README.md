@@ -33,7 +33,7 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🔐 **Granular RBAC & User Groups**: Administrators define detailed roles, groups, and permissions, giving each user exactly the access they should have — secure by default, with tailored experiences per group and admin-only rights for sensitive actions like model creation and pulling.
 
-- 🧩 **Plugin Support — Build Almost Anything**: Extend Open WebUI with native plugins, each specialized for its job: **Filters** to intercept and transform requests and responses, **Actions** to add custom buttons and interactive flows, **Pipes** to build entirely custom models and pipelines with custom logic, and **Tools** to give models real capabilities. Connect external services through **MCP** (native Streamable HTTP for Model Context Protocol servers), **MCPO**, and **OpenAPI tool servers** (auto-discover tools from any OpenAPI-compatible endpoint). Add **Skills** (Markdown instruction sets that teach models how to approach tasks) and **Prompts** (slash-command templates with typed input variables and versioning). With these building blocks you can create custom integrations, rate limits, human-in-the-loop approval popups, data connections, per-user usage budgets, custom interfaces, and much more. If you can imagine it, you can most likely build it.
+- 🧩 **Plugin Support — Build Almost Anything**: Extend Open WebUI with native plugins, each specialized for its job: **Filters** to intercept and transform requests and responses, **Actions** to add custom buttons and interactive flows, **Pipes** to build entirely custom models and pipelines with custom logic, and **Tools** to give models real capabilities. Connect external services through **MCP** (native Streamable HTTP for Model Context Protocol servers), **MCPO**, and **OpenAPI tool servers** that auto-discover tools from any OpenAPI-compatible endpoint. Add **Skills** (Markdown instruction sets that teach models how to approach tasks) and **Prompts** (slash-command templates with typed input variables and versioning). With these building blocks you can create custom integrations, rate limits, human-in-the-loop approval popups, data connections, per-user usage budgets, custom interfaces, and much more. If you can imagine it, you can most likely build it.
 
 - 🤖 **Models & Agents**: Wrap any base model with custom instructions, bound tools, and knowledge to build specialized agents — a "Code Reviewer" with your linting rules baked in, a "Meeting Summarizer" with your company's template, a "Python Tutor" that always uses your style guide. Each agent is a configuration preset (system prompt, tools, knowledge, and parameters in one package), with dynamic variables like `{{ USER_NAME }}` and `{{ CURRENT_DATE }}` injected automatically, per-user/group access control, and global defaults across all models. Build characters and import community presets through [Open WebUI Community](https://openwebui.com/) integration.
 
@@ -43,7 +43,11 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🧠 **Persistent Memory**: The AI remembers facts about you across conversations, carrying context from one chat to the next.
 
-- ⏱️ **Automations & Scheduled Prompts**: Schedule prompts to run automatically on recurring schedules, and let models maintain structured task lists to work through multi-step workflows.
+- ✅ **Live Workflow & Message Flow**: Stay in the loop on multi-step work without waiting. For complex tasks, the AI builds its own checklist right in the chat and works through it visibly — watch progress tick off step by step instead of staring at a spinner. And you never have to wait: queue messages while the AI is still responding and they send automatically as soon as it's ready.
+
+- 📅 **Calendar & AI Scheduling**: A built-in calendar gives every user personal and shared calendars with month/week/day views, recurring (RRULE) events, color coding, attendees with RSVP tracking, and reminders via toast, browser notification, or webhook. With native function calling, models manage your schedule conversationally — *"schedule a standup every weekday at 9am"* or *"what's on my calendar this week?"* — creating, searching, updating, and deleting events for you. Active automations surface as virtual events on a dedicated Scheduled Tasks calendar, giving you one unified timeline of manual events and automated runs.
+
+- ⏱️ **Automations**: Schedule prompts to run automatically on recurring schedules, with upcoming and past runs surfaced on your calendar and each completed run linking back to the chat it produced.
 
 - 📱 **Responsive Design & PWA**: Enjoy a seamless experience across desktop, laptop, and mobile, with a Progressive Web App that delivers a native app-like feel and offline access on localhost.
 
@@ -67,13 +71,13 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🗄️ **Flexible Database & Storage**: Choose SQLite (with optional encryption) or PostgreSQL for your database, and store files locally or on S3, Google Cloud Storage, or Azure Blob Storage for scalable deployments.
 
-- 🔍 **Advanced Vector Database Support**: Pick from 9 vector databases — ChromaDB, PGVector, Qdrant, Milvus, Elasticsearch, OpenSearch, Pinecone, S3Vector, and Oracle 23ai — to tune RAG performance to your stack.
+- 🧬 **Advanced Vector Database Support**: Pick from 9 vector databases — ChromaDB, PGVector, Qdrant, Milvus, Elasticsearch, OpenSearch, Pinecone, S3Vector, and Oracle 23ai — to tune RAG performance to your stack.
 
-- 🔐 **Enterprise Authentication & Provisioning**: Full LDAP/Active Directory integration, SSO via trusted headers and OAuth providers, and automated user lifecycle management through SCIM 2.0 — for seamless integration with identity providers like Okta, Azure AD, and Google Workspace.
+- 🪪 **Enterprise Authentication & Provisioning**: Full LDAP/Active Directory integration, SSO via trusted headers and OAuth providers, and automated user lifecycle management through SCIM 2.0 — for seamless integration with identity providers like Okta, Azure AD, and Google Workspace.
 
 - ☁️ **Cloud-Native File Integration**: Native Google Drive and OneDrive/SharePoint file picking for seamless document import from enterprise cloud storage.
 
-- 📊 **Production Observability**: Built-in OpenTelemetry support for traces, metrics, and logs, plugging into your existing monitoring stack.
+- 🔭 **Production Observability**: Built-in OpenTelemetry support for traces, metrics, and logs, plugging into your existing monitoring stack.
 
 - ⚖️ **Horizontal Scalability**: Redis-backed session management and WebSocket support for multi-worker, multi-node deployments behind load balancers.
 
@@ -91,7 +95,7 @@ Open WebUI is the core, surrounded by companion apps and infrastructure that ext
 
 - ⚡ **Open Terminal — Give Your AI a Real Computer** — [open-webui/open-terminal](https://github.com/open-webui/open-terminal): A self-hosted computing environment that plugs directly into Open WebUI, giving the AI a place to write code, run it, read the output, fix errors, and iterate — all inside the chat. Analyze spreadsheets and PDFs, build and live-preview websites, clone repos and run tests, automate file and system tasks. Run it sandboxed in Docker or bare-metal for full machine access, with a built-in file browser sidebar in Open WebUI.
 
-- 🔐 **Terminals — Per-User Container Orchestration** **· Enterprise** — [open-webui/terminals](https://github.com/open-webui/terminals): Run Open Terminal safely for a whole team. Every user gets their own fully isolated container — separate credentials, resource limits, and network rules — with automatic lifecycle management (spin-up on connect, proxying, limit enforcement, cleanup). Define policy-based environments on Docker or Kubernetes. Per-user isolation makes this the production-grade, hardened way to run Open Terminal for a team.
+- 🔒 **Terminals — Per-User Container Orchestration** **· Enterprise** — [open-webui/terminals](https://github.com/open-webui/terminals): Run Open Terminal safely for a whole team. Every user gets their own fully isolated container — separate credentials, resource limits, and network rules — with automatic lifecycle management (spin-up on connect, proxying, limit enforcement, cleanup). Define policy-based environments on Docker or Kubernetes. Per-user isolation makes this the production-grade, hardened way to run Open Terminal for a team.
 > [!IMPORTANT]
 > Production use requires an **Open WebUI Enterprise License with Terminals access**. [Contact the Open WebUI team](https://docs.openwebui.com/enterprise) to get started.
 
@@ -99,7 +103,7 @@ Open WebUI is the core, surrounded by companion apps and infrastructure that ext
 
 - 🔄 **oikb — Connect Everything** — [open-webui/oikb](https://github.com/open-webui/oikb): Feed your Knowledge Bases from 45+ sources — GitHub, Confluence, ServiceNow, Salesforce, Jira, Slack, SharePoint, Notion, and many more — keeping the tools your team already uses continuously in sync with Open WebUI.
 
-- 🖥️ **Native Desktop App** — [open-webui/desktop](https://github.com/open-webui/desktop): Run Open WebUI as a native app on macOS, Windows, and Linux — no Docker, no terminal, just download and launch. System-wide Spotlight chat bar with screenshot capture, push-to-talk voice from any app, and optional fully-local inference via a built-in llama.cpp engine.
+- 🖥️ **Native Desktop App** *(Early Alpha)* — [open-webui/desktop](https://github.com/open-webui/desktop): Run Open WebUI as a native app on macOS, Windows, and Linux — no Docker, no terminal, just download and launch. System-wide Spotlight chat bar with screenshot capture, push-to-talk voice from any app, and optional fully-local inference via a built-in llama.cpp engine.
 
 Want to learn more about Open WebUI's Ecosystem? Check out our [Open WebUI documentation](https://docs.openwebui.com) for more details!
 
