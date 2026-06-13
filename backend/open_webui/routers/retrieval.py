@@ -81,6 +81,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.bocha import search_bocha
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
+from open_webui.retrieval.web.crw import search_crw
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.external import search_external
@@ -543,6 +544,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'FIRECRAWL_API_KEY': request.app.state.config.FIRECRAWL_API_KEY,
             'FIRECRAWL_API_BASE_URL': request.app.state.config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': request.app.state.config.FIRECRAWL_TIMEOUT,
+            'CRW_API_KEY': request.app.state.config.CRW_API_KEY,
+            'CRW_API_BASE_URL': request.app.state.config.CRW_API_BASE_URL,
+            'CRW_TIMEOUT': request.app.state.config.CRW_TIMEOUT,
             'TAVILY_EXTRACT_DEPTH': request.app.state.config.TAVILY_EXTRACT_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -614,6 +618,9 @@ class WebConfig(BaseModel):
     FIRECRAWL_API_KEY: str | None = None
     FIRECRAWL_API_BASE_URL: str | None = None
     FIRECRAWL_TIMEOUT: str | None = None
+    CRW_API_KEY: str | None = None
+    CRW_API_BASE_URL: str | None = None
+    CRW_TIMEOUT: str | None = None
     TAVILY_EXTRACT_DEPTH: str | None = None
     EXTERNAL_WEB_SEARCH_URL: str | None = None
     EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
@@ -1109,6 +1116,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.FIRECRAWL_API_KEY = form_data.web.FIRECRAWL_API_KEY
         request.app.state.config.FIRECRAWL_API_BASE_URL = form_data.web.FIRECRAWL_API_BASE_URL
         request.app.state.config.FIRECRAWL_TIMEOUT = form_data.web.FIRECRAWL_TIMEOUT
+        request.app.state.config.CRW_API_KEY = form_data.web.CRW_API_KEY
+        request.app.state.config.CRW_API_BASE_URL = form_data.web.CRW_API_BASE_URL
+        request.app.state.config.CRW_TIMEOUT = form_data.web.CRW_TIMEOUT
         request.app.state.config.EXTERNAL_WEB_SEARCH_URL = form_data.web.EXTERNAL_WEB_SEARCH_URL
         request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = form_data.web.EXTERNAL_WEB_SEARCH_API_KEY
         request.app.state.config.EXTERNAL_WEB_LOADER_URL = form_data.web.EXTERNAL_WEB_LOADER_URL
@@ -1243,6 +1253,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'FIRECRAWL_API_KEY': request.app.state.config.FIRECRAWL_API_KEY,
             'FIRECRAWL_API_BASE_URL': request.app.state.config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': request.app.state.config.FIRECRAWL_TIMEOUT,
+            'CRW_API_KEY': request.app.state.config.CRW_API_KEY,
+            'CRW_API_BASE_URL': request.app.state.config.CRW_API_BASE_URL,
+            'CRW_TIMEOUT': request.app.state.config.CRW_TIMEOUT,
             'TAVILY_EXTRACT_DEPTH': request.app.state.config.TAVILY_EXTRACT_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -2160,6 +2173,15 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             search_firecrawl,
             request.app.state.config.FIRECRAWL_API_BASE_URL,
             request.app.state.config.FIRECRAWL_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
+    elif engine == 'crw':
+        return await asyncio.to_thread(
+            search_crw,
+            request.app.state.config.CRW_API_BASE_URL,
+            request.app.state.config.CRW_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,

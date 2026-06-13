@@ -37,12 +37,13 @@
 		'perplexity',
 		'sougou',
 		'firecrawl',
+		'crw',
 		'external',
 		'yandex',
 		'youcom',
 		'linkup'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'crw', 'tavily', 'external'];
 
 	let webConfig = null;
 
@@ -755,6 +756,55 @@
 									</div>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'crw'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('fastCRW API Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter fastCRW API Base URL')}
+												bind:value={webConfig.CRW_API_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('fastCRW API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter fastCRW API Key')}
+										bind:value={webConfig.CRW_API_KEY}
+									/>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('fastCRW Timeout (s)')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter fastCRW Timeout')}
+												bind:value={webConfig.CRW_TIMEOUT}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'external'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
@@ -1142,6 +1192,37 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Firecrawl API Key')}
 									bind:value={webConfig.FIRECRAWL_API_KEY}
+								/>
+							</div>
+						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'crw' && webConfig.WEB_SEARCH_ENGINE !== 'crw'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('fastCRW API Base URL')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="text"
+											placeholder={$i18n.t('Enter fastCRW API Base URL')}
+											bind:value={webConfig.CRW_API_BASE_URL}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('fastCRW API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter fastCRW API Key')}
+									bind:value={webConfig.CRW_API_KEY}
 								/>
 							</div>
 						</div>
