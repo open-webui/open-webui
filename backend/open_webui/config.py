@@ -1879,6 +1879,24 @@ FIRECRAWL_TIMEOUT = ConfigVar(
     os.getenv('FIRECRAWL_TIMEOUT', ''),
 )
 
+CRW_API_KEY = ConfigVar(
+    'CRW_API_KEY',
+    'rag.web.loader.crw_api_key',
+    os.getenv('CRW_API_KEY', ''),
+)
+
+CRW_API_BASE_URL = ConfigVar(
+    'CRW_API_BASE_URL',
+    'rag.web.loader.crw_api_url',
+    os.getenv('CRW_API_BASE_URL', 'https://fastcrw.com/api'),
+)
+
+CRW_TIMEOUT = ConfigVar(
+    'CRW_TIMEOUT',
+    'rag.web.loader.crw_timeout',
+    os.getenv('CRW_TIMEOUT', ''),
+)
+
 EXTERNAL_WEB_SEARCH_URL = ConfigVar(
     'EXTERNAL_WEB_SEARCH_URL',
     'rag.web.search.external_web_search_url',
