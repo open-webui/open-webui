@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2026-06-13
+
+### Added
+
+- 🖥️ **Use cptr as a model.** cptr, Open WebUI's standalone companion app, now exposes an OpenAI-compatible gateway with first-class Open WebUI support, so a one-click setup adds it as a connection and lets you drive its full agent loop (files, terminal, git, and web access on the machine it runs on) from chat as if it were just another model. [GitHub](https://github.com/open-webui/computer)
+- 🏷️ **More custom header variables.** Custom request headers now support "{{USER_MESSAGE_ID}}", "{{USER_MESSAGE_PARENT_ID}}", and "{{TASK}}", letting connected services tell apart real user messages from automated background requests like title, tag, and follow-up generation. [Commit](https://github.com/open-webui/open-webui/commit/f85cb27ef835aa76aff7de6176bf2159ba392061)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+
+### Changed
+
+- 🔀 **Native tool calling is now the default.** Every chat and model that had not explicitly chosen a tool-calling mode now runs Native, which relies on a model's built-in tool support, while the old behavior has been renamed "Legacy" and made the explicit opt-out; if your models depend on the previous approach you must switch them back to "Legacy" per chat, per model, or globally in your default model parameters to preserve their behavior. [Commit](https://github.com/open-webui/open-webui/commit/b1d40f340921c27eb9a965b9feeb2563856e25e2)
+
 ## [0.9.6] - 2026-06-01
 
 ### Added
