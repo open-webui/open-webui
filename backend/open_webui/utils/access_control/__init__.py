@@ -321,7 +321,8 @@ async def check_model_access(
         return
 
     if model_info:
-        if user.role == 'user':
+        # Enforce for every non-admin role (including pending); never fail open.
+        if user.role != 'admin':
             from open_webui.models.access_grants import AccessGrants
 
             user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
