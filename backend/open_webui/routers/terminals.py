@@ -282,10 +282,14 @@ async def ws_terminal(
 
     import urllib.parse
 
+    # Encode session_id as an opaque path segment so it cannot smuggle '?'/'#'/'&' (at any
+    # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
+    safe_session_id = urllib.parse.quote(session_id, safe='')
+
     if policy_id:
-        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{session_id}'
+        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{safe_session_id}'
     else:
-        upstream_url = f'{ws_base}/api/terminals/{session_id}'
+        upstream_url = f'{ws_base}/api/terminals/{safe_session_id}'
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 
