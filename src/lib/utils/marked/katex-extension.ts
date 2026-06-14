@@ -9,8 +9,11 @@ const DELIMITER_LIST = [
 ];
 
 // Defines characters that are allowed to immediately precede or follow a math delimiter.
+// NOTE: the backtick (`) is deliberately EXCLUDED (range ends at `_`, not `` ` ``) so that a
+// `$` sitting directly against an inline code span — e.g. C# `$"..."` or shell `` `$PATH` `` —
+// is not treated as the start/end of math. Real LaTeX is never delimited right against a backtick.
 const ALLOWED_SURROUNDING_CHARS =
-	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
+	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯:：？！～⇒?!-\\/:-@\\[-_{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 // Modified to fit more formats in different languages. Originally: '\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 
 // Pre-compile the surrounding character regex once at module load time.
@@ -161,6 +164,13 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 			.slice(2)
 			.filter((item) => item)
 			.find((item) => item.trim());
+
+		// A math body containing a raw backtick is almost never valid LaTeX — it means the
+		// `$...$` span swallowed an inline code span (e.g. `` `$PATH` and `$HOME` ``). Bail so
+		// marked falls back to normal inline parsing (codespans + text).
+		if (!text || text.includes('`')) {
+			return;
+		}
 
 		return {
 			type,

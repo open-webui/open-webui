@@ -25,6 +25,9 @@ import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 import { decode } from 'html-entities';
 
+import { normalizeNestedFences } from './markdown-fences';
+export { normalizeNestedFences } from './markdown-fences';
+
 //////////////////////////
 // Helper functions
 // No one thanks the foundation, but without it the
@@ -95,6 +98,7 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	content = normalizeNestedFences(content);
 	content = processChineseContent(content);
 	return content.trim();
 };
