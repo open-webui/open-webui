@@ -1250,6 +1250,12 @@ RAG_FULL_CONTEXT = ConfigVar(
     os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true',
 )
 
+RAG_MESSAGE_SCOPED_FILE_CONTEXT = ConfigVar(
+    'RAG_MESSAGE_SCOPED_FILE_CONTEXT',
+    'rag.message_scoped_file_context',
+    os.getenv('RAG_MESSAGE_SCOPED_FILE_CONTEXT', 'False').lower() == 'true',
+)
+
 RAG_FILE_MAX_COUNT = ConfigVar(
     'RAG_FILE_MAX_COUNT',
     'rag.file.max_count',

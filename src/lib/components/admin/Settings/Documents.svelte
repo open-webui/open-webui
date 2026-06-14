@@ -811,6 +811,22 @@
 						</div>
 					</div>
 
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							<Tooltip
+								content={$i18n.t(
+									'Keep attached files scoped to the user message they were sent with instead of merging all chat files into the latest RAG context.'
+								)}
+								placement="top-start"
+							>
+								{$i18n.t('Scope File Context by Message')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={RAGConfig.RAG_MESSAGE_SCOPED_FILE_CONTEXT} />
+						</div>
+					</div>
+
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
