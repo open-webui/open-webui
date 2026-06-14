@@ -43,6 +43,9 @@ def _sanitize_proxy_path(path: str) -> str | None:
         if once == decoded:
             break
         decoded = once
+    # Fail closed: still encoded after the cap means the upstream would decode further into traversal.
+    if unquote(decoded) != decoded:
+        return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
