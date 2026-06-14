@@ -425,6 +425,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
         'TOP_K': request.app.state.config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
+        'BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE': (
+            request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE
+        ),
         'RAG_FULL_CONTEXT': request.app.state.config.RAG_FULL_CONTEXT,
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
@@ -635,6 +638,7 @@ class ConfigForm(BaseModel):
     RAG_TEMPLATE: str | None = None
     TOP_K: int | None = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
+    BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE: bool | None = None
     RAG_FULL_CONTEXT: bool | None = None
 
     # Hybrid search settings
@@ -725,6 +729,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.BYPASS_EMBEDDING_AND_RETRIEVAL
         if form_data.BYPASS_EMBEDDING_AND_RETRIEVAL is not None
         else request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+    )
+    request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE = (
+        form_data.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE
+        if form_data.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE is not None
+        else request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE
     )
     request.app.state.config.RAG_FULL_CONTEXT = (
         form_data.RAG_FULL_CONTEXT
@@ -1130,6 +1139,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'RAG_TEMPLATE': request.app.state.config.RAG_TEMPLATE,
         'TOP_K': request.app.state.config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
+        'BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE': (
+            request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE
+        ),
         'RAG_FULL_CONTEXT': request.app.state.config.RAG_FULL_CONTEXT,
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,

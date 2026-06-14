@@ -290,6 +290,8 @@
 				: config.MINERU_PARAMS;
 
 		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
+		config.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE =
+			config.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE ?? true;
 
 		RAGConfig = config;
 	});
@@ -810,6 +812,34 @@
 							</Tooltip>
 						</div>
 					</div>
+
+					{#if RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Keep full document context attached to the user message where each document was uploaded.'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('Scope Document Context by Message')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<Tooltip
+									content={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE
+										? $i18n.t(
+												'Attached documents stay scoped to their original user message instead of being merged into the latest message.'
+											)
+										: $i18n.t(
+												'Attached documents are merged into the latest message context for legacy behavior.'
+											)}
+								>
+									<Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE} />
+								</Tooltip>
+							</div>
+						</div>
+					{/if}
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">

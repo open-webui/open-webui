@@ -1214,6 +1214,12 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = ConfigVar(
     os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true',
 )
 
+BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE = ConfigVar(
+    'BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE',
+    'rag.bypass_embedding_and_retrieval_context_per_message',
+    os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL_CONTEXT_PER_MESSAGE', 'True').lower() == 'true',
+)
+
 
 RAG_TOP_K = ConfigVar('RAG_TOP_K', 'rag.top_k', int(os.getenv('RAG_TOP_K', '3')))
 RAG_TOP_K_RERANKER = ConfigVar(
