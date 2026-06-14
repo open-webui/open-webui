@@ -312,7 +312,7 @@
 						name: item.name,
 						type: 'collection',
 						collection_names: item.collection_names,
-						legacy: true
+						legacy: false
 					};
 				} else {
 					return item;
