@@ -35,7 +35,7 @@
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip
 					content={$i18n.t(
-						'This is an experimental feature, it may not function as expected and is subject to change at any time.'
+						'Memory is dificult so this is an experimental feature, it may not function as expected and is subject to change at any time.'
 					)}
 				>
 					<div class="flex items-center gap-2 text-sm font-medium">
@@ -61,7 +61,7 @@
 		<div class="text-xs text-gray-600 dark:text-gray-400">
 			<div>
 				{$i18n.t(
-					"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
+					"Turn this on to let Alyx remember and recall things about you between chats, you can manage what it sees using the button below"
 				)}
 			</div>
 
