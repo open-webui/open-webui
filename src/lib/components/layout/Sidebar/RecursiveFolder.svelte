@@ -549,7 +549,7 @@
 						});
 
 						if (folder) {
-							await selectedFolder.set(folder);
+							await selectedFolder.set({ ...folders[folderId], ...folder });
 						}
 
 						await goto('/');
@@ -703,8 +703,8 @@
 							createdAt={chat.created_at}
 							updatedAt={chat.updated_at}
 							lastReadAt={chat.last_read_at}
-							ownerName={chat.owner_name ?? null}
-							ownerUserId={chat.owner_name ? chat.user_id : null}
+							ownerName={folders[folderId]?.shared ? (chat.owner_name ?? null) : null}
+							ownerUserId={folders[folderId]?.shared && chat.owner_name ? chat.user_id : null}
 							readonly={chat.user_id !== $user?.id}
 							{shiftKey}
 							on:change={(e) => {

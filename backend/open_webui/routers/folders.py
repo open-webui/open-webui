@@ -210,7 +210,8 @@ async def get_shared_folders(
 async def get_folder_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
-        return folder
+        grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
+        return {**folder.model_dump(), 'access_grants': [g.model_dump() for g in grants]}
 
     # Check shared access
     folder = await Folders.get_folder_by_id(id, db=db)

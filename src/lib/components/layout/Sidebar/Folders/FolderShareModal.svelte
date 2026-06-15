@@ -5,7 +5,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { updateFolderAccessById } from '$lib/apis/folders';
+	import { getFolderById, updateFolderAccessById } from '$lib/apis/folders';
 	import { user } from '$lib/stores';
 
 	type AccessGrant = {
@@ -19,10 +19,27 @@
 	export let folder: any = null;
 
 	let accessGrants: AccessGrant[] = [];
+	let loading = false;
 
-	$: if (folder) {
-		accessGrants = folder.access_grants ?? [];
+	// Fetch fresh folder data (with access_grants) when modal opens
+	$: if (show && folder?.id) {
+		loadAccessGrants();
 	}
+
+	const loadAccessGrants = async () => {
+		loading = true;
+		try {
+			const freshFolder = await getFolderById(localStorage.token, folder.id);
+			if (freshFolder) {
+				accessGrants = freshFolder.access_grants ?? [];
+			}
+		} catch (e) {
+			console.error('Failed to load folder access grants', e);
+			accessGrants = folder?.access_grants ?? [];
+		} finally {
+			loading = false;
+		}
+	};
 
 	const handleAccessChange = async () => {
 		if (!folder) return;

@@ -529,6 +529,16 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
+			{#if ownerUserId}
+				<Tooltip content={ownerName || 'Unknown'}>
+					<img
+						src="/api/v1/users/{ownerUserId}/profile/image"
+						alt=""
+						class="size-4 rounded-full shrink-0 object-cover mr-1.5"
+					/>
+				</Tooltip>
+			{/if}
+
 			<!-- Loading spinner for active chat (left side) -->
 			{#if $activeChatIds.has(id)}
 				<div class="shrink-0 self-center pr-2">
@@ -537,15 +547,6 @@
 			{/if}
 
 			<div class="flex self-center flex-1 w-full min-w-0">
-				{#if ownerUserId}
-					<Tooltip content={ownerName || 'Unknown'}>
-						<img
-							src="/api/v1/users/{ownerUserId}/profile/image"
-							alt=""
-							class="size-4 rounded-full shrink-0 object-cover mr-1.5"
-						/>
-					</Tooltip>
-				{/if}
 				{#if unread}
 					<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
 						<div class="size-1.5 bg-sky-500 rounded-full" />
