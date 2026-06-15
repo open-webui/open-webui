@@ -429,8 +429,11 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
 
 async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
     """Generate speech via the ElevenLabs TTS API."""
-    voice_id = payload.get('voice', '')
-    if voice_id not in await get_available_voices(request):
+    voice_id = (payload.get('voice') or '').strip()
+    if not voice_id:
+         raise HTTPException(status_code=400, detail='Missing ElevenLabs voice id')
+    available_voices = await get_available_voices(request)
+    if available_voices and voice_id not in available_voices:
         raise HTTPException(status_code=400, detail='Invalid voice id')
 
     r = None
@@ -1344,7 +1347,7 @@ async def get_available_voices(request) -> dict:
                 voices_data = await resp.json()
                 return {v['voice_id']: v['name'] for v in voices_data.get('voices', [])}
         except Exception as e:
-            log.error(f'Error fetching ElevenLabs voices: {e}')
+            log.warning(f'Error fetching ElevenLabs voices: {e}')
             return {}
 
     if engine == 'azure':
