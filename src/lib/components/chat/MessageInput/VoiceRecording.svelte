@@ -3,6 +3,7 @@
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, extractCurlyBraceWords } from '$lib/utils';
+	import { createWebSpeechInactivityController } from '$lib/utils/webSpeechRecognition';
 
 	import { transcribeAudio } from '$lib/apis/audio';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -88,6 +89,8 @@
 
 	let stream;
 	let speechRecognition;
+	let speechInactivityController: ReturnType<typeof createWebSpeechInactivityController> | null =
+		null;
 
 	let mediaRecorder;
 	let audioChunks = [];
@@ -306,18 +309,18 @@
 					// Set continuous to true for continuous recognition
 					speechRecognition.continuous = true;
 
-					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
-					const inactivityTimeout = 2000; // 3 seconds
+					speechInactivityController = createWebSpeechInactivityController({
+						stop: () => {
+							console.log('Speech recognition turned off due to inactivity.');
+							speechRecognition.stop();
+						}
+					});
 
-					let timeoutId;
 					// Start recognition
 					speechRecognition.start();
 
 					// Event triggered when speech is recognized
 					speechRecognition.onresult = async (event) => {
-						// Clear the inactivity timeout
-						clearTimeout(timeoutId);
-
 						// Handle recognized speech
 						console.log(event);
 						const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
@@ -326,16 +329,21 @@
 
 						await tick();
 						document.getElementById('chat-input')?.focus();
+					};
 
-						// Restart the inactivity timeout
-						timeoutId = setTimeout(() => {
-							console.log('Speech recognition turned off due to inactivity.');
-							speechRecognition.stop();
-						}, inactivityTimeout);
+					speechRecognition.onspeechstart = () => {
+						speechInactivityController?.handleSpeechStart();
+					};
+
+					speechRecognition.onspeechend = () => {
+						speechInactivityController?.handleSpeechEnd();
 					};
 
 					// Event triggered when recognition is ended
 					speechRecognition.onend = function () {
+						speechInactivityController?.dispose();
+						speechInactivityController = null;
+
 						// Restart recognition after it ends
 						console.log('recognition ended');
 
@@ -366,6 +374,8 @@
 		}
 
 		if (speechRecognition) {
+			speechInactivityController?.dispose();
+			speechInactivityController = null;
 			speechRecognition.stop();
 		}
 
