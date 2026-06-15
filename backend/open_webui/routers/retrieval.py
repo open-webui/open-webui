@@ -40,6 +40,8 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_QUERY_PREFIX,
+    RAG_FILE_CONTEXT_SCOPE_CONVERSATION,
+    RAG_FILE_CONTEXT_SCOPE_MESSAGE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
@@ -49,6 +51,7 @@ from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
     RAG_EMBEDDING_TIMEOUT,
+    RAG_SYSTEM_CONTEXT,
     SENTENCE_TRANSFORMERS_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
@@ -241,6 +244,17 @@ def get_rf(
 router = APIRouter()
 
 
+def get_effective_rag_file_context_scope(request: Request) -> str:
+    if RAG_SYSTEM_CONTEXT:
+        return RAG_FILE_CONTEXT_SCOPE_CONVERSATION
+
+    return request.app.state.config.RAG_FILE_CONTEXT_SCOPE
+
+
+def is_message_scoped_file_context_enabled(request: Request) -> bool:
+    return get_effective_rag_file_context_scope(request) == RAG_FILE_CONTEXT_SCOPE_MESSAGE
+
+
 class CollectionNameForm(BaseModel):
     collection_name: str | None = None
 
@@ -426,7 +440,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'TOP_K': request.app.state.config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         'RAG_FULL_CONTEXT': request.app.state.config.RAG_FULL_CONTEXT,
-        'RAG_MESSAGE_SCOPED_FILE_CONTEXT': request.app.state.config.RAG_MESSAGE_SCOPED_FILE_CONTEXT,
+        'RAG_SYSTEM_CONTEXT': RAG_SYSTEM_CONTEXT,
+        'RAG_FILE_CONTEXT_SCOPE': request.app.state.config.RAG_FILE_CONTEXT_SCOPE,
+        'RAG_FILE_CONTEXT_SCOPE_EFFECTIVE': get_effective_rag_file_context_scope(request),
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         'ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS': request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
@@ -637,7 +653,7 @@ class ConfigForm(BaseModel):
     TOP_K: int | None = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
     RAG_FULL_CONTEXT: bool | None = None
-    RAG_MESSAGE_SCOPED_FILE_CONTEXT: bool | None = None
+    RAG_FILE_CONTEXT_SCOPE: str | None = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: bool | None = None
@@ -733,11 +749,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         if form_data.RAG_FULL_CONTEXT is not None
         else request.app.state.config.RAG_FULL_CONTEXT
     )
-    request.app.state.config.RAG_MESSAGE_SCOPED_FILE_CONTEXT = (
-        form_data.RAG_MESSAGE_SCOPED_FILE_CONTEXT
-        if form_data.RAG_MESSAGE_SCOPED_FILE_CONTEXT is not None
-        else request.app.state.config.RAG_MESSAGE_SCOPED_FILE_CONTEXT
-    )
+    if not RAG_SYSTEM_CONTEXT:
+        if form_data.RAG_FILE_CONTEXT_SCOPE is not None:
+            request.app.state.config.RAG_FILE_CONTEXT_SCOPE = form_data.RAG_FILE_CONTEXT_SCOPE
 
     # Hybrid search settings
     request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
@@ -1138,7 +1152,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'TOP_K': request.app.state.config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         'RAG_FULL_CONTEXT': request.app.state.config.RAG_FULL_CONTEXT,
-        'RAG_MESSAGE_SCOPED_FILE_CONTEXT': request.app.state.config.RAG_MESSAGE_SCOPED_FILE_CONTEXT,
+        'RAG_SYSTEM_CONTEXT': RAG_SYSTEM_CONTEXT,
+        'RAG_FILE_CONTEXT_SCOPE': request.app.state.config.RAG_FILE_CONTEXT_SCOPE,
+        'RAG_FILE_CONTEXT_SCOPE_EFFECTIVE': get_effective_rag_file_context_scope(request),
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         'TOP_K_RERANKER': request.app.state.config.TOP_K_RERANKER,

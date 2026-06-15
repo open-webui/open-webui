@@ -59,6 +59,7 @@ from open_webui.routers.pipelines import (
 )
 from open_webui.routers.retrieval import (
     SearchForm,
+    is_message_scoped_file_context_enabled,
     process_web_search,
 )
 from open_webui.routers.tasks import (
@@ -2542,7 +2543,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             ],
                         ]
                 # Keep non-image files only long enough for optional message-scoped RAG.
-                if request.app.state.config.RAG_MESSAGE_SCOPED_FILE_CONTEXT:
+                if is_message_scoped_file_context_enabled(request):
                     non_image_files = [file for file in message.get('files', []) if is_file_context_item(file)]
                     if non_image_files:
                         message['files'] = non_image_files
@@ -2836,7 +2837,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
     #     urls = extract_urls(prompt)
 
-    if request.app.state.config.RAG_MESSAGE_SCOPED_FILE_CONTEXT:
+    if is_message_scoped_file_context_enabled(request):
         if file_context_enabled:
             form_data['messages'], files, message_scoped_sources, message_scoped_contexts = (
                 await apply_message_file_contexts(

@@ -291,6 +291,10 @@
 
 		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
 
+		if (!config.RAG_FILE_CONTEXT_SCOPE) {
+			config.RAG_FILE_CONTEXT_SCOPE = 'conversation';
+		}
+
 		RAGConfig = config;
 	});
 </script>
@@ -811,21 +815,29 @@
 						</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							<Tooltip
-								content={$i18n.t(
-									'Keep attached files scoped to the user message they were sent with instead of merging all chat files into the latest RAG context.'
-								)}
-								placement="top-start"
-							>
-								{$i18n.t('Scope File Context by Message')}
-							</Tooltip>
+					{#if !RAGConfig.RAG_SYSTEM_CONTEXT}
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Choose whether attached files are treated as conversation-level context or scoped to the user message they were sent with.'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('File Context Scope')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<select
+									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={RAGConfig.RAG_FILE_CONTEXT_SCOPE}
+								>
+									<option value="conversation">{$i18n.t('Conversation')}</option>
+									<option value="message">{$i18n.t('Message')}</option>
+								</select>
+							</div>
 						</div>
-						<div class="flex items-center relative">
-							<Switch bind:state={RAGConfig.RAG_MESSAGE_SCOPED_FILE_CONTEXT} />
-						</div>
-					</div>
+					{/if}
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
