@@ -865,6 +865,9 @@ class EditImageForm(BaseModel):
     n: int | None = None
     negative_prompt: str | None = None
     background: str | None = None
+    seed: int | None = None
+    steps: int | None = None
+    extra_params: dict | None = None
 
 
 @router.post('/edit')
@@ -1147,6 +1150,18 @@ async def image_edits(
                 **({'height': height} if height is not None else {}),
                 **({'n': form_data.n} if form_data.n else {}),
             }
+
+            if form_data.negative_prompt is not None:
+                data['negative_prompt'] = form_data.negative_prompt
+
+            if form_data.seed is not None:
+                data['seed'] = form_data.seed
+
+            if form_data.steps is not None:
+                data['steps'] = form_data.steps
+
+            if form_data.extra_params:
+                data['extra_params'] = form_data.extra_params
 
             form_data = ComfyUIEditImageForm(
                 **{
