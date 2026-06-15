@@ -92,8 +92,8 @@
 	let showUpdateToast = true;
 	let showChangelog = true;
 
-	let showEmojiInCall = false;
-	let voiceInterruption = false;
+	let showEmojiInCall = true;
+	let voiceInterruption = true;
 	let hapticFeedback = false;
 
 	let webSearch = null;
