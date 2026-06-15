@@ -17,15 +17,135 @@ from open_webui.models.groups import (
     UserIdsForm,
 )
 from open_webui.models.knowledge import Knowledges
-from open_webui.models.models import Models
+from open_webui.models.models import ModelForm, ModelMeta, ModelParams, Models
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserInfoResponse, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.models import get_all_models
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class GroupModelIdsForm(BaseModel):
+    model_ids: list[str] = Field(default_factory=list, max_length=100)
+
+
+class GroupModelResponse(BaseModel):
+    id: str
+    name: str
+    base_model_id: str | None = None
+    description: str | None = None
+    selected: bool = False
+
+
+def _model_label(model: dict) -> str:
+    return str(model.get('name') or model.get('id') or '')
+
+
+def _model_info(model: dict) -> dict:
+    info = model.get('info') or {}
+    return info if isinstance(info, dict) else {}
+
+
+def _grant_data(grant) -> dict:
+    return grant.model_dump() if hasattr(grant, 'model_dump') else dict(grant)
+
+
+def _model_meta(model) -> dict:
+    data = model.model_dump() if hasattr(model, 'model_dump') else dict(model)
+    meta = data.get('meta') or {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def _model_hidden(model) -> bool:
+    return bool(_model_meta(model).get('hidden'))
+
+
+def _is_assignable_model(model: dict) -> bool:
+    if model.get('arena'):
+        return False
+    if 'pipeline' in model and model['pipeline'].get('type', None) == 'filter':
+        return False
+    if _model_meta(model).get('hidden'):
+        return False
+    return True
+
+
+def _model_summary(model, selected: bool = False) -> dict:
+    data = model.model_dump() if hasattr(model, 'model_dump') else dict(model)
+    meta = _model_meta(model)
+    return {
+        'id': data.get('id'),
+        'name': data.get('name') or data.get('id'),
+        'base_model_id': data.get('base_model_id'),
+        'description': meta.get('description') if isinstance(meta, dict) else None,
+        'selected': selected,
+    }
+
+
+def _with_group_read_grant(access_grants: list, group_id: str) -> list[dict]:
+    grants = [_grant_data(grant) for grant in (access_grants or [])]
+    if not any(
+        grant.get('principal_type') == 'group'
+        and grant.get('principal_id') == group_id
+        and grant.get('permission') == 'read'
+        for grant in grants
+    ):
+        grants.append(
+            {
+                'principal_type': 'group',
+                'principal_id': group_id,
+                'permission': 'read',
+            }
+        )
+    return grants
+
+
+def _without_group_grants(access_grants: list, group_id: str) -> list[dict]:
+    grants = []
+    for grant in access_grants or []:
+        grant_data = _grant_data(grant)
+        if (
+            grant_data.get('principal_type') == 'group'
+            and grant_data.get('principal_id') == group_id
+            and grant_data.get('permission') == 'read'
+        ):
+            continue
+        grants.append(grant_data)
+    return grants
+
+
+async def _ensure_model_access_record(model_id: str, visible_model: dict, user, db: AsyncSession):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if model:
+        if not model.is_active or _model_hidden(model):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+        return model
+
+    model_info = _model_info(visible_model)
+    model_meta = model_info.get('meta') or {}
+
+    return await Models.insert_new_model(
+        ModelForm(
+            id=model_id,
+            base_model_id=None,
+            name=_model_label(visible_model),
+            meta=ModelMeta(
+                description=visible_model.get('description')
+                or (model_meta.get('description') if isinstance(model_meta, dict) else None),
+                capabilities=visible_model.get('capabilities'),
+            ),
+            params=ModelParams(),
+            access_grants=[],
+            is_active=True,
+        ),
+        user.id,
+        db=db,
+    )
 
 ############################
 # GetFunctions
@@ -253,6 +373,146 @@ async def remove_users_from_group(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+############################
+# ManageGroupModels
+############################
+
+
+@router.get('/id/{id}/models', response_model=list[GroupModelResponse])
+async def get_group_models(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    models = await Models.get_all_models(db=db)
+    return [
+        _model_summary(model, selected=True)
+        for model in models
+        if model.is_active
+        and not _model_hidden(model)
+        and any(
+            grant.principal_type == 'group'
+            and grant.principal_id == id
+            and grant.permission == 'read'
+            for grant in (model.access_grants or [])
+        )
+    ]
+
+
+@router.get('/id/{id}/models/available', response_model=list[GroupModelResponse])
+async def get_available_group_models(
+    id: str,
+    request: Request,
+    query: Optional[str] = None,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    configured = {model.id: model for model in await Models.get_all_models(db=db)}
+    q = (query or '').strip().lower()
+    items = []
+
+    for model in await get_all_models(request, user=user):
+        if not _is_assignable_model(model):
+            continue
+
+        model_id = str(model.get('id') or '')
+        if not model_id:
+            continue
+
+        model_info = _model_info(model)
+        model_meta = model_info.get('meta') or {}
+        configured_model = configured.get(model_id)
+        if configured_model and (not configured_model.is_active or _model_hidden(configured_model)):
+            continue
+
+        access_grants = configured_model.access_grants if configured_model else model_info.get('access_grants', [])
+        grants = [_grant_data(grant) for grant in (access_grants or [])]
+        selected = any(
+            grant.get('principal_type') == 'group'
+            and grant.get('principal_id') == id
+            and grant.get('permission') == 'read'
+            for grant in grants
+        )
+        item = {
+            'id': model_id,
+            'name': _model_label(model),
+            'base_model_id': model_info.get('base_model_id'),
+            'description': model.get('description')
+            or (model_meta.get('description') if isinstance(model_meta, dict) else None),
+            'selected': selected,
+        }
+        if q and q not in item['id'].lower() and q not in item['name'].lower():
+            continue
+        items.append(item)
+
+    return sorted(items, key=lambda item: item['name'].lower())
+
+
+@router.post('/id/{id}/models/add', response_model=list[GroupModelResponse])
+async def add_models_to_group(
+    id: str,
+    form_data: GroupModelIdsForm,
+    request: Request,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    visible_models = {
+        model.get('id'): model
+        for model in await get_all_models(request, user=user)
+        if model.get('id') and _is_assignable_model(model)
+    }
+
+    for model_id in form_data.model_ids:
+        visible_model = visible_models.get(model_id)
+        if not visible_model:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+        model = await _ensure_model_access_record(model_id, visible_model, user, db)
+        if not model:
+            continue
+        await AccessGrants.set_access_grants(
+            'model',
+            model.id,
+            _with_group_read_grant(model.access_grants or [], id),
+            db=db,
+        )
+
+    return await get_group_models(id, user=user, db=db)
+
+
+@router.post('/id/{id}/models/remove', response_model=list[GroupModelResponse])
+async def remove_models_from_group(
+    id: str,
+    form_data: GroupModelIdsForm,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    for model_id in form_data.model_ids:
+        model = await Models.get_model_by_id(model_id, db=db)
+        if not model:
+            continue
+        await AccessGrants.set_access_grants(
+            'model',
+            model.id,
+            _without_group_grants(model.access_grants or [], id),
+            db=db,
+        )
+
+    return await get_group_models(id, user=user, db=db)
 
 
 ############################

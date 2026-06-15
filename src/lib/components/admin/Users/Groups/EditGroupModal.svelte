@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import General from './General.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
+	import GroupModels from './GroupModels.svelte';
 	import GroupPreviewPanel from './GroupPreviewPanel.svelte';
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
@@ -21,7 +23,7 @@
 	export let show = false;
 	export let edit = false;
 
-	export let group = null;
+	export let group: any = null;
 	export let defaultPermissions = {};
 
 	export let custom = true;
@@ -33,6 +35,7 @@
 	let showDeleteConfirmDialog = false;
 
 	let userCount = 0;
+	let groupId = '';
 
 	export let name = '';
 	export let description = '';
@@ -79,6 +82,8 @@
 	$: if (show) {
 		init();
 	}
+
+	$: groupId = group?.id ?? '';
 
 	onMount(() => {
 		selectedTab = tabs[0];
@@ -197,6 +202,24 @@
 								</button>
 							{/if}
 
+							{#if tabs.includes('models') && groupId}
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'models'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'models';
+									}}
+									type="button"
+								>
+									<div class="self-center mr-2">
+										<Cube className="size-4" />
+									</div>
+									<div class="self-center">{$i18n.t('Models')}</div>
+								</button>
+							{/if}
+
 							{#if tabs.includes('preview')}
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
@@ -244,6 +267,10 @@
 									<Permissions bind:permissions {defaultPermissions} />
 								{:else if selectedTab == 'users'}
 									<Users bind:userCount groupId={group?.id} />
+								{:else if selectedTab == 'models'}
+									{#if groupId}
+										<GroupModels {groupId} />
+									{/if}
 								{:else if selectedTab == 'preview'}
 									<GroupPreviewPanel groupId={group?.id} />
 								{/if}
