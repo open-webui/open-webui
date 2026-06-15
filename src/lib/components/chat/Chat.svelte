@@ -184,6 +184,13 @@
 	let files = [];
 	let params = {};
 
+	const isImageFile = (file: any) =>
+		file?.type === 'image' || (file?.content_type ?? '').startsWith('image/');
+
+	const isFileContextItem = (file: any) =>
+		['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(file?.type) ||
+		(file?.type === 'file' && !isImageFile(file));
+
 	$: if (chatIdProp) {
 		navigateHandler();
 	}
@@ -1931,13 +1938,7 @@
 	const submitPrompt = async (inputContent, inputFiles) => {
 		const _files = structuredClone(inputFiles);
 
-		chatFiles.push(
-			..._files.filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
-		);
+		chatFiles.push(..._files.filter(isFileContextItem));
 		chatFiles = chatFiles.filter(
 			// Remove duplicates
 			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
@@ -2286,13 +2287,7 @@
 		});
 
 		let files = structuredClone(chatFiles);
-		files.push(
-			...(userMessage?.files ?? []).filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
-		);
+		files.push(...(userMessage?.files ?? []).filter(isFileContextItem));
 		// Remove duplicates
 		files = files.filter((item, index, array) => array.findIndex((i) => equal(i, item)) === index);
 
@@ -2339,13 +2334,13 @@
 
 			messages = messages
 				.map((message, idx, arr) => {
-					const imageFiles = (message?.files ?? []).filter(
-						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-					);
+					const imageFiles = (message?.files ?? []).filter(isImageFile);
+					const messageFiles = (message?.files ?? []).filter(isFileContextItem);
 
 					return {
 						role: message.role,
 						...(message.output ? { output: message.output } : {}),
+						...(messageFiles.length > 0 ? { files: messageFiles } : {}),
 						...(message.role === 'user' && imageFiles.length > 0
 							? {
 									content: [
