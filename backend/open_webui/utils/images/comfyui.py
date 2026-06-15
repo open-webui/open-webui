@@ -284,12 +284,14 @@ class ComfyUIEditImageForm(BaseModel):
 
     image: str | list[str]
     prompt: str
+    negative_prompt: Optional[str] = None
     width: Optional[int] = None
     height: Optional[int] = None
     n: Optional[int] = None
 
     steps: Optional[int] = None
     seed: Optional[int] = None
+    extra_params: Optional[dict] = None
 
 
 async def comfyui_edit_image(model: str, payload: ComfyUIEditImageForm, client_id, base_url, api_key):
