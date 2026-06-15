@@ -2497,27 +2497,37 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
+        # Per-model default snippet count ("Document Snippets Returned").
+        # A per-knowledge-base override on the item itself takes precedence;
+        # both fall back to the global TOP_K inside get_sources_from_items.
+        model_rag_top_k = model.get('info', {}).get('meta', {}).get('rag_top_k')
+
         knowledge_files = []
         for item in model_knowledge:
             if item.get('collection_name'):
-                knowledge_files.append(
-                    {
-                        'id': item.get('collection_name'),
-                        'name': item.get('name'),
-                        'legacy': True,
-                    }
-                )
+                knowledge_file = {
+                    'id': item.get('collection_name'),
+                    'name': item.get('name'),
+                    'legacy': True,
+                }
             elif item.get('collection_names'):
-                knowledge_files.append(
-                    {
-                        'name': item.get('name'),
-                        'type': 'collection',
-                        'collection_names': item.get('collection_names'),
-                        'legacy': True,
-                    }
-                )
+                knowledge_file = {
+                    'name': item.get('name'),
+                    'type': 'collection',
+                    'collection_names': item.get('collection_names'),
+                    'legacy': True,
+                }
             else:
-                knowledge_files.append(item)
+                knowledge_file = item
+
+            # Resolve the effective snippet count for this knowledge base:
+            # per-KB override > per-model default. Leave unset to inherit the
+            # global TOP_K downstream.
+            item_rag_top_k = item.get('rag_top_k') or model_rag_top_k
+            if item_rag_top_k:
+                knowledge_file['rag_top_k'] = item_rag_top_k
+
+            knowledge_files.append(knowledge_file)
 
         files = form_data.get('files', [])
         files.extend(knowledge_files)

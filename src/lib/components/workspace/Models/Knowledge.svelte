@@ -13,6 +13,9 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	export let selectedItems = [];
+	// Per-model default snippet count, shown as the placeholder for each
+	// knowledge base's per-KB override input.
+	export let defaultTopK: number | null = null;
 	const i18n = getContext('i18n');
 
 	let loaded = false;
@@ -167,24 +170,44 @@
 
 	<div class="flex flex-col mb-1">
 		{#if selectedItems?.length > 0}
-			<div class=" flex flex-wrap items-center gap-2 mb-2.5">
+			<div class=" flex flex-col gap-2 mb-2.5">
 				{#each selectedItems as file, fileIdx}
-					<FileItem
-						{file}
-						small={true}
-						item={file}
-						name={file.name}
-						modal={true}
-						edit={true}
-						loading={file.status === 'uploading'}
-						type={file?.legacy
-							? `Legacy${file.type ? ` ${file.type}` : ''}`
-							: (file?.type ?? 'collection')}
-						dismissible
-						on:dismiss={(e) => {
-							selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
-						}}
-					/>
+					<div class="flex items-center justify-between gap-2">
+						<FileItem
+							{file}
+							small={true}
+							item={file}
+							name={file.name}
+							modal={true}
+							edit={true}
+							loading={file.status === 'uploading'}
+							type={file?.legacy
+								? `Legacy${file.type ? ` ${file.type}` : ''}`
+								: (file?.type ?? 'collection')}
+							dismissible
+							on:dismiss={(e) => {
+								selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
+							}}
+						/>
+
+						<!-- Per-knowledge-base snippet override. Empty = inherit the
+						model default / global setting. Hidden for full-context items
+						(they bypass snippet-based retrieval). -->
+						{#if (file?.context ?? 'chunk') !== 'full'}
+							<div class="flex items-center gap-1.5 shrink-0">
+								<span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+									{$i18n.t('Snippets')}
+								</span>
+								<input
+									type="number"
+									class="w-16 text-xs text-right bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5"
+									placeholder={defaultTopK ? `${defaultTopK}` : $i18n.t('Global')}
+									min="1"
+									bind:value={file.rag_top_k}
+								/>
+							</div>
+						{/if}
+					</div>
 				{/each}
 			</div>
 		{/if}

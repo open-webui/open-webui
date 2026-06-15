@@ -1405,6 +1405,13 @@ async def get_sources_from_items(
                     log.debug(f'access denied for all collections in item {item}')
                     continue
 
+            # Per-knowledge-base snippet override: an item may carry its own
+            # `rag_top_k` (set from the model's per-KB config) to cap how many
+            # snippets this collection contributes. Falls back to the caller's
+            # global `k` when unset or invalid.
+            item_rag_top_k = item.get('rag_top_k')
+            item_k = item_rag_top_k if isinstance(item_rag_top_k, int) and item_rag_top_k > 0 else k
+
             try:
                 if full_context:
                     # Sync helper makes blocking VECTOR_DB_CLIENT calls;
@@ -1416,7 +1423,7 @@ async def get_sources_from_items(
                         collection_names=collection_names,
                         queries=queries,
                         embedding_function=embedding_function,
-                        k=k,
+                        k=item_k,
                     )
             except Exception as e:
                 log.exception(e)

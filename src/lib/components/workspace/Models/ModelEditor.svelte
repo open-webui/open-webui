@@ -336,18 +336,24 @@
 				: null;
 
 			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
+				// Preserve any per-knowledge-base snippet override across the
+				// legacy-format normalization below.
+				const ragTopKOverride = item?.rag_top_k ? { rag_top_k: item.rag_top_k } : {};
+
 				if (item?.collection_name && item?.type !== 'file') {
 					return {
 						id: item.collection_name,
 						name: item.name,
-						legacy: true
+						legacy: true,
+						...ragTopKOverride
 					};
 				} else if (item?.collection_names) {
 					return {
 						name: item.name,
 						type: 'collection',
 						collection_names: item.collection_names,
-						legacy: true
+						legacy: true,
+						...ragTopKOverride
 					};
 				} else {
 					return item;
@@ -812,7 +818,7 @@
 					</div>
 
 					<div class="my-4">
-						<Knowledge bind:selectedItems={knowledge} />
+						<Knowledge bind:selectedItems={knowledge} defaultTopK={ragTopK} />
 					</div>
 
 					{#if knowledge.length > 0}
