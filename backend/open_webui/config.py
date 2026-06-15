@@ -1624,7 +1624,7 @@ WEB_SEARCH_TRUST_ENV = ConfigVar(
 OLLAMA_CLOUD_WEB_SEARCH_API_KEY = ConfigVar(
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY',
     'rag.web.search.ollama_cloud_api_key',
-    os.getenv('OLLAMA_CLOUD_API_KEY', ''),
+    os.getenv('OLLAMA_CLOUD_WEB_SEARCH_API_KEY', os.getenv('OLLAMA_CLOUD_API_KEY', '')),
 )
 
 SEARXNG_QUERY_URL = ConfigVar(
