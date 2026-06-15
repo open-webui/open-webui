@@ -5,7 +5,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as FocusTrap from 'focus-trap';
 	export let show = true;
-	export let size = 'md';
+	export let size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' | 'max' = 'md';
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-4xl';
 
@@ -16,23 +16,26 @@
 	// https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
 	let focusTrap: FocusTrap.FocusTrap | null = null;
 
-	const sizeToWidth = (size) => {
-		if (size === 'full') {
+	const sizeToWidth = (modalSize: typeof size) => {
+		if (modalSize === 'full') {
 			return 'w-full';
 		}
-		if (size === 'xs') {
+		if (modalSize === 'max') {
+			return '';
+		}
+		if (modalSize === 'xs') {
 			return 'w-[16rem]';
-		} else if (size === 'sm') {
+		} else if (modalSize === 'sm') {
 			return 'w-[30rem]';
-		} else if (size === 'md') {
+		} else if (modalSize === 'md') {
 			return 'w-[42rem]';
-		} else if (size === 'lg') {
+		} else if (modalSize === 'lg') {
 			return 'w-[56rem]';
-		} else if (size === 'xl') {
+		} else if (modalSize === 'xl') {
 			return 'w-[70rem]';
-		} else if (size === '2xl') {
+		} else if (modalSize === '2xl') {
 			return 'w-[84rem]';
-		} else if (size === '3xl') {
+		} else if (modalSize === '3xl') {
 			return 'w-[100rem]';
 		} else {
 			return 'w-[56rem]';
@@ -129,9 +132,10 @@
 		}}
 	>
 		<div
-			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
-				? 'mx-2'
-				: ''} shadow-3xl min-h-fit scrollbar-hidden {className} border border-white dark:border-gray-850"
+			class="m-auto shadow-3xl min-h-fit scrollbar-hidden {className} border border-white dark:border-gray-850
+				{size === 'max'
+				? 'w-[calc(100vw-4rem)] h-[calc(100vh-4rem)] max-w-none max-h-none'
+				: `max-w-full ${sizeToWidth(size)} ${size !== 'full' ? 'mx-2' : ''}`}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

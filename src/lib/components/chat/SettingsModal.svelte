@@ -28,6 +28,8 @@
 	import Face from '../icons/Face.svelte';
 	import AppNotification from '../icons/AppNotification.svelte';
 	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
+	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
+	import Collapse from '../icons/Collapse.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -41,6 +43,7 @@
 		addScrollListener();
 	} else {
 		selectedTab = 'general';
+		isExpanded = false;
 		removeScrollListener();
 	}
 
@@ -552,6 +555,7 @@
 	};
 
 	let selectedTab = 'general';
+	let isExpanded = false;
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
@@ -589,26 +593,47 @@
 	});
 </script>
 
-<Modal size="2xl" bind:show>
-	<div class="text-gray-700 dark:text-gray-100 mx-1">
-		<div class=" flex justify-between dark:text-gray-300 px-4 md:px-4.5 pt-4.5 pb-0.5 md:pb-2.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
-			<button
-				aria-label={$i18n.t('Close settings modal')}
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<XMark className="w-5 h-5"></XMark>
-			</button>
+<Modal size={isExpanded ? 'max' : '2xl'} bind:show>
+	<div class="text-gray-700 dark:text-gray-100 mx-1 flex flex-col h-full">
+		<div
+			class="flex items-center justify-between dark:text-gray-300 px-4 md:px-4.5 pt-4.5 pb-0.5 md:pb-2.5 flex-shrink-0"
+		>
+			<div class="text-lg font-medium self-center">{$i18n.t('Settings')}</div>
+
+			<div class="flex items-center gap-1">
+				<button
+					aria-label={$i18n.t(isExpanded ? 'Collapse' : 'Expand')}
+					class="hidden md:flex p-1 rounded-lg transition hover:bg-gray-100 dark:hover:bg-gray-800"
+					on:click={() => {
+						isExpanded = !isExpanded;
+					}}
+				>
+					{#if isExpanded}
+						<Collapse className="size-4 text-gray-500" />
+					{:else}
+						<ArrowsPointingOut className="size-4 text-gray-500" />
+					{/if}
+				</button>
+				<button
+					aria-label={$i18n.t('Close settings modal')}
+					class="self-center"
+					on:click={() => {
+						show = false;
+					}}
+				>
+					<XMark className="w-5 h-5"></XMark>
+				</button>
+			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full pt-1 pb-4">
+		<div class="flex flex-col md:flex-row w-full pt-1 pb-4 flex-grow overflow-hidden">
 			<div
 				role="tablist"
 				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[min(42rem,calc(100dvh-10rem))] md:max-h-[min(42rem,calc(100dvh-10rem))] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
+				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1
+				{isExpanded
+					? 'md:h-full md:overflow-y-auto'
+					: 'md:min-h-[min(42rem,calc(100dvh-10rem))] md:max-h-[min(42rem,calc(100dvh-10rem))]'}"
 			>
 				<div
 					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 mb-1.5"
@@ -880,7 +905,10 @@
 				{/if}
 			</div>
 			<div
-				class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[min(42rem,calc(100dvh-10rem))] max-h-[min(42rem,calc(100dvh-10rem))] overflow-y-auto"
+				class="flex-1 px-3.5 md:pl-0 md:pr-4.5 overflow-y-auto
+				{isExpanded
+					? 'md:h-full'
+					: 'md:min-h-[min(42rem,calc(100dvh-10rem))] max-h-[min(42rem,calc(100dvh-10rem))]'}"
 			>
 				{#if selectedTab === 'general'}
 					<General
