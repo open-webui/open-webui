@@ -169,6 +169,9 @@
 	let chat = null;
 	let tags = [];
 
+	// Read-only when viewing someone else's chat (e.g. via shared folder access)
+	$: readOnly = chat != null && chat.user_id !== $user?.id;
+
 	let chatTasks = [];
 
 	let history = {
@@ -3103,6 +3106,7 @@
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
+										{readOnly}
 										bind:history
 										bind:autoScroll
 										bind:prompt
@@ -3126,7 +3130,16 @@
 								</div>
 							</div>
 
-							<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+							{#if readOnly}
+							<div class="pb-6 z-10">
+								<div
+									class="text-xs text-gray-400 dark:text-gray-500 text-center"
+								>
+									{$i18n.t('Read only')}
+								</div>
+							</div>
+						{:else}
+						<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
 								<MessageInput
 									bind:this={messageInput}
 									{history}
@@ -3208,6 +3221,7 @@
 									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 								</div>
 							</div>
+							{/if}
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder

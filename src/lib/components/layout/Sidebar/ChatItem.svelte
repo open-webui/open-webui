@@ -63,6 +63,7 @@
 
 	export let selected = false;
 	export let shiftKey = false;
+	export let readonly = false;
 
 	export let onDragEnd = () => {};
 
@@ -445,7 +446,7 @@
 	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={!confirmEdit}
+	draggable={!confirmEdit && !readonly}
 >
 	{#if confirmEdit}
 		<div
@@ -509,6 +510,7 @@
 				lastReadAt = Date.now() / 1000;
 			}}
 			on:dblclick={async (e) => {
+				if (readonly) return;
 				e.preventDefault();
 				e.stopPropagation();
 
@@ -557,6 +559,7 @@
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	{#if !readonly}
 	<div
 		id="sidebar-chat-item-menu"
 		class="
@@ -691,4 +694,5 @@
 			</div>
 		{/if}
 	</div>
+	{/if}
 </div>
