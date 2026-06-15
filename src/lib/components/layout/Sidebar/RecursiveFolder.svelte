@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -703,6 +703,9 @@
 							createdAt={chat.created_at}
 							updatedAt={chat.updated_at}
 							lastReadAt={chat.last_read_at}
+							ownerName={chat.owner_name ?? null}
+							ownerUserId={chat.owner_name ? chat.user_id : null}
+							readonly={chat.user_id !== $user?.id}
 							{shiftKey}
 							on:change={(e) => {
 								dispatch('change', e.detail);

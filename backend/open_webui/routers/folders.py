@@ -443,6 +443,15 @@ async def get_shared_folder_chats(
 
     chats = await Chats.get_all_chats_by_folder_id(id, db=db)
 
+    # Resolve owner names for display (avatar URLs are constructed client-side)
+    owner_cache: dict[str, str] = {}
+    for chat in chats:
+        uid = chat['user_id']
+        if uid not in owner_cache:
+            u = await Users.get_user_by_id(uid, db=db)
+            owner_cache[uid] = u.name if u else 'Unknown'
+        chat['owner_name'] = owner_cache[uid]
+
     return {
         'chats': [
             {**chat, 'readonly': chat['user_id'] != user.id}

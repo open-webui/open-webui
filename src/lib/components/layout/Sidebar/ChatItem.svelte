@@ -65,6 +65,9 @@
 	export let shiftKey = false;
 	export let readonly = false;
 
+	export let ownerName: string | null = null;
+	export let ownerUserId: string | null = null;
+
 	export let onDragEnd = () => {};
 
 	function formatTimeAgo(timestamp: number): string {
@@ -534,6 +537,15 @@
 			{/if}
 
 			<div class="flex self-center flex-1 w-full min-w-0">
+				{#if ownerUserId}
+					<Tooltip content={ownerName || 'Unknown'}>
+						<img
+							src="/api/v1/users/{ownerUserId}/profile/image"
+							alt=""
+							class="size-4 rounded-full shrink-0 object-cover mr-1.5"
+						/>
+					</Tooltip>
+				{/if}
 				{#if unread}
 					<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
 						<div class="size-1.5 bg-sky-500 rounded-full" />

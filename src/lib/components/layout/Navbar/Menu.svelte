@@ -39,6 +39,7 @@
 	const i18n = getContext('i18n');
 
 	export let shareEnabled: boolean = false;
+	export let readOnly: boolean = false;
 
 	export let shareHandler: Function;
 	export let moveChatHandler: Function;
@@ -364,7 +365,7 @@
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 			{/if}
 
-			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
+			{#if !readOnly && !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<button
 					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
@@ -438,7 +439,7 @@
 				<div class="flex items-center">{$i18n.t('Copy')}</div>
 			</button>
 
-			{#if !$temporaryChatEnabled && chat?.id}
+			{#if !readOnly && !$temporaryChatEnabled && chat?.id}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 				{#if $folders.length > 0}

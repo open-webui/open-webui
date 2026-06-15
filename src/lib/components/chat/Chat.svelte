@@ -3030,6 +3030,7 @@
 					<FilesOverlay show={dragged} />
 					<Navbar
 						bind:this={navbarElement}
+						{readOnly}
 						chat={{
 							id: $chatId,
 							chat: {

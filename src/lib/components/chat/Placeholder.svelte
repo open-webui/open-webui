@@ -73,6 +73,9 @@
 	}
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+
+	// True when viewing a shared folder the current user doesn't own
+	$: folderReadOnly = $selectedFolder != null && $selectedFolder.user_id !== $user?.id;
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -94,18 +97,19 @@
 		<div class="w-full flex flex-col justify-center items-center">
 			{#if $selectedFolder}
 				<FolderTitle
-					folder={$selectedFolder}
-					onUpdate={async (folder) => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						currentChatPage.set(1);
-					}}
-					onDelete={async () => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						currentChatPage.set(1);
+				folder={$selectedFolder}
+				readOnly={folderReadOnly}
+				onUpdate={async (folder) => {
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					currentChatPage.set(1);
+				}}
+				onDelete={async () => {
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+					currentChatPage.set(1);
 
-						selectedFolder.set(null);
-					}}
-				/>
+					selectedFolder.set(null);
+				}}
+			/>
 			{:else}
 				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
 					<div class="flex shrink-0 justify-center">
@@ -210,33 +214,35 @@
 			{/if}
 
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
-				<MessageInput
-					bind:this={messageInput}
-					{history}
-					{selectedModels}
-					bind:files
-					bind:prompt
-					bind:autoScroll
-					bind:selectedToolIds
-					bind:selectedSkillIds
-					bind:selectedFilterIds
-					bind:imageGenerationEnabled
-					bind:codeInterpreterEnabled
-					bind:webSearchEnabled
-					bind:atSelectedModel
-					bind:showCommands
-					bind:dragged
-					{pendingOAuthTools}
-					{toolServers}
-					{stopResponse}
-					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
-					{onChange}
-					{onUpload}
-					on:submit={(e) => {
-						dispatch('submit', e.detail);
-					}}
-				/>
+				{#if !($selectedFolder && folderReadOnly)}
+					<MessageInput
+						bind:this={messageInput}
+						{history}
+						{selectedModels}
+						bind:files
+						bind:prompt
+						bind:autoScroll
+						bind:selectedToolIds
+						bind:selectedSkillIds
+						bind:selectedFilterIds
+						bind:imageGenerationEnabled
+						bind:codeInterpreterEnabled
+						bind:webSearchEnabled
+						bind:atSelectedModel
+						bind:showCommands
+						bind:dragged
+						{pendingOAuthTools}
+						{toolServers}
+						{stopResponse}
+						{createMessagePair}
+						placeholder={$i18n.t('How can I help you today?')}
+						{onChange}
+						{onUpload}
+						on:submit={(e) => {
+							dispatch('submit', e.detail);
+						}}
+					/>
+				{/if}
 			</div>
 		</div>
 	</div>
