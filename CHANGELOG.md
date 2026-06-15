@@ -5,13 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.7] - 2026-06-13
+## [0.9.7] - 2026-06-16
 
 ### Added
 
 - 🖥️ **Use cptr as a model.** cptr, Open WebUI's standalone companion app, now exposes an OpenAI-compatible gateway with first-class Open WebUI support, so a one-click setup adds it as a connection and lets you drive its full agent loop (files, terminal, git, and web access on the machine it runs on) from chat as if it were just another model. [GitHub](https://github.com/open-webui/computer)
+- 🤝 **Share folders with your team.** You can now share a folder and the chats inside it with specific users, groups, or everyone, with read or write access; people you share with see shared folders in their sidebar and open the chats in a read-only view when they are not the owner, and administrators control who is allowed to share folders with a new "Folders Sharing" permission that is off by default. [Commit](https://github.com/open-webui/open-webui/commit/5019af79a0c45743ede8c9ff37d68f768e7f6174), [Commit](https://github.com/open-webui/open-webui/commit/38920c0ed1f6ad5fe3bb9d12898fa968ead3634a), [Commit](https://github.com/open-webui/open-webui/commit/d65ac445a43348c5f0323d54c37397ae7f483cb8), [Commit](https://github.com/open-webui/open-webui/commit/c783fd30f20d6be5028cf337bc5e5c2f9afbd3f8), [Commit](https://github.com/open-webui/open-webui/commit/45fcf272ef51c84cb01c1454589da3f98e4adc2c), [Commit](https://github.com/open-webui/open-webui/commit/76854d14246660af8222a5302513020e1f36c4f3), [Commit](https://github.com/open-webui/open-webui/commit/084d040e220ee39f62757d928d839646e813fb25)
 - 🏷️ **More custom header variables.** Custom request headers now support "{{USER_MESSAGE_ID}}", "{{USER_MESSAGE_PARENT_ID}}", and "{{TASK}}", letting connected services tell apart real user messages from automated background requests like title, tag, and follow-up generation. [Commit](https://github.com/open-webui/open-webui/commit/f85cb27ef835aa76aff7de6176bf2159ba392061)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+
+### Fixed
 
 ### Changed
 
