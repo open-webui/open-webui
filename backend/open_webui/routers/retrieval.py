@@ -96,6 +96,7 @@ from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.search_result import is_valid_search_result_url
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.serper import search_serper
@@ -2269,7 +2270,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         for result in search_results:
             if result:
                 for item in result:
-                    if item and item.link:
+                    if item and is_valid_search_result_url(item.link):
                         result_items.append(item)
                         urls.append(item.link)
 
