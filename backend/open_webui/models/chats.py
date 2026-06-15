@@ -1353,6 +1353,43 @@ class ChatTable:
                 for chat in all_chats
             ]
 
+    async def get_all_chats_by_folder_id(
+        self,
+        folder_id: str,
+        skip: int = 0,
+        limit: int = 60,
+        db: AsyncSession | None = None,
+    ) -> list[dict]:
+        """Get chats in a folder across ALL users. Returns dicts with user_id."""
+        async with get_async_db_context(db) as session:
+            stmt = (
+                select(Chat.id, Chat.title, Chat.user_id, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                .filter_by(folder_id=folder_id)
+                .filter(or_(Chat.pinned == False, Chat.pinned == None))
+                .filter_by(archived=False)
+                .order_by(Chat.updated_at.desc(), Chat.id)
+            )
+
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+
+            result = await session.execute(stmt)
+            all_chats = result.all()
+            return [
+                {
+                    'id': chat[0],
+                    'title': chat[1],
+                    'user_id': chat[2],
+                    'updated_at': chat[3],
+                    'created_at': chat[4],
+                    'last_read_at': chat[5],
+                }
+                for chat in all_chats
+            ]
+
+
     async def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
     ) -> list[ChatModel]:

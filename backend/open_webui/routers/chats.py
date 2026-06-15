@@ -32,6 +32,7 @@ from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.middleware import serialize_output
 from open_webui.utils.misc import get_message_list
@@ -561,10 +562,13 @@ async def create_new_chat(
     # to assume the column is clean. Also catches non-UUID / nonexistent IDs.
     if form_data.folder_id is not None:
         if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
+            # Check shared folder write access
+            shared_folder = await Folders.get_folder_by_id(form_data.folder_id, db=db)
+            if not shared_folder or not await has_folder_access(user.id, shared_folder, 'write', db):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
 
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
@@ -950,6 +954,14 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
             )
             if has_grant:
                 chat = await Chats.get_chat_by_id(id, db=db)
+
+            # Check folder-based access (shared folders)
+            if not chat:
+                candidate = await Chats.get_chat_by_id(id, db=db)
+                if candidate and candidate.folder_id:
+                    folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
+                    if folder and await has_folder_access(user.id, folder, 'read', db):
+                        chat = candidate
 
     if chat:
         return ChatResponse(**chat.model_dump())
@@ -1493,10 +1505,13 @@ async def update_chat_folder_id_by_id(
         # folder_id values. None is allowed (moves the chat out of any folder).
         if form_data.folder_id is not None:
             if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
+                # Check shared folder write access
+                shared_folder = await Folders.get_folder_by_id(form_data.folder_id, db=db)
+                if not shared_folder or not await has_folder_access(user.id, shared_folder, 'write', db):
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=ERROR_MESSAGES.NOT_FOUND,
+                    )
 
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())
