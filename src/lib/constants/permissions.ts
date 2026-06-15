@@ -25,6 +25,7 @@ export const DEFAULT_PERMISSIONS = {
 		public_skills: false,
 		notes: false,
 		public_notes: false,
+		folders: false,
 		public_chats: false,
 		public_calendars: false
 	},
