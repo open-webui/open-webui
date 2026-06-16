@@ -24,7 +24,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.internal.db import get_async_session
 from open_webui.models.chats import Chats
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -851,14 +851,16 @@ async def image_edits(
                 # without re-validation would let an attacker reach private IPs via a
                 # public host that redirects internally (e.g. cloud-metadata exfil).
                 validate_url(data)
-                session = await get_session()
-                async with session.get(
-                    data, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
-                ) as r:
-                    r.raise_for_status()
+                # SSRF-safe session: re-checks the connect-time IP so a rebinding DNS answer
+                # that passed validate_url cannot reach an internal address.
+                async with get_ssrf_safe_session() as session:
+                    async with session.get(
+                        data, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                    ) as r:
+                        r.raise_for_status()
 
-                    image_data = base64.b64encode(await r.read()).decode('utf-8')
-                    return f'data:{r.headers["content-type"]};base64,{image_data}'
+                        image_data = base64.b64encode(await r.read()).decode('utf-8')
+                        return f'data:{r.headers["content-type"]};base64,{image_data}'
 
             else:
                 file_id = None
