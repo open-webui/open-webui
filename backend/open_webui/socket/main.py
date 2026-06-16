@@ -757,11 +757,13 @@ async def yjs_document_update(sid, data):
 @sio.on('ydoc:document:leave')
 async def yjs_document_leave(sid, data):
     """Handle user leaving a document"""
+    user = SESSION_POOL.get(sid)
+    if not user:  # authenticated session required (parity with sibling handlers)
+        return
     try:
         document_id = normalize_document_id(data['document_id'])
-        user_id = data.get('user_id', sid)
 
-        log.info(f'User {user_id} leaving document {document_id}')
+        log.info(f'User {user["id"]} leaving document {document_id}')
 
         # Remove user from the document
         await YDOC_MANAGER.remove_user(document_id=document_id, user_id=sid)
@@ -769,10 +771,10 @@ async def yjs_document_leave(sid, data):
         # Leave Socket.IO room
         await sio.leave_room(sid, f'doc_{document_id}')
 
-        # Notify other users
+        # Notify other users; user_id is the authenticated identity, not client-supplied
         await sio.emit(
             'ydoc:user:left',
-            {'document_id': document_id, 'user_id': user_id},
+            {'document_id': document_id, 'user_id': user['id']},
             room=f'doc_{document_id}',
         )
 
@@ -787,16 +789,21 @@ async def yjs_document_leave(sid, data):
 @sio.on('ydoc:awareness:update')
 async def yjs_awareness_update(sid, data):
     """Handle awareness updates (cursors, selections, etc.)"""
+    user = SESSION_POOL.get(sid)
+    if not user:  # authenticated session required (parity with sibling handlers)
+        return
     try:
-        document_id = data['document_id']
-        user_id = data.get('user_id', sid)
+        document_id = normalize_document_id(data['document_id'])
+        room = f'doc_{document_id}'
+        if room not in sio.rooms(sid):  # must have joined the document first
+            return
         update = data['update']
 
-        # Broadcast awareness update to all other users in the document
+        # Broadcast to the room; user_id is the authenticated identity, not client-supplied
         await sio.emit(
             'ydoc:awareness:update',
-            {'document_id': document_id, 'user_id': user_id, 'update': update},
-            room=f'doc_{document_id}',
+            {'document_id': document_id, 'user_id': user['id'], 'update': update},
+            room=room,
             skip_sid=sid,
         )
 
