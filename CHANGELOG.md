@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🪟 **Default Permissions modal resets on close.** Closing the Default Permissions dialog without saving now discards unsaved edits instead of keeping them around the next time you open it. [Commit](https://github.com/open-webui/open-webui/commit/78a5015846a9e55ff2bc9d6cc98f880437abe8ed)
 - 👯 **Side-by-side chat with the same model.** Running two panes with the same model no longer leaves one pane stuck waiting or showing the other pane's reply after a reload, since each pane's messages are now tracked separately. [Commit](https://github.com/open-webui/open-webui/commit/56ae99e96a845289b5787d2dd26a3d828f2295e7), [#25982](https://github.com/open-webui/open-webui/issues/25982)
 - 💾 **Model edits no longer lost when changing access.** Adjusting a model's access no longer auto-saves on its own and discards your other unsaved changes to that model. [#26004](https://github.com/open-webui/open-webui/pull/26004)
+- 🔧 **Parallel tool calls over the Anthropic-compatible API.** External Anthropic-compatible clients calling Open WebUI's messages endpoint now receive tool calls reliably when a model issues several at once or returns them in its final message. [Commit](https://github.com/open-webui/open-webui/commit/4210cae68e30173d7902582d32128dd699d5628a), [#25963](https://github.com/open-webui/open-webui/pull/25963), [#25964](https://github.com/open-webui/open-webui/discussions/25964)
 
 ### Changed
 
