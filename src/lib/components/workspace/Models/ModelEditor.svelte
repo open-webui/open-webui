@@ -248,9 +248,13 @@
 	};
 
 	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
+		if (!$tools) {
+			await tools.set(await getTools(localStorage.token));
+		}
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
-		await functions.set(await getFunctions(localStorage.token));
+		if (!$functions) {
+			await functions.set(await getFunctions(localStorage.token));
+		}
 
 		// Fetch admin-configured default model metadata so the editor
 		// reflects the actual defaults rather than hardcoded values

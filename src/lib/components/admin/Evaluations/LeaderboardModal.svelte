@@ -51,7 +51,8 @@
 
 	// Load history when model changes and modal is shown
 	$: if (show && model?.id) {
-		selectRange(selectedRange);
+		selectedRange = '30d';
+		loadHistory(30);
 	}
 
 	// Use top_tags from backend response (already computed)
