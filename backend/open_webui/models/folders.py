@@ -252,6 +252,25 @@ class FolderTable:
             result = await db.execute(select(Folder).filter_by(parent_id=parent_id, user_id=user_id))
             return [FolderModel.model_validate(folder) for folder in result.scalars().all()]
 
+    async def get_folder_ids_by_id_and_user_id_in_subtree(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[str]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Folder).filter_by(id=id, user_id=user_id))
+            folder = result.scalars().first()
+            if not folder:
+                return []
+
+            folder_ids = [folder.id]
+            folders = [FolderModel.model_validate(folder)]
+            while folders:
+                current_folder = folders.pop()
+                children = await self.get_folders_by_parent_id_and_user_id(current_folder.id, user_id, db=db)
+                folder_ids.extend(child.id for child in children)
+                folders.extend(children)
+
+            return folder_ids
+
     async def update_folder_parent_id_by_id_and_user_id(
         self,
         id: str,

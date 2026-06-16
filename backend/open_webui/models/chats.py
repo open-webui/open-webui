@@ -1571,6 +1571,21 @@ class ChatTable:
             log.info(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
+    async def count_chats_by_folder_ids_and_user_id(
+        self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
+    ) -> int:
+        if not folder_ids:
+            return 0
+
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(func.count(Chat.id)).filter(Chat.user_id == user_id, Chat.folder_id.in_(folder_ids))
+            )
+            count = result.scalar()
+
+            log.info(f"Count of chats for folders '{folder_ids}': {count}")
+            return count
+
     async def delete_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
     ) -> bool:
