@@ -2102,8 +2102,9 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		// Build message_ids map: {model_id: assistant_message_id}
-		const messageIdsMap: Record<string, string> = {};
+		// Build message_ids list: [{model_id, message_id}, ...]
+		// Uses an array instead of a dict to support duplicate model IDs in side-by-side chat.
+		const messageIdsList: Array<{ model_id: string; message_id: string }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -2135,7 +2136,7 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
-				messageIdsMap[modelId] = responseMessageId;
+				messageIdsList.push({ model_id: modelId, message_id: responseMessageId });
 			}
 		}
 		history = history;
@@ -2181,7 +2182,7 @@
 		// Single request — backend fans out to all models
 		const primaryModelId = selectedModelIds[0];
 		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
-		const primaryResponseMessageId = messageIdsMap[primaryModelId];
+		const primaryResponseMessageId = messageIdsList[0]?.message_id;
 
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
@@ -2197,7 +2198,7 @@
 					primaryResponseMessageId,
 					_chatId,
 					{
-						messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
+						messageIdsList: selectedModelIds.length > 1 ? messageIdsList : undefined,
 						regenerationPrompt
 					}
 				);
@@ -2266,11 +2267,11 @@
 		responseMessageId,
 		_chatId,
 		{
-			messageIdsMap,
+			messageIdsList,
 			regenerationPrompt,
 			continueResponse = false
 		}: {
-			messageIdsMap?: Record<string, string>;
+			messageIdsList?: Array<{ model_id: string; message_id: string }>;
 			regenerationPrompt?: string | null;
 			continueResponse?: boolean;
 		} = {}
@@ -2474,7 +2475,7 @@
 				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
-				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
+				...(messageIdsList ? { message_ids: messageIdsList } : {}),
 				parent_id: userMessage?.parentId ?? null,
 				user_message: userMessage,
 				...(regenerationPrompt ? { regeneration_prompt: regenerationPrompt } : {}),
