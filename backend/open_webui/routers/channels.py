@@ -31,9 +31,7 @@ from open_webui.models.messages import (
 from open_webui.models.users import (
     UserIdNameResponse,
     UserIdNameStatusResponse,
-    UserListResponse,
     UserModel,
-    UserModelResponse,
     UserNameResponse,
     Users,
 )
@@ -440,7 +438,40 @@ async def get_channel_by_id(
 PAGE_ITEM_COUNT = 30
 
 
-@router.get('/{id}/members', response_model=UserListResponse)
+class ChannelMemberResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str
+    profile_image_url: str | None = None
+    presence_state: str | None = None
+    status_emoji: str | None = None
+    status_message: str | None = None
+    status_expires_at: int | None = None
+    is_active: bool = False
+
+
+class ChannelMemberListResponse(BaseModel):
+    users: list[ChannelMemberResponse]
+    total: int
+
+
+def serialize_channel_member(user: UserModel) -> ChannelMemberResponse:
+    return ChannelMemberResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=user.role,
+        profile_image_url=user.profile_image_url,
+        presence_state=user.presence_state,
+        status_emoji=user.status_emoji,
+        status_message=user.status_message,
+        status_expires_at=user.status_expires_at,
+        is_active=Users.is_active(user),
+    )
+
+
+@router.get('/{id}/members', response_model=ChannelMemberListResponse)
 async def get_channel_members_by_id(
     request: Request,
     id: str,
@@ -475,7 +506,7 @@ async def get_channel_members_by_id(
         total = len(fetched_users)
 
         return {
-            'users': [UserModelResponse(**u.model_dump(), is_active=Users.is_active(u)) for u in fetched_users],
+            'users': [serialize_channel_member(u) for u in fetched_users],
             'total': total,
         }
     else:
@@ -503,7 +534,7 @@ async def get_channel_members_by_id(
         total = result['total']
 
         return {
-            'users': [UserModelResponse(**u.model_dump(), is_active=Users.is_active(u)) for u in fetched_users],
+            'users': [serialize_channel_member(u) for u in fetched_users],
             'total': total,
         }
 
