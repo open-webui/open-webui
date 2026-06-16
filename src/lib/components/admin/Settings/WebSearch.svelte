@@ -15,6 +15,7 @@
 
 	let webSearchEngines = [
 		'ollama_cloud',
+		'SERPHouse',
 		'perplexity_search',
 		'searxng',
 		'yacy',
@@ -526,7 +527,38 @@
 									</div>
 								</div>
 							</div>
-						{:else if webConfig.WEB_SEARCH_ENGINE === 'serpapi'}
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'SERPHouse'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('SERPHouse API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter SERPHouse API Key')}
+										bind:value={webConfig.SERPHOUSE_API_KEY}
+									/>
+								</div>
+								<div class="mt-1.5">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('SERPHouse Engine')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter SERPHouse Engine')}
+												bind:value={webConfig.SERPHOUSE_ENGINE}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							{:else if webConfig.WEB_SEARCH_ENGINE === 'serpapi'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">

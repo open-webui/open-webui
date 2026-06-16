@@ -1765,6 +1765,18 @@ SERPAPI_ENGINE = ConfigVar(
     os.getenv('SERPAPI_ENGINE', ''),
 )
 
+SERPHOUSE_API_KEY = ConfigVar(
+    'SERPHOUSE_API_KEY',
+    'rag.web.search.serphouse_api_key',
+    os.getenv('SERPHOUSE_API_KEY', ''),
+)
+
+SERPHOUSE_ENGINE = ConfigVar(
+    'SERPHOUSE_ENGINE',
+    'rag.web.search.serphouse_engine',
+    os.getenv('SERPHOUSE_ENGINE', ''),
+)
+
 BING_SEARCH_V7_ENDPOINT = ConfigVar(
     'BING_SEARCH_V7_ENDPOINT',
     'rag.web.search.bing_search_v7_endpoint',
