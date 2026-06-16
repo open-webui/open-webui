@@ -2274,6 +2274,83 @@ async def generate_messages(
         return response
 
 
+##################################
+#
+# OpenAI Legacy Completions Compatible Endpoint
+#
+##################################
+
+
+from open_webui.utils.completions import (
+    chat_stream_to_completions_stream,
+    convert_chat_to_completions_response,
+    convert_completions_to_chat_payload,
+    normalize_completion_prompt,
+)
+
+
+@app.post('/api/completions')
+@app.post('/api/v1/completions')  # Experimental: Compatibility with OpenAI API
+async def completions(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    """
+    OpenAI-compatible legacy (text) completions endpoint.
+
+    Accepts the OpenAI ``/v1/completions`` request format (``prompt``,
+    ``suffix``, ``max_tokens``, ``stream``, ...), converts it internally to the
+    Chat Completions format, routes it through the existing chat completion
+    pipeline, then converts the response back to the legacy ``text_completion``
+    shape.
+
+    This unblocks tools (e.g. continue.dev autocomplete) that require the
+    non-chat ``/completions`` endpoint, which previously returned 405. The
+    ``prompt`` is forwarded verbatim as the user message so callers can supply
+    their own FIM template; when a ``suffix`` is supplied a best-effort
+    fill-in-the-middle framing is used.
+
+    Supports both streaming and non-streaming requests. All models configured
+    in Open WebUI are accessible via this endpoint.
+    """
+    requested_model = form_data.get('model', '')
+
+    # ``echo`` prepends the prompt to the generated text (legacy-only feature).
+    echo_prompt = ''
+    if form_data.get('echo'):
+        echo_prompt = normalize_completion_prompt(form_data.get('prompt', ''))
+
+    # Convert legacy completions payload to chat completions format
+    chat_payload = convert_completions_to_chat_payload(form_data)
+
+    # Route through the existing chat_completion handler
+    response = await chat_completion(request, chat_payload, user)
+
+    # Convert the response back to the legacy completions format
+    if isinstance(response, StreamingResponse):
+        # Streaming response: wrap the generator to convert SSE format
+        return StreamingResponse(
+            chat_stream_to_completions_stream(
+                response.body_iterator,
+                model=requested_model,
+                echo_prompt=echo_prompt,
+            ),
+            media_type='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            },
+        )
+    elif isinstance(response, dict):
+        return convert_chat_to_completions_response(
+            response, model=requested_model, echo_prompt=echo_prompt
+        )
+    else:
+        # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
+        return response
+
+
 @app.post('/api/chat/completed')
 async def chat_completed(request: Request, form_data: dict, user=Depends(get_verified_user)):
     """Deprecated: outlet filters now run inline during chat completion.
