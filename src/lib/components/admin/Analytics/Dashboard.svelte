@@ -186,8 +186,6 @@
 	$: if (typeof localStorage !== 'undefined' && selectedPeriod) {
 		localStorage.setItem('analyticsPeriod', selectedPeriod);
 	}
-
-	onMount(loadDashboard);
 </script>
 
 <!-- Header with title and period selector -->
