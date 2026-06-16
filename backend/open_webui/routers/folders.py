@@ -277,7 +277,22 @@ async def delete_folder_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if await Chats.count_chats_by_folder_id_and_user_id(id, user.id, db=db):
+    # Check for chats in the folder and all its descendant subfolders.
+    # A parent folder may have no direct chats but contain subfolders
+    # that do — deleting the parent would cascade-delete those chats,
+    # so the chat.delete permission must be enforced for the entire subtree.
+    folder_ids_to_check = [id]
+    children = await Folders.get_children_folders_by_id_and_user_id(id, user.id, db=db)
+    if children:
+        folder_ids_to_check.extend(child.id for child in children)
+
+    has_chats = False
+    for fid in folder_ids_to_check:
+        if await Chats.count_chats_by_folder_id_and_user_id(fid, user.id, db=db):
+            has_chats = True
+            break
+
+    if has_chats:
         chat_delete_permission = await has_permission(
             user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS, db=db
         )
