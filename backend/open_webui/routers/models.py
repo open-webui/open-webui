@@ -60,6 +60,9 @@ def _safe_static_redirect_path(url: str) -> str | None:
         if decoded == path:
             break
         path = decoded
+    # Fail closed: a value still encoded after the cap would be decoded further downstream.
+    if unquote(path) != path:
+        return None
     if '\x00' in path or '\\' in path:
         return None
     if not path.startswith('/'):
