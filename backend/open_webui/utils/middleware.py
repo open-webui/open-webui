@@ -3864,6 +3864,32 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
+
+            def accumulate_usage(new_usage: dict):
+                """Accumulate token counts across multiple LLM calls in a tool loop.
+
+                During native function-calling loops the same assistant message
+                may require several upstream LLM calls. Each call returns its
+                own usage object, but only the last one was persisted, causing
+                analytics to undercount. This helper merges new counts into the
+                running total so the final persisted usage reflects the whole
+                tool loop.
+                """
+                nonlocal usage
+                if not new_usage:
+                    return new_usage
+                if usage is None:
+                    usage = new_usage
+                    return new_usage
+                # Sum the standardised token fields
+                usage = {
+                    **new_usage,
+                    'input_tokens': usage.get('input_tokens', 0) + new_usage.get('input_tokens', 0),
+                    'output_tokens': usage.get('output_tokens', 0) + new_usage.get('output_tokens', 0),
+                    'total_tokens': usage.get('total_tokens', 0) + new_usage.get('total_tokens', 0),
+                }
+                return usage
+
             prior_output = []
             last_response_id = None
 
@@ -4053,7 +4079,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
                                             response_metadata['usage'] = normalize_usage(response_metadata['usage'])
-                                            usage = response_metadata['usage']
+                                            accumulate_usage(response_metadata['usage'])
 
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
@@ -4072,7 +4098,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     raw_usage = data.get('usage', {}) or {}
                                     raw_usage.update(data.get('timings', {}))  # llama.cpp
                                     if raw_usage:
-                                        usage = normalize_usage(raw_usage)
+                                        normalized = normalize_usage(raw_usage)
+                                        accumulate_usage(normalized)
                                         await event_emitter(
                                             {
                                                 'type': 'chat:completion',
