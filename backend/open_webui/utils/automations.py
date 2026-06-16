@@ -359,6 +359,16 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await _record_run(automation.id, 'error', error='User not found')
             return
 
+        # Re-gate the rehydrated owner: a demoted/deactivated or de-permissioned owner must not run.
+        from open_webui.utils.access_control import has_permission
+
+        if user.role not in ('user', 'admin') or (
+            user.role != 'admin'
+            and not await has_permission(user.id, 'features.automations', app.state.config.USER_PERMISSIONS)
+        ):
+            await _record_run(automation.id, 'error', error='Owner no longer permitted to run automations')
+            return
+
         prompt = await prompt_template(automation.data['prompt'], user)
         model_id = automation.data['model_id']
         terminal_config = automation.data.get('terminal')
