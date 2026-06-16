@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 **Login card targetable with custom CSS.** The login card now carries a stable element ID, making it easier to target in custom CSS themes. [#26060](https://github.com/open-webui/open-webui/pull/26060)
 - ⚡ **Faster model overview.** The admin model overview now loads its feedback history and tags through batched queries, so it opens noticeably faster on instances with many chats. [Commit](https://github.com/open-webui/open-webui/commit/40c09167cd6de1c853a5dd03c88b4fdcb279dfe1)
 - 🏎️ **Lighter channel profile previews.** Profile previews in channels now load a person's details only when you hover to open one, rather than fetching them for every message up front. [Commit](https://github.com/open-webui/open-webui/commit/4f69c33de0e9a8fde4f16d0b2f1ed8aac8741772)
+- ↩️ **Reset permissions to defaults.** The group and default permission dialogs now include a button to restore all permissions back to their built-in defaults in one step. [#25931](https://github.com/open-webui/open-webui/pull/25931)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 
 ### Fixed
@@ -46,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔁 **Fewer redundant data loads.** Several views no longer fire duplicate background fetches at once, avoiding occasional glitches from overlapping requests. [#25943](https://github.com/open-webui/open-webui/pull/25943), [#25942](https://github.com/open-webui/open-webui/pull/25942), [#25934](https://github.com/open-webui/open-webui/pull/25934)
 - 🔎 **Steadier search boxes across admin and workspace.** Search fields for users, knowledge, prompts, tools, and similar lists now run only as you type and reset to the first page correctly, instead of occasionally re-searching on their own. [Commit](https://github.com/open-webui/open-webui/commit/fc9c2ea1915accd1f6edca467e965283dff71cd7), [#25938](https://github.com/open-webui/open-webui/pull/25938)
 - 📊 **Admin feedback list loads again on PostgreSQL.** The admin feedback list no longer fails to load on PostgreSQL setups, where it previously returned a server error. [Commit](https://github.com/open-webui/open-webui/commit/7ee75a0c04a31528954903e88c9213d5fbb31aa7), [#25953](https://github.com/open-webui/open-webui/issues/25953)
+- 🗂️ **Deleting nested folders checks chats correctly.** Deleting a folder that contains subfolders now accounts for the chats inside those subfolders when applying the delete-permission check, instead of only the top-level folder's chats. [Commit](https://github.com/open-webui/open-webui/commit/232421f40b84590e6d6fdecab4e43274aac37add), [#25920](https://github.com/open-webui/open-webui/issues/25920)
+- 🖱️ **Dragging chats into folders is more reliable.** Dragging a chat into a folder no longer throws an error in cases where the chat couldn't be resolved. [#25928](https://github.com/open-webui/open-webui/pull/25928)
+- 🛠️ **Workspace menu shows for the skills permission.** Users who only have the skills permission now see the Workspace entry in their menu, which previously appeared only for other workspace permissions. [#25925](https://github.com/open-webui/open-webui/pull/25925)
+- 🧠 **Admins can always reach memories.** Administrators can now use the memories endpoints regardless of the memories permission toggle, matching how admin access works for other features. [#25924](https://github.com/open-webui/open-webui/pull/25924)
+- 🖼️ **Image settings page survives a config load failure.** The admin image settings page no longer crashes when its configuration fails to load, showing the page instead. [#25933](https://github.com/open-webui/open-webui/pull/25933)
 
 ### Changed
 
