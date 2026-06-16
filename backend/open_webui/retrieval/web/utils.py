@@ -303,8 +303,9 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.params = params or {}
 
     def lazy_load(self) -> Iterator[Document]:
-        try:
-            for url in self.web_paths:
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
                 doc = scrape_firecrawl_url(
                     self.api_url,
                     self.api_key,
@@ -315,22 +316,16 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 )
                 if doc is not None:
                     yield doc
-        except Exception as e:
-            if self.continue_on_failure:
-                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
-            else:
+            except Exception as e:
+                if self.continue_on_failure:
+                    log.warning(f'Error extracting content from {url} with Firecrawl: {e}')
+                    continue
                 raise e
 
     async def alazy_load(self):
-        try:
-            docs = await run_in_threadpool(lambda: list(self.lazy_load()))
-            for doc in docs:
-                yield doc
-        except Exception as e:
-            if self.continue_on_failure:
-                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
-            else:
-                raise e
+        docs = await run_in_threadpool(lambda: list(self.lazy_load()))
+        for doc in docs:
+            yield doc
 
 
 class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
