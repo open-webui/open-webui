@@ -66,7 +66,8 @@ export const DEFAULT_PERMISSIONS = {
 		code_interpreter: true,
 		memories: true,
 		automations: false,
-		calendar: true
+		calendar: true,
+		user_webhooks: false
 	},
 	settings: {
 		interface: true
