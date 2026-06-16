@@ -219,6 +219,10 @@
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
+
+			if (res) {
+				pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+			}
 		}, 200);
 	};
 
@@ -1092,7 +1096,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									onDelete={() => {
 										showDeleteConfirm = true;
 									}}
-									isPinned={note.is_pinned ?? false}
+									isPinned={$pinnedNotes.some((n) => n.id === note.id)}
 									onPin={async () => {
 										await toggleNotePinnedStatusById(localStorage.token, note.id);
 										note = await getNoteById(localStorage.token, note.id);
