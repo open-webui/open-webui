@@ -8,6 +8,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
+from open_webui.utils.auth import PLACEHOLDER_HASH
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Boolean, Column, String, Text, delete, select, update
@@ -142,11 +143,13 @@ class AuthsTable:
         log.info('authenticate_user: %s', email)
         resolved = await Users.get_user_by_email(email, db=db)
         if not resolved:
+            verify_password(PLACEHOLDER_HASH)
             return
         # load the credential row and verify the password hash
         async with get_async_db_context(db) as session:
             credential = await session.get(Auth, resolved.id)
             if not credential or not credential.active:
+                verify_password(PLACEHOLDER_HASH)
                 return
             if not verify_password(credential.password):
                 return

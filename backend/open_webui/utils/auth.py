@@ -162,6 +162,12 @@ def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
+# Pre-computed hash verified on signin paths that lack a real credential
+# (unknown user, inactive account) so response timing cannot reveal
+# whether an account exists (CWE-208).
+PLACEHOLDER_HASH = get_password_hash('placeholder')
+
+
 def validate_password(password: str) -> bool:
     # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
     if len(password.encode('utf-8')) > 72:
