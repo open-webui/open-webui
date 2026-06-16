@@ -35,6 +35,8 @@
 
 	const i18n = getContext('i18n');
 
+	$: canImportChats = $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true);
+
 	import {
 		getChatList,
 		getAllTags,
@@ -372,6 +374,11 @@
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
+		if (!canImportChats) {
+			toast.error($i18n.t('Access prohibited'));
+			return;
+		}
+
 		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
 			console.log(item);
@@ -1401,6 +1408,11 @@
 								return null;
 							});
 							if (!chat && item) {
+								if (!canImportChats) {
+									toast.error($i18n.t('Access prohibited'));
+									return;
+								}
+
 								chat = await importChats(localStorage.token, [
 									{
 										chat: item.chat,
@@ -1409,9 +1421,9 @@
 										folder_id: null,
 										created_at: item?.created_at ?? null,
 										updated_at: item?.updated_at ?? null
-									}
-								]);
-							}
+										}
+									]);
+								}
 
 							if (chat) {
 								console.log(chat);
@@ -1467,6 +1479,11 @@
 												return null;
 											});
 											if (!chat && item) {
+												if (!canImportChats) {
+													toast.error($i18n.t('Access prohibited'));
+													return;
+												}
+
 												chat = await importChats(localStorage.token, [
 													{
 														chat: item.chat,

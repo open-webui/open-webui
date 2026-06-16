@@ -161,6 +161,11 @@
 									return null;
 								});
 								if (!chat && item) {
+									if (!($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))) {
+										toast.error($i18n.t('Access prohibited'));
+										return;
+									}
+
 									chat = await importChats(localStorage.token, [
 										{
 											chat: item.chat,

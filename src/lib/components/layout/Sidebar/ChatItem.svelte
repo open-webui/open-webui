@@ -9,10 +9,6 @@
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
-	const i18n = getContext('i18n');
-
-	const dispatch = createEventDispatcher();
-
 	import {
 		archiveChatById,
 		cloneChatById,
@@ -35,7 +31,8 @@
 		currentChatPage,
 		tags,
 		selectedFolder,
-		activeChatIds
+		activeChatIds,
+		user
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -52,6 +49,10 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
+
+	const i18n = getContext('i18n');
+
+	const dispatch = createEventDispatcher();
 
 	export let className = '';
 
@@ -143,6 +144,11 @@
 	};
 
 	const cloneChatHandler = async (id) => {
+		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))) {
+			toast.error($i18n.t('Access prohibited'));
+			return;
+		}
+
 		const res = await cloneChatById(
 			localStorage.token,
 			id,
