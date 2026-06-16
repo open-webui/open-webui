@@ -19,7 +19,7 @@
 
 	export let saveSettings: Function;
 
-	let backgroundImageUrl = null;
+	let backgroundImageUrl = 'https://proxy.alyxai.net/api/v1/files/6c1d8844-2dcd-465e-a2c1-5a1feffcc9d7/content';
 	let inputFiles = null;
 	let filesInputElement;
 
