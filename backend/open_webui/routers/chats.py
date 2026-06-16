@@ -43,6 +43,17 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+async def require_chat_import_permission(request: Request, user, db: AsyncSession):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.import', request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
 ############################
 # GetChatList
 # Let the record outlive the session, so that what was
@@ -590,13 +601,7 @@ async def import_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.import', request.app.state.config.USER_PERMISSIONS, db=db
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    await require_chat_import_permission(request, user, db)
 
     try:
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
@@ -1219,11 +1224,14 @@ class CloneForm(BaseModel):
 
 @router.post('/{id}/clone', response_model=ChatResponse | None)
 async def clone_chat_by_id(
+    request: Request,
     form_data: CloneForm,
     id: str,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_chat_import_permission(request, user, db)
+
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         updated_chat = {
@@ -1267,8 +1275,13 @@ async def clone_chat_by_id(
 
 @router.post('/{id}/clone/shared', response_model=ChatResponse | None)
 async def clone_shared_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
+    await require_chat_import_permission(request, user, db)
+
     chat = await Chats.get_chat_by_share_id(id, db=db)
 
     # Fallback: admins can also access any chat directly by chat ID
