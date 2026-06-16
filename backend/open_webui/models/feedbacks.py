@@ -222,12 +222,19 @@ class FeedbackTable:
     ) -> FeedbackListResponse:
         async with get_async_db_context(db) as db:
             stmt = select(Feedback, User).join(User, Feedback.user_id == User.id)
+            count_stmt = (
+                select(func.count(Feedback.id))
+                .select_from(Feedback)
+                .join(User, Feedback.user_id == User.id)
+            )
 
             if filter:
                 # Apply model_id filter (exact match)
                 model_id = filter.get('model_id')
                 if model_id:
-                    stmt = stmt.filter(Feedback.data['model_id'].as_string() == model_id)
+                    model_id_filter = Feedback.data['model_id'].as_string() == model_id
+                    stmt = stmt.filter(model_id_filter)
+                    count_stmt = count_stmt.filter(model_id_filter)
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
@@ -256,9 +263,9 @@ class FeedbackTable:
             else:
                 stmt = stmt.order_by(Feedback.created_at.desc())
 
-            # Count BEFORE pagination
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
-            total = count_result.scalar()
+            # Count before pagination without wrapping the ordered item query.
+            count_result = await db.execute(count_stmt)
+            total = count_result.scalar() or 0
 
             if skip:
                 stmt = stmt.offset(skip)
