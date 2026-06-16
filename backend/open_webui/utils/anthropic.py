@@ -337,17 +337,17 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
 
     # tool_choice
     if 'tool_choice' in anthropic_payload:
-        tc = anthropic_payload['tool_choice']
-        if isinstance(tc, dict):
-            tc_type = tc.get('type', 'auto')
-            if tc_type == 'auto':
+        tool_choice = anthropic_payload['tool_choice']
+        if isinstance(tool_choice, dict):
+            tool_choice_type = tool_choice.get('type', 'auto')
+            if tool_choice_type == 'auto':
                 openai_payload['tool_choice'] = 'auto'
-            elif tc_type == 'any':
+            elif tool_choice_type == 'any':
                 openai_payload['tool_choice'] = 'required'
-            elif tc_type == 'tool':
+            elif tool_choice_type == 'tool':
                 openai_payload['tool_choice'] = {
                     'type': 'function',
-                    'function': {'name': tc.get('name', '')},
+                    'function': {'name': tool_choice.get('name', '')},
                 }
 
     return openai_payload
@@ -377,23 +377,23 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
 
     # Build content blocks
     content = []
-    msg_content = message.get('content')
-    if msg_content:
-        content.append({'type': 'text', 'text': msg_content})
+    message_content = message.get('content')
+    if message_content:
+        content.append({'type': 'text', 'text': message_content})
 
-    # Tool calls → tool_use blocks
+    # Tool calls -> tool_use blocks
     tool_calls = message.get('tool_calls', [])
-    for tc in tool_calls:
-        func = tc.get('function', {})
+    for tool_call in tool_calls:
+        function = tool_call.get('function', {})
         try:
-            tool_input = json.loads(func.get('arguments', '{}'))
+            tool_input = json.loads(function.get('arguments', '{}'))
         except (json.JSONDecodeError, TypeError):
             tool_input = {}
         content.append(
             {
                 'type': 'tool_use',
-                'id': tc.get('id', f'toolu_{_uuid.uuid4().hex[:24]}'),
-                'name': func.get('name', ''),
+                'id': tool_call.get('id', f'toolu_{_uuid.uuid4().hex[:24]}'),
+                'name': function.get('name', ''),
                 'input': tool_input,
             }
         )
@@ -426,10 +426,14 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
     Handles text content, tool calls, and mixed content with proper
     multi-block indexing as required by Anthropic's streaming protocol.
+
+    Tool calls are tracked by their unique id (not OpenAI index) so that
+    parallel calls sharing the same index get distinct Anthropic tool_use
+    blocks. Each block follows the Anthropic lifecycle: start -> delta -> stop.
     """
     import uuid as _uuid
 
-    msg_id = f'msg_{_uuid.uuid4().hex[:24]}'
+    message_id = f'msg_{_uuid.uuid4().hex[:24]}'
     input_tokens = 0
     output_tokens = 0
     stop_reason = 'end_turn'
@@ -439,16 +443,21 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     current_block_index = 0
     text_block_open = False
 
-    # Track tool call state: maps OpenAI tool_call index -> Anthropic block index
-    # This allows handling multiple concurrent tool calls.
-    tool_call_blocks = {}  # {openai_tc_index: anthropic_block_index}
-    tool_call_started = {}  # {openai_tc_index: bool}
+    # Accumulated state for each tool call, keyed by tool call id.
+    # Parallel calls that share the same OpenAI index get distinct entries.
+    # Each entry: {id, name, arguments, block_index, started, stopped}
+    tracked_tool_calls = {}
+    # Map OpenAI tool call index -> tool call id for routing
+    # argument-only deltas (deltas that carry arguments but no id).
+    index_to_tool_id = {}
+    # Whether any tool call block has been emitted (suppresses further text)
+    has_tool_calls = False
 
     # Emit message_start
     message_start = {
         'type': 'message_start',
         'message': {
-            'id': msg_id,
+            'id': message_id,
             'type': 'message',
             'role': 'assistant',
             'content': [],
@@ -471,14 +480,14 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                 if not line or not line.startswith('data:'):
                     continue
 
-                data_str = line[5:].strip()
-                if data_str == '[DONE]':
+                data_string = line[5:].strip()
+                if data_string == '[DONE]':
                     continue
-                if data_str == '{}':
+                if data_string == '{}':
                     continue
 
                 try:
-                    data = json.loads(data_str)
+                    data = json.loads(data_string)
                 except (json.JSONDecodeError, TypeError):
                     continue
 
@@ -492,6 +501,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
                 delta = choices[0].get('delta', {})
                 finish_reason = choices[0].get('finish_reason')
+                message = choices[0].get('message') or {}
 
                 # Update usage if present
                 if data.get('usage'):
@@ -499,10 +509,11 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     output_tokens = data['usage'].get('completion_tokens', output_tokens)
 
                 # --- Handle text content ---
+                # Anthropic expects text blocks before tool blocks, so skip
+                # text deltas once any tool call has started.
                 content = delta.get('content')
-                if content is not None:
+                if content and not has_tool_calls:
                     if not text_block_open:
-                        # Start a new text content block
                         block_start = {
                             'type': 'content_block_start',
                             'index': current_block_index,
@@ -511,7 +522,6 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                         yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
                         text_block_open = True
 
-                    # Send text delta
                     block_delta = {
                         'type': 'content_block_delta',
                         'index': current_block_index,
@@ -520,7 +530,12 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
 
                 # --- Handle tool calls ---
-                tool_calls = delta.get('tool_calls')
+                # Some providers put tool_calls on the final message object
+                # instead of the delta; fall back to that when needed.
+                tool_calls = delta.get('tool_calls') or []
+                if not tool_calls and message.get('tool_calls'):
+                    tool_calls = message['tool_calls']
+
                 if tool_calls:
                     # Close text block if one is open (text comes before tools)
                     if text_block_open:
@@ -532,43 +547,95 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                         text_block_open = False
                         current_block_index += 1
 
-                    for tc in tool_calls:
-                        tc_index = tc.get('index', 0)
+                    for tool_call in tool_calls:
+                        tool_call_index = tool_call.get('index', 0)
+                        tool_call_id = tool_call.get('id', '')
+                        tool_call_name = (tool_call.get('function') or {}).get('name', '')
+                        arguments_chunk = (tool_call.get('function') or {}).get('arguments', '')
 
-                        if tc_index not in tool_call_started:
-                            # First time seeing this tool call — emit content_block_start
-                            tool_call_blocks[tc_index] = current_block_index
-                            tool_call_started[tc_index] = True
+                        # Resolve which tracked tool call this delta belongs to.
+                        # A delta with an id starts or identifies a specific tool.
+                        # A delta without an id carries arguments for the most
+                        # recent tool at this OpenAI index.
+                        if tool_call_id:
+                            if tool_call_id not in tracked_tool_calls:
+                                tracked_tool_calls[tool_call_id] = {
+                                    'id': tool_call_id,
+                                    'name': tool_call_name,
+                                    'arguments': '',
+                                    'block_index': -1,
+                                    'started': False,
+                                    'stopped': False,
+                                }
+                            index_to_tool_id[tool_call_index] = tool_call_id
+                            tool = tracked_tool_calls[tool_call_id]
+                        elif tool_call_index in index_to_tool_id:
+                            tool = tracked_tool_calls[index_to_tool_id[tool_call_index]]
+                        else:
+                            # First delta for this index with no id; create a
+                            # provisional entry with a generated fallback id.
+                            fallback_id = f'toolu_{_uuid.uuid4().hex[:24]}'
+                            tracked_tool_calls[fallback_id] = {
+                                'id': fallback_id,
+                                'name': tool_call_name,
+                                'arguments': '',
+                                'block_index': -1,
+                                'started': False,
+                                'stopped': False,
+                            }
+                            index_to_tool_id[tool_call_index] = fallback_id
+                            tool = tracked_tool_calls[fallback_id]
 
-                            # Extract tool call ID and name from the first chunk
-                            tc_id = tc.get('id', f'toolu_{_uuid.uuid4().hex[:24]}')
-                            tc_name = tc.get('function', {}).get('name', '')
+                        # Update name if provided on a later delta
+                        if tool_call_name and not tool['name']:
+                            tool['name'] = tool_call_name
+
+                        # Emit content_block_start once we have a name
+                        if not tool['started'] and tool['name']:
+                            tool['block_index'] = current_block_index
+                            tool['started'] = True
+                            has_tool_calls = True
 
                             block_start = {
                                 'type': 'content_block_start',
                                 'index': current_block_index,
                                 'content_block': {
                                     'type': 'tool_use',
-                                    'id': tc_id,
-                                    'name': tc_name,
+                                    'id': tool['id'],
+                                    'name': tool['name'],
                                     'input': {},
                                 },
                             }
                             yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
                             current_block_index += 1
 
-                        # Emit argument chunks as input_json_delta
-                        args_chunk = tc.get('function', {}).get('arguments', '')
-                        if args_chunk:
-                            block_delta = {
-                                'type': 'content_block_delta',
-                                'index': tool_call_blocks[tc_index],
-                                'delta': {
-                                    'type': 'input_json_delta',
-                                    'partial_json': args_chunk,
-                                },
-                            }
-                            yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+                        # Buffer arguments and emit as input_json_delta
+                        if arguments_chunk:
+                            tool['arguments'] += arguments_chunk
+
+                            if tool['started'] and not tool['stopped']:
+                                block_delta = {
+                                    'type': 'content_block_delta',
+                                    'index': tool['block_index'],
+                                    'delta': {
+                                        'type': 'input_json_delta',
+                                        'partial_json': arguments_chunk,
+                                    },
+                                }
+                                yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+
+                            # Close the block once arguments form complete JSON
+                            if tool['started'] and not tool['stopped']:
+                                try:
+                                    json.loads(tool['arguments'])
+                                    tool['stopped'] = True
+                                    block_stop = {
+                                        'type': 'content_block_stop',
+                                        'index': tool['block_index'],
+                                    }
+                                    yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+                                except (json.JSONDecodeError, ValueError):
+                                    pass
 
                 # --- Handle finish reason ---
                 if finish_reason is not None:
@@ -582,15 +649,46 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     except Exception as e:
         log.error(f'Error in Anthropic stream conversion: {e}')
 
+    # Flush any tools that buffered arguments but never emitted a block
+    for tool in tracked_tool_calls.values():
+        if not tool['started'] and tool['name']:
+            tool['block_index'] = current_block_index
+            tool['started'] = True
+
+            block_start = {
+                'type': 'content_block_start',
+                'index': current_block_index,
+                'content_block': {
+                    'type': 'tool_use',
+                    'id': tool['id'],
+                    'name': tool['name'],
+                    'input': {},
+                },
+            }
+            yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
+            current_block_index += 1
+
+            if tool['arguments']:
+                block_delta = {
+                    'type': 'content_block_delta',
+                    'index': tool['block_index'],
+                    'delta': {
+                        'type': 'input_json_delta',
+                        'partial_json': tool['arguments'],
+                    },
+                }
+                yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+
     # Close any open text block
     if text_block_open:
         block_stop = {'type': 'content_block_stop', 'index': current_block_index}
         yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
 
-    # Close any open tool call blocks
-    for tc_index, block_index in tool_call_blocks.items():
-        block_stop = {'type': 'content_block_stop', 'index': block_index}
-        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+    # Close any tool call blocks that are still open
+    for tool in tracked_tool_calls.values():
+        if tool['started'] and not tool['stopped']:
+            block_stop = {'type': 'content_block_stop', 'index': tool['block_index']}
+            yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
 
     # Emit message_delta with stop reason
     message_delta = {
@@ -605,3 +703,4 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
     # Emit message_stop
     yield f'event: message_stop\ndata: {json.dumps({"type": "message_stop"})}\n\n'.encode()
+
