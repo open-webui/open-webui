@@ -89,6 +89,26 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
 ##############################
 
 
+def _copy_cache_control(source: dict, target: dict) -> dict:
+    if isinstance(source, dict) and 'cache_control' in source:
+        target['cache_control'] = source['cache_control']
+    return target
+
+
+def _has_cache_control(blocks: list) -> bool:
+    return any(isinstance(block, dict) and 'cache_control' in block for block in blocks)
+
+
+def _finalize_openai_content(blocks: list) -> str | list:
+    if not blocks:
+        return ''
+
+    if len(blocks) == 1 and blocks[0].get('type') == 'text' and not _has_cache_control(blocks):
+        return blocks[0].get('text', '')
+
+    return blocks
+
+
 def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     """
     Convert an Anthropic Messages API request to OpenAI Chat Completions format.
@@ -112,14 +132,21 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
         if isinstance(system, str):
             messages.append({'role': 'system', 'content': system})
         elif isinstance(system, list):
-            # Anthropic supports system as list of content blocks
-            text_parts = []
+            openai_content = []
             for block in system:
                 if isinstance(block, dict) and block.get('type') == 'text':
-                    text_parts.append(block.get('text', ''))
+                    openai_content.append(
+                        _copy_cache_control(
+                            block,
+                            {
+                                'type': 'text',
+                                'text': block.get('text', ''),
+                            },
+                        )
+                    )
                 elif isinstance(block, str):
-                    text_parts.append(block)
-            messages.append({'role': 'system', 'content': '\n'.join(text_parts)})
+                    openai_content.append({'type': 'text', 'text': block})
+            messages.append({'role': 'system', 'content': _finalize_openai_content(openai_content)})
 
     # Convert messages
     for msg in anthropic_payload.get('messages', []):
@@ -138,10 +165,13 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
 
                 if block_type == 'text':
                     openai_content.append(
-                        {
-                            'type': 'text',
-                            'text': block.get('text', ''),
-                        }
+                        _copy_cache_control(
+                            block,
+                            {
+                                'type': 'text',
+                                'text': block.get('text', ''),
+                            },
+                        )
                     )
                 elif block_type == 'image':
                     source = block.get('source', {})
@@ -149,19 +179,25 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                         media_type = source.get('media_type', 'image/png')
                         data = source.get('data', '')
                         openai_content.append(
-                            {
-                                'type': 'image_url',
-                                'image_url': {
-                                    'url': f'data:{media_type};base64,{data}',
+                            _copy_cache_control(
+                                block,
+                                {
+                                    'type': 'image_url',
+                                    'image_url': {
+                                        'url': f'data:{media_type};base64,{data}',
+                                    },
                                 },
-                            }
+                            )
                         )
                     elif source.get('type') == 'url':
                         openai_content.append(
-                            {
-                                'type': 'image_url',
-                                'image_url': {'url': source.get('url', '')},
-                            }
+                            _copy_cache_control(
+                                block,
+                                {
+                                    'type': 'image_url',
+                                    'image_url': {'url': source.get('url', '')},
+                                },
+                            )
                         )
                 elif block_type == 'tool_use':
                     tool_calls.append(
@@ -196,10 +232,13 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
 
                             if content_type == 'text':
                                 converted_parts.append(
-                                    {
-                                        'type': 'text',
-                                        'text': content_block.get('text', ''),
-                                    }
+                                    _copy_cache_control(
+                                        content_block,
+                                        {
+                                            'type': 'text',
+                                            'text': content_block.get('text', ''),
+                                        },
+                                    )
                                 )
                             elif content_type == 'image':
                                 source = content_block.get('source', {})
@@ -207,21 +246,27 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                                     media_type = source.get('media_type', 'image/png')
                                     data = source.get('data', '')
                                     converted_parts.append(
-                                        {
-                                            'type': 'image_url',
-                                            'image_url': {
-                                                'url': f'data:{media_type};base64,{data}',
+                                        _copy_cache_control(
+                                            content_block,
+                                            {
+                                                'type': 'image_url',
+                                                'image_url': {
+                                                    'url': f'data:{media_type};base64,{data}',
+                                                },
                                             },
-                                        }
+                                        )
                                     )
                                 elif source.get('type') == 'url':
                                     converted_parts.append(
-                                        {
-                                            'type': 'image_url',
-                                            'image_url': {
-                                                'url': source.get('url', ''),
+                                        _copy_cache_control(
+                                            content_block,
+                                            {
+                                                'type': 'image_url',
+                                                'image_url': {
+                                                    'url': source.get('url', ''),
+                                                },
                                             },
-                                        }
+                                        )
                                     )
                             elif content_type == 'document':
                                 # Documents have no direct OpenAI equivalent;
@@ -254,7 +299,9 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                                 converted_parts.append({'type': 'text', 'text': search_text})
 
                         # Flatten to string when only text parts are present
-                        if all(part.get('type') == 'text' for part in converted_parts):
+                        if all(part.get('type') == 'text' for part in converted_parts) and not _has_cache_control(
+                            converted_parts
+                        ):
                             tool_content = '\n'.join(part.get('text', '') for part in converted_parts)
                         elif converted_parts:
                             tool_content = converted_parts
@@ -287,21 +334,13 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                 # Assistant message with tool calls
                 msg_dict = {'role': role}
                 if openai_content:
-                    # If there's only text, flatten it
-                    if len(openai_content) == 1 and openai_content[0]['type'] == 'text':
-                        msg_dict['content'] = openai_content[0]['text']
-                    else:
-                        msg_dict['content'] = openai_content
+                    msg_dict['content'] = _finalize_openai_content(openai_content)
                 else:
                     msg_dict['content'] = ''
                 msg_dict['tool_calls'] = tool_calls
                 messages.append(msg_dict)
             elif openai_content:
-                # If there's only a single text block, flatten it to a string
-                if len(openai_content) == 1 and openai_content[0]['type'] == 'text':
-                    messages.append({'role': role, 'content': openai_content[0]['text']})
-                else:
-                    messages.append({'role': role, 'content': openai_content})
+                messages.append({'role': role, 'content': _finalize_openai_content(openai_content)})
         else:
             messages.append({'role': role, 'content': str(content) if content else ''})
 
@@ -312,7 +351,7 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
         openai_payload['max_tokens'] = anthropic_payload['max_tokens']
 
     # Common parameters
-    for param in ('temperature', 'top_p', 'stop_sequences', 'stream'):
+    for param in ('temperature', 'top_p', 'top_k', 'stop_sequences', 'stream', 'metadata', 'service_tier'):
         if param in anthropic_payload:
             if param == 'stop_sequences':
                 openai_payload['stop'] = anthropic_payload[param]
@@ -324,14 +363,17 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
         openai_tools = []
         for tool in anthropic_payload['tools']:
             openai_tools.append(
-                {
-                    'type': 'function',
-                    'function': {
-                        'name': tool.get('name', ''),
-                        'description': tool.get('description', ''),
-                        'parameters': tool.get('input_schema', {}),
+                _copy_cache_control(
+                    tool,
+                    {
+                        'type': 'function',
+                        'function': {
+                            'name': tool.get('name', ''),
+                            'description': tool.get('description', ''),
+                            'parameters': tool.get('input_schema', {}),
+                        },
                     },
-                }
+                )
             )
         openai_payload['tools'] = openai_tools
 
@@ -382,7 +424,7 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
         content.append({'type': 'text', 'text': message_content})
 
     # Tool calls -> tool_use blocks
-    tool_calls = message.get('tool_calls', [])
+    tool_calls = message.get('tool_calls') or []
     for tool_call in tool_calls:
         function = tool_call.get('function', {})
         try:
@@ -404,6 +446,10 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
         'input_tokens': openai_usage.get('prompt_tokens', 0),
         'output_tokens': openai_usage.get('completion_tokens', 0),
     }
+    if 'cache_creation_input_tokens' in openai_usage:
+        usage['cache_creation_input_tokens'] = openai_usage['cache_creation_input_tokens']
+    if 'cache_read_input_tokens' in openai_usage:
+        usage['cache_read_input_tokens'] = openai_usage['cache_read_input_tokens']
 
     return {
         'id': openai_response.get('id', f'msg_{_uuid.uuid4().hex[:24]}'),
@@ -703,4 +749,3 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
     # Emit message_stop
     yield f'event: message_stop\ndata: {json.dumps({"type": "message_stop"})}\n\n'.encode()
-
