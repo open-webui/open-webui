@@ -4473,6 +4473,34 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
                                 reasoning_item['status'] = 'completed'
 
+                            # Some providers (e.g. vLLM with reasoning disabled) may
+                            # incorrectly place the actual answer in reasoning_content
+                            # while never emitting content, resulting in an output that
+                            # contains only reasoning items with no message item.  Detect
+                            # this case and convert the reasoning into a regular message.
+                            has_message = any(
+                                item.get('type') == 'message' for item in output
+                            )
+                            if not has_message:
+                                # Extract text from all reasoning content and replace
+                                # with a single message item
+                                text = ''
+                                for item in output:
+                                    for part in item.get('content', []):
+                                        if part.get('type') == 'output_text':
+                                            text += part.get('text', '')
+
+                                output = [
+                                    {
+                                        'type': 'message',
+                                        'id': output_id('msg'),
+                                        'status': 'completed',
+                                        'role': 'assistant',
+                                        'content': [{'type': 'output_text', 'text': text}],
+                                    }
+                                ]
+                                content = text
+
                     if response_tool_calls:
                         tool_calls.append(_split_tool_calls(response_tool_calls))
 
