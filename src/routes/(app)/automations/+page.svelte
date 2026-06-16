@@ -50,15 +50,19 @@
 
 	let page = 1;
 
-	// Debounce only query changes (gate behind loaded to prevent double-fetch on mount)
-	$: if (loaded && query !== undefined) {
+	const handleSearchInput = () => {
+		if (!loaded) return;
+
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			getAutomationList();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				getAutomationList();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to page/filter changes (gate behind loaded)
 	$: if (loaded && page && statusFilter !== undefined) {
@@ -296,6 +300,7 @@
 							<input
 								class="w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 								bind:value={query}
+								on:input={handleSearchInput}
 								aria-label={$i18n.t('Search Automations')}
 								placeholder={$i18n.t('Search Automations')}
 								maxlength="500"
@@ -308,6 +313,7 @@
 										aria-label={$i18n.t('Clear search')}
 										on:click={() => {
 											query = '';
+											handleSearchInput();
 										}}
 									>
 										<XMark className="size-3" strokeWidth="2" />

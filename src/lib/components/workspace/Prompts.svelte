@@ -59,15 +59,17 @@
 
 	let page = 1;
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			getPromptList();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				getPromptList();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to page/filter changes
 	$: if (page && selectedTag !== undefined && viewOption !== undefined) {
@@ -332,6 +334,7 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search Prompts')}
 					placeholder={$i18n.t('Search Prompts')}
 				/>
@@ -343,6 +346,7 @@
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
+								handleSearchInput();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />

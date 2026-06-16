@@ -100,13 +100,16 @@
 		}
 	};
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			getUserList();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				getUserList();
+			}
 		}, 300);
-	}
+	};
 
 	$: if (page !== null && orderBy !== null && direction !== null) {
 		getUserList();
@@ -210,6 +213,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						on:input={handleSearchInput}
 						aria-label={$i18n.t('Search')}
 						placeholder={$i18n.t('Search')}
 					/>

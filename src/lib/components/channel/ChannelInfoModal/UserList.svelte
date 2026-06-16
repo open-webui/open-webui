@@ -78,13 +78,14 @@
 		}
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined && channel !== null) {
+	const handleSearchInput = () => {
+		if (channel === null) return;
+
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
 			getUserList();
 		}, 300);
-	}
+	};
 
 	// Immediate response to page/sort changes
 	$: if (channel !== null && page && orderBy && direction) {
@@ -142,6 +143,7 @@
 						<input
 							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 							bind:value={query}
+							on:input={handleSearchInput}
 							placeholder={$i18n.t('Search')}
 						/>
 					</div>
