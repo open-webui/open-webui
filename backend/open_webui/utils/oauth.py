@@ -435,6 +435,13 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         # Attempt to fetch OAuth server metadata to get registration endpoint & scopes
         resource_metadata = await get_protected_resource_metadata(oauth_server_url)
         resource = resource_metadata.resource
+
+        # Prefer the resource-specific scopes from the Protected Resource Metadata
+        # (RFC 9728) over the AS's full scopes_supported catalog, for least
+        # privilege. Mirrors the static-credentials flow (#24690).
+        if resource_metadata.scopes_supported:
+            oauth_client_metadata.scope = ' '.join(resource_metadata.scopes_supported)
+
         discovery_urls = resource_metadata.get_discovery_urls(oauth_server_url)
         for url in discovery_urls:
             async with aiohttp.ClientSession(trust_env=True) as session:
