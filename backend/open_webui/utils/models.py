@@ -368,7 +368,11 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     models_dict = {model['id']: model for model in models}
     if isinstance(request.app.state.MODELS, RedisDict):
-        request.app.state.MODELS.set(models_dict)
+        try:
+            request.app.state.MODELS.set(models_dict)
+        except Exception as e:
+            log.warning(f'Failed to update Redis model cache, using in-process cache: {e}')
+            request.app.state.MODELS = models_dict
     else:
         request.app.state.MODELS = models_dict
 

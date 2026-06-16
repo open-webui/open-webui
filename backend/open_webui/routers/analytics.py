@@ -367,6 +367,12 @@ async def get_model_overview(
 ):
     """Get model overview with feedback history and chat tags."""
 
+    # Calculate start date for history
+    now = datetime.now()
+    start_dt = None
+    if days > 0:
+        start_dt = now - timedelta(days=days)
+
     # Get chat IDs that used this model
     chat_ids = await ChatMessages.get_chat_ids_by_model_id(
         model_id=model_id,
@@ -377,31 +383,18 @@ async def get_model_overview(
         db=db,
     )
 
-    # Get feedback history per day
-    history_counts: dict[str, dict] = defaultdict(lambda: {'won': 0, 'lost': 0})
-
-    # Calculate start date for history
-    now = datetime.now()
-    start_dt = None
-    if days > 0:
-        start_dt = now - timedelta(days=days)
-
-    for chat_id in chat_ids:
-        feedbacks = await Feedbacks.get_feedbacks_by_chat_id(chat_id, db=db)
-        for fb in feedbacks:
-            if fb.data and 'rating' in fb.data:
-                rating = fb.data['rating']
-                fb_date = datetime.fromtimestamp(fb.created_at)
-
-                # Filter by date range
-                if start_dt and fb_date < start_dt:
-                    continue
-
-                date_str = fb_date.strftime('%Y-%m-%d')
-                if rating == 1:
-                    history_counts[date_str]['won'] += 1
-                elif rating == -1:
-                    history_counts[date_str]['lost'] += 1
+    history_rows = await Feedbacks.get_model_feedback_counts_by_day(
+        model_id=model_id,
+        start_date=int(start_dt.timestamp()) if start_dt else None,
+        db=db,
+    )
+    history_counts = {
+        entry.date: {
+            'won': entry.won,
+            'lost': entry.lost,
+        }
+        for entry in history_rows
+    }
 
     # Fill in missing days
     history = []
@@ -430,10 +423,14 @@ async def get_model_overview(
 
     # Get chat tags
     tag_counts: dict[str, int] = defaultdict(int)
-    for chat_id in chat_ids:
-        chat = await Chats.get_chat_by_id(chat_id, db=db)
-        if chat and chat.meta:
-            for tag in chat.meta.get('tags', []):
+    if chat_ids:
+        chat_metas = await Chats.get_chat_metas_by_chat_ids(
+            chat_ids,
+            include_archived=True,
+            db=db,
+        )
+        for meta in chat_metas:
+            for tag in meta.get('tags', []):
                 tag_counts[tag] += 1
 
     # Sort by count and take top 10

@@ -957,6 +957,20 @@ class ChatTable:
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    async def get_chat_metas_by_chat_ids(
+        self,
+        chat_ids: list[str],
+        include_archived: bool = False,
+        db: AsyncSession | None = None,
+    ) -> list[dict]:
+        async with get_async_db_context(db) as session:
+            stmt = select(Chat.meta).filter(Chat.id.in_(chat_ids))
+            if not include_archived:
+                stmt = stmt.filter_by(archived=False)
+
+            result = await session.execute(stmt)
+            return [meta for meta in result.scalars().all() if isinstance(meta, dict)]
+
     # retrieve conversation
     async def get_chat_by_id(
         self,
@@ -1388,7 +1402,6 @@ class ChatTable:
                 }
                 for chat in all_chats
             ]
-
 
     async def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
