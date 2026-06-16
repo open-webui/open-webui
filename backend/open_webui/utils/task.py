@@ -147,10 +147,13 @@ def truncate_content(content: str, max_chars: int, mode: str = 'middletruncate')
     if mode == 'start':
         return content[:max_chars]
     elif mode == 'end':
-        return content[-max_chars:]
+        # ``content[-max_chars:]`` returns the whole string when max_chars is 0
+        # because ``-0 == 0``; guard against that so 0 truncates to empty.
+        return content[-max_chars:] if max_chars else ''
     else:  # middletruncate
         half = max_chars // 2
-        return f'{content[:half]}...{content[-(max_chars - half) :]}'
+        tail = max_chars - half
+        return f'{content[:half]}...{content[-tail:] if tail else ""}'
 
 
 def apply_content_filter(messages: list[dict], filter_str: str) -> list[dict]:
