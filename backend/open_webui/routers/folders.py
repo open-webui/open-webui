@@ -40,6 +40,25 @@ router = APIRouter()
 from open_webui.utils.access_control.folders import has_folder_access as _has_folder_access
 
 
+async def check_folders_permission(request: Request, user, db=None):
+    """Verify the folders feature is enabled and the user has permission."""
+    if request.app.state.config.ENABLE_FOLDERS is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    if user.role != 'admin' and not await has_permission(
+        user.id,
+        'features.folders',
+        request.app.state.config.USER_PERMISSIONS,
+        db=db,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
 ############################
 # Get Folders
 ############################
@@ -51,22 +70,7 @@ async def get_folders(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if request.app.state.config.ENABLE_FOLDERS is False:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    if user.role != 'admin' and not await has_permission(
-        user.id,
-        'features.folders',
-        request.app.state.config.USER_PERMISSIONS,
-        db=db,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    await check_folders_permission(request, user, db=db)
 
     folders = await Folders.get_folders_by_user_id(user.id, db=db)
 
@@ -96,10 +100,12 @@ async def get_folders(
 
 @router.post('/')
 async def create_folder(
+    request: Request,
     form_data: FolderForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
         form_data.parent_id, user.id, form_data.name, db=db
     )
@@ -155,6 +161,7 @@ async def get_shared_folders(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get all folders shared with the current user (not owned by them)."""
+    await check_folders_permission(request, user, db=db)
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     group_ids = {g.id for g in groups}
 
@@ -207,7 +214,8 @@ async def get_shared_folders(
 
 
 @router.get('/{id}', response_model=None)
-async def get_folder_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_folder_by_id(request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
@@ -232,11 +240,13 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user), db: AsyncSe
 
 @router.post('/{id}/update')
 async def update_folder_name_by_id(
+    request: Request,
     id: str,
     form_data: FolderUpdateForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if not folder:
         # Check shared write access
@@ -292,11 +302,13 @@ class FolderParentIdForm(BaseModel):
 
 @router.post('/{id}/update/parent')
 async def update_folder_parent_id_by_id(
+    request: Request,
     id: str,
     form_data: FolderParentIdForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
@@ -337,11 +349,13 @@ class FolderIsExpandedForm(BaseModel):
 
 @router.post('/{id}/update/expanded')
 async def update_folder_is_expanded_by_id(
+    request: Request,
     id: str,
     form_data: FolderIsExpandedForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
         try:
@@ -380,6 +394,7 @@ async def update_folder_access_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id(id, db=db)
     if not folder:
         raise HTTPException(
@@ -419,11 +434,13 @@ async def update_folder_access_by_id(
 
 @router.get('/{id}/shared/chats')
 async def get_shared_folder_chats(
+    request: Request,
     id: str,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get chats within a shared folder. Returns readonly flag based on permission."""
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id(id, db=db)
     if not folder:
         raise HTTPException(
@@ -475,6 +492,7 @@ async def delete_folder_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
 
     if not folder:
