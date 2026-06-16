@@ -38,7 +38,7 @@ from open_webui.utils.auth import (
     get_verified_user,
     validate_password,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -201,6 +201,8 @@ class AccessGrantsPermissions(BaseModel):
 
 
 class ChatPermissions(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     controls: bool = True
     valves: bool = True
     system_prompt: bool = True
@@ -215,6 +217,7 @@ class ChatPermissions(BaseModel):
     edit: bool = True
     share: bool = True
     export: bool = True
+    import_: bool = Field(default=True, alias='import')
     stt: bool = True
     tts: bool = True
     call: bool = True
@@ -265,7 +268,7 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
 
 @router.post('/default/permissions')
 async def update_default_user_permissions(request: Request, form_data: UserPermissions, user=Depends(get_admin_user)):
-    request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
+    request.app.state.config.USER_PERMISSIONS = form_data.model_dump(by_alias=True)
     return request.app.state.config.USER_PERMISSIONS
 
 
