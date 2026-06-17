@@ -831,6 +831,17 @@ class ChatTable:
                 for chat in all_chats
             ]
 
+    async def count_archived_chats_by_user_id(
+        self,
+        user_id: str,
+        db: AsyncSession | None = None,
+    ) -> int:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(func.count(Chat.id)).filter_by(user_id=user_id, archived=True)
+            )
+            return result.scalar() or 0
+
     async def get_shared_chat_list_by_user_id(
         self,
         user_id: str,
