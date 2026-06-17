@@ -17,7 +17,7 @@
 	let enableMemory = false;
 
 	onMount(async () => {
-		enableMemory = $settings?.memory ?? false;
+		enableMemory = $settings?.memory ?? $config?.features?.enable_memories ?? false;
 	});
 </script>
 

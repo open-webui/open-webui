@@ -2244,7 +2244,7 @@
 			}
 		}
 
-		if ($settings?.memory ?? false) {
+		if ($settings?.memory ?? $config?.features?.enable_memories ?? false) {
 			features = { ...features, memory: true };
 		}
 
