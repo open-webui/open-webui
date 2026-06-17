@@ -707,6 +707,14 @@
 				return;
 			}
 
+			// Normalize optional collections: a partial diff response (missing
+			// or null arrays) must not crash the .map/.some/.length calls below.
+			diff.deleted = diff.deleted ?? [];
+			diff.modified = diff.modified ?? [];
+			diff.added = diff.added ?? [];
+			diff.rmdir = diff.rmdir ?? [];
+			diff.mkdir = diff.mkdir ?? [];
+
 			// ── 4. Cleanup — remove deleted + stale modified files first ──
 			const staleFileIds = [
 				...diff.deleted.map((d: any) => d.file_id),
