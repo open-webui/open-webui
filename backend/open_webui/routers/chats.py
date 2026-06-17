@@ -12,6 +12,7 @@ from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.chats import (
     AggregateChatStats,
     ChatBody,
@@ -32,6 +33,7 @@ from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
+from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.middleware import serialize_output
 from open_webui.utils.misc import get_message_list
@@ -41,6 +43,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def require_chat_import_permission(request: Request, user, db: AsyncSession):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.import', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
 
 ############################
 # GetChatList
@@ -400,7 +413,7 @@ async def export_chat_stats(
     user=Depends(get_verified_user),
 ):
     # Check if the user has permission to share/export chats
-    if (user.role != 'admin') and (not request.app.state.config.ENABLE_COMMUNITY_SHARING):
+    if (user.role != 'admin') and (not await Config.get('ui.enable_community_sharing')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -449,7 +462,7 @@ async def export_single_chat_stats(
     Returns ChatStatsExport for the specified chat.
     """
     # Check if the user has permission to share/export chats
-    if (user.role != 'admin') and (not request.app.state.config.ENABLE_COMMUNITY_SHARING):
+    if (user.role != 'admin') and (not await Config.get('ui.enable_community_sharing')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -496,7 +509,7 @@ async def delete_all_user_chats(
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'user' and not await has_permission(
-        user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS
+        user.id, 'chat.delete', await Config.get('user.permissions')
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -561,10 +574,13 @@ async def create_new_chat(
     # to assume the column is clean. Also catches non-UUID / nonexistent IDs.
     if form_data.folder_id is not None:
         if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
+            # Check shared folder write access
+            shared_folder = await Folders.get_folder_by_id(form_data.folder_id, db=db)
+            if not shared_folder or not await has_folder_access(user.id, shared_folder, 'write', db):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
 
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
@@ -581,10 +597,13 @@ async def create_new_chat(
 
 @router.post('/import', response_model=list[ChatResponse])
 async def import_chats(
+    request: Request,
     form_data: ChatsImportForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_chat_import_permission(request, user, db)
+
     try:
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
         return chats
@@ -801,6 +820,19 @@ async def get_archived_session_user_chat_list(
 
 
 ############################
+# GetArchivedChatsCount
+############################
+
+
+@router.get('/archived/count', response_model=int)
+async def get_archived_session_user_chat_count(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await Chats.count_archived_chats_by_user_id(user.id, db=db)
+
+
+############################
 # ArchiveAllChats
 ############################
 
@@ -950,6 +982,14 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
             )
             if has_grant:
                 chat = await Chats.get_chat_by_id(id, db=db)
+
+            # Check folder-based access (shared folders)
+            if not chat:
+                candidate = await Chats.get_chat_by_id(id, db=db)
+                if candidate and candidate.folder_id:
+                    folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
+                    if folder and await has_folder_access(user.id, folder, 'read', db):
+                        chat = candidate
 
     if chat:
         return ChatResponse(**chat.model_dump())
@@ -1138,7 +1178,7 @@ async def delete_chat_by_id(
 
         return result
     else:
-        if not await has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
+        if not await has_permission(user.id, 'chat.delete', await Config.get('user.permissions')):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1198,11 +1238,14 @@ class CloneForm(BaseModel):
 
 @router.post('/{id}/clone', response_model=ChatResponse | None)
 async def clone_chat_by_id(
+    request: Request,
     form_data: CloneForm,
     id: str,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    await require_chat_import_permission(request, user, db)
+
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         updated_chat = {
@@ -1246,8 +1289,13 @@ async def clone_chat_by_id(
 
 @router.post('/{id}/clone/shared', response_model=ChatResponse | None)
 async def clone_shared_chat_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
+    await require_chat_import_permission(request, user, db)
+
     chat = await Chats.get_chat_by_share_id(id, db=db)
 
     # Fallback: admins can also access any chat directly by chat ID
@@ -1350,7 +1398,7 @@ async def share_chat_by_id(
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS
+        user.id, 'chat.share', await Config.get('user.permissions')
     ):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
@@ -1426,7 +1474,7 @@ async def update_shared_chat_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -1493,10 +1541,13 @@ async def update_chat_folder_id_by_id(
         # folder_id values. None is allowed (moves the chat out of any folder).
         if form_data.folder_id is not None:
             if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
+                # Check shared folder write access
+                shared_folder = await Folders.get_folder_by_id(form_data.folder_id, db=db)
+                if not shared_folder or not await has_folder_access(user.id, shared_folder, 'write', db):
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=ERROR_MESSAGES.NOT_FOUND,
+                    )
 
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         return ChatResponse(**chat.model_dump())

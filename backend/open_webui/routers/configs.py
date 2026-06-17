@@ -7,7 +7,8 @@ from typing import Optional
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from mcp.shared.auth import OAuthMetadata
-from open_webui.config import BannerModel, async_save_config, get_config, save_config
+from open_webui.config import BannerModel
+from open_webui.models.config import Config
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -34,6 +35,44 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 
+CONNECTIONS_CONFIG_KEYS = {
+    'ENABLE_DIRECT_CONNECTIONS': 'direct.enable',
+    'ENABLE_BASE_MODELS_CACHE': 'models.base_models_cache',
+}
+CODE_EXECUTION_CONFIG_KEYS = {
+    'ENABLE_CODE_EXECUTION': 'code_execution.enable',
+    'CODE_EXECUTION_ENGINE': 'code_execution.engine',
+    'CODE_EXECUTION_JUPYTER_URL': 'code_execution.jupyter.url',
+    'CODE_EXECUTION_JUPYTER_AUTH': 'code_execution.jupyter.auth',
+    'CODE_EXECUTION_JUPYTER_AUTH_TOKEN': 'code_execution.jupyter.auth_token',
+    'CODE_EXECUTION_JUPYTER_AUTH_PASSWORD': 'code_execution.jupyter.auth_password',
+    'CODE_EXECUTION_JUPYTER_TIMEOUT': 'code_execution.jupyter.timeout',
+    'ENABLE_CODE_INTERPRETER': 'code_interpreter.enable',
+    'CODE_INTERPRETER_ENGINE': 'code_interpreter.engine',
+    'CODE_INTERPRETER_PROMPT_TEMPLATE': 'code_interpreter.prompt_template',
+    'CODE_INTERPRETER_JUPYTER_URL': 'code_interpreter.jupyter.url',
+    'CODE_INTERPRETER_JUPYTER_AUTH': 'code_interpreter.jupyter.auth',
+    'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN': 'code_interpreter.jupyter.auth_token',
+    'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD': 'code_interpreter.jupyter.auth_password',
+    'CODE_INTERPRETER_JUPYTER_TIMEOUT': 'code_interpreter.jupyter.timeout',
+}
+MODELS_CONFIG_KEYS = {
+    'DEFAULT_MODELS': 'ui.default_models',
+    'DEFAULT_PINNED_MODELS': 'ui.default_pinned_models',
+    'MODEL_ORDER_LIST': 'ui.model_order_list',
+    'DEFAULT_MODEL_METADATA': 'models.default_metadata',
+    'DEFAULT_MODEL_PARAMS': 'models.default_params',
+}
+
+
+async def get_config_values(key_map: dict[str, str]) -> dict:
+    values = await Config.get_many(*key_map.values())
+    return {field: values[storage_key] for field, storage_key in key_map.items() if storage_key in values}
+
+
+def config_updates(data: dict, key_map: dict[str, str]) -> dict:
+    return {key_map[field]: value for field, value in data.items() if field in key_map}
+
 
 ############################
 # ImportConfig
@@ -48,9 +87,8 @@ class ImportConfigForm(BaseModel):
 
 @router.post('/import', response_model=dict)
 async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
-    await async_save_config(form_data.config)
-    request.app.state.config._sync_to_redis()
-    return get_config()
+    await Config.upsert(form_data.config)
+    return await Config.get_all()
 
 
 ############################
@@ -60,7 +98,12 @@ async def import_config(request: Request, form_data: ImportConfigForm, user=Depe
 
 @router.get('/export', response_model=dict)
 async def export_config(user=Depends(get_admin_user)):
-    return get_config()
+    return await Config.get_all()
+
+
+@router.get('/namespace/{namespace}', response_model=dict)
+async def get_config_namespace(namespace: str, user=Depends(get_admin_user)):
+    return await Config.get_namespace(namespace)
 
 
 ############################
@@ -75,10 +118,7 @@ class ConnectionsConfigForm(BaseModel):
 
 @router.get('/connections', response_model=ConnectionsConfigForm)
 async def get_connections_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'ENABLE_DIRECT_CONNECTIONS': request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
-        'ENABLE_BASE_MODELS_CACHE': request.app.state.config.ENABLE_BASE_MODELS_CACHE,
-    }
+    return await get_config_values(CONNECTIONS_CONFIG_KEYS)
 
 
 @router.post('/connections', response_model=ConnectionsConfigForm)
@@ -87,13 +127,8 @@ async def set_connections_config(
     form_data: ConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.ENABLE_DIRECT_CONNECTIONS = form_data.ENABLE_DIRECT_CONNECTIONS
-    request.app.state.config.ENABLE_BASE_MODELS_CACHE = form_data.ENABLE_BASE_MODELS_CACHE
-
-    return {
-        'ENABLE_DIRECT_CONNECTIONS': request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
-        'ENABLE_BASE_MODELS_CACHE': request.app.state.config.ENABLE_BASE_MODELS_CACHE,
-    }
+    await Config.upsert(config_updates(form_data.model_dump(), CONNECTIONS_CONFIG_KEYS))
+    return await get_config_values(CONNECTIONS_CONFIG_KEYS)
 
 
 class OAuthClientRegistrationForm(BaseModel):
@@ -167,9 +202,7 @@ class ToolServersConfigForm(BaseModel):
 
 @router.get('/tool_servers', response_model=ToolServersConfigForm)
 async def get_tool_servers_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'TOOL_SERVER_CONNECTIONS': request.app.state.config.TOOL_SERVER_CONNECTIONS,
-    }
+    return {'TOOL_SERVER_CONNECTIONS': await Config.get('tool_server.connections')}
 
 
 @router.post('/tool_servers', response_model=ToolServersConfigForm)
@@ -178,7 +211,8 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
-    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+    existing_connections = await Config.get('tool_server.connections', []) or []
+    for connection in existing_connections:
         server_type = connection.get('type', 'openapi')
         auth_type = connection.get('auth_type', 'none')
 
@@ -193,13 +227,12 @@ async def set_tool_servers_config(
                 pass
 
     # Set new tool server connections
-    request.app.state.config.TOOL_SERVER_CONNECTIONS = [
-        connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
-    ]
+    connections = [connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS]
+    await Config.upsert({'tool_server.connections': connections})
 
     await set_tool_servers(request)
 
-    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+    for connection in connections:
         server_type = connection.get('type', 'openapi')
         if server_type == 'mcp':
             server_id = connection.get('info', {}).get('id')
@@ -216,9 +249,7 @@ async def set_tool_servers_config(
                     log.debug(f'Failed to add OAuth client for MCP tool server: {e}')
                     continue
 
-    return {
-        'TOOL_SERVER_CONNECTIONS': request.app.state.config.TOOL_SERVER_CONNECTIONS,
-    }
+    return {'TOOL_SERVER_CONNECTIONS': connections}
 
 
 class TerminalServerConnection(BaseModel):
@@ -249,9 +280,7 @@ class TerminalServersConfigForm(BaseModel):
 
 @router.get('/terminal_servers')
 async def get_terminal_servers_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'TERMINAL_SERVER_CONNECTIONS': request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
-    }
+    return {'TERMINAL_SERVER_CONNECTIONS': await Config.get('terminal_server.connections')}
 
 
 @router.post('/terminal_servers')
@@ -260,15 +289,12 @@ async def set_terminal_servers_config(
     form_data: TerminalServersConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.TERMINAL_SERVER_CONNECTIONS = [
-        connection.model_dump() for connection in form_data.TERMINAL_SERVER_CONNECTIONS
-    ]
+    connections = [connection.model_dump() for connection in form_data.TERMINAL_SERVER_CONNECTIONS]
+    await Config.upsert({'terminal_server.connections': connections})
 
     await set_terminal_servers(request)
 
-    return {
-        'TERMINAL_SERVER_CONNECTIONS': request.app.state.config.TERMINAL_SERVER_CONNECTIONS,
-    }
+    return {'TERMINAL_SERVER_CONNECTIONS': connections}
 
 
 @router.post('/terminal_servers/verify')
@@ -518,67 +544,15 @@ class CodeInterpreterConfigForm(BaseModel):
 
 @router.get('/code_execution', response_model=CodeInterpreterConfigForm)
 async def get_code_execution_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'ENABLE_CODE_EXECUTION': request.app.state.config.ENABLE_CODE_EXECUTION,
-        'CODE_EXECUTION_ENGINE': request.app.state.config.CODE_EXECUTION_ENGINE,
-        'CODE_EXECUTION_JUPYTER_URL': request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
-        'CODE_EXECUTION_JUPYTER_AUTH': request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
-        'CODE_EXECUTION_JUPYTER_AUTH_TOKEN': request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
-        'CODE_EXECUTION_JUPYTER_AUTH_PASSWORD': request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
-        'CODE_EXECUTION_JUPYTER_TIMEOUT': request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
-        'ENABLE_CODE_INTERPRETER': request.app.state.config.ENABLE_CODE_INTERPRETER,
-        'CODE_INTERPRETER_ENGINE': request.app.state.config.CODE_INTERPRETER_ENGINE,
-        'CODE_INTERPRETER_PROMPT_TEMPLATE': request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
-        'CODE_INTERPRETER_JUPYTER_URL': request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
-        'CODE_INTERPRETER_JUPYTER_AUTH': request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
-        'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN': request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
-        'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD': request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
-        'CODE_INTERPRETER_JUPYTER_TIMEOUT': request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
-    }
+    return await get_config_values(CODE_EXECUTION_CONFIG_KEYS)
 
 
 @router.post('/code_execution', response_model=CodeInterpreterConfigForm)
 async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
-    request.app.state.config.ENABLE_CODE_EXECUTION = form_data.ENABLE_CODE_EXECUTION
-
-    request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE
-    request.app.state.config.CODE_EXECUTION_JUPYTER_URL = form_data.CODE_EXECUTION_JUPYTER_URL
-    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH = form_data.CODE_EXECUTION_JUPYTER_AUTH
-    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN = form_data.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
-    request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = form_data.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
-    request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT = form_data.CODE_EXECUTION_JUPYTER_TIMEOUT
-
-    request.app.state.config.ENABLE_CODE_INTERPRETER = form_data.ENABLE_CODE_INTERPRETER
-    request.app.state.config.CODE_INTERPRETER_ENGINE = form_data.CODE_INTERPRETER_ENGINE
-    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE = form_data.CODE_INTERPRETER_PROMPT_TEMPLATE
-
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_URL = form_data.CODE_INTERPRETER_JUPYTER_URL
-
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH = form_data.CODE_INTERPRETER_JUPYTER_AUTH
-
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = form_data.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = form_data.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
-    request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT = form_data.CODE_INTERPRETER_JUPYTER_TIMEOUT
-
-    return {
-        'ENABLE_CODE_EXECUTION': request.app.state.config.ENABLE_CODE_EXECUTION,
-        'CODE_EXECUTION_ENGINE': request.app.state.config.CODE_EXECUTION_ENGINE,
-        'CODE_EXECUTION_JUPYTER_URL': request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
-        'CODE_EXECUTION_JUPYTER_AUTH': request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
-        'CODE_EXECUTION_JUPYTER_AUTH_TOKEN': request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN,
-        'CODE_EXECUTION_JUPYTER_AUTH_PASSWORD': request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD,
-        'CODE_EXECUTION_JUPYTER_TIMEOUT': request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
-        'ENABLE_CODE_INTERPRETER': request.app.state.config.ENABLE_CODE_INTERPRETER,
-        'CODE_INTERPRETER_ENGINE': request.app.state.config.CODE_INTERPRETER_ENGINE,
-        'CODE_INTERPRETER_PROMPT_TEMPLATE': request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE,
-        'CODE_INTERPRETER_JUPYTER_URL': request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
-        'CODE_INTERPRETER_JUPYTER_AUTH': request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH,
-        'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN': request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
-        'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD': request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
-        'CODE_INTERPRETER_JUPYTER_TIMEOUT': request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
-    }
+    await Config.upsert(config_updates(form_data.model_dump(), CODE_EXECUTION_CONFIG_KEYS))
+    return await get_config_values(CODE_EXECUTION_CONFIG_KEYS)
 
 
 ############################
@@ -595,35 +569,19 @@ class ModelsConfigForm(BaseModel):
 @router.get('/models/defaults')
 async def get_models_defaults(request: Request, user=Depends(get_verified_user)):
     return {
-        'DEFAULT_MODEL_METADATA': request.app.state.config.DEFAULT_MODEL_METADATA,
+        'DEFAULT_MODEL_METADATA': await Config.get('models.default_metadata'),
     }
 
 
 @router.get('/models', response_model=ModelsConfigForm)
 async def get_models_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'DEFAULT_MODELS': request.app.state.config.DEFAULT_MODELS,
-        'DEFAULT_PINNED_MODELS': request.app.state.config.DEFAULT_PINNED_MODELS,
-        'MODEL_ORDER_LIST': request.app.state.config.MODEL_ORDER_LIST,
-        'DEFAULT_MODEL_METADATA': request.app.state.config.DEFAULT_MODEL_METADATA,
-        'DEFAULT_MODEL_PARAMS': request.app.state.config.DEFAULT_MODEL_PARAMS,
-    }
+    return await get_config_values(MODELS_CONFIG_KEYS)
 
 
 @router.post('/models', response_model=ModelsConfigForm)
 async def set_models_config(request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)):
-    request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
-    request.app.state.config.DEFAULT_PINNED_MODELS = form_data.DEFAULT_PINNED_MODELS
-    request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
-    request.app.state.config.DEFAULT_MODEL_METADATA = form_data.DEFAULT_MODEL_METADATA
-    request.app.state.config.DEFAULT_MODEL_PARAMS = form_data.DEFAULT_MODEL_PARAMS
-    return {
-        'DEFAULT_MODELS': request.app.state.config.DEFAULT_MODELS,
-        'DEFAULT_PINNED_MODELS': request.app.state.config.DEFAULT_PINNED_MODELS,
-        'MODEL_ORDER_LIST': request.app.state.config.MODEL_ORDER_LIST,
-        'DEFAULT_MODEL_METADATA': request.app.state.config.DEFAULT_MODEL_METADATA,
-        'DEFAULT_MODEL_PARAMS': request.app.state.config.DEFAULT_MODEL_PARAMS,
-    }
+    await Config.upsert(config_updates(form_data.model_dump(), MODELS_CONFIG_KEYS))
+    return await get_config_values(MODELS_CONFIG_KEYS)
 
 
 class PromptSuggestion(BaseModel):
@@ -642,8 +600,8 @@ async def set_default_suggestions(
     user=Depends(get_admin_user),
 ):
     data = form_data.model_dump()
-    request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = data['suggestions']
-    return request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS
+    await Config.upsert({'ui.prompt_suggestions': data['suggestions']})
+    return await Config.get('ui.prompt_suggestions')
 
 
 ############################
@@ -662,8 +620,8 @@ async def set_banners(
     user=Depends(get_admin_user),
 ):
     data = form_data.model_dump()
-    request.app.state.config.BANNERS = data['banners']
-    return request.app.state.config.BANNERS
+    await Config.upsert({'ui.banners': data['banners']})
+    return await Config.get('ui.banners')
 
 
 @router.get('/banners', response_model=list[BannerModel])
@@ -671,4 +629,4 @@ async def get_banners(
     request: Request,
     user=Depends(get_verified_user),
 ):
-    return request.app.state.config.BANNERS
+    return await Config.get('ui.banners')

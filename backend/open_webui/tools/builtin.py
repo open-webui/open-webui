@@ -18,6 +18,7 @@ from fastapi import Request
 
 from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
@@ -225,10 +226,10 @@ async def search_web(
         return json.dumps({'error': 'Request context not available'})
 
     try:
-        engine = __request__.app.state.config.WEB_SEARCH_ENGINE
+        engine = await Config.get('rag.web.search.engine')
         user = UserModel(**__user__) if __user__ else None
 
-        configured = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT
+        configured = await Config.get('rag.web.search.result_count')
         max_count = 5 if configured is None else configured
         count = max(1, min(count, max_count)) if count is not None else max_count
 
@@ -266,7 +267,7 @@ async def fetch_url(
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
         # Guard: content may be None if the web loader silently failed
         if content is not None:
-            max_length = getattr(__request__.app.state.config, 'WEB_FETCH_MAX_CONTENT_LENGTH', None)
+            max_length = await Config.get('rag.web.fetch.max_content_length')
             if max_length and max_length > 0 and len(content) > max_length:
                 content = content[:max_length] + '\n\n[Content truncated...]'
         else:
@@ -475,7 +476,7 @@ async def execute_code(
             )
             code = blocking_code + '\n' + code
 
-        engine = getattr(__request__.app.state.config, 'CODE_INTERPRETER_ENGINE', 'pyodide')
+        engine = await Config.get('code_interpreter.engine', 'pyodide')
         if engine == 'pyodide':
             # Execute via frontend pyodide using bidirectional event call
             if __event_call__ is None:
@@ -513,21 +514,22 @@ async def execute_code(
 
         elif engine == 'jupyter':
             from open_webui.utils.code_interpreter import execute_code_jupyter
+            jupyter_auth = await Config.get('code_interpreter.jupyter.auth')
 
             output = await execute_code_jupyter(
-                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                await Config.get('code_interpreter.jupyter.url'),
                 code,
                 (
-                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
-                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == 'token'
+                    await Config.get('code_interpreter.jupyter.auth_token')
+                    if jupyter_auth == 'token'
                     else None
                 ),
                 (
-                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
-                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == 'password'
+                    await Config.get('code_interpreter.jupyter.auth_password')
+                    if jupyter_auth == 'password'
                     else None
                 ),
-                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+                await Config.get('code_interpreter.jupyter.timeout'),
             )
 
             stdout = output.get('stdout', '')

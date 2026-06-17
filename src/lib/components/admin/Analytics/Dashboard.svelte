@@ -230,8 +230,6 @@
 		localStorage.setItem('analyticsCustomStart', customStart);
 		localStorage.setItem('analyticsCustomEnd', customEnd);
 	}
-
-	onMount(loadDashboard);
 </script>
 
 <!-- Header with title and period selector -->

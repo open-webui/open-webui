@@ -45,18 +45,18 @@
 	let allItemsLoaded = false;
 	let itemsLoading = false;
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			init();
 		}, 300);
-	}
+	};
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
 	});
 
-	$: if (viewOption !== undefined) {
+	$: if (loaded && viewOption !== undefined) {
 		init();
 	}
 
@@ -199,6 +199,7 @@
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search Knowledge')}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>
@@ -209,6 +210,7 @@
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
+								handleSearchInput();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />

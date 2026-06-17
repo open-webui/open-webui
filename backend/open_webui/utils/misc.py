@@ -69,6 +69,44 @@ def is_string_allowed(string: Union[str, Sequence[str]], filter_list: list[str |
     return True
 
 
+def _host_matches_pattern(host: str, pattern: str) -> bool:
+    """Match a hostname against a filter entry on DNS label boundaries.
+
+    `pattern` matches `host` when equal or a parent domain of it, so `corp.com`
+    matches `api.corp.com` but not `evilcorp.com`, and an IP literal matches only
+    itself. Avoids the raw-suffix confusion of a plain endswith.
+    """
+    host = (host or '').strip().lower().rstrip('.')
+    pattern = (pattern or '').strip().lower().rstrip('.')
+    if not host or not pattern:
+        return False
+    return host == pattern or host.endswith('.' + pattern)
+
+
+def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+    """Allow/block a hostname (or list of hostnames / resolved IPs) against a
+    WEB_FETCH_FILTER_LIST-style filter, matching on label boundaries.
+
+    Pass a parsed hostname, never a full URL: matching against a URL lets a path
+    component defeat the filter (e.g. ``https://blocked.example/x`` ends with ``/x``,
+    not the blocked host). Entries prefixed with ``!`` are blocked; the rest form an allowlist.
+    """
+    if not filter_list:
+        return True
+
+    allow_list, block_list = get_allow_block_lists(filter_list)
+    hosts = [host] if isinstance(host, str) else list(host or [])
+
+    if allow_list:
+        if not any(_host_matches_pattern(h, allowed) for h in hosts for allowed in allow_list):
+            return False
+
+    if any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list):
+        return False
+
+    return True
+
+
 def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.

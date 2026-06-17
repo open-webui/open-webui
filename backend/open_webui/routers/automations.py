@@ -14,6 +14,7 @@ from open_webui.models.automations import (
     AutomationRuns,
     Automations,
 )
+from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.automations import (
@@ -38,13 +39,14 @@ PAGE_ITEM_COUNT = 30
 
 
 async def check_automations_permission(request, user):
-    if not request.app.state.config.ENABLE_AUTOMATIONS:
+    config = await Config.get_many('automations.enable', 'user.permissions')
+    if not config.get('automations.enable'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
     if user.role != 'admin' and not await has_permission(
-        user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
+        user.id, 'features.automations', config.get('user.permissions')
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -72,7 +74,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
 
     # Max count (create only)
     if is_create:
-        max_count = request.app.state.config.AUTOMATION_MAX_COUNT
+        max_count = await Config.get('automations.max_count')
         if max_count:
             max_count = int(max_count)
             if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
@@ -82,7 +84,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
                 )
 
     # Min interval (create + update)
-    min_interval = request.app.state.config.AUTOMATION_MIN_INTERVAL
+    min_interval = await Config.get('automations.min_interval')
     if min_interval:
         min_interval = int(min_interval)
         if min_interval > 0:

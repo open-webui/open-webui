@@ -142,14 +142,17 @@
 		await getItemsPage();
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 
 		searchDebounceTimer = setTimeout(() => {
-			getItemsPage();
+			if (currentPage !== 1) {
+				currentPage = 1;
+			} else {
+				getItemsPage();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to filter/pagination changes
 	$: if (
@@ -161,15 +164,6 @@
 		includeContent !== undefined
 	) {
 		getItemsPage();
-	}
-
-	$: if (
-		query !== undefined &&
-		viewOption !== undefined &&
-		sortKey !== undefined &&
-		direction !== undefined
-	) {
-		reset();
 	}
 
 	const getItemsPage = async () => {
@@ -1313,6 +1307,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						on:input={handleSearchInput}
 						aria-label={$i18n.t('Search Collection')}
 						placeholder={$i18n.t('Search Collection')}
 						on:focus={() => {

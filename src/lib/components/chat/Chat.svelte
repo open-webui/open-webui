@@ -113,7 +113,6 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
-	import { getBanners } from '$lib/apis/configs';
 
 	export let chatIdProp = '';
 
@@ -168,6 +167,9 @@
 
 	let chat = null;
 	let tags = [];
+
+	// Read-only when viewing someone else's chat (e.g. via shared folder access)
+	$: readOnly = chat != null && chat.user_id !== $user?.id;
 
 	let chatTasks = [];
 
@@ -327,107 +329,117 @@
 		);
 	};
 
+	let settingDefaults = false;
 	const setDefaults = async () => {
-		if (!$tools) {
-			tools.set(await getTools(localStorage.token));
-		}
-		if (!$functions) {
-			functions.set(await getFunctions(localStorage.token));
-		}
-		if (!$skills) {
-			skills.set(await getSkills(localStorage.token));
-		}
-		if (selectedModels.length !== 1 && !atSelectedModel) {
-			return;
-		}
+		if (settingDefaults) return;
+		settingDefaults = true;
 
-		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
-			// Set Default Tools
-			if (model?.info?.meta?.toolIds) {
-				const defaultIds = [
-					...new Set(
-						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
-					)
-				];
+		try {
+			if (!$tools) {
+				tools.set(await getTools(localStorage.token));
+			}
+			if (!$functions) {
+				functions.set(await getFunctions(localStorage.token));
+			}
+			if (!$skills) {
+				skills.set(await getSkills(localStorage.token));
+			}
+			if (selectedModels.length !== 1 && !atSelectedModel) {
+				return;
+			}
 
-				// Separate unauthenticated OAuth tools
-				const unauthed = [];
-				const authed = [];
-				for (const id of defaultIds) {
-					const tool = $tools.find((t) => t.id === id);
-					if (tool && tool.authenticated === false) {
-						const parts = id.split(':');
-						const serverId = parts.at(-1) ?? id;
-						const authType =
-							parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
-						unauthed.push({ id, name: tool.name ?? id, serverId, authType });
-					} else {
-						authed.push(id);
+			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+			if (model) {
+				// Set Default Tools
+				if (model?.info?.meta?.toolIds) {
+					const defaultIds = [
+						...new Set(
+							[...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
+								$tools.find((t) => t.id === id)
+							)
+						)
+					];
+
+					// Separate unauthenticated OAuth tools
+					const unauthed = [];
+					const authed = [];
+					for (const id of defaultIds) {
+						const tool = $tools.find((t) => t.id === id);
+						if (tool && tool.authenticated === false) {
+							const parts = id.split(':');
+							const serverId = parts.at(-1) ?? id;
+							const authType =
+								parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
+							unauthed.push({ id, name: tool.name ?? id, serverId, authType });
+						} else {
+							authed.push(id);
+						}
+					}
+					selectedToolIds = authed;
+					pendingOAuthTools = unauthed;
+				} else if ($settings?.tools) {
+					selectedToolIds = $settings.tools;
+				} else {
+					selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
+				}
+
+				// Set Default Skills
+				if (model?.info?.meta?.skillIds) {
+					selectedSkillIds = [
+						...new Set(
+							[...(model?.info?.meta?.skillIds ?? [])].filter((id) =>
+								($skills ?? []).find((s) => s.id === id && s.is_active)
+							)
+						)
+					];
+				} else {
+					selectedSkillIds = [];
+				}
+
+				// Set Default Filters (Toggleable only)
+				if (model?.info?.meta?.defaultFilterIds) {
+					selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
+						model?.filters?.find((f) => f.id === id)
+					);
+				}
+
+				// Set Default Features
+				if (model?.info?.meta?.defaultFeatureIds) {
+					if (
+						model.info?.meta?.capabilities?.['image_generation'] &&
+						$config?.features?.enable_image_generation &&
+						($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+					) {
+						imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
+					}
+
+					if (
+						model.info?.meta?.capabilities?.['web_search'] &&
+						$config?.features?.enable_web_search &&
+						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+					) {
+						webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
+					}
+
+					if (
+						model.info?.meta?.capabilities?.['code_interpreter'] &&
+						$config?.features?.enable_code_interpreter &&
+						($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+					) {
+						codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
 					}
 				}
-				selectedToolIds = authed;
-				pendingOAuthTools = unauthed;
-			} else if ($settings?.tools) {
-				selectedToolIds = $settings.tools;
-			} else {
-				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
-			}
 
-			// Set Default Skills
-			if (model?.info?.meta?.skillIds) {
-				selectedSkillIds = [
-					...new Set(
-						[...(model?.info?.meta?.skillIds ?? [])].filter((id) =>
-							($skills ?? []).find((s) => s.id === id && s.is_active)
-						)
-					)
-				];
-			} else {
-				selectedSkillIds = [];
-			}
-
-			// Set Default Filters (Toggleable only)
-			if (model?.info?.meta?.defaultFilterIds) {
-				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
-					model?.filters?.find((f) => f.id === id)
-				);
-			}
-
-			// Set Default Features
-			if (model?.info?.meta?.defaultFeatureIds) {
-				if (
-					model.info?.meta?.capabilities?.['image_generation'] &&
-					$config?.features?.enable_image_generation &&
-					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-				) {
-					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
-				}
-
-				if (
-					model.info?.meta?.capabilities?.['web_search'] &&
-					$config?.features?.enable_web_search &&
-					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-				) {
-					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
-				}
-
-				if (
-					model.info?.meta?.capabilities?.['code_interpreter'] &&
-					$config?.features?.enable_code_interpreter &&
-					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
-				) {
-					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				// Set Default Terminal — only if the referenced terminal actually exists
+				if (model?.info?.meta?.terminalId) {
+					const tid = model.info.meta.terminalId;
+					if (isTerminalAvailable(tid)) {
+						selectedTerminalId.set(tid);
+					}
 				}
 			}
-
-			// Set Default Terminal — only if the referenced terminal actually exists
-			if (model?.info?.meta?.terminalId) {
-				const tid = model.info.meta.terminalId;
-				if (isTerminalAvailable(tid)) {
-					selectedTerminalId.set(tid);
-				}
-			}
+		} finally {
+			settingDefaults = false;
 		}
 	};
 
@@ -793,13 +805,6 @@
 			if (p.url.pathname === '/') {
 				await tick();
 				initNewChat();
-
-				// Re-fetch banners on navigation to homepage so newly configured banners appear
-				try {
-					banners.set(await getBanners(localStorage.token).catch(() => []));
-				} catch (e) {
-					console.error('Failed to refresh banners:', e);
-				}
 			}
 
 			stopAudio();
@@ -2099,8 +2104,9 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		// Build message_ids map: {model_id: assistant_message_id}
-		const messageIdsMap: Record<string, string> = {};
+		// Build message_ids list: [{model_id, message_id}, ...]
+		// Uses an array instead of a dict to support duplicate model IDs in side-by-side chat.
+		const messageIdsList: Array<{ model_id: string; message_id: string }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -2132,7 +2138,7 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
-				messageIdsMap[modelId] = responseMessageId;
+				messageIdsList.push({ model_id: modelId, message_id: responseMessageId });
 			}
 		}
 		history = history;
@@ -2178,7 +2184,7 @@
 		// Single request — backend fans out to all models
 		const primaryModelId = selectedModelIds[0];
 		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
-		const primaryResponseMessageId = messageIdsMap[primaryModelId];
+		const primaryResponseMessageId = messageIdsList[0]?.message_id;
 
 		if (primaryModel && primaryResponseMessageId) {
 			const chatEventEmitter = await getChatEventEmitter(primaryModel.id, _chatId);
@@ -2194,7 +2200,7 @@
 					primaryResponseMessageId,
 					_chatId,
 					{
-						messageIdsMap: selectedModelIds.length > 1 ? messageIdsMap : undefined,
+						messageIdsList: selectedModelIds.length > 1 ? messageIdsList : undefined,
 						regenerationPrompt
 					}
 				);
@@ -2263,11 +2269,11 @@
 		responseMessageId,
 		_chatId,
 		{
-			messageIdsMap,
+			messageIdsList,
 			regenerationPrompt,
 			continueResponse = false
 		}: {
-			messageIdsMap?: Record<string, string>;
+			messageIdsList?: Array<{ model_id: string; message_id: string }>;
 			regenerationPrompt?: string | null;
 			continueResponse?: boolean;
 		} = {}
@@ -2471,7 +2477,7 @@
 				folder_id: $selectedFolder?.id ?? undefined,
 
 				id: responseMessageId,
-				...(messageIdsMap ? { message_ids: messageIdsMap } : {}),
+				...(messageIdsList ? { message_ids: messageIdsList } : {}),
 				parent_id: userMessage?.parentId ?? null,
 				user_message: userMessage,
 				...(regenerationPrompt ? { regeneration_prompt: regenerationPrompt } : {}),
@@ -3027,6 +3033,7 @@
 					<FilesOverlay show={dragged} />
 					<Navbar
 						bind:this={navbarElement}
+						{readOnly}
 						chat={{
 							id: $chatId,
 							chat: {
@@ -3103,6 +3110,7 @@
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
+										{readOnly}
 										bind:history
 										bind:autoScroll
 										bind:prompt
@@ -3126,7 +3134,16 @@
 								</div>
 							</div>
 
-							<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+							{#if readOnly}
+							<div class="pb-6 z-10">
+								<div
+									class="text-xs text-gray-400 dark:text-gray-500 text-center"
+								>
+									{$i18n.t('Read only')}
+								</div>
+							</div>
+						{:else}
+						<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
 								<MessageInput
 									bind:this={messageInput}
 									{history}
@@ -3208,6 +3225,7 @@
 									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 								</div>
 							</div>
+							{/if}
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
