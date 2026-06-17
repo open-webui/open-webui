@@ -853,8 +853,25 @@ async def unarchive_all_chats(user=Depends(get_verified_user), db: AsyncSession 
 
 
 ############################
-# GetSharedChats
+# UnshareAllChats
 ############################
+
+
+@router.delete('/share/all', response_model=bool)
+async def unshare_all_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    # Collect chat_ids that have shares so we can clear share_id and access grants
+    shared_list = await SharedChats.get_by_user_id(user.id, db=db)
+    chat_ids = [s.chat_id for s in shared_list]
+
+    # Delete all shared_chat rows for this user
+    result = await SharedChats.delete_all_by_user_id(user.id, db=db)
+
+    # Clear share_id on the original chats and remove access grants
+    for chat_id in chat_ids:
+        await Chats.update_chat_share_id_by_id(chat_id, None, db=db)
+        await AccessGrants.set_access_grants('shared_chat', chat_id, [], db=db)
+
+    return result
 
 
 @router.get('/shared', response_model=list[SharedChatResponse])
