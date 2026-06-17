@@ -5,6 +5,8 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	dayjs.extend(calendar);
 
@@ -25,36 +27,105 @@
 	export let emptyMessage = 'No chats found';
 	export let onLoadMore: (() => void) | null = null;
 	export let onChatClick: ((chatId: string) => void) | null = null;
+
+	let orderBy = 'updated_at';
+	let direction: 'asc' | 'desc' = 'desc';
+
+	const toggleSort = (key: string) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = key === 'updated_at' ? 'desc' : 'asc';
+		}
+	};
+
+	$: sortedChatList = chatList
+		? [...chatList].sort((a, b) => {
+				if (orderBy === 'user_name') {
+					const aName = (a.user_name || '').toLowerCase();
+					const bName = (b.user_name || '').toLowerCase();
+					return direction === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName);
+				}
+				if (orderBy === 'title') {
+					const aTitle = (a.title || '').toLowerCase();
+					const bTitle = (b.title || '').toLowerCase();
+					return direction === 'asc' ? aTitle.localeCompare(bTitle) : bTitle.localeCompare(aTitle);
+				}
+				// updated_at (numeric)
+				return direction === 'asc' ? a.updated_at - b.updated_at : b.updated_at - a.updated_at;
+			})
+		: null;
 </script>
 
 <div>
-	{#if chatList && chatList.length > 0}
+	{#if sortedChatList && sortedChatList.length > 0}
 		<div class="flex text-xs font-medium mb-1.5">
 			{#if showUserInfo}
-				<div class="px-1.5 py-1 w-32">
-					{$i18n.t('User')}
-				</div>
+				<button
+					class="px-1.5 py-1 w-32 cursor-pointer select-none"
+					on:click={() => toggleSort('user_name')}
+				>
+					<div class="flex gap-1 items-center">
+						{$i18n.t('User')}
+						{#if orderBy === 'user_name'}
+							{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+									className="size-2"
+								/>{/if}
+						{:else}
+							<span class="invisible"><ChevronUp className="size-2" /></span>
+						{/if}
+					</div>
+				</button>
 			{/if}
-			<div class="px-1.5 py-1 {showUserInfo ? 'flex-1' : 'basis-3/5'}">
-				{$i18n.t('Title')}
-			</div>
-			<div class="px-1.5 py-1 hidden sm:flex {showUserInfo ? 'w-28' : 'basis-2/5'} justify-end">
-				{$i18n.t('Updated at')}
-			</div>
+			<button
+				class="px-1.5 py-1 {showUserInfo
+					? 'flex-1'
+					: 'basis-3/5'} cursor-pointer select-none text-left"
+				on:click={() => toggleSort('title')}
+			>
+				<div class="flex gap-1 items-center">
+					{$i18n.t('Title')}
+					{#if orderBy === 'title'}
+						{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+								className="size-2"
+							/>{/if}
+					{:else}
+						<span class="invisible"><ChevronUp className="size-2" /></span>
+					{/if}
+				</div>
+			</button>
+			<button
+				class="px-1.5 py-1 hidden sm:flex {showUserInfo
+					? 'w-28'
+					: 'basis-2/5'} justify-end cursor-pointer select-none"
+				on:click={() => toggleSort('updated_at')}
+			>
+				<div class="flex gap-1 items-center">
+					{$i18n.t('Updated at')}
+					{#if orderBy === 'updated_at'}
+						{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+								className="size-2"
+							/>{/if}
+					{:else}
+						<span class="invisible"><ChevronUp className="size-2" /></span>
+					{/if}
+				</div>
+			</button>
 		</div>
 	{/if}
 	<div class="max-h-[22rem] overflow-y-scroll">
-		{#if loading && (!chatList || chatList.length === 0)}
+		{#if loading && (!sortedChatList || sortedChatList.length === 0)}
 			<div class="flex justify-center py-8">
 				<Spinner />
 			</div>
-		{:else if !chatList || chatList.length === 0}
+		{:else if !sortedChatList || sortedChatList.length === 0}
 			<div class="text-center text-gray-500 text-sm py-8">
 				{$i18n.t(emptyMessage)}
 			</div>
 		{:else}
-			{#each chatList as chat, idx (chat.id)}
-				{#if chat.time_range && (idx === 0 || chat.time_range !== chatList[idx - 1]?.time_range)}
+			{#each sortedChatList as chat, idx (chat.id)}
+				{#if chat.time_range && (idx === 0 || chat.time_range !== sortedChatList[idx - 1]?.time_range)}
 					<div
 						class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
 							? ''
