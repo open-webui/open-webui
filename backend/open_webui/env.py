@@ -806,6 +806,16 @@ PROFILE_IMAGE_MAX_DATA_URI_SIZE = int(_profile_image_max_data_uri_size) if _prof
 
 ENABLE_FORWARD_USER_INFO_HEADERS = os.getenv('ENABLE_FORWARD_USER_INFO_HEADERS', 'False').lower() == 'true'
 
+# When enabled, forward the inbound client's User-Agent header to OpenAI-compatible
+# and Ollama backend requests, unless the outbound headers already define one.
+ENABLE_FORWARD_CLIENT_USER_AGENT = os.getenv('ENABLE_FORWARD_CLIENT_USER_AGENT', 'False').lower() == 'true'
+
+# Comma-separated allow-list of additional inbound client request headers to
+# forward to model backends. Existing outbound headers take precedence.
+FORWARD_CLIENT_HEADERS = tuple(
+    header.strip() for header in os.getenv('FORWARD_CLIENT_HEADERS', '').split(',') if header.strip()
+)
+
 FORWARD_USER_INFO_HEADER_USER_NAME = os.getenv('FORWARD_USER_INFO_HEADER_USER_NAME', 'X-OpenWebUI-User-Name')
 FORWARD_USER_INFO_HEADER_USER_ID = os.getenv('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
 FORWARD_USER_INFO_HEADER_USER_EMAIL = os.getenv('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
