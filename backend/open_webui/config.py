@@ -1171,6 +1171,12 @@ FIRECRAWL_API_BASE_URL = os.getenv('FIRECRAWL_API_BASE_URL', 'https://api.firecr
 
 FIRECRAWL_TIMEOUT = os.getenv('FIRECRAWL_TIMEOUT', '')
 
+CRW_API_KEY = os.getenv('CRW_API_KEY', '')
+
+CRW_API_BASE_URL = os.getenv('CRW_API_BASE_URL', 'https://fastcrw.com/api')
+
+CRW_TIMEOUT = os.getenv('CRW_TIMEOUT', '')
+
 EXTERNAL_WEB_SEARCH_URL = os.getenv('EXTERNAL_WEB_SEARCH_URL', '')
 
 EXTERNAL_WEB_SEARCH_API_KEY = os.getenv('EXTERNAL_WEB_SEARCH_API_KEY', '')
