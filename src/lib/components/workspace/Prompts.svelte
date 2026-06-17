@@ -72,7 +72,7 @@
 	};
 
 	// Immediate response to page/filter changes
-	$: if (page && selectedTag !== undefined && viewOption !== undefined) {
+	$: if (loaded && page && selectedTag !== undefined && viewOption !== undefined) {
 		getPromptList();
 	}
 

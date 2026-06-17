@@ -199,8 +199,6 @@
 		}
 
 		loaded = true;
-		// Explicit initial fetch — reactive blocks will handle subsequent changes
-		await getAutomationList();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);

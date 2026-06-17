@@ -91,7 +91,7 @@
 	};
 
 	// Immediate response to page/filter changes
-	$: if (page && viewOption !== undefined) {
+	$: if (loaded && page && viewOption !== undefined) {
 		loadSkillItems();
 	}
 
