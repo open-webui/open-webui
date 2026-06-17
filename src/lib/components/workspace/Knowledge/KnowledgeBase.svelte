@@ -197,7 +197,16 @@
 		});
 
 		if (res) {
-			fileItems = res.items;
+			// Snapshot this fetch's result locally. The pending-files merge
+			// below awaits a network call, during which a concurrent
+			// getItemsPage() run can reset the shared `fileItems` back to
+			// null (see the `fileItems = null` at the top of this function).
+			// Reading that shared value after the await is what caused the
+			// "can't access property map ... is null" crash, which surfaced
+			// right after uploading a still-processing file (the only time
+			// the pending branch runs). Use the snapshot instead.
+			const baseItems = res.items ?? [];
+			fileItems = baseItems;
 			fileItemsTotal = res.total;
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
@@ -206,7 +215,7 @@
 			try {
 				const pendingFiles = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
 				if (pendingFiles && pendingFiles.length > 0) {
-					const existingIds = new Set(fileItems.map((f) => f.id));
+					const existingIds = new Set(baseItems.map((f) => f.id));
 					const newPending = pendingFiles
 						.filter((f) => !existingIds.has(f.id))
 						.map((f) => ({
@@ -215,7 +224,7 @@
 							status: 'uploading'
 						}));
 					if (newPending.length > 0) {
-						fileItems = [...newPending, ...fileItems];
+						fileItems = [...newPending, ...baseItems];
 
 						// Start polling for completion (if not already polling)
 						if (!pendingPollTimer) {
