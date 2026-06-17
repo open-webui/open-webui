@@ -2027,7 +2027,7 @@ async def process_web(
 ):
     config = await get_retrieval_config()
     try:
-        content, docs = await run_in_threadpool(get_content_from_url, request, form_data.url)
+        content, docs = await get_content_from_url(request, form_data.url)
         log.debug(f'text_content: {content}')
 
         if process:
