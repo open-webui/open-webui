@@ -13,6 +13,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.tools import (
@@ -84,7 +85,7 @@ async def get_tools(
     server_access_grants = {}
     for server in await get_tool_servers(request):
         server_idx = server.get('idx', 0)
-        connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+        connections = await Config.get('tool_server.connections', [])
         if server_idx >= len(connections):
             log.warning(
                 f'Tool server index {server_idx} out of range '
@@ -113,7 +114,7 @@ async def get_tools(
         )
 
     # MCP Tool Servers
-    for server in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+    for server in await Config.get('tool_server.connections', []):
         if server.get('type', 'openapi') == 'mcp' and server.get('config', {}).get('enable'):
             server_id = server.get('info', {}).get('id')
             auth_type = server.get('auth_type', 'none')
@@ -303,7 +304,7 @@ async def export_tools(
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.tools_export',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -331,11 +332,11 @@ async def create_new_tools(
 ):
     """Create a new tool from user-supplied Python source code."""
     if user.role != 'admin' and not (
-        await has_permission(user.id, 'workspace.tools', request.app.state.config.USER_PERMISSIONS, db=db)
+        await has_permission(user.id, 'workspace.tools', await Config.get('user.permissions'), db=db)
         or await has_permission(
             user.id,
             'workspace.tools_import',
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
             db=db,
         )
     ):
@@ -356,7 +357,7 @@ async def create_new_tools(
     if tools is None:
         try:
             form_data.access_grants = await filter_allowed_access_grants(
-                request.app.state.config.USER_PERMISSIONS,
+                await Config.get('user.permissions'),
                 user.id,
                 user.role,
                 form_data.access_grants,
@@ -484,8 +485,8 @@ async def update_tools_by_id(
     # Content edits trigger exec on load — gate them behind workspace.tools (matches /create).
     if form_data.content != tools.content:
         if user.role != 'admin' and not (
-            await has_permission(user.id, 'workspace.tools', request.app.state.config.USER_PERMISSIONS, db=db)
-            or await has_permission(user.id, 'workspace.tools_import', request.app.state.config.USER_PERMISSIONS, db=db)
+            await has_permission(user.id, 'workspace.tools', await Config.get('user.permissions'), db=db)
+            or await has_permission(user.id, 'workspace.tools_import', await Config.get('user.permissions'), db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -503,7 +504,7 @@ async def update_tools_by_id(
         specs = get_tool_specs(TOOLS[id])
 
         form_data.access_grants = await filter_allowed_access_grants(
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
             user.id,
             user.role,
             form_data.access_grants,
@@ -574,7 +575,7 @@ async def update_tool_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,

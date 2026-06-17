@@ -40,6 +40,7 @@ from open_webui.env import (
     RAG_SYSTEM_CONTEXT,
 )
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -980,13 +981,13 @@ async def apply_source_context_to_messages(
 
     if RAG_SYSTEM_CONTEXT:
         return add_or_update_system_message(
-            await rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
+            await rag_template(await Config.get('rag.template'), context, user_message),
             messages,
             append=True,
         )
     else:
         return add_or_update_user_message(
-            await rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
+            await rag_template(await Config.get('rag.template'), context, user_message),
             messages,
             append=False,
         )
@@ -1290,8 +1291,8 @@ async def chat_completion_tools_handler(
 
     task_model_id = get_task_model_id(
         body['model'],
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        await Config.get('task.model.default'),
+        await Config.get('task.model.external'),
         models,
     )
 
@@ -1301,8 +1302,8 @@ async def chat_completion_tools_handler(
     specs = [tool['spec'] for tool in tools.values()]
     tools_specs = json.dumps(specs, ensure_ascii=False)
 
-    if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != '':
-        template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+    if await Config.get('task.tools.prompt_template') != '':
+        template = await Config.get('task.tools.prompt_template')
     else:
         template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 
@@ -1792,7 +1793,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     system_message_content = ''
 
-    if len(input_images) > 0 and request.app.state.config.ENABLE_IMAGE_EDIT:
+    if len(input_images) > 0 and await Config.get('images.edit.enable'):
         # Edit image(s)
         try:
             images = await image_edits(
@@ -1852,7 +1853,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     else:
         # Create image(s)
-        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
+        if await Config.get('image_generation.prompt.enable'):
             try:
                 res = await generate_image_prompt(
                     request,
@@ -2018,17 +2019,17 @@ async def chat_completion_files_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=request.app.state.config.TOP_K,
+                k=await Config.get('rag.top_k'),
                 reranking_function=(
                     (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                     if request.app.state.RERANKING_FUNCTION
                     else None
                 ),
-                k_reranker=request.app.state.config.TOP_K_RERANKER,
-                r=request.app.state.config.RELEVANCE_THRESHOLD,
-                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                full_context=all_full_context or request.app.state.config.RAG_FULL_CONTEXT,
+                k_reranker=await Config.get('rag.top_k_reranker'),
+                r=await Config.get('rag.relevance_threshold'),
+                hybrid_bm25_weight=await Config.get('rag.hybrid_bm25_weight'),
+                hybrid_search=await Config.get('rag.enable_hybrid_search'),
+                full_context=all_full_context or await Config.get('rag.full_context'),
                 user=user,
             )
         except Exception as e:
@@ -2269,7 +2270,7 @@ async def connect_mcp_server(
     Returns None if the server is not found or access is denied.
     """
     mcp_server_connection = None
-    for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+    for server_connection in await Config.get('tool_server.connections', []):
         if server_connection.get('type', '') == 'mcp' and server_connection.get('info', {}).get('id') == server_id:
             mcp_server_connection = server_connection
             break
@@ -2442,8 +2443,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     task_model_id = get_task_model_id(
         form_data['model'],
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        await Config.get('task.model.default'),
+        await Config.get('task.model.external'),
         models,
     )
 
@@ -2550,9 +2551,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params['__features__'] = features
     if features:
         if 'voice' in features and features['voice']:
-            if getattr(request.app.state.config, 'ENABLE_VOICE_MODE_PROMPT', True):
-                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE:
-                    template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
+            if await Config.get('task.voice.prompt.enable'):
+                if await Config.get('task.voice.prompt_template'):
+                    template = await Config.get('task.voice.prompt_template')
                 else:
                     template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
 
@@ -2577,14 +2578,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data = await chat_image_generation_handler(request, form_data, extra_params, user)
 
         if 'code_interpreter' in features and features['code_interpreter']:
-            engine = getattr(request.app.state.config, 'CODE_INTERPRETER_ENGINE', 'pyodide')
+            engine = await Config.get('code_interpreter.engine', 'pyodide')
 
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
             if metadata.get('params', {}).get('function_calling') == 'legacy':
                 prompt = (
-                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ''
+                    await Config.get('code_interpreter.prompt_template')
+                    if await Config.get('code_interpreter.prompt_template') != ''
                     else DEFAULT_CODE_INTERPRETER_PROMPT
                 )
 
@@ -3534,18 +3535,19 @@ async def non_streaming_chat_response_handler(response, ctx):
                         )
 
                     # Send a webhook notification if the user is not active
-                    if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
+                    if await Config.get('ui.enable_user_webhooks') and not await Users.is_user_active(user.id):
                         webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
+                            webui_url = await Config.get('webui.url')
                             await post_webhook(
                                 request.app.state.WEBUI_NAME,
                                 webhook_url,
-                                f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
+                                f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
                                 {
                                     'action': 'chat',
                                     'message': content,
                                     'title': title,
-                                    'url': f'{request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
+                                    'url': f'{webui_url}/c/{metadata["chat_id"]}',
                                 },
                             )
 
@@ -3883,14 +3885,14 @@ async def streaming_chat_response_handler(response, ctx):
             DETECT_CODE_INTERPRETER = (
                 bool(features.get('code_interpreter'))
                 and builtin_tools_meta.get('code_interpreter', True)
-                and getattr(request.app.state.config, 'ENABLE_CODE_INTERPRETER', True)
+                and await Config.get('code_interpreter.enable')
                 and model_capabilities.get('code_interpreter', True)
                 and (
                     getattr(user, 'role', None) == 'admin'
                     or await has_permission(
                         getattr(user, 'id', ''),
                         'features.code_interpreter',
-                        request.app.state.config.USER_PERMISSIONS,
+                        await Config.get('user.permissions'),
                     )
                 )
             )
@@ -4784,7 +4786,7 @@ async def streaming_chat_response_handler(response, ctx):
                             source_context = source_context.strip()
                             if source_context:
                                 rag_content = await rag_template(
-                                    request.app.state.config.RAG_TEMPLATE,
+                                    await Config.get('rag.template'),
                                     source_context,
                                     user_message,
                                 )
@@ -4978,7 +4980,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     """)
                                     code = blocking_code + '\n' + code
 
-                                if request.app.state.config.CODE_INTERPRETER_ENGINE == 'pyodide':
+                                if await Config.get('code_interpreter.engine') == 'pyodide':
                                     ci_output = await event_caller(
                                         {
                                             'type': 'execute:python',
@@ -4990,21 +4992,21 @@ async def streaming_chat_response_handler(response, ctx):
                                             },
                                         }
                                     )
-                                elif request.app.state.config.CODE_INTERPRETER_ENGINE == 'jupyter':
+                                elif await Config.get('code_interpreter.engine') == 'jupyter':
                                     ci_output = await execute_code_jupyter(
-                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                                        await Config.get('code_interpreter.jupyter.url'),
                                         code,
                                         (
-                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
-                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == 'token'
+                                            await Config.get('code_interpreter.jupyter.auth_token')
+                                            if await Config.get('code_interpreter.jupyter.auth') == 'token'
                                             else None
                                         ),
                                         (
-                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
-                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == 'password'
+                                            await Config.get('code_interpreter.jupyter.auth_password')
+                                            if await Config.get('code_interpreter.jupyter.auth') == 'password'
                                             else None
                                         ),
-                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+                                        await Config.get('code_interpreter.jupyter.timeout'),
                                     )
                                 else:
                                     ci_output = {'stdout': 'Code interpreter engine not configured.'}
@@ -5148,18 +5150,19 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                 # Send a webhook notification if the user is not active
-                if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
+                if await Config.get('ui.enable_user_webhooks') and not await Users.is_user_active(user.id):
                     webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
+                        webui_url = await Config.get('webui.url')
                         await post_webhook(
                             request.app.state.WEBUI_NAME,
                             webhook_url,
-                            f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
+                            f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
                             {
                                 'action': 'chat',
                                 'message': content,
                                 'title': title,
-                                'url': f'{request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
+                                'url': f'{webui_url}/c/{metadata["chat_id"]}',
                             },
                         )
 

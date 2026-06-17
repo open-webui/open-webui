@@ -12,6 +12,7 @@ from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.chats import (
     AggregateChatStats,
     ChatBody,
@@ -46,7 +47,7 @@ router = APIRouter()
 
 async def require_chat_import_permission(request: Request, user, db: AsyncSession):
     if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.import', request.app.state.config.USER_PERMISSIONS, db=db
+        user.id, 'chat.import', await Config.get('user.permissions'), db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -412,7 +413,7 @@ async def export_chat_stats(
     user=Depends(get_verified_user),
 ):
     # Check if the user has permission to share/export chats
-    if (user.role != 'admin') and (not request.app.state.config.ENABLE_COMMUNITY_SHARING):
+    if (user.role != 'admin') and (not await Config.get('ui.enable_community_sharing')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -461,7 +462,7 @@ async def export_single_chat_stats(
     Returns ChatStatsExport for the specified chat.
     """
     # Check if the user has permission to share/export chats
-    if (user.role != 'admin') and (not request.app.state.config.ENABLE_COMMUNITY_SHARING):
+    if (user.role != 'admin') and (not await Config.get('ui.enable_community_sharing')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -508,7 +509,7 @@ async def delete_all_user_chats(
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'user' and not await has_permission(
-        user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS
+        user.id, 'chat.delete', await Config.get('user.permissions')
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1164,7 +1165,7 @@ async def delete_chat_by_id(
 
         return result
     else:
-        if not await has_permission(user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS):
+        if not await has_permission(user.id, 'chat.delete', await Config.get('user.permissions')):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1384,7 +1385,7 @@ async def share_chat_by_id(
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.share', request.app.state.config.USER_PERMISSIONS
+        user.id, 'chat.share', await Config.get('user.permissions')
     ):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
@@ -1460,7 +1461,7 @@ async def update_shared_chat_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,

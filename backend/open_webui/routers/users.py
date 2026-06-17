@@ -12,6 +12,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.auths import Auths
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import (
@@ -157,7 +158,7 @@ async def get_user_permissisions(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    user_permissions = await get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
+    user_permissions = await get_permissions(user.id, await Config.get('user.permissions'), db=db)
 
     return user_permissions
 
@@ -239,7 +240,7 @@ class FeaturesPermissions(BaseModel):
     memories: bool = True
     automations: bool = False
     calendar: bool = True
-    user_webhooks: bool = False
+    webhooks: bool = False
 
 
 class SettingsPermissions(BaseModel):
@@ -257,20 +258,22 @@ class UserPermissions(BaseModel):
 
 @router.get('/default/permissions', response_model=UserPermissions)
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
+    user_permissions = await Config.get('user.permissions')
     return {
-        'workspace': WorkspacePermissions(**request.app.state.config.USER_PERMISSIONS.get('workspace', {})),
-        'sharing': SharingPermissions(**request.app.state.config.USER_PERMISSIONS.get('sharing', {})),
-        'access_grants': AccessGrantsPermissions(**request.app.state.config.USER_PERMISSIONS.get('access_grants', {})),
-        'chat': ChatPermissions(**request.app.state.config.USER_PERMISSIONS.get('chat', {})),
-        'features': FeaturesPermissions(**request.app.state.config.USER_PERMISSIONS.get('features', {})),
-        'settings': SettingsPermissions(**request.app.state.config.USER_PERMISSIONS.get('settings', {})),
+        'workspace': WorkspacePermissions(**user_permissions.get('workspace', {})),
+        'sharing': SharingPermissions(**user_permissions.get('sharing', {})),
+        'access_grants': AccessGrantsPermissions(**user_permissions.get('access_grants', {})),
+        'chat': ChatPermissions(**user_permissions.get('chat', {})),
+        'features': FeaturesPermissions(**user_permissions.get('features', {})),
+        'settings': SettingsPermissions(**user_permissions.get('settings', {})),
     }
 
 
 @router.post('/default/permissions')
 async def update_default_user_permissions(request: Request, form_data: UserPermissions, user=Depends(get_admin_user)):
-    request.app.state.config.USER_PERMISSIONS = form_data.model_dump(by_alias=True)
-    return request.app.state.config.USER_PERMISSIONS
+    user_permissions = form_data.model_dump(by_alias=True)
+    await Config.upsert({'user.permissions': user_permissions})
+    return user_permissions
 
 
 @router.get('/default/permissions/defaults', response_model=UserPermissions)
@@ -321,7 +324,7 @@ async def update_user_settings_by_session_user(
         and not await has_permission(
             user.id,
             'features.direct_tool_servers',
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
         )
     ):
         # If the user is not an admin and does not have permission to use tool servers, remove the key
@@ -348,7 +351,7 @@ async def get_user_status_by_session_user(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if not request.app.state.config.ENABLE_USER_STATUS:
+    if not await Config.get('users.enable_status'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
@@ -369,7 +372,7 @@ async def update_user_status_by_session_user(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if not request.app.state.config.ENABLE_USER_STATUS:
+    if not await Config.get('users.enable_status'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,

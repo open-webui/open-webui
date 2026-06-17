@@ -21,7 +21,6 @@ from typing import (
 import aiohttp
 import aiohttp.resolver
 import certifi
-import requests
 import urllib3.connection
 import urllib3.connectionpool
 import validators
@@ -777,13 +776,13 @@ def get_web_loader(
         'trust_env': trust_env,
     }
 
-    if WEB_LOADER_ENGINE.value == '' or WEB_LOADER_ENGINE.value == 'safe_web':
+    if WEB_LOADER_ENGINE == '' or WEB_LOADER_ENGINE == 'safe_web':
         WebLoaderClass = SafeWebBaseLoader
 
         request_kwargs = {}
-        if WEB_LOADER_TIMEOUT.value:
+        if WEB_LOADER_TIMEOUT:
             try:
-                timeout_value = float(WEB_LOADER_TIMEOUT.value)
+                timeout_value = float(WEB_LOADER_TIMEOUT)
             except ValueError:
                 timeout_value = None
 
@@ -793,31 +792,31 @@ def get_web_loader(
         if request_kwargs:
             web_loader_args['requests_kwargs'] = request_kwargs
 
-    if WEB_LOADER_ENGINE.value == 'playwright':
+    if WEB_LOADER_ENGINE == 'playwright':
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT.value
-        if PLAYWRIGHT_WS_URL.value:
-            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL.value
+        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT
+        if PLAYWRIGHT_WS_URL:
+            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL
 
-    if WEB_LOADER_ENGINE.value == 'firecrawl':
+    if WEB_LOADER_ENGINE == 'firecrawl':
         WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args['api_key'] = FIRECRAWL_API_KEY.value
-        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL.value
-        if FIRECRAWL_TIMEOUT.value:
+        web_loader_args['api_key'] = FIRECRAWL_API_KEY
+        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL
+        if FIRECRAWL_TIMEOUT:
             try:
-                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT.value)
+                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE.value == 'tavily':
+    if WEB_LOADER_ENGINE == 'tavily':
         WebLoaderClass = SafeTavilyLoader
-        web_loader_args['api_key'] = TAVILY_API_KEY.value
-        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH.value
+        web_loader_args['api_key'] = TAVILY_API_KEY
+        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH
 
-    if WEB_LOADER_ENGINE.value == 'external':
+    if WEB_LOADER_ENGINE == 'external':
         WebLoaderClass = ExternalWebLoader
-        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL.value
-        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY.value
+        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL
+        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
@@ -831,6 +830,6 @@ def get_web_loader(
         return web_loader
     else:
         raise ValueError(
-            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. '
+            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE}. '
             "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
         )

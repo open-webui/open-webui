@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
+from open_webui.models.config import Config
 from open_webui.models.chats import Chats
 from open_webui.models.folders import (
     FolderForm,
@@ -42,7 +43,8 @@ from open_webui.utils.access_control.folders import has_folder_access as _has_fo
 
 async def check_folders_permission(request: Request, user, db=None):
     """Verify the folders feature is enabled and the user has permission."""
-    if request.app.state.config.ENABLE_FOLDERS is False:
+    config = await Config.get_many('folders.enable', 'user.permissions')
+    if config.get('folders.enable') is False:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -50,7 +52,7 @@ async def check_folders_permission(request: Request, user, db=None):
     if user.role != 'admin' and not await has_permission(
         user.id,
         'features.folders',
-        request.app.state.config.USER_PERMISSIONS,
+        config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -411,7 +413,7 @@ async def update_folder_access_by_id(
             )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id, user.role,
         form_data.access_grants,
         None,
@@ -522,7 +524,7 @@ async def delete_folder_by_id(
     folder_ids = await Folders.get_folder_ids_by_id_and_user_id_in_subtree(id, folder_owner_id, db=db)
     if await Chats.count_chats_by_folder_ids_and_user_id(folder_ids, folder_owner_id, db=db):
         chat_delete_permission = await has_permission(
-            user.id, 'chat.delete', request.app.state.config.USER_PERMISSIONS, db=db
+            user.id, 'chat.delete', await Config.get('user.permissions'), db=db
         )
         if user.role != 'admin' and not chat_delete_permission:
             raise HTTPException(

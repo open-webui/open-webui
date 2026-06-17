@@ -1007,9 +1007,9 @@
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('User Webhooks')}
 				</div>
-				<Switch bind:state={permissions.features.user_webhooks} />
+				<Switch bind:state={permissions.features.webhooks} />
 			</div>
-			{#if defaultPermissions?.features?.user_webhooks && !permissions.features.user_webhooks}
+			{#if defaultPermissions?.features?.webhooks && !permissions.features.webhooks}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

@@ -259,10 +259,6 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
         enable_scim = getattr(request.app.state, 'ENABLE_SCIM', False)
         log.info(f'SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}')
 
-        # Handle both ConfigVar and direct value
-        if hasattr(enable_scim, 'value'):
-            enable_scim = enable_scim.value
-
         if not enable_scim:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -271,9 +267,6 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
 
         # Verify the SCIM token
         scim_token = getattr(request.app.state, 'SCIM_TOKEN', None)
-        # Handle both ConfigVar and direct value
-        if hasattr(scim_token, 'value'):
-            scim_token = scim_token.value
         log.debug(f'SCIM token configured: {bool(scim_token)}')
         if not scim_token or not hmac.compare_digest(token, scim_token):
             raise HTTPException(

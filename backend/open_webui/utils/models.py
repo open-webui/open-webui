@@ -12,6 +12,7 @@ from open_webui.config import (
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
@@ -52,14 +53,15 @@ async def fetch_openai_models(request: Request, user: UserModel = None):
 
 
 async def get_all_base_models(request: Request, user: UserModel = None):
+    config = await Config.get_many('openai.enable', 'ollama.enable')
     openai_task = (
         fetch_openai_models(request, user)
-        if request.app.state.config.ENABLE_OPENAI_API
+        if config.get('openai.enable')
         else asyncio.sleep(0, result=[])
     )
     ollama_task = (
         fetch_ollama_models(request, user)
-        if request.app.state.config.ENABLE_OLLAMA_API
+        if config.get('ollama.enable')
         else asyncio.sleep(0, result=[])
     )
     function_task = get_function_models(request)
@@ -70,10 +72,15 @@ async def get_all_base_models(request: Request, user: UserModel = None):
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
+    config = await Config.get_many(
+        'models.base_models_cache',
+        'evaluation.arena.enable',
+        'evaluation.arena.models',
+    )
     if (
         request.app.state.MODELS
         and request.app.state.BASE_MODELS
-        and (request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh)
+        and (config.get('models.base_models_cache') and not refresh)
     ):
         base_models = request.app.state.BASE_MODELS
     else:
@@ -88,9 +95,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         return []
 
     # Add arena models
-    if request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS:
+    if config.get('evaluation.arena.enable'):
         arena_models = []
-        if len(request.app.state.config.EVALUATION_ARENA_MODELS) > 0:
+        arena_config = config.get('evaluation.arena.models') or []
+        if len(arena_config) > 0:
             arena_models = [
                 {
                     'id': model['id'],
@@ -103,7 +111,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     'owned_by': 'arena',
                     'arena': True,
                 }
-                for model in request.app.state.config.EVALUATION_ARENA_MODELS
+                for model in arena_config
             ]
         else:
             # Add default arena model
@@ -289,7 +297,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # Apply global model defaults to all models
     # Per-model overrides take precedence over global defaults
-    default_metadata = getattr(request.app.state.config, 'DEFAULT_MODEL_METADATA', None) or {}
+    default_metadata = await Config.get('models.default_metadata', {}) or {}
 
     if default_metadata:
         for model in models:

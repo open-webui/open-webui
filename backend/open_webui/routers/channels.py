@@ -11,6 +11,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
+from open_webui.models.config import Config
 from open_webui.models.channels import (
     ChannelForm,
     ChannelModel,
@@ -123,7 +124,7 @@ def get_channel_permitted_group_and_user_ids(
 
 async def check_channels_access(request: Request, user: Optional[UserModel] = None):
     """Dependency to ensure channels are globally enabled."""
-    if not request.app.state.config.ENABLE_CHANNELS:
+    if not await Config.get('channels.enable'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.FEATURE_DISABLED('Channels'),
@@ -131,7 +132,7 @@ async def check_channels_access(request: Request, user: Optional[UserModel] = No
 
     if user:
         if user.role != 'admin' and not await has_permission(
-            user.id, 'features.channels', request.app.state.config.USER_PERMISSIONS
+            user.id, 'features.channels', await Config.get('user.permissions')
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -292,7 +293,7 @@ async def create_new_channel(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -663,7 +664,7 @@ async def update_channel_by_id(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -857,8 +858,8 @@ async def get_pinned_channel_messages(
 
 async def send_notification(request, channel, message, active_user_ids, db=None):
     name = request.app.state.WEBUI_NAME
-    webui_url = request.app.state.config.WEBUI_URL
-    enable_user_webhooks = request.app.state.config.ENABLE_USER_WEBHOOKS
+    webui_url = await Config.get('webui.url')
+    enable_user_webhooks = await Config.get('ui.enable_user_webhooks')
 
     users = await get_channel_users_with_access(channel, 'read', db=db)
 
@@ -1009,7 +1010,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                 )
 
                 tool_ids = _resolve_model_tool_ids(request.app, model_id)
-                features = _resolve_model_features(request.app, model_id)
+                features = await _resolve_model_features(request.app, model_id)
                 filter_ids = _resolve_model_filter_ids(request.app, model_id)
 
                 # Build full form_data — same shape as frontend POST.

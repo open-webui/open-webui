@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_connection_access
@@ -62,7 +63,7 @@ def _sanitize_proxy_path(path: str) -> str | None:
 @router.get('/')
 async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
     """Return terminal servers the authenticated user has access to."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
     return [
@@ -87,7 +88,7 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
@@ -235,7 +236,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         return None
 
     # Resolve terminal server
-    connections = ws.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:

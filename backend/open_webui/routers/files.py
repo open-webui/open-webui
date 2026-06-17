@@ -26,6 +26,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_db_context, get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
+from open_webui.models.config import Config
 from open_webui.models.chats import Chats
 from open_webui.models.files import (
     FileForm,
@@ -123,7 +124,7 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            stt_supported = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
+            stt_supported = await Config.get('audio.stt.supported_content_types', [])
 
             if content_type and strict_match_mime_type(stt_supported, content_type):
                 # Audio / STT-supported files → transcribe then index
@@ -144,7 +145,7 @@ async def process_uploaded_file(
             elif (
                 content_type
                 and content_type.startswith(('image/', 'video/'))
-                and request.app.state.config.CONTENT_EXTRACTION_ENGINE != 'external'
+                and await Config.get('rag.content_extraction_engine') != 'external'
             ):
                 # Media files without an external extraction engine
                 if content_type.startswith('video/'):
@@ -288,12 +289,11 @@ async def upload_file_handler(
         # Remove the leading dot from the file extension and lowercase it
         file_extension = file_extension[1:].lower() if file_extension else ''
 
-        if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
-                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
-            ]
+        allowed_file_extensions = await Config.get('rag.file.allowed_extensions')
+        if process and allowed_file_extensions:
+            allowed_file_extensions = [ext for ext in allowed_file_extensions if ext]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension not in allowed_file_extensions:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
