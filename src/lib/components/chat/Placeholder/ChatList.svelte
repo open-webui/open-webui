@@ -9,6 +9,7 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	dayjs.extend(localizedFormat);
 
@@ -53,6 +54,7 @@
 
 	let orderBy = 'updated_at';
 	let direction = 'desc'; // 'asc' or 'desc'
+
 
 	$: if (chats) {
 		init();
@@ -157,10 +159,20 @@
 					{chat?.title}
 				</div>
 
-				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end">
+				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
 					<div class=" text-gray-500 dark:text-gray-400 text-xs">
 						{dayjs(chat?.updated_at * 1000).calendar()}
 					</div>
+
+					{#if chat.user_id && chat.owner_name}
+						<Tooltip content={chat.owner_name}>
+							<img
+								src="/api/v1/users/{chat.user_id}/profile/image"
+								alt=""
+								class="size-5 rounded-full shrink-0 object-cover"
+							/>
+						</Tooltip>
+					{/if}
 				</div>
 			</a>
 		{/each}

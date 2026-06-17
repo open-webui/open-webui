@@ -23,6 +23,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.models import (
     ModelAccessListResponse,
@@ -60,6 +61,9 @@ def _safe_static_redirect_path(url: str) -> str | None:
         if decoded == path:
             break
         path = decoded
+    # Fail closed: a value still encoded after the cap would be decoded further downstream.
+    if unquote(path) != path:
+        return None
     if '\x00' in path or '\\' in path:
         return None
     if not path.startswith('/'):
@@ -227,7 +231,7 @@ async def create_new_model(
 ):
     """Create a new workspace model entry."""
     if user.role != 'admin' and not await has_permission(
-        user.id, 'workspace.models', request.app.state.config.USER_PERMISSIONS, db=db
+        user.id, 'workspace.models', await Config.get('user.permissions'), db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -255,7 +259,7 @@ async def create_new_model(
         )
 
         form_data.access_grants = await filter_allowed_access_grants(
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
             user.id,
             user.role,
             form_data.access_grants,
@@ -286,7 +290,7 @@ async def export_models(
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.models_export',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -319,7 +323,7 @@ async def import_models(
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.models_import',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -400,7 +404,7 @@ async def import_models(
                         # metadata-only imports.
                         if 'access_grants' in model_data:
                             updated_model.access_grants = await filter_allowed_access_grants(
-                                request.app.state.config.USER_PERMISSIONS,
+                                await Config.get('user.permissions'),
                                 user.id,
                                 user.role,
                                 updated_model.access_grants,
@@ -413,7 +417,7 @@ async def import_models(
                         model_data['params'] = model_data.get('params', {})
                         new_model = ModelForm(**model_data)
                         new_model.access_grants = await filter_allowed_access_grants(
-                            request.app.state.config.USER_PERMISSIONS,
+                            await Config.get('user.permissions'),
                             user.id,
                             user.role,
                             new_model.access_grants,
@@ -674,7 +678,7 @@ async def update_model_by_id(
     )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -746,7 +750,7 @@ async def update_model_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,

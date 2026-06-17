@@ -10,9 +10,11 @@
 	import Users from './Users.svelte';
 	import GroupPreviewPanel from './GroupPreviewPanel.svelte';
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
+	import { getUserDefaultPermissions, getUserDefaultPermissionsDefaults } from '$lib/apis/users';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let onSubmit: Function = () => {};
@@ -31,6 +33,7 @@
 	let selectedTab = 'general';
 	let loading = false;
 	let showDeleteConfirmDialog = false;
+	let showResetConfirmDialog = false;
 
 	let userCount = 0;
 
@@ -54,6 +57,29 @@
 
 		loading = false;
 		show = false;
+	};
+
+	const resetToDefaultsHandler = async () => {
+		try {
+			// For user groups: reset to current global default permissions
+			// For default permissions modal: reset to stock/env-var configuration
+			const defaults = custom
+				? await getUserDefaultPermissions(localStorage.token)
+				: await getUserDefaultPermissionsDefaults(localStorage.token);
+			if (defaults) {
+				permissions = {
+					workspace: { ...DEFAULT_PERMISSIONS.workspace, ...defaults.workspace },
+					sharing: { ...DEFAULT_PERMISSIONS.sharing, ...defaults.sharing },
+					access_grants: { ...DEFAULT_PERMISSIONS.access_grants, ...defaults.access_grants },
+					chat: { ...DEFAULT_PERMISSIONS.chat, ...defaults.chat },
+					features: { ...DEFAULT_PERMISSIONS.features, ...defaults.features },
+					settings: { ...DEFAULT_PERMISSIONS.settings, ...defaults.settings }
+				};
+				toast.success($i18n.t('Permissions reset to defaults'));
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		}
 	};
 
 	const init = () => {
@@ -91,6 +117,17 @@
 	on:confirm={() => {
 		onDelete();
 		show = false;
+	}}
+/>
+
+<ConfirmDialog
+	bind:show={showResetConfirmDialog}
+	title={$i18n.t('Reset to Defaults')}
+	message={$i18n.t(
+		'Are you sure you want to reset all permissions to their default values? You will still need to save to apply the changes.'
+	)}
+	on:confirm={() => {
+		resetToDefaultsHandler();
 	}}
 />
 
@@ -250,7 +287,29 @@
 							</div>
 
 							{#if ['general', 'permissions'].includes(selectedTab)}
-								<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+								<div class="flex justify-between items-center pt-3 text-sm font-medium gap-1.5">
+									<div>
+										{#if selectedTab === 'permissions'}
+											<Tooltip
+												content={custom
+													? $i18n.t(
+															'Reset group permissions to match the current default user permissions'
+														)
+													: $i18n.t('Reset all permissions to their initial configuration values')}
+											>
+												<button
+													class="text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
+													type="button"
+													on:click={() => {
+														showResetConfirmDialog = true;
+													}}
+												>
+													{$i18n.t('Reset to Defaults')}
+												</button>
+											</Tooltip>
+										{/if}
+									</div>
+
 									<button
 										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 											? ' cursor-not-allowed'

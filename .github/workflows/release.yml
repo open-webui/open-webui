@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v5
 
@@ -43,9 +44,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ steps.pkg.outputs.version }}" \
-            --title "v${{ steps.pkg.outputs.version }}" \
-            --notes-file /tmp/release-notes.md
+          if gh release view "v${{ steps.pkg.outputs.version }}" &>/dev/null; then
+            echo "Release v${{ steps.pkg.outputs.version }} already exists — skipping creation"
+          else
+            gh release create "v${{ steps.pkg.outputs.version }}" \
+              --title "v${{ steps.pkg.outputs.version }}" \
+              --notes-file /tmp/release-notes.md
+          fi
 
       - name: Archive source
         uses: actions/upload-artifact@v4
@@ -56,3 +61,14 @@ jobs:
             !.git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Docker build
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docker.yaml',
+              ref: 'v${{ steps.pkg.outputs.version }}',
+            })

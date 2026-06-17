@@ -4,7 +4,7 @@
 	import type { Writable } from 'svelte/store';
 	import dayjs from 'dayjs';
 
-	import { searchFiles, deleteFileById } from '$lib/apis/files';
+	import { searchFiles, deleteFileById, getFileCount } from '$lib/apis/files';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -21,6 +21,7 @@
 	export let show = false;
 
 	let files: any[] | null = null;
+	let fileCount: number | null = null;
 	let query = '';
 	let orderBy = 'created_at';
 	let direction = 'desc';
@@ -70,6 +71,10 @@
 			const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
 			files = sortFiles(newFiles);
 			allFilesLoaded = newFiles.length < PAGE_SIZE;
+
+			if (!query) {
+				fileCount = await getFileCount(localStorage.token);
+			}
 		} catch (error) {
 			// Handle 404 or other errors - show empty state instead of spinner
 			files = [];
@@ -124,6 +129,7 @@
 			toast.success($i18n.t('File deleted successfully.'));
 			// Remove from local array instead of re-fetching to allow rapid deletion
 			files = files?.filter((f) => f.id !== fileId) ?? null;
+			if (fileCount !== null) fileCount--;
 		} catch (error) {
 			toast.error(`${error}`);
 		}
@@ -197,7 +203,18 @@
 <Modal size="xl" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class="text-lg font-medium self-center">{$i18n.t('Files')}</div>
+			<div class="flex items-center gap-2 text-lg font-medium self-center">
+				<div>{$i18n.t('Files')}</div>
+				{#if query && files}
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{files.length}
+					</div>
+				{:else if fileCount !== null}
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{fileCount}
+					</div>
+				{/if}
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {

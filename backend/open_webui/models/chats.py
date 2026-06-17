@@ -309,6 +309,7 @@ class ChatTable:
                     'folder_id': form_data.folder_id,
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
+                    'last_read_at': int(time.time()),
                 }
             )
 
@@ -445,7 +446,6 @@ class ChatTable:
                 clean_title = self._clean_null_bytes(title)
                 chat_item.title = clean_title
                 chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
-                chat_item.updated_at = int(time.time())
                 await session.commit()
                 await session.refresh(chat_item)
                 return ChatModel.model_validate(chat_item)
@@ -748,6 +748,7 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.pinned = not chat.pinned
                 chat.updated_at = int(time.time())
+                chat.last_read_at = int(time.time())
                 await session.commit()
                 await session.refresh(chat)
                 return ChatModel.model_validate(chat)
@@ -761,6 +762,7 @@ class ChatTable:
                 chat.archived = not chat.archived
                 chat.folder_id = None
                 chat.updated_at = int(time.time())
+                chat.last_read_at = int(time.time())
                 await session.commit()
                 await session.refresh(chat)
                 return ChatModel.model_validate(chat)
@@ -828,6 +830,17 @@ class ChatTable:
                 )
                 for chat in all_chats
             ]
+
+    async def count_archived_chats_by_user_id(
+        self,
+        user_id: str,
+        db: AsyncSession | None = None,
+    ) -> int:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(func.count(Chat.id)).filter_by(user_id=user_id, archived=True)
+            )
+            return result.scalar() or 0
 
     async def get_shared_chat_list_by_user_id(
         self,
@@ -956,6 +969,20 @@ class ChatTable:
             )
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    async def get_chat_metas_by_chat_ids(
+        self,
+        chat_ids: list[str],
+        include_archived: bool = False,
+        db: AsyncSession | None = None,
+    ) -> list[dict]:
+        async with get_async_db_context(db) as session:
+            stmt = select(Chat.meta).filter(Chat.id.in_(chat_ids))
+            if not include_archived:
+                stmt = stmt.filter_by(archived=False)
+
+            result = await session.execute(stmt)
+            return [meta for meta in result.scalars().all() if isinstance(meta, dict)]
 
     # retrieve conversation
     async def get_chat_by_id(
@@ -1353,6 +1380,42 @@ class ChatTable:
                 for chat in all_chats
             ]
 
+    async def get_all_chats_by_folder_id(
+        self,
+        folder_id: str,
+        skip: int = 0,
+        limit: int = 60,
+        db: AsyncSession | None = None,
+    ) -> list[dict]:
+        """Get chats in a folder across ALL users. Returns dicts with user_id."""
+        async with get_async_db_context(db) as session:
+            stmt = (
+                select(Chat.id, Chat.title, Chat.user_id, Chat.updated_at, Chat.created_at, Chat.last_read_at)
+                .filter_by(folder_id=folder_id)
+                .filter(or_(Chat.pinned == False, Chat.pinned == None))
+                .filter_by(archived=False)
+                .order_by(Chat.updated_at.desc(), Chat.id)
+            )
+
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+
+            result = await session.execute(stmt)
+            all_chats = result.all()
+            return [
+                {
+                    'id': chat[0],
+                    'title': chat[1],
+                    'user_id': chat[2],
+                    'updated_at': chat[3],
+                    'created_at': chat[4],
+                    'last_read_at': chat[5],
+                }
+                for chat in all_chats
+            ]
+
     async def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
     ) -> list[ChatModel]:
@@ -1377,6 +1440,7 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.folder_id = folder_id
                 chat.updated_at = int(time.time())
+                chat.last_read_at = int(time.time())
                 chat.pinned = False
                 await session.commit()
                 await session.refresh(chat)
@@ -1519,6 +1583,21 @@ class ChatTable:
             count = result.scalar()
 
             log.info(f"Count of chats for folder '{folder_id}': {count}")
+            return count
+
+    async def count_chats_by_folder_ids_and_user_id(
+        self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
+    ) -> int:
+        if not folder_ids:
+            return 0
+
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(func.count(Chat.id)).filter(Chat.user_id == user_id, Chat.folder_id.in_(folder_ids))
+            )
+            count = result.scalar()
+
+            log.info(f"Count of chats for folders '{folder_ids}': {count}")
             return count
 
     async def delete_tag_by_id_and_user_id_and_tag_name(

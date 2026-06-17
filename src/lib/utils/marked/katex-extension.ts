@@ -72,14 +72,19 @@ const isAllowedTrailing = (src: string, i: number): boolean =>
 const isBlockBoundary = (src: string, i: number): boolean =>
 	/^(?:[ \t]*\r?\n|$)/.test(src.slice(i));
 
-const findClosingDelimiter = (src: string, i: number): number =>
-	i >= src.length - 1
-		? -1
-		: src[i] === '\\'
-			? findClosingDelimiter(src, i + 2)
-			: src[i] === '$' && src[i + 1] === '$'
-				? i
-				: findClosingDelimiter(src, i + 1);
+const findClosingDelimiter = (src: string, i: number): number => {
+	const len = src.length - 1;
+	while (i < len) {
+		if (src[i] === '\\') {
+			i += 2;
+		} else if (src[i] === '$' && src[i + 1] === '$') {
+			return i;
+		} else {
+			i++;
+		}
+	}
+	return -1;
+};
 
 export const tokenizeDisplayMath = (
 	src: string,

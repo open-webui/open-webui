@@ -9,10 +9,6 @@
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
-	const i18n = getContext('i18n');
-
-	const dispatch = createEventDispatcher();
-
 	import {
 		archiveChatById,
 		cloneChatById,
@@ -35,7 +31,8 @@
 		currentChatPage,
 		tags,
 		selectedFolder,
-		activeChatIds
+		activeChatIds,
+		user
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -53,6 +50,10 @@
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
 
+	const i18n = getContext('i18n');
+
+	const dispatch = createEventDispatcher();
+
 	export let className = '';
 
 	export let id;
@@ -63,6 +64,10 @@
 
 	export let selected = false;
 	export let shiftKey = false;
+	export let readonly = false;
+
+	export let ownerName: string | null = null;
+	export let ownerUserId: string | null = null;
 
 	export let onDragEnd = () => {};
 
@@ -139,6 +144,11 @@
 	};
 
 	const cloneChatHandler = async (id) => {
+		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))) {
+			toast.error($i18n.t('Access prohibited'));
+			return;
+		}
+
 		const res = await cloneChatById(
 			localStorage.token,
 			id,
@@ -445,7 +455,7 @@
 	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
-	draggable={!confirmEdit}
+	draggable={!confirmEdit && !readonly}
 >
 	{#if confirmEdit}
 		<div
@@ -509,6 +519,7 @@
 				lastReadAt = Date.now() / 1000;
 			}}
 			on:dblclick={async (e) => {
+				if (readonly) return;
 				e.preventDefault();
 				e.stopPropagation();
 
@@ -524,6 +535,16 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
+			{#if ownerUserId}
+				<Tooltip content={ownerName || 'Unknown'}>
+					<img
+						src="/api/v1/users/{ownerUserId}/profile/image"
+						alt=""
+						class="size-4 rounded-full shrink-0 object-cover mr-1.5"
+					/>
+				</Tooltip>
+			{/if}
+
 			<!-- Loading spinner for active chat (left side) -->
 			{#if $activeChatIds.has(id)}
 				<div class="shrink-0 self-center pr-2">
@@ -557,6 +578,7 @@
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	{#if !readonly}
 	<div
 		id="sidebar-chat-item-menu"
 		class="
@@ -691,4 +713,5 @@
 			</div>
 		{/if}
 	</div>
+	{/if}
 </div>
