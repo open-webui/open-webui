@@ -1120,6 +1120,46 @@ async def apply_message_file_context_templates(
     return messages
 
 
+def merge_latest_user_source_context(
+    messages: list[dict],
+    message_contexts: list[tuple[int, str, str]],
+    sources: list,
+    source_ids: dict | None = None,
+) -> tuple[list[tuple[int, str, str]], list]:
+    if not message_contexts or not sources:
+        return message_contexts, sources
+
+    last_user_index = next(
+        (index for index in range(len(messages) - 1, -1, -1) if messages[index].get('role') == 'user'),
+        None,
+    )
+    if last_user_index is None:
+        return message_contexts, sources
+
+    message_context_index = next(
+        (
+            index
+            for index, (message_index, _message_context, _query) in enumerate(message_contexts)
+            if message_index == last_user_index
+        ),
+        None,
+    )
+    if message_context_index is None:
+        return message_contexts, sources
+
+    context = get_source_context(sources, source_ids=source_ids).strip()
+    if not context:
+        return message_contexts, sources
+
+    message_index, message_context, query = message_contexts[message_context_index]
+    message_contexts[message_context_index] = (
+        message_index,
+        f'{context}\n{message_context}' if message_context else context,
+        query,
+    )
+    return message_contexts, []
+
+
 async def apply_source_context_to_messages(
     request: Request,
     messages: list,
@@ -3087,6 +3127,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             log.exception(e)
 
+    sources_for_context = sources
+    if message_scoped_contexts and sources_for_context:
+        message_scoped_contexts, sources_for_context = merge_latest_user_source_context(
+            form_data['messages'],
+            message_scoped_contexts,
+            sources_for_context,
+            source_ids=rag_source_ids,
+        )
+
     if message_scoped_contexts:
         form_data['messages'] = await apply_message_file_context_templates(
             request,
@@ -3104,11 +3153,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['sources'] = all_sources[:] if all_sources else []
 
     # If context is not empty, insert it into the messages
-    if sources and prompt:
+    if sources_for_context and prompt:
         form_data['messages'] = await apply_source_context_to_messages(
             request,
             form_data['messages'],
-            sources,
+            sources_for_context,
             prompt,
             source_ids=rag_source_ids,
         )
