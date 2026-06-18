@@ -38,6 +38,7 @@ from open_webui.models.config import Config
 
 
 async def seed_registered_defaults():
+    await Config.repair_flattened_dict_configs()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
 

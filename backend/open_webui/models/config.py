@@ -15,9 +15,75 @@ import time
 from typing import Any, ClassVar
 
 from open_webui.internal.db import Base, get_async_db
-from sqlalchemy import JSON, BigInteger, Column, Text, select
+from sqlalchemy import JSON, BigInteger, Column, Text, delete, select
 
 log = logging.getLogger(__name__)
+
+API_CONFIG_KEYS = ('openai.api_configs', 'ollama.api_configs')
+DICT_CONFIG_KEY_ALIASES = {
+    'openai.api_configs': ('OPENAI_API_CONFIGS',),
+    'ollama.api_configs': ('OLLAMA_API_CONFIGS',),
+    'rag.mineru_params': ('MINERU_PARAMS',),
+    'rag.docling_params': ('DOCLING_PARAMS',),
+    'rag.web.search.linkup_search_params': ('LINKUP_SEARCH_PARAMS',),
+    'image_generation.automatic1111.api_params': ('AUTOMATIC1111_PARAMS',),
+    'image_generation.openai.params': ('IMAGES_OPENAI_API_PARAMS',),
+    'audio.tts.openai.params': ('AUDIO_TTS_OPENAI_PARAMS',),
+    'models.default_metadata': ('DEFAULT_MODEL_METADATA',),
+    'models.default_params': ('DEFAULT_MODEL_PARAMS',),
+    'user.permissions': ('USER_PERMISSIONS',),
+}
+DICT_CONFIG_KEYS = tuple(DICT_CONFIG_KEY_ALIASES)
+API_CONFIG_FIELDS = (
+    'enable',
+    'key',
+    'prefix_id',
+    'tags',
+    'model_ids',
+    'connection_type',
+    'provider',
+    'auth_type',
+    'headers',
+    'azure',
+    'api_version',
+    'extra_params',
+)
+
+
+def _split_api_config_fragment(fragment: str) -> tuple[str, list[str]] | None:
+    if not fragment:
+        return None
+
+    first, _, rest = fragment.partition('.')
+    if first.isdigit() and rest:
+        return first, rest.split('.')
+
+    match: tuple[int, str] | None = None
+    for field in API_CONFIG_FIELDS:
+        marker = f'.{field}'
+        marker_index = fragment.rfind(marker)
+        if marker_index != -1 and (match is None or marker_index > match[0]):
+            match = (marker_index, field)
+
+    if match:
+        marker_index, field = match
+        connection_key = fragment[:marker_index]
+        field_path = fragment[marker_index + 1 :]
+        if connection_key:
+            return connection_key, field_path.split('.')
+
+    return None
+
+
+def _assign_path(target: dict, path: list[str], value: Any) -> None:
+    current = target
+    for part in path[:-1]:
+        next_value = current.get(part)
+        if not isinstance(next_value, dict):
+            next_value = {}
+            current[part] = next_value
+        current = next_value
+    current[path[-1]] = value
 
 
 # ── Model ────────────────────────────────────────────────────────────────────
@@ -147,10 +213,8 @@ class Config(Base):
     @staticmethod
     async def clear() -> None:
         """Delete all config rows."""
-        from sqlalchemy import delete as sa_delete
-
         async with get_async_db() as db:
-            await db.execute(sa_delete(Config))
+            await db.execute(delete(Config))
             await db.commit()
 
     @staticmethod
@@ -175,3 +239,71 @@ class Config(Base):
             if new_count:
                 await db.commit()
                 log.info('Seeded %d new config defaults', new_count)
+
+    @staticmethod
+    async def repair_flattened_dict_configs() -> None:
+        """Reassemble dict config values flattened by the per-key migration."""
+        if not Config.PERSISTENT_ENABLED:
+            return
+
+        async with get_async_db() as db:
+            repaired_keys: list[str] = []
+            orphan_keys: list[str] = []
+
+            for config_key, aliases in DICT_CONFIG_KEY_ALIASES.items():
+                prefixes = (config_key, *aliases)
+                rows = []
+                for key_prefix in prefixes:
+                    result = await db.execute(select(Config).where(Config.key.like(f'{key_prefix}.%')))
+                    rows.extend(result.scalars().all())
+                if not rows:
+                    continue
+
+                existing = await db.get(Config, config_key)
+                repaired = existing.value if existing and isinstance(existing.value, dict) else {}
+
+                repaired_any = False
+                for row in rows:
+                    fragment = None
+                    for key_prefix in prefixes:
+                        prefix = f'{key_prefix}.'
+                        if row.key.startswith(prefix):
+                            fragment = row.key.removeprefix(prefix)
+                            break
+                    if fragment is None:
+                        continue
+
+                    if config_key in API_CONFIG_KEYS:
+                        split = _split_api_config_fragment(fragment)
+                        if not split:
+                            continue
+                        object_key, field_path = split
+                    else:
+                        object_key, field_path = None, fragment.split('.')
+
+                    target = repaired
+                    if object_key is not None:
+                        target = repaired.setdefault(object_key, {})
+                        if not isinstance(target, dict):
+                            continue
+
+                    _assign_path(target, field_path, row.value)
+                    orphan_keys.append(row.key)
+                    repaired_any = True
+
+                if not repaired_any:
+                    continue
+
+                if existing:
+                    existing.value = repaired
+                    existing.updated_at = int(time.time())
+                else:
+                    db.add(Config(key=config_key, value=repaired, updated_at=int(time.time())))
+                repaired_keys.append(config_key)
+
+            if orphan_keys:
+                await db.execute(delete(Config).where(Config.key.in_(orphan_keys)))
+
+            if repaired_keys or orphan_keys:
+                await db.commit()
+                log.info('Repaired flattened dict config rows for %s', ', '.join(repaired_keys))
