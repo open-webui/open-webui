@@ -44,11 +44,19 @@
 	const componentId = id || uuidv4();
 
 	function parseJSONString(str: string) {
-		try {
-			return parseJSONString(JSON.parse(str));
-		} catch (e) {
-			return str;
+		// Iteratively unwrap nested JSON-encoded strings. Same result as the previous
+		// recursive form, but without the stack-overflow-and-recover path it hit on
+		// scalar values (e.g. JSON.parse('5') -> 5 -> infinite self-recursion).
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		let value: any = str;
+		while (typeof value === 'string') {
+			try {
+				value = JSON.parse(value);
+			} catch {
+				break;
+			}
 		}
+		return value;
 	}
 
 	function formatJSONString(str: string) {
