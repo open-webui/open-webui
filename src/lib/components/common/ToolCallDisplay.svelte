@@ -51,7 +51,12 @@
 		}
 	}
 
-	$: args = decode(attributes?.arguments ?? '');
+	// Only decode the (potentially huge, per-frame-growing) arguments when they can
+	// actually be shown: when the panel is expanded, or when embeds need them. This
+	// avoids an O(n) decode on every streamed frame for a collapsed in-progress tool
+	// call — the args are never rendered while collapsed without embeds.
+	$: args =
+		open || (Array.isArray(embeds) && embeds.length > 0) ? decode(attributes?.arguments ?? '') : '';
 	export let resultContent: string = '';
 
 	$: result = resultContent || decode(attributes?.result ?? '');
