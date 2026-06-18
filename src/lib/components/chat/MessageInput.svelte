@@ -58,6 +58,8 @@
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
 	import { getSessionUser } from '$lib/apis/auths';
+	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
@@ -1104,6 +1106,9 @@
 				dropzoneElement.addEventListener('drop', onDrop, true);
 				dropzoneElement.addEventListener('dragleave', onDragLeave);
 			}
+
+			tools.set(await getTools(localStorage.token));
+			skills.set(await getSkills(localStorage.token));
 		};
 		initialize();
 
@@ -1514,17 +1519,19 @@
 														if (prompt === '' && e.key == 'ArrowUp') {
 															e.preventDefault();
 
-															const userMessageElement = [
-																...document.getElementsByClassName('user-message')
-															]?.at(-1);
+															if (history?.currentId) {
+																const messages = createMessagesList(history, history.currentId);
+																const userMessages = messages.filter((m) => m.role === 'user');
+																if (userMessages.length > 0) {
+																	const lastUserMessage = userMessages[userMessages.length - 1];
+																	prompt = lastUserMessage.content;
 
-															if (userMessageElement) {
-																userMessageElement.scrollIntoView({ block: 'center' });
-																const editButton = [
-																	...document.getElementsByClassName('edit-user-message-button')
-																]?.at(-1);
-
-																editButton?.click();
+																	await tick();
+																	const chatInput = document.getElementById('chat-input');
+																	if (chatInput) {
+																		chatInput.focus();
+																	}
+																}
 															}
 														}
 
