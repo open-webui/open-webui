@@ -440,7 +440,7 @@
 		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
 			{#if renderHTML}
 				<SvgPanZoom
-					className=" rounded-2xl max-h-fit overflow-hidden"
+					className=" rounded-2xl max-h-fit "
 					svg={renderHTML}
 					content={_token.text}
 				/>

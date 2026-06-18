@@ -32,10 +32,10 @@
 	};
 </script>
 
-<div class="relative {className}">
+<div class="svg-pan-zoom relative {className}">
 	<PanzoomContainer
 		bind:this={panzoomRef}
-		className="flex h-full max-h-full justify-center items-center"
+		className="flex justify-center items-center overflow-visible"
 	>
 		{@html DOMPurify.sanitize(svg, {
 			USE_PROFILES: { svg: true, svgFilters: true }, // allow <svg>, <defs>, <filter>, etc.
@@ -118,3 +118,26 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.svg-pan-zoom :global(svg) {
+		display: block;
+		max-width: 100%;
+		height: auto;
+		overflow: visible;
+	}
+
+	.svg-pan-zoom :global(foreignObject) {
+		overflow: visible;
+	}
+
+	.svg-pan-zoom :global(foreignObject div),
+	.svg-pan-zoom :global(foreignObject span),
+	.svg-pan-zoom :global(foreignObject p) {
+		margin: 0 !important;
+		padding: 0 !important;
+		line-height: 1.2 !important;
+		white-space: normal !important;
+		overflow: visible !important;
+	}
+</style>
