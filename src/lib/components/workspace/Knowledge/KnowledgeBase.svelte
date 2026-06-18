@@ -107,6 +107,7 @@
 	let selectedFileId = null;
 	let selectedFile = null;
 	let selectedFileContent = '';
+	let selectedFileContentLoading = false;
 
 	let inputFiles = null;
 
@@ -235,11 +236,20 @@
 	};
 
 	const fileSelectHandler = async (file) => {
+		selectedFile = file;
+		selectedFileContent = '';
+
+		if (!file?.id) return;
+
+		// list rows are metadata-only; fetch content on demand
+		selectedFileContentLoading = true;
 		try {
-			selectedFile = file;
-			selectedFileContent = selectedFile?.data?.content || '';
+			const fullFile = await getFileById(localStorage.token, file.id);
+			selectedFileContent = fullFile?.data?.content || '';
 		} catch (e) {
 			toast.error($i18n.t('Failed to load file content.'));
+		} finally {
+			selectedFileContentLoading = false;
 		}
 	};
 
@@ -1543,7 +1553,7 @@
 											<div>
 												<button
 													class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-													disabled={isSaving}
+													disabled={isSaving || selectedFileContentLoading}
 													on:click={() => {
 														updateFileContentHandler();
 													}}
@@ -1560,13 +1570,19 @@
 									</div>
 
 									{#key selectedFile.id}
-										<textarea
-											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
-											bind:value={selectedFileContent}
-											disabled={!knowledge?.write_access}
-											aria-label={$i18n.t('File content')}
-											placeholder={$i18n.t('Add content here')}
-										/>
+										{#if selectedFileContentLoading}
+											<div class="flex justify-center items-center h-full">
+												<Spinner className="size-4" />
+											</div>
+										{:else}
+											<textarea
+												class="w-full h-full text-sm outline-none resize-none px-3 py-2"
+												bind:value={selectedFileContent}
+												disabled={!knowledge?.write_access}
+												aria-label={$i18n.t('File content')}
+												placeholder={$i18n.t('Add content here')}
+											/>
+										{/if}
 									{/key}
 								</div>
 							</div>
