@@ -1026,11 +1026,13 @@ async def apply_message_file_contexts(
     files: list[dict] | None,
     metadata: dict,
     user: UserModel,
+    source_ids: dict | None = None,
 ) -> tuple[list[dict], list[dict] | None, list[dict], list[tuple[int, str, str]]]:
     attach_current_user_message_files(messages, metadata)
 
     handled_file_keys = set()
-    source_ids = {}
+    if source_ids is None:
+        source_ids = {}
     scoped_sources = []
     message_contexts = []
 
@@ -1108,6 +1110,7 @@ async def apply_source_context_to_messages(
     sources: list,
     user_message: str,
     include_content: bool = True,
+    source_ids: dict | None = None,
 ) -> list:
     """
     Build source context from citation sources and apply to messages.
@@ -1120,7 +1123,7 @@ async def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, include_content=include_content)
+    context = get_source_context(sources, source_ids=source_ids, include_content=include_content)
 
     context = context.strip()
     if not context:
@@ -2604,6 +2607,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     events = []
     sources = []
+    rag_source_ids = {}
     message_scoped_sources = []
     message_scoped_contexts = []
     file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
@@ -2846,6 +2850,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     files,
                     metadata,
                     user,
+                    source_ids=rag_source_ids,
                 )
             )
 
@@ -3082,7 +3087,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # If context is not empty, insert it into the messages
     if sources and prompt:
-        form_data['messages'] = await apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
+        form_data['messages'] = await apply_source_context_to_messages(
+            request,
+            form_data['messages'],
+            sources,
+            prompt,
+            source_ids=rag_source_ids,
+        )
 
     # If there are citations, add them to the data_items
     sources = [
