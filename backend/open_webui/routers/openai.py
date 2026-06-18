@@ -32,10 +32,11 @@ from open_webui.env import (
     MODELS_CACHE_TTL,
 )
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
-from open_webui.utils.access_control import check_model_access
+from open_webui.utils.access_control import check_model_access, has_connection_access, has_permission
 from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_client_headers, include_user_info_headers
@@ -239,15 +240,50 @@ def get_microsoft_entra_id_access_token():
 
 router = APIRouter()
 
+OPENAI_CONFIG_KEYS = {
+    'ENABLE_OPENAI_API': 'openai.enable',
+    'OPENAI_API_BASE_URLS': 'openai.api_base_urls',
+    'OPENAI_API_KEYS': 'openai.api_keys',
+    'OPENAI_API_CONFIGS': 'openai.api_configs',
+}
+
+
+async def get_openai_config() -> dict:
+    values = await Config.get_many(*OPENAI_CONFIG_KEYS.values())
+    return {field: values[storage_key] for field, storage_key in OPENAI_CONFIG_KEYS.items() if storage_key in values}
+
+
+async def get_openai_runtime_config() -> tuple[bool, list[str], list[str], dict]:
+    values = await Config.get_many('openai.enable', 'openai.api_base_urls', 'openai.api_keys', 'openai.api_configs')
+    return (
+        values.get('openai.enable'),
+        values.get('openai.api_base_urls') or [],
+        values.get('openai.api_keys') or [],
+        values.get('openai.api_configs') or {},
+    )
+
+
+async def normalize_openai_api_keys(api_base_urls: list[str], api_keys: list[str]) -> list[str]:
+    if len(api_keys) > len(api_base_urls):
+        api_keys = api_keys[: len(api_base_urls)]
+    elif len(api_keys) < len(api_base_urls):
+        api_keys = [*api_keys, *([''] * (len(api_base_urls) - len(api_keys)))]
+
+    await Config.upsert({'openai.api_keys': api_keys})
+    return api_keys
+
+
+async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
+    _, api_base_urls, api_keys, api_configs = await get_openai_runtime_config()
+    url = api_base_urls[idx]
+    key = api_keys[idx]
+    api_config = api_configs.get(str(idx), api_configs.get(url, {}))
+    return url, key, api_config
+
 
 @router.get('/config')
 async def get_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'ENABLE_OPENAI_API': request.app.state.config.ENABLE_OPENAI_API,
-        'OPENAI_API_BASE_URLS': request.app.state.config.OPENAI_API_BASE_URLS,
-        'OPENAI_API_KEYS': request.app.state.config.OPENAI_API_KEYS,
-        'OPENAI_API_CONFIGS': request.app.state.config.OPENAI_API_CONFIGS,
-    }
+    return await get_openai_config()
 
 
 class OpenAIConfigForm(BaseModel):
@@ -259,42 +295,47 @@ class OpenAIConfigForm(BaseModel):
 
 @router.post('/config/update')
 async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)):
-    request.app.state.config.ENABLE_OPENAI_API = form_data.ENABLE_OPENAI_API
-    request.app.state.config.OPENAI_API_BASE_URLS = form_data.OPENAI_API_BASE_URLS
-    request.app.state.config.OPENAI_API_KEYS = form_data.OPENAI_API_KEYS
+    api_keys = form_data.OPENAI_API_KEYS
 
-    # Check if API KEYS length is same than API URLS length
-    if len(request.app.state.config.OPENAI_API_KEYS) != len(request.app.state.config.OPENAI_API_BASE_URLS):
-        if len(request.app.state.config.OPENAI_API_KEYS) > len(request.app.state.config.OPENAI_API_BASE_URLS):
-            request.app.state.config.OPENAI_API_KEYS = request.app.state.config.OPENAI_API_KEYS[
-                : len(request.app.state.config.OPENAI_API_BASE_URLS)
-            ]
-        else:
-            request.app.state.config.OPENAI_API_KEYS += [''] * (
-                len(request.app.state.config.OPENAI_API_BASE_URLS) - len(request.app.state.config.OPENAI_API_KEYS)
-            )
+    if len(api_keys) > len(form_data.OPENAI_API_BASE_URLS):
+        api_keys = api_keys[: len(form_data.OPENAI_API_BASE_URLS)]
+    elif len(api_keys) < len(form_data.OPENAI_API_BASE_URLS):
+        api_keys = [*api_keys, *([''] * (len(form_data.OPENAI_API_BASE_URLS) - len(api_keys)))]
 
-    request.app.state.config.OPENAI_API_CONFIGS = form_data.OPENAI_API_CONFIGS
+    valid_keys = set(map(str, range(len(form_data.OPENAI_API_BASE_URLS))))
+    api_configs = {key: value for key, value in form_data.OPENAI_API_CONFIGS.items() if key in valid_keys}
 
-    # Remove the API configs that are not in the API URLS
-    keys = list(map(str, range(len(request.app.state.config.OPENAI_API_BASE_URLS))))
-    request.app.state.config.OPENAI_API_CONFIGS = {
-        key: value for key, value in request.app.state.config.OPENAI_API_CONFIGS.items() if key in keys
-    }
+    await Config.upsert(
+        {
+            'openai.enable': form_data.ENABLE_OPENAI_API,
+            'openai.api_base_urls': form_data.OPENAI_API_BASE_URLS,
+            'openai.api_keys': api_keys,
+            'openai.api_configs': api_configs,
+        }
+    )
 
     return {
-        'ENABLE_OPENAI_API': request.app.state.config.ENABLE_OPENAI_API,
-        'OPENAI_API_BASE_URLS': request.app.state.config.OPENAI_API_BASE_URLS,
-        'OPENAI_API_KEYS': request.app.state.config.OPENAI_API_KEYS,
-        'OPENAI_API_CONFIGS': request.app.state.config.OPENAI_API_CONFIGS,
+        'ENABLE_OPENAI_API': form_data.ENABLE_OPENAI_API,
+        'OPENAI_API_BASE_URLS': form_data.OPENAI_API_BASE_URLS,
+        'OPENAI_API_KEYS': api_keys,
+        'OPENAI_API_CONFIGS': api_configs,
     }
 
 
 @router.post('/audio/speech')
 async def speech(request: Request, user=Depends(get_verified_user)):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'chat.tts', await Config.get('user.permissions')
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     idx = None
     try:
-        idx = request.app.state.config.OPENAI_API_BASE_URLS.index('https://api.openai.com/v1')
+        _, api_base_urls, _, _ = await get_openai_runtime_config()
+        idx = api_base_urls.index('https://api.openai.com/v1')
 
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
@@ -308,12 +349,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         if file_path.is_file():
             return FileResponse(file_path)
 
-        url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-        key = request.app.state.config.OPENAI_API_KEYS[idx]
-        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-            str(idx),
-            request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-        )
+        url, key, api_config = await get_openai_connection(idx)
 
         headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
 
@@ -363,29 +399,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 
 async def get_all_models_responses(request: Request, user: UserModel) -> list:
-    if not request.app.state.config.ENABLE_OPENAI_API:
+    enable_openai_api, api_base_urls, api_keys, api_configs = await get_openai_runtime_config()
+    if not enable_openai_api:
         return []
 
-    # Cache config values locally to avoid repeated Redis lookups.
-    # Each access to request.app.state.config.<KEY> triggers a Redis GET;
-    # caching here avoids hundreds of redundant round-trips.
-    api_base_urls = request.app.state.config.OPENAI_API_BASE_URLS
-    api_keys = list(request.app.state.config.OPENAI_API_KEYS)
-    api_configs = request.app.state.config.OPENAI_API_CONFIGS
-
-    # Check if API KEYS length is same than API URLS length
     num_urls = len(api_base_urls)
     num_keys = len(api_keys)
 
     if num_keys != num_urls:
-        # if there are more keys than urls, remove the extra keys
-        if num_keys > num_urls:
-            api_keys = api_keys[:num_urls]
-            request.app.state.config.OPENAI_API_KEYS = api_keys
-        # if there are more urls than keys, add empty keys
-        else:
-            api_keys += [''] * (num_urls - num_keys)
-            request.app.state.config.OPENAI_API_KEYS = api_keys
+        api_keys = await normalize_openai_api_keys(api_base_urls, api_keys)
 
     request_tasks = []
     for idx, url in enumerate(api_base_urls):
@@ -495,12 +517,9 @@ async def get_filtered_models(models, user, db=None):
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info('get_all_models()')
 
-    if not request.app.state.config.ENABLE_OPENAI_API:
+    enable_openai_api, api_base_urls, _, _ = await get_openai_runtime_config()
+    if not enable_openai_api:
         return {'data': []}
-
-    # Cache config value locally to avoid repeated Redis lookups inside
-    # the nested loop in get_merged_models (one GET per model otherwise).
-    api_base_urls = request.app.state.config.OPENAI_API_BASE_URLS
 
     responses = await get_all_models_responses(request, user=user)
 
@@ -572,7 +591,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 @router.get('/models')
 @router.get('/models/{url_idx}')
 async def get_models(request: Request, url_idx: int | None = None, user=Depends(get_verified_user)):
-    if not request.app.state.config.ENABLE_OPENAI_API:
+    if not await Config.get('openai.enable'):
         raise HTTPException(status_code=503, detail='OpenAI API is disabled')
 
     models = {
@@ -582,13 +601,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
     if url_idx is None:
         models = await get_all_models(request, user=user)
     else:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
-        key = request.app.state.config.OPENAI_API_KEYS[url_idx]
-
-        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-            str(url_idx),
-            request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-        )
+        url, key, api_config = await get_openai_connection(url_idx)
 
         r = None
         async with aiohttp.ClientSession(
@@ -1117,13 +1130,7 @@ async def generate_chat_completion(
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
+    url, key, api_config = await get_openai_connection(idx)
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
@@ -1137,9 +1144,6 @@ async def generate_chat_completion(
             'email': user.email,
             'role': user.role,
         }
-
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_new_model(payload['model']):
@@ -1306,12 +1310,7 @@ async def embeddings(request: Request, form_data: dict, user):
     if model_id in models:
         idx = models[model_id]['urlIdx']
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+    url, key, api_config = await get_openai_connection(idx)
 
     r = None
     streaming = False
@@ -1429,12 +1428,7 @@ async def responses(
         if model_id in models:
             idx = models[model_id]['urlIdx']
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+    url, key, api_config = await get_openai_connection(idx)
 
     r = None
     streaming = False
@@ -1538,14 +1532,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if model_id in models:
             idx = models[model_id]['urlIdx']
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
+    url, key, api_config = await get_openai_connection(idx)
 
     r = None
     streaming = False

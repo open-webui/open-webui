@@ -29,12 +29,8 @@ def search_perplexity_search(
 
     """
 
-    # Handle ConfigVar object
-    if hasattr(api_key, '__str__'):
-        api_key = str(api_key)
-
-    if hasattr(api_url, '__str__'):
-        api_url = str(api_url)
+    api_key = str(api_key)
+    api_url = str(api_url)
 
     try:
         url = api_url

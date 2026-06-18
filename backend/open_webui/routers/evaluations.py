@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
+from open_webui.models.config import Config
 from open_webui.models.feedbacks import (
     FeedbackForm,
     FeedbackIdResponse,
@@ -24,6 +25,16 @@ log = logging.getLogger(__name__)
 
 
 router = APIRouter()
+
+EVALUATION_CONFIG_KEYS = {
+    'ENABLE_EVALUATION_ARENA_MODELS': 'evaluation.arena.enable',
+    'EVALUATION_ARENA_MODELS': 'evaluation.arena.models',
+}
+
+
+async def get_config_values(key_map: dict[str, str]) -> dict:
+    values = await Config.get_many(*key_map.values())
+    return {field: values[storage_key] for field, storage_key in key_map.items() if storage_key in values}
 
 
 # Leaderboard Elo Rating Computation
@@ -255,10 +266,7 @@ async def get_model_history(
 
 @router.get('/config')
 async def get_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        'ENABLE_EVALUATION_ARENA_MODELS': request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS,
-        'EVALUATION_ARENA_MODELS': request.app.state.config.EVALUATION_ARENA_MODELS,
-    }
+    return await get_config_values(EVALUATION_CONFIG_KEYS)
 
 
 ############################
@@ -277,15 +285,13 @@ async def update_config(
     form_data: UpdateConfigForm,
     user=Depends(get_admin_user),
 ):
-    config = request.app.state.config
+    updates = {}
     if form_data.ENABLE_EVALUATION_ARENA_MODELS is not None:
-        config.ENABLE_EVALUATION_ARENA_MODELS = form_data.ENABLE_EVALUATION_ARENA_MODELS
+        updates['evaluation.arena.enable'] = form_data.ENABLE_EVALUATION_ARENA_MODELS
     if form_data.EVALUATION_ARENA_MODELS is not None:
-        config.EVALUATION_ARENA_MODELS = form_data.EVALUATION_ARENA_MODELS
-    return {
-        'ENABLE_EVALUATION_ARENA_MODELS': config.ENABLE_EVALUATION_ARENA_MODELS,
-        'EVALUATION_ARENA_MODELS': config.EVALUATION_ARENA_MODELS,
-    }
+        updates['evaluation.arena.models'] = form_data.EVALUATION_ARENA_MODELS
+    await Config.upsert(updates)
+    return await get_config_values(EVALUATION_CONFIG_KEYS)
 
 
 @router.get('/feedbacks/models', response_model=list[str])

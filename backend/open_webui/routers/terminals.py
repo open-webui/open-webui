@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_connection_access
@@ -43,6 +44,9 @@ def _sanitize_proxy_path(path: str) -> str | None:
         if once == decoded:
             break
         decoded = once
+    # Fail closed: still encoded after the cap means the upstream would decode further into traversal.
+    if unquote(decoded) != decoded:
+        return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
@@ -59,7 +63,7 @@ def _sanitize_proxy_path(path: str) -> str | None:
 @router.get('/')
 async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
     """Return terminal servers the authenticated user has access to."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
     return [
@@ -84,7 +88,7 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
@@ -232,7 +236,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         return None
 
     # Resolve terminal server
-    connections = ws.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
@@ -282,10 +286,14 @@ async def ws_terminal(
 
     import urllib.parse
 
+    # Encode session_id as an opaque path segment so it cannot smuggle '?'/'#'/'&' (at any
+    # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
+    safe_session_id = urllib.parse.quote(session_id, safe='')
+
     if policy_id:
-        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{session_id}'
+        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{safe_session_id}'
     else:
-        upstream_url = f'{ws_base}/api/terminals/{session_id}'
+        upstream_url = f'{ws_base}/api/terminals/{safe_session_id}'
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 

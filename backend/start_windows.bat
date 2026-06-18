@@ -27,6 +27,9 @@ IF "%HOST%"=="" SET HOST=0.0.0.0
 IF "%FORWARDED_ALLOW_IPS%"=="" SET "FORWARDED_ALLOW_IPS='*'"
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 SET "WEBUI_JWT_SECRET_KEY=%WEBUI_JWT_SECRET_KEY%"
+IF "%WEBUI_SECRET_KEY_LENGTH%" == "" (
+    SET "WEBUI_SECRET_KEY_LENGTH=24"
+)
 
 :: Check if WEBUI_SECRET_KEY and WEBUI_JWT_SECRET_KEY are not set
 IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
@@ -36,7 +39,7 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
         echo Generating WEBUI_SECRET_KEY
         :: Generate a random value to use as a WEBUI_SECRET_KEY in case the user didn't provide one
         SET /p WEBUI_SECRET_KEY=<nul
-        FOR /L %%i IN (1,1,12) DO SET /p WEBUI_SECRET_KEY=<!random!>>%KEY_FILE%
+        FOR /L %%i IN (1,1,%WEBUI_SECRET_KEY_LENGTH%) DO SET /p WEBUI_SECRET_KEY=<!random!>>%KEY_FILE%
         echo WEBUI_SECRET_KEY generated
     )
 

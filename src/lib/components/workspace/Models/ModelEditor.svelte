@@ -29,7 +29,6 @@
 	import TerminalSelector from './TerminalSelector.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
-	import { updateModelAccessGrants } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -249,9 +248,13 @@
 	};
 
 	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
+		if (!$tools) {
+			await tools.set(await getTools(localStorage.token));
+		}
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
-		await functions.set(await getFunctions(localStorage.token));
+		if (!$functions) {
+			await functions.set(await getFunctions(localStorage.token));
+		}
 
 		// Fetch admin-configured default model metadata so the editor
 		// reflects the actual defaults rather than hardcoded values
@@ -363,21 +366,6 @@
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
-		onChange={async () => {
-			if (edit && model?.id) {
-				try {
-					await updateModelAccessGrants(
-						localStorage.token,
-						model.id,
-						model.name ?? name,
-						accessGrants
-					);
-					toast.success($i18n.t('Saved'));
-				} catch (error) {
-					toast.error(error?.detail ?? `${error}`);
-				}
-			}
-		}}
 	/>
 
 	{#if onBack}

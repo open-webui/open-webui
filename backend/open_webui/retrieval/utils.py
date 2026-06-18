@@ -39,6 +39,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.notes import Notes
+from open_webui.models.config import Config
 from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
@@ -63,65 +64,84 @@ def is_youtube_url(url: str) -> bool:
     return re.match(youtube_regex, url) is not None
 
 
-def get_loader(request, url: str):
+LOADER_CONFIG_KEYS = {
+    'youtube_language': 'rag.youtube_loader_language',
+    'youtube_proxy_url': 'rag.youtube_loader_proxy_url',
+    'web_loader_ssl_verification': 'rag.web.loader.ssl_verification',
+    'web_loader_concurrent_requests': 'rag.web.loader.concurrent_requests',
+    'web_search_trust_env': 'rag.web.search.trust_env',
+    'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
+    'DATALAB_MARKER_API_KEY': 'rag.datalab_marker_api_key',
+    'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',
+    'DATALAB_MARKER_ADDITIONAL_CONFIG': 'rag.datalab_marker_additional_config',
+    'DATALAB_MARKER_SKIP_CACHE': 'rag.datalab_marker_skip_cache',
+    'DATALAB_MARKER_FORCE_OCR': 'rag.datalab_marker_force_ocr',
+    'DATALAB_MARKER_PAGINATE': 'rag.datalab_marker_paginate',
+    'DATALAB_MARKER_STRIP_EXISTING_OCR': 'rag.datalab_marker_strip_existing_ocr',
+    'DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION': 'rag.datalab_marker_disable_image_extraction',
+    'DATALAB_MARKER_FORMAT_LINES': 'rag.datalab_marker_format_lines',
+    'DATALAB_MARKER_USE_LLM': 'rag.datalab_marker_use_llm',
+    'DATALAB_MARKER_OUTPUT_FORMAT': 'rag.datalab_marker_output_format',
+    'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
+    'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
+    'TIKA_SERVER_URL': 'rag.tika_server_url',
+    'DOCLING_SERVER_URL': 'rag.docling_server_url',
+    'DOCLING_API_KEY': 'rag.docling_api_key',
+    'DOCLING_PARAMS': 'rag.docling_params',
+    'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
+    'PDF_LOADER_MODE': 'rag.pdf_loader_mode',
+    'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
+    'DOCUMENT_INTELLIGENCE_KEY': 'rag.document_intelligence_key',
+    'DOCUMENT_INTELLIGENCE_MODEL': 'rag.document_intelligence_model',
+    'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
+    'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
+    'PADDLEOCR_VL_BASE_URL': 'rag.paddleocr_vl_base_url',
+    'PADDLEOCR_VL_TOKEN': 'rag.paddleocr_vl_token',
+    'MINERU_API_MODE': 'rag.mineru_api_mode',
+    'MINERU_API_URL': 'rag.mineru_api_url',
+    'MINERU_API_KEY': 'rag.mineru_api_key',
+    'MINERU_API_TIMEOUT': 'rag.mineru_api_timeout',
+    'MINERU_PARAMS': 'rag.mineru_params',
+    'MINERU_FILE_EXTENSIONS': 'rag.mineru_file_extensions',
+}
+
+
+async def get_loader_config():
+    values = await Config.get_many(*LOADER_CONFIG_KEYS.values())
+    return {name: values.get(key) for name, key in LOADER_CONFIG_KEYS.items()}
+
+
+def get_loader(request, url: str, config: dict):
     if is_youtube_url(url):
         return YoutubeLoader(
             url,
-            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
+            language=config.get('youtube_language'),
+            proxy_url=config.get('youtube_proxy_url'),
         )
-    else:
-        return get_web_loader(
-            url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-            trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
-        )
-
-
-def build_loader_from_config(request):
-    """Build a Loader instance with the admin's configured extraction engine settings."""
-    from open_webui.retrieval.loaders.main import Loader
-
-    config = request.app.state.config
-    return Loader(
-        engine=config.CONTENT_EXTRACTION_ENGINE,
-        DATALAB_MARKER_API_KEY=config.DATALAB_MARKER_API_KEY,
-        DATALAB_MARKER_API_BASE_URL=config.DATALAB_MARKER_API_BASE_URL,
-        DATALAB_MARKER_ADDITIONAL_CONFIG=config.DATALAB_MARKER_ADDITIONAL_CONFIG,
-        DATALAB_MARKER_SKIP_CACHE=config.DATALAB_MARKER_SKIP_CACHE,
-        DATALAB_MARKER_FORCE_OCR=config.DATALAB_MARKER_FORCE_OCR,
-        DATALAB_MARKER_PAGINATE=config.DATALAB_MARKER_PAGINATE,
-        DATALAB_MARKER_STRIP_EXISTING_OCR=config.DATALAB_MARKER_STRIP_EXISTING_OCR,
-        DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
-        DATALAB_MARKER_FORMAT_LINES=config.DATALAB_MARKER_FORMAT_LINES,
-        DATALAB_MARKER_USE_LLM=config.DATALAB_MARKER_USE_LLM,
-        DATALAB_MARKER_OUTPUT_FORMAT=config.DATALAB_MARKER_OUTPUT_FORMAT,
-        EXTERNAL_DOCUMENT_LOADER_URL=config.EXTERNAL_DOCUMENT_LOADER_URL,
-        EXTERNAL_DOCUMENT_LOADER_API_KEY=config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-        TIKA_SERVER_URL=config.TIKA_SERVER_URL,
-        DOCLING_SERVER_URL=config.DOCLING_SERVER_URL,
-        DOCLING_API_KEY=config.DOCLING_API_KEY,
-        DOCLING_PARAMS=config.DOCLING_PARAMS,
-        PDF_EXTRACT_IMAGES=config.PDF_EXTRACT_IMAGES,
-        PDF_LOADER_MODE=config.PDF_LOADER_MODE,
-        DOCUMENT_INTELLIGENCE_ENDPOINT=config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-        DOCUMENT_INTELLIGENCE_KEY=config.DOCUMENT_INTELLIGENCE_KEY,
-        DOCUMENT_INTELLIGENCE_MODEL=config.DOCUMENT_INTELLIGENCE_MODEL,
-        MISTRAL_OCR_API_BASE_URL=config.MISTRAL_OCR_API_BASE_URL,
-        MISTRAL_OCR_API_KEY=config.MISTRAL_OCR_API_KEY,
-        PADDLEOCR_VL_BASE_URL=config.PADDLEOCR_VL_BASE_URL,
-        PADDLEOCR_VL_TOKEN=config.PADDLEOCR_VL_TOKEN,
-        MINERU_API_MODE=config.MINERU_API_MODE,
-        MINERU_API_URL=config.MINERU_API_URL,
-        MINERU_API_KEY=config.MINERU_API_KEY,
-        MINERU_API_TIMEOUT=config.MINERU_API_TIMEOUT,
-        MINERU_PARAMS=config.MINERU_PARAMS,
-        MINERU_FILE_EXTENSIONS=config.MINERU_FILE_EXTENSIONS,
+    return get_web_loader(
+        url,
+        verify_ssl=config.get('web_loader_ssl_verification'),
+        requests_per_second=config.get('web_loader_concurrent_requests'),
+        trust_env=config.get('web_search_trust_env'),
     )
 
 
-def _extract_text_from_binary_response(request, response: requests.Response, url: str) -> tuple[str, list]:
+def build_loader_from_config(request, config: dict):
+    """Build a Loader instance with the admin's configured extraction engine settings."""
+    from open_webui.retrieval.loaders.main import Loader
+
+    loader_config = {
+        key: config.get(key)
+        for key in LOADER_CONFIG_KEYS
+        if key.isupper()
+    }
+    return Loader(
+        engine=loader_config['CONTENT_EXTRACTION_ENGINE'],
+        **{key: value for key, value in loader_config.items() if key != 'CONTENT_EXTRACTION_ENGINE'},
+    )
+
+
+def _extract_text_from_binary_response(request, response: requests.Response, url: str, loader_config: dict) -> tuple[str, list]:
     """Download response body to a temp file and extract text using the Loader pipeline."""
     import mimetypes
     import tempfile
@@ -150,7 +170,7 @@ def _extract_text_from_binary_response(request, response: requests.Response, url
         tmp_path = tmp.name
 
     try:
-        loader = build_loader_from_config(request)
+        loader = build_loader_from_config(request, loader_config)
         docs = loader.load(filename, content_type, tmp_path)
         for doc in docs:
             doc.metadata['source'] = url
@@ -170,8 +190,10 @@ def _is_text_content_type(content_type: str) -> bool:
     return not ct  # empty / missing → assume HTML
 
 
-def get_content_from_url(request, url: str) -> str:
+async def get_content_from_url(request, url: str) -> str:
     from open_webui.retrieval.web.utils import validate_url
+
+    loader_config = await get_loader_config()
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
@@ -183,7 +205,7 @@ def get_content_from_url(request, url: str) -> str:
     # when allow_redirects=False, causing the binary-content path to run
     # and produce empty docs → HTTP 400.
     if is_youtube_url(url):
-        loader = get_loader(request, url)
+        loader = get_loader(request, url, loader_config)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
         return content, docs
@@ -205,14 +227,14 @@ def get_content_from_url(request, url: str) -> str:
     if response is None or _is_text_content_type(content_type):
         if response is not None:
             response.close()
-        loader = get_loader(request, url)
+        loader = get_loader(request, url, loader_config)
         docs = loader.load()
         content = ' '.join([doc.page_content for doc in docs])
         return content, docs
 
     # Binary content (PDF, DOCX, XLSX, PPTX, etc.) — download and extract
     try:
-        return _extract_text_from_binary_response(request, response, url)
+        return _extract_text_from_binary_response(request, response, url, loader_config)
     finally:
         response.close()
 
@@ -539,8 +561,15 @@ async def query_collection(
     embedding_function,
     k: int,
 ) -> dict:
+    config = await Config.get_many(
+        'rag.enable_hybrid_search',
+        'rag.top_k_reranker',
+        'rag.relevance_threshold',
+        'rag.hybrid_bm25_weight',
+        'rag.enable_hybrid_search_enriched_texts',
+    )
     # When request is provided, try hybrid search + reranking if enabled
-    if request and request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+    if request and config.get('rag.enable_hybrid_search'):
         try:
             reranking_function = (
                 (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents))
@@ -553,10 +582,10 @@ async def query_collection(
                 embedding_function=embedding_function,
                 k=k,
                 reranking_function=reranking_function,
-                k_reranker=request.app.state.config.TOP_K_RERANKER,
-                r=request.app.state.config.RELEVANCE_THRESHOLD,
-                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                enable_enriched_texts=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+                k_reranker=config.get('rag.top_k_reranker'),
+                r=config.get('rag.relevance_threshold'),
+                hybrid_bm25_weight=config.get('rag.hybrid_bm25_weight'),
+                enable_enriched_texts=config.get('rag.enable_hybrid_search_enriched_texts'),
             )
         except Exception as e:
             log.debug(f'Hybrid search failed, falling back to vector search: {e}')
@@ -1165,6 +1194,7 @@ async def get_sources_from_items(
 ):
     log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
 
+    bypass_embedding_and_retrieval = await Config.get('rag.bypass_embedding_and_retrieval')
     extracted_collections = []
     query_results = []
 
@@ -1244,14 +1274,14 @@ async def get_sources_from_items(
                     }
 
         elif item.get('type') == 'url':
-            content, docs = get_content_from_url(request, item.get('url'))
+            content, docs = await get_content_from_url(request, item.get('url'))
             if docs:
                 query_result = {
                     'documents': [[content]],
                     'metadatas': [[{'url': item.get('url'), 'name': item.get('url')}]],
                 }
         elif item.get('type') == 'file':
-            if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            if item.get('context') == 'full' or bypass_embedding_and_retrieval:
                 if item.get('file', {}).get('data', {}).get('content', ''):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
@@ -1323,7 +1353,7 @@ async def get_sources_from_items(
                     permission='read',
                 )
             ):
-                if item.get('context') == 'full' or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+                if item.get('context') == 'full' or bypass_embedding_and_retrieval:
                     if knowledge_base and (
                         user.role == 'admin'
                         or knowledge_base.user_id == user.id

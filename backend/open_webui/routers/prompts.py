@@ -7,6 +7,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
     PromptHistories,
@@ -149,13 +150,13 @@ async def create_new_prompt(
         await has_permission(
             user.id,
             'workspace.prompts',
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
             db=db,
         )
         or await has_permission(
             user.id,
             'workspace.prompts_import',
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
             db=db,
         )
     ):
@@ -165,7 +166,7 @@ async def create_new_prompt(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -281,7 +282,7 @@ async def update_prompt_by_id(
             )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -438,7 +439,7 @@ async def update_prompt_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,

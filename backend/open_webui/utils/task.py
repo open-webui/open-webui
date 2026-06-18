@@ -141,6 +141,9 @@ def truncate_content(content: str, max_chars: int, mode: str = 'middletruncate')
         - start: keep first max_chars characters
         - end: keep last max_chars characters
     """
+    if max_chars <= 0:
+        return ''
+
     if not content or len(content) <= max_chars:
         return content
 

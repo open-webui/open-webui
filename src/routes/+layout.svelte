@@ -475,7 +475,7 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		// Calendar alerts are not chat-scoped — handle before chat_id checks
+		// Calendar alerts are not chat-scoped, handle before chat_id checks
 		if (type === 'calendar:alert' && data) {
 			const timeStr =
 				data.minutes_until <= 0
@@ -992,18 +992,6 @@
 
 				$socket?.on('events', chatEventHandler);
 				$socket?.on('events:channel', channelEventHandler);
-
-				const userSettings = await getUserSettings(localStorage.token);
-				if (userSettings) {
-					settings.set(userSettings.ui);
-				} else {
-					try {
-						settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-					} catch {
-						settings.set({});
-					}
-				}
-				setTextScale($settings?.textScale ?? 1);
 
 				// Set up the token expiry check
 				if (tokenTimer) {
