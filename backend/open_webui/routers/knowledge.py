@@ -20,6 +20,7 @@ from open_webui.models.knowledge import (
     KnowledgeDirectoryForm,
     KnowledgeDirectoryModel,
     KnowledgeFileListResponse,
+    KnowledgeFileModel,
     KnowledgeForm,
     KnowledgeResponse,
     Knowledges,
@@ -697,6 +698,11 @@ class KnowledgeFileIdForm(BaseModel):
     directory_id: Optional[str] = None
 
 
+class KnowledgeFileContextForm(BaseModel):
+    file_id: str
+    context: Optional[str] = None  # 'full' to inject verbatim; None to restore RAG
+
+
 @router.post('/{id}/file/add', response_model=KnowledgeFilesResponse | None)
 async def add_file_to_knowledge_by_id(
     request: Request,
@@ -782,6 +788,57 @@ async def add_file_to_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+@router.post('/{id}/file/context', response_model=KnowledgeFileModel | None)
+async def update_file_context_in_knowledge_by_id(
+    id: str,
+    form_data: KnowledgeFileContextForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='knowledge',
+            resource_id=knowledge.id,
+            permission='write',
+            db=db,
+        )
+        and user.role != 'admin'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if not await Knowledges.has_file(id, form_data.file_id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    ok = await Knowledges.update_file_context_by_id(
+        knowledge_id=id,
+        file_id=form_data.file_id,
+        context=form_data.context,
+        db=db,
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+    return None
 
 
 @router.post('/{id}/file/update', response_model=KnowledgeFilesResponse | None)

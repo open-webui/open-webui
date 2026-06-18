@@ -105,6 +105,8 @@ class KnowledgeFile(Base):
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
 
+    context = Column(Text, nullable=True)
+
     __table_args__ = (
         UniqueConstraint('knowledge_id', 'file_id', name='uq_knowledge_file_knowledge_file'),
         Index('ix_knowledge_file_directory_id', 'directory_id'),
@@ -120,6 +122,8 @@ class KnowledgeFileModel(BaseModel):
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
+
+    context: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -633,6 +637,40 @@ class KnowledgeTable:
                 return [FileModel.model_validate(file) for file in files]
         except Exception:
             return []
+
+    async def get_files_with_context_by_id(
+        self, knowledge_id: str, db: Optional[AsyncSession] = None
+    ) -> list[tuple[FileModel, Optional[str]]]:
+        """Return (FileModel, context) pairs for all files in a KB."""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(
+                    select(File, KnowledgeFile.context)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+                return [(FileModel.model_validate(file), ctx) for file, ctx in result.all()]
+        except Exception:
+            return []
+
+    async def update_file_context_by_id(
+        self,
+        knowledge_id: str,
+        file_id: str,
+        context: Optional[str],
+        db: Optional[AsyncSession] = None,
+    ) -> bool:
+        try:
+            async with get_async_db_context(db) as db:
+                await db.execute(
+                    update(KnowledgeFile)
+                    .filter_by(knowledge_id=knowledge_id, file_id=file_id)
+                    .values(context=context, updated_at=int(time.time()))
+                )
+                await db.commit()
+                return True
+        except Exception:
+            return False
 
     async def get_file_metadatas_by_id(
         self, knowledge_id: str, db: Optional[AsyncSession] = None

@@ -1383,6 +1383,28 @@ async def get_sources_from_items(
                             'metadatas': [metadatas],
                         }
                 else:
+                    # Per-file full context: inject files marked with context='full'
+                    # directly into the result, bypassing vector retrieval for those files.
+                    # The rest of the collection still goes through normal RAG.
+                    for file, file_ctx in await Knowledges.get_files_with_context_by_id(knowledge_base.id):
+                        if file_ctx == 'full':
+                            content = (file.data or {}).get('content', '')
+                            if content.strip():
+                                query_results.append({
+                                    'documents': [[content]],
+                                    'metadatas': [[{
+                                        'file_id': file.id,
+                                        'name': file.filename,
+                                        'source': file.filename,
+                                    }]],
+                                    'file': {
+                                        'type': 'file',
+                                        'context': 'full',
+                                        'id': file.id,
+                                        'name': file.filename,
+                                    },
+                                })
+
                     if item.get('legacy'):
                         if BYPASS_RETRIEVAL_ACCESS_CONTROL:
                             collection_names = item.get('collection_names', [])
