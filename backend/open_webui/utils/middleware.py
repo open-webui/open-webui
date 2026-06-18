@@ -955,11 +955,17 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
     return context_string
 
 
+FILE_CONTEXT_ITEM_TYPES = {'doc', 'text', 'note', 'chat', 'folder', 'collection'}
+
+
 def is_file_context_item(item: dict) -> bool:
     if not isinstance(item, dict):
         return False
 
-    return item.get('type') != 'image' and not (item.get('content_type') or '').startswith('image/')
+    item_type = item.get('type')
+    return item_type in FILE_CONTEXT_ITEM_TYPES or (
+        item_type == 'file' and not (item.get('content_type') or '').startswith('image/')
+    )
 
 
 def get_file_context_key(item: dict) -> tuple:

@@ -10,7 +10,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Sequence, Union
+from typing import Callable, Iterator, Literal, Optional, Sequence, Union
 
 import tiktoken
 from fastapi import (
@@ -653,7 +653,7 @@ class ConfigForm(BaseModel):
     TOP_K: int | None = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
     RAG_FULL_CONTEXT: bool | None = None
-    RAG_FILE_CONTEXT_SCOPE: str | None = None
+    RAG_FILE_CONTEXT_SCOPE: Literal['conversation', 'message'] | None = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: bool | None = None

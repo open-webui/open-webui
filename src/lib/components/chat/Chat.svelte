@@ -2340,7 +2340,7 @@
 					return {
 						role: message.role,
 						...(message.output ? { output: message.output } : {}),
-						...(messageFiles.length > 0 ? { files: messageFiles } : {}),
+						...(message.role === 'user' && messageFiles.length > 0 ? { files: messageFiles } : {}),
 						...(message.role === 'user' && imageFiles.length > 0
 							? {
 									content: [
