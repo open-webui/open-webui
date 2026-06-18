@@ -183,7 +183,7 @@ We credit only the earliest filer of a given vulnerability:
 
 ## Responsible Disclosure
 
-Vulnerability reports submitted through GitHub Security Advisories are **private and confidential**. Public disclosure of **ANY** details related to a submitted vulnerability report is **STRICTLY PROHIBITED** until the advisory has been **fully published** — not merely when a CVE ID has been assigned, but when the advisory itself is publicly visible.
+Vulnerability reports submitted through GitHub Security Advisories are **private and confidential**. Generally: Public disclosure of **ANY** details is **STRICTLY PROHIBITED** until an advisory for the vulnerability has been **fully published** — not merely when a CVE ID has been assigned, but when an advisory itself is publicly visible.
 
 This prohibition applies to **all channels**, including but not limited to comments on pull requests, issues, or discussions (on GitHub or elsewhere), social media (Discord, Reddit or any other platform), blogs, forums, or any other website or service.
 
