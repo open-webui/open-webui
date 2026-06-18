@@ -475,6 +475,18 @@ app.state.TERMINAL_SERVERS = []
 
 ########################################
 #
+# TOOLS & FUNCTIONS
+#
+########################################
+
+app.state.TOOLS = {}
+app.state.TOOL_CONTENTS = {}
+
+app.state.FUNCTIONS = {}
+app.state.FUNCTION_CONTENTS = {}
+
+########################################
+#
 # DIRECT CONNECTIONS
 #
 ########################################
