@@ -40,6 +40,7 @@ jobs:
             "pdfplumber==0.11.10" \
             "fpdf2==2.8.7" \
             "weasyprint==62.3" \
+            "pydyf==0.10.0" \
             "pytest==8.3.4" \
             "pytest-asyncio==0.25.2"
 

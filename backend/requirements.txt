@@ -86,6 +86,7 @@ pdfminer.six==20260107   # MIT  - dependencia de extracao de texto do pdfplumber
 #   com redis==7.4.0 (ja no projeto); o modo inline da Fatia 1 nao usa Redis.
 weasyprint==62.3         # BSD  - export .pdf paginado (F2.3). ATENCAO: deps NATIVAS
                          # (cairo/pango/gdk-pixbuf); no Railway exigira apt/nixpacks.
+pydyf==0.10.0            # BSD  - backend PDF do weasyprint 62.3 (0.11+ quebra a API)
 
 nltk==3.9.3
 Markdown==3.10.2
