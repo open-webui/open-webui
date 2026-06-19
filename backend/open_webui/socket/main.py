@@ -1015,10 +1015,10 @@ async def get_event_call(request_info):
     async def __event_caller__(event_data):
         session_id = request_info['session_id']
 
-        # Fast-fail if the client has disconnected.
-        if session_id not in SESSION_POOL:
-            log.warning(f'Event caller: session {session_id} no longer connected')
-            return {'error': 'Client session disconnected.'}
+        # We do not check session_id in SESSION_POOL because in multi-worker
+        # setups using Redis, the session may be connected to another worker.
+        # python-socketio's sio.call will route the event correctly and timeout
+        # if the client is fully disconnected.
 
         try:
             return await sio.call(

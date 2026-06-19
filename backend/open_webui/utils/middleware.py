@@ -186,9 +186,12 @@ def _split_tool_calls(
 
         return results or [raw]
 
+    if not tool_calls:
+        return []
+
     expanded = []
     for tool_call in tool_calls:
-        arguments = tool_call.get('function', {}).get('arguments', '')
+        arguments = tool_call.get('function', {}).get('arguments') or '{}'
         split_arguments = split_json_objects(arguments)
 
         if len(split_arguments) <= 1:
@@ -1319,6 +1322,7 @@ async def chat_completion_tools_handler(
             return body, {}
 
         try:
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
             content = content[content.find('{') : content.rfind('}') + 1]
             if not content:
                 raise Exception('No JSON object found in the response')
@@ -1536,7 +1540,8 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
         response = res['choices'][0]['message']['content']
 
         try:
-            bracket_start = response.rfind('{')
+            response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
+            bracket_start = response.find('{')
             bracket_end = response.rfind('}') + 1
 
             if bracket_start == -1 or bracket_end == -1:
@@ -1876,7 +1881,8 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 response = res['choices'][0]['message']['content']
 
                 try:
-                    bracket_start = response.rfind('{')
+                    response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
+                    bracket_start = response.find('{')
                     bracket_end = response.rfind('}') + 1
 
                     if bracket_start == -1 or bracket_end == -1:
@@ -1980,7 +1986,8 @@ async def chat_completion_files_handler(
                 queries_response = queries_response['choices'][0]['message']['content']
 
                 try:
-                    bracket_start = queries_response.rfind('{')
+                    queries_response = re.sub(r'<think>.*?</think>', '', queries_response, flags=re.DOTALL)
+                    bracket_start = queries_response.find('{')
                     bracket_end = queries_response.rfind('}') + 1
 
                     if bracket_start == -1 or bracket_end == -1:
@@ -3140,6 +3147,7 @@ async def background_tasks_handler(ctx):
                     else:
                         follow_ups_string = ''
 
+                    follow_ups_string = re.sub(r'<think>.*?</think>', '', follow_ups_string, flags=re.DOTALL)
                     follow_ups_string = follow_ups_string[
                         follow_ups_string.find('{') : follow_ups_string.rfind('}') + 1
                     ]
@@ -3203,6 +3211,7 @@ async def background_tasks_handler(ctx):
                             else:
                                 title_string = ''
 
+                            title_string = re.sub(r'<think>.*?</think>', '', title_string, flags=re.DOTALL)
                             title_string = title_string[title_string.find('{') : title_string.rfind('}') + 1]
 
                             try:
@@ -3255,6 +3264,7 @@ async def background_tasks_handler(ctx):
                         else:
                             tags_string = ''
 
+                        tags_string = re.sub(r'<think>.*?</think>', '', tags_string, flags=re.DOTALL)
                         tags_string = tags_string[tags_string.find('{') : tags_string.rfind('}') + 1]
 
                         try:
@@ -4140,70 +4150,6 @@ async def streaming_chat_response_handler(response, ctx):
                                                     }
                                                 )
 
-                                    delta_tool_calls = delta.get('tool_calls', None)
-                                    if delta_tool_calls:
-                                        for delta_tool_call in delta_tool_calls:
-                                            tool_call_index = delta_tool_call.get('index')
-
-                                            if tool_call_index is not None:
-                                                # Check if the tool call already exists
-                                                current_response_tool_call = None
-                                                for response_tool_call in response_tool_calls:
-                                                    if response_tool_call.get('index') == tool_call_index:
-                                                        current_response_tool_call = response_tool_call
-                                                        break
-
-                                                if current_response_tool_call is None:
-                                                    # Add the new tool call
-                                                    delta_tool_call.setdefault('function', {})
-                                                    delta_tool_call['function'].setdefault('name', '')
-                                                    delta_tool_call['function'].setdefault('arguments', '')
-                                                    response_tool_calls.append(delta_tool_call)
-                                                else:
-                                                    # Update the existing tool call
-                                                    delta_name = delta_tool_call.get('function', {}).get('name')
-                                                    delta_arguments = delta_tool_call.get('function', {}).get(
-                                                        'arguments'
-                                                    )
-
-                                                    if delta_name:
-                                                        current_response_tool_call['function']['name'] = delta_name
-
-                                                    if delta_arguments:
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
-                                                        )
-
-                                        # Emit pending tool calls in real-time
-                                        if response_tool_calls:
-                                            # Flush any pending text first
-                                            await flush_pending_delta_data()
-
-                                            # Build pending function_call output items for display
-                                            pending_fc_items = []
-                                            for tc in response_tool_calls:
-                                                call_id = tc.get('id', '')
-                                                func = tc.get('function', {})
-                                                pending_fc_items.append(
-                                                    {
-                                                        'type': 'function_call',
-                                                        'id': call_id or output_id('fc'),
-                                                        'call_id': call_id,
-                                                        'name': func.get('name', ''),
-                                                        'arguments': func.get('arguments', '{}'),
-                                                        'status': 'in_progress',
-                                                    }
-                                                )
-
-                                            await event_emitter(
-                                                {
-                                                    'type': 'chat:completion',
-                                                    'data': {
-                                                        'content': serialize_output(full_output() + pending_fc_items),
-                                                    },
-                                                }
-                                            )
-
                                     image_urls = await get_image_urls(delta.get('images', []), request, metadata, user)
                                     if image_urls:
                                         image_file_list = [{'type': 'image', 'url': url} for url in image_urls]
@@ -4420,6 +4366,71 @@ async def streaming_chat_response_handler(response, ctx):
                                                 'content': serialize_output(full_output()),
                                             }
 
+                                    delta_tool_calls = delta.get('tool_calls', None)
+                                    if delta_tool_calls:
+                                        for delta_tool_call in delta_tool_calls:
+                                            tool_call_index = delta_tool_call.get('index')
+
+                                            if tool_call_index is not None:
+                                                # Check if the tool call already exists
+                                                current_response_tool_call = None
+                                                for response_tool_call in response_tool_calls:
+                                                    if response_tool_call.get('index') == tool_call_index:
+                                                        current_response_tool_call = response_tool_call
+                                                        break
+
+                                                if current_response_tool_call is None:
+                                                    # Add the new tool call
+                                                    delta_tool_call.setdefault('function', {})
+                                                    delta_tool_call['function'].setdefault('name', '')
+                                                    delta_tool_call['function'].setdefault('arguments', '')
+                                                    response_tool_calls.append(delta_tool_call)
+                                                else:
+                                                    # Update the existing tool call
+                                                    delta_name = delta_tool_call.get('function', {}).get('name')
+                                                    delta_arguments = delta_tool_call.get('function', {}).get(
+                                                        'arguments'
+                                                    )
+
+                                                    if delta_name:
+                                                        current_response_tool_call['function']['name'] = delta_name
+
+                                                    if delta_arguments:
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
+
+                                        # Emit pending tool calls in real-time
+                                        if response_tool_calls:
+                                            # Flush any pending text first
+                                            await flush_pending_delta_data()
+
+                                            # Build pending function_call output items for display
+                                            pending_fc_items = []
+                                            for tc in response_tool_calls:
+                                                call_id = tc.get('id', '')
+                                                func = tc.get('function', {})
+                                                pending_fc_items.append(
+                                                    {
+                                                        'type': 'function_call',
+                                                        'id': call_id or output_id('fc'),
+                                                        'call_id': call_id,
+                                                        'name': func.get('name', ''),
+                                                        'arguments': func.get('arguments') or '{}',
+                                                        'status': 'in_progress',
+                                                    }
+                                                )
+
+                                            await event_emitter(
+                                                {
+                                                    'type': 'chat:completion',
+                                                    'data': {
+                                                        'content': serialize_output(full_output() + pending_fc_items),
+                                                    },
+                                                }
+                                            )
+
+
                                 if delta:
                                     delta_count += 1
                                     last_delta_data = data
@@ -4489,7 +4500,7 @@ async def streaming_chat_response_handler(response, ctx):
                         responses_api_tool_calls = []
                         for item in output:
                             if item.get('type') == 'function_call' and item.get('call_id') not in handled_call_ids:
-                                arguments = item.get('arguments', '{}')
+                                arguments = item.get('arguments') or '{}'
                                 responses_api_tool_calls.append(
                                     {
                                         'id': item.get('call_id', ''),
@@ -4552,7 +4563,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     'id': call_id or output_id('fc'),
                                     'call_id': call_id,
                                     'name': func.get('name', ''),
-                                    'arguments': func.get('arguments', '{}'),
+                                    'arguments': func.get('arguments') or '{}',
                                     'status': 'in_progress',
                                 }
                             )
@@ -4574,7 +4585,7 @@ async def streaming_chat_response_handler(response, ctx):
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get('id', '')
                         tool_function_name = tool_call.get('function', {}).get('name', '')
-                        tool_args = tool_call.get('function', {}).get('arguments', '{}')
+                        tool_args = tool_call.get('function', {}).get('arguments') or '{}'
 
                         tool_function_params = {}
                         if tool_args and tool_args.strip():
@@ -4705,9 +4716,9 @@ async def streaming_chat_response_handler(response, ctx):
                         # Mark function_call as completed
                         for item in output:
                             if item.get('type') == 'function_call' and item.get('call_id') == call_id:
-                                item['status'] = 'completed'
                                 # Update arguments with parsed/sanitized version
-                                item['arguments'] = tc.get('function', {}).get('arguments', '{}')
+                                item['arguments'] = tc.get('function', {}).get('arguments') or '{}'
+                                item['status'] = 'completed'
                                 break
 
                     for result in results:
