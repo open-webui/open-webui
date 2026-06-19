@@ -273,12 +273,12 @@ async def rag_template(template: str, context: str, query: str):
         )
 
     query_placeholders = []
-    if '[query]' in context:
+    if '[query]' in template:
         query_placeholder = '{{QUERY' + str(uuid.uuid4()) + '}}'
         template = template.replace('[query]', query_placeholder)
         query_placeholders.append((query_placeholder, '[query]'))
 
-    if '{{QUERY}}' in context:
+    if '{{QUERY}}' in template:
         query_placeholder = '{{QUERY' + str(uuid.uuid4()) + '}}'
         template = template.replace('{{QUERY}}', query_placeholder)
         query_placeholders.append((query_placeholder, '{{QUERY}}'))
@@ -289,8 +289,8 @@ async def rag_template(template: str, context: str, query: str):
     template = template.replace('[query]', query)
     template = template.replace('{{QUERY}}', query)
 
-    for query_placeholder, original_placeholder in query_placeholders:
-        template = template.replace(query_placeholder, original_placeholder)
+    for query_placeholder, _original_placeholder in query_placeholders:
+        template = template.replace(query_placeholder, query)
 
     return template
 
