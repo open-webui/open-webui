@@ -109,9 +109,6 @@ class ChatMessage(Base):
     # Usage (tokens, timing, etc.)
     usage = Column(JSON, nullable=True)
 
-    # Context compaction checkpoint
-    context_summary = Column(Text, nullable=True)
-
     # Timestamps
     created_at = Column(BigInteger, index=True)
     updated_at = Column(BigInteger)
@@ -146,7 +143,6 @@ class ChatMessageModel(BaseModel):
     status_history: Optional[list] = None
     error: Optional[dict | str] = None
     usage: Optional[dict] = None
-    context_summary: Optional[str] = None
     created_at: int
     updated_at: int
 
@@ -198,8 +194,6 @@ class ChatMessageTable:
                     existing.status_history = data.get('status_history') or data.get('statusHistory')
                 if 'error' in data:
                     existing.error = data.get('error')
-                if 'context_summary' in data or 'contextSummary' in data:
-                    existing.context_summary = data.get('context_summary') or data.get('contextSummary')
                 # Extract and normalize usage
                 usage = get_usage(data)
                 if usage:
@@ -231,7 +225,6 @@ class ChatMessageTable:
                     status_history=data.get('status_history') or data.get('statusHistory'),
                     error=data.get('error'),
                     usage=usage,
-                    context_summary=data.get('context_summary') or data.get('contextSummary'),
                     created_at=timestamp,
                     updated_at=now,
                 )
@@ -258,7 +251,6 @@ class ChatMessageTable:
         'parent_id': 'parentId',
         'model_id': 'model',
         'status_history': 'statusHistory',
-        'context_summary': 'contextSummary',
         'created_at': 'timestamp',
     }
     # DB-internal columns excluded from the reconstructed message dict.
