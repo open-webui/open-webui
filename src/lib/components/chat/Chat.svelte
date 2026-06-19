@@ -3095,11 +3095,11 @@
 								on:scroll={(e) => {
 									autoScroll =
 										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-										messagesContainerElement.clientHeight + 5;
+										messagesContainerElement.clientHeight + 50;
 									isNearTop = messagesContainerElement.scrollTop <= 100;
 								}}
 							>
-								<div class=" h-full w-full flex flex-col">
+								<div class=" h-full w-full flex flex-col" style="overflow-anchor: none;">
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
@@ -3124,6 +3124,8 @@
 										{onSelect}
 									/>
 								</div>
+								<!-- Scroll Anchor for native browser scroll tracking during fast text streaming -->
+								<div id="scroll-anchor" style="overflow-anchor: auto; height: 1px; width: 100%;"></div>
 							</div>
 
 							<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
