@@ -6,8 +6,6 @@ caminho de erro (formato nao suportado -> status=error com mensagem clara).
 """
 
 import contextlib
-import os
-import tempfile
 import types
 
 import pytest
@@ -77,21 +75,22 @@ class _FakeStorage:
         return (data, "stored/" + filename)
 
 
-async def test_ingestion_docx_happy_path(session_factory, monkeypatch, tmp_path):
+async def test_ingestion_docx_happy_path(session_factory, tmp_path):
     # grava o fixture .docx num arquivo que o "Storage" devolve
     docx_path = tmp_path / "obra.docx"
     docx_path.write_bytes(build_docx_with_footnote())
 
-    monkeypatch.setattr(ingest_mod, "Files", _FakeFiles(str(docx_path), "obra.docx"))
+    fake_files = _FakeFiles(str(docx_path), "obra.docx")
     fake_storage = _FakeStorage(str(docx_path))
-    monkeypatch.setattr(ingest_mod, "Storage", fake_storage)
 
     proj = await ed.Projects.create("autor-A", ed.ProjectForm(name="Obra A"))
     doc = await ed.Documents.create(
         "autor-A", proj.id, ed.DocumentIngestForm(file_id="f1", filename="obra.docx")
     )
 
-    result = await ingest_mod.run_ingestion(doc.id)
+    result = await ingest_mod.run_ingestion(
+        doc.id, files=fake_files, storage=fake_storage
+    )
     assert result["status"] == "done", result
 
     saved = await ed.Documents.get(doc.id)
@@ -114,19 +113,21 @@ async def test_ingestion_docx_happy_path(session_factory, monkeypatch, tmp_path)
 
 
 async def test_ingestion_unsupported_format_sets_clear_error(
-    session_factory, monkeypatch, tmp_path
+    session_factory, tmp_path
 ):
     f = tmp_path / "planilha.xyz"
     f.write_bytes(b"conteudo qualquer")
-    monkeypatch.setattr(ingest_mod, "Files", _FakeFiles(str(f), "planilha.xyz"))
-    monkeypatch.setattr(ingest_mod, "Storage", _FakeStorage(str(f)))
+    fake_files = _FakeFiles(str(f), "planilha.xyz")
+    fake_storage = _FakeStorage(str(f))
 
     proj = await ed.Projects.create("autor-A", ed.ProjectForm(name="Obra A"))
     doc = await ed.Documents.create(
         "autor-A", proj.id, ed.DocumentIngestForm(file_id="f1", filename="planilha.xyz")
     )
 
-    result = await ingest_mod.run_ingestion(doc.id)
+    result = await ingest_mod.run_ingestion(
+        doc.id, files=fake_files, storage=fake_storage
+    )
     assert result["status"] == "error"
 
     saved = await ed.Documents.get(doc.id)

@@ -15,13 +15,21 @@ import logging
 
 from open_webui.editorial.extractors import EXTRACTORS, detect_format, get_extractor
 from open_webui.models.editorial import Documents
-from open_webui.models.files import Files
-from open_webui.storage.provider import Storage
 
 log = logging.getLogger(__name__)
 
+# Files/Storage sao importados de FORMA PREGUICOSA dentro da funcao: assim
+# importar este modulo (e os testes) nao puxa a cadeia pesada de
+# storage.provider -> config -> redis/boto3/azure/google. Os testes injetam
+# fakes via os parametros files=/storage=.
 
-async def run_ingestion(document_id: str) -> dict:
+
+async def run_ingestion(document_id: str, *, files=None, storage=None) -> dict:
+    if files is None:
+        from open_webui.models.files import Files as files
+    if storage is None:
+        from open_webui.storage.provider import Storage as storage
+
     doc = await Documents.get(document_id)
     if doc is None:
         log.warning("ingestao: documento %s nao encontrado", document_id)
@@ -32,11 +40,11 @@ async def run_ingestion(document_id: str) -> dict:
         if not doc.file_id:
             raise ValueError("documento sem file_id (nada para ingerir)")
 
-        file_rec = await Files.get_file_by_id(doc.file_id)
+        file_rec = await files.get_file_by_id(doc.file_id)
         if file_rec is None:
             raise ValueError("arquivo (file_id) nao encontrado no Open WebUI")
 
-        local_path = Storage.get_file(file_rec.path)
+        local_path = storage.get_file(file_rec.path)
         with open(local_path, "rb") as f:
             data = f.read()
 
@@ -52,7 +60,7 @@ async def run_ingestion(document_id: str) -> dict:
 
         tree_bytes = json.dumps(tree, ensure_ascii=False).encode("utf-8")
         tree_name = f"editorial_tree_{document_id}.json"
-        _, tree_path = Storage.upload_file(
+        _, tree_path = storage.upload_file(
             io.BytesIO(tree_bytes), tree_name, {"editorial": "tree"}
         )
 
