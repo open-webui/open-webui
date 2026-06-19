@@ -1,0 +1,5 @@
+# Dependencias APENAS de teste (nao vao para producao).
+# Rodar: cd backend && pip install -r requirements.txt -r requirements-test.txt && pytest
+pytest==8.3.4          # MIT
+pytest-asyncio==0.25.2 # Apache-2.0
+# aiosqlite ja esta no requirements.txt principal (0.21.0)

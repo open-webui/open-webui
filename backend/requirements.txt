@@ -75,6 +75,17 @@ python-pptx==1.0.2
 msoffcrypto-tool==6.0.0
 unstructured==0.18.31
 
+# --- Nidum: funcionalidades editoriais (F1 - ingestao estruturada) ---
+# Licencas verificadas no PyPI (2026-06-19): todas permissivas (uso comercial OK).
+python-docx==1.2.0       # MIT  - leitura estruturada de .docx (puxa lxml BSD-3)
+pdfplumber==0.11.10      # MIT  - texto/layout/tabelas de PDF + deteccao de escaneado
+pdfminer.six==20260107   # MIT  - dependencia de extracao de texto do pdfplumber
+# .epub e .odt: lidos com zipfile (stdlib) + lxml (BSD-3), SEM ebooklib (AGPL).
+# pypdf (BSD) e beautifulsoup4 (MIT) ja pinados acima.
+# Fila de jobs (arq, MIT) sera pinada na Fatia 2 apos validar compatibilidade
+#   com redis==7.4.0 (ja no projeto); o modo inline da Fatia 1 nao usa Redis.
+# weasyprint (BSD) entra na F2 (export) por ter dependencias nativas.
+
 nltk==3.9.3
 Markdown==3.10.2
 beautifulsoup4==4.14.3
