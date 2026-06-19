@@ -41,6 +41,19 @@ jobs:
             "pytest==8.3.4" \
             "pytest-asyncio==0.25.2"
 
+      # EPUBCheck (Java) para validar FORMALMENTE o .epub gerado (F2.2).
+      - name: Setup Java (EPUBCheck)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Baixar EPUBCheck
+        run: |
+          curl -sL -o epubcheck.zip https://github.com/w3c/epubcheck/releases/download/v5.1.0/epubcheck-5.1.0.zip
+          unzip -q epubcheck.zip
+          echo "EPUBCHECK_JAR=$PWD/epubcheck-5.1.0/epubcheck.jar" >> "$GITHUB_ENV"
+
       - name: Run editorial test suite
         working-directory: backend
         env:

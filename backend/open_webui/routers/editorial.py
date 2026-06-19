@@ -167,6 +167,7 @@ async def get_document_chunks(document_id: str, user=Depends(get_verified_user))
 
 _EXPORT_MEDIA = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "epub": "application/epub+zip",
 }
 
 
@@ -185,23 +186,29 @@ async def export_document(
             detail=f"documento ainda nao processado (status={doc.status})",
         )
     fmt = (format or "docx").lower()
-    if fmt != "docx":
-        # .epub/.pdf entram nas fatias F2.2/F2.3
+    if fmt not in _EXPORT_MEDIA:
+        # .pdf entra na fatia F2.3
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"export para {fmt!r} ainda nao suportado (disponivel: docx)",
+            detail=f"export para {fmt!r} ainda nao suportado (disponivel: {sorted(_EXPORT_MEDIA)})",
         )
 
     local_path = Storage.get_file(doc.tree_ref)
     with open(local_path, "r", encoding="utf-8") as f:
         tree = json.load(f)
 
-    from open_webui.editorial.export.docx_export import build_docx
+    if fmt == "epub":
+        from open_webui.editorial.export.epub_export import build_epub
 
-    data = build_docx(tree)
+        data = build_epub(tree)
+    else:
+        from open_webui.editorial.export.docx_export import build_docx
+
+        data = build_docx(tree)
+
     base = (doc.filename or "documento").rsplit(".", 1)[0]
     return StreamingResponse(
         io.BytesIO(data),
-        media_type=_EXPORT_MEDIA["docx"],
-        headers={"Content-Disposition": f'attachment; filename="{base}.docx"'},
+        media_type=_EXPORT_MEDIA[fmt],
+        headers={"Content-Disposition": f'attachment; filename="{base}.{fmt}"'},
     )
