@@ -78,8 +78,9 @@ unstructured==0.18.31
 # --- Nidum: funcionalidades editoriais (F1 - ingestao estruturada) ---
 # Licencas verificadas no PyPI (2026-06-19): todas permissivas (uso comercial OK).
 python-docx==1.2.0       # MIT  - leitura estruturada de .docx (puxa lxml BSD-3)
-pdfplumber==0.11.10      # MIT  - texto/layout/tabelas de PDF + deteccao de escaneado
-pdfminer.six==20260107   # MIT  - dependencia de extracao de texto do pdfplumber
+pdfplumber==0.11.9       # MIT  - texto/layout/tabelas de PDF (0.11.10 exige pillow>=12.2.0,
+                         #        que conflita com pillow==12.1.1 do projeto)
+pdfminer.six==20251230   # MIT  - versao exata exigida pelo pdfplumber 0.11.9
 # .epub e .odt: lidos com zipfile (stdlib) + lxml (BSD-3), SEM ebooklib (AGPL).
 # pypdf (BSD) e beautifulsoup4 (MIT) ja pinados acima.
 # Fila de jobs (arq, MIT) sera pinada na Fatia 2 apos validar compatibilidade

@@ -37,7 +37,7 @@ jobs:
             "python-docx==1.2.0" \
             "lxml" \
             "pypdf==6.7.5" \
-            "pdfplumber==0.11.10" \
+            "pdfplumber==0.11.9" \
             "fpdf2==2.8.7" \
             "weasyprint==62.3" \
             "pydyf==0.10.0" \
