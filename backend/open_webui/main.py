@@ -508,6 +508,7 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    webhooks,
 )
 from open_webui.routers.retrieval import (
     get_ef,
@@ -674,8 +675,10 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_session_pool_cleanup())
 
     from open_webui.utils.automations import scheduler_worker_loop
+    from open_webui.utils.webhook import webhook_retry_worker_loop
 
     asyncio.create_task(scheduler_worker_loop(app))
+    asyncio.create_task(webhook_retry_worker_loop())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -1450,6 +1453,7 @@ app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
 app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars'])
+app.include_router(webhooks.router, prefix='/api/v1/webhooks', tags=['webhooks'])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:

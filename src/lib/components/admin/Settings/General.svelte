@@ -3,6 +3,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getWebhookLogs, retryWebhookLog } from '$lib/apis/webhooks';
 	import {
 		getAdminConfig,
 		getLdapConfig,
@@ -37,6 +38,7 @@
 
 	let adminConfig = null;
 	let webhookUrl = '';
+	let webhookLogs = [];
 	let groups = [];
 
 	let banners: Banner[] = [];
@@ -117,6 +119,9 @@
 
 			(async () => {
 				webhookUrl = await getWebhookUrl(localStorage.token);
+			})(),
+			(async () => {
+				webhookLogs = await getWebhookLogs(localStorage.token);
 			})(),
 			(async () => {
 				LDAP_SERVER = await getLdapServer(localStorage.token);
@@ -839,6 +844,50 @@
 								placeholder={`https://example.com/webhook`}
 								bind:value={webhookUrl}
 							/>
+						</div>
+					</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
+
+					<div class=" w-full justify-between">
+						<div class="flex w-full justify-between mb-2">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Webhook Delivery Logs')}</div>
+							<button class="text-xs text-gray-500 hover:text-gray-700 transition" type="button" on:click={async () => webhookLogs = await getWebhookLogs(localStorage.token)}>
+								{$i18n.t('Refresh')}
+							</button>
+						</div>
+
+						<div class="flex flex-col space-y-2 max-h-60 overflow-y-auto">
+							{#if webhookLogs.length === 0}
+								<div class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('No logs found.')}</div>
+							{:else}
+								{#each webhookLogs as log}
+									<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-850">
+										<div class="flex flex-col overflow-hidden max-w-[80%]">
+											<div class="text-xs truncate font-medium">{log.url}</div>
+											<div class="text-xs text-gray-500 truncate">{new Date(log.created_at / 1000000).toLocaleString()} • {log.status} {log.retry_count > 0 ? `(${log.retry_count} retries)` : ''}</div>
+										</div>
+										{#if log.status === 'failed' || log.status === 'pending'}
+											<button
+												class="ml-2 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-sm transition"
+												type="button"
+												on:click={async () => {
+													toast.success($i18n.t('Retrying webhook...'));
+													const success = await retryWebhookLog(localStorage.token, log.id);
+													if (success) {
+														toast.success($i18n.t('Webhook delivered successfully'));
+													} else {
+														toast.error($i18n.t('Webhook retry failed'));
+													}
+													webhookLogs = await getWebhookLogs(localStorage.token);
+												}}
+											>
+												{$i18n.t('Retry')}
+											</button>
+										{/if}
+									</div>
+								{/each}
+							{/if}
 						</div>
 					</div>
 				</div>

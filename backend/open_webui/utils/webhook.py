@@ -1,7 +1,10 @@
 import json
 import logging
+import asyncio
+import uuid
 
 import aiohttp
+from open_webui.models.webhook_logs import WebhookDeliveryLogs
 from open_webui.config import WEBUI_FAVICON_URL
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
@@ -60,6 +63,15 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             payload = {**event_data}
 
         log.debug(f'payload: {payload}')
+        
+        # Insert log entry
+        log_entry = await WebhookDeliveryLogs.insert_new_log(
+            id=str(uuid.uuid4()),
+            url=url,
+            payload=payload,
+            event_action=event_data.get('action')
+        )
+        
         async with aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
@@ -73,7 +85,44 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
                 r.raise_for_status()
                 log.debug(f'r.text: {r_text}')
 
+        if log_entry:
+            await WebhookDeliveryLogs.update_log_status(log_entry.id, 'success', 0)
+            
         return True
     except Exception as e:
         log.exception(e)
+        if 'log_entry' in locals() and log_entry:
+            await WebhookDeliveryLogs.update_log_status(log_entry.id, 'failed', 1)
         return False
+
+async def webhook_retry_worker_loop():
+    """Background task to periodically retry failed webhooks."""
+    while True:
+        try:
+            failed_logs = await WebhookDeliveryLogs.get_failed_logs_for_retry(max_retries=3, limit=50)
+            for log_entry in failed_logs:
+                log.info(f"Retrying webhook delivery for {log_entry.id} (attempt {log_entry.retry_count + 1})")
+                
+                try:
+                    async with aiohttp.ClientSession(
+                        trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+                    ) as session:
+                        async with session.post(
+                            log_entry.url,
+                            json=log_entry.payload,
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                            allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                        ) as r:
+                            r.raise_for_status()
+                            
+                    # Success
+                    await WebhookDeliveryLogs.update_log_status(log_entry.id, 'success', log_entry.retry_count + 1)
+                except Exception as retry_e:
+                    log.warning(f"Webhook retry failed for {log_entry.id}: {retry_e}")
+                    await WebhookDeliveryLogs.update_log_status(log_entry.id, 'failed', log_entry.retry_count + 1)
+                    
+        except Exception as e:
+            log.exception(f"Error in webhook_retry_worker_loop: {e}")
+            
+        await asyncio.sleep(60)  # Run every 60 seconds
+
