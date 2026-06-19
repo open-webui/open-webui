@@ -1308,6 +1308,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
         config.LINKUP_SEARCH_PARAMS = form_data.web.LINKUP_SEARCH_PARAMS
 
+    await config.save()
+
     return {
         'status': True,
         # RAG settings
