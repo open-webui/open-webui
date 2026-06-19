@@ -4022,10 +4022,12 @@ async def streaming_chat_response_handler(response, ctx):
                         int(metadata.get('params', {}).get('stream_delta_chunk_size') or 1),
                     )
                     last_delta_data = None
+                    last_delta_data_kind = None
 
                     async def flush_pending_delta_data(threshold: int = 0):
                         nonlocal delta_count
                         nonlocal last_delta_data
+                        nonlocal last_delta_data_kind
 
                         if delta_count >= threshold and last_delta_data:
                             await event_emitter(
@@ -4036,6 +4038,21 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                             delta_count = 0
                             last_delta_data = None
+                            last_delta_data_kind = None
+
+                    async def queue_pending_delta_data(delta_data: dict, delta_data_kind: str):
+                        nonlocal delta_count
+                        nonlocal last_delta_data
+                        nonlocal last_delta_data_kind
+
+                        if last_delta_data_kind and last_delta_data_kind != delta_data_kind:
+                            await flush_pending_delta_data()
+
+                        delta_count += 1
+                        last_delta_data = delta_data
+                        last_delta_data_kind = delta_data_kind
+                        if delta_count >= delta_chunk_size:
+                            await flush_pending_delta_data(delta_chunk_size)
 
                     async for line in response.body_iterator:
                         line = line.decode('utf-8', 'replace') if isinstance(line, bytes) else line
@@ -4084,11 +4101,17 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
+                                    response_event_type = data.get('type', '')
+                                    response_event_is_delta = response_event_type.endswith('.delta')
+
                                     output, response_metadata = handle_responses_streaming_event(data, output)
+
+                                    if not response_event_is_delta:
+                                        await flush_pending_delta_data()
 
                                     # Emit citation sources from finalized output items
                                     # (mirrors Chat Completions annotation handling at delta level)
-                                    if data.get('type') == 'response.output_item.done':
+                                    if response_event_type == 'response.output_item.done':
                                         item = data.get('item', {})
                                         if item.get('type') == 'message':
                                             for part in item.get('content', []):
@@ -4147,12 +4170,23 @@ async def streaming_chat_response_handler(response, ctx):
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
 
-                                    await event_emitter(
-                                        {
-                                            'type': 'chat:completion',
-                                            'data': processed_data,
-                                        }
-                                    )
+                                    if response_event_is_delta:
+                                        response_delta_type = response_event_type.split('.')[1]
+                                        await queue_pending_delta_data(
+                                            processed_data,
+                                            (
+                                                'tool_call'
+                                                if response_delta_type == 'function_call_arguments'
+                                                else 'content'
+                                            ),
+                                        )
+                                    else:
+                                        await event_emitter(
+                                            {
+                                                'type': 'chat:completion',
+                                                'data': processed_data,
+                                            }
+                                        )
                                     continue
                                 else:
                                     choices = data.get('choices', [])
@@ -4196,6 +4230,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         continue
 
                                     delta = choices[0].get('delta', {})
+                                    delta_data_kind = 'delta'
 
                                     # Handle delta annotations
                                     annotations = delta.get('annotations')
@@ -4263,10 +4298,11 @@ async def streaming_chat_response_handler(response, ctx):
                                                             delta_arguments
                                                         )
 
-                                        # Emit pending tool calls in real-time
+                                        # Queue pending tool calls through the shared delta batching path
                                         if response_tool_calls:
-                                            # Flush any pending text first
-                                            await flush_pending_delta_data()
+                                            # Keep text ahead of tool-call display updates.
+                                            if last_delta_data_kind != 'tool_call':
+                                                await flush_pending_delta_data()
 
                                             # Build pending function_call output items for display
                                             pending_fc_items = []
@@ -4284,14 +4320,10 @@ async def streaming_chat_response_handler(response, ctx):
                                                     }
                                                 )
 
-                                            await event_emitter(
-                                                {
-                                                    'type': 'chat:completion',
-                                                    'data': {
-                                                        'content': serialize_output(full_output() + pending_fc_items),
-                                                    },
-                                                }
-                                            )
+                                            data = {
+                                                'content': serialize_output(full_output() + pending_fc_items),
+                                            }
+                                            delta_data_kind = 'tool_call'
 
                                     image_urls = await get_image_urls(delta.get('images', []), request, metadata, user)
                                     if image_urls:
@@ -4348,8 +4380,10 @@ async def streaming_chat_response_handler(response, ctx):
                                             ]
 
                                         data = {'content': serialize_output(full_output())}
+                                        delta_data_kind = 'content'
 
                                     if value:
+                                        delta_data_kind = 'content'
                                         if (
                                             output
                                             and output[-1].get('type') == 'reasoning'
@@ -4510,8 +4544,12 @@ async def streaming_chat_response_handler(response, ctx):
                                             }
 
                                 if delta:
+                                    if last_delta_data_kind == 'tool_call' and delta_data_kind != 'tool_call':
+                                        await flush_pending_delta_data()
+
                                     delta_count += 1
                                     last_delta_data = data
+                                    last_delta_data_kind = delta_data_kind
                                     if delta_count >= delta_chunk_size:
                                         await flush_pending_delta_data(delta_chunk_size)
                                 else:
