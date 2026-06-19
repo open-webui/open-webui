@@ -85,7 +85,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         base_models = request.app.state.BASE_MODELS
     else:
         base_models = await get_all_base_models(request, user=user)
-        request.app.state.BASE_MODELS = base_models
+        if base_models:
+            request.app.state.BASE_MODELS = base_models
+        else:
+            base_models = request.app.state.BASE_MODELS
 
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
