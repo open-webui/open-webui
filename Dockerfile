@@ -130,6 +130,8 @@ RUN apt-get update && \
     libmariadb-dev \
     python3-dev \
     ffmpeg libsm6 libxext6 zstd \
+    libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libcairo2 libffi8 \
+    fonts-dejavu-core shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
