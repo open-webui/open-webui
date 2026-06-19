@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import get_async_session
@@ -21,6 +21,7 @@ from open_webui.models.models import Models
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserInfoResponse, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.usage_limits import UsageLimitsConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -349,3 +350,78 @@ async def preview_group_access(
         },
         'permissions': group.permissions or {},
     }
+
+
+############################
+# GetGroupUsageLimits
+############################
+
+
+@router.get('/id/{id}/usage-limits')
+async def get_group_usage_limits(
+    id: str,
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return the usage limits configured for a group, or null if not set."""
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    raw = (group.data or {}).get('usage_limits')
+    if raw is None:
+        return None
+    try:
+        return UsageLimitsConfig.model_validate(raw)
+    except Exception:
+        raise HTTPException(status_code=500, detail='Stored usage_limits config is malformed')
+
+
+############################
+# UpdateGroupUsageLimits
+############################
+
+
+@router.put('/id/{id}/usage-limits')
+async def update_group_usage_limits(
+    id: str,
+    form_data: Optional[UsageLimitsConfig] = Body(default=None),
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Set or clear usage limits for a group.
+
+    All members of the group inherit these limits unless they have a user-level
+    override. When a user belongs to multiple groups with limits, the most
+    restrictive combined limit applies.
+
+    Pass ``null`` to remove limits from the group.
+    """
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    current_data = dict(group.data or {})
+
+    if form_data is None:
+        current_data.pop('usage_limits', None)
+    else:
+        current_data['usage_limits'] = form_data.model_dump()
+
+    updated = await Groups.update_group_by_id(
+        id,
+        GroupUpdateForm(
+            name=group.name,
+            description=group.description,
+            permissions=group.permissions,
+            data=current_data,
+        ),
+        db=db,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    raw = (updated.data or {}).get('usage_limits')
+    if raw is None:
+        return None
+    return UsageLimitsConfig.model_validate(raw)
