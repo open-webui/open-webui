@@ -36,6 +36,8 @@ jobs:
             "cryptography==46.0.5" \
             "python-docx==1.2.0" \
             "lxml" \
+            "pdfplumber==0.11.10" \
+            "fpdf2==2.8.7" \
             "pytest==8.3.4" \
             "pytest-asyncio==0.25.2"
 

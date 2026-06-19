@@ -3,9 +3,14 @@
 Transforma o ChatND em assistente editorial.
 - **Fatia 1:** camada de dados + endpoints de projeto e ficha (versionada).
 - **Fatia 2:** ingestao real — recebe o `file_id` do upload nativo, le o arquivo
-  (Files+Storage), extrai a **Arvore de Blocos** (1o formato: `.docx`, com notas
-  de rodape ligadas a ancora) e guarda no Storage. PDF/EPUB/ODT + chunking +
-  export vem nas proximas.
+  (Files+Storage), extrai a **Arvore de Blocos** e guarda no Storage.
+- **Fatia 3:** extratores `.pdf` (com **deteccao de escaneado** -> `needs_ocr`,
+  sem fabricar texto), `.epub` e `.odt` (sem ebooklib/odfpy). Chunking + export
+  vem nas proximas.
+
+**Formatos suportados:** `.docx`, `.pdf`, `.epub`, `.odt`. Todos produzem a mesma
+Arvore de Blocos. Notas de rodape ficam ligadas a ancora (`footnote_ref` <-> `footnote`)
+em docx/epub/odt; no PDF, se nao houver camada de texto, sinaliza `needs_ocr`.
 
 ## Arquivos novos
 

@@ -5,10 +5,17 @@ lxml + python-docx), o que o torna testavel isoladamente. detect_format e puro.
 """
 
 from open_webui.editorial.extractors.docx import extract_docx
+from open_webui.editorial.extractors.epub import extract_epub
+from open_webui.editorial.extractors.odt import extract_odt
+from open_webui.editorial.extractors.pdf import extract_pdf
 
-# Mapa formato -> funcao extratora. .pdf/.epub/.odt entram nas fatias seguintes.
+# Mapa formato -> funcao extratora. As libs pesadas (pdfplumber, python-docx,
+# bs4) sao importadas DENTRO de cada extrator, entao importar este modulo e leve.
 EXTRACTORS = {
     "docx": extract_docx,
+    "pdf": extract_pdf,
+    "epub": extract_epub,
+    "odt": extract_odt,
 }
 
 
