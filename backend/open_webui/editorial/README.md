@@ -1,8 +1,11 @@
-# Modulo Editorial (Nidum) — Fatia 1
+# Modulo Editorial (Nidum) — Fatias 1 e 2
 
-Transforma o ChatND em assistente editorial. Esta fatia entrega a **camada de
-dados** e os **endpoints de projeto e ficha**. A ingestao/parse de obras e o
-export entram nas fatias seguintes.
+Transforma o ChatND em assistente editorial.
+- **Fatia 1:** camada de dados + endpoints de projeto e ficha (versionada).
+- **Fatia 2:** ingestao real — recebe o `file_id` do upload nativo, le o arquivo
+  (Files+Storage), extrai a **Arvore de Blocos** (1o formato: `.docx`, com notas
+  de rodape ligadas a ancora) e guarda no Storage. PDF/EPUB/ODT + chunking +
+  export vem nas proximas.
 
 ## Arquivos novos
 
@@ -10,9 +13,14 @@ export entram nas fatias seguintes.
 |---|---|
 | `models/editorial.py` | Tabelas `editorial_project`, `editorial_project_sheet` (ficha versionada), `editorial_document` + helper-classes `Projects`, `Sheets`, `Documents`. |
 | `routers/editorial.py` | Endpoints REST (prefixo `/api/v1/editorial`). |
-| `editorial/jobs.py` | Fila de jobs com modo **inline** (sem Redis). Backend `arq` entra na Fatia 2. |
+| `editorial/jobs.py` | Fila de jobs com modo **inline** (sem Redis). Backend `arq` entra na Fatia 2+. |
+| `editorial/extractors/docx.py` | Extrator `.docx` -> Arvore de Blocos (puro: stdlib+lxml+python-docx). |
+| `editorial/extractors/__init__.py` | Registro de extratores por formato + `detect_format`. |
+| `editorial/ingest.py` | Ingestao: file_id -> Files/Storage -> extrator -> guarda arvore -> status. |
 | `migrations/versions/b7e1c4a9d2f3_add_editorial_tables.py` | Migracao Alembic (cria as 3 tabelas + indices). |
-| `test/editorial/test_editorial.py` | Testes (SQLite em memoria, sem Redis). |
+| `test/editorial/test_editorial.py` | Testes de dados (SQLite em memoria, sem Redis). |
+| `test/editorial/test_docx_extractor.py` | Testes do extrator (ancora<->nota, erro claro). |
+| `test/editorial/test_ingest.py` | Teste de integracao da ingestao (Files/Storage mockados). |
 
 ## Endpoints
 
@@ -24,8 +32,9 @@ export entram nas fatias seguintes.
 | GET | `/api/v1/editorial/projects/{id}/sheet` | Ficha **atual** (versao current). |
 | POST | `/api/v1/editorial/projects/{id}/sheet` | Cria **nova versao** da ficha (preserva a anterior). |
 | GET | `/api/v1/editorial/projects/{id}/sheet/versions` | Historico de versoes (desc). |
-| POST | `/api/v1/editorial/projects/{id}/documents` | Registra documento p/ ingestao (202; parse na Fatia 2/3). |
-| GET | `/api/v1/editorial/documents/{id}` | Status do documento. |
+| POST | `/api/v1/editorial/projects/{id}/documents` | Registra `{file_id}` e **dispara a ingestao** (202). No modo inline ja volta `done`. |
+| GET | `/api/v1/editorial/documents/{id}` | Status do documento (`pending/parsing/done/error` + `meta`). |
+| GET | `/api/v1/editorial/documents/{id}/tree` | Arvore de Blocos extraida (409 se ainda indisponivel). |
 
 **Isolamento:** toda rota exige posse do projeto pelo autor (`user_id`); admin
 acessa para suporte. Um autor nunca acessa projeto/ficha de outro.

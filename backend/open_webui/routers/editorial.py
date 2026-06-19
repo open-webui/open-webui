@@ -7,11 +7,14 @@ Isolamento: toda operacao exige que o projeto pertenca ao autor (user_id).
 Admin pode acessar para suporte/auditoria.
 """
 
+import json
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.editorial.ingest import run_ingestion
+from open_webui.editorial.jobs import get_job_queue
 from open_webui.models.editorial import (
     Documents,
     DocumentIngestForm,
@@ -23,6 +26,7 @@ from open_webui.models.editorial import (
     Sheets,
     SheetForm,
 )
+from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_verified_user
 
 log = logging.getLogger(__name__)
@@ -108,9 +112,11 @@ async def ingest_document(
     project_id: str, form: DocumentIngestForm, user=Depends(get_verified_user)
 ):
     await _get_owned_project(project_id, user)
-    # Fatia 1: apenas registra (status=pending). A extracao assincrona (job +
-    # extratores por formato) sera ligada na Fatia 2/3.
-    return await Documents.create(user.id, project_id, form)
+    doc = await Documents.create(user.id, project_id, form)
+    # Enfileira a ingestao. No modo inline (default) roda agora e ja atualiza o
+    # status; com backend arq, fica pendente e o cliente acompanha via GET.
+    await get_job_queue().enqueue(run_ingestion, doc.id)
+    return await Documents.get(doc.id)
 
 
 @router.get("/documents/{document_id}", response_model=EditorialDocumentModel)
@@ -121,3 +127,20 @@ async def get_document(document_id: str, user=Depends(get_verified_user)):
     if doc.user_id != user.id and user.role != "admin":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     return doc
+
+
+@router.get("/documents/{document_id}/tree")
+async def get_document_tree(document_id: str, user=Depends(get_verified_user)):
+    doc = await Documents.get(document_id)
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if doc.user_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not doc.tree_ref:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"arvore indisponivel (status={doc.status})",
+        )
+    local_path = Storage.get_file(doc.tree_ref)
+    with open(local_path, "r", encoding="utf-8") as f:
+        return json.load(f)

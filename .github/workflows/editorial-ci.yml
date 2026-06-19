@@ -34,6 +34,8 @@ jobs:
             "Markdown==3.10.2" \
             "beautifulsoup4==4.14.3" \
             "cryptography==46.0.5" \
+            "python-docx==1.2.0" \
+            "lxml" \
             "pytest==8.3.4" \
             "pytest-asyncio==0.25.2"
 

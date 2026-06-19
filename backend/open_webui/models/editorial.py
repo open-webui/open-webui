@@ -310,6 +310,40 @@ class EditorialDocumentsTable:
             row = res.scalars().first()
             return EditorialDocumentModel.model_validate(row) if row else None
 
+    async def set_status(
+        self, document_id: str, status: str, error: Optional[str] = None
+    ) -> None:
+        async with get_async_db_context() as db:
+            await db.execute(
+                update(EditorialDocument)
+                .where(EditorialDocument.id == document_id)
+                .values(status=status, error=error, updated_at=int(time.time()))
+            )
+            await db.commit()
+
+    async def set_result(
+        self,
+        document_id: str,
+        status: str,
+        meta: Optional[dict] = None,
+        tree_ref: Optional[str] = None,
+        chunks_ref: Optional[str] = None,
+    ) -> None:
+        vals = {"status": status, "updated_at": int(time.time())}
+        if meta is not None:
+            vals["meta"] = meta
+        if tree_ref is not None:
+            vals["tree_ref"] = tree_ref
+        if chunks_ref is not None:
+            vals["chunks_ref"] = chunks_ref
+        async with get_async_db_context() as db:
+            await db.execute(
+                update(EditorialDocument)
+                .where(EditorialDocument.id == document_id)
+                .values(**vals)
+            )
+            await db.commit()
+
 
 Projects = EditorialProjectsTable()
 Sheets = EditorialProjectSheetsTable()
