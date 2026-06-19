@@ -144,3 +144,20 @@ async def get_document_tree(document_id: str, user=Depends(get_verified_user)):
     local_path = Storage.get_file(doc.tree_ref)
     with open(local_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+@router.get("/documents/{document_id}/chunks")
+async def get_document_chunks(document_id: str, user=Depends(get_verified_user)):
+    doc = await Documents.get(document_id)
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if doc.user_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not doc.chunks_ref:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"chunks indisponiveis (status={doc.status})",
+        )
+    local_path = Storage.get_file(doc.chunks_ref)
+    with open(local_path, "r", encoding="utf-8") as f:
+        return json.load(f)

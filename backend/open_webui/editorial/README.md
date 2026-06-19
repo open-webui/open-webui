@@ -5,8 +5,10 @@ Transforma o ChatND em assistente editorial.
 - **Fatia 2:** ingestao real — recebe o `file_id` do upload nativo, le o arquivo
   (Files+Storage), extrai a **Arvore de Blocos** e guarda no Storage.
 - **Fatia 3:** extratores `.pdf` (com **deteccao de escaneado** -> `needs_ocr`,
-  sem fabricar texto), `.epub` e `.odt` (sem ebooklib/odfpy). Chunking + export
-  vem nas proximas.
+  sem fabricar texto), `.epub` e `.odt` (sem ebooklib/odfpy).
+- **Fatia 4:** **chunking posicional** (chunks por capitulo, com `block_ids` e
+  intervalo de caracteres para reconstrucao/citacao) + aceite do `.docx` de ~80k
+  palavras (capitulos e notas sem perda). Export (F2) vem depois.
 
 **Formatos suportados:** `.docx`, `.pdf`, `.epub`, `.odt`. Todos produzem a mesma
 Arvore de Blocos. Notas de rodape ficam ligadas a ancora (`footnote_ref` <-> `footnote`)
@@ -40,6 +42,7 @@ em docx/epub/odt; no PDF, se nao houver camada de texto, sinaliza `needs_ocr`.
 | POST | `/api/v1/editorial/projects/{id}/documents` | Registra `{file_id}` e **dispara a ingestao** (202). No modo inline ja volta `done`. |
 | GET | `/api/v1/editorial/documents/{id}` | Status do documento (`pending/parsing/done/error` + `meta`). |
 | GET | `/api/v1/editorial/documents/{id}/tree` | Arvore de Blocos extraida (409 se ainda indisponivel). |
+| GET | `/api/v1/editorial/documents/{id}/chunks` | Chunks posicionais (409 se ainda indisponivel). |
 
 **Isolamento:** toda rota exige posse do projeto pelo autor (`user_id`); admin
 acessa para suporte. Um autor nunca acessa projeto/ficha de outro.

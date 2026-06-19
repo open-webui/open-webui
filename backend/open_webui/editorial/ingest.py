@@ -13,6 +13,7 @@ import io
 import json
 import logging
 
+from open_webui.editorial.chunking import chunk_tree
 from open_webui.editorial.extractors import EXTRACTORS, detect_format, get_extractor
 from open_webui.models.editorial import Documents
 
@@ -64,6 +65,15 @@ async def run_ingestion(document_id: str, *, files=None, storage=None) -> dict:
             io.BytesIO(tree_bytes), tree_name, {"editorial": "tree"}
         )
 
+        # Chunking posicional (para reconstrucao/citacao/RAG posterior).
+        chunks = chunk_tree(tree)
+        chunks_bytes = json.dumps(chunks, ensure_ascii=False).encode("utf-8")
+        _, chunks_path = storage.upload_file(
+            io.BytesIO(chunks_bytes),
+            f"editorial_chunks_{document_id}.json",
+            {"editorial": "chunks"},
+        )
+
         blocks = tree.get("blocks", [])
         meta = {
             "title": (tree.get("metadata") or {}).get("title"),
@@ -71,12 +81,22 @@ async def run_ingestion(document_id: str, *, files=None, storage=None) -> dict:
             "blocks": len(blocks),
             "headings": sum(1 for b in blocks if b.get("type") == "heading"),
             "footnotes": sum(1 for b in blocks if b.get("type") == "footnote"),
+            "chunks": len(chunks),
             "warnings": (tree.get("metadata") or {}).get("warnings", []),
         }
         await Documents.set_result(
-            document_id, status="done", meta=meta, tree_ref=tree_path
+            document_id,
+            status="done",
+            meta=meta,
+            tree_ref=tree_path,
+            chunks_ref=chunks_path,
         )
-        return {"status": "done", "tree_ref": tree_path, "meta": meta}
+        return {
+            "status": "done",
+            "tree_ref": tree_path,
+            "chunks_ref": chunks_path,
+            "meta": meta,
+        }
 
     except Exception as e:
         # Mensagem de erro CLARA fica registrada no proprio documento.

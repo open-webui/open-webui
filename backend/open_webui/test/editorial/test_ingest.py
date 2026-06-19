@@ -96,12 +96,15 @@ async def test_ingestion_docx_happy_path(session_factory, tmp_path):
     saved = await ed.Documents.get(doc.id)
     assert saved.status == "done"
     assert saved.tree_ref and saved.tree_ref.startswith("stored/")
+    assert saved.chunks_ref and saved.chunks_ref.startswith("stored/")
     assert saved.meta["footnotes"] == 1
     assert saved.meta["headings"] == 1
+    assert saved.meta["chunks"] >= 1
     # a arvore guardada contem a ligacao ancora<->nota
     import json
 
-    tree = json.loads(list(fake_storage.uploaded.values())[0].decode("utf-8"))
+    tree_blob = next(v for k, v in fake_storage.uploaded.items() if "tree" in k)
+    tree = json.loads(tree_blob.decode("utf-8"))
     notes = {b["id"] for b in tree["blocks"] if b["type"] == "footnote"}
     refs = {
         i["id"]
@@ -110,6 +113,11 @@ async def test_ingestion_docx_happy_path(session_factory, tmp_path):
         if i.get("t") == "footnote_ref"
     }
     assert refs == {"fn-2"} and "fn-2" in notes
+
+    # e os chunks guardados referenciam a posicao original
+    chunks_blob = next(v for k, v in fake_storage.uploaded.items() if "chunks" in k)
+    chunks = json.loads(chunks_blob.decode("utf-8"))
+    assert chunks and all("block_ids" in c and "char_start" in c for c in chunks)
 
 
 async def test_ingestion_unsupported_format_sets_clear_error(
