@@ -6,7 +6,7 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
@@ -38,6 +38,13 @@ from open_webui.utils.auth import (
     get_password_hash,
     get_verified_user,
     validate_password,
+)
+from open_webui.utils.usage_limits import (
+    QuotaSummary,
+    UsageLimitsConfig,
+    UsageStatus,
+    get_quota_summary,
+    get_usage_status,
 )
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -423,6 +430,106 @@ async def update_user_info_by_session_user(  # PATCH-style merge
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
     return updated.info
+
+
+############################
+# GetCurrentUserQuota
+############################
+
+
+@router.get('/user/quota')
+async def get_current_user_quota(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return a pre-computed quota summary for the current user.
+
+    ``remaining`` is pre-calculated; ``resets_at`` is an ISO 8601 date string
+    (e.g. ``"2026-07-01"``). When no limits are configured, ``unlimited`` is
+    ``true`` and all dimension fields are ``null``.
+    """
+    return await get_quota_summary(user.id, db=db)
+
+
+############################
+# GetCurrentUserUsage
+############################
+
+
+@router.get('/user/usage')
+async def get_current_user_usage(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return raw token/message usage and effective limits for the current user.
+
+    For a human-readable quota card, prefer GET /user/quota instead.
+    """
+    return await get_usage_status(user.id, db=db)
+
+
+############################
+# Admin — GetUserUsageLimits
+############################
+
+
+@router.get('/{user_id}/usage-limits')
+async def get_user_usage_limits(
+    user_id: str,
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return the usage limit override configured directly on a user, or null."""
+    target = await Users.get_user_by_id(user_id, db=db)
+    if not target:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    raw = (target.info or {}).get('usage_limits')
+    if raw is None:
+        return None
+    try:
+        return UsageLimitsConfig.model_validate(raw)
+    except Exception:
+        raise HTTPException(status_code=500, detail='Stored usage_limits config is malformed')
+
+
+############################
+# Admin — UpdateUserUsageLimits
+############################
+
+
+@router.put('/{user_id}/usage-limits')
+async def update_user_usage_limits(
+    user_id: str,
+    form_data: Optional[UsageLimitsConfig] = Body(default=None),
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Set or clear the usage limit override for a user.
+
+    Pass ``null`` to remove the user-level override (the user inherits group
+    limits again). Pass ``{"enabled": false}`` to explicitly exempt a user
+    from any group-level limits without configuring new caps.
+    """
+    target = await Users.get_user_by_id(user_id, db=db)
+    if not target:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    current_info = dict(target.info or {})
+
+    if form_data is None:
+        current_info.pop('usage_limits', None)
+    else:
+        current_info['usage_limits'] = form_data.model_dump()
+
+    updated = await Users.update_user_by_id(user_id, {'info': current_info}, db=db)
+    if not updated:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    raw = (updated.info or {}).get('usage_limits')
+    if raw is None:
+        return None
+    return UsageLimitsConfig.model_validate(raw)
 
 
 ############################
