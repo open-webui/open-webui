@@ -100,6 +100,15 @@ async def list_sheet_versions(project_id: str, user=Depends(get_verified_user)):
     return await Sheets.list_versions(project_id)
 
 
+@router.get("/projects/{project_id}/context")
+async def get_project_context(project_id: str, user=Depends(get_verified_user)):
+    """Ficha atual formatada como contexto (F3). Vazio se nao houver ficha."""
+    await _get_owned_project(project_id, user)
+    from open_webui.editorial.project_context import build_project_context
+
+    return {"context": await build_project_context(project_id)}
+
+
 ############################
 # Documentos (Fatia 1: cria o registro; parse vem na Fatia 2/3)
 ############################

@@ -39,6 +39,7 @@ em docx/epub/odt; no PDF, se nao houver camada de texto, sinaliza `needs_ocr`.
 | GET | `/api/v1/editorial/projects/{id}/sheet` | Ficha **atual** (versao current). |
 | POST | `/api/v1/editorial/projects/{id}/sheet` | Cria **nova versao** da ficha (preserva a anterior). |
 | GET | `/api/v1/editorial/projects/{id}/sheet/versions` | Historico de versoes (desc). |
+| GET | `/api/v1/editorial/projects/{id}/context` | Ficha atual formatada como contexto (F3). |
 | POST | `/api/v1/editorial/projects/{id}/documents` | Registra `{file_id}` e **dispara a ingestao** (202). No modo inline ja volta `done`. |
 | GET | `/api/v1/editorial/documents/{id}` | Status do documento (`pending/parsing/done/error` + `meta`). |
 | GET | `/api/v1/editorial/documents/{id}/tree` | Arvore de Blocos extraida (409 se ainda indisponivel). |
