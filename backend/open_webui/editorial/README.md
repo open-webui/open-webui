@@ -43,7 +43,7 @@ em docx/epub/odt; no PDF, se nao houver camada de texto, sinaliza `needs_ocr`.
 | GET | `/api/v1/editorial/documents/{id}` | Status do documento (`pending/parsing/done/error` + `meta`). |
 | GET | `/api/v1/editorial/documents/{id}/tree` | Arvore de Blocos extraida (409 se ainda indisponivel). |
 | GET | `/api/v1/editorial/documents/{id}/chunks` | Chunks posicionais (409 se ainda indisponivel). |
-| POST | `/api/v1/editorial/documents/{id}/export?format=docx\|epub` | Exporta a obra (F2.1 `.docx`, F2.2 `.epub`; pdf na proxima). |
+| POST | `/api/v1/editorial/documents/{id}/export?format=docx\|epub\|pdf` | Exporta a obra (F2.1 `.docx`, F2.2 `.epub`, F2.3 `.pdf`). |
 
 **Isolamento:** toda rota exige posse do projeto pelo autor (`user_id`); admin
 acessa para suporte. Um autor nunca acessa projeto/ficha de outro.

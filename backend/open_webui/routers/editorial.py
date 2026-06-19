@@ -168,6 +168,7 @@ async def get_document_chunks(document_id: str, user=Depends(get_verified_user))
 _EXPORT_MEDIA = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "epub": "application/epub+zip",
+    "pdf": "application/pdf",
 }
 
 
@@ -187,10 +188,9 @@ async def export_document(
         )
     fmt = (format or "docx").lower()
     if fmt not in _EXPORT_MEDIA:
-        # .pdf entra na fatia F2.3
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"export para {fmt!r} ainda nao suportado (disponivel: {sorted(_EXPORT_MEDIA)})",
+            detail=f"export para {fmt!r} nao suportado (disponivel: {sorted(_EXPORT_MEDIA)})",
         )
 
     local_path = Storage.get_file(doc.tree_ref)
@@ -201,6 +201,10 @@ async def export_document(
         from open_webui.editorial.export.epub_export import build_epub
 
         data = build_epub(tree)
+    elif fmt == "pdf":
+        from open_webui.editorial.export.pdf_export import build_pdf
+
+        data = build_pdf(tree)
     else:
         from open_webui.editorial.export.docx_export import build_docx
 
