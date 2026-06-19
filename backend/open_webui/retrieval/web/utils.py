@@ -36,6 +36,8 @@ from open_webui.config import (
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     FIRECRAWL_TIMEOUT,
+    MICROSOFT_WEB_IQ_API_KEY,
+    MICROSOFT_WEB_IQ_LANGUAGE,
     PLAYWRIGHT_TIMEOUT,
     PLAYWRIGHT_WS_URL,
     TAVILY_API_KEY,
@@ -54,6 +56,7 @@ from open_webui.env import (
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
+from open_webui.retrieval.web.microsoft_browse import browse_microsoft_url
 from open_webui.utils.misc import is_host_allowed
 
 log = logging.getLogger(__name__)
@@ -348,6 +351,59 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         except Exception as e:
             if self.continue_on_failure:
                 log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
+            else:
+                raise e
+
+
+class SafeMicrosoftBrowseLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    def __init__(
+        self,
+        web_paths,
+        api_key: str,
+        language: str = 'en',
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        requests_per_second: Optional[float] = None,
+        continue_on_failure: bool = True,
+        timeout: Optional[int] = None,
+    ):
+        self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_key = api_key
+        self.language = language
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+        self.continue_on_failure = continue_on_failure
+        self.timeout = timeout
+
+    def lazy_load(self) -> Iterator[Document]:
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                doc = browse_microsoft_url(
+                    self.api_key,
+                    url,
+                    language=self.language,
+                    verify_ssl=self.verify_ssl,
+                    timeout=self.timeout,
+                )
+                if doc is not None:
+                    yield doc
+            except Exception as e:
+                if self.continue_on_failure:
+                    log.warning(f'Error browsing {url} with Microsoft Browse: {e}')
+                else:
+                    raise e
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        try:
+            docs = await run_in_threadpool(lambda: list(self.lazy_load()))
+            for doc in docs:
+                yield doc
+        except Exception as e:
+            if self.continue_on_failure:
+                log.warning(f'Error browsing URLs with Microsoft Browse: {e}')
             else:
                 raise e
 
@@ -818,6 +874,16 @@ def get_web_loader(
         web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL
         web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY
 
+    if WEB_LOADER_ENGINE == 'microsoft_web_iq':
+        WebLoaderClass = SafeMicrosoftBrowseLoader
+        web_loader_args['api_key'] = MICROSOFT_WEB_IQ_API_KEY
+        web_loader_args['language'] = MICROSOFT_WEB_IQ_LANGUAGE
+        if WEB_LOADER_TIMEOUT:
+            try:
+                web_loader_args['timeout'] = int(WEB_LOADER_TIMEOUT)
+            except ValueError:
+                pass
+
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
 
@@ -831,5 +897,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'external', or 'microsoft_web_iq'."
         )

@@ -16,6 +16,7 @@
 	let webSearchEngines = [
 		'ollama_cloud',
 		'perplexity_search',
+		'microsoft_web_iq',
 		'searxng',
 		'yacy',
 		'google_pse',
@@ -42,7 +43,7 @@
 		'youcom',
 		'linkup'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external', 'microsoft_web_iq'];
 
 	let webConfig = null;
 
@@ -240,6 +241,53 @@
 												bind:value={webConfig.PERPLEXITY_API_KEY}
 											/>
 										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'microsoft_web_iq'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Microsoft Web IQ API Key')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Microsoft Web IQ API Key')}
+												bind:value={webConfig.MICROSOFT_WEB_IQ_API_KEY}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Language')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter language code (e.g. en)')}
+												bind:value={webConfig.MICROSOFT_WEB_IQ_LANGUAGE}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+
+									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+										<a
+											class=" text-gray-300 font-medium underline"
+											href="https://webiq.microsoft.ai/documentation/supported-languages-and-regions/#supported-languages"
+											target="_blank"
+										>
+											{$i18n.t('View supported languages.')}
+										</a>
 									</div>
 								</div>
 							</div>
@@ -1207,6 +1255,14 @@
 									placeholder={$i18n.t('Enter External Web Loader API Key')}
 									bind:value={webConfig.EXTERNAL_WEB_LOADER_API_KEY}
 								/>
+							</div>
+						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'microsoft_web_iq'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class=" text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t(
+									'Uses the Microsoft Web IQ API Key configured under Web Search above.'
+								)}
 							</div>
 						</div>
 					{/if}
