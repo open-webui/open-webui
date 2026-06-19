@@ -8,7 +8,10 @@ Transforma o ChatND em assistente editorial.
   sem fabricar texto), `.epub` e `.odt` (sem ebooklib/odfpy).
 - **Fatia 4:** **chunking posicional** (chunks por capitulo, com `block_ids` e
   intervalo de caracteres para reconstrucao/citacao) + aceite do `.docx` de ~80k
-  palavras (capitulos e notas sem perda). Export (F2) vem depois.
+  palavras (capitulos e notas sem perda).
+- **F2.4a:** extracao de **imagens** (.docx: bytes + alt do `descr`) na Arvore +
+  geracao de **alt-text** (acessibilidade) via funcao de visao INJETAVEL
+  (`alt_text.ensure_alt_text`); embutir imagem nos exports = F2.4b.
 
 **Formatos suportados:** `.docx`, `.pdf`, `.epub`, `.odt`. Todos produzem a mesma
 Arvore de Blocos. Notas de rodape ficam ligadas a ancora (`footnote_ref` <-> `footnote`)

@@ -11,6 +11,7 @@ Escopo desta fatia: titulos (hierarquia), paragrafos, marcacao inline
 Numeracao/estilos herdados e refinamento de listas ficam para fatia posterior.
 """
 
+import base64
 import io
 import re
 import zipfile
@@ -18,6 +19,21 @@ import zipfile
 from lxml import etree
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+_A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+_WP = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}"
+_R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+_PKGREL = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+_MIME = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "svg": "image/svg+xml",
+    "webp": "image/webp",
+    "bmp": "image/bmp",
+    "tif": "image/tiff",
+    "tiff": "image/tiff",
+}
 
 
 def _t(tag: str) -> str:
@@ -137,6 +153,53 @@ def _extract_footnotes(data: bytes) -> dict:
     return notes
 
 
+def _load_media(data: bytes) -> dict:
+    """Mapa rId -> {mime, b64} das imagens em word/media, via document.xml.rels."""
+    media = {}
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        names = set(zf.namelist())
+        if "word/_rels/document.xml.rels" not in names:
+            return media
+        root = etree.fromstring(zf.read("word/_rels/document.xml.rels"))
+        for rel in root.findall(_PKGREL + "Relationship"):
+            if not (rel.get("Type") or "").endswith("/image"):
+                continue
+            rid = rel.get("Id")
+            target = (rel.get("Target") or "").lstrip("/")
+            path = target if target.startswith("word/") else "word/" + target
+            if path in names:
+                raw = zf.read(path)
+                ext = path.rsplit(".", 1)[-1].lower()
+                media[rid] = {
+                    "mime": _MIME.get(ext, "application/octet-stream"),
+                    "b64": base64.b64encode(raw).decode("ascii"),
+                }
+    return media
+
+
+def _images_in_paragraph(p, media) -> list:
+    out = []
+    for drawing in p.iter(_t("drawing")):
+        docpr = next(drawing.iter(_WP + "docPr"), None)
+        alt = docpr.get("descr") if docpr is not None else None
+        name = docpr.get("name") if docpr is not None else None
+        blip = next(drawing.iter(_A + "blip"), None)
+        rid = blip.get(_R + "embed") if blip is not None else None
+        image = {"alt": (alt or None), "name": name}
+        m = media.get(rid) if rid else None
+        if m:
+            image.update(m)
+        out.append(
+            {
+                "type": "image",
+                "text": alt or name or "imagem",
+                "inlines": [],
+                "image": image,
+            }
+        )
+    return out
+
+
 def extract_docx(data: bytes) -> dict:
     """Recebe os bytes de um .docx e devolve a Arvore de Blocos Nidum.
     Lanca ValueError com mensagem clara quando o arquivo nao e um docx valido."""
@@ -153,6 +216,7 @@ def extract_docx(data: bytes) -> dict:
     if body is None:
         raise ValueError("docx invalido: corpo (<w:body>) ausente")
 
+    media = _load_media(data)
     blocks = []
     order = 0
     chapter_index = 0
@@ -161,19 +225,23 @@ def extract_docx(data: bytes) -> dict:
     for el in body:
         tag = el.tag
         if tag == _t("p"):
-            blk = _para_block(el)
+            produced = [_para_block(el)] + _images_in_paragraph(el, media)
         elif tag == _t("tbl"):
-            blk = _table_block(el)
+            produced = [_table_block(el)]
         else:
             continue
-        if blk["type"] == "heading" and blk.get("level") == 1:
-            chapter_index += 1
-            chapter_title = blk["text"]
-        order += 1
-        blk["id"] = "b-%06d" % order
-        blk["order"] = order
-        blk["path"] = {"chapter_index": chapter_index, "chapter_title": chapter_title}
-        blocks.append(blk)
+        for blk in produced:
+            if blk["type"] == "heading" and blk.get("level") == 1:
+                chapter_index += 1
+                chapter_title = blk["text"]
+            order += 1
+            blk["id"] = "b-%06d" % order
+            blk["order"] = order
+            blk["path"] = {
+                "chapter_index": chapter_index,
+                "chapter_title": chapter_title,
+            }
+            blocks.append(blk)
 
     notes = _extract_footnotes(data)
     for fid, n in notes.items():
