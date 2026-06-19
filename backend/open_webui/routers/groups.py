@@ -385,7 +385,7 @@ async def get_group_usage_limits(
 @router.put('/id/{id}/usage-limits')
 async def update_group_usage_limits(
     id: str,
-    form_data: Optional[UsageLimitsConfig] = Body(default=None),
+    form_data: UsageLimitsConfig | None = Body(default=None),
     admin=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):

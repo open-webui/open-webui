@@ -11,10 +11,14 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
 from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.auths import Auths
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.models import Models
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.tools import Tools
 from open_webui.models.users import (
     UserGroupIdsListResponse,
     UserGroupIdsModel,
@@ -27,10 +31,6 @@ from open_webui.models.users import (
     UserStatus,
     UserUpdateForm,
 )
-from open_webui.models.access_grants import AccessGrants
-from open_webui.models.knowledge import Knowledges
-from open_webui.models.models import Models
-from open_webui.models.tools import Tools
 from open_webui.socket.main import disconnect_user_sessions
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.auth import (
@@ -437,7 +437,7 @@ async def update_user_info_by_session_user(  # PATCH-style merge
 ############################
 
 
-@router.get('/user/quota')
+@router.get('/user/quota', response_model=QuotaSummary)
 async def get_current_user_quota(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -456,7 +456,7 @@ async def get_current_user_quota(
 ############################
 
 
-@router.get('/user/usage')
+@router.get('/user/usage', response_model=UsageStatus)
 async def get_current_user_usage(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -501,7 +501,7 @@ async def get_user_usage_limits(
 @router.put('/{user_id}/usage-limits')
 async def update_user_usage_limits(
     user_id: str,
-    form_data: Optional[UsageLimitsConfig] = Body(default=None),
+    form_data: UsageLimitsConfig | None = Body(default=None),
     admin=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):

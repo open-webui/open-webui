@@ -74,6 +74,18 @@ class TestPeriodHelpers:
         for period in ('daily', 'weekly', 'monthly'):
             assert get_period_end_ts(period) > get_period_start_ts(period)
 
+    def test_monthly_end_is_last_day_of_current_month(self):
+        """Regression: monthly period end must be last day of the current month,
+        not the first day of the next month (TOCTOU with time-of-day offset)."""
+        end_ts = get_period_end_ts('monthly')
+        end_dt = datetime.fromtimestamp(end_ts, tz=UTC)
+        now = datetime.now(UTC)
+        # The end date's month must equal the current month
+        assert end_dt.month == now.month, (
+            f'Monthly period end is {end_dt.date()} but current month is {now.month}; '
+            f'end must be in the same month as today'
+        )
+
     def test_unknown_period_raises(self):
         with pytest.raises(ValueError, match='Unknown period'):
             get_period_start_ts('yearly')

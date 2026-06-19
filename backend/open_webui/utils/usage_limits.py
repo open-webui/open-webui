@@ -128,11 +128,13 @@ def get_period_end_ts(period: str) -> int:
         days_to_sunday = 6 - now.weekday()
         end = (now + timedelta(days=days_to_sunday)).replace(hour=23, minute=59, second=59, microsecond=999999)
     elif period == 'monthly':
+        # Reset to midnight before subtracting 1 µs so the result is the last
+        # microsecond of the current month, not the first day of the next month.
         if now.month == 12:
-            first_of_next = now.replace(year=now.year + 1, month=1, day=1)
+            first_of_next = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         else:
-            first_of_next = now.replace(month=now.month + 1, day=1)
-        end = (first_of_next - timedelta(seconds=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
+            first_of_next = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = first_of_next - timedelta(microseconds=1)
     else:
         raise ValueError(f'Unknown period: {period!r}')
     return int(end.timestamp())
