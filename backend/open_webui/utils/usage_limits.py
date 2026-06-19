@@ -8,12 +8,29 @@ a user belongs to multiple groups with limits configured.
 Limits are checked as a pre-flight step inside generate_chat_completion() before
 any LLM call is made. The check fails open on DB errors to avoid blocking
 legitimate users due to transient infrastructure issues.
+
+Known limitation — TOCTOU race condition:
+  The check-then-act pattern (read usage → enforce → LLM call → write usage)
+  means that concurrent requests from the same user can all pass the pre-flight
+  check before any of them write their usage back to the database. The maximum
+  overshoot per burst is bounded by (N_concurrent × tokens_per_request). For
+  typical chat-UI usage (one request at a time), this is negligible. Eliminating
+  it would require an atomic counter (Redis INCR or a dedicated DB row with
+  SELECT FOR UPDATE), which is out of scope for this initial implementation.
+  Treat configured limits as soft caps with a small burst tolerance.
+
+Known limitation — cross-period dimension merging:
+  When a user belongs to groups with different periods (e.g. Group A enforces a
+  daily message cap and Group B enforces a weekly token cap), only the shortest-
+  period group's limits are applied. The longer-period cap is silently ignored.
+  All limits WITHIN the shortest period are merged correctly (minimum across
+  groups for each dimension).
 """
 
 import logging
 from contextlib import suppress
-from datetime import datetime, timedelta, timezone
-from typing import Literal, Optional
+from datetime import UTC, datetime, timedelta  # noqa: ICN003
+from typing import Literal
 
 from fastapi import HTTPException
 from open_webui.models.chat_messages import ChatMessages
@@ -34,23 +51,23 @@ class UsageLimitsConfig(BaseModel):
     """
 
     enabled: bool = False
-    period: Literal["daily", "weekly", "monthly"] = "daily"
+    period: Literal['daily', 'weekly', 'monthly'] = 'daily'
 
     # Optional per-period caps (None = unlimited for that dimension)
-    max_messages: Optional[int] = None
-    max_input_tokens: Optional[int] = None
-    max_output_tokens: Optional[int] = None
-    max_total_tokens: Optional[int] = None
+    max_messages: int | None = None
+    max_input_tokens: int | None = None
+    max_output_tokens: int | None = None
+    max_total_tokens: int | None = None
 
-    model_config = {"extra": "ignore"}
+    model_config = {'extra': 'ignore'}
 
 
 class UsageStatus(BaseModel):
     """Current usage snapshot for a user, paired with their effective limits."""
 
-    limits: Optional[UsageLimitsConfig] = None
-    period_start: Optional[int] = None
-    period_end: Optional[int] = None
+    limits: UsageLimitsConfig | None = None
+    period_start: int | None = None
+    period_end: int | None = None
     usage: dict = {}
 
 
@@ -71,59 +88,53 @@ class QuotaSummary(BaseModel):
     """
 
     unlimited: bool = False
-    period: Optional[Literal["daily", "weekly", "monthly"]] = None
-    resets_at: Optional[str] = None  # ISO 8601 date, e.g. "2026-07-01"
+    period: Literal['daily', 'weekly', 'monthly'] | None = None
+    resets_at: str | None = None  # ISO 8601 date, e.g. "2026-07-01"
 
-    total_tokens: Optional[QuotaDimension] = None
-    input_tokens: Optional[QuotaDimension] = None
-    output_tokens: Optional[QuotaDimension] = None
-    messages: Optional[QuotaDimension] = None
+    total_tokens: QuotaDimension | None = None
+    input_tokens: QuotaDimension | None = None
+    output_tokens: QuotaDimension | None = None
+    messages: QuotaDimension | None = None
 
 
 # ---------------------------------------------------------------------------
 # Period helpers
 # ---------------------------------------------------------------------------
 
-_PERIOD_ORDER = {"daily": 0, "weekly": 1, "monthly": 2}
+_PERIOD_ORDER = {'daily': 0, 'weekly': 1, 'monthly': 2}
 
 
 def get_period_start_ts(period: str) -> int:
     """UTC Unix timestamp for the start of the current billing period."""
-    now = datetime.now(timezone.utc)
-    if period == "daily":
+    now = datetime.now(UTC)
+    if period == 'daily':
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif period == "weekly":
+    elif period == 'weekly':
         # ISO weeks start on Monday
-        start = (now - timedelta(days=now.weekday())).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-    elif period == "monthly":
+        start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == 'monthly':
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     else:
-        raise ValueError(f"Unknown period: {period!r}")
+        raise ValueError(f'Unknown period: {period!r}')
     return int(start.timestamp())
 
 
 def get_period_end_ts(period: str) -> int:
     """UTC Unix timestamp for the end of the current billing period (inclusive)."""
-    now = datetime.now(timezone.utc)
-    if period == "daily":
+    now = datetime.now(UTC)
+    if period == 'daily':
         end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-    elif period == "weekly":
+    elif period == 'weekly':
         days_to_sunday = 6 - now.weekday()
-        end = (now + timedelta(days=days_to_sunday)).replace(
-            hour=23, minute=59, second=59, microsecond=999999
-        )
-    elif period == "monthly":
+        end = (now + timedelta(days=days_to_sunday)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif period == 'monthly':
         if now.month == 12:
             first_of_next = now.replace(year=now.year + 1, month=1, day=1)
         else:
             first_of_next = now.replace(month=now.month + 1, day=1)
-        end = (first_of_next - timedelta(seconds=1)).replace(
-            hour=23, minute=59, second=59, microsecond=999999
-        )
+        end = (first_of_next - timedelta(seconds=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
     else:
-        raise ValueError(f"Unknown period: {period!r}")
+        raise ValueError(f'Unknown period: {period!r}')
     return int(end.timestamp())
 
 
@@ -139,7 +150,7 @@ def _most_restrictive(configs: list[UsageLimitsConfig]) -> UsageLimitsConfig:
     - Caps: minimum non-None value across all configs.
     """
 
-    def _min_cap(*values: Optional[int]) -> Optional[int]:
+    def _min_cap(*values: int | None) -> int | None:
         non_none = [v for v in values if v is not None]
         return min(non_none) if non_none else None
 
@@ -162,8 +173,8 @@ def _most_restrictive(configs: list[UsageLimitsConfig]) -> UsageLimitsConfig:
 
 async def get_effective_usage_limits(
     user_id: str,
-    db: Optional[AsyncSession] = None,
-) -> Optional[UsageLimitsConfig]:
+    db: AsyncSession | None = None,
+) -> UsageLimitsConfig | None:
     """Resolve the effective usage limits for a user.
 
     Priority order:
@@ -179,19 +190,19 @@ async def get_effective_usage_limits(
         return None
 
     # ── 1. User-level override ────────────────────────────────────────────
-    raw_user_limits = (user.info or {}).get("usage_limits")
+    raw_user_limits = (user.info or {}).get('usage_limits')
     if raw_user_limits is not None:
         with suppress(Exception):
             user_limits = UsageLimitsConfig.model_validate(raw_user_limits)
             # Explicit user config found — honour it regardless of groups.
             return user_limits if user_limits.enabled else None
-        log.warning("Ignoring malformed usage_limits for user %s", user_id)
+        log.warning('Ignoring malformed usage_limits for user %s', user_id)
 
     # ── 2. Group-level limits ─────────────────────────────────────────────
     groups = await Groups.get_groups_by_member_id(user_id, db=db)
     enabled_group_limits: list[UsageLimitsConfig] = []
     for group in groups:
-        raw_group_limits = (group.data or {}).get("usage_limits")
+        raw_group_limits = (group.data or {}).get('usage_limits')
         if raw_group_limits is None:
             continue
         with suppress(Exception):
@@ -199,7 +210,7 @@ async def get_effective_usage_limits(
             if gl.enabled:
                 enabled_group_limits.append(gl)
             continue
-        log.warning("Ignoring malformed usage_limits for group %s", group.id)
+        log.warning('Ignoring malformed usage_limits for group %s', group.id)
 
     if not enabled_group_limits:
         return None
@@ -215,7 +226,7 @@ async def get_effective_usage_limits(
 async def get_user_usage_for_period(
     user_id: str,
     period: str,
-    db: Optional[AsyncSession] = None,
+    db: AsyncSession | None = None,
 ) -> dict:
     """Return current-period token/message stats for a single user."""
     start_date = get_period_start_ts(period)
@@ -227,10 +238,10 @@ async def get_user_usage_for_period(
     return usage_map.get(
         user_id,
         {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "total_tokens": 0,
-            "message_count": 0,
+            'input_tokens': 0,
+            'output_tokens': 0,
+            'total_tokens': 0,
+            'message_count': 0,
         },
     )
 
@@ -242,7 +253,7 @@ async def get_user_usage_for_period(
 
 async def check_usage_limits(
     user_id: str,
-    db: Optional[AsyncSession] = None,
+    db: AsyncSession | None = None,
 ) -> None:
     """Pre-flight usage limit check. Call this before invoking the LLM.
 
@@ -266,7 +277,7 @@ async def check_usage_limits(
         usage = await get_user_usage_for_period(user_id, limits.period, db=db)
         period_end = get_period_end_ts(limits.period)
 
-        def _exceeded(limit: Optional[int], key: str, label: str) -> None:
+        def _exceeded(limit: int | None, key: str, label: str) -> None:
             if limit is None:
                 return
             current = usage.get(key, 0)
@@ -274,24 +285,24 @@ async def check_usage_limits(
                 raise HTTPException(
                     status_code=429,
                     detail={
-                        "error": "usage_limit_exceeded",
-                        "limit_type": label,
-                        "period": limits.period,
-                        "limit": limit,
-                        "current": current,
-                        "resets_at": period_end,
+                        'error': 'usage_limit_exceeded',
+                        'limit_type': label,
+                        'period': limits.period,
+                        'limit': limit,
+                        'current': current,
+                        'resets_at': period_end,
                     },
                 )
 
-        _exceeded(limits.max_messages, "message_count", "messages")
-        _exceeded(limits.max_total_tokens, "total_tokens", "total_tokens")
-        _exceeded(limits.max_input_tokens, "input_tokens", "input_tokens")
-        _exceeded(limits.max_output_tokens, "output_tokens", "output_tokens")
+        _exceeded(limits.max_messages, 'message_count', 'messages')
+        _exceeded(limits.max_total_tokens, 'total_tokens', 'total_tokens')
+        _exceeded(limits.max_input_tokens, 'input_tokens', 'input_tokens')
+        _exceeded(limits.max_output_tokens, 'output_tokens', 'output_tokens')
 
     except HTTPException:
         raise
     except Exception:
-        log.exception("Usage limit check failed for user %s — allowing request", user_id)
+        log.exception('Usage limit check failed for user %s — allowing request', user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -301,7 +312,7 @@ async def check_usage_limits(
 
 async def get_usage_status(
     user_id: str,
-    db: Optional[AsyncSession] = None,
+    db: AsyncSession | None = None,
 ) -> UsageStatus:
     """Build a UsageStatus payload for the /me/usage endpoint (raw numbers)."""
     limits = await get_effective_usage_limits(user_id, db=db)
@@ -319,12 +330,10 @@ async def get_usage_status(
 
 def _period_end_date_str(period: str) -> str:
     """ISO 8601 date string for the last day of the current billing period."""
-    return datetime.fromtimestamp(
-        get_period_end_ts(period), tz=timezone.utc
-    ).date().isoformat()
+    return datetime.fromtimestamp(get_period_end_ts(period), tz=UTC).date().isoformat()
 
 
-def _dimension(used: int, limit: Optional[int]) -> Optional[QuotaDimension]:
+def _dimension(used: int, limit: int | None) -> QuotaDimension | None:
     """Build a QuotaDimension only when the cap is configured."""
     if limit is None:
         return None
@@ -333,7 +342,7 @@ def _dimension(used: int, limit: Optional[int]) -> Optional[QuotaDimension]:
 
 async def get_quota_summary(
     user_id: str,
-    db: Optional[AsyncSession] = None,
+    db: AsyncSession | None = None,
 ) -> QuotaSummary:
     """Build a clean, pre-computed quota summary for the /me/quota endpoint.
 
@@ -363,8 +372,8 @@ async def get_quota_summary(
         unlimited=False,
         period=limits.period,
         resets_at=_period_end_date_str(limits.period),
-        total_tokens=_dimension(usage.get("total_tokens", 0), limits.max_total_tokens),
-        input_tokens=_dimension(usage.get("input_tokens", 0), limits.max_input_tokens),
-        output_tokens=_dimension(usage.get("output_tokens", 0), limits.max_output_tokens),
-        messages=_dimension(usage.get("message_count", 0), limits.max_messages),
+        total_tokens=_dimension(usage.get('total_tokens', 0), limits.max_total_tokens),
+        input_tokens=_dimension(usage.get('input_tokens', 0), limits.max_input_tokens),
+        output_tokens=_dimension(usage.get('output_tokens', 0), limits.max_output_tokens),
+        messages=_dimension(usage.get('message_count', 0), limits.max_messages),
     )

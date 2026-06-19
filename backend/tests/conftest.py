@@ -19,16 +19,16 @@ def _stub(name: str) -> ModuleType:
 
 
 # ── open_webui.models.users ───────────────────────────────────────────────────
-users_mod = _stub("open_webui.models.users")
+users_mod = _stub('open_webui.models.users')
 users_mod.Users = MagicMock()
 users_mod.UserModel = MagicMock()
 
 # ── open_webui.models.groups ──────────────────────────────────────────────────
-groups_mod = _stub("open_webui.models.groups")
+groups_mod = _stub('open_webui.models.groups')
 groups_mod.Groups = MagicMock()
 groups_mod.GroupMember = MagicMock()
 groups_mod.GroupUpdateForm = MagicMock()
 
 # ── open_webui.models.chat_messages ──────────────────────────────────────────
-chat_messages_mod = _stub("open_webui.models.chat_messages")
+chat_messages_mod = _stub('open_webui.models.chat_messages')
 chat_messages_mod.ChatMessages = MagicMock()
