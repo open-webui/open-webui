@@ -77,7 +77,6 @@ from open_webui.utils.access_control import has_connection_access, has_permissio
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -2171,10 +2170,7 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
-    return [
-        {k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files', 'contextSummary')}
-        for msg in db_messages
-    ]
+    return [{k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files')} for msg in db_messages]
 
 
 def get_reasoning_format(model: dict) -> str | None:
@@ -2223,50 +2219,6 @@ def process_messages_with_output(
         processed.append(clean_message)
 
     return processed
-
-
-def strip_compaction_fields(messages: list[dict]) -> list[dict]:
-    stripped = []
-    for message in messages:
-        clean = dict(message)
-        clean.pop('contextSummary', None)
-        clean.pop('context_summary', None)
-        stripped.append(clean)
-    return stripped
-
-
-def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
-    tool_result_ids = {
-        message.get('tool_call_id')
-        for message in messages
-        if message.get('role') == 'tool' and message.get('tool_call_id')
-    }
-
-    tool_call_ids = {
-        tool_call.get('id')
-        for message in messages
-        for tool_call in (message.get('tool_calls') or [])
-        if message.get('role') == 'assistant' and tool_call.get('id')
-    }
-
-    sanitized = []
-    for message in messages:
-        if message.get('role') == 'assistant' and message.get('tool_calls'):
-            kept = [
-                tool_call for tool_call in message.get('tool_calls') or [] if tool_call.get('id') in tool_result_ids
-            ]
-            if kept:
-                sanitized.append({**message, 'tool_calls': kept})
-            else:
-                clean = dict(message)
-                clean.pop('tool_calls', None)
-                clean.pop('reasoning_items', None)
-                if clean.get('content'):
-                    sanitized.append(clean)
-        elif message.get('role') != 'tool' or message.get('tool_call_id') in tool_call_ids:
-            sanitized.append(message)
-
-    return sanitized
 
 
 SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)\|?[^>]*>')
@@ -2416,11 +2368,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                 if assistant_message and (assistant_message.get('content') or assistant_message.get('output')):
                     db_messages.append(
-                        {
-                            k: v
-                            for k, v in assistant_message.items()
-                            if k in ('role', 'content', 'output', 'files', 'contextSummary')
-                        }
+                        {k: v for k, v in assistant_message.items() if k in ('role', 'content', 'output', 'files')}
                     )
 
             system_message = get_system_message(form_data.get('messages', []))
@@ -2453,44 +2401,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
-    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
-        if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-            compaction_models = {
-                request.state.model['id']: request.state.model,
-            }
-        else:
-            compaction_models = request.app.state.MODELS
-
-        system_message = get_system_message(form_data.get('messages', []))
-        system_prompt = get_content_from_message(system_message) if system_message else ''
-
-        try:
-            form_data['messages'], context_summary, _ = await compact_messages_for_request(
-                request,
-                user,
-                form_data.get('messages', []),
-                metadata,
-                form_data.get('model'),
-                compaction_models,
-                system_prompt,
-            )
-            if context_summary:
-                form_data['messages'] = add_or_update_system_message(
-                    f'[CONVERSATION SUMMARY]\n{context_summary}',
-                    form_data['messages'],
-                    append=True,
-                )
-        except Exception:
-            log.exception('Context compaction failed; continuing with full chat history')
-
-    form_data['messages'] = strip_compaction_fields(form_data.get('messages', []))
-
     # Process messages with OR-aligned output items for clean LLM messages
     form_data['messages'] = process_messages_with_output(
         form_data.get('messages', []),
         reasoning_format=get_reasoning_format(model),
     )
-    form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings

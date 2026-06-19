@@ -31,45 +31,18 @@ from open_webui.models.folders import Folders
 from open_webui.models.shared_chats import SharedChatResponse, SharedChats
 from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
-from open_webui.tasks import has_active_tasks, stop_item_tasks
+from open_webui.tasks import stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.context_compaction import compact_chat_branch
 from open_webui.utils.middleware import serialize_output
 from open_webui.utils.misc import get_message_list
-from open_webui.utils.models import get_all_models
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
-
-CHAT_CONFIG_KEYS = {
-    'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
-    'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
-    'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
-}
-
-
-class ChatConfigForm(BaseModel):
-    ENABLE_CONTEXT_COMPACTION: bool
-    CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
-    CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
-
-
-class CompactChatForm(BaseModel):
-    model: str | None = None
-
-
-async def get_chat_config_values() -> dict:
-    values = await Config.get_many(*CHAT_CONFIG_KEYS.values())
-    return {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
-
-
-def chat_config_updates(data: dict) -> dict:
-    return {CHAT_CONFIG_KEYS[field]: value for field, value in data.items() if field in CHAT_CONFIG_KEYS}
 
 
 async def require_chat_import_permission(request: Request, user, db: AsyncSession):
@@ -640,30 +613,6 @@ async def import_chats(
 
 
 ############################
-# ChatConfig
-############################
-
-
-@router.get('/config', response_model=ChatConfigForm)
-async def get_chat_config(user=Depends(get_admin_user)):
-    return await get_chat_config_values()
-
-
-@router.post('/config', response_model=ChatConfigForm)
-async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
-    threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
-    await Config.upsert(
-        chat_config_updates(
-            {
-                **form_data.model_dump(),
-                'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
-            }
-        )
-    )
-    return await get_chat_config_values()
-
-
-############################
 # GetChats
 ############################
 
@@ -1025,49 +974,6 @@ async def get_user_chat_list_by_tag_name(
         await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
     return chats
-
-
-############################
-# CompactChat
-############################
-
-
-@router.post('/{id}/compact')
-async def compact_chat_by_id(
-    request: Request,
-    id: str,
-    form_data: CompactChatForm | None = None,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-    if not chat:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
-
-    if await has_active_tasks(request.app.state.redis, id):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='Wait for the current response to finish before compacting.',
-        )
-
-    if not request.app.state.MODELS:
-        await get_all_models(request, user=user)
-
-    history = (chat.chat or {}).get('history') or {}
-    messages_map = await Chats.get_messages_map_by_chat_id(id)
-    message_list = get_message_list(messages_map or history.get('messages') or {}, history.get('currentId'))
-    model_id = (form_data.model if form_data else None) or next(
-        (message.get('model') for message in reversed(message_list) if message.get('model')),
-        None,
-    )
-
-    if not model_id:
-        chat_models = (chat.chat or {}).get('models') or []
-        model_id = chat_models[0] if chat_models else None
-    if not model_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No model found for context compaction.')
-
-    return await compact_chat_branch(request, user, chat, model_id, request.app.state.MODELS)
 
 
 ############################
