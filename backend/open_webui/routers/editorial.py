@@ -7,11 +7,13 @@ Isolamento: toda operacao exige que o projeto pertenca ao autor (user_id).
 Admin pode acessar para suporte/auditoria.
 """
 
+import io
 import json
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.editorial.ingest import run_ingestion
 from open_webui.editorial.jobs import get_job_queue
@@ -161,3 +163,45 @@ async def get_document_chunks(document_id: str, user=Depends(get_verified_user))
     local_path = Storage.get_file(doc.chunks_ref)
     with open(local_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+_EXPORT_MEDIA = {
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+@router.post("/documents/{document_id}/export")
+async def export_document(
+    document_id: str, format: str = "docx", user=Depends(get_verified_user)
+):
+    doc = await Documents.get(document_id)
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if doc.user_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not doc.tree_ref:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"documento ainda nao processado (status={doc.status})",
+        )
+    fmt = (format or "docx").lower()
+    if fmt != "docx":
+        # .epub/.pdf entram nas fatias F2.2/F2.3
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"export para {fmt!r} ainda nao suportado (disponivel: docx)",
+        )
+
+    local_path = Storage.get_file(doc.tree_ref)
+    with open(local_path, "r", encoding="utf-8") as f:
+        tree = json.load(f)
+
+    from open_webui.editorial.export.docx_export import build_docx
+
+    data = build_docx(tree)
+    base = (doc.filename or "documento").rsplit(".", 1)[0]
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=_EXPORT_MEDIA["docx"],
+        headers={"Content-Disposition": f'attachment; filename="{base}.docx"'},
+    )
