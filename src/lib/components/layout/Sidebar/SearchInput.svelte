@@ -19,6 +19,21 @@
 	let selectedIdx = 0;
 	let selectedOption = null;
 
+	let isComposing = false;
+	let compositionEndedAt = -2e8;
+	const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+	function inOrNearComposition(event: KeyboardEvent) {
+		if (isComposing) {
+			return true;
+		}
+		if (isSafari && Math.abs(event.timeStamp - compositionEndedAt) < 500) {
+			compositionEndedAt = -2e8;
+			return true;
+		}
+		return false;
+	}
+
 	let lastWord = '';
 	$: lastWord = value ? value.split(' ').at(-1) : value;
 
@@ -223,20 +238,31 @@
 					initTags();
 				}
 			}}
-			on:blur={() => {
-				if (!hovering) {
-					focused = false;
-				}
-			}}
-			on:keydown={(e) => {
-				if (e.key === 'Enter') {
-					if (filteredItems.length > 0) {
-						const itemElement = document.getElementById(`search-item-${selectedIdx}`);
-						itemElement.click();
-						return;
-					}
+		on:blur={() => {
+			if (!hovering) {
+				focused = false;
+			}
+		}}
+		on:compositionstart={() => {
+			isComposing = true;
+		}}
+		on:compositionend={(e) => {
+			isComposing = false;
+			compositionEndedAt = e.timeStamp;
+		}}
+		on:keydown={(e) => {
+			if (inOrNearComposition(e)) {
+				return;
+			}
 
-					if (filteredOptions.length > 0) {
+			if (e.key === 'Enter') {
+				if (filteredItems.length > 0) {
+					const itemElement = document.getElementById(`search-item-${selectedIdx}`);
+					itemElement.click();
+					return;
+				}
+
+				if (filteredOptions.length > 0) {
 						const optionElement = document.getElementById(`search-option-${selectedIdx}`);
 						optionElement.click();
 						return;
