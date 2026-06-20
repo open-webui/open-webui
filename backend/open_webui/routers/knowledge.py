@@ -747,6 +747,16 @@ async def add_file_to_knowledge_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
+    # Reject content already present in this KB (same raw-bytes hash). The
+    # id guard keeps re-adding/reindexing the very same file idempotent.
+    file_hash = (file.meta or {}).get('file_hash')
+    existing = await Knowledges.get_file_by_hash_in_knowledge(id, file_hash, db=db)
+    if existing and existing.id != file.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DUPLICATE_CONTENT,
+        )
+
     # Add content to the vector database
     try:
         await process_file(

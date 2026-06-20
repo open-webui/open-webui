@@ -649,6 +649,23 @@ class KnowledgeTable:
         except Exception:
             return []
 
+    async def get_file_by_hash_in_knowledge(
+        self, knowledge_id: str, file_hash: str, db: Optional[AsyncSession] = None
+    ) -> Optional[FileModel]:
+        """Return an existing file in the knowledge base whose raw-bytes hash
+        (meta.file_hash) matches, or None. Used to reject duplicate-by-content
+        uploads before they are vectorised/linked."""
+        if not file_hash:
+            return None
+        try:
+            files = await self.get_files_by_id(knowledge_id, db=db)
+            for file in files:
+                if (file.meta or {}).get('file_hash') == file_hash:
+                    return file
+            return None
+        except Exception:
+            return None
+
     async def add_file_to_knowledge_by_id(
         self,
         knowledge_id: str,

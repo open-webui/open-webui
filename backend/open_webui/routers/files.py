@@ -299,6 +299,22 @@ async def upload_file_handler(
         # If the client pre-computed and sent file_hash, use that.
         file_hash = file_metadata.get('file_hash') or hashlib.sha256(contents).hexdigest()
 
+        # When uploading straight into a knowledge base, reject content that is
+        # already present (same raw-bytes hash) BEFORE creating the file row,
+        # vectorising, or linking. Processing happens in a background task, so a
+        # later duplicate error would be invisible to the user and would leave a
+        # phantom KB entry plus wasted storage/embeddings behind. Catch it here
+        # while we can still surface the error and discard the stored blob.
+        knowledge_id = file_metadata.get('knowledge_id')
+        if knowledge_id:
+            existing = await Knowledges.get_file_by_hash_in_knowledge(knowledge_id, file_hash, db=db)
+            if existing:
+                Storage.delete_file(file_path)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DUPLICATE_CONTENT,
+                )
+
         file_item = await Files.insert_new_file(
             user.id,
             FileForm(
