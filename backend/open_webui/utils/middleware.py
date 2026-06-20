@@ -110,7 +110,7 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
-from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.payload import apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.sanitize import sanitize_code
@@ -2985,7 +2985,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # restore to the true original (before file-source injection) rather
     # than a snapshot that already has the RAG template baked in.
     system_message = get_system_message(form_data['messages'])
-    metadata['system_prompt'] = get_content_from_message(system_message) if system_message else None
+    system_content = get_content_from_message(system_message) if system_message else ''
+    # Include the model's configured system prompt. The router applies it
+    # downstream on the first (non-bypassed) dispatch, so it is not yet in the
+    # message list here. Without it the snapshot is incomplete and the tool-call
+    # loop's RAG restore drops the model system prompt on every post-tool-call
+    # request — follow-up dispatches bypass the router, so it is never re-added.
+    model_system_prompt = await resolve_system_prompt(
+        (model.get('info', {}).get('params', {}) or {}).get('system'),
+        metadata,
+        user,
+    )
+    if model_system_prompt:
+        system_content = f'{model_system_prompt}\n{system_content}' if system_content else model_system_prompt
+    metadata['system_prompt'] = system_content or None
     metadata['user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
 
