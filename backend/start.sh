@@ -24,7 +24,7 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     playwright install chromium
     playwright install-deps chromium
   fi
-  python -c "import nltk; nltk.download('punkt_tab')"
+  python -c "import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"
 fi
 
 # ── Secret key setup ─────────────────────────────────────────────────────────
