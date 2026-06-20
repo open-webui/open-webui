@@ -1398,6 +1398,10 @@ async def get_sources_from_items(
                     else:
                         collection_names.append(item['id'])
 
+        elif item.get('type') == 'web_search':
+            if item.get('collection_name'):
+                collection_names.append(item.get('collection_name'))
+
         elif item.get('docs'):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             query_result = {
