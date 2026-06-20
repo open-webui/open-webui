@@ -1495,24 +1495,45 @@ async def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Validate the file actually belongs to this knowledge base
-    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    is_linked = await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db)
 
-    # Remove content from the vector database
-    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': form_data.file_id})
-
-    # Add content to the vector database
     try:
-        await process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-            db=db,
-        )
+        if is_linked:
+            # File is already in the knowledge base — delete stale vectors and
+            # re-embed from the existing file-level collection.
+            await ASYNC_VECTOR_DB_CLIENT.delete(
+                collection_name=knowledge.id, filter={'file_id': form_data.file_id}
+            )
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+                user=user,
+                db=db,
+            )
+        else:
+            # File exists but was never linked (e.g. processing crashed before
+            # the knowledge_file row was created).  Re-process from source so
+            # the file-level collection is (re)created, then copy into the KB
+            # collection and create the join-table link.
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id),
+                user=user,
+                db=db,
+            )
+            await process_file(
+                request,
+                ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+                user=user,
+                db=db,
+            )
+            await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                user_id=user.id,
+                directory_id=form_data.directory_id,
+                db=db,
+            )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1585,14 +1606,12 @@ async def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Validate the file actually belongs to this knowledge base
-    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
+    # Unlink from knowledge base if the join-table row exists.
+    # Files still being processed (pending/processing) may not have been
+    # linked yet; allow cleanup to proceed regardless so they don't become
+    # permanently stuck in the UI.
+    if await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+        await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
 
     # Remove content from the vector database
     try:

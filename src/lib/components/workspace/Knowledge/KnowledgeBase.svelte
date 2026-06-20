@@ -139,6 +139,7 @@
 	let deleteDirectoryContents = true;
 
 	let pendingPollTimer: ReturnType<typeof setInterval> | null = null;
+	let pendingPollCount = 0;
 	let externalTestQuery = '';
 	let externalTestResult: {
 		documents?: string[];
@@ -228,15 +229,20 @@
 
 						// Start polling for completion (if not already polling)
 						if (!pendingPollTimer) {
+							pendingPollCount = 0;
 							pendingPollTimer = setInterval(async () => {
+								pendingPollCount++;
 								try {
 									const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-									if (!still || still.length === 0) {
+									if (!still || still.length === 0 || pendingPollCount >= 60) {
 										clearInterval(pendingPollTimer);
 										pendingPollTimer = null;
 										init();
 									}
-								} catch {}
+								} catch {
+									clearInterval(pendingPollTimer);
+									pendingPollTimer = null;
+								}
 							}, 5000);
 						}
 					}
@@ -1617,6 +1623,22 @@
 													deleteFileHandler(fileId);
 												}}
 												onRename={(fileId, name) => renameFileHandler(fileId, name)}
+												onReindex={async (fileId) => {
+													try {
+														const res = await updateFileFromKnowledgeById(
+															localStorage.token,
+															id,
+															fileId
+														);
+
+														if (res) {
+															toast.success($i18n.t('File reindexing started.'));
+															init();
+														}
+													} catch (e) {
+														toast.error(`${e}`);
+													}
+												}}
 												onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
 												onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
 												onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
