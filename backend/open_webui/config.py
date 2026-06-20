@@ -1172,6 +1172,17 @@ FIRECRAWL_API_BASE_URL = os.getenv('FIRECRAWL_API_BASE_URL', 'https://api.firecr
 
 FIRECRAWL_TIMEOUT = os.getenv('FIRECRAWL_TIMEOUT', '')
 
+CRW_API_KEY = os.getenv('CRW_API_KEY', '')
+
+CRW_API_BASE_URL = os.getenv('CRW_API_BASE_URL', 'https://fastcrw.com/api')
+
+CRW_TIMEOUT = os.getenv('CRW_TIMEOUT', '')
+
+# fastCRW-specific differentiator: comma-separated category routing for the
+# /v1/search endpoint (e.g. "research,github,pdf"). Empty by default so the
+# request stays Firecrawl-compatible until an admin opts in.
+CRW_SEARCH_CATEGORIES = os.getenv('CRW_SEARCH_CATEGORIES', '')
+
 EXTERNAL_WEB_SEARCH_URL = os.getenv('EXTERNAL_WEB_SEARCH_URL', '')
 
 EXTERNAL_WEB_SEARCH_API_KEY = os.getenv('EXTERNAL_WEB_SEARCH_API_KEY', '')
@@ -2761,6 +2772,10 @@ DEFAULT_CONFIG = {
     'rag.web.loader.firecrawl_api_key': FIRECRAWL_API_KEY,
     'rag.web.loader.firecrawl_api_url': FIRECRAWL_API_BASE_URL,
     'rag.web.loader.firecrawl_timeout': FIRECRAWL_TIMEOUT,
+    'rag.web.loader.crw_api_key': CRW_API_KEY,
+    'rag.web.loader.crw_api_url': CRW_API_BASE_URL,
+    'rag.web.loader.crw_timeout': CRW_TIMEOUT,
+    'rag.web.search.crw_search_categories': CRW_SEARCH_CATEGORIES,
     'rag.web.search.external_web_search_url': EXTERNAL_WEB_SEARCH_URL,
     'rag.web.search.external_web_search_api_key': EXTERNAL_WEB_SEARCH_API_KEY,
     'rag.web.loader.external_web_loader_url': EXTERNAL_WEB_LOADER_URL,
