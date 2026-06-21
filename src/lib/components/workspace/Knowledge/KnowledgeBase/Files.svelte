@@ -147,7 +147,7 @@
 							class="text-xs px-1.5 py-0.5 rounded-full {file.embedding_status === 'failed'
 								? 'bg-red-500/10 text-red-500'
 								: 'bg-gray-500/10 text-gray-500 dark:text-gray-400'}"
-							title={file?.error ?? ''}
+							title={file?.embedding_error ?? ''}
 						>
 							{#if file.embedding_status === 'pending'}
 								{$i18n.t('Queued')}

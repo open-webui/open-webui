@@ -161,13 +161,22 @@
 		const worker = async () => {
 			while (index < files.length) {
 				const current = files[index++];
-				await uploadFileHandler(current);
+				// silent: avoid a per-file toast + list refetch on every upload
+				// (which would also re-introduce the fileItems null race).
+				await uploadFileHandler(current, { silent: true });
 				done++;
 				onProgress?.(done, total);
 			}
 		};
 
 		await Promise.all(Array.from({ length: Math.min(concurrency, total) }, () => worker()));
+
+		// Single refresh once all uploads are accepted; embedding then proceeds
+		// in the backend worker and the progress poller tracks it.
+		if (total > 0) {
+			toast.success($i18n.t('{{count}} file(s) uploaded.', { count: total }));
+			await init();
+		}
 	};
 
 	const refreshEmbeddingProgress = async () => {
@@ -422,7 +431,9 @@
 		}
 	};
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file, { silent = false }: { silent?: boolean } = {}) => {
+		// `silent` is used by bulk/parallel uploads to suppress the per-file
+		// toast and list refresh; the caller refreshes once at the end instead.
 		console.log(file);
 
 		const fileItem = {
@@ -491,11 +502,15 @@
 					toast.warning(uploadedFile.error);
 					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
 				} else {
-					toast.success($i18n.t('File added successfully.'));
-					init();
+					if (!silent) {
+						toast.success($i18n.t('File added successfully.'));
+						init();
+					}
 				}
 			} else {
-				toast.error($i18n.t('Failed to upload file.'));
+				if (!silent) {
+					toast.error($i18n.t('Failed to upload file.'));
+				}
 			}
 		} catch (e) {
 			toast.error(`${e}`);
