@@ -40,7 +40,9 @@
 		deleteKnowledgeDirectory,
 		moveFileInKnowledge,
 		syncKnowledgeDiff,
-		syncKnowledgeCleanup
+		syncKnowledgeCleanup,
+		getKnowledgeEmbeddingProgress,
+		retryKnowledgeEmbedding
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -132,6 +134,76 @@
 	let deleteDirectoryContents = true;
 
 	let pendingPollTimer: ReturnType<typeof setInterval> | null = null;
+
+	// Embedding progress (per-KB), driven by the durable backend worker.
+	let embeddingProgress: {
+		pending: number;
+		processing: number;
+		completed: number;
+		failed: number;
+		total: number;
+	} | null = null;
+	let embeddingPollTimer: ReturnType<typeof setInterval> | null = null;
+	let retryingEmbeddings = false;
+
+	// Upload every file first with bounded concurrency, then let the backend
+	// worker embed them. Returns once uploads are accepted — embedding then
+	// proceeds in the background, so the user can close the session.
+	const uploadFilesConcurrently = async (
+		files: File[],
+		onProgress?: (done: number, total: number) => void,
+		concurrency = 6
+	) => {
+		let done = 0;
+		let index = 0;
+		const total = files.length;
+
+		const worker = async () => {
+			while (index < files.length) {
+				const current = files[index++];
+				await uploadFileHandler(current);
+				done++;
+				onProgress?.(done, total);
+			}
+		};
+
+		await Promise.all(Array.from({ length: Math.min(concurrency, total) }, () => worker()));
+	};
+
+	const refreshEmbeddingProgress = async () => {
+		if (!knowledgeId) return;
+		const progress = await getKnowledgeEmbeddingProgress(localStorage.token, knowledgeId).catch(
+			() => null
+		);
+		embeddingProgress = progress;
+
+		const active = progress && (progress.pending > 0 || progress.processing > 0);
+		if (active && !embeddingPollTimer) {
+			embeddingPollTimer = setInterval(refreshEmbeddingProgress, 5000);
+		} else if (!active && embeddingPollTimer) {
+			clearInterval(embeddingPollTimer);
+			embeddingPollTimer = null;
+			// Refresh the file list once embedding settles so statuses update.
+			init();
+		}
+	};
+
+	const retryFailedEmbeddingsHandler = async () => {
+		if (!knowledgeId || retryingEmbeddings) return;
+		retryingEmbeddings = true;
+		try {
+			const res = await retryKnowledgeEmbedding(localStorage.token, knowledgeId).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+			if (res) {
+				toast.success($i18n.t('Re-queued {{count}} file(s) for embedding.', { count: res.requeued }));
+				await refreshEmbeddingProgress();
+			}
+		} finally {
+			retryingEmbeddings = false;
+		}
+	};
 
 	const reset = () => {
 		currentPage = 1;
@@ -245,6 +317,10 @@
 				console.warn('Failed to fetch pending files:', e);
 			}
 		}
+
+		// Refresh embedding progress (fire-and-forget); this also (re)starts the
+		// progress poller while files are still pending/processing.
+		refreshEmbeddingProgress();
 
 		return res;
 	};
@@ -483,38 +559,35 @@
 			}
 		}
 
-		// Recursive function to process directories excluding hidden files and folders
-		async function processDirectory(dirHandle, path = '') {
+		// Recursively COLLECT all (non-hidden) files first, then upload them
+		// with bounded concurrency. Embedding is handled by the backend worker,
+		// so we only need to get every file uploaded — fast and in one go.
+		async function collectFiles(dirHandle, path = '') {
+			const collected: File[] = [];
 			for await (const entry of dirHandle.values()) {
-				// Skip hidden files and directories
 				if (entry.name.startsWith('.')) continue;
-
 				const entryPath = path ? `${path}/${entry.name}` : entry.name;
-
-				// Skip if the path contains any hidden folders
 				if (hasHiddenFolder(entryPath)) continue;
 
 				if (entry.kind === 'file') {
 					const file = await entry.getFile();
-					const fileWithPath = new File([file], entryPath, { type: file.type });
-
-					await uploadFileHandler(fileWithPath);
-					uploadedFiles++;
-					updateProgress();
+					collected.push(new File([file], entryPath, { type: file.type }));
 				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await processDirectory(entry, entryPath);
-					}
+					collected.push(...(await collectFiles(entry, entryPath)));
 				}
 			}
+			return collected;
 		}
 
 		await countFiles(dirHandle);
 		updateProgress();
 
 		if (totalFiles > 0) {
-			await processDirectory(dirHandle);
+			const files = await collectFiles(dirHandle);
+			await uploadFilesConcurrently(files, (done) => {
+				uploadedFiles = done;
+				updateProgress();
+			});
 		} else {
 			console.log('No files to upload.');
 		}
@@ -557,18 +630,17 @@
 
 					updateProgress();
 
-					// Process all files
-					for (const file of files) {
-						// Skip hidden files (additional check)
-						if (!file.name.startsWith('.')) {
-							const relativePath = file.webkitRelativePath || file.name;
-							const fileWithPath = new File([file], relativePath, { type: file.type });
-
-							await uploadFileHandler(fileWithPath);
-							uploadedFiles++;
-							updateProgress();
-						}
-					}
+					// Upload all files with bounded concurrency.
+					const filesWithPath = files
+						.filter((file) => !file.name.startsWith('.'))
+						.map(
+							(file) =>
+								new File([file], file.webkitRelativePath || file.name, { type: file.type })
+						);
+					await uploadFilesConcurrently(filesWithPath, (done) => {
+						uploadedFiles = done;
+						updateProgress();
+					});
 
 					// Clean up
 					document.body.removeChild(input);
@@ -752,23 +824,30 @@
 					diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
 			);
 
+			// Upload changed files with bounded concurrency; embedding is then
+			// handled by the backend worker, so the session need not stay open.
 			let uploadedCount = 0;
-			for (const entry of filesToUpload) {
-				uploadedCount++;
-				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
-				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
-					current: uploadedCount,
-					total: filesToUpload.length,
-					file: displayPath
-				});
+			let nextIndex = 0;
+			const concurrency = Math.min(6, filesToUpload.length);
 
-				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
-					knowledge_id: knowledge.id,
-					file_hash: entry.checksum,
-					directory_id: entry.path ? directoryIdByPath[entry.path] : null
-				}).catch(() => null);
-			}
+			const syncUploadWorker = async () => {
+				while (nextIndex < filesToUpload.length) {
+					const entry = filesToUpload[nextIndex++];
+					const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+					await uploadFile(localStorage.token, fileObject, {
+						knowledge_id: knowledge.id,
+						file_hash: entry.checksum,
+						directory_id: entry.path ? directoryIdByPath[entry.path] : null
+					}).catch(() => null);
+					uploadedCount++;
+					syncing = $i18n.t('Uploading {{current}}/{{total}}', {
+						current: uploadedCount,
+						total: filesToUpload.length
+					});
+				}
+			};
+
+			await Promise.all(Array.from({ length: concurrency }, () => syncUploadWorker()));
 
 			// ── 7. Report ──
 			toast.success(
@@ -1141,6 +1220,10 @@
 			clearInterval(pendingPollTimer);
 			pendingPollTimer = null;
 		}
+		if (embeddingPollTimer) {
+			clearInterval(embeddingPollTimer);
+			embeddingPollTimer = null;
+		}
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
@@ -1501,6 +1584,34 @@
 						<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 							{syncing}
 						</div>
+					</div>
+				</div>
+			{/if}
+
+			{#if embeddingProgress && embeddingProgress.total > 0 && (embeddingProgress.pending > 0 || embeddingProgress.processing > 0 || embeddingProgress.failed > 0)}
+				<div class="mx-2.5 mt-2.5 -mb-0.5">
+					<div
+						class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850"
+					>
+						{#if embeddingProgress.pending > 0 || embeddingProgress.processing > 0}
+							<Spinner className="size-3.5 shrink-0" />
+						{/if}
+						<div class="flex-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+							{$i18n.t('Embedding')}: {embeddingProgress.completed}/{embeddingProgress.total}
+							{#if embeddingProgress.failed > 0}
+								· <span class="text-red-500">{embeddingProgress.failed} {$i18n.t('failed')}</span>
+							{/if}
+						</div>
+						{#if embeddingProgress.failed > 0}
+							<button
+								class="text-xs font-medium px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
+								type="button"
+								disabled={retryingEmbeddings}
+								on:click={retryFailedEmbeddingsHandler}
+							>
+								{$i18n.t('Retry failed')}
+							</button>
+						{/if}
 					</div>
 				</div>
 			{/if}

@@ -297,6 +297,66 @@ export const streamPendingKnowledgeFiles = async (token: string, id: string) => 
 	return res;
 };
 
+export const getKnowledgeEmbeddingProgress = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/embedding/progress`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res as {
+		pending: number;
+		processing: number;
+		completed: number;
+		failed: number;
+		total: number;
+	} | null;
+};
+
+export const retryKnowledgeEmbedding = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/embedding/retry`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res as { requeued: number } | null;
+};
+
 type KnowledgeUpdateForm = {
 	name?: string;
 	description?: string;

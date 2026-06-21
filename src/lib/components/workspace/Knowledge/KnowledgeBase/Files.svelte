@@ -142,6 +142,23 @@
 				</div>
 
 				<div class="flex items-center gap-2 shrink-0">
+					{#if file?.embedding_status && file.embedding_status !== 'completed'}
+						<span
+							class="text-xs px-1.5 py-0.5 rounded-full {file.embedding_status === 'failed'
+								? 'bg-red-500/10 text-red-500'
+								: 'bg-gray-500/10 text-gray-500 dark:text-gray-400'}"
+							title={file?.error ?? ''}
+						>
+							{#if file.embedding_status === 'pending'}
+								{$i18n.t('Queued')}
+							{:else if file.embedding_status === 'processing'}
+								{$i18n.t('Embedding')}
+							{:else if file.embedding_status === 'failed'}
+								{$i18n.t('Failed')}
+							{/if}
+						</span>
+					{/if}
+
 					{#if file?.updated_at}
 						<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
 							<div class="text-xs text-gray-400">
