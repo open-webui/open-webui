@@ -83,6 +83,16 @@ async def _embed_one(app, link) -> None:
 async def embedding_worker_loop(app) -> None:
     """Continuously drain pending knowledge-base embeddings."""
     log.info(f'Embedding worker started (idle interval: {EMBEDDING_WORKER_IDLE_INTERVAL}s)')
+
+    # Recover links left 'processing' by a previous run that was killed
+    # mid-embed — without this they would never be re-driven.
+    try:
+        recovered = await Knowledges.requeue_stale_processing_embeddings()
+        if recovered:
+            log.info(f'Re-queued {recovered} stale processing embedding(s) from a previous run')
+    except Exception:
+        log.exception('Embedding worker: failed to recover stale processing rows')
+
     while True:
         try:
             link = await Knowledges.claim_next_pending_embedding()

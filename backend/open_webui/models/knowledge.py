@@ -183,6 +183,7 @@ class FileUserResponse(FileModelResponse):
     # Per-KB embedding state from the knowledge_file link (pending |
     # processing | completed | failed). None for legacy rows.
     embedding_status: Optional[str] = None
+    embedding_error: Optional[str] = None
 
 
 class KnowledgeListResponse(BaseModel):
@@ -547,7 +548,7 @@ class KnowledgeTable:
         try:
             async with get_async_db_context(db) as db:
                 stmt = (
-                    select(File, User, KnowledgeFile.status)
+                    select(File, User, KnowledgeFile.status, KnowledgeFile.error)
                     .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
                     .outerjoin(User, User.id == KnowledgeFile.user_id)
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
@@ -616,12 +617,13 @@ class KnowledgeTable:
                 items = result.all()
 
                 files = []
-                for file, user, embedding_status in items:
+                for file, user, embedding_status, embedding_error in items:
                     files.append(
                         FileUserResponse(
                             **FileModel.model_validate(file).model_dump(),
                             user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
                             embedding_status=embedding_status,
+                            embedding_error=embedding_error,
                         )
                     )
 
@@ -803,6 +805,32 @@ class KnowledgeTable:
                 pass
         counts['total'] = sum(counts.values())
         return counts
+
+    async def requeue_stale_processing_embeddings(
+        self, db: Optional[AsyncSession] = None
+    ) -> int:
+        """Reset any links left in 'processing' (across all KBs) back to
+        'pending'. Called once at worker startup: a 'processing' row means a
+        worker claimed it but the process died mid-embed, so nothing would ever
+        re-drive it. Returns the number of rows reset.
+
+        Caveat: with multiple backend processes/replicas this also resets rows
+        another live worker is mid-flight on; the embed simply runs again
+        (re-embedding the same file_id is allowed and content-hash dedupe
+        guards the rest).
+        """
+        async with get_async_db_context(db) as db:
+            try:
+                result = await db.execute(
+                    update(KnowledgeFile)
+                    .where(KnowledgeFile.status == 'processing')
+                    .values(status='pending', updated_at=int(time.time()))
+                )
+                await db.commit()
+                return result.rowcount or 0
+            except Exception:
+                await db.rollback()
+                return 0
 
     async def requeue_failed_embeddings(
         self, knowledge_id: str, db: Optional[AsyncSession] = None
