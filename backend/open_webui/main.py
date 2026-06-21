@@ -677,6 +677,12 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(scheduler_worker_loop(app))
 
+    # Durable knowledge-base embedding worker: drains pending knowledge_file
+    # links so uploads can be embedded asynchronously and resume after restart.
+    from open_webui.utils.embedding_worker import embedding_worker_loop
+
+    asyncio.create_task(embedding_worker_loop(app))
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
             await get_all_models(

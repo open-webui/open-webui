@@ -173,8 +173,11 @@ async def process_uploaded_file(
                 )
 
             # Auto-link to Knowledge Collection when uploaded from one (#24807).
-            # Mirrors POST /knowledge/{id}/file/add so linking doesn't depend
-            # on the frontend staying connected after upload.
+            # The text has been extracted above; the heavier KB-collection
+            # embedding is NOT done here. Instead we create the link as
+            # 'pending' and let the durable embedding worker embed it. This
+            # keeps uploads fast, makes ingestion resumable across sessions and
+            # restarts, and surfaces per-file embedding status/failures.
             knowledge_id = file_metadata.get('knowledge_id')
             if knowledge_id:
                 try:
@@ -183,16 +186,12 @@ async def process_uploaded_file(
                         file_id=file_item.id,
                         user_id=user.id,
                         directory_id=file_metadata.get('directory_id'),
-                    )
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
-                        user=user,
+                        status='pending',
                         db=db_session,
                     )
-                    log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+                    log.info(f'Queued file {file_item.id} for embedding into knowledge {knowledge_id}')
                 except Exception as e:
-                    log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
+                    log.warning(f'Failed to queue file {file_item.id} for knowledge {knowledge_id}: {e}')
 
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')

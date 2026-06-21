@@ -757,23 +757,23 @@ async def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.DUPLICATE_CONTENT,
         )
 
-    # Add content to the vector database
+    # Queue the file for embedding rather than embedding inline. The link is
+    # created as 'pending' and the durable embedding worker embeds it into the
+    # KB collection asynchronously, so the request returns immediately and
+    # ingestion is resumable.
     try:
-        await process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-            db=db,
-        )
-
-        # Add file to knowledge base
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=form_data.file_id,
-            user_id=user.id,
-            directory_id=form_data.directory_id,
-            db=db,
-        )
+        if await Knowledges.has_file(id, form_data.file_id, db=db):
+            # Already linked — re-queue it for (re)embedding.
+            await Knowledges.set_embedding_status(id, form_data.file_id, 'pending', db=db)
+        else:
+            await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                user_id=user.id,
+                directory_id=form_data.directory_id,
+                status='pending',
+                db=db,
+            )
     except Exception as e:
         log.debug(e)
         raise HTTPException(
@@ -791,6 +791,53 @@ async def add_file_to_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+@router.get('/{id}/embedding/progress')
+async def get_knowledge_embedding_progress(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Per-status embedding counts for a knowledge base, e.g.
+    {pending, processing, completed, failed, total}. Lets the UI show overall
+    ingestion progress without keeping a session open."""
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    if not (
+        user.role == 'admin'
+        or knowledge.user_id == user.id
+        or await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='knowledge',
+            resource_id=knowledge.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    return await Knowledges.get_embedding_progress(id, db=db)
+
+
+@router.post('/{id}/embedding/retry')
+async def retry_knowledge_embedding(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Re-queue all 'failed' files in a knowledge base for embedding. Returns
+    the number of files re-queued."""
+    await _verify_knowledge_write_access(id, user, db)
+    requeued = await Knowledges.requeue_failed_embeddings(id, db=db)
+    return {'requeued': requeued}
 
 
 @router.post('/{id}/file/update', response_model=KnowledgeFilesResponse | None)
