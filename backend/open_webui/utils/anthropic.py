@@ -108,6 +108,36 @@ def _finalize_openai_content(blocks: list) -> str | list:
 
     return blocks
 
+# === Add logic to convert Anthropic thinking/reasoning parameters to OpenAI reasoning_effort ===
+def convert_budget_to_level(budget: int) -> str | None:
+    """
+    Convert a budget value to the nearest thinking level.
+    
+    Threshold mapping:
+        -1         -> auto
+        0          -> none
+        1-512      -> minimal
+        513-1024   -> low
+        1025-8192  -> medium
+        8193-24576 -> high
+        24577+     -> xhigh
+    """
+    if budget < -1:
+        return None
+    elif budget == -1:
+        return 'auto'
+    elif budget == 0:
+        return 'none'
+    elif budget <= 512:
+        return 'minimal'
+    elif budget <= 1024:
+        return 'low'
+    elif budget <= 8192:
+        return 'medium'
+    elif budget <= 24576:
+        return 'high'
+    else:
+        return 'xhigh'
 
 def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     """
@@ -391,6 +421,47 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
                     'type': 'function',
                     'function': {'name': tool_choice.get('name', '')},
                 }
+
+
+    # Thinking: Convert Claude thinking config to OpenAI reasoning_effort
+    thinking = anthropic_payload.get('thinking')
+    if isinstance(thinking, dict):
+        thinking_type = thinking.get('type')
+
+        if thinking_type == 'enabled':
+            if 'budget_tokens' in thinking:
+                try:
+                    budget = int(thinking['budget_tokens'])
+                    effort = convert_budget_to_level(budget)
+                    if effort:
+                        openai_payload['reasoning_effort'] = effort
+                except (ValueError, TypeError):
+                    pass
+            else:
+                # No budget_tokens specified, default to "auto" for enabled thinking
+                effort = convert_budget_to_level(-1)
+                if effort:
+                    openai_payload['reasoning_effort'] = effort
+
+        elif thinking_type in ('adaptive', 'auto'):
+            # Adaptive thinking can carry an explicit effort in output_config.effort
+            effort = ""
+            output_config = anthropic_payload.get('output_config')
+            if isinstance(output_config, dict):
+                effort_val = output_config.get('effort')
+                if effort_val is not None:
+                    effort = str(effort_val).strip().lower()
+
+            if effort:
+                openai_payload['reasoning_effort'] = effort
+            else:
+                # Default to xhigh when adaptive but no effort is explicitly set
+                openai_payload['reasoning_effort'] = 'xhigh'
+
+        elif thinking_type == 'disabled':
+            effort = convert_budget_to_level(0)
+            if effort:
+                openai_payload['reasoning_effort'] = effort
 
     return openai_payload
 
