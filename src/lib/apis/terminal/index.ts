@@ -15,6 +15,17 @@ export type TerminalFeatures = {
 	terminal?: boolean;
 };
 
+export type TerminalFileRoot = {
+	path: string;
+	label: string;
+};
+
+export type TerminalCwd = {
+	cwd: string | null;
+	home?: string;
+	root?: TerminalFileRoot;
+};
+
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type TerminalServer = {
@@ -49,14 +60,19 @@ export const getCwd = async (
 	baseUrl: string,
 	apiKey: string,
 	sessionId?: string
-): Promise<string | null> => {
+): Promise<TerminalCwd | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, { headers }).catch(() => null);
 	if (!res || !res.ok) return null;
 	const json = await res.json().catch(() => null);
-	return json?.cwd ?? null;
+	if (!json) return null;
+	return {
+		cwd: json?.cwd ?? null,
+		home: json?.home,
+		root: json?.root
+	};
 };
 
 export const listFiles = async (
