@@ -21,6 +21,7 @@ from open_webui.utils.oauth import (
     get_discovery_urls,
     get_oauth_client_info_with_dynamic_client_registration,
     get_oauth_client_info_with_static_credentials,
+    recover_static_oauth_client_metadata,
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
@@ -241,6 +242,9 @@ async def set_tool_servers_config(
             if auth_type in ('oauth_2.1', 'oauth_2.1_static') and server_id:
                 try:
                     oauth_client_info = resolve_oauth_client_info(connection)
+                    oauth_client_info = await recover_static_oauth_client_metadata(
+                        connection, oauth_client_info
+                    )
                     request.app.state.oauth_client_manager.add_client(
                         f'{server_type}:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
