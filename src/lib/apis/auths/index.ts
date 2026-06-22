@@ -525,7 +525,14 @@ export const updateUserPassword = async (token: string, password: string, newPas
 	return res;
 };
 
-export const createAPIKey = async (token: string) => {
+export type APIKey = {
+	api_key: string | null;
+	expires_at?: number | null;
+	created_at?: number | null;
+	updated_at?: number | null;
+};
+
+export const createAPIKey = async (token: string): Promise<APIKey> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
@@ -547,10 +554,10 @@ export const createAPIKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
-	return res.api_key;
+	return res;
 };
 
-export const getAPIKey = async (token: string) => {
+export const getAPIKey = async (token: string): Promise<APIKey> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
@@ -572,7 +579,7 @@ export const getAPIKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
-	return res.api_key;
+	return res;
 };
 
 export const deleteAPIKey = async (token: string) => {

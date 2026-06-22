@@ -162,6 +162,29 @@
 				</div>
 
 				{#if adminConfig?.ENABLE_API_KEYS}
+					<div class="mb-2.5 w-full justify-between pr-2">
+						<div class="flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('API Key Expiration')}
+							</div>
+						</div>
+
+						<div class="flex mt-2 space-x-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								type="text"
+								placeholder={`e.g.) 30d, 12h, -1`}
+								bind:value={adminConfig.API_KEY_EXPIRES_IN}
+							/>
+						</div>
+
+						<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t(
+								'Set how long user-generated API keys remain valid. Use -1 for no expiration.'
+							)}
+						</div>
+					</div>
+
 					<div class="mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('API Key Endpoint Restrictions')}

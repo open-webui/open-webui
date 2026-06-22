@@ -320,8 +320,14 @@ class UsersTable:
     ) -> UserModel | None:
         """Resolve a user from their API key via a JOIN on the api_key table."""
         async with get_async_db_context(db) as session:
+            now_ts = int(time.time())
             result = await session.execute(
-                select(User).join(ApiKey, User.id == ApiKey.user_id).where(ApiKey.key == api_key),
+                select(User)
+                .join(ApiKey, User.id == ApiKey.user_id)
+                .where(
+                    ApiKey.key == api_key,
+                    or_(ApiKey.expires_at.is_(None), ApiKey.expires_at > now_ts),
+                ),
             )
             user = result.scalars().first()
             return UserModel.model_validate(user) if user else None
@@ -697,12 +703,18 @@ class UsersTable:
             await session.commit()
             return True
 
-    async def get_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
+    async def get_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> ApiKeyModel | None:
         async with get_async_db_context(db) as session:
             api_key = (await session.execute(select(ApiKey).where(ApiKey.user_id == id))).scalars().first()
-            return api_key.key if api_key else None
+            return ApiKeyModel.model_validate(api_key) if api_key else None
 
-    async def update_user_api_key_by_id(self, id: str, api_key: str, db: AsyncSession | None = None) -> bool:
+    async def update_user_api_key_by_id(
+        self,
+        id: str,
+        api_key: str,
+        expires_at: int | None = None,
+        db: AsyncSession | None = None,
+    ) -> ApiKeyModel | None:
         async with get_async_db_context(db) as session:
             await session.execute(delete(ApiKey).where(ApiKey.user_id == id))
             now_ts = int(time.time())
@@ -710,12 +722,14 @@ class UsersTable:
                 id=f'key_{id}',
                 user_id=id,
                 key=api_key,
+                expires_at=expires_at,
                 created_at=now_ts,
                 updated_at=now_ts,
             )
             session.add(new_key)
             await session.commit()
-            return True
+            await session.refresh(new_key)
+            return ApiKeyModel.model_validate(new_key)
 
     async def delete_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:

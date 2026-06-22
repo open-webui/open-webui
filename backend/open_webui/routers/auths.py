@@ -92,6 +92,7 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_API_KEYS': 'auth.enable_api_keys',
     'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS': 'auth.api_key.endpoint_restrictions',
     'API_KEYS_ALLOWED_ENDPOINTS': 'auth.api_key.allowed_endpoints',
+    'API_KEY_EXPIRES_IN': 'auth.api_key.expires_in',
     'DEFAULT_USER_ROLE': 'ui.default_user_role',
     'DEFAULT_GROUP_ID': 'ui.default_group_id',
     'JWT_EXPIRES_IN': 'auth.jwt_expiry',
@@ -137,6 +138,13 @@ async def get_config_values(key_map: dict[str, str]) -> dict:
 
 def config_updates(data: dict, key_map: dict[str, str]) -> dict:
     return {key_map[field]: value for field, value in data.items() if field in key_map}
+
+
+def get_api_key_expires_at(expires_in: str | None) -> int | None:
+    expires_delta = parse_duration(expires_in or '-1')
+    if expires_delta:
+        return int(time.time()) + int(expires_delta.total_seconds())
+    return None
 
 
 async def create_session_response(
@@ -1060,6 +1068,7 @@ class AdminConfig(BaseModel):
     ENABLE_API_KEYS: bool
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS: bool
     API_KEYS_ALLOWED_ENDPOINTS: str
+    API_KEY_EXPIRES_IN: str | None = '-1'
     DEFAULT_USER_ROLE: str
     DEFAULT_GROUP_ID: str
     JWT_EXPIRES_IN: str
@@ -1098,6 +1107,12 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
     # Check if the input string matches the pattern
     if not re.match(pattern, form_data.JWT_EXPIRES_IN):
         updates.pop('auth.jwt_expiry', None)
+
+    api_key_expires_in = form_data.API_KEY_EXPIRES_IN or '-1'
+    if not re.match(pattern, api_key_expires_in):
+        updates.pop('auth.api_key.expires_in', None)
+    else:
+        updates['auth.api_key.expires_in'] = api_key_expires_in
 
     await Config.upsert(updates)
     return await get_config_values(ADMIN_CONFIG_KEYS)
@@ -1323,11 +1338,19 @@ async def generate_api_key(
     await _check_api_key_permission(request, user, db)
 
     api_key = create_api_key()
-    success = await Users.update_user_api_key_by_id(user.id, api_key, db=db)
+    api_key_record = await Users.update_user_api_key_by_id(
+        user.id,
+        api_key,
+        expires_at=get_api_key_expires_at(await Config.get('auth.api_key.expires_in')),
+        db=db,
+    )
 
-    if success:
+    if api_key_record:
         return {
-            'api_key': api_key,
+            'api_key': api_key_record.key,
+            'expires_at': api_key_record.expires_at,
+            'created_at': api_key_record.created_at,
+            'updated_at': api_key_record.updated_at,
         }
     else:
         raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
@@ -1351,7 +1374,10 @@ async def get_api_key(
     api_key = await Users.get_user_api_key_by_id(user.id, db=db)
     if api_key:
         return {
-            'api_key': api_key,
+            'api_key': api_key.key,
+            'expires_at': api_key.expires_at,
+            'created_at': api_key.created_at,
+            'updated_at': api_key.updated_at,
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)

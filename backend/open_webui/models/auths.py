@@ -51,6 +51,9 @@ class Token(BaseModel):
 
 class ApiKey(BaseModel):
     api_key: str | None = None
+    expires_at: int | None = None
+    created_at: int | None = None
+    updated_at: int | None = None
 
 
 class SigninResponse(Token, UserProfileImageResponse):

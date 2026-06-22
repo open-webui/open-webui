@@ -3,7 +3,13 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import {
+		updateUserProfile,
+		createAPIKey,
+		getAPIKey,
+		getSessionUser,
+		type APIKey as APIKeyInfo
+	} from '$lib/apis/auths';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -37,9 +43,43 @@
 
 	let JWTTokenCopied = false;
 
-	let APIKey = '';
+	let APIKey: APIKeyInfo | null = null;
 	let APIKeyCopied = false;
 	let profileImageInputElement: HTMLInputElement;
+
+	const API_KEY_RENEWAL_WARNING_SECONDS = 7 * 24 * 60 * 60;
+
+	$: APIKeyValue = APIKey?.api_key ?? '';
+	$: APIKeyExpired = APIKey?.expires_at ? APIKey.expires_at <= Math.floor(Date.now() / 1000) : false;
+	$: APIKeyNeedsRenewal = APIKey?.expires_at
+		? APIKey.expires_at - Math.floor(Date.now() / 1000) <= API_KEY_RENEWAL_WARNING_SECONDS
+		: false;
+
+	const isAPIKeyNeedsRenewal = (expiresAt?: number | null) => {
+		return expiresAt
+			? expiresAt - Math.floor(Date.now() / 1000) <= API_KEY_RENEWAL_WARNING_SECONDS
+			: false;
+	};
+
+	const formatAPIKeyExpiry = (expiresAt?: number | null) => {
+		if (!expiresAt) {
+			return $i18n.t('This API key does not expire.');
+		}
+
+		return new Date(expiresAt * 1000).toLocaleString();
+	};
+
+	const getAPIKeyExpiryMessage = (expiresAt?: number | null) => {
+		if (!expiresAt) {
+			return $i18n.t('This API key does not expire.');
+		}
+
+		if (expiresAt <= Math.floor(Date.now() / 1000)) {
+			return $i18n.t('This API key has expired. Create a new key to renew access.');
+		}
+
+		return `${$i18n.t('This API key expires on')} ${formatAPIKeyExpiry(expiresAt)}.`;
+	};
 
 	const submitHandler = async () => {
 		if (name !== $user?.name) {
@@ -82,8 +122,11 @@
 
 	const createAPIKeyHandler = async () => {
 		APIKey = await createAPIKey(localStorage.token);
-		if (APIKey) {
+		if (APIKey?.api_key) {
 			toast.success($i18n.t('API Key created.'));
+			if (isAPIKeyNeedsRenewal(APIKey.expires_at)) {
+				toast.warning(getAPIKeyExpiryMessage(APIKey.expires_at));
+			}
 		} else {
 			toast.error($i18n.t('Failed to create API Key.'));
 		}
@@ -116,8 +159,12 @@
 		) {
 			APIKey = await getAPIKey(localStorage.token).catch((error) => {
 				console.log(error);
-				return '';
+				return null;
 			});
+
+			if (APIKey?.expires_at && isAPIKeyNeedsRenewal(APIKey.expires_at)) {
+				toast.warning(getAPIKeyExpiryMessage(APIKey.expires_at));
+			}
 		}
 
 		loaded = true;
@@ -333,14 +380,14 @@
 								</div>
 							{/if}
 							<div class="flex">
-								{#if APIKey}
-									<SensitiveInput value={APIKey} readOnly={true} />
+								{#if APIKeyValue}
+									<SensitiveInput value={APIKeyValue} readOnly={true} />
 
 									<button
 										class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
 										aria-label={$i18n.t('Copy API Key')}
 										on:click={() => {
-											copyToClipboard(APIKey);
+											copyToClipboard(APIKeyValue);
 											APIKeyCopied = true;
 											setTimeout(() => {
 												APIKeyCopied = false;
@@ -418,6 +465,18 @@
 									>
 								{/if}
 							</div>
+
+							{#if APIKeyValue}
+								<div
+									class="mt-1 text-xs {APIKeyExpired
+										? 'text-red-600 dark:text-red-400'
+										: APIKeyNeedsRenewal
+											? 'text-yellow-600 dark:text-yellow-400'
+											: 'text-gray-500 dark:text-gray-400'}"
+								>
+									{getAPIKeyExpiryMessage(APIKey?.expires_at)}
+								</div>
+							{/if}
 						</div>
 					{/if}
 				</div>
