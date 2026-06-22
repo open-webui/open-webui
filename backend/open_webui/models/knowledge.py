@@ -548,7 +548,7 @@ class KnowledgeTable:
         try:
             async with get_async_db_context(db) as db:
                 stmt = (
-                    select(File, User, KnowledgeFile.status, KnowledgeFile.error)
+                    select(File, User)
                     .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
                     .outerjoin(User, User.id == KnowledgeFile.user_id)
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
@@ -616,8 +616,33 @@ class KnowledgeTable:
                 result = await db.execute(stmt)
                 items = result.all()
 
+                # Fetch embedding status SEPARATELY and defensively. The file
+                # listing must never depend on the knowledge_file.status/error
+                # columns existing — if that query fails (e.g. the migration
+                # that adds those columns has not run yet) we simply return the
+                # files with no embedding status rather than blanking the KB.
+                status_map: dict = {}
+                file_ids = [file.id for file, _user in items]
+                if file_ids:
+                    try:
+                        status_result = await db.execute(
+                            select(
+                                KnowledgeFile.file_id,
+                                KnowledgeFile.status,
+                                KnowledgeFile.error,
+                            ).filter(
+                                KnowledgeFile.knowledge_id == knowledge_id,
+                                KnowledgeFile.file_id.in_(file_ids),
+                            )
+                        )
+                        status_map = {fid: (st, err) for fid, st, err in status_result.all()}
+                    except Exception as status_err:
+                        log.warning(f'embedding status unavailable (using none): {status_err}')
+                        status_map = {}
+
                 files = []
-                for file, user, embedding_status, embedding_error in items:
+                for file, user in items:
+                    embedding_status, embedding_error = status_map.get(file.id, (None, None))
                     files.append(
                         FileUserResponse(
                             **FileModel.model_validate(file).model_dump(),
