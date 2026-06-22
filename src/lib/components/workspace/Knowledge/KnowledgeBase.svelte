@@ -42,7 +42,8 @@
 		syncKnowledgeDiff,
 		syncKnowledgeCleanup,
 		getKnowledgeEmbeddingProgress,
-		retryKnowledgeEmbedding
+		retryKnowledgeEmbedding,
+		recoverStuckKnowledgeFiles
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -194,6 +195,39 @@
 			embeddingPollTimer = null;
 			// Refresh the file list once embedding settles so statuses update.
 			init();
+		}
+	};
+
+	let recoveringStuck = false;
+
+	// Files merged from the "pending" set that have been sitting unprocessed for
+	// a while are extraction orphans (stuck), not live uploads. Surface a
+	// recover action for them.
+	const STUCK_AGE_SECONDS = 300;
+	$: stuckCount = (fileItems ?? []).filter(
+		(f) =>
+			f?.status === 'uploading' &&
+			f?.updated_at &&
+			Date.now() / 1000 - f.updated_at > STUCK_AGE_SECONDS
+	).length;
+
+	const recoverStuckHandler = async () => {
+		if (!knowledgeId || recoveringStuck) return;
+		recoveringStuck = true;
+		try {
+			const res = await recoverStuckKnowledgeFiles(localStorage.token, knowledgeId).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+			if (res) {
+				toast.success(
+					$i18n.t('Recovering {{count}} stuck file(s)…', { count: res.recovering })
+				);
+				// Give the worker a moment, then refresh.
+				setTimeout(() => init(), 3000);
+			}
+		} finally {
+			recoveringStuck = false;
 		}
 	};
 
@@ -1599,6 +1633,27 @@
 						<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 							{syncing}
 						</div>
+					</div>
+				</div>
+			{/if}
+
+			{#if stuckCount > 0}
+				<div class="mx-2.5 mt-2.5 -mb-0.5">
+					<div class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850">
+						<div class="flex-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+							{$i18n.t(
+								'{{count}} file(s) appear stuck processing — their upload was interrupted.',
+								{ count: stuckCount }
+							)}
+						</div>
+						<button
+							class="text-xs font-medium px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
+							type="button"
+							disabled={recoveringStuck}
+							on:click={recoverStuckHandler}
+						>
+							{$i18n.t('Recover')}
+						</button>
 					</div>
 				</div>
 			{/if}
