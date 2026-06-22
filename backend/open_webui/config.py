@@ -1747,6 +1747,19 @@ SEARCHAPI_API_KEY = ConfigVar(
     os.getenv('SEARCHAPI_API_KEY', ''),
 )
 
+
+SERPHOUSE_API_KEY = ConfigVar(
+    'SERPHOUSE_API_KEY',
+    'rag.web.search.serphouse_api_key',
+    os.getenv('SERPHOUSE_API_KEY', ''),
+)
+
+SERPHOUSE_ENGINE = ConfigVar(
+    'SERPHOUSE_ENGINE',
+    'rag.web.search.serphouse_engine',
+    os.getenv('SERPHOUSE_ENGINE', 'google.com'),
+)
+
 SEARCHAPI_ENGINE = ConfigVar(
     'SEARCHAPI_ENGINE',
     'rag.web.search.searchapi_engine',

@@ -1374,6 +1374,9 @@ async def get_sources_from_items(
                 'documents': [[doc.get('content') for doc in item.get('docs')]],
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
+        elif item.get('type') == 'web_search' and item.get('collection_name'):
+            # Ephemeral collections created by process_web_search
+            collection_names.append(item['collection_name'])
         elif item.get('collection_name'):
             if BYPASS_RETRIEVAL_ACCESS_CONTROL:
                 collection_names.append(item['collection_name'])

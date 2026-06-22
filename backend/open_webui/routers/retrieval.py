@@ -118,6 +118,7 @@ from open_webui.utils.misc import (
 )
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.retrieval.web.serphouse import search_serphouse
 
 log = logging.getLogger(__name__)
 
@@ -524,6 +525,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SEARCHAPI_ENGINE': request.app.state.config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': request.app.state.config.SERPAPI_API_KEY,
             'SERPAPI_ENGINE': request.app.state.config.SERPAPI_ENGINE,
+            'SERPHOUSE_API_KEY': request.app.state.config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_ENGINE': request.app.state.config.SERPHOUSE_ENGINE,
             'JINA_API_KEY': request.app.state.config.JINA_API_KEY,
             'JINA_API_BASE_URL': request.app.state.config.JINA_API_BASE_URL,
             'BING_SEARCH_V7_ENDPOINT': request.app.state.config.BING_SEARCH_V7_ENDPOINT,
@@ -628,6 +631,8 @@ class WebConfig(BaseModel):
     YOUCOM_API_KEY: str | None = None
     LINKUP_API_KEY: str | None = None
     LINKUP_SEARCH_PARAMS: dict | None = None
+    SERPHOUSE_API_KEY: str | None = None
+    SERPHOUSE_ENGINE: str | None = None
 
 
 class ConfigForm(BaseModel):
@@ -1087,6 +1092,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         request.app.state.config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
         request.app.state.config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
         request.app.state.config.SERPAPI_ENGINE = form_data.web.SERPAPI_ENGINE
+        request.app.state.config.SERPHOUSE_API_KEY = form_data.web.SERPHOUSE_API_KEY
+        request.app.state.config.SERPHOUSE_ENGINE = form_data.web.SERPHOUSE_ENGINE
         request.app.state.config.JINA_API_KEY = form_data.web.JINA_API_KEY
         request.app.state.config.JINA_API_BASE_URL = form_data.web.JINA_API_BASE_URL
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = form_data.web.BING_SEARCH_V7_ENDPOINT
@@ -1224,6 +1231,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SEARCHAPI_ENGINE': request.app.state.config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': request.app.state.config.SERPAPI_API_KEY,
             'SERPAPI_ENGINE': request.app.state.config.SERPAPI_ENGINE,
+            'SERPHOUSE_API_KEY': request.app.state.config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_ENGINE': request.app.state.config.SERPHOUSE_ENGINE,
             'JINA_API_KEY': request.app.state.config.JINA_API_KEY,
             'JINA_API_BASE_URL': request.app.state.config.JINA_API_BASE_URL,
             'BING_SEARCH_V7_ENDPOINT': request.app.state.config.BING_SEARCH_V7_ENDPOINT,
@@ -2096,6 +2105,18 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No SERPAPI_API_KEY found in environment variables')
+    elif engine == 'SERPHouse':
+        if request.app.state.config.SERPHOUSE_API_KEY:
+            return await asyncio.to_thread(
+                search_serphouse,
+                request.app.state.config.SERPHOUSE_API_KEY,
+                request.app.state.config.SERPHOUSE_ENGINE,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No SERPHOUSE_API_KEY found in environment variables')
     elif engine == 'jina':
         return await asyncio.to_thread(
             search_jina,
