@@ -773,14 +773,15 @@ async def edit_images(request: Request, form_data: EditImageForm, user=Depends(g
     # global image-edit switch and the per-user image-generation permission. The internal
     # callers (edit_image tool, chat middleware) gate themselves and call image_edits()
     # directly, so they are unaffected by this wrapper.
-    if not request.app.state.config.ENABLE_IMAGE_EDIT:
+    image_config = await get_image_config()
+    if not image_config.ENABLE_IMAGE_EDIT:
         raise HTTPException(
             status_code=403,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
     if user.role != 'admin' and not await has_permission(
-        user.id, 'features.image_generation', request.app.state.config.USER_PERMISSIONS
+        user.id, 'features.image_generation', image_config.USER_PERMISSIONS
     ):
         raise HTTPException(
             status_code=403,

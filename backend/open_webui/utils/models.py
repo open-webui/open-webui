@@ -21,8 +21,8 @@ from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
 from open_webui.utils.plugin import (
+    get_functions_cache,
     get_function_module_from_cache,
-    load_function_module_by_id,
 )
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -322,10 +322,11 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # Batch-fetch all function valves in one query to avoid N+1 DB hits
     # inside get_action_priority (previously called per action × per model).
     all_function_valves = await Functions.get_function_valves_by_ids(list(all_function_ids))
+    functions_cache = get_functions_cache(request)
 
     def get_action_priority(action_id):
         try:
-            function_module = request.app.state.FUNCTIONS.get(action_id)
+            function_module = functions_cache.get(action_id)
             if function_module and hasattr(function_module, 'Valves'):
                 valves_db = all_function_valves.get(action_id)
                 valves = function_module.Valves(**(valves_db if valves_db else {}))
@@ -355,7 +356,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 log.info(f'Action not found: {action_id}')
                 continue
 
-            function_module = request.app.state.FUNCTIONS.get(action_id)
+            function_module = functions_cache.get(action_id)
             if function_module is None:
                 log.info(f'Failed to load action module: {action_id}')
                 continue
@@ -368,7 +369,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 log.info(f'Filter not found: {filter_id}')
                 continue
 
-            function_module = request.app.state.FUNCTIONS.get(filter_id)
+            function_module = functions_cache.get(filter_id)
             if function_module is None:
                 log.info(f'Failed to load filter module: {filter_id}')
                 continue

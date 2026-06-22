@@ -31,6 +31,7 @@ from open_webui.utils.access_control import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
+    get_tools_cache,
     get_tool_module_from_cache,
     load_tool_module_by_id,
     replace_imports,
@@ -70,8 +71,9 @@ async def get_tools(
     tools = []
 
     # Local Tools
+    tools_cache = get_tools_cache(request)
     for tool in await Tools.get_tools(defer_content=True, db=db):
-        tool_module = request.app.state.TOOLS.get(tool.id) if hasattr(request.app.state, 'TOOLS') else None
+        tool_module = tools_cache.get(tool.id)
         tools.append(
             ToolUserResponse(
                 **{
@@ -368,7 +370,7 @@ async def create_new_tools(
             tool_module, frontmatter = await load_tool_module_by_id(form_data.id, content=form_data.content)
             form_data.meta.manifest = frontmatter
 
-            TOOLS = request.app.state.TOOLS
+            TOOLS = get_tools_cache(request)
             TOOLS[form_data.id] = tool_module
 
             specs = get_tool_specs(TOOLS[form_data.id])
@@ -498,7 +500,7 @@ async def update_tools_by_id(
         tool_module, frontmatter = await load_tool_module_by_id(id, content=form_data.content)
         form_data.meta.manifest = frontmatter
 
-        TOOLS = request.app.state.TOOLS
+        TOOLS = get_tools_cache(request)
         TOOLS[id] = tool_module
 
         specs = get_tool_specs(TOOLS[id])
@@ -624,9 +626,8 @@ async def delete_tools_by_id(
 
     result = await Tools.delete_tool_by_id(id, db=db)
     if result:
-        TOOLS = request.app.state.TOOLS
-        if id in TOOLS:
-            del TOOLS[id]
+        TOOLS = get_tools_cache(request)
+        TOOLS.pop(id, None)
 
     return result
 
@@ -708,11 +709,7 @@ async def get_tools_valves_spec_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if id in request.app.state.TOOLS:
-        tools_module = request.app.state.TOOLS[id]
-    else:
-        tools_module, _ = await load_tool_module_by_id(id)
-        request.app.state.TOOLS[id] = tools_module
+    tools_module, _ = await get_tool_module_from_cache(request, id)
 
     if hasattr(tools_module, 'Valves'):
         Valves = tools_module.Valves
@@ -759,11 +756,7 @@ async def update_tools_valves_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if id in request.app.state.TOOLS:
-        tools_module = request.app.state.TOOLS[id]
-    else:
-        tools_module, _ = await load_tool_module_by_id(id)
-        request.app.state.TOOLS[id] = tools_module
+    tools_module, _ = await get_tool_module_from_cache(request, id)
 
     if not hasattr(tools_module, 'Valves'):
         raise HTTPException(
@@ -858,11 +851,7 @@ async def get_tools_user_valves_spec_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if id in request.app.state.TOOLS:
-        tools_module = request.app.state.TOOLS[id]
-    else:
-        tools_module, _ = await load_tool_module_by_id(id)
-        request.app.state.TOOLS[id] = tools_module
+    tools_module, _ = await get_tool_module_from_cache(request, id)
 
     if hasattr(tools_module, 'UserValves'):
         UserValves = tools_module.UserValves
@@ -904,11 +893,7 @@ async def update_tools_user_valves_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    if id in request.app.state.TOOLS:
-        tools_module = request.app.state.TOOLS[id]
-    else:
-        tools_module, _ = await load_tool_module_by_id(id)
-        request.app.state.TOOLS[id] = tools_module
+    tools_module, _ = await get_tool_module_from_cache(request, id)
 
     if hasattr(tools_module, 'UserValves'):
         UserValves = tools_module.UserValves
