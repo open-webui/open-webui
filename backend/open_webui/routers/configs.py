@@ -358,6 +358,24 @@ class TerminalServerPolicyForm(BaseModel):
     policy_data: dict
 
 
+class TerminalServerLifecycleForm(BaseModel):
+    url: str
+    key: str | None = ''
+    auth_type: str | None = 'bearer'
+    policy_id: str
+    lifecycle_data: dict
+
+
+class TerminalServerRefreshForm(BaseModel):
+    url: str
+    key: str | None = ''
+    auth_type: str | None = 'bearer'
+    user_id: str | None = None
+    policy_id: str | None = None
+    only_idle: bool = True
+    reset: bool = False
+
+
 @router.post('/terminal_servers/policy')
 async def put_terminal_server_policy(
     request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
@@ -391,6 +409,91 @@ async def put_terminal_server_policy(
     except Exception as e:
         log.debug(f'Failed to save policy to terminal server: {e}')
         raise HTTPException(status_code=400, detail='Failed to save policy to terminal server')
+
+
+@router.post('/terminal_servers/lifecycle')
+async def put_terminal_server_lifecycle(
+    request: Request, form_data: TerminalServerLifecycleForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a policy lifecycle PUT to an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {'Content-Type': 'application/json'}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            lifecycle_url = f'{base_url}/api/v1/policies/{form_data.policy_id}/lifecycle'
+            async with session.put(
+                lifecycle_url,
+                headers=headers,
+                json=form_data.lifecycle_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to save lifecycle to terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to save lifecycle to terminal server')
+
+
+@router.post('/terminal_servers/refresh')
+async def refresh_terminal_server_terminals(
+    request: Request, form_data: TerminalServerRefreshForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a terminal refresh request to an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {'Content-Type': 'application/json'}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+
+    body = {
+        'only_idle': form_data.only_idle,
+        'reset': form_data.reset,
+    }
+    if form_data.user_id:
+        body['user_id'] = form_data.user_id
+    if form_data.policy_id:
+        body['policy_id'] = form_data.policy_id
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            refresh_url = f'{base_url}/api/v1/terminals/refresh'
+            async with session.post(
+                refresh_url,
+                headers=headers,
+                json=body,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to refresh terminals: {e}')
+        raise HTTPException(status_code=400, detail='Failed to refresh terminals')
 
 
 @router.post('/tool_servers/verify')
