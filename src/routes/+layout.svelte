@@ -65,6 +65,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage, displayFileHandler, getUserTimezone } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
+	import { installFetchAuthInterceptor } from '$lib/utils/auth-fetch';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
@@ -882,6 +883,11 @@
 	};
 
 	onMount(async () => {
+		// Catch 401s on authenticated backend calls that happen after page load
+		// (e.g. token revoked/expired server-side) and redirect to /auth instead
+		// of leaving the UI stuck in a broken "logged-in" state.
+		installFetchAuthInterceptor();
+
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
