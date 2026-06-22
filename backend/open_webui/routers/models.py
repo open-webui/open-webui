@@ -532,11 +532,7 @@ async def get_model_profile_image(
 
     # Fallback: check arena models stored in config (not in the DB)
     if not profile_image_url:
-        arena_models = getattr(
-            getattr(request.app.state, 'config', None),
-            'EVALUATION_ARENA_MODELS',
-            [],
-        )
+        arena_models = await Config.get('evaluation.arena.models', []) or []
         for arena_model in arena_models:
             if arena_model.get('id') == id:
                 profile_image_url = arena_model.get('meta', {}).get('profile_image_url')

@@ -632,7 +632,8 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                                     error_detail = f'External Error: {res["error"]}'
                             except Exception:
                                 pass
-                            raise Exception(error_detail)
+                            log.error(f'Error fetching models from {url}: {error_detail}')
+                            raise HTTPException(status_code=500, detail=error_detail)
 
                         response_data = await r.json()
 
@@ -654,6 +655,10 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                             ]
 
                         models = response_data
+            except HTTPException:
+                # Expected, already-formatted errors (e.g. non-200 from the
+                # upstream provider) pass through without a noisy stack trace.
+                raise
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f'Client error: {str(e)}')

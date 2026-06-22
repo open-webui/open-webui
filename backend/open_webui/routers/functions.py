@@ -23,6 +23,7 @@ from open_webui.models.functions import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
     get_function_module_from_cache,
+    get_functions_cache,
     load_function_module_by_id,
     replace_imports,
     resolve_valves_schema_options,
@@ -205,7 +206,7 @@ async def create_new_function(
             )
             form_data.meta.manifest = frontmatter
 
-            FUNCTIONS = request.app.state.FUNCTIONS
+            FUNCTIONS = get_functions_cache(request)
             FUNCTIONS[form_data.id] = function_module
 
             function = await Functions.insert_new_function(user.id, function_type, form_data, db=db)
@@ -322,7 +323,7 @@ async def update_function_by_id(
         function_module, function_type, frontmatter = await load_function_module_by_id(id, content=form_data.content)
         form_data.meta.manifest = frontmatter
 
-        FUNCTIONS = request.app.state.FUNCTIONS
+        FUNCTIONS = get_functions_cache(request)
         FUNCTIONS[id] = function_module
 
         updated = {**form_data.model_dump(exclude={'id'}), 'type': function_type}
@@ -363,7 +364,7 @@ async def delete_function_by_id(
     result = await Functions.delete_function_by_id(id, db=db)
 
     if result:
-        FUNCTIONS = request.app.state.FUNCTIONS
+        FUNCTIONS = get_functions_cache(request)
         if id in FUNCTIONS:
             del FUNCTIONS[id]
 
