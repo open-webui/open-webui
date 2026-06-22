@@ -840,6 +840,29 @@ async def retry_knowledge_embedding(
     return {'requeued': requeued}
 
 
+@router.post('/{id}/files/recover')
+async def recover_stuck_knowledge_files(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Re-drive files orphaned in the extraction phase (uploaded but stuck at
+    pending/processing and never linked — e.g. a crash/restart killed the
+    in-process extraction). Runs in the background and returns how many stuck
+    files were found to recover."""
+    await _verify_knowledge_write_access(id, user, db)
+
+    stuck = await Files.get_stuck_knowledge_files(cutoff=None, knowledge_id=id, db=db)
+    if stuck:
+        from open_webui.utils.embedding_worker import recover_stuck_extractions
+
+        # Fire-and-forget; the periodic worker sweep is the durable backstop.
+        asyncio.create_task(recover_stuck_extractions(request.app, knowledge_id=id, ignore_age=True))
+
+    return {'recovering': len(stuck)}
+
+
 @router.post('/{id}/file/update', response_model=KnowledgeFilesResponse | None)
 async def update_file_from_knowledge_by_id(
     request: Request,

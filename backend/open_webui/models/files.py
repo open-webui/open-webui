@@ -431,6 +431,48 @@ class FilesTable:
                 log.warning(f'Error fetching pending files for knowledge {knowledge_id}: {e}')
                 return []
 
+    async def get_stuck_knowledge_files(
+        self,
+        cutoff: int | None = None,
+        knowledge_id: str | None = None,
+        limit: int = 100,
+        db: AsyncSession | None = None,
+    ) -> list[FileModel]:
+        """Return files orphaned in the extraction phase.
+
+        A "stuck" file was uploaded toward a knowledge base
+        (``meta.data.knowledge_id`` set), is still ``pending``/``processing``,
+        and was never linked into ``knowledge_file`` — i.e. its in-process
+        extraction task died (server restart / crash) and nothing re-drives it.
+
+        ``cutoff``: only return files whose ``updated_at`` is older than this
+        epoch seconds, so the recovery worker doesn't race a live upload still
+        being processed. Pass None to ignore age (used by the manual trigger).
+        ``knowledge_id``: restrict to one knowledge base (manual trigger).
+        """
+        async with get_async_db_context(db) as db:
+            try:
+                from open_webui.models.knowledge import KnowledgeFile
+
+                linked_ids = select(KnowledgeFile.file_id).correlate(None)
+
+                stmt = select(File).filter(
+                    File.meta['data']['knowledge_id'].as_string().isnot(None),
+                    File.data['status'].as_string().in_(['pending', 'processing']),
+                    File.id.notin_(linked_ids),
+                )
+                if knowledge_id is not None:
+                    stmt = stmt.filter(File.meta['data']['knowledge_id'].as_string() == knowledge_id)
+                if cutoff is not None:
+                    stmt = stmt.filter(File.updated_at < cutoff)
+
+                stmt = stmt.order_by(File.created_at.asc()).limit(limit)
+                result = await db.execute(stmt)
+                return [FileModel.model_validate(f) for f in result.scalars().all()]
+            except Exception as e:
+                log.warning(f'Error fetching stuck knowledge files: {e}')
+                return []
+
     async def delete_file_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
             try:
