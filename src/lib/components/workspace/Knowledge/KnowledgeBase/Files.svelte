@@ -16,6 +16,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
+	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -142,21 +143,28 @@
 				</div>
 
 				<div class="flex items-center gap-2 shrink-0">
-					{#if file?.embedding_status && file.embedding_status !== 'completed'}
+					<!-- Embedding status column: every file shows where it is in the
+					embedding pipeline (embedded / queued / embedding / failed). -->
+					{#if file?.embedding_status === 'completed'}
+						<Tooltip content={$i18n.t('Embedded')}>
+							<CheckCircle className="size-4 text-green-500" />
+						</Tooltip>
+					{:else if file?.embedding_status === 'processing'}
+						<Tooltip content={$i18n.t('Embedding')}>
+							<Spinner className="size-3.5" />
+						</Tooltip>
+					{:else if file?.embedding_status === 'pending'}
 						<span
-							class="text-xs px-1.5 py-0.5 rounded-full {file.embedding_status === 'failed'
-								? 'bg-red-500/10 text-red-500'
-								: 'bg-gray-500/10 text-gray-500 dark:text-gray-400'}"
-							title={file?.embedding_error ?? ''}
+							class="text-xs px-1.5 py-0.5 rounded-full bg-gray-500/10 text-gray-500 dark:text-gray-400"
 						>
-							{#if file.embedding_status === 'pending'}
-								{$i18n.t('Queued')}
-							{:else if file.embedding_status === 'processing'}
-								{$i18n.t('Embedding')}
-							{:else if file.embedding_status === 'failed'}
-								{$i18n.t('Failed')}
-							{/if}
+							{$i18n.t('Queued')}
 						</span>
+					{:else if file?.embedding_status === 'failed'}
+						<Tooltip content={file?.embedding_error ?? $i18n.t('Embedding failed')}>
+							<span class="text-xs px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500">
+								{$i18n.t('Failed')}
+							</span>
+						</Tooltip>
 					{/if}
 
 					{#if file?.updated_at}
