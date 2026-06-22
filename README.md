@@ -1,5 +1,23 @@
 # Open WebUI 👋
 
+> **Forked from [https://github.com/open-webui/open-webui](https://github.com/open-webui/open-webui), with the following tweaks and enhancements:**
+>
+> This is a customised fork. Upstream is treated as a source of enhancements that we periodically merge in; our own changes are maintained on top. The high-level deviations from upstream are:
+>
+> | Area | Tweak / Enhancement | Why |
+> |------|---------------------|-----|
+> | **Model resilience** | LLM provider **failover** — an ordered list of OpenAI-compatible providers per model (incl. base-model failover), with provider health tracking and streaming failover (`utils/failover.py`, `utils/provider_health.py`). | A single provider outage no longer breaks chat; requests transparently fall through to the next healthy provider. |
+> | **RAG tuning** | **Per-model and per-knowledge-base "Document Snippets Returned" (top-k) override.** | Attaching several knowledge bases to a model otherwise returns `top_k × N` snippets and blows the context window; per-KB caps let us fine-tune retrieval (e.g. 5 from A, 2 from B). |
+> | **Knowledge ingestion** | **Async, durable embedding pipeline** — files upload first, then a background worker embeds them, tracking per-file status (`pending`/`processing`/`completed`/`failed`) on the `knowledge_file` link. Resumes after restart. | Large imports (10k+ files) no longer require keeping a browser session open, and progress survives interruptions/restarts instead of starting over. |
+> | **Knowledge ingestion** | **Stuck-file recovery** — extraction orphans (interrupted uploads) are re-driven automatically by the worker and via a manual "Recover" action. | Files left mid-extraction by a crash/restart used to spin forever; they now self-heal. |
+> | **Knowledge ingestion** | **Duplicate rejection by content hash** before vectorising. | Avoids wasted storage, duplicate embeddings, and phantom entries from re-uploading the same document. |
+> | **Knowledge UX** | **Per-file embedding status badges, embedding progress banner, retry, and bounded-concurrency (parallel) bulk/directory upload.** | Makes the success/failure of every file reviewable and speeds up large directory imports. |
+> | **Knowledge sync** | **Incremental directory sync** (checksum diff add/modify/delete) endpoints. | Re-syncing a source folder only uploads what actually changed. |
+> | **Performance** | **Paginated Files API** and a **`metadata_only` knowledge listing** view (defers the heavy `data` column). | Knowledge bases with tens of thousands of files load without timing out or exhausting memory. |
+> | **Ops** | **Dockerfile fix and pinned `requirements.txt`.** | Reproducible builds and a working image. |
+>
+> _For the authoritative, commit-level diff: `git diff upstream/main...HEAD`._
+
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
