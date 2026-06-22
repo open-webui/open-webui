@@ -176,6 +176,12 @@
 	}
 
 	const onKeyDown = (e) => {
+		// Ignore keydown fired while confirming an IME composition (e.g. Japanese/Chinese/Korean)
+		// so confirming the composition with Enter doesn't trigger search actions (#26172).
+		if (e.isComposing || e.keyCode === 229) {
+			return;
+		}
+
 		const searchOptions = document.getElementById('search-options-container');
 		if (searchOptions || !show) {
 			return;
