@@ -1130,6 +1130,11 @@ SEARCHAPI_API_KEY = os.getenv('SEARCHAPI_API_KEY', '')
 
 SEARCHAPI_ENGINE = os.getenv('SEARCHAPI_ENGINE', '')
 
+
+SERPHOUSE_API_KEY = os.getenv('SERPHOUSE_API_KEY', '')
+
+SERPHOUSE_ENGINE = os.getenv('SERPHOUSE_ENGINE', 'google.com')
+
 SERPAPI_API_KEY = os.getenv('SERPAPI_API_KEY', '')
 
 SERPAPI_ENGINE = os.getenv('SERPAPI_ENGINE', '')
@@ -2771,6 +2776,8 @@ DEFAULT_CONFIG = {
     'rag.web.search.youcom_api_key': YOUCOM_API_KEY,
     'rag.web.search.linkup_api_key': LINKUP_API_KEY,
     'rag.web.search.linkup_search_params': LINKUP_SEARCH_PARAMS,
+    'rag.web.search.serphouse_api_key': SERPHOUSE_API_KEY,
+    'rag.web.search.serphouse_engine': SERPHOUSE_ENGINE,
     'image_generation.enable': ENABLE_IMAGE_GENERATION,
     'image_generation.engine': IMAGE_GENERATION_ENGINE,
     'image_generation.model': IMAGE_GENERATION_MODEL,

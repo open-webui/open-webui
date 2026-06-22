@@ -505,19 +505,6 @@ app.state.BASE_MODELS = []
 ########################################
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 async def initialize_runtime_config(app: FastAPI):
     # Migrate legacy access_control → access_grants on boot.
     from open_webui.utils.access_control import migrate_access_control

@@ -231,6 +231,19 @@ async def search_web(
 
         configured = await Config.get('rag.web.search.result_count')
         max_count = 5 if configured is None else configured
+
+        # Coerce parameters from LLM tool calls (may come as strings)
+        if isinstance(max_count, str):
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = 5
+        if isinstance(count, str):
+            try:
+                count = int(count)
+            except ValueError:
+                count = max_count
+
         count = max(1, min(count, max_count)) if count is not None else max_count
 
         results = await _search_web(__request__, engine, query, user)

@@ -121,6 +121,7 @@ from open_webui.utils.misc import (
 )
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.retrieval.web.serphouse import search_serphouse
 
 log = logging.getLogger(__name__)
 
@@ -354,6 +355,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'SEARXNG_QUERY_URL': 'rag.web.search.searxng_query_url',
     'SERPAPI_API_KEY': 'rag.web.search.serpapi_api_key',
     'SERPAPI_ENGINE': 'rag.web.search.serpapi_engine',
+    'SERPHOUSE_API_KEY': 'rag.web.search.serphouse_api_key',
+    'SERPHOUSE_ENGINE': 'rag.web.search.serphouse_engine',
     'SERPER_API_KEY': 'rag.web.search.serper_api_key',
     'SERPLY_API_KEY': 'rag.web.search.serply_api_key',
     'SERPSTACK_API_KEY': 'rag.web.search.serpstack_api_key',
@@ -740,6 +743,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'YOUCOM_API_KEY': config.YOUCOM_API_KEY,
             'LINKUP_API_KEY': config.LINKUP_API_KEY,
             'LINKUP_SEARCH_PARAMS': config.LINKUP_SEARCH_PARAMS,
+            'SERPHOUSE_API_KEY': config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_ENGINE': config.SERPHOUSE_ENGINE,
         },
     }
 
@@ -811,6 +816,8 @@ class WebConfig(BaseModel):
     YOUCOM_API_KEY: str | None = None
     LINKUP_API_KEY: str | None = None
     LINKUP_SEARCH_PARAMS: dict | None = None
+    SERPHOUSE_API_KEY: str | None = None
+    SERPHOUSE_ENGINE: str | None = None
 
 
 class ConfigForm(BaseModel):
@@ -1282,6 +1289,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.PERPLEXITY_SEARCH_API_URL = form_data.web.PERPLEXITY_SEARCH_API_URL
         config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
+        config.SERPHOUSE_API_KEY = form_data.web.SERPHOUSE_API_KEY
+        config.SERPHOUSE_ENGINE = form_data.web.SERPHOUSE_ENGINE
 
         # Web loader settings
         config.WEB_LOADER_ENGINE = form_data.web.WEB_LOADER_ENGINE
@@ -1308,6 +1317,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
         config.LINKUP_SEARCH_PARAMS = form_data.web.LINKUP_SEARCH_PARAMS
 
+    await config.save()
     return {
         'status': True,
         # RAG settings
@@ -1408,6 +1418,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
             'SERPAPI_ENGINE': config.SERPAPI_ENGINE,
+            'SERPHOUSE_API_KEY': config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_ENGINE': config.SERPHOUSE_ENGINE,
             'JINA_API_KEY': config.JINA_API_KEY,
             'JINA_API_BASE_URL': config.JINA_API_BASE_URL,
             'BING_SEARCH_V7_ENDPOINT': config.BING_SEARCH_V7_ENDPOINT,
@@ -2289,6 +2301,18 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No SERPAPI_API_KEY found in environment variables')
+    elif engine == 'SERPHouse':
+        if config.SERPHOUSE_API_KEY:
+            return await asyncio.to_thread(
+                search_serphouse,
+                config.SERPHOUSE_API_KEY,
+                config.SERPHOUSE_ENGINE,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No SERPHOUSE_API_KEY found in environment variables')
     elif engine == 'jina':
         return await asyncio.to_thread(
             search_jina,

@@ -36,10 +36,10 @@ from open_webui.env import (
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.notes import Notes
-from open_webui.models.config import Config
 from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
@@ -130,18 +130,16 @@ def build_loader_from_config(request, config: dict):
     """Build a Loader instance with the admin's configured extraction engine settings."""
     from open_webui.retrieval.loaders.main import Loader
 
-    loader_config = {
-        key: config.get(key)
-        for key in LOADER_CONFIG_KEYS
-        if key.isupper()
-    }
+    loader_config = {key: config.get(key) for key in LOADER_CONFIG_KEYS if key.isupper()}
     return Loader(
         engine=loader_config['CONTENT_EXTRACTION_ENGINE'],
         **{key: value for key, value in loader_config.items() if key != 'CONTENT_EXTRACTION_ENGINE'},
     )
 
 
-def _extract_text_from_binary_response(request, response: requests.Response, url: str, loader_config: dict) -> tuple[str, list]:
+def _extract_text_from_binary_response(
+    request, response: requests.Response, url: str, loader_config: dict
+) -> tuple[str, list]:
     """Download response body to a temp file and extract text using the Loader pipeline."""
     import mimetypes
     import tempfile
