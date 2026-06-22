@@ -2580,6 +2580,7 @@ class QueryDocForm(BaseModel):
     k_reranker: int | None = None
     r: float | None = None
     hybrid: bool | None = None
+    hybrid_bm25_weight: float | None = None
 
 
 @router.post('/query/doc')
@@ -2593,13 +2594,9 @@ async def query_doc_handler(
 
     try:
         if config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
-            collection_results = {}
-            collection_results[form_data.collection_name] = await ASYNC_VECTOR_DB_CLIENT.get(
-                collection_name=form_data.collection_name
-            )
             return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
-                collection_result=collection_results[form_data.collection_name],
+                collection_result=None,
                 query=form_data.query,
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
@@ -2614,10 +2611,9 @@ async def query_doc_handler(
                 r=(form_data.r if form_data.r else config.RELEVANCE_THRESHOLD),
                 hybrid_bm25_weight=(
                     form_data.hybrid_bm25_weight
-                    if form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight is not None
                     else config.HYBRID_BM25_WEIGHT
                 ),
-                user=user,
             )
         else:
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(
@@ -2678,7 +2674,7 @@ async def query_collection_handler(
                 r=(form_data.r if form_data.r else config.RELEVANCE_THRESHOLD),
                 hybrid_bm25_weight=(
                     form_data.hybrid_bm25_weight
-                    if form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight is not None
                     else config.HYBRID_BM25_WEIGHT
                 ),
                 enable_enriched_texts=(
