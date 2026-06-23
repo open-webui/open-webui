@@ -194,7 +194,9 @@ def apply_content_filter(messages: list[dict], filter_str: str) -> list[dict]:
     return result
 
 
-def replace_messages_variable(template: str, messages: Optional[list[dict]] = None) -> str:
+def replace_messages_variable(
+    template: str, messages: Optional[list[dict]] = None, variable_name: str = 'MESSAGES'
+) -> str:
     def replacement_function(match):
         # Groups: (1) filter for bare MESSAGES
         #         (2) START count, (3) filter for START
@@ -240,12 +242,13 @@ def replace_messages_variable(template: str, messages: Optional[list[dict]] = No
 
         return get_messages_content(selected)
 
+    variable_pattern = re.escape(variable_name)
     template = re.sub(
         r'(?:'
-        r'\{\{MESSAGES(?:\|(\w+:\d+))?\}\}'
-        r'|\{\{MESSAGES:START:(\d+)(?:\|(\w+:\d+))?\}\}'
-        r'|\{\{MESSAGES:END:(\d+)(?:\|(\w+:\d+))?\}\}'
-        r'|\{\{MESSAGES:MIDDLETRUNCATE:(\d+)(?:\|(\w+:\d+))?\}\}'
+        rf'\{{\{{{variable_pattern}(?:\|(\w+:\d+))?\}}\}}'
+        rf'|\{{\{{{variable_pattern}:START:(\d+)(?:\|(\w+:\d+))?\}}\}}'
+        rf'|\{{\{{{variable_pattern}:END:(\d+)(?:\|(\w+:\d+))?\}}\}}'
+        rf'|\{{\{{{variable_pattern}:MIDDLETRUNCATE:(\d+)(?:\|(\w+:\d+))?\}}\}}'
         r')',
         replacement_function,
         template,

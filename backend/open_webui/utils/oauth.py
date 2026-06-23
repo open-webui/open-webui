@@ -666,6 +666,34 @@ def resolve_oauth_client_info(connection: dict) -> dict:
     return data
 
 
+async def recover_static_oauth_client_metadata(connection: dict, oauth_client_info: dict) -> dict:
+    if connection.get('auth_type') != 'oauth_2.1_static':
+        return oauth_client_info
+
+    if oauth_client_info.get('scope') and oauth_client_info.get('resource'):
+        return oauth_client_info
+
+    server_url = connection.get('url')
+    if not server_url:
+        return oauth_client_info
+
+    try:
+        resource_metadata = await get_protected_resource_metadata(server_url)
+    except Exception as e:
+        log.debug(f'Unable to recover static OAuth metadata for {server_url}: {e}')
+        return oauth_client_info
+
+    recovered = {**oauth_client_info}
+    if not recovered.get('scope') and resource_metadata.scopes_supported:
+        recovered['scope'] = ' '.join(resource_metadata.scopes_supported)
+        log.info(f'Recovered static OAuth scopes for {server_url} from protected resource metadata')
+
+    if not recovered.get('resource') and resource_metadata.resource:
+        recovered['resource'] = resource_metadata.resource
+
+    return recovered
+
+
 class OAuthClientManager:
     def __init__(self, app):
         self.oauth = OAuth()
@@ -744,6 +772,9 @@ class OAuthClientManager:
 
             try:
                 oauth_client_info = resolve_oauth_client_info(connection)
+                oauth_client_info = await recover_static_oauth_client_metadata(
+                    connection, oauth_client_info
+                )
                 return self.add_client(expected_client_id, OAuthClientInformationFull(**oauth_client_info))['client']
             except Exception as e:
                 log.error(f'Failed to lazily add OAuth client {expected_client_id} from config: {e}')
@@ -777,7 +808,13 @@ class OAuthClientManager:
             redirect_uri = str(client_info.redirect_uris[0])
 
         try:
-            auth_data = await client.create_authorization_url(redirect_uri=redirect_uri)
+            kwargs = {}
+            if client_info.scope:
+                kwargs['scope'] = client_info.scope
+            if client_info.resource:
+                kwargs['resource'] = client_info.resource
+
+            auth_data = await client.create_authorization_url(redirect_uri=redirect_uri, **kwargs)
             authorization_url = auth_data.get('url')
 
             if not authorization_url:
@@ -1013,8 +1050,10 @@ class OAuthClientManager:
 
         redirect_uri = client_info.redirect_uris[0] if client_info.redirect_uris else None
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
-        # RFC 8707: pass resource indicator so the IdP sets the correct JWT audience
+        # Pass explicit scope/resource parameters for providers that require them.
         kwargs = {}
+        if client_info.scope:
+            kwargs['scope'] = client_info.scope
         if client_info.resource:
             kwargs['resource'] = client_info.resource
         return await client.authorize_redirect(request, redirect_uri_str, **kwargs)

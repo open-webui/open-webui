@@ -228,6 +228,7 @@ from open_webui.utils.oauth import (
     encrypt_data,
     get_oauth_client_info_with_dynamic_client_registration,
     get_oauth_client_info_with_static_credentials,
+    recover_static_oauth_client_metadata,
     resolve_oauth_client_info,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
@@ -535,6 +536,9 @@ async def initialize_runtime_config(app: FastAPI):
             if server_id and auth_type in ('oauth_2.1', 'oauth_2.1_static'):
                 try:
                     oauth_client_info = resolve_oauth_client_info(tool_server_connection)
+                    oauth_client_info = await recover_static_oauth_client_metadata(
+                        tool_server_connection, oauth_client_info
+                    )
                     app.state.oauth_client_manager.add_client(
                         f'mcp:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
@@ -835,7 +839,7 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
 
         models.append(model)
 
-    model_order_list = await Config.get('models.order_list')
+    model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:
         model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
         # Sort models by order list priority, with fallback for those not in the list
