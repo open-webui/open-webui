@@ -1,16 +1,17 @@
-import logging
-import os
-from typing import Awaitable, Optional, Union
+from __future__ import annotations
 
-import requests
-import aiohttp
 import asyncio
 import hashlib
-from concurrent.futures import ThreadPoolExecutor
-import time
+import logging
+import os
 import re
-
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import Awaitable, Optional, Union
 from urllib.parse import quote
+
+import aiohttp
+import requests
 from huggingface_hub import snapshot_download
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
@@ -18,41 +19,35 @@ from langchain_classic.retrievers import (
 )
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-
-from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-
-
-from open_webui.models.users import UserModel
-from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
-
-from open_webui.models.chats import Chats
-from open_webui.models.notes import Notes
-from open_webui.models.access_grants import AccessGrants
-from open_webui.utils.access_control.files import has_access_to_file
-
-from open_webui.retrieval.vector.main import GetResult
-from open_webui.utils.headers import include_user_info_headers
-from open_webui.utils.misc import get_message_list
-
-from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.retrieval.loaders.youtube import YoutubeLoader
-
-
-from open_webui.env import (
-    AIOHTTP_CLIENT_TIMEOUT,
-    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
-    OFFLINE_MODE,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    AIOHTTP_CLIENT_SESSION_SSL,
-)
 from open_webui.config import (
-    RAG_EMBEDDING_QUERY_PREFIX,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_PREFIX_FIELD_NAME,
+    RAG_EMBEDDING_QUERY_PREFIX,
+    VECTOR_DB,
 )
+from open_webui.env import (
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
+    BYPASS_RETRIEVAL_ACCESS_CONTROL,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
+    OFFLINE_MODE,
+)
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.chats import Chats
+from open_webui.models.files import Files
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.notes import Notes
+from open_webui.models.users import UserModel
+from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.main import GetResult
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.misc import get_message_list
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +117,7 @@ def build_loader_from_config(request):
         MINERU_API_KEY=config.MINERU_API_KEY,
         MINERU_API_TIMEOUT=config.MINERU_API_TIMEOUT,
         MINERU_PARAMS=config.MINERU_PARAMS,
+        MINERU_FILE_EXTENSIONS=config.MINERU_FILE_EXTENSIONS,
     )
 
 
@@ -179,6 +175,18 @@ def get_content_from_url(request, url: str) -> str:
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
+
+    # YouTube URLs (including youtu.be short links) should go straight to
+    # YoutubeLoader, which uses youtube-transcript-api and never needs the
+    # HTTP response body.  Probing the URL first is harmful for short URLs:
+    # youtu.be returns a 303 redirect with Content-Type: application/binary
+    # when allow_redirects=False, causing the binary-content path to run
+    # and produce empty docs → HTTP 400.
+    if is_youtube_url(url):
+        loader = get_loader(request, url)
+        docs = loader.load()
+        content = ' '.join([doc.page_content for doc in docs])
+        return content, docs
 
     # Streamed GET to check Content-Type without downloading the body.
     # allow_redirects=False prevents redirect-based SSRF: validate_url() above is
@@ -919,6 +927,13 @@ def get_embedding_function(
     concurrent_requests=0,
 ) -> Awaitable:
     if embedding_engine == '':
+        if embedding_function is None:
+            raise ValueError(
+                'No embedding model is loaded. Set RAG_EMBEDDING_MODEL to a valid '
+                'SentenceTransformer model name, or configure an external '
+                'RAG_EMBEDDING_ENGINE (ollama, openai, azure_openai).'
+            )
+
         # Sentence transformers: CPU-bound sync operation
         async def async_embedding_function(query, prefix=None, user=None):
             return await asyncio.to_thread(
@@ -1058,6 +1073,16 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
         )
 
 
+# UUIDs, SHA-256 digests, and prefixed variants thereof all fit [A-Za-z0-9_-].
+# Anything else cannot be a real Open WebUI collection and could break out of
+# a Milvus expression literal.
+_SAFE_COLLECTION_NAME_RE = re.compile(r'^[A-Za-z0-9_-]{1,255}$')
+
+
+def _is_safe_collection_name(name: str) -> bool:
+    return isinstance(name, str) and bool(_SAFE_COLLECTION_NAME_RE.match(name))
+
+
 async def filter_accessible_collections(
     collection_names: set[str],
     user: UserModel,
@@ -1067,20 +1092,33 @@ async def filter_accessible_collections(
     Return only the collection names the user is allowed to access.
     Admins bypass all checks.  For non-admins the policy is:
 
+      - any name with characters outside [A-Za-z0-9_-] → rejected
       - file-*          → validated via has_access_to_file
       - user-memory-*   → must match user's own memory collection
       - web-search-*    → ephemeral per-query collections, always allowed
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
                           via Knowledges.check_access_by_user_id; if no
-                          such KB exists, the name is treated as an
-                          ephemeral/legacy collection and allowed
+                          such KB exists, denied by default.  When
+                          ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS is True,
+                          the name is treated as a legacy/ephemeral
+                          collection and allowed.
     """
+    # Applied before the admin bypass — malformed names should never reach the vector store.
+    safe_names = {n for n in collection_names if _is_safe_collection_name(n)}
+    rejected = collection_names - safe_names
+    if rejected:
+        log.warning(
+            'filter_accessible_collections: rejected %d collection name(s) with unsafe characters (user_id=%s)',
+            len(rejected),
+            getattr(user, 'id', '<unknown>'),
+        )
+
     if user.role == 'admin':
-        return collection_names
+        return safe_names
 
     validated = set()
-    for name in collection_names:
+    for name in safe_names:
         if name == 'knowledge-bases':
             # System meta-collection — never exposed to non-admins.
             continue
@@ -1099,11 +1137,13 @@ async def filter_accessible_collections(
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.
             # If it IS a KB, enforce access control.  If no such KB
-            # exists, treat it as a non-sensitive collection (e.g. legacy
-            # model knowledge, process_text SHA256 collections) and allow.
+            # exists, the behaviour depends on
+            # ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS:
+            #   False (default) — deny (closes the unscoped namespace)
+            #   True  — allow (preserves legacy behaviour)
             if await Knowledges.check_access_by_user_id(name, user.id, permission=access_type):
                 validated.add(name)
-            elif not await Knowledges.get_knowledge_by_id(name):
+            elif ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS and not await Knowledges.get_knowledge_by_id(name):
                 # Not a KB at all — legacy/ephemeral collection, allow
                 validated.add(name)
     return validated
@@ -1121,7 +1161,7 @@ async def get_sources_from_items(
     hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
-    user: Optional[UserModel] = None,
+    user: UserModel | None = None,
 ):
     log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
 
@@ -1247,11 +1287,27 @@ async def get_sources_from_items(
                             ],
                         }
             else:
-                # Fallback to collection names
-                if item.get('legacy'):
-                    collection_names.append(f'{item["id"]}')
-                else:
-                    collection_names.append(f'file-{item["id"]}')
+                # Chunked-retrieval fallback — verify read access before
+                # exposing the file's vector collection (same posture as the
+                # full-context branch above).
+                file_id = item.get('id')
+                if file_id:
+                    if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                        if item.get('legacy'):
+                            collection_names.append(f'{file_id}')
+                        else:
+                            collection_names.append(f'file-{file_id}')
+                    else:
+                        file_object = await Files.get_file_by_id(file_id)
+                        if file_object and (
+                            user.role == 'admin'
+                            or file_object.user_id == user.id
+                            or await has_access_to_file(file_id, 'read', user)
+                        ):
+                            if item.get('legacy'):
+                                collection_names.append(f'{file_id}')
+                            else:
+                                collection_names.append(f'file-{file_id}')
 
         elif item.get('type') == 'collection':
             # Manual Full Mode Toggle for Collection
@@ -1297,9 +1353,18 @@ async def get_sources_from_items(
                             'metadatas': [metadatas],
                         }
                 else:
-                    # Fallback to collection names
                     if item.get('legacy'):
-                        collection_names = item.get('collection_names', [])
+                        if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                            collection_names = item.get('collection_names', [])
+                        else:
+                            # Legacy KB: item.collection_names is client-supplied.
+                            # Validate against the KB's actual files to prevent
+                            # cross-tenant collection name substitution.
+                            files = await Knowledges.get_files_by_id(knowledge_base.id)
+                            owned_names = {f'file-{f.id}' for f in files}
+                            owned_names.add(knowledge_base.id)
+                            valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
+                            collection_names = valid_names if valid_names else [knowledge_base.id]
                     else:
                         collection_names.append(item['id'])
 
@@ -1310,11 +1375,20 @@ async def get_sources_from_items(
                 'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
             }
         elif item.get('collection_name'):
-            # Direct Collection Name
-            collection_names.append(item['collection_name'])
+            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                collection_names.append(item['collection_name'])
+            else:
+                log.debug(
+                    "get_sources_from_items: ignoring untrusted direct collection_name '%s' on item without type",
+                    item.get('collection_name'),
+                )
         elif item.get('collection_names'):
-            # Collection Names List
-            collection_names.extend(item['collection_names'])
+            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                collection_names.extend(item['collection_names'])
+            else:
+                log.debug(
+                    'get_sources_from_items: ignoring untrusted direct collection_names on item without type',
+                )
 
         # If query_result is None
         # Fallback to collection names and vector search the collections
@@ -1433,7 +1507,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Optional[Callbacks] = None,
+        callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
         """Compress retrieved documents given the query context.
 
@@ -1452,7 +1526,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Optional[Callbacks] = None,
+        callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 
@@ -1460,13 +1534,12 @@ class RerankCompressor(BaseDocumentCompressor):
         if reranking:
             scores = await asyncio.to_thread(self.reranking_function, query, documents)
         else:
-            from sentence_transformers import util
+            from sentence_transformers import util as st_util
 
             query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-            document_embedding = await self.embedding_function(
-                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
-            )
-            scores = util.cos_sim(query_embedding, document_embedding)[0]
+            doc_texts = [doc.page_content for doc in documents]
+            document_embedding = await self.embedding_function(doc_texts, RAG_EMBEDDING_CONTENT_PREFIX)
+            scores = st_util.cos_sim(query_embedding, document_embedding)[0]
 
         if scores is not None:
             docs_with_scores = list(

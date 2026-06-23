@@ -2,7 +2,6 @@ import json
 import logging
 
 import aiohttp
-
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,

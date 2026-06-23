@@ -1,14 +1,13 @@
 import logging
 
-from open_webui.models.users import UserModel
-from open_webui.models.files import Files
-from open_webui.models.knowledge import Knowledges
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
 from open_webui.models.groups import Groups
+from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
-from open_webui.models.access_grants import AccessGrants
-
+from open_webui.models.users import UserModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -67,7 +66,7 @@ async def has_access_to_file(
 
     # Check if the file is associated with any chats the user has access to
     shared_chat_ids = await Chats.get_shared_chat_ids_by_file_id(file_id, db=db)
-    if shared_chat_ids:
+    if access_type == 'read' and shared_chat_ids:
         accessible_ids = await AccessGrants.get_accessible_resource_ids(
             user_id=user.id,
             resource_type='shared_chat',

@@ -13,18 +13,15 @@ import sys
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool, QueuePool
-
 from open_webui.config import (
     MARIADB_VECTOR_DB_URL,
     MARIADB_VECTOR_DISTANCE_STRATEGY,
     MARIADB_VECTOR_INDEX_M,
     MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
-    MARIADB_VECTOR_POOL_SIZE,
     MARIADB_VECTOR_POOL_MAX_OVERFLOW,
-    MARIADB_VECTOR_POOL_TIMEOUT,
     MARIADB_VECTOR_POOL_RECYCLE,
+    MARIADB_VECTOR_POOL_SIZE,
+    MARIADB_VECTOR_POOL_TIMEOUT,
 )
 from open_webui.retrieval.vector.main import (
     GetResult,
@@ -33,6 +30,8 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool, QueuePool
 
 log = logging.getLogger(__name__)
 

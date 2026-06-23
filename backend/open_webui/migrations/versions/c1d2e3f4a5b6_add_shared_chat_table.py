@@ -9,8 +9,8 @@ Create Date: 2026-04-16 23:00:00.000000
 import time
 import uuid
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'c1d2e3f4a5b6'
 down_revision = 'e1f2a3b4c5d6'
@@ -61,18 +61,21 @@ access_grant_t = sa.table(
 
 def upgrade():
     conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    tables = inspector.get_table_names()
 
-    # 1. Create shared_chat table
-    op.create_table(
-        'shared_chat',
-        sa.Column('id', sa.Text(), primary_key=True),
-        sa.Column('chat_id', sa.Text(), sa.ForeignKey('chat.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('user_id', sa.Text(), nullable=False),
-        sa.Column('title', sa.Text(), nullable=True),
-        sa.Column('chat', sa.JSON(), nullable=True),
-        sa.Column('created_at', sa.BigInteger(), nullable=True),
-        sa.Column('updated_at', sa.BigInteger(), nullable=True),
-    )
+    # 1. Create shared_chat table (idempotent)
+    if 'shared_chat' not in tables:
+        op.create_table(
+            'shared_chat',
+            sa.Column('id', sa.Text(), primary_key=True),
+            sa.Column('chat_id', sa.Text(), sa.ForeignKey('chat.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('user_id', sa.Text(), nullable=False),
+            sa.Column('title', sa.Text(), nullable=True),
+            sa.Column('chat', sa.JSON(), nullable=True),
+            sa.Column('created_at', sa.BigInteger(), nullable=True),
+            sa.Column('updated_at', sa.BigInteger(), nullable=True),
+        )
 
     # 2. Migrate existing shared-* rows
     shared_rows = conn.execute(
@@ -96,31 +99,51 @@ def upgrade():
         if not original:
             continue
 
-        # Insert snapshot into shared_chat
-        conn.execute(
-            shared_chat_t.insert().values(
-                id=share_token,
-                chat_id=original_chat_id,
-                user_id=original.user_id,
-                title=row.title,
-                chat=row.chat,
-                created_at=row.created_at,
-                updated_at=row.updated_at,
-            )
-        )
+        # Check if shared_chat record already exists (idempotent)
+        existing_shared = conn.execute(
+            sa.select(shared_chat_t.c.id).where(shared_chat_t.c.id == share_token)
+        ).fetchone()
 
-        # Create user:*:read grant for backward compat
-        conn.execute(
-            access_grant_t.insert().values(
-                id=str(uuid.uuid4()),
-                resource_type='shared_chat',
-                resource_id=original_chat_id,
-                principal_type='user',
-                principal_id='*',
-                permission='read',
-                created_at=row.created_at or int(time.time()),
+        if not existing_shared:
+            # Insert snapshot into shared_chat
+            conn.execute(
+                shared_chat_t.insert().values(
+                    id=share_token,
+                    chat_id=original_chat_id,
+                    user_id=original.user_id,
+                    title=row.title,
+                    chat=row.chat,
+                    created_at=row.created_at,
+                    updated_at=row.updated_at,
+                )
             )
-        )
+
+        # Check if access_grant record already exists (idempotent)
+        existing_grant = conn.execute(
+            sa.select(access_grant_t.c.id).where(
+                sa.and_(
+                    access_grant_t.c.resource_type == 'shared_chat',
+                    access_grant_t.c.resource_id == original_chat_id,
+                    access_grant_t.c.principal_type == 'user',
+                    access_grant_t.c.principal_id == '*',
+                    access_grant_t.c.permission == 'read',
+                )
+            )
+        ).fetchone()
+
+        if not existing_grant:
+            # Create user:*:read grant for backward compat
+            conn.execute(
+                access_grant_t.insert().values(
+                    id=str(uuid.uuid4()),
+                    resource_type='shared_chat',
+                    resource_id=original_chat_id,
+                    principal_type='user',
+                    principal_id='*',
+                    permission='read',
+                    created_at=row.created_at or int(time.time()),
+                )
+            )
 
     # 3. Clean up old phantom rows
     conn.execute(

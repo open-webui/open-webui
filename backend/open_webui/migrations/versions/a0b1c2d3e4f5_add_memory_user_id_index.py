@@ -6,6 +6,7 @@ Create Date: 2025-09-15 03:00:00.000000
 
 """
 
+import sqlalchemy as sa
 from alembic import op
 
 revision = 'a0b1c2d3e4f5'
@@ -15,7 +16,12 @@ depends_on = None
 
 
 def upgrade():
-    op.create_index('ix_memory_user_id', 'memory', ['user_id'])
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_indexes = {idx['name'] for idx in inspector.get_indexes('memory')}
+
+    if 'ix_memory_user_id' not in existing_indexes:
+        op.create_index('ix_memory_user_id', 'memory', ['user_id'])
 
 
 def downgrade():

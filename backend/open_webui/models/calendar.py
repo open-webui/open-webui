@@ -1,30 +1,29 @@
-import time
 import logging
+import time
 from typing import Optional
 from uuid import uuid4
-
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import (
-    Column,
-    Text,
-    JSON,
-    Boolean,
-    BigInteger,
-    Index,
-    UniqueConstraint,
-    select,
-    or_,
-    exists,
-    func,
-    delete,
-    update,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Index,
+    Text,
+    UniqueConstraint,
+    delete,
+    exists,
+    func,
+    or_,
+    select,
+    update,
+)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -696,12 +695,19 @@ class CalendarEventTable:
         self,
         now_ns: int,
         default_lookahead_ns: int,
+        grace_ns: int = 0,
         db: Optional[AsyncSession] = None,
     ) -> list[tuple[CalendarEventModel, Optional[str]]]:
         """Events starting between now and now + lookahead, for alert processing.
 
         Per-event lookahead is read from meta.alert_minutes (falls back to
         default_lookahead_ns).  Returns (event, user_timezone) pairs.
+
+        *grace_ns* widens the SQL lower bound so that events whose start_at
+        is up to *grace_ns* nanoseconds in the past are still fetched.  This
+        ensures "At time of event" alerts (alert_minutes=0) are not missed
+        when the scheduler polls a few seconds after the event's exact start
+        time.
         """
         from open_webui.models.users import User as UserRow
 
@@ -716,7 +722,7 @@ class CalendarEventTable:
                 .outerjoin(UserRow, UserRow.id == CalendarEvent.user_id)
                 .filter(
                     CalendarEvent.is_cancelled == False,
-                    CalendarEvent.start_at >= now_ns,
+                    CalendarEvent.start_at >= now_ns - grace_ns,
                     CalendarEvent.start_at <= upper,
                 )
             )

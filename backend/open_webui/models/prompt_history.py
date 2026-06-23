@@ -1,18 +1,16 @@
 """Prompt history model for version tracking."""
 
+import difflib
+import json
 import time
 import uuid
 from typing import Optional
-import json
-import difflib
 
-from sqlalchemy import select, delete, func
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.models.users import Users, UserResponse
-
+from open_webui.models.users import UserResponse, Users
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, JSON, Index
+from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # PromptHistory DB Schema
@@ -153,13 +151,19 @@ class PromptHistoryTable:
         self,
         from_id: str,
         to_id: str,
+        prompt_id: str,
         db: Optional[AsyncSession] = None,
     ) -> Optional[dict]:
         """Compute diff between two history entries."""
         async with get_async_db_context(db) as db:
-            result_from = await db.execute(select(PromptHistory).filter(PromptHistory.id == from_id))
+            # Bind both entries to the authorized prompt; an unbound id reads another prompt's snapshot.
+            result_from = await db.execute(
+                select(PromptHistory).filter(PromptHistory.id == from_id, PromptHistory.prompt_id == prompt_id)
+            )
             from_entry = result_from.scalars().first()
-            result_to = await db.execute(select(PromptHistory).filter(PromptHistory.id == to_id))
+            result_to = await db.execute(
+                select(PromptHistory).filter(PromptHistory.id == to_id, PromptHistory.prompt_id == prompt_id)
+            )
             to_entry = result_to.scalars().first()
 
             if not from_entry or not to_entry:
@@ -205,11 +209,13 @@ class PromptHistoryTable:
     async def delete_history_entry(
         self,
         history_id: str,
+        prompt_id: str,
         db: Optional[AsyncSession] = None,
     ) -> bool:
         """Delete a history entry and reparent its children to grandparent."""
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(PromptHistory).filter_by(id=history_id))
+            # Bind to the authorized prompt; an unbound id deletes another prompt's history.
+            result = await db.execute(select(PromptHistory).filter_by(id=history_id, prompt_id=prompt_id))
             entry = result.scalars().first()
             if not entry:
                 return False

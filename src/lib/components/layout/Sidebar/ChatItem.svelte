@@ -51,6 +51,7 @@
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { generateTitle } from '$lib/apis';
+	import { createMessagesList } from '$lib/utils';
 
 	export let className = '';
 
@@ -339,18 +340,56 @@
 
 	const generateTitleHandler = async () => {
 		generating = true;
-		if (!chat) {
-			chat = await getChatById(localStorage.token, id);
-		}
+		chat = await getChatById(localStorage.token, id);
 
-		const messages = (chat.chat?.messages ?? []).map((message) => {
-			return {
+		const chatContent = chat.chat;
+
+		// Build the active branch message list from the history tree.
+		// Fallback to the legacy flat messages array for older chats
+		// that haven't been migrated to the tree structure yet.
+		const history = chatContent?.history;
+		let messages = [];
+		if (history?.messages && history?.currentId) {
+			messages = createMessagesList(history, history.currentId).map((message) => ({
 				role: message.role,
 				content: message.content
-			};
-		});
+			}));
+		} else {
+			messages = (chatContent?.messages ?? []).map((message) => ({
+				role: message.role,
+				content: message.content
+			}));
+		}
 
-		const model = chat.chat.models.at(0) ?? chat.models.at(0) ?? '';
+		// Resolve the model from the most recent assistant message in the
+		// active branch. This avoids using the stale top-level `models`
+		// array which may reference a model from an older edit.
+		let model = '';
+
+		// For the active chat, prefer the live dropdown selection.
+		if (id === $chatId) {
+			try {
+				model = JSON.parse(sessionStorage.selectedModels || '[]').find((m) => m) ?? '';
+			} catch {}
+		}
+
+		if (!model && history?.messages && history?.currentId) {
+			let currentId = history.currentId;
+			while (currentId) {
+				const msg = history.messages[currentId];
+				if (!msg) break;
+				if (msg.role === 'assistant' && msg.model) {
+					model = msg.model;
+					break;
+				}
+				currentId = msg.parentId;
+			}
+		}
+
+		// Fallback to top-level models if no model was found in the history
+		if (!model) {
+			model = chatContent?.models?.at(0) ?? '';
+		}
 
 		chatTitle = '';
 

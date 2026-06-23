@@ -1,18 +1,20 @@
+from __future__ import annotations
+
+import logging
 import os
 import re
 import subprocess
 import sys
-from importlib import util
-import types
 import tempfile
-import logging
+import types
+from importlib import util
 from typing import Any
 
 from open_webui.env import (
+    ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
+    OFFLINE_MODE,
     PIP_OPTIONS,
     PIP_PACKAGE_INDEX_OPTIONS,
-    OFFLINE_MODE,
-    ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
 )
 from open_webui.models.functions import FunctionModel, Functions
 from open_webui.models.tools import Tools
@@ -419,7 +421,6 @@ def install_frontmatter_requirements(requirements: str):
 
 
 async def install_tool_and_function_dependencies():
-    return
     """
     Install all dependencies for all admin tools and active functions.
 
@@ -427,6 +428,7 @@ async def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
+    return
     function_list = await Functions.get_functions(active_only=True)
     tool_list = await Tools.get_tools()
 

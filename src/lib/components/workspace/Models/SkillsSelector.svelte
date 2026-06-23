@@ -3,18 +3,23 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getContext, onMount } from 'svelte';
 
-	import { getSkillItems } from '$lib/apis/skills';
+	export let skills = [];
+
+	let _skills = {};
+	let searchQuery = '';
 
 	export let selectedSkillIds: string[] = [];
 
-	let _skills: Record<string, any> = {};
-
 	const i18n = getContext('i18n');
 
-	onMount(async () => {
-		const res = await getSkillItems(localStorage.token).catch(() => null);
-		const skills = res?.items ?? [];
-		_skills = skills.reduce((acc: Record<string, any>, skill: any) => {
+	$: filteredSkillKeys = Object.keys(_skills).filter((id) => {
+		if (!searchQuery.trim()) return true;
+		const q = searchQuery.toLowerCase();
+		return _skills[id].name?.toLowerCase().includes(q) || _skills[id].id?.toLowerCase().includes(q);
+	});
+
+	onMount(() => {
+		_skills = skills.reduce((acc, skill) => {
 			acc[skill.id] = {
 				...skill,
 				selected: selectedSkillIds.includes(skill.id)
@@ -30,10 +35,21 @@
 		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Skills')}</div>
 	</div>
 
+	{#if Object.keys(_skills).length > 10}
+		<div class="mb-2">
+			<input
+				class="w-full text-sm bg-transparent outline-none border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-1.5 placeholder-gray-400"
+				type="text"
+				placeholder={$i18n.t('Search skills...')}
+				bind:value={searchQuery}
+			/>
+		</div>
+	{/if}
+
 	<div class="flex flex-col mb-1">
-		{#if Object.keys(_skills).length > 0}
+		{#if skills.length > 0}
 			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_skills) as skill, skillIdx}
+				{#each filteredSkillKeys as skill, skillIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox

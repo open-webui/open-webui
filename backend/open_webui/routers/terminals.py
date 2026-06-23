@@ -12,14 +12,13 @@ from urllib.parse import unquote
 import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
-from starlette.background import BackgroundTask
-
-from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_connection_access
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.config import TERMINAL_PROXY_HEADERS
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
+from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.auth import get_verified_user
+from starlette.background import BackgroundTask
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +35,14 @@ def _sanitize_proxy_path(path: str) -> str | None:
     Trailing slashes are preserved — many upstream frameworks treat
     ``/path`` and ``/path/`` differently.
     """
-    decoded = unquote(path)
+    # Decode until stable: a single unquote pass leaves %252e%252e as %2e%2e,
+    # which the upstream then re-decodes into '..', bypassing the check below.
+    decoded = path
+    for _ in range(8):
+        once = unquote(decoded)
+        if once == decoded:
+            break
+        decoded = once
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
@@ -199,6 +205,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     """
     import asyncio
     import json
+
     from open_webui.utils.auth import decode_token
 
     # First-message authentication
@@ -324,11 +331,20 @@ async def ws_terminal(
                 except Exception:
                     pass
 
-            await asyncio.gather(
-                _client_to_upstream(),
-                _upstream_to_client(),
-                return_exceptions=True,
-            )
+            # End the proxy as soon as either direction finishes (e.g. a
+            # graceful upstream CLOSE) and cancel the sibling, which would
+            # otherwise hang on a blocked ws.receive() until the browser leaves.
+            tasks = [
+                asyncio.create_task(_client_to_upstream()),
+                asyncio.create_task(_upstream_to_client()),
+            ]
+            _done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
     finally:

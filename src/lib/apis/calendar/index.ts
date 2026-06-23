@@ -49,13 +49,13 @@ export type CalendarEventModel = {
 export type CalendarEventForm = {
 	calendar_id: string;
 	title: string;
-	description?: string;
+	description?: string | null;
 	start_at: number;
 	end_at?: number;
 	all_day?: boolean;
 	rrule?: string;
 	color?: string;
-	location?: string;
+	location?: string | null;
 	data?: Record<string, any>;
 	meta?: Record<string, any>;
 	attendees?: { user_id: string; status?: string }[];

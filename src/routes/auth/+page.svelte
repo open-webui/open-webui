@@ -183,10 +183,31 @@
 		await oauthCallbackHandler();
 		form = $page.url.searchParams.get('form');
 
+		// Auto-redirect to SSO when OAUTH_AUTO_REDIRECT is enabled and the
+		// deployment is unambiguously SSO-only (single provider, no login form,
+		// no LDAP). Suppressed by ?form=, ?error=, onboarding, trusted-header
+		// auth, or an existing session/token.
+		if ($config?.oauth?.auto_redirect && !form && !error) {
+			const providers = Object.keys($config?.oauth?.providers ?? {});
+			if (
+				providers.length === 1 &&
+				$config?.features?.auth !== false &&
+				$config?.features?.enable_login_form === false &&
+				!$config?.features?.enable_ldap &&
+				!$config?.features?.auth_trusted_header &&
+				!$config?.onboarding &&
+				!localStorage.token &&
+				!document.cookie.split('; ').some((c) => c.startsWith('token='))
+			) {
+				window.location.href = `${WEBUI_BASE_URL}/oauth/${providers[0]}/login`;
+				return;
+			}
+		}
+
 		loaded = true;
 		setLogoImage();
 
-		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
+		if (($config?.features?.auth_trusted_header ?? false) || $config?.features?.auth === false) {
 			await signInHandler();
 		} else {
 			onboarding = $config?.onboarding ?? false;

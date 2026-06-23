@@ -1,44 +1,43 @@
+from __future__ import annotations
+
 import logging
+import re
+import time
 from pathlib import Path
 from typing import Optional
-import time
-import re
+
 import aiohttp
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
-from open_webui.models.groups import Groups
-from pydantic import BaseModel, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.internal.db import get_async_session
-
-
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.tools import (
+    ToolAccessResponse,
     ToolForm,
     ToolModel,
     ToolResponse,
-    ToolUserResponse,
-    ToolAccessResponse,
     Tools,
+    ToolUserResponse,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.access_control import (
+    filter_allowed_access_grants,
+    has_access,
+    has_permission,
+)
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
+    get_tool_module_from_cache,
     load_tool_module_by_id,
     replace_imports,
-    get_tool_module_from_cache,
     resolve_valves_schema_options,
 )
-from open_webui.utils.tools import get_tool_specs
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import (
-    has_permission,
-    has_access,
-    filter_allowed_access_grants,
-)
-from open_webui.utils.tools import get_tool_servers
-
-from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.tools import get_tool_servers, get_tool_specs
+from pydantic import BaseModel, HttpUrl
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -248,7 +247,7 @@ def github_url_to_raw_url(url: str) -> str:
     return url
 
 
-@router.post('/load/url', response_model=Optional[dict])
+@router.post('/load/url', response_model=dict | None)
 async def load_tool_from_url(request: Request, form_data: LoadUrlForm, user=Depends(get_admin_user)):
     # NOTE: This is NOT a SSRF vulnerability:
     # This endpoint is admin-only (see get_admin_user), meant for *trusted* internal use,
@@ -323,13 +322,14 @@ async def export_tools(
 ############################
 
 
-@router.post('/create', response_model=Optional[ToolResponse])
+@router.post('/create', response_model=ToolResponse | None)
 async def create_new_tools(
     request: Request,
     form_data: ToolForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Create a new tool from user-supplied Python source code."""
     if user.role != 'admin' and not (
         await has_permission(user.id, 'workspace.tools', request.app.state.config.USER_PERMISSIONS, db=db)
         or await has_permission(
@@ -401,7 +401,7 @@ async def create_new_tools(
 ############################
 
 
-@router.get('/id/{id}', response_model=Optional[ToolAccessResponse])
+@router.get('/id/{id}', response_model=ToolAccessResponse | None)
 async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     tools = await Tools.get_tool_by_id(id, db=db)
 
@@ -448,7 +448,7 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
 ############################
 
 
-@router.post('/id/{id}/update', response_model=Optional[ToolModel])
+@router.post('/id/{id}/update', response_model=ToolModel | None)
 async def update_tools_by_id(
     request: Request,
     id: str,
@@ -456,6 +456,7 @@ async def update_tools_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    """Update an existing tool's source code and metadata."""
     tools = await Tools.get_tool_by_id(id, db=db)
     if not tools:
         raise HTTPException(
@@ -541,7 +542,7 @@ class ToolAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post('/id/{id}/access/update', response_model=Optional[ToolModel])
+@router.post('/id/{id}/access/update', response_model=ToolModel | None)
 async def update_tool_access_by_id(
     request: Request,
     id: str,
@@ -634,7 +635,7 @@ async def delete_tools_by_id(
 ############################
 
 
-@router.get('/id/{id}/valves', response_model=Optional[dict])
+@router.get('/id/{id}/valves', response_model=dict | None)
 async def get_tools_valves_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -676,7 +677,7 @@ async def get_tools_valves_by_id(
 ############################
 
 
-@router.get('/id/{id}/valves/spec', response_model=Optional[dict])
+@router.get('/id/{id}/valves/spec', response_model=dict | None)
 async def get_tools_valves_spec_by_id(
     request: Request,
     id: str,
@@ -726,7 +727,7 @@ async def get_tools_valves_spec_by_id(
 ############################
 
 
-@router.post('/id/{id}/valves/update', response_model=Optional[dict])
+@router.post('/id/{id}/valves/update', response_model=dict | None)
 async def update_tools_valves_by_id(
     request: Request,
     id: str,
@@ -789,7 +790,7 @@ async def update_tools_valves_by_id(
 ############################
 
 
-@router.get('/id/{id}/valves/user', response_model=Optional[dict])
+@router.get('/id/{id}/valves/user', response_model=dict | None)
 async def get_tools_user_valves_by_id(
     id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -826,7 +827,7 @@ async def get_tools_user_valves_by_id(
         )
 
 
-@router.get('/id/{id}/valves/user/spec', response_model=Optional[dict])
+@router.get('/id/{id}/valves/user/spec', response_model=dict | None)
 async def get_tools_user_valves_spec_by_id(
     request: Request,
     id: str,
@@ -871,7 +872,7 @@ async def get_tools_user_valves_spec_by_id(
     return None
 
 
-@router.post('/id/{id}/valves/user/update', response_model=Optional[dict])
+@router.post('/id/{id}/valves/user/update', response_model=dict | None)
 async def update_tools_user_valves_by_id(
     request: Request,
     id: str,

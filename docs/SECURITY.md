@@ -100,7 +100,17 @@ Your remediation guidance can include, for example:
 > [!IMPORTANT]
 > **For administrators:** Treat the `workspace.tools` permission as **root-equivalent access**. Only grant it to users you would trust with direct access to your server. If you enable this permission for untrusted users, you are accepting the risk of arbitrary code execution on your host. For more details, see our [Plugin Security documentation](https://docs.openwebui.com/features/extensibility/plugin/).
 
-11. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **you MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
+11. **Legacy Code Paths Are Out of Scope:** Open WebUI maintains some code paths that are explicitly marked as **legacy** in the official documentation. Legacy paths remain available — sometimes still the default — purely for **backwards-compatibility reasons**, not because they are the supported or maintained surface. The supported replacement is the migration target, and security and functional work happens on the replacement, not the legacy path. Reports describing a security boundary issue **on a legacy code path that does not also reproduce on the supported replacement** are out of scope under this rule.
+
+> [!NOTE]
+> If you find a security issue that:
+>
+> 1. exists on a legacy code path **and also on the supported modern replacement**, OR
+> 2. exists on a legacy code path **and the legacy path is the only documented way to achieve a given function** (no migration target exists yet)
+>
+> we still want to hear about it. This rule is intended to filter reports that target deprecated paths with a documented modern alternative, not to discourage finding real bugs in paths users are still on.
+
+12. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **you MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
 
 > [!NOTE]
 > AI-aided vulnerability reports **will not be rejected by us by default**. But:
@@ -118,7 +128,7 @@ Your remediation guidance can include, for example:
 > - wrote comments with conflicting information
 > - used illogical and conflicting arguments
 
-12. **Self-Affecting Issues Are Not Vulnerabilities:** A vulnerability requires crossing a security boundary that affects **a party other than the reporter**. Crossing one of the five recognized security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation - These boundaries are interpreted broadly; equivalent concepts in other security frameworks fall within them) only against the reporter's own data, account, session, or environment is **not a vulnerability** - it is a bug, and belongs in the [Issue Tracker](https://github.com/open-webui/open-webui/issues), not in a security report.
+13. **Self-Affecting Issues Are Not Vulnerabilities:** A vulnerability requires crossing a security boundary that affects **a party other than the reporter**. Crossing one of the five recognized security boundaries (Confidentiality, Integrity, Availability, Authenticity, Non-repudiation - These boundaries are interpreted broadly; equivalent concepts in other security frameworks fall within them) only against the reporter's own data, account, session, or environment is **not a vulnerability** - it is a bug, and belongs in the [Issue Tracker](https://github.com/open-webui/open-webui/issues), not in a security report.
 
 > [!NOTE]
 > This rule is about **who is harmed**, not about severity. A user modifying or deleting their own data, impairing their own session, observing their own configuration, or disabling security controls on their own account is out of scope under this rule, regardless of impact.
@@ -132,11 +142,13 @@ Your remediation guidance can include, for example:
 If you want to report a vulnerability and can meet the outlined requirements, [open a vulnerability report here](https://github.com/open-webui/open-webui/security/advisories/new).
 If you feel like you are not able to follow ALL outlined requirements for vulnerability-specific reasons, still do report it, we will check every report either way.
 
-## Expected Response Timeframe
+## Expected Timeframe
 
 Due to the very high volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by an unbelievably high number of AI-generated reports (see [AI report transparency](#ai-report-transparency)) — our capacity to respond is limited. Open WebUI is a community-driven project maintained by a small team, and security reports are handled alongside all other project responsibilities.
 
 **Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means we have not yet had the capacity to address it. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
+
+For findings we judge to have **broad or severe real-world impact** — regardless of CVSS score — we may hold off on publishing for **1–2 weeks** after the patched version is released, to give administrators time to update their instances.
 
 ## Report Handling
 
@@ -152,7 +164,7 @@ We credit only the earliest filer of a given vulnerability:
 2. **Credit-for-duplicates incentivizes flooding.** If similar-but-later filings earn credit, the rational play is to skim open advisories and file variations. We already see this pressure — the first-filer rule is what limits it.
 3. **Co-discovery is different from duplication.** Multiple reporters **are credited** on one advisory **when each contributes a _distinct_ finding** — different vector, different affected component, different sub-path the earlier filing does not cover. That is the consolidation rule above. Filing a duplicate of an existing report is not co-discovery.
 
-## Confidential Disclosure
+## Responsible Disclosure
 
 Vulnerability reports submitted through GitHub Security Advisories are **private and confidential**. Public disclosure of **ANY** details related to a submitted vulnerability report is **STRICTLY PROHIBITED** until the advisory has been **fully published** — not merely when a CVE ID has been assigned, but when the advisory itself is publicly visible.
 
@@ -162,7 +174,7 @@ This prohibition applies to **all channels**, including but not limited to:
 - Social media, blogs, forums, or any other website
 - Discord, Reddit, or any other platform, website or service
 
-Premature disclosure undermines the security of all Open WebUI users and **violates the trust** inherent in the responsible disclosure process. **Reporters who publicly disclose vulnerability details before official publication <ins>may be permanently banned from future reporting.</ins>**
+This confidential, responsible disclosure process exists to give us time to fix bugs, publish fixes and alert users once a fix is ready. The entire premise of responsible disclosure is to **protect users from vulnerabilities**. Therefore, premature disclosure undermines the security of all Open WebUI users and **violates the trust** inherent in the responsible disclosure process. **Reporters who prematurely publicly disclose vulnerability details before official publication <ins>WILL BE PERMANENTLY BANNED from future reporting.</ins>**
 
 ## Product Security And For Non-Vulnerability Related Security Concerns:
 
@@ -172,6 +184,7 @@ If your concern does not meet the vulnerability requirements outlined above, is 
 - **Feature requests:** Create a discussion in [GitHub Discussions - Ideas](https://github.com/open-webui/open-webui/discussions/) to discuss with the community if this feature request is wanted by multiple people
 - **Configuration help:** Ask the community for help and guidance on our [Discord Server](https://discord.gg/5rJgQTnV4s) or on [Reddit](https://www.reddit.com/r/OpenWebUI/)
 - **General issues:** Use our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
+- **Bugs:** Report bugs to our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
 
 **Examples of non-vulnerability, still security related concerns:**
 
@@ -191,4 +204,4 @@ For any other immediate concerns and questions, please create an issue in our [i
 
 ---
 
-_Last updated on **2026-05-04**._
+_Last updated on **2026-05-14**._

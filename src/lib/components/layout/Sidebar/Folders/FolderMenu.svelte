@@ -15,7 +15,7 @@
 	export let onEdit = () => {};
 	export let onExport = () => {};
 	export let onDelete = () => {};
-	export let onCreateSub = () => {};
+	export let onCreateSubFolder = () => {};
 
 	let show = false;
 </script>
@@ -47,7 +47,7 @@
 			<button
 				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={() => {
-					onCreateSub();
+					onCreateSubFolder();
 				}}
 			>
 				<Folder />

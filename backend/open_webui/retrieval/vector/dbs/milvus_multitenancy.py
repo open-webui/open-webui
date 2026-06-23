@@ -3,18 +3,19 @@ NOTE: This vector database integration is community-supported and maintained on 
 """
 
 import logging
-from typing import Optional, Tuple, List, Dict, Any
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
 from open_webui.config import (
-    MILVUS_URI,
-    MILVUS_TOKEN,
-    MILVUS_DB,
     MILVUS_COLLECTION_PREFIX,
-    MILVUS_INDEX_TYPE,
-    MILVUS_METRIC_TYPE,
-    MILVUS_HNSW_M,
+    MILVUS_DB,
     MILVUS_HNSW_EFCONSTRUCTION,
+    MILVUS_HNSW_M,
+    MILVUS_INDEX_TYPE,
     MILVUS_IVF_FLAT_NLIST,
+    MILVUS_METRIC_TYPE,
+    MILVUS_TOKEN,
+    MILVUS_URI,
 )
 from open_webui.retrieval.vector.main import (
     GetResult,
@@ -23,17 +24,41 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from pymilvus import (
-    connections,
-    utility,
     Collection,
     CollectionSchema,
-    FieldSchema,
     DataType,
+    FieldSchema,
+    connections,
+    utility,
 )
 
 log = logging.getLogger(__name__)
 
 RESOURCE_ID_FIELD = 'resource_id'
+
+# Milvus expressions are SQL-like strings with no parameterized-query API;
+# values get interpolated into single-quoted literals. Reject anything that
+# can't be a legitimate Open WebUI collection name.
+_SAFE_RESOURCE_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,255}$')
+_SAFE_METADATA_KEY_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,63}$')
+
+
+def _validate_resource_id(resource_id: str) -> str:
+    if not isinstance(resource_id, str) or not _SAFE_RESOURCE_ID_RE.match(resource_id):
+        raise ValueError(f'Invalid Milvus resource_id (collection name): {resource_id!r}')
+    return resource_id
+
+
+def _validate_metadata_key(key: str) -> str:
+    if not isinstance(key, str) or not _SAFE_METADATA_KEY_RE.match(key):
+        raise ValueError(f'Invalid Milvus metadata filter key: {key!r}')
+    return key
+
+
+def _escape_milvus_string(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f'Expected str for Milvus expression value, got {type(value).__name__}')
+    return value.replace('\\', '\\\\').replace("'", "\\'")
 
 
 class MilvusClient(VectorDBBase):
@@ -126,6 +151,7 @@ class MilvusClient(VectorDBBase):
 
     def has_collection(self, collection_name: str) -> bool:
         mt_collection, resource_id = self._get_collection_and_resource_id(collection_name)
+        _validate_resource_id(resource_id)
         if not utility.has_collection(mt_collection):
             return False
 
@@ -138,6 +164,7 @@ class MilvusClient(VectorDBBase):
         if not items:
             return
         mt_collection, resource_id = self._get_collection_and_resource_id(collection_name)
+        _validate_resource_id(resource_id)
         dimension = len(items[0]['vector'])
         self._ensure_collection(mt_collection, dimension)
         collection = Collection(mt_collection)
@@ -165,6 +192,7 @@ class MilvusClient(VectorDBBase):
             return None
 
         mt_collection, resource_id = self._get_collection_and_resource_id(collection_name)
+        _validate_resource_id(resource_id)
         if not utility.has_collection(mt_collection):
             return None
 
@@ -203,21 +231,22 @@ class MilvusClient(VectorDBBase):
         filter: Optional[Dict[str, Any]] = None,
     ):
         mt_collection, resource_id = self._get_collection_and_resource_id(collection_name)
+        _validate_resource_id(resource_id)
         if not utility.has_collection(mt_collection):
             return
 
         collection = Collection(mt_collection)
 
-        # Build expression
         expr = [f"{RESOURCE_ID_FIELD} == '{resource_id}'"]
         if ids:
             # Milvus expects a string list for 'in' operator
-            id_list_str = ', '.join([f"'{id_val}'" for id_val in ids])
+            id_list_str = ', '.join([f"'{_escape_milvus_string(str(id_val))}'" for id_val in ids])
             expr.append(f'id in [{id_list_str}]')
 
         if filter:
             for key, value in filter.items():
-                expr.append(f"metadata['{key}'] == '{value}'")
+                _validate_metadata_key(key)
+                expr.append(f"metadata['{key}'] == '{_escape_milvus_string(str(value))}'")
 
         collection.delete(' and '.join(expr))
 
@@ -228,6 +257,7 @@ class MilvusClient(VectorDBBase):
 
     def delete_collection(self, collection_name: str):
         mt_collection, resource_id = self._get_collection_and_resource_id(collection_name)
+        _validate_resource_id(resource_id)
         if not utility.has_collection(mt_collection):
             return
 
@@ -236,6 +266,7 @@ class MilvusClient(VectorDBBase):
 
     def query(self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None) -> Optional[GetResult]:
         mt_collection, resource_id = self._get_collection_and_resource_id(collection_name)
+        _validate_resource_id(resource_id)
         if not utility.has_collection(mt_collection):
             return None
 
@@ -245,10 +276,15 @@ class MilvusClient(VectorDBBase):
         expr = [f"{RESOURCE_ID_FIELD} == '{resource_id}'"]
         if filter:
             for key, value in filter.items():
+                _validate_metadata_key(key)
                 if isinstance(value, str):
-                    expr.append(f"metadata['{key}'] == '{value}'")
-                else:
+                    expr.append(f"metadata['{key}'] == '{_escape_milvus_string(value)}'")
+                elif isinstance(value, bool):
+                    expr.append(f"metadata['{key}'] == {str(value).lower()}")
+                elif isinstance(value, (int, float)):
                     expr.append(f"metadata['{key}'] == {value}")
+                else:
+                    raise TypeError(f'Unsupported Milvus filter value type for key {key!r}: {type(value).__name__}')
 
         iterator = collection.query_iterator(
             expr=' and '.join(expr),
