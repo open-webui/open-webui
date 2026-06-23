@@ -1065,6 +1065,7 @@ async def chat_completion(
         # Chat Params
         stream_delta_chunk_size = form_data.get('params', {}).get('stream_delta_chunk_size')
         reasoning_tags = form_data.get('params', {}).get('reasoning_tags')
+        compact_token_threshold = form_data.get('params', {}).get('compact_token_threshold')
 
         # Model Params
         if model_info_params.get('stream_response') is not None:
@@ -1075,6 +1076,9 @@ async def chat_completion(
 
         if model_info_params.get('reasoning_tags') is not None:
             reasoning_tags = model_info_params.get('reasoning_tags')
+
+        if model_info_params.get('compact_token_threshold') is not None:
+            compact_token_threshold = model_info_params.get('compact_token_threshold')
 
         # parent_id signals intent:
         #   null   → new chat (root message, no parent)
@@ -1133,6 +1137,7 @@ async def chat_completion(
             'params': {
                 'stream_delta_chunk_size': stream_delta_chunk_size,
                 'reasoning_tags': reasoning_tags,
+                'compact_token_threshold': compact_token_threshold,
                 'function_calling': (
                     form_data.get('params', {}).get('function_calling')
                     or model_info_params.get('function_calling')

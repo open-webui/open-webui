@@ -53,8 +53,9 @@ async def compact_messages_for_request(
         return messages, None, False
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+    token_threshold = _resolve_token_threshold(config['token_threshold'], metadata)
     if (
-        not _exceeds_token_threshold(messages, system_prompt, previous_summary, config['token_threshold'])
+        not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold)
         or len(messages) <= 3
     ):
         return messages, previous_summary, False
@@ -145,6 +146,21 @@ async def _load_config() -> dict:
         'token_threshold': int(values.get('chat.context_compaction.token_threshold', 80000) or 80000),
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
+
+
+def _parse_positive_int(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _resolve_token_threshold(global_threshold: int, metadata: dict) -> int:
+    configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
+    if configured_threshold is None:
+        return global_threshold
+    return min(configured_threshold, global_threshold)
 
 
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:

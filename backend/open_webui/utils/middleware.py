@@ -2076,6 +2076,7 @@ def apply_params_to_form_data(form_data, model):
         'stream_delta_chunk_size': int,
         'function_calling': str,
         'reasoning_tags': list,
+        'compact_token_threshold': int,
         'system': str,
     }
 

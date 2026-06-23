@@ -16,6 +16,7 @@
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
+		compact_token_threshold: null,
 		function_calling: null,
 		reasoning_tags: null,
 		seed: null,
@@ -140,6 +141,52 @@
 							class=" bg-transparent text-center w-14"
 							min="1"
 							step="any"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div>
+			<Tooltip
+				content={$i18n.t(
+					'Lower the context compaction token threshold for this model. The global context compaction threshold remains the maximum.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Context Compaction Threshold')}
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						type="button"
+						on:click={() => {
+							params.compact_token_threshold =
+								(params?.compact_token_threshold ?? null) === null ? 80000 : null;
+						}}
+					>
+						{#if (params?.compact_token_threshold ?? null) === null}
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						{:else}
+							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.compact_token_threshold ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							class="text-sm w-full bg-transparent outline-hidden outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter token threshold')}
+							bind:value={params.compact_token_threshold}
+							autocomplete="off"
+							min="1"
+							step="1"
 						/>
 					</div>
 				</div>
