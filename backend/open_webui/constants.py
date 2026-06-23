@@ -59,6 +59,7 @@ class ERROR_MESSAGES(str, Enum):
     USER_NOT_FOUND = "We could not find what you're looking for :/"
     API_KEY_NOT_FOUND = "Oops! It looks like there's a hiccup. The API key is missing. Please make sure to provide a valid API key to access this feature."
     API_KEY_NOT_ALLOWED = 'Use of API key is not enabled in the environment.'
+    API_KEY_EXPIRED = 'This API key has expired. Create a new key in Settings > Account > API keys to renew access.'
 
     MALICIOUS = 'Unusual activities detected, please try again in a few minutes.'
 

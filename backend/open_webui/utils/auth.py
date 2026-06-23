@@ -6,6 +6,7 @@ import hmac
 import json
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Union
@@ -405,6 +406,13 @@ async def get_current_user_by_api_key(request, api_key: str):
     user = await Users.get_user_by_api_key(api_key)
 
     if user is None:
+        key = await Users.get_api_key_by_key(api_key)
+        if key and key.expires_at is not None and key.expires_at <= int(time.time()):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.API_KEY_EXPIRED,
+            )
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.INVALID_TOKEN,
