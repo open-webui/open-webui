@@ -1384,6 +1384,8 @@ IMAGE_EDIT_MODEL = os.getenv('IMAGE_EDIT_MODEL', '')
 
 IMAGE_EDIT_SIZE = os.getenv('IMAGE_EDIT_SIZE', '')
 
+IMAGE_EDIT_NORMALIZE = os.getenv('IMAGE_EDIT_NORMALIZE', 'true').lower() == 'true'
+
 IMAGES_EDIT_OPENAI_API_BASE_URL = os.getenv('IMAGES_EDIT_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL)
 IMAGES_EDIT_OPENAI_API_VERSION = os.getenv('IMAGES_EDIT_OPENAI_API_VERSION', '')
 
@@ -2795,6 +2797,7 @@ DEFAULT_CONFIG = {
     'images.edit.engine': IMAGE_EDIT_ENGINE,
     'images.edit.model': IMAGE_EDIT_MODEL,
     'images.edit.size': IMAGE_EDIT_SIZE,
+    'images.edit.normalize': IMAGE_EDIT_NORMALIZE,
     'images.edit.openai.api_base_url': IMAGES_EDIT_OPENAI_API_BASE_URL,
     'images.edit.openai.api_version': IMAGES_EDIT_OPENAI_API_VERSION,
     'images.edit.openai.api_key': IMAGES_EDIT_OPENAI_API_KEY,
