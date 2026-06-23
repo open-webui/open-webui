@@ -288,6 +288,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'ENABLE_WEB_SEARCH': 'rag.web.search.enable',
     'EXA_API_KEY': 'rag.web.search.exa_api_key',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
+    'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
     'EXTERNAL_WEB_LOADER_API_KEY': 'rag.web.loader.external_web_loader_api_key',
     'EXTERNAL_WEB_LOADER_URL': 'rag.web.loader.external_web_loader_url',
@@ -632,6 +633,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'DATALAB_MARKER_OUTPUT_FORMAT': config.DATALAB_MARKER_OUTPUT_FORMAT,
         'EXTERNAL_DOCUMENT_LOADER_URL': config.EXTERNAL_DOCUMENT_LOADER_URL,
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+        'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
@@ -846,6 +848,7 @@ class ConfigForm(BaseModel):
 
     EXTERNAL_DOCUMENT_LOADER_URL: str | None = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: str | None = None
+    EXTERNAL_DOCUMENT_LOADER_HEADERS: dict | None = None
 
     TIKA_SERVER_URL: str | None = None
     DOCLING_SERVER_URL: str | None = None
@@ -1020,6 +1023,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY
         if form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY is not None
         else config.EXTERNAL_DOCUMENT_LOADER_API_KEY
+    )
+    config.EXTERNAL_DOCUMENT_LOADER_HEADERS = (
+        form_data.EXTERNAL_DOCUMENT_LOADER_HEADERS
+        if form_data.EXTERNAL_DOCUMENT_LOADER_HEADERS is not None
+        else config.EXTERNAL_DOCUMENT_LOADER_HEADERS
     )
     config.TIKA_SERVER_URL = (
         form_data.TIKA_SERVER_URL if form_data.TIKA_SERVER_URL is not None else config.TIKA_SERVER_URL
@@ -1336,6 +1344,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'DATALAB_MARKER_OUTPUT_FORMAT': config.DATALAB_MARKER_OUTPUT_FORMAT,
         'EXTERNAL_DOCUMENT_LOADER_URL': config.EXTERNAL_DOCUMENT_LOADER_URL,
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+        'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
@@ -1843,6 +1852,11 @@ async def process_file(
                     loader_config = await get_loader_config()
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
+                    loader.metadata = {
+                        'file_id': file.id,
+                        'file_name': file.filename,
+                        'file_content_type': file.meta.get('content_type'),
+                    }
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [

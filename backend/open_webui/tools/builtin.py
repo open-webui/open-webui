@@ -514,21 +514,14 @@ async def execute_code(
 
         elif engine == 'jupyter':
             from open_webui.utils.code_interpreter import execute_code_jupyter
+
             jupyter_auth = await Config.get('code_interpreter.jupyter.auth')
 
             output = await execute_code_jupyter(
                 await Config.get('code_interpreter.jupyter.url'),
                 code,
-                (
-                    await Config.get('code_interpreter.jupyter.auth_token')
-                    if jupyter_auth == 'token'
-                    else None
-                ),
-                (
-                    await Config.get('code_interpreter.jupyter.auth_password')
-                    if jupyter_auth == 'password'
-                    else None
-                ),
+                (await Config.get('code_interpreter.jupyter.auth_token') if jupyter_auth == 'token' else None),
+                (await Config.get('code_interpreter.jupyter.auth_password') if jupyter_auth == 'password' else None),
                 await Config.get('code_interpreter.jupyter.timeout'),
             )
 
@@ -2385,6 +2378,7 @@ async def query_knowledge_files(
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
         from open_webui.models.notes import Notes
+        from open_webui.retrieval.external import retrieve_external_knowledge
         from open_webui.retrieval.utils import query_collection
 
         user_id = __user__.get('id')
@@ -2396,6 +2390,7 @@ async def query_knowledge_files(
             return json.dumps({'error': 'Embedding function not configured'})
 
         collection_names = []
+        external_knowledges = []
         note_results = []  # Notes aren't vectorized, handle separately
 
         # If model has attached knowledge, use those
@@ -2418,7 +2413,10 @@ async def query_knowledge_files(
                             user_group_ids=set(user_group_ids),
                         )
                     ):
-                        collection_names.append(item_id)
+                        if (knowledge.meta or {}).get('source') == 'external':
+                            external_knowledges.append(knowledge)
+                        else:
+                            collection_names.append(item_id)
 
                 elif item_type == 'file':
                     # Individual file - use file-{id} as collection name
@@ -2464,7 +2462,10 @@ async def query_knowledge_files(
                         user_group_ids=set(user_group_ids),
                     )
                 ):
-                    collection_names.append(knowledge_id)
+                    if (knowledge.meta or {}).get('source') == 'external':
+                        external_knowledges.append(knowledge)
+                    else:
+                        collection_names.append(knowledge_id)
         else:
             # No model knowledge and no specific IDs - search all accessible KBs
             result = await Knowledges.search_knowledge_bases(
@@ -2477,7 +2478,11 @@ async def query_knowledge_files(
                 skip=0,
                 limit=50,
             )
-            collection_names = [knowledge_base.id for knowledge_base in result.items]
+            for knowledge_base in result.items:
+                if (knowledge_base.meta or {}).get('source') == 'external':
+                    external_knowledges.append(knowledge_base)
+                else:
+                    collection_names.append(knowledge_base.id)
 
         chunks = []
 
@@ -2508,6 +2513,31 @@ async def query_knowledge_files(
                     if idx < len(distances):
                         chunk_info['distance'] = distances[idx]
                     chunks.append(chunk_info)
+
+        for knowledge in external_knowledges:
+            query_results = await retrieve_external_knowledge(
+                __request__,
+                knowledge,
+                queries=[query],
+                count=count,
+                user=type('UserContext', (), {'id': user_id, 'role': user_role})(),
+            )
+            documents = query_results.get('documents', [[]])[0]
+            metadatas = query_results.get('metadatas', [[]])[0]
+            distances = query_results.get('distances', [[]])[0]
+
+            for idx, doc in enumerate(documents):
+                metadata = metadatas[idx] if idx < len(metadatas) else {}
+                chunk_info = {
+                    'content': doc,
+                    'source': metadata.get('source', metadata.get('name', knowledge.name)),
+                    'file_id': metadata.get('file_id', f'external-{knowledge.id}'),
+                    'type': 'external',
+                    'knowledge_id': knowledge.id,
+                }
+                if idx < len(distances):
+                    chunk_info['distance'] = distances[idx]
+                chunks.append(chunk_info)
 
         # Limit to requested count
         chunks = chunks[:count]

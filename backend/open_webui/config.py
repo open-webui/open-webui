@@ -857,6 +857,16 @@ EXTERNAL_DOCUMENT_LOADER_URL = os.getenv('EXTERNAL_DOCUMENT_LOADER_URL', '')
 
 EXTERNAL_DOCUMENT_LOADER_API_KEY = os.getenv('EXTERNAL_DOCUMENT_LOADER_API_KEY', '')
 
+external_document_loader_headers = os.getenv('EXTERNAL_DOCUMENT_LOADER_HEADERS', '')
+try:
+    external_document_loader_headers = json.loads(external_document_loader_headers)
+except json.JSONDecodeError:
+    external_document_loader_headers = {}
+if not isinstance(external_document_loader_headers, dict):
+    external_document_loader_headers = {}
+
+EXTERNAL_DOCUMENT_LOADER_HEADERS = external_document_loader_headers
+
 TIKA_SERVER_URL = os.getenv('TIKA_SERVER_URL', 'http://tika:9998')
 
 DOCLING_SERVER_URL = os.getenv('DOCLING_SERVER_URL', 'http://docling:5001')
@@ -2652,6 +2662,7 @@ DEFAULT_CONFIG = {
     'rag.mineru_file_extensions': MINERU_FILE_EXTENSIONS,
     'rag.external_document_loader_url': EXTERNAL_DOCUMENT_LOADER_URL,
     'rag.external_document_loader_api_key': EXTERNAL_DOCUMENT_LOADER_API_KEY,
+    'rag.external_document_loader_headers': EXTERNAL_DOCUMENT_LOADER_HEADERS,
     'rag.tika_server_url': TIKA_SERVER_URL,
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
