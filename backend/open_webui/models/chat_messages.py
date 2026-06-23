@@ -6,7 +6,7 @@ from typing import Any, Optional
 from sqlalchemy import select, delete, func, cast, Integer, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.utils.response import normalize_usage
+from open_webui.utils.response import merge_usage, normalize_usage
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     JSON,
@@ -203,10 +203,8 @@ class ChatMessageTable:
                 # Extract and normalize usage
                 usage = get_usage(data)
                 if usage:
-                    # Deep-merge: preserve existing keys not present in new data
-                    # This prevents background tasks (follow-ups, title, tags)
-                    # from accidentally clearing the primary response's token counts
-                    existing.usage = {**(existing.usage or {}), **usage}
+                    existing_usage = normalize_usage(existing.usage or {}) if existing.usage else {}
+                    existing.usage = existing_usage if usage == existing_usage else merge_usage(existing_usage, usage)
                 existing.updated_at = now
                 await db.commit()
                 await db.refresh(existing)
