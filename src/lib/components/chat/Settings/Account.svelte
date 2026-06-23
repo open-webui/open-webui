@@ -50,7 +50,9 @@
 	const API_KEY_RENEWAL_WARNING_SECONDS = 7 * 24 * 60 * 60;
 
 	$: APIKeyValue = APIKey?.api_key ?? '';
-	$: APIKeyExpired = APIKey?.expires_at ? APIKey.expires_at <= Math.floor(Date.now() / 1000) : false;
+	$: APIKeyExpired = APIKey?.expires_at
+		? APIKey.expires_at <= Math.floor(Date.now() / 1000)
+		: false;
 	$: APIKeyNeedsRenewal = APIKey?.expires_at
 		? APIKey.expires_at - Math.floor(Date.now() / 1000) <= API_KEY_RENEWAL_WARNING_SECONDS
 		: false;
@@ -78,7 +80,7 @@
 			return $i18n.t('This API key has expired. Create a new key to renew access.');
 		}
 
-		return `${$i18n.t('This API key expires on')} ${formatAPIKeyExpiry(expiresAt)}.`;
+		return $i18n.t('This API key expires on {{date}}.', { date: formatAPIKeyExpiry(expiresAt) });
 	};
 
 	const submitHandler = async () => {
