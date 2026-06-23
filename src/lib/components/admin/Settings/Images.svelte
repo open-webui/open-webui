@@ -896,6 +896,21 @@
 						</div>
 					</div>
 
+					<div class="mb-2.5">
+						<div class="flex w-full justify-between items-center">
+							<div class="text-xs pr-2">
+								<div class="">
+									{$i18n.t('Normalize image uploads')}
+								</div>
+								<div class="text-[0.65rem] text-gray-500 dark:text-gray-400">
+									{$i18n.t('Converts phone photos to a provider-friendly format so image edits work reliably.')}
+								</div>
+							</div>
+
+							<Switch bind:state={config.IMAGE_EDIT_NORMALIZE} />
+						</div>
+					</div>
+
 					{#if config?.ENABLE_IMAGE_GENERATION && config?.ENABLE_IMAGE_EDIT}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">

@@ -2211,6 +2211,12 @@ IMAGE_EDIT_MODEL = ConfigVar(
 
 IMAGE_EDIT_SIZE = ConfigVar('IMAGE_EDIT_SIZE', 'images.edit.size', os.getenv('IMAGE_EDIT_SIZE', ''))
 
+IMAGE_EDIT_NORMALIZE = ConfigVar(
+    'IMAGE_EDIT_NORMALIZE',
+    'images.edit.normalize',
+    os.getenv('IMAGE_EDIT_NORMALIZE', 'true').lower() == 'true',
+)
+
 IMAGES_EDIT_OPENAI_API_BASE_URL = ConfigVar(
     'IMAGES_EDIT_OPENAI_API_BASE_URL',
     'images.edit.openai.api_base_url',

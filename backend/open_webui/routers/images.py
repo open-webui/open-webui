@@ -13,6 +13,7 @@ from typing import Optional
 from urllib.parse import quote, urlparse
 
 import aiohttp
+from PIL import Image, ImageOps
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from open_webui.config import (
@@ -144,6 +145,7 @@ class ImagesConfig(BaseModel):
     ENABLE_IMAGE_EDIT: bool
     IMAGE_EDIT_ENGINE: str
     IMAGE_EDIT_MODEL: str
+    IMAGE_EDIT_NORMALIZE: bool = True
     IMAGE_EDIT_SIZE: str | None
 
     IMAGES_EDIT_OPENAI_API_BASE_URL: str
@@ -183,6 +185,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         'ENABLE_IMAGE_EDIT': request.app.state.config.ENABLE_IMAGE_EDIT,
         'IMAGE_EDIT_ENGINE': request.app.state.config.IMAGE_EDIT_ENGINE,
         'IMAGE_EDIT_MODEL': request.app.state.config.IMAGE_EDIT_MODEL,
+        'IMAGE_EDIT_NORMALIZE': request.app.state.config.IMAGE_EDIT_NORMALIZE,
         'IMAGE_EDIT_SIZE': request.app.state.config.IMAGE_EDIT_SIZE,
         'IMAGES_EDIT_OPENAI_API_BASE_URL': request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL,
         'IMAGES_EDIT_OPENAI_API_KEY': request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY,
@@ -254,6 +257,7 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
     request.app.state.config.ENABLE_IMAGE_EDIT = form_data.ENABLE_IMAGE_EDIT
     request.app.state.config.IMAGE_EDIT_ENGINE = form_data.IMAGE_EDIT_ENGINE
     request.app.state.config.IMAGE_EDIT_MODEL = form_data.IMAGE_EDIT_MODEL
+    request.app.state.config.IMAGE_EDIT_NORMALIZE = form_data.IMAGE_EDIT_NORMALIZE
     request.app.state.config.IMAGE_EDIT_SIZE = form_data.IMAGE_EDIT_SIZE
 
     request.app.state.config.IMAGES_EDIT_OPENAI_API_BASE_URL = form_data.IMAGES_EDIT_OPENAI_API_BASE_URL
@@ -499,6 +503,40 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
     except Exception as e:
         log.exception(f'Error loading image data: {e}')
         return None, None
+
+
+
+def normalize_image_data_url(data_url: str):
+    if not data_url.startswith('data:') or ',' not in data_url:
+        return data_url
+
+    header, encoded = data_url.split(',', 1)
+    content_type = header.split(';')[0].lstrip('data:')
+
+    if not content_type.startswith('image/'):
+        return data_url
+
+    try:
+        image_bytes = base64.b64decode(encoded)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            image = ImageOps.exif_transpose(image)
+
+            if image.mode in ('RGBA', 'LA', 'P'):
+                rgba_image = image.convert('RGBA')
+                background = Image.new('RGBA', rgba_image.size, (255, 255, 255, 255))
+                image = Image.alpha_composite(background, rgba_image).convert('RGB')
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            output = io.BytesIO()
+            image.save(output, format='JPEG', quality=95, optimize=True)
+            output.seek(0)
+            normalized_image = base64.b64encode(output.read()).decode('utf-8')
+            return f'data:image/jpeg;base64,{normalized_image}'
+    except Exception as e:
+        log.debug(f'Image normalization skipped: {e}')
+
+    return data_url
 
 
 async def upload_image(request, image_data, content_type, metadata, user, db=None):
@@ -904,6 +942,12 @@ async def image_edits(
 
     try:
         if request.app.state.config.IMAGE_EDIT_ENGINE == 'openai':
+            if request.app.state.config.IMAGE_EDIT_NORMALIZE:
+                if isinstance(form_data.image, str):
+                    form_data.image = normalize_image_data_url(form_data.image)
+                elif isinstance(form_data.image, list):
+                    form_data.image = [normalize_image_data_url(img) for img in form_data.image]
+
             headers = {
                 'Authorization': f'Bearer {request.app.state.config.IMAGES_EDIT_OPENAI_API_KEY}',
             }
