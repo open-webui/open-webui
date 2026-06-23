@@ -281,9 +281,18 @@ export const sanitizeHistory = (history) => {
 		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
 	}
 
-	// Recover currentId if it points to a missing or incomplete node
+	// Recover currentId if it points to a missing, incomplete, or structurally orphaned node.
+	// An orphan is a node that claims to be a root (parentId === null) but has no children
+	// and is not the only message in the chat — indicating it was never wired into the tree.
+	// This can happen when a follow-up suggestion response is saved with content fields but
+	// without its graph fields (role, parentId, timestamp), causing currentId to point at it.
 	const currentMessage = history.messages?.[history.currentId];
-	if (!currentMessage?.id || !currentMessage?.role) {
+	const isOrphan =
+		!!currentMessage &&
+		currentMessage.parentId === null &&
+		currentMessage.childrenIds.length === 0 &&
+		Object.keys(history.messages).length > 1;
+	if (!currentMessage?.id || !currentMessage?.role || isOrphan) {
 		let latestLeafId = null;
 		let latestTimestamp = -1;
 		for (const [id, message] of Object.entries(history.messages)) {
