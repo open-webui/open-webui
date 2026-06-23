@@ -1043,6 +1043,12 @@ async def chat_completion(
             **default_model_params,
             **(model_info.params.model_dump() if model_info and model_info.params else {}),
         }
+        request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
+        if model_info_params or request_params:
+            form_data['params'] = {
+                **model_info_params,
+                **request_params,
+            }
 
         # Check base model existence for custom models
         if model_info and model_info.base_model_id:
