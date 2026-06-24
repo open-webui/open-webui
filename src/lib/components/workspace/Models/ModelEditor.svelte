@@ -26,6 +26,13 @@
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	import {
+		buildBaseModelPickerItems,
+		fromBaseModelSelectorValue,
+		normalizeSavedBaseModelId,
+		toBaseModelSelectorValue
+	} from './baseModelPicker';
 	import TerminalSelector from './TerminalSelector.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -108,6 +115,15 @@
 	let terminalId = '';
 	let tts = { voice: '' };
 
+	let baseModelSelectorValue = '';
+	let baseModelValidationError = false;
+
+	$: baseModelPickerContext = { editingModelId: model?.id ?? null };
+	$: baseModelItems = buildBaseModelPickerItems($models, baseModelPickerContext);
+	$: info.base_model_id = fromBaseModelSelectorValue(baseModelSelectorValue);
+	$: if (baseModelSelectorValue) {
+		baseModelValidationError = false;
+	}
 	const submitHandler = async () => {
 		loading = true;
 
@@ -124,6 +140,15 @@
 		if (name === '') {
 			toast.error($i18n.t('Model Name is required.'));
 			loading = false;
+
+			return;
+		}
+
+		if (preset && !info.base_model_id) {
+			baseModelValidationError = true;
+			toast.error($i18n.t('Select a base model'));
+			loading = false;
+			document.getElementById('model-selector-workspace-base-model-button')?.focus();
 
 			return;
 		}
@@ -278,17 +303,11 @@
 			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
-				const base_model = $models
-					.filter((m) => !m?.preset && !(m?.arena ?? false))
-					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
-
-				console.log('base_model', base_model);
-
-				if (base_model) {
-					model.base_model_id = base_model.id;
-				} else {
-					model.base_model_id = null;
-				}
+				model.base_model_id = normalizeSavedBaseModelId(
+					model.base_model_id,
+					$models,
+					baseModelPickerContext
+				);
 			}
 
 			system = model?.params?.system ?? '';
@@ -348,7 +367,7 @@
 				)
 			};
 
-			console.log(model);
+			baseModelSelectorValue = toBaseModelSelectorValue(info.base_model_id);
 		}
 
 		loaded = true;
@@ -608,19 +627,27 @@
 									</div>
 
 									<div>
-										<select
-											class="text-sm w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-											bind:value={info.base_model_id}
-											required
-										>
-											<option value={null} class=" text-gray-900"
-												>{$i18n.t('Select a base model')}</option
+										<Selector
+											id="workspace-base-model"
+											bind:value={baseModelSelectorValue}
+											items={baseModelItems}
+											placeholder={$i18n.t('Select a base model')}
+											searchPlaceholder={$i18n.t('Search a model')}
+											className="w-[32rem]"
+											triggerClassName="text-sm"
+											selectionOnly
+											ariaInvalid={baseModelValidationError}
+											ariaDescribedBy={baseModelValidationError ? 'workspace-base-model-error' : ''}
+										/>
+										{#if baseModelValidationError}
+											<div
+												id="workspace-base-model-error"
+												class="text-xs text-red-500 mt-1"
+												role="alert"
 											>
-											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
-												<option value={model.id} class=" text-gray-900">{model.name}</option>
-											{/each}
-										</select>
+												{$i18n.t('Select a base model')}
+											</div>
+										{/if}
 									</div>
 								</div>
 							{/if}
