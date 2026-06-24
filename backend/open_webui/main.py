@@ -180,7 +180,6 @@ from open_webui.tasks import (
     has_active_tasks,
     list_task_ids_by_item_id,
     list_tasks,
-    redis_task_command_listener,
     stop_item_tasks,
     stop_task,
 )  # Import from tasks.py
@@ -316,9 +315,6 @@ async def lifespan(app: FastAPI):
 
     app.state.redis = get_redis_client(async_mode=True)
 
-    if app.state.redis is not None:
-        app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
-
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
@@ -394,9 +390,6 @@ async def lifespan(app: FastAPI):
     from open_webui.utils.session_pool import close_session
 
     await close_session()
-
-    if hasattr(app.state, 'redis_task_command_listener'):
-        app.state.redis_task_command_listener.cancel()
 
 
 app = FastAPI(
