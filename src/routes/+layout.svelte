@@ -1198,4 +1198,10 @@
 	richColors
 	position="top-right"
 	closeButton
+	toastOptions={{
+		classes: {
+			closeButton:
+				'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
+		}
+	}}
 />
