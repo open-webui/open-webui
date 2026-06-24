@@ -48,6 +48,21 @@
 	let loading = false;
 
 	let hovering = false;
+	let isComposing = false;
+	let compositionEndedAt = -2e8;
+
+	const inOrNearComposition = (event: KeyboardEvent) => {
+		if (isComposing || event.isComposing) {
+			return true;
+		}
+
+		if (Math.abs(event.timeStamp - compositionEndedAt) < 500) {
+			compositionEndedAt = -2e8;
+			return true;
+		}
+
+		return false;
+	};
 
 	let filteredOptions = options;
 	$: filteredOptions = options.filter((option) => {
@@ -228,8 +243,21 @@
 					focused = false;
 				}
 			}}
+			on:compositionstart={() => {
+				isComposing = true;
+			}}
+			on:compositionend={(e) => {
+				compositionEndedAt = e.timeStamp;
+				isComposing = false;
+			}}
 			on:keydown={(e) => {
 				if (e.key === 'Enter') {
+					if (inOrNearComposition(e)) {
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
+
 					if (filteredItems.length > 0) {
 						const itemElement = document.getElementById(`search-item-${selectedIdx}`);
 						itemElement.click();
