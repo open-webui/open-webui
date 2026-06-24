@@ -187,6 +187,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             base_model = base_model_lookup.get(custom_model.base_model_id)
             if base_model is None:
                 base_model = base_model_lookup.get(custom_model.base_model_id.split(':')[0])
+            if base_model is None:
+                # Base model is not available (e.g. provider disabled,
+                # connection unreachable).  Skip this workspace model so
+                # it does not appear in the selector as a non-functional
+                # entry.
+                continue
             if base_model:
                 owned_by = base_model.get('owned_by', 'unknown')
                 if 'pipe' in base_model:
