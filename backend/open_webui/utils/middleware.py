@@ -981,15 +981,15 @@ def get_file_context_key(item: dict) -> tuple:
         return ('item', str(item))
 
 
-def set_message_text_content(message: dict, content: str) -> None:
+def prepend_message_text_content(message: dict, content: str) -> None:
     if isinstance(message.get('content'), list):
         for item in message['content']:
             if isinstance(item, dict) and item.get('type') == 'text':
-                item['text'] = content
+                item['text'] = f'{content}\n{item.get("text", "")}'
                 return
         message['content'].insert(0, {'type': 'text', 'text': content})
     else:
-        message['content'] = content
+        message['content'] = f'{content}\n{message.get("content", "")}'
 
 
 def strip_message_files(messages: list[dict]) -> None:
@@ -1112,7 +1112,7 @@ async def apply_message_file_context_templates(
     template = await Config.get('rag.template')
     for message_index, context, query in message_contexts:
         if 0 <= message_index < len(messages):
-            set_message_text_content(
+            prepend_message_text_content(
                 messages[message_index],
                 await rag_template(template, context, query),
             )
