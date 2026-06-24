@@ -1884,7 +1884,17 @@ ENABLE_NOTES = os.getenv('ENABLE_NOTES', 'True').lower() == 'true'
 ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
 
 ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true'
-EVALUATION_ARENA_MODELS = []
+try:
+    evaluation_arena_models = json.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
+    if not isinstance(evaluation_arena_models, list) or not all(
+        isinstance(model, dict) for model in evaluation_arena_models
+    ):
+        raise ValueError('EVALUATION_ARENA_MODELS must be a JSON list of objects')
+except Exception as e:
+    log.exception(f'Error loading EVALUATION_ARENA_MODELS: {e}')
+    evaluation_arena_models = []
+
+EVALUATION_ARENA_MODELS = evaluation_arena_models
 
 DEFAULT_ARENA_MODEL = {
     'id': 'arena-model',
