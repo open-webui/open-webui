@@ -59,6 +59,9 @@
 	export let triggerClassName = 'text-lg';
 
 	export let pinModelHandler: (modelId: string) => void = () => {};
+	export let selectionOnly = false;
+	export let ariaInvalid = false;
+	export let ariaDescribedBy = '';
 
 	let tagsContainerElement;
 
@@ -398,7 +401,7 @@
 		}
 	});
 
-	$: if (show) {
+	$: if (show && !selectionOnly) {
 		setOllamaVersion();
 	}
 
@@ -511,8 +514,11 @@
 		aria-label={selectedModel
 			? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label })
 			: placeholder}
+		role="combobox"
 		aria-haspopup="listbox"
 		aria-expanded={show}
+		aria-invalid={ariaInvalid ? 'true' : undefined}
+		aria-describedby={ariaDescribedBy || undefined}
 		id="model-selector-{id}-button"
 		type="button"
 		on:click={toggleOpen}
@@ -523,12 +529,14 @@
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
+				if (!selectionOnly) {
+					models.set(
+						await getModels(
+							localStorage.token,
+							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						)
+					);
+				}
 			}}
 		>
 			{#if selectedModel}
@@ -735,6 +743,7 @@
 								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 									{@const index = visibleStart + i}
 									<ModelItem
+										{selectionOnly}
 										{selectedModelIdx}
 										{item}
 										{index}
@@ -745,7 +754,6 @@
 										onClick={() => {
 											value = item.value;
 											selectedModelIdx = index;
-
 											show = false;
 										}}
 									/>
@@ -754,7 +762,7 @@
 							</div>
 						{/if}
 
-						{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
+						{#if !selectionOnly && !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
 							<Tooltip
 								content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
 									searchValue: searchValue
@@ -776,67 +784,69 @@
 							</Tooltip>
 						{/if}
 
-						{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
-							<div
-								class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
-							>
-								<div class="flex">
-									<div class="mr-2.5 translate-y-0.5">
-										<Spinner />
-									</div>
-
-									<div class="flex flex-col self-start">
-										<div class="flex gap-1">
-											<div class="line-clamp-1">
-												Downloading "{model}"
-											</div>
-
-											<div class="shrink-0">
-												{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
-													? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
-													: ''}
-											</div>
+						{#if !selectionOnly}
+							{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
+								<div
+									class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
+								>
+									<div class="flex">
+										<div class="mr-2.5 translate-y-0.5">
+											<Spinner />
 										</div>
 
-										{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
-											<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
-												{$MODEL_DOWNLOAD_POOL[model].digest}
+										<div class="flex flex-col self-start">
+											<div class="flex gap-1">
+												<div class="line-clamp-1">
+													Downloading "{model}"
+												</div>
+
+												<div class="shrink-0">
+													{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
+														? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
+														: ''}
+												</div>
 											</div>
-										{/if}
+
+											{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
+												<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
+													{$MODEL_DOWNLOAD_POOL[model].digest}
+												</div>
+											{/if}
+										</div>
+									</div>
+
+									<div class="mr-2 ml-1 translate-y-0.5">
+										<Tooltip content={$i18n.t('Cancel')}>
+											<button
+												class="text-gray-800 dark:text-gray-100"
+												aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
+												on:click={() => {
+													cancelModelPullHandler(model);
+												}}
+											>
+												<svg
+													class="w-4 h-4 text-gray-800 dark:text-white"
+													aria-hidden="true"
+													xmlns="http://www.w3.org/2000/svg"
+													width="24"
+													height="24"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke="currentColor"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18 17.94 6M18 18 6.06 6"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
 									</div>
 								</div>
-
-								<div class="mr-2 ml-1 translate-y-0.5">
-									<Tooltip content={$i18n.t('Cancel')}>
-										<button
-											class="text-gray-800 dark:text-gray-100"
-											aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
-											on:click={() => {
-												cancelModelPullHandler(model);
-											}}
-										>
-											<svg
-												class="w-4 h-4 text-gray-800 dark:text-white"
-												aria-hidden="true"
-												xmlns="http://www.w3.org/2000/svg"
-												width="24"
-												height="24"
-												fill="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													stroke="currentColor"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18 17.94 6M18 18 6.06 6"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								</div>
-							</div>
-						{/each}
+							{/each}
+						{/if}
 					</div>
 
 					<div class="pb-2.5"></div>
