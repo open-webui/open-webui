@@ -40,7 +40,6 @@ from open_webui.env import (
     RAG_SYSTEM_CONTEXT,
 )
 from open_webui.models.chats import Chats
-from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -77,7 +76,6 @@ from open_webui.utils.access_control import has_connection_access, has_permissio
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -112,7 +110,7 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.response import merge_usage, normalize_usage
+from open_webui.utils.response import normalize_usage
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.task import (
     get_task_model_id,
@@ -132,6 +130,9 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+# Global set holding strong references to fire-and-forget background tasks.
+# Prevents Python's GC from reclaiming Task objects before they complete.
+BACKGROUND_TASKS: set[asyncio.Task] = set()
 
 # We believe in one maker of all models, seen and unseen,
 # and in the reasoning which proceeds from the architect.
@@ -982,13 +983,13 @@ async def apply_source_context_to_messages(
 
     if RAG_SYSTEM_CONTEXT:
         return add_or_update_system_message(
-            await rag_template(await Config.get('rag.template'), context, user_message),
+            await rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=True,
         )
     else:
         return add_or_update_user_message(
-            await rag_template(await Config.get('rag.template'), context, user_message),
+            await rag_template(request.app.state.config.RAG_TEMPLATE, context, user_message),
             messages,
             append=False,
         )
@@ -1292,8 +1293,8 @@ async def chat_completion_tools_handler(
 
     task_model_id = get_task_model_id(
         body['model'],
-        await Config.get('task.model.default'),
-        await Config.get('task.model.external'),
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
 
@@ -1303,8 +1304,8 @@ async def chat_completion_tools_handler(
     specs = [tool['spec'] for tool in tools.values()]
     tools_specs = json.dumps(specs, ensure_ascii=False)
 
-    if await Config.get('task.tools.prompt_template') != '':
-        template = await Config.get('task.tools.prompt_template')
+    if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != '':
+        template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     else:
         template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 
@@ -1794,7 +1795,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     system_message_content = ''
 
-    if len(input_images) > 0 and await Config.get('images.edit.enable'):
+    if len(input_images) > 0 and request.app.state.config.ENABLE_IMAGE_EDIT:
         # Edit image(s)
         try:
             images = await image_edits(
@@ -1854,7 +1855,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
     else:
         # Create image(s)
-        if await Config.get('image_generation.prompt.enable'):
+        if request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION:
             try:
                 res = await generate_image_prompt(
                     request,
@@ -2020,17 +2021,17 @@ async def chat_completion_files_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=await Config.get('rag.top_k'),
+                k=request.app.state.config.TOP_K,
                 reranking_function=(
                     (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                     if request.app.state.RERANKING_FUNCTION
                     else None
                 ),
-                k_reranker=await Config.get('rag.top_k_reranker'),
-                r=await Config.get('rag.relevance_threshold'),
-                hybrid_bm25_weight=await Config.get('rag.hybrid_bm25_weight'),
-                hybrid_search=await Config.get('rag.enable_hybrid_search'),
-                full_context=all_full_context or await Config.get('rag.full_context'),
+                k_reranker=request.app.state.config.TOP_K_RERANKER,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
+                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                full_context=all_full_context or request.app.state.config.RAG_FULL_CONTEXT,
                 user=user,
             )
         except Exception as e:
@@ -2076,7 +2077,6 @@ def apply_params_to_form_data(form_data, model):
         'stream_delta_chunk_size': int,
         'function_calling': str,
         'reasoning_tags': list,
-        'compact_token_threshold': int,
         'system': str,
     }
 
@@ -2172,10 +2172,7 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
-    return [
-        {k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files', 'contextSummary')}
-        for msg in db_messages
-    ]
+    return [{k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files')} for msg in db_messages]
 
 
 def get_reasoning_format(model: dict) -> str | None:
@@ -2224,50 +2221,6 @@ def process_messages_with_output(
         processed.append(clean_message)
 
     return processed
-
-
-def strip_compaction_fields(messages: list[dict]) -> list[dict]:
-    stripped = []
-    for message in messages:
-        clean = dict(message)
-        clean.pop('contextSummary', None)
-        clean.pop('context_summary', None)
-        stripped.append(clean)
-    return stripped
-
-
-def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
-    tool_result_ids = {
-        message.get('tool_call_id')
-        for message in messages
-        if message.get('role') == 'tool' and message.get('tool_call_id')
-    }
-
-    tool_call_ids = {
-        tool_call.get('id')
-        for message in messages
-        for tool_call in (message.get('tool_calls') or [])
-        if message.get('role') == 'assistant' and tool_call.get('id')
-    }
-
-    sanitized = []
-    for message in messages:
-        if message.get('role') == 'assistant' and message.get('tool_calls'):
-            kept = [
-                tool_call for tool_call in message.get('tool_calls') or [] if tool_call.get('id') in tool_result_ids
-            ]
-            if kept:
-                sanitized.append({**message, 'tool_calls': kept})
-            else:
-                clean = dict(message)
-                clean.pop('tool_calls', None)
-                clean.pop('reasoning_items', None)
-                if clean.get('content'):
-                    sanitized.append(clean)
-        elif message.get('role') != 'tool' or message.get('tool_call_id') in tool_call_ids:
-            sanitized.append(message)
-
-    return sanitized
 
 
 SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)\|?[^>]*>')
@@ -2319,7 +2272,7 @@ async def connect_mcp_server(
     Returns None if the server is not found or access is denied.
     """
     mcp_server_connection = None
-    for server_connection in await Config.get('tool_server.connections', []):
+    for server_connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
         if server_connection.get('type', '') == 'mcp' and server_connection.get('info', {}).get('id') == server_id:
             mcp_server_connection = server_connection
             break
@@ -2417,11 +2370,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                 if assistant_message and (assistant_message.get('content') or assistant_message.get('output')):
                     db_messages.append(
-                        {
-                            k: v
-                            for k, v in assistant_message.items()
-                            if k in ('role', 'content', 'output', 'files', 'contextSummary')
-                        }
+                        {k: v for k, v in assistant_message.items() if k in ('role', 'content', 'output', 'files')}
                     )
 
             system_message = get_system_message(form_data.get('messages', []))
@@ -2454,44 +2403,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
-    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
-        if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-            compaction_models = {
-                request.state.model['id']: request.state.model,
-            }
-        else:
-            compaction_models = request.app.state.MODELS
-
-        system_message = get_system_message(form_data.get('messages', []))
-        system_prompt = get_content_from_message(system_message) if system_message else ''
-
-        try:
-            form_data['messages'], context_summary, _ = await compact_messages_for_request(
-                request,
-                user,
-                form_data.get('messages', []),
-                metadata,
-                form_data.get('model'),
-                compaction_models,
-                system_prompt,
-            )
-            if context_summary:
-                form_data['messages'] = add_or_update_system_message(
-                    f'[CONVERSATION SUMMARY]\n{context_summary}',
-                    form_data['messages'],
-                    append=True,
-                )
-        except Exception:
-            log.exception('Context compaction failed; continuing with full chat history')
-
-    form_data['messages'] = strip_compaction_fields(form_data.get('messages', []))
-
     # Process messages with OR-aligned output items for clean LLM messages
     form_data['messages'] = process_messages_with_output(
         form_data.get('messages', []),
         reasoning_format=get_reasoning_format(model),
     )
-    form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings
@@ -2529,8 +2445,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     task_model_id = get_task_model_id(
         form_data['model'],
-        await Config.get('task.model.default'),
-        await Config.get('task.model.external'),
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
 
@@ -2558,7 +2474,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if 'files' in folder.data:
                 # Defensive: filter to entries the caller can still read.
                 allowed_files = await get_accessible_folder_files(folder.data['files'], user)
-                if metadata.get('params', {}).get('function_calling') == 'legacy':
+                if metadata.get('params', {}).get('function_calling') != 'native':
                     form_data['files'] = [
                         *allowed_files,
                         *form_data.get('files', []),
@@ -2572,7 +2488,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data['messages'])
     model_knowledge = model.get('info', {}).get('meta', {}).get('knowledge', False)
 
-    if model_knowledge and metadata.get('params', {}).get('function_calling') == 'legacy':
+    if model_knowledge and metadata.get('params', {}).get('function_calling') != 'native':
         await event_emitter(
             {
                 'type': 'status',
@@ -2637,9 +2553,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params['__features__'] = features
     if features:
         if 'voice' in features and features['voice']:
-            if await Config.get('task.voice.prompt.enable'):
-                if await Config.get('task.voice.prompt_template'):
-                    template = await Config.get('task.voice.prompt_template')
+            if getattr(request.app.state.config, 'ENABLE_VOICE_MODE_PROMPT', True):
+                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE:
+                    template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
                 else:
                     template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
 
@@ -2650,28 +2566,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if 'memory' in features and features['memory']:
             # Skip forced memory injection when native FC is enabled - model can use memory tools
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
+            if metadata.get('params', {}).get('function_calling') != 'native':
                 form_data = await chat_memory_handler(request, form_data, extra_params, user)
 
         if 'web_search' in features and features['web_search']:
             # Skip forced RAG web search when native FC is enabled - model can use web_search tool
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
+            if metadata.get('params', {}).get('function_calling') != 'native':
                 form_data = await chat_web_search_handler(request, form_data, extra_params, user)
 
         if 'image_generation' in features and features['image_generation']:
             # Skip forced image generation when native FC is enabled - model can use generate_image tool
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
+            if metadata.get('params', {}).get('function_calling') != 'native':
                 form_data = await chat_image_generation_handler(request, form_data, extra_params, user)
 
         if 'code_interpreter' in features and features['code_interpreter']:
-            engine = await Config.get('code_interpreter.engine', 'pyodide')
+            engine = getattr(request.app.state.config, 'CODE_INTERPRETER_ENGINE', 'pyodide')
 
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
+            if metadata.get('params', {}).get('function_calling') != 'native':
                 prompt = (
-                    await Config.get('code_interpreter.prompt_template')
-                    if await Config.get('code_interpreter.prompt_template') != ''
+                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ''
                     else DEFAULT_CODE_INTERPRETER_PROMPT
                 )
 
@@ -2704,7 +2620,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # If the original caller provided tools, use them as-is (skip resolution).
     # Otherwise, save any tools that filter inlets added for merging later.
-    inlet_filter_tools = None if payload_tools is not None else form_data.get('tools', None)
+    inlet_filter_tools = None if payload_tools else form_data.get('tools', None)
 
     # Skills — extract IDs from message content (<$skillId|label> tags) so
     # persisted chats work without relying on the frontend to send skill_ids.
@@ -2791,10 +2707,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     }
     form_data['metadata'] = metadata
 
-    # When the caller provides an explicit `tools` key in the request body,
-    # skip all server-side tool resolution and pass the caller's tools through
-    # unchanged.  Sending `tools: []` explicitly opts out of builtin injection.
-    if payload_tools is None:
+    # When the caller provides an explicit OpenAI-style `tools` array in the
+    # request body, skip all server-side tool resolution and pass the caller's
+    # tools through to the model unchanged.
+    if not payload_tools:
         # Server side tools
         tool_ids = metadata.get('tool_ids', None)
         # Client side tools
@@ -2925,14 +2841,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if mcp_clients:
             metadata['mcp_clients'] = mcp_clients
 
-        # Inject builtin tools for native function calling based on enabled features and model capability.
-        # Only inject when the request originates from the UI (identified by session_id).
-        # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
+        # Inject builtin tools for native function calling based on enabled features and model capability
+        # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
         builtin_tools_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
             'builtin_tools', True
         )
-        has_session = bool(metadata.get('session_id'))
-        if has_session and metadata.get('params', {}).get('function_calling') != 'legacy' and builtin_tools_enabled:
+        if metadata.get('params', {}).get('function_calling') == 'native' and builtin_tools_enabled:
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
             form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
@@ -2955,7 +2869,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # (e.g. pipe functions) can access all tools including MCP and builtins.
             metadata['tools'] = tools_dict
 
-            if metadata.get('params', {}).get('function_calling') != 'legacy':
+            if metadata.get('params', {}).get('function_calling') == 'native':
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})} for tool in tools_dict.values()
@@ -3510,6 +3424,23 @@ async def outlet_filter_handler(ctx):
         log.debug(f'Error running outlet filters: {e}')
 
 
+async def _run_post_stream_tasks(ctx: dict) -> None:
+    """Run outlet filter + background tasks without blocking the HTTP response.
+
+    Intended to be invoked via ``asyncio.create_task()`` or as a
+    ``StreamingResponse`` background callback so the initial real-time
+    chunk delivery is never delayed.
+    """
+    chat_id = ctx.get('metadata', {}).get('chat_id', 'unknown')
+    print(f'🚀 [BACKGROUND_TASK] Started post-stream processing for chat: {chat_id}')
+    try:
+        await outlet_filter_handler(ctx)
+        await background_tasks_handler(ctx)
+        print(f'✅ [BACKGROUND_TASK] Successfully completed all post-stream tasks for chat: {chat_id}')
+    except Exception as e:
+        print(f'❌ [BACKGROUND_TASK] Error encountered during post-stream tasks for chat {chat_id}: {e}')
+
+
 async def non_streaming_chat_response_handler(response, ctx):
     request = ctx['request']
 
@@ -3621,19 +3552,18 @@ async def non_streaming_chat_response_handler(response, ctx):
                         )
 
                     # Send a webhook notification if the user is not active
-                    if await Config.get('ui.enable_user_webhooks') and not await Users.is_user_active(user.id):
+                    if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
                         webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
-                            webui_url = await Config.get('webui.url')
                             await post_webhook(
                                 request.app.state.WEBUI_NAME,
                                 webhook_url,
-                                f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
+                                f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
                                 {
                                     'action': 'chat',
                                     'message': content,
                                     'title': title,
-                                    'url': f'{webui_url}/c/{metadata["chat_id"]}',
+                                    'url': f'{request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
                                 },
                             )
 
@@ -3642,8 +3572,12 @@ async def non_streaming_chat_response_handler(response, ctx):
                         'output': response_output,
                         **({'usage': usage} if usage else {}),
                     }
-                    await outlet_filter_handler(ctx)
-                    await background_tasks_handler(ctx)
+                    # Fire post-stream tasks without blocking the HTTP response.
+                    # Keep a strong reference in BACKGROUND_TASKS to prevent GC
+                    # from reclaiming the un-awaited Task under high concurrency.
+                    _task = asyncio.create_task(_run_post_stream_tasks(ctx))
+                    BACKGROUND_TASKS.add(_task)
+                    _task.add_done_callback(BACKGROUND_TASKS.discard)
 
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
@@ -3971,14 +3905,14 @@ async def streaming_chat_response_handler(response, ctx):
             DETECT_CODE_INTERPRETER = (
                 bool(features.get('code_interpreter'))
                 and builtin_tools_meta.get('code_interpreter', True)
-                and await Config.get('code_interpreter.enable')
+                and getattr(request.app.state.config, 'ENABLE_CODE_INTERPRETER', True)
                 and model_capabilities.get('code_interpreter', True)
                 and (
                     getattr(user, 'role', None) == 'admin'
                     or await has_permission(
                         getattr(user, 'id', ''),
                         'features.code_interpreter',
-                        await Config.get('user.permissions'),
+                        request.app.state.config.USER_PERMISSIONS,
                     )
                 )
             )
@@ -4142,8 +4076,8 @@ async def streaming_chat_response_handler(response, ctx):
 
                                         # Normalize and capture usage for DB persistence
                                         if response_metadata.get('usage'):
-                                            usage = merge_usage(usage, response_metadata['usage'])
-                                            response_metadata['usage'] = usage
+                                            response_metadata['usage'] = normalize_usage(response_metadata['usage'])
+                                            usage = response_metadata['usage']
 
                                         processed_data.update(response_metadata)
                                         processed_data.pop('done', None)
@@ -4162,7 +4096,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     raw_usage = data.get('usage', {}) or {}
                                     raw_usage.update(data.get('timings', {}))  # llama.cpp
                                     if raw_usage:
-                                        usage = merge_usage(usage, raw_usage)
+                                        usage = normalize_usage(raw_usage)
                                         await event_emitter(
                                             {
                                                 'type': 'chat:completion',
@@ -4260,9 +4194,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function'][
-                                                            'arguments'
-                                                        ] += delta_arguments
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
@@ -4872,7 +4806,7 @@ async def streaming_chat_response_handler(response, ctx):
                             source_context = source_context.strip()
                             if source_context:
                                 rag_content = await rag_template(
-                                    await Config.get('rag.template'),
+                                    request.app.state.config.RAG_TEMPLATE,
                                     source_context,
                                     user_message,
                                 )
@@ -5066,7 +5000,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     """)
                                     code = blocking_code + '\n' + code
 
-                                if await Config.get('code_interpreter.engine') == 'pyodide':
+                                if request.app.state.config.CODE_INTERPRETER_ENGINE == 'pyodide':
                                     ci_output = await event_caller(
                                         {
                                             'type': 'execute:python',
@@ -5078,21 +5012,21 @@ async def streaming_chat_response_handler(response, ctx):
                                             },
                                         }
                                     )
-                                elif await Config.get('code_interpreter.engine') == 'jupyter':
+                                elif request.app.state.config.CODE_INTERPRETER_ENGINE == 'jupyter':
                                     ci_output = await execute_code_jupyter(
-                                        await Config.get('code_interpreter.jupyter.url'),
+                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
                                         code,
                                         (
-                                            await Config.get('code_interpreter.jupyter.auth_token')
-                                            if await Config.get('code_interpreter.jupyter.auth') == 'token'
+                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == 'token'
                                             else None
                                         ),
                                         (
-                                            await Config.get('code_interpreter.jupyter.auth_password')
-                                            if await Config.get('code_interpreter.jupyter.auth') == 'password'
+                                            request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+                                            if request.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == 'password'
                                             else None
                                         ),
-                                        await Config.get('code_interpreter.jupyter.timeout'),
+                                        request.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
                                     )
                                 else:
                                     ci_output = {'stdout': 'Code interpreter engine not configured.'}
@@ -5236,19 +5170,18 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                 # Send a webhook notification if the user is not active
-                if await Config.get('ui.enable_user_webhooks') and not await Users.is_user_active(user.id):
+                if request.app.state.config.ENABLE_USER_WEBHOOKS and not await Users.is_user_active(user.id):
                     webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
-                        webui_url = await Config.get('webui.url')
                         await post_webhook(
                             request.app.state.WEBUI_NAME,
                             webhook_url,
-                            f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
+                            f'{content}\n\n{title} - {request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
                             {
                                 'action': 'chat',
                                 'message': content,
                                 'title': title,
-                                'url': f'{webui_url}/c/{metadata["chat_id"]}',
+                                'url': f'{request.app.state.config.WEBUI_URL}/c/{metadata["chat_id"]}',
                             },
                         )
 
@@ -5264,8 +5197,12 @@ async def streaming_chat_response_handler(response, ctx):
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
-                await outlet_filter_handler(ctx)
-                await background_tasks_handler(ctx)
+                # Fire post-stream tasks without blocking the HTTP response.
+                # Keep a strong reference in BACKGROUND_TASKS to prevent GC
+                # from reclaiming the un-awaited Task under high concurrency.
+                _task = asyncio.create_task(_run_post_stream_tasks(ctx))
+                BACKGROUND_TASKS.add(_task)
+                _task.add_done_callback(BACKGROUND_TASKS.discard)
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
 
@@ -5340,10 +5277,19 @@ async def streaming_chat_response_handler(response, ctx):
                 if data:
                     yield data
 
+        # Chain the original background (if any) with post-stream tasks
+        # so outlet filters and background tasks still run for pure HTTP clients.
+        async def _combined_background():
+            try:
+                if response.background:
+                    await response.background()
+            finally:
+                await _run_post_stream_tasks(ctx)
+
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
             headers=dict(response.headers),
-            background=response.background,
+            background=_combined_background,
         )
 
 
