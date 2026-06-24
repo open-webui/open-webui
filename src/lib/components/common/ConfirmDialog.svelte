@@ -25,6 +25,7 @@
 	export let inputValue = '';
 	export let inputType = '';
 	export let inputOptions: ({ label?: string; value: string } | string)[] = [];
+	export let inputRequired = false;
 
 	let _inputValue = inputValue;
 
@@ -208,10 +209,13 @@
 						{cancelLabel}
 					</button>
 					<button
-						class="text-sm bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2 rounded-3xl transition"
+						class="text-sm font-medium w-full py-2 rounded-3xl transition {inputRequired && !_inputValue
+							? 'bg-gray-100 dark:bg-gray-850 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+							: 'bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800'}"
 						on:click={() => {
 							confirmHandler();
 						}}
+						disabled={inputRequired && !_inputValue}
 						type="button"
 					>
 						{confirmLabel}
