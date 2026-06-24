@@ -877,8 +877,15 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
     """
     model_id = form_data.model
 
-    # --- Ollama provider ---
+    # --- Resolve workspace models to their underlying base model ---
     ollama_models = getattr(request.app.state, 'OLLAMA_MODELS', None) or {}
+    openai_models = getattr(request.app.state, 'OPENAI_MODELS', None) or {}
+    if model_id not in ollama_models and model_id not in openai_models:
+        model_info = await Models.get_model_by_id(model_id)
+        if model_info and model_info.base_model_id:
+            model_id = model_info.base_model_id
+
+    # --- Ollama provider ---
     if model_id in ollama_models:
         ollama_config = await Config.get_many('ollama.base_urls', 'ollama.api_configs')
         ollama_base_urls = ollama_config.get('ollama.base_urls') or []
