@@ -16,13 +16,14 @@ log = logging.getLogger(__name__)
 
 # Let this message reach those for whom it was written, and
 # may no network partition deny the word its destination.
-async def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
+async def post_webhook(
+    name: str, url: str, message: str, event_data: dict, validate: bool = True
+) -> bool:
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')
-        # Block private-IP / loopback / cloud-metadata targets — the URL is
-        # caller-controlled (user notification settings under
-        # ENABLE_USER_WEBHOOKS, automation notification triggers).
-        validate_url(url)
+        # SSRF guard for user-controlled URLs; trusted admin config opts out.
+        if validate:
+            validate_url(url)
         payload = {}
 
         # Slack and Google Chat Webhooks

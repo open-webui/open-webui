@@ -577,6 +577,7 @@ async def ldap_auth(
                                 'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                                 'user': user.model_dump_json(exclude_none=True),
                             },
+                            validate=False,
                         )
 
                 except HTTPException:
@@ -774,6 +775,7 @@ async def signup_handler(
                 'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                 'user': user.model_dump_json(exclude_none=True),
             },
+            validate=False,
         )
 
     await apply_default_group_assignment(

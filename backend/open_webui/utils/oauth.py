@@ -1847,6 +1847,7 @@ class OAuthManager:
                                 'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                                 'user': user.model_dump_json(exclude_none=True),
                             },
+                            validate=False,
                         )
 
                     default_group_id = await Config.get('ui.default_group_id')
