@@ -195,6 +195,8 @@
 							return item.model?.connection_type === 'external';
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
+						} else if (selectedConnectionType === 'workspace') {
+							return item.model?.info?.base_model_id;
 						}
 					})
 			: items
@@ -215,6 +217,8 @@
 							return item.model?.connection_type === 'external';
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
+						} else if (selectedConnectionType === 'workspace') {
+							return item.model?.info?.base_model_id;
 						}
 					})
 	).filter((item) => !(item.model?.info?.meta?.hidden ?? false));
@@ -608,7 +612,7 @@
 									class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
 									bind:this={tagsContainerElement}
 								>
-									{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
+									{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || items.find((item) => item.model?.info?.base_model_id) || tags.length > 0}
 										<button
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
 											selectedConnectionType === ''
@@ -669,6 +673,22 @@
 											}}
 										>
 											{$i18n.t('Direct')}
+										</button>
+									{/if}
+
+									{#if items.find((item) => item.model?.info?.base_model_id)}
+										<button
+											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
+											'workspace'
+												? ''
+												: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+											aria-pressed={selectedConnectionType === 'workspace'}
+											on:click={() => {
+												selectedTag = '';
+												selectedConnectionType = 'workspace';
+											}}
+										>
+											{$i18n.t('Workspace')}
 										</button>
 									{/if}
 
