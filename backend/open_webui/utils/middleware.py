@@ -130,6 +130,9 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+# Global set holding strong references to fire-and-forget background tasks.
+# Prevents Python's GC from reclaiming Task objects before they complete.
+BACKGROUND_TASKS: set[asyncio.Task] = set()
 
 # We believe in one maker of all models, seen and unseen,
 # and in the reasoning which proceeds from the architect.
@@ -3421,6 +3424,23 @@ async def outlet_filter_handler(ctx):
         log.debug(f'Error running outlet filters: {e}')
 
 
+async def _run_post_stream_tasks(ctx: dict) -> None:
+    """Run outlet filter + background tasks without blocking the HTTP response.
+
+    Intended to be invoked via ``asyncio.create_task()`` or as a
+    ``StreamingResponse`` background callback so the initial real-time
+    chunk delivery is never delayed.
+    """
+    chat_id = ctx.get('metadata', {}).get('chat_id', 'unknown')
+    print(f'🚀 [BACKGROUND_TASK] Started post-stream processing for chat: {chat_id}')
+    try:
+        await outlet_filter_handler(ctx)
+        await background_tasks_handler(ctx)
+        print(f'✅ [BACKGROUND_TASK] Successfully completed all post-stream tasks for chat: {chat_id}')
+    except Exception as e:
+        print(f'❌ [BACKGROUND_TASK] Error encountered during post-stream tasks for chat {chat_id}: {e}')
+
+
 async def non_streaming_chat_response_handler(response, ctx):
     request = ctx['request']
 
@@ -3552,8 +3572,12 @@ async def non_streaming_chat_response_handler(response, ctx):
                         'output': response_output,
                         **({'usage': usage} if usage else {}),
                     }
-                    await outlet_filter_handler(ctx)
-                    await background_tasks_handler(ctx)
+                    # Fire post-stream tasks without blocking the HTTP response.
+                    # Keep a strong reference in BACKGROUND_TASKS to prevent GC
+                    # from reclaiming the un-awaited Task under high concurrency.
+                    _task = asyncio.create_task(_run_post_stream_tasks(ctx))
+                    BACKGROUND_TASKS.add(_task)
+                    _task.add_done_callback(BACKGROUND_TASKS.discard)
 
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
@@ -5173,8 +5197,12 @@ async def streaming_chat_response_handler(response, ctx):
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
-                await outlet_filter_handler(ctx)
-                await background_tasks_handler(ctx)
+                # Fire post-stream tasks without blocking the HTTP response.
+                # Keep a strong reference in BACKGROUND_TASKS to prevent GC
+                # from reclaiming the un-awaited Task under high concurrency.
+                _task = asyncio.create_task(_run_post_stream_tasks(ctx))
+                BACKGROUND_TASKS.add(_task)
+                _task.add_done_callback(BACKGROUND_TASKS.discard)
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
 
@@ -5249,10 +5277,19 @@ async def streaming_chat_response_handler(response, ctx):
                 if data:
                     yield data
 
+        # Chain the original background (if any) with post-stream tasks
+        # so outlet filters and background tasks still run for pure HTTP clients.
+        async def _combined_background():
+            try:
+                if response.background:
+                    await response.background()
+            finally:
+                await _run_post_stream_tasks(ctx)
+
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
             headers=dict(response.headers),
-            background=response.background,
+            background=_combined_background,
         )
 
 
