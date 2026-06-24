@@ -29,6 +29,7 @@
 	export let deleteModelHandler: (model: any) => void = () => {};
 
 	export let onClick: () => void = () => {};
+	export let selectionOnly = false;
 
 	const copyLinkHandler = async (model) => {
 		const baseUrl = window.location.origin;
@@ -237,46 +238,48 @@
 	</div>
 
 	<div class="ml-auto pl-2 pr-1 flex items-center gap-1.5 shrink-0">
-		{#if $user?.role === 'admin' && item.model.loaded}
-			<Tooltip
-				content={`${$i18n.t('Eject')}`}
-				className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "
+		{#if !selectionOnly}
+			{#if $user?.role === 'admin' && item.model.loaded}
+				<Tooltip
+					content={`${$i18n.t('Eject')}`}
+					className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "
+				>
+					<button
+						class="flex"
+						aria-label={$i18n.t('Eject model')}
+						on:click={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							unloadModelHandler(item.value);
+						}}
+					>
+						<ArrowUpTray className="size-3" />
+					</button>
+				</Tooltip>
+			{/if}
+
+			<ModelItemMenu
+				bind:show={showMenu}
+				model={item.model}
+				{pinModelHandler}
+				{deleteModelHandler}
+				copyLinkHandler={() => {
+					copyLinkHandler(item.model);
+				}}
 			>
 				<button
+					aria-label={`${$i18n.t('More Options')}`}
 					class="flex"
-					aria-label={$i18n.t('Eject model')}
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						unloadModelHandler(item.value);
+						showMenu = !showMenu;
 					}}
 				>
-					<ArrowUpTray className="size-3" />
+					<EllipsisHorizontal />
 				</button>
-			</Tooltip>
+			</ModelItemMenu>
 		{/if}
-
-		<ModelItemMenu
-			bind:show={showMenu}
-			model={item.model}
-			{pinModelHandler}
-			{deleteModelHandler}
-			copyLinkHandler={() => {
-				copyLinkHandler(item.model);
-			}}
-		>
-			<button
-				aria-label={`${$i18n.t('More Options')}`}
-				class="flex"
-				on:click={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					showMenu = !showMenu;
-				}}
-			>
-				<EllipsisHorizontal />
-			</button>
-		</ModelItemMenu>
 
 		{#if value === item.value}
 			<div>

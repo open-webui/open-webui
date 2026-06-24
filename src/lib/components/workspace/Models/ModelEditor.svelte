@@ -2,13 +2,14 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, user } from '$lib/stores';
+	import { config, models, settings, tools, functions, user } from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
+	import { getModels } from '$lib/apis';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -26,9 +27,17 @@
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
+	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	import {
+		buildBaseModelPickerItems,
+		fromBaseModelSelectorValue,
+		normalizeSavedBaseModelId,
+		toBaseModelSelectorValue
+	} from './baseModelPicker';
 	import TerminalSelector from './TerminalSelector.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import { updateModelAccessGrants } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -107,6 +116,14 @@
 	let terminalId = '';
 	let tts = { voice: '' };
 
+	let baseModelSelectorValue = '';
+	let baseModelValidationError = false;
+
+	$: baseModelPickerContext = { editingModelId: model?.id ?? null };
+	$: info.base_model_id = fromBaseModelSelectorValue(baseModelSelectorValue);
+	$: if (baseModelSelectorValue) {
+		baseModelValidationError = false;
+	}
 	const submitHandler = async () => {
 		loading = true;
 
@@ -123,6 +140,15 @@
 		if (name === '') {
 			toast.error($i18n.t('Model Name is required.'));
 			loading = false;
+
+			return;
+		}
+
+		if (preset && !info.base_model_id) {
+			baseModelValidationError = true;
+			toast.error($i18n.t('Select a base model'));
+			loading = false;
+			document.getElementById('model-selector-workspace-base-model-button')?.focus();
 
 			return;
 		}
@@ -248,12 +274,17 @@
 	};
 
 	onMount(async () => {
-		if (!$tools) {
-			await tools.set(await getTools(localStorage.token));
-		}
+		await tools.set(await getTools(localStorage.token));
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
-		if (!$functions) {
-			await functions.set(await getFunctions(localStorage.token));
+		await functions.set(await getFunctions(localStorage.token));
+
+		if (preset) {
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 
 		// Fetch admin-configured default model metadata so the editor
@@ -281,17 +312,11 @@
 			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
-				const base_model = $models
-					.filter((m) => !m?.preset && !(m?.arena ?? false))
-					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
-
-				console.log('base_model', base_model);
-
-				if (base_model) {
-					model.base_model_id = base_model.id;
-				} else {
-					model.base_model_id = null;
-				}
+				model.base_model_id = normalizeSavedBaseModelId(
+					model.base_model_id,
+					$models,
+					baseModelPickerContext
+				);
 			}
 
 			system = model?.params?.system ?? '';
@@ -351,7 +376,7 @@
 				)
 			};
 
-			console.log(model);
+			baseModelSelectorValue = toBaseModelSelectorValue(info.base_model_id);
 		}
 
 		loaded = true;
@@ -366,6 +391,21 @@
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+		onChange={async () => {
+			if (edit && model?.id) {
+				try {
+					await updateModelAccessGrants(
+						localStorage.token,
+						model.id,
+						model.name ?? name,
+						accessGrants
+					);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(error?.detail ?? `${error}`);
+				}
+			}
+		}}
 	/>
 
 	{#if onBack}
@@ -596,19 +636,27 @@
 									</div>
 
 									<div>
-										<select
-											class="text-sm w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-											bind:value={info.base_model_id}
-											required
-										>
-											<option value={null} class=" text-gray-900"
-												>{$i18n.t('Select a base model')}</option
+										<Selector
+											id="workspace-base-model"
+											bind:value={baseModelSelectorValue}
+											baseModelPickerContext={baseModelPickerContext}
+											placeholder={$i18n.t('Select a base model')}
+											searchPlaceholder={$i18n.t('Search a model')}
+											className="w-[32rem]"
+											triggerClassName="text-sm"
+											selectionOnly
+											ariaInvalid={baseModelValidationError}
+											ariaDescribedBy={baseModelValidationError ? 'workspace-base-model-error' : ''}
+										/>
+										{#if baseModelValidationError}
+											<div
+												id="workspace-base-model-error"
+												class="text-xs text-red-500 mt-1"
+												role="alert"
 											>
-											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
-												<option value={model.id} class=" text-gray-900">{model.name}</option>
-											{/each}
-										</select>
+												{$i18n.t('Select a base model')}
+											</div>
+										{/if}
 									</div>
 								</div>
 							{/if}

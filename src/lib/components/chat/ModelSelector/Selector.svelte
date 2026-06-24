@@ -37,6 +37,10 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 
 	import ModelItem from './ModelItem.svelte';
+	import {
+		buildBaseModelPickerItems,
+		type BaseModelPickerContext
+	} from '$lib/components/workspace/Models/baseModelPicker';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -59,6 +63,15 @@
 	export let triggerClassName = 'text-lg';
 
 	export let pinModelHandler: (modelId: string) => void = () => {};
+	export let selectionOnly = false;
+	export let baseModelPickerContext: BaseModelPickerContext = {};
+	export let ariaInvalid = false;
+	export let ariaDescribedBy = '';
+
+	let selectorItems = items;
+	$: selectorItems = selectionOnly
+		? buildBaseModelPickerItems($models, baseModelPickerContext)
+		: items;
 
 	let tagsContainerElement;
 
@@ -77,7 +90,7 @@
 	};
 
 	const updatePosition = () => {
-		if (!show || !triggerElement) return;
+		if (!triggerElement) return;
 		const rect = triggerElement.getBoundingClientRect();
 		dropdownPosition = {
 			top: rect.bottom + 2,
@@ -86,17 +99,30 @@
 		};
 	};
 
-	const toggleOpen = () => {
-		show = !show;
+	const toggleOpen = async () => {
 		if (show) {
-			searchValue = '';
-			listScrollTop = 0;
-			resetView();
-			updatePosition();
-			window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
-		} else {
+			show = false;
 			document.getElementById(`model-selector-${id}-button`)?.blur();
+			return;
 		}
+
+		if (selectionOnly) {
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+		}
+
+		updatePosition();
+		show = true;
+		searchValue = '';
+		listScrollTop = 0;
+		resetView();
+		await tick();
+		updatePosition();
+		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	};
 
 	const handlePointerDown = (e: PointerEvent) => {
@@ -124,7 +150,7 @@
 	let tags = [];
 
 	let selectedModel = '';
-	$: selectedModel = items.find((item) => item.value === value) ?? '';
+	$: selectedModel = selectorItems.find((item) => item.value === value) ?? '';
 
 	let searchValue = '';
 
@@ -135,7 +161,7 @@
 	let selectedModelIdx = 0;
 
 	const fuse = new Fuse(
-		items.map((item) => {
+		selectorItems.map((item) => {
 			const _item = {
 				...item,
 				modelName: item.model?.name,
@@ -153,7 +179,7 @@
 	const updateFuse = () => {
 		if (fuse) {
 			fuse.setCollection(
-				items.map((item) => {
+				selectorItems.map((item) => {
 					const _item = {
 						...item,
 						modelName: item.model?.name,
@@ -166,7 +192,7 @@
 		}
 	};
 
-	$: if (items) {
+	$: if (selectorItems) {
 		updateFuse();
 	}
 
@@ -197,7 +223,7 @@
 							return item.model?.direct;
 						}
 					})
-			: items
+			: selectorItems
 					.filter((item) => {
 						if (selectedTag === '') {
 							return true;
@@ -387,18 +413,15 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 	};
 
-	onMount(async () => {
-		if (items) {
-			tags = items
-				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
-				.flatMap((item) => item.model?.tags ?? [])
-				.map((tag) => tag.name.toLowerCase());
-			// Remove duplicates and sort
-			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
-		}
-	});
+	$: if (selectorItems) {
+		tags = selectorItems
+			.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
+			.flatMap((item) => item.model?.tags ?? [])
+			.map((tag) => tag.name.toLowerCase());
+		tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+	}
 
-	$: if (show) {
+	$: if (show && !selectionOnly) {
 		setOllamaVersion();
 	}
 
@@ -511,8 +534,11 @@
 		aria-label={selectedModel
 			? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label })
 			: placeholder}
+		role="combobox"
 		aria-haspopup="listbox"
 		aria-expanded={show}
+		aria-invalid={ariaInvalid ? 'true' : undefined}
+		aria-describedby={ariaDescribedBy || undefined}
 		id="model-selector-{id}-button"
 		type="button"
 		on:click={toggleOpen}
@@ -523,12 +549,14 @@
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
+				if (!selectionOnly) {
+					models.set(
+						await getModels(
+							localStorage.token,
+							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						)
+					);
+				}
 			}}
 		>
 			{#if selectedModel}
@@ -594,7 +622,7 @@
 					{/if}
 
 					<div class="px-2">
-						{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
+						{#if tags && selectorItems.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 							<div
 								class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none font-[450] mb-0.5"
 								on:wheel={(e) => {
@@ -608,7 +636,7 @@
 									class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
 									bind:this={tagsContainerElement}
 								>
-									{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
+									{#if selectorItems.find((item) => item.model?.connection_type === 'local') || selectorItems.find((item) => item.model?.connection_type === 'external') || selectorItems.find((item) => item.model?.direct) || tags.length > 0}
 										<button
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
 											selectedConnectionType === ''
@@ -624,7 +652,7 @@
 										</button>
 									{/if}
 
-									{#if items.find((item) => item.model?.connection_type === 'local')}
+									{#if selectorItems.find((item) => item.model?.connection_type === 'local')}
 										<button
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'local'
@@ -640,7 +668,7 @@
 										</button>
 									{/if}
 
-									{#if items.find((item) => item.model?.connection_type === 'external')}
+									{#if selectorItems.find((item) => item.model?.connection_type === 'external')}
 										<button
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'external'
@@ -656,7 +684,7 @@
 										</button>
 									{/if}
 
-									{#if items.find((item) => item.model?.direct)}
+									{#if selectorItems.find((item) => item.model?.direct)}
 										<button
 											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
 											'direct'
@@ -695,7 +723,7 @@
 
 					<div class="px-2.5 group relative">
 						{#if filteredItems.length === 0}
-							{#if items.length === 0 && $user?.role === 'admin'}
+							{#if selectorItems.length === 0 && $user?.role === 'admin'}
 								<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
 									<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
 										{$i18n.t('No models available')}
@@ -735,6 +763,7 @@
 								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 									{@const index = visibleStart + i}
 									<ModelItem
+										{selectionOnly}
 										{selectedModelIdx}
 										{item}
 										{index}
@@ -745,7 +774,6 @@
 										onClick={() => {
 											value = item.value;
 											selectedModelIdx = index;
-
 											show = false;
 										}}
 									/>
@@ -754,7 +782,7 @@
 							</div>
 						{/if}
 
-						{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
+						{#if !selectionOnly && !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
 							<Tooltip
 								content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
 									searchValue: searchValue
@@ -776,67 +804,69 @@
 							</Tooltip>
 						{/if}
 
-						{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
-							<div
-								class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
-							>
-								<div class="flex">
-									<div class="mr-2.5 translate-y-0.5">
-										<Spinner />
-									</div>
-
-									<div class="flex flex-col self-start">
-										<div class="flex gap-1">
-											<div class="line-clamp-1">
-												Downloading "{model}"
-											</div>
-
-											<div class="shrink-0">
-												{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
-													? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
-													: ''}
-											</div>
+						{#if !selectionOnly}
+							{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
+								<div
+									class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
+								>
+									<div class="flex">
+										<div class="mr-2.5 translate-y-0.5">
+											<Spinner />
 										</div>
 
-										{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
-											<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
-												{$MODEL_DOWNLOAD_POOL[model].digest}
+										<div class="flex flex-col self-start">
+											<div class="flex gap-1">
+												<div class="line-clamp-1">
+													Downloading "{model}"
+												</div>
+
+												<div class="shrink-0">
+													{'pullProgress' in $MODEL_DOWNLOAD_POOL[model]
+														? `(${$MODEL_DOWNLOAD_POOL[model].pullProgress}%)`
+														: ''}
+												</div>
 											</div>
-										{/if}
+
+											{#if 'digest' in $MODEL_DOWNLOAD_POOL[model] && $MODEL_DOWNLOAD_POOL[model].digest}
+												<div class="-mt-1 h-fit text-[0.7rem] dark:text-gray-500 line-clamp-1">
+													{$MODEL_DOWNLOAD_POOL[model].digest}
+												</div>
+											{/if}
+										</div>
+									</div>
+
+									<div class="mr-2 ml-1 translate-y-0.5">
+										<Tooltip content={$i18n.t('Cancel')}>
+											<button
+												class="text-gray-800 dark:text-gray-100"
+												aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
+												on:click={() => {
+													cancelModelPullHandler(model);
+												}}
+											>
+												<svg
+													class="w-4 h-4 text-gray-800 dark:text-white"
+													aria-hidden="true"
+													xmlns="http://www.w3.org/2000/svg"
+													width="24"
+													height="24"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke="currentColor"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18 17.94 6M18 18 6.06 6"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
 									</div>
 								</div>
-
-								<div class="mr-2 ml-1 translate-y-0.5">
-									<Tooltip content={$i18n.t('Cancel')}>
-										<button
-											class="text-gray-800 dark:text-gray-100"
-											aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
-											on:click={() => {
-												cancelModelPullHandler(model);
-											}}
-										>
-											<svg
-												class="w-4 h-4 text-gray-800 dark:text-white"
-												aria-hidden="true"
-												xmlns="http://www.w3.org/2000/svg"
-												width="24"
-												height="24"
-												fill="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													stroke="currentColor"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18 17.94 6M18 18 6.06 6"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								</div>
-							</div>
-						{/each}
+							{/each}
+						{/if}
 					</div>
 
 					<div class="pb-2.5"></div>
