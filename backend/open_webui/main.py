@@ -234,6 +234,7 @@ from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     OAuthClientManager,
     OAuthManager,
+    apply_connection_oauth_options,
     decrypt_data,
     encrypt_data,
     get_oauth_client_info_with_dynamic_client_registration,
@@ -554,6 +555,9 @@ async def initialize_runtime_config(app: FastAPI):
                 try:
                     oauth_client_info = resolve_oauth_client_info(tool_server_connection)
                     oauth_client_info = await recover_static_oauth_client_metadata(
+                        tool_server_connection, oauth_client_info
+                    )
+                    oauth_client_info = apply_connection_oauth_options(
                         tool_server_connection, oauth_client_info
                     )
                     app.state.oauth_client_manager.add_client(
@@ -2274,6 +2278,11 @@ async def register_client(request, client_id: str) -> bool:
         return False
 
     oauth_client_manager.remove_client(client_id)
+    oauth_client_info = OAuthClientInformationFull(
+        **apply_connection_oauth_options(
+            connection, oauth_client_info.model_dump(mode='json')
+        )
+    )
     oauth_client_manager.add_client(client_id, oauth_client_info)
     log.info(f'Re-registered OAuth client {client_id} for tool server')
     return True

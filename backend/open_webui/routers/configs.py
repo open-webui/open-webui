@@ -17,6 +17,7 @@ from open_webui.utils.headers import get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
+    apply_connection_oauth_options,
     decrypt_data,
     encrypt_data,
     get_discovery_urls,
@@ -261,6 +262,7 @@ async def set_tool_servers_config(
                     oauth_client_info = await recover_static_oauth_client_metadata(
                         connection, oauth_client_info
                     )
+                    oauth_client_info = apply_connection_oauth_options(connection, oauth_client_info)
                     request.app.state.oauth_client_manager.add_client(
                         f'{server_type}:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
