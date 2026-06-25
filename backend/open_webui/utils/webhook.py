@@ -1,15 +1,13 @@
 import json
 import logging
 
-import aiohttp
 from open_webui.config import WEBUI_FAVICON_URL
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
     VERSION,
 )
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 
 log = logging.getLogger(__name__)
 
@@ -33,9 +31,9 @@ async def post_webhook(
 ) -> bool:
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')
-        # Block private-IP / loopback / cloud-metadata targets — the URL is
-        # caller-controlled (user notification settings under
-        # ENABLE_USER_WEBHOOKS, automation notification triggers).
+        # Block private-IP / loopback / cloud-metadata targets for every
+        # webhook source, including admin-managed event webhooks and
+        # user-configured notification URLs.
         validate_url(url)
         payload = {}
 
@@ -80,9 +78,7 @@ async def post_webhook(
             payload = event_data
 
         log.debug(f'payload: {payload}')
-        async with aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        ) as session:
+        async with get_ssrf_safe_session() as session:
             async with session.post(
                 url,
                 json=payload,
