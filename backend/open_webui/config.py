@@ -1196,7 +1196,8 @@ YANDEX_WEB_SEARCH_API_KEY = os.getenv('YANDEX_WEB_SEARCH_API_KEY', '')
 
 YANDEX_WEB_SEARCH_CONFIG = os.getenv('YANDEX_WEB_SEARCH_CONFIG', '')
 
-YOUCOM_API_KEY = os.getenv('YOUCOM_API_KEY', '')
+# YDC_API_KEY is You.com's canonical env var; YOUCOM_API_KEY kept as a fallback.
+YOUCOM_API_KEY = os.getenv('YDC_API_KEY') or os.getenv('YOUCOM_API_KEY', '')
 
 LINKUP_API_KEY = os.getenv('LINKUP_API_KEY', '')
 
