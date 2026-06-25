@@ -985,8 +985,7 @@
 		};
 		window.addEventListener('resize', onResize);
 
-		// Regaining connectivity: kick an immediate socket reconnect instead of
-		// waiting out socket.io's backoff (pairs with the chat's DB reconcile).
+		// Network back: force an immediate reconnect instead of awaiting backoff.
 		const onOnline = () => {
 			if ($socket && !$socket.connected) {
 				$socket.connect();

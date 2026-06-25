@@ -181,16 +181,10 @@
 
 	let taskIds = null;
 
-	// --- Stuck-stream recovery ---
-	// The open chat finalizes its in-flight assistant message only on the `done`
-	// socket event. If that event is missed (PWA frozen/evicted/disconnected in the
-	// background, or a dropped socket that reconnects "silent"), the message is
-	// stuck at done:false forever — an endless loading animation — even though the
-	// backend already persisted it done:true. The helpers below consult the DB (the
-	// source of truth) and finalize the message, without ever finalizing one that is
-	// genuinely still running.
-	const STALL_TIMEOUT_MS = 15000; // silence before the watchdog consults the DB
-	const RECONCILE_CEILING_MS = 5 * 60 * 1000; // finalize despite a (possibly ghost) active task
+	// Stuck-stream recovery: if the `done` socket event is missed (PWA frozen/
+	// evicted/disconnected), reconcile the in-flight message against the DB.
+	const STALL_TIMEOUT_MS = 15000; // silence before the watchdog checks the DB
+	const RECONCILE_CEILING_MS = 5 * 60 * 1000; // finalize despite a ghost task
 	let stallTimer = null;
 	let inFlightStartTs = 0;
 	let reconciling = false;
@@ -562,9 +556,8 @@
 		}
 	};
 
-	// (Re)arm the silence watchdog — but only while a response is in-flight.
-	// Called on every inbound event, so during healthy streaming the timer is
-	// perpetually pushed forward and never fires (no extra DB round-trips).
+	// Silence watchdog: armed while in-flight, reset on every event so it never
+	// fires during healthy streaming.
 	const armStallTimer = () => {
 		clearStallTimer();
 		if (isResponseInFlight()) {
@@ -575,8 +568,7 @@
 		}
 	};
 
-	// Marks the moment a response goes in-flight; drives the registration-race
-	// guard and the ghost-task ceiling, and starts the watchdog.
+	// Mark a response in-flight (drives the age guard + ceiling) and start the watchdog.
 	const markResponseInFlight = () => {
 		inFlightStartTs = Date.now();
 		armStallTimer();
@@ -588,10 +580,8 @@
 		}
 	};
 
-	// Apply the server's persisted truth to the stuck message and finalize it.
-	// Never truncates (the DB can lag in-memory content after a hard crash) and
-	// surfaces any persisted error. Finalizes every in-flight assistant sibling
-	// (side-by-side / multi-model), not just history.currentId.
+	// Adopt the DB's persisted state and finalize. Never truncates content;
+	// finalizes every in-flight sibling (multi-model), surfaces persisted errors.
 	const applyDoneFromDb = (message, dbMessage) => {
 		if (dbMessage) {
 			if ((dbMessage.content?.length ?? 0) > (message.content?.length ?? 0)) {
@@ -621,24 +611,22 @@
 		clearStallTimer();
 	};
 
-	// Single entry point for every "we may have missed socket events" trigger
-	// (tab refocused, page restored, process unfrozen, network back, reconnect,
-	// silence watchdog). Idempotent and self-guarding.
+	// Entry point for every recovery trigger. Idempotent and self-guarding.
 	const reconcile = async () => {
 		const chatIdAtStart = $chatId;
 		const currentIdAtStart = history.currentId;
 		const message = currentIdAtStart ? history.messages[currentIdAtStart] : null;
 
-		// Nothing in-flight → not our case.
+		// Nothing in-flight.
 		if (!message || message.role !== 'assistant' || message.done) {
 			clearStallTimer();
 			return;
 		}
-		// Temporary / local / channel chats have no DB record to consult.
+		// Temp/local/channel chats have no DB record.
 		if ($temporaryChatEnabled || /^(local|channel):/.test(`${$chatId ?? ''}`)) {
 			return;
 		}
-		// Debounce concurrent triggers.
+		// Debounce.
 		if (reconciling) {
 			return;
 		}
@@ -649,10 +637,10 @@
 			try {
 				chat = await getChatById(localStorage.token, $chatId);
 			} catch {
-				chat = null; // Never finalize on a failed fetch; retry on the next trigger.
+				chat = null; // Don't finalize on a failed fetch.
 			}
 
-			// Bail if the world moved under us while the fetch was in flight.
+			// Bail if the chat/message changed during the fetch.
 			if (
 				!chat ||
 				$chatId !== chatIdAtStart ||
@@ -665,39 +653,37 @@
 			const dbMessage = chat?.chat?.history?.messages?.[message.id] ?? null;
 			const age = Date.now() - inFlightStartTs;
 
-			// (3) The DB has the final answer (clean completion, clean STOP, or
-			//     main-response-done-while-title-gen-runs) → adopt it.
+			// (3) DB is done → adopt it.
 			if (dbMessage?.done) {
 				applyDoneFromDb(message, dbMessage);
 				return;
 			}
 
-			// DB not done → is generation actually still running?
+			// DB not done → still running?
 			let activeTask = false;
 			try {
 				const res = await getTaskIdsByChatId(localStorage.token, $chatId);
 				activeTask = (res?.task_ids ?? []).length > 0;
 			} catch {
-				activeTask = true; // Unknown → assume running; the ceiling still bounds the wait.
+				activeTask = true; // Unknown → assume running.
 			}
 
 			if ($chatId !== chatIdAtStart || history.currentId !== currentIdAtStart || message.done) {
 				return;
 			}
 
-			// (4) Running → wait. The ceiling defeats a ghost task (Redis task entries
-			//     have no TTL) that would otherwise wedge us here forever.
+			// (4) Running → wait. Ceiling defeats a ghost task (Redis entries have no TTL).
 			if (activeTask && age < RECONCILE_CEILING_MS) {
 				armStallTimer();
 				return;
 			}
-			// Registration race — the task may not be registered yet; wait briefly.
+			// Registration race — task not registered yet.
 			if (!activeTask && age < STALL_TIMEOUT_MS) {
 				armStallTimer();
 				return;
 			}
 
-			// (5) Genuinely dead (crash / OOM / stopped-without-done / ghost past ceiling).
+			// (5) Dead → finalize.
 			applyDoneFromDb(message, dbMessage);
 		} finally {
 			reconciling = false;
@@ -871,8 +857,7 @@
 
 				history.messages[event.message_id] = message;
 
-				// Any inbound event is proof the stream is alive — push the
-				// stuck-stream watchdog forward (or clear it once done).
+				// Any event = stream alive; push the watchdog forward.
 				armStallTimer();
 			}
 		} else {
@@ -994,7 +979,7 @@
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', reconcile);
 
-		// Stuck-stream recovery triggers — all funnel into the idempotent reconcile().
+		// Recovery triggers → reconcile().
 		document.addEventListener('visibilitychange', onVisibilityReconcile);
 		window.addEventListener('pageshow', reconcile);
 		(document as EventTarget).addEventListener('resume', reconcile); // Page Lifecycle API (Chromium)
@@ -1704,9 +1689,7 @@
 					}
 				}
 
-				// If the chat loaded mid-stream (a response still running, e.g. started
-				// on another device), keep the stuck-stream watchdog alive so a missed
-				// completion event still recovers it.
+				// Loaded mid-stream → keep the watchdog alive.
 				if (isResponseInFlight()) {
 					markResponseInFlight();
 				}
@@ -2377,7 +2360,7 @@
 		}
 		history = history;
 
-		// Responses are now in-flight — start the stuck-stream watchdog.
+		// Responses in-flight → start the watchdog.
 		markResponseInFlight();
 
 		// New chat — backend generates the chat_id on first request
