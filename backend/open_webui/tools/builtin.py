@@ -595,7 +595,8 @@ async def search_memories(
     __user__: dict = None,
 ) -> str:
     """
-    Search the user's stored memories for relevant information.
+    Search saved user memories for preferences, facts, or prior context that
+    may help personalize the answer.
 
     :param query: The search query to find relevant memories
     :param count: Number of memories to return (default 5)
@@ -640,7 +641,7 @@ async def add_memory(
     __user__: dict = None,
 ) -> str:
     """
-    Store a new memory for the user.
+    Save a user-provided preference, fact, or instruction as memory for future chats.
 
     :param content: The memory content to store
     :return: Confirmation that the memory was stored
@@ -670,7 +671,7 @@ async def replace_memory_content(
     __user__: dict = None,
 ) -> str:
     """
-    Update the content of an existing memory by its ID.
+    Update an existing saved memory by its ID when its content needs correction.
 
     :param memory_id: The ID of the memory to update
     :param content: The new content for the memory
@@ -704,7 +705,7 @@ async def delete_memory(
     __user__: dict = None,
 ) -> str:
     """
-    Delete a memory by its ID.
+    Delete a saved memory by its ID.
 
     :param memory_id: The ID of the memory to delete
     :return: Confirmation that the memory was deleted
@@ -735,7 +736,7 @@ async def list_memories(
     __user__: dict = None,
 ) -> str:
     """
-    List all stored memories for the user.
+    List all stored memories for the user, including IDs and timestamps.
 
     :return: JSON list of all memories with id, content, and dates
     """
@@ -779,7 +780,7 @@ async def search_notes(
     __user__: dict = None,
 ) -> str:
     """
-    Search the user's notes by title and content.
+    Search the user's saved notes by title and content.
 
     :param query: The search query to find matching notes
     :param count: Maximum number of results to return (default: 5)
@@ -982,7 +983,7 @@ async def replace_note_content(
     __user__: dict = None,
 ) -> str:
     """
-    Update the content of a note. Use this to modify task lists, add notes, or update content.
+    Update the markdown content, and optionally the title, of an existing note.
 
     :param note_id: The ID of the note to update
     :param content: The new markdown content for the note
@@ -1059,6 +1060,7 @@ async def search_chats(
 ) -> str:
     """
     Search the user's previous chat conversations by title and message content.
+    Helpful for finding details from earlier conversations.
 
     :param query: The search query to find matching chats
     :param count: Maximum number of results to return (default: 5)
@@ -1136,7 +1138,8 @@ async def view_chat(
     __user__: dict = None,
 ) -> str:
     """
-    Get the full conversation history of a chat by its ID.
+    Get the full conversation history of a chat by its ID after a relevant
+    previous chat has been identified.
 
     :param chat_id: The ID of the chat to retrieve
     :return: JSON with the chat's id, title, and messages
@@ -1206,7 +1209,7 @@ async def search_channels(
     __user__: dict = None,
 ) -> str:
     """
-    Search for channels by name and description that the user has access to.
+    Search channels by name and description to find accessible team spaces.
 
     :param query: The search query to find matching channels
     :param count: Maximum number of results to return (default: 5)
@@ -1260,7 +1263,8 @@ async def search_channel_messages(
     __user__: dict = None,
 ) -> str:
     """
-    Search for messages in channels the user is a member of, including thread replies.
+    Search messages in channels the user is a member of, including thread replies.
+    Helpful for finding prior team/channel discussion.
 
     :param query: The search query to find matching messages
     :param count: Maximum number of results to return (default: 10)
@@ -1488,7 +1492,8 @@ async def list_knowledge_bases(
     __user__: dict = None,
 ) -> str:
     """
-    List the user's accessible knowledge bases.
+    List the user's accessible knowledge bases so a relevant internal source
+    can be chosen.
 
     :param count: Maximum number of KBs to return (default: 10)
     :param skip: Number of results to skip for pagination (default: 0)
@@ -1546,7 +1551,8 @@ async def search_knowledge_bases(
     __user__: dict = None,
 ) -> str:
     """
-    Search the user's accessible knowledge bases by name and description.
+    Search the user's accessible knowledge bases by name and description to find
+    a relevant internal source.
 
     :param query: The search query to find matching knowledge bases
     :param count: Maximum number of results to return (default: 5)
@@ -1609,6 +1615,7 @@ async def search_knowledge_files(
     """
     Search files by filename across knowledge bases the user has access to.
     When the model has attached knowledge, searches only within attached KBs and files.
+    Helpful when looking for a specific document or file name.
 
     :param query: The search query to find matching files by filename
     :param knowledge_id: Optional KB id to limit search to a specific knowledge base
@@ -1780,6 +1787,7 @@ async def grep_knowledge_files(
     Search for exact text across knowledge files. Returns matching lines with line numbers.
     Unlike query_knowledge_files (semantic/vector search), this performs exact string matching.
     Automatically detects regex patterns (e.g. "error|warn", "version \\d+").
+    Helpful for literal strings, identifiers, error messages, or regex-style searches.
 
     :param pattern: The text pattern to search for (regex auto-detected)
     :param file_id: Optional file ID to search within a single file only
@@ -2342,6 +2350,7 @@ async def query_knowledge_files(
     """
     Search knowledge base files using semantic/vector search. Searches across collections (KBs),
     individual files, and notes that the user has access to.
+    Helpful for internal documentation, uploaded knowledge, and attached model knowledge.
 
     :param query: The search query to find semantically relevant content
     :param knowledge_ids: Optional list of KB ids to limit search to specific knowledge bases
@@ -2557,7 +2566,7 @@ async def query_knowledge_bases(
     """
     Search knowledge bases by semantic similarity to query.
     Finds KBs whose name/description match the meaning of your query.
-    Use this to discover relevant knowledge bases before querying their files.
+    Helpful for discovering which knowledge base to query next.
 
     :param query: Natural language query describing what you're looking for
     :param count: Maximum results (default: 5)
@@ -2763,9 +2772,7 @@ async def create_tasks(
     __user__: dict = None,
 ) -> str:
     """
-    Create a task checklist to track progress on multi-step work.
-    Call this once at the start to define all steps, then use
-    update_task to mark each task as you complete it.
+    Create a visible task checklist for multi-step work so progress can be shown in chat.
 
     :param tasks: List of task items. Each item: content (string, required), status (pending|in_progress|completed|cancelled, default pending), id (optional, auto-generated).
     :return: JSON with the full task list and summary counts
@@ -2816,9 +2823,7 @@ async def update_task(
     __user__: dict = None,
 ) -> str:
     """
-    Mark a single task as completed, in_progress, pending, or cancelled.
-    Call this after finishing each step. You MUST call this for every
-    task, including the very last one.
+    Mark a single visible task item as completed, in_progress, pending, or cancelled.
 
     :param id: The task ID to update
     :param status: New status: completed, in_progress, pending, or cancelled (default: completed)
@@ -3258,8 +3263,7 @@ async def search_calendar_events(
 ) -> str:
     """
     Search calendar events, reminders, and scheduled items by text and/or date range.
-    Use this to check what's coming up, find a specific event or reminder, or list
-    the user's schedule for a time period.
+    Helpful for finding upcoming events, reminders, or schedule items.
 
     :param query: Search text to match against event title, description, or location (optional)
     :param start: Only return events starting at or after this datetime, e.g. "2026-04-20 00:00" (optional)
