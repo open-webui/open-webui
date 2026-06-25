@@ -9,12 +9,15 @@ from typing import Any
 
 from open_webui.env import VERSION
 from open_webui.models.config import Config
+from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.webhook import post_webhook
 
 log = logging.getLogger(__name__)
 
-EVENT_VERSION = 'event.v1'
 MAX_STRING_LENGTH = 1000
+EVENT_WEBHOOKS_CONFIG_KEY = 'events.webhooks'
+LEGACY_WEBHOOK_CONFIG_KEY = 'webhook_url'
+DEFAULT_WEBHOOK_ID = 'default'
 
 
 class EVENTS(StrEnum):
@@ -192,6 +195,7 @@ class EVENTS(StrEnum):
 
 
 EVENT_CATALOG = tuple(event.value for event in EVENTS)
+EVENT_CATALOG_SET = set(EVENT_CATALOG)
 
 SENSITIVE_KEYS = {
     'password',
@@ -209,6 +213,126 @@ SENSITIVE_KEYS = {
 }
 
 SAFE_ACTOR_FIELDS = ('id', 'name', 'email', 'role', 'created_at', 'updated_at')
+
+
+def normalize_event_webhook(webhook: dict[str, Any], *, create: bool = False) -> dict[str, Any]:
+    now = int(time.time())
+    webhook_id = str(webhook.get('id') or uuid.uuid4())
+    url = str(webhook.get('url') or '').strip()
+
+    events = [str(event).strip() for event in (webhook.get('events') or ['*']) if str(event).strip()]
+    events = events or ['*']
+    for event_filter in events:
+        if event_filter == '*':
+            continue
+        if event_filter.endswith('.*'):
+            prefix = event_filter[:-2]
+            if prefix and any(event.startswith(f'{prefix}.') for event in EVENT_CATALOG):
+                continue
+            raise ValueError(f'Invalid event pattern: {event_filter}')
+        if event_filter not in EVENT_CATALOG_SET:
+            raise ValueError(f'Invalid event: {event_filter}')
+
+    return {
+        'id': webhook_id,
+        'name': str(webhook.get('name') or ('Default webhook' if webhook_id == DEFAULT_WEBHOOK_ID else 'Webhook')),
+        'url': url,
+        'enabled': bool(webhook.get('enabled', True)),
+        'events': events,
+        'created_at': int(webhook.get('created_at') or now),
+        'updated_at': now if create or webhook.get('updated_at') is None else int(webhook.get('updated_at') or now),
+    }
+
+
+def event_webhook_matches(webhook: dict[str, Any], event_name: str) -> bool:
+    if not webhook.get('enabled', True):
+        return False
+
+    for event_filter in webhook.get('events') or ['*']:
+        if event_filter == '*':
+            return True
+        if event_filter.endswith('.*') and event_name.startswith(f'{event_filter[:-2]}.'):
+            return True
+        if event_name == event_filter:
+            return True
+    return False
+
+
+async def get_event_webhooks() -> list[dict[str, Any]]:
+    webhooks = await Config.get(EVENT_WEBHOOKS_CONFIG_KEY, []) or []
+    if not isinstance(webhooks, list):
+        return []
+    return [normalize_event_webhook(webhook) for webhook in webhooks if isinstance(webhook, dict)]
+
+
+async def migrate_legacy_webhook_config() -> list[dict[str, Any]]:
+    webhooks = await get_event_webhooks()
+    if any(webhook.get('id') == DEFAULT_WEBHOOK_ID for webhook in webhooks):
+        return webhooks
+
+    now = int(time.time())
+    legacy_url = await Config.get(LEGACY_WEBHOOK_CONFIG_KEY) or ''
+    if not legacy_url:
+        return webhooks
+
+    webhooks = [
+        {
+            'id': DEFAULT_WEBHOOK_ID,
+            'name': 'Default webhook',
+            'url': legacy_url,
+            'enabled': True,
+            'events': ['*'],
+            'created_at': now,
+            'updated_at': now,
+        },
+        *webhooks,
+    ]
+    await Config.upsert({EVENT_WEBHOOKS_CONFIG_KEY: webhooks})
+    return webhooks
+
+
+async def upsert_event_webhook(webhook: dict[str, Any]) -> dict[str, Any]:
+    webhooks = await get_event_webhooks()
+    url = str(webhook.get('url') or '').strip()
+    if url:
+        validate_url(url)
+
+    normalized = normalize_event_webhook(webhook, create=True)
+    replaced = False
+    next_webhooks = []
+
+    for existing in webhooks:
+        if existing.get('id') == normalized['id']:
+            next_webhooks.append(
+                {
+                    **existing,
+                    **normalized,
+                    'created_at': existing.get('created_at') or normalized['created_at'],
+                }
+            )
+            replaced = True
+        else:
+            next_webhooks.append(existing)
+
+    if not replaced:
+        next_webhooks.append(normalized)
+
+    await Config.upsert({EVENT_WEBHOOKS_CONFIG_KEY: next_webhooks})
+    return next(webhook for webhook in next_webhooks if webhook.get('id') == normalized['id'])
+
+
+async def delete_event_webhook(webhook_id: str) -> bool:
+    webhooks = await get_event_webhooks()
+    next_webhooks = [webhook for webhook in webhooks if webhook.get('id') != webhook_id]
+    if len(next_webhooks) == len(webhooks):
+        return False
+
+    values = {EVENT_WEBHOOKS_CONFIG_KEY: next_webhooks}
+    if webhook_id == DEFAULT_WEBHOOK_ID:
+        values[LEGACY_WEBHOOK_CONFIG_KEY] = ''
+
+    await Config.upsert(values)
+    return True
 
 
 @dataclass
@@ -295,7 +419,7 @@ def build_event(
     )
 
     return Event(
-        schema=EVENT_VERSION,
+        schema=VERSION,
         id=str(uuid.uuid4()),
         event=event_name,
         resource=resource,
@@ -313,10 +437,6 @@ def build_event(
 
 class WebhookEventSink:
     async def handle_event(self, app: Any, event: Event) -> None:
-        url = await Config.get('webhook_url')
-        if not url:
-            return
-
         name = getattr(getattr(app, 'state', None), 'WEBUI_NAME', 'Open WebUI')
         subject = event.subject or {}
         subject_id = subject.get('id')
@@ -324,7 +444,12 @@ class WebhookEventSink:
         if subject_id:
             message = f'{message} ({subject_id})'
 
-        await post_webhook(name, url, message, event.model_dump())
+        for webhook in await get_event_webhooks():
+            if webhook.get('url') and event_webhook_matches(webhook, event.event):
+                try:
+                    await post_webhook(name, webhook['url'], message, event.model_dump())
+                except Exception:
+                    log.exception('Event webhook failed for %s', webhook.get('id'))
 
 
 EVENT_SINKS = [WebhookEventSink()]
