@@ -1924,7 +1924,8 @@ YANDEX_WEB_SEARCH_CONFIG = ConfigVar(
 YOUCOM_API_KEY = ConfigVar(
     'YOUCOM_API_KEY',
     'rag.web.search.youcom_api_key',
-    os.getenv('YOUCOM_API_KEY', ''),
+    # YDC_API_KEY is You.com's canonical env var; YOUCOM_API_KEY kept as fallback.
+    os.getenv('YDC_API_KEY') or os.getenv('YOUCOM_API_KEY', ''),
 )
 
 LINKUP_API_KEY = ConfigVar(
