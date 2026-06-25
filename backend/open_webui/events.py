@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 import logging
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
+from types import SimpleNamespace
 from typing import Any
 
 from open_webui.env import VERSION
@@ -436,7 +439,7 @@ def build_event(
 
 
 class WebhookEventSink:
-    async def handle_event(self, app: Any, event: Event) -> None:
+    async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
         name = getattr(getattr(app, 'state', None), 'WEBUI_NAME', 'Open WebUI')
         subject = event.subject or {}
         subject_id = subject.get('id')
@@ -452,7 +455,66 @@ class WebhookEventSink:
                     log.exception('Event webhook failed for %s', webhook.get('id'))
 
 
-EVENT_SINKS = [WebhookEventSink()]
+async def dispatch_event_functions(app: Any, event: Event, request: Any | None = None) -> None:
+    from open_webui.models.functions import Functions
+    from open_webui.utils.plugin import get_function_module_from_cache
+
+    context = request or SimpleNamespace(app=app)
+    event_payload = event.model_dump()
+
+    try:
+        event_functions = await Functions.get_functions_by_type('event', active_only=True)
+    except Exception:
+        log.exception('Event functions could not be loaded for %s', event.event)
+        return
+
+    for function in event_functions:
+        try:
+            function_module, _, _ = await get_function_module_from_cache(context, function.id, function=function)
+            handler = getattr(function_module, 'event', None)
+            if not handler:
+                continue
+
+            if hasattr(function_module, 'valves') and hasattr(function_module, 'Valves'):
+                valves = await Functions.get_function_valves_by_id(function.id)
+                function_module.valves = function_module.Valves(**(valves if valves else {}))
+
+            sig = inspect.signature(handler)
+            accepts_kwargs = any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values())
+            extra_params = {
+                'event': event_payload,
+                '__id__': function.id,
+                '__event__': event,
+                '__event_id__': event.id,
+                '__event_name__': event.event,
+                '__app__': app,
+                '__request__': request,
+            }
+            params = {
+                key: value for key, value in extra_params.items() if accepts_kwargs or key in sig.parameters
+            }
+
+            if inspect.iscoroutinefunction(handler):
+                await handler(**params)
+            else:
+                handler(**params)
+        except Exception:
+            log.exception('Event function failed for %s', function.id)
+
+
+def schedule_event_function_dispatch(app: Any, event: Event, request: Any | None = None) -> None:
+    try:
+        asyncio.create_task(dispatch_event_functions(app, event, request))
+    except RuntimeError:
+        log.exception('Event functions could not be scheduled for %s', event.event)
+
+
+class EventFunctionSink:
+    async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
+        schedule_event_function_dispatch(app, event, request)
+
+
+EVENT_SINKS = [EventFunctionSink(), WebhookEventSink()]
 
 
 async def publish_event(
@@ -467,6 +529,7 @@ async def publish_event(
     message: str | None = None,
 ) -> None:
     app = getattr(request_or_app, 'app', request_or_app)
+    request = request_or_app if hasattr(request_or_app, 'app') else None
     event_payload = build_event(
         request_or_app,
         event,
@@ -480,6 +543,6 @@ async def publish_event(
 
     for sink in EVENT_SINKS:
         try:
-            await sink.handle_event(app, event_payload)
+            await sink.handle_event(app, event_payload, request=request)
         except Exception:
             log.exception('Event sink failed for %s', event.value)
