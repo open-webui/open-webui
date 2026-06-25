@@ -985,6 +985,15 @@
 		};
 		window.addEventListener('resize', onResize);
 
+		// Regaining connectivity: kick an immediate socket reconnect instead of
+		// waiting out socket.io's backoff (pairs with the chat's DB reconcile).
+		const onOnline = () => {
+			if ($socket && !$socket.connected) {
+				$socket.connect();
+			}
+		};
+		window.addEventListener('online', onOnline);
+
 		user.subscribe(async (value) => {
 			if (value) {
 				$socket?.off('events', chatEventHandler);
@@ -1135,6 +1144,7 @@
 
 		return () => {
 			window.removeEventListener('resize', onResize);
+			window.removeEventListener('online', onOnline);
 			window.removeEventListener('message', windowMessageEventHandler);
 			document.removeEventListener('touchstart', touchstartHandler);
 			document.removeEventListener('touchmove', touchmoveHandler);

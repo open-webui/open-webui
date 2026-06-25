@@ -181,6 +181,20 @@
 
 	let taskIds = null;
 
+	// --- Stuck-stream recovery ---
+	// The open chat finalizes its in-flight assistant message only on the `done`
+	// socket event. If that event is missed (PWA frozen/evicted/disconnected in the
+	// background, or a dropped socket that reconnects "silent"), the message is
+	// stuck at done:false forever — an endless loading animation — even though the
+	// backend already persisted it done:true. The helpers below consult the DB (the
+	// source of truth) and finalize the message, without ever finalizing one that is
+	// genuinely still running.
+	const STALL_TIMEOUT_MS = 15000; // silence before the watchdog consults the DB
+	const RECONCILE_CEILING_MS = 5 * 60 * 1000; // finalize despite a (possibly ghost) active task
+	let stallTimer = null;
+	let inFlightStartTs = 0;
+	let reconciling = false;
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -536,6 +550,160 @@
 		}
 	};
 
+	const isResponseInFlight = () => {
+		const m = history.currentId ? history.messages[history.currentId] : null;
+		return !!m && m.role === 'assistant' && !m.done;
+	};
+
+	const clearStallTimer = () => {
+		if (stallTimer) {
+			clearTimeout(stallTimer);
+			stallTimer = null;
+		}
+	};
+
+	// (Re)arm the silence watchdog — but only while a response is in-flight.
+	// Called on every inbound event, so during healthy streaming the timer is
+	// perpetually pushed forward and never fires (no extra DB round-trips).
+	const armStallTimer = () => {
+		clearStallTimer();
+		if (isResponseInFlight()) {
+			if (!inFlightStartTs) {
+				inFlightStartTs = Date.now();
+			}
+			stallTimer = setTimeout(() => reconcile(), STALL_TIMEOUT_MS);
+		}
+	};
+
+	// Marks the moment a response goes in-flight; drives the registration-race
+	// guard and the ghost-task ceiling, and starts the watchdog.
+	const markResponseInFlight = () => {
+		inFlightStartTs = Date.now();
+		armStallTimer();
+	};
+
+	const onVisibilityReconcile = () => {
+		if (document.visibilityState === 'visible') {
+			reconcile();
+		}
+	};
+
+	// Apply the server's persisted truth to the stuck message and finalize it.
+	// Never truncates (the DB can lag in-memory content after a hard crash) and
+	// surfaces any persisted error. Finalizes every in-flight assistant sibling
+	// (side-by-side / multi-model), not just history.currentId.
+	const applyDoneFromDb = (message, dbMessage) => {
+		if (dbMessage) {
+			if ((dbMessage.content?.length ?? 0) > (message.content?.length ?? 0)) {
+				message.content = dbMessage.content;
+			}
+			message.output = dbMessage.output ?? message.output;
+			message.sources = dbMessage.sources ?? message.sources;
+			message.usage = dbMessage.usage ?? message.usage;
+			if (dbMessage.error) {
+				message.error = dbMessage.error;
+			}
+		}
+
+		const parent = message.parentId ? history.messages[message.parentId] : null;
+		const siblingIds = parent?.childrenIds ?? [message.id];
+		for (const sid of siblingIds) {
+			const sib = history.messages[sid];
+			if (sib && sib.role === 'assistant' && !sib.done) {
+				sib.done = true;
+			}
+		}
+
+		message.done = true;
+		history.messages[message.id] = message;
+		history = history;
+		inFlightStartTs = 0;
+		clearStallTimer();
+	};
+
+	// Single entry point for every "we may have missed socket events" trigger
+	// (tab refocused, page restored, process unfrozen, network back, reconnect,
+	// silence watchdog). Idempotent and self-guarding.
+	const reconcile = async () => {
+		const chatIdAtStart = $chatId;
+		const currentIdAtStart = history.currentId;
+		const message = currentIdAtStart ? history.messages[currentIdAtStart] : null;
+
+		// Nothing in-flight → not our case.
+		if (!message || message.role !== 'assistant' || message.done) {
+			clearStallTimer();
+			return;
+		}
+		// Temporary / local / channel chats have no DB record to consult.
+		if ($temporaryChatEnabled || /^(local|channel):/.test(`${$chatId ?? ''}`)) {
+			return;
+		}
+		// Debounce concurrent triggers.
+		if (reconciling) {
+			return;
+		}
+		reconciling = true;
+
+		try {
+			let chat = null;
+			try {
+				chat = await getChatById(localStorage.token, $chatId);
+			} catch {
+				chat = null; // Never finalize on a failed fetch; retry on the next trigger.
+			}
+
+			// Bail if the world moved under us while the fetch was in flight.
+			if (
+				!chat ||
+				$chatId !== chatIdAtStart ||
+				history.currentId !== currentIdAtStart ||
+				message.done
+			) {
+				return;
+			}
+
+			const dbMessage = chat?.chat?.history?.messages?.[message.id] ?? null;
+			const age = Date.now() - inFlightStartTs;
+
+			// (3) The DB has the final answer (clean completion, clean STOP, or
+			//     main-response-done-while-title-gen-runs) → adopt it.
+			if (dbMessage?.done) {
+				applyDoneFromDb(message, dbMessage);
+				return;
+			}
+
+			// DB not done → is generation actually still running?
+			let activeTask = false;
+			try {
+				const res = await getTaskIdsByChatId(localStorage.token, $chatId);
+				activeTask = (res?.task_ids ?? []).length > 0;
+			} catch {
+				activeTask = true; // Unknown → assume running; the ceiling still bounds the wait.
+			}
+
+			if ($chatId !== chatIdAtStart || history.currentId !== currentIdAtStart || message.done) {
+				return;
+			}
+
+			// (4) Running → wait. The ceiling defeats a ghost task (Redis task entries
+			//     have no TTL) that would otherwise wedge us here forever.
+			if (activeTask && age < RECONCILE_CEILING_MS) {
+				armStallTimer();
+				return;
+			}
+			// Registration race — the task may not be registered yet; wait briefly.
+			if (!activeTask && age < STALL_TIMEOUT_MS) {
+				armStallTimer();
+				return;
+			}
+
+			// (5) Genuinely dead (crash / OOM / stopped-without-done / ghost past ceiling).
+			applyDoneFromDb(message, dbMessage);
+		} finally {
+			reconciling = false;
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
@@ -702,6 +870,10 @@
 				}
 
 				history.messages[event.message_id] = message;
+
+				// Any inbound event is proof the stream is alive — push the
+				// stuck-stream watchdog forward (or clear it once done).
+				armStallTimer();
 			}
 		} else {
 			// Non-active chat completion: queue stays in the global store.
@@ -820,6 +992,13 @@
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
+		$socket?.on('connect', reconcile);
+
+		// Stuck-stream recovery triggers — all funnel into the idempotent reconcile().
+		document.addEventListener('visibilitychange', onVisibilityReconcile);
+		window.addEventListener('pageshow', reconcile);
+		(document as EventTarget).addEventListener('resume', reconcile); // Page Lifecycle API (Chromium)
+		window.addEventListener('online', reconcile);
 
 		$audioQueue?.destroy();
 
@@ -937,6 +1116,12 @@
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				dismissContextCompactionToast();
+				$socket?.off('connect', reconcile);
+				document.removeEventListener('visibilitychange', onVisibilityReconcile);
+				window.removeEventListener('pageshow', reconcile);
+				(document as EventTarget).removeEventListener('resume', reconcile);
+				window.removeEventListener('online', reconcile);
+				clearStallTimer();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
 			} catch (e) {
@@ -1517,6 +1702,13 @@
 					if (currentMessage?.role === 'assistant' && !currentMessage.done) {
 						currentMessage.done = true;
 					}
+				}
+
+				// If the chat loaded mid-stream (a response still running, e.g. started
+				// on another device), keep the stuck-stream watchdog alive so a missed
+				// completion event still recovers it.
+				if (isResponseInFlight()) {
+					markResponseInFlight();
 				}
 
 				await tick();
@@ -2185,6 +2377,9 @@
 		}
 		history = history;
 
+		// Responses are now in-flight — start the stuck-stream watchdog.
+		markResponseInFlight();
+
 		// New chat — backend generates the chat_id on first request
 		if (!_chatId) {
 			if ($temporaryChatEnabled) {
@@ -2655,6 +2850,7 @@
 	};
 
 	const stopResponse = async (processQueue = true) => {
+		clearStallTimer();
 		if (taskIds) {
 			if ($chatId) {
 				await stopTasksByChatId(localStorage.token, $chatId).catch((error) => {
@@ -2771,6 +2967,7 @@
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
 			responseMessage.done = false;
+			markResponseInFlight();
 			await tick();
 
 			const model = $models
