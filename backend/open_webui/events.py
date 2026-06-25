@@ -5,13 +5,12 @@ import inspect
 import logging
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
-from enum import StrEnum
 from types import SimpleNamespace
 from typing import Any
 
 from open_webui.env import VERSION
 from open_webui.models.config import Config
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.webhook import post_webhook
 
@@ -23,182 +22,215 @@ LEGACY_WEBHOOK_CONFIG_KEY = 'webhook_url'
 DEFAULT_WEBHOOK_ID = 'default'
 
 
-class EVENTS(StrEnum):
-    SYSTEM_STARTUP_STARTED = 'system.startup.started'
-    SYSTEM_STARTUP_COMPLETED = 'system.startup.completed'
-    SYSTEM_SHUTDOWN_STARTED = 'system.shutdown.started'
-    SYSTEM_SHUTDOWN_COMPLETED = 'system.shutdown.completed'
-    CONFIG_IMPORTED = 'config.imported'
-    CONFIG_UPDATED = 'config.updated'
-    CONFIG_WEBHOOK_UPDATED = 'config.webhook.updated'
-    CONFIG_CONNECTIONS_UPDATED = 'config.connections.updated'
-    CONFIG_TOOL_SERVERS_UPDATED = 'config.tool_servers.updated'
-    CONFIG_TERMINAL_SERVERS_UPDATED = 'config.terminal_servers.updated'
-    CONFIG_CODE_EXECUTION_UPDATED = 'config.code_execution.updated'
-    CONFIG_MODELS_UPDATED = 'config.models.updated'
-    CONFIG_BANNERS_UPDATED = 'config.banners.updated'
-    CONFIG_SUGGESTIONS_UPDATED = 'config.suggestions.updated'
-    AUTH_SIGNUP = 'auth.signup'
-    AUTH_LOGIN = 'auth.login'
-    AUTH_LOGOUT = 'auth.logout'
-    AUTH_PASSWORD_CHANGED = 'auth.password_changed'
-    AUTH_API_KEY_CREATED = 'auth.api_key.created'
-    AUTH_API_KEY_DELETED = 'auth.api_key.deleted'
-    AUTH_OAUTH_SESSION_DELETED = 'auth.oauth_session.deleted'
-    USER_CREATED = 'user.created'
-    USER_UPDATED = 'user.updated'
-    USER_DELETED = 'user.deleted'
-    USER_ROLE_UPDATED = 'user.role_updated'
-    USER_STATUS_UPDATED = 'user.status_updated'
-    USER_SETTINGS_UPDATED = 'user.settings_updated'
-    USER_PROFILE_UPDATED = 'user.profile_updated'
-    USER_PERMISSIONS_UPDATED = 'user.permissions_updated'
-    GROUP_CREATED = 'group.created'
-    GROUP_UPDATED = 'group.updated'
-    GROUP_DELETED = 'group.deleted'
-    GROUP_MEMBER_ADDED = 'group.member_added'
-    GROUP_MEMBER_REMOVED = 'group.member_removed'
-    CHAT_CREATED = 'chat.created'
-    CHAT_IMPORTED = 'chat.imported'
-    CHAT_UPDATED = 'chat.updated'
-    CHAT_DELETED = 'chat.deleted'
-    CHAT_DELETED_ALL = 'chat.deleted_all'
-    CHAT_COMPACTED = 'chat.compacted'
-    CHAT_PINNED = 'chat.pinned'
-    CHAT_UNPINNED = 'chat.unpinned'
-    CHAT_CLONED = 'chat.cloned'
-    CHAT_ARCHIVED = 'chat.archived'
-    CHAT_UNARCHIVED = 'chat.unarchived'
-    CHAT_SHARED = 'chat.shared'
-    CHAT_UNSHARED = 'chat.unshared'
-    CHAT_FOLDER_UPDATED = 'chat.folder_updated'
-    CHAT_TAG_ADDED = 'chat.tag_added'
-    CHAT_TAG_REMOVED = 'chat.tag_removed'
-    MESSAGE_CREATED = 'message.created'
-    MESSAGE_UPDATED = 'message.updated'
-    MESSAGE_DELETED = 'message.deleted'
-    MESSAGE_EVENT_RECEIVED = 'message.event_received'
-    MESSAGE_REACTION_ADDED = 'message.reaction_added'
-    MESSAGE_REACTION_REMOVED = 'message.reaction_removed'
-    MESSAGE_PINNED = 'message.pinned'
-    MESSAGE_UNPINNED = 'message.unpinned'
-    CHANNEL_CREATED = 'channel.created'
-    CHANNEL_UPDATED = 'channel.updated'
-    CHANNEL_DELETED = 'channel.deleted'
-    CHANNEL_MEMBER_ADDED = 'channel.member_added'
-    CHANNEL_MEMBER_REMOVED = 'channel.member_removed'
-    CHANNEL_MEMBER_ACTIVE_UPDATED = 'channel.member_active_updated'
-    CHANNEL_WEBHOOK_CREATED = 'channel.webhook.created'
-    CHANNEL_WEBHOOK_UPDATED = 'channel.webhook.updated'
-    CHANNEL_WEBHOOK_DELETED = 'channel.webhook.deleted'
-    FILE_UPLOADED = 'file.uploaded'
-    FILE_CONTENT_UPDATED = 'file.content_updated'
-    FILE_RENAMED = 'file.renamed'
-    FILE_DELETED = 'file.deleted'
-    FILE_DELETED_ALL = 'file.deleted_all'
-    FOLDER_CREATED = 'folder.created'
-    FOLDER_UPDATED = 'folder.updated'
-    FOLDER_PARENT_UPDATED = 'folder.parent_updated'
-    FOLDER_ACCESS_UPDATED = 'folder.access_updated'
-    FOLDER_DELETED = 'folder.deleted'
-    NOTE_CREATED = 'note.created'
-    NOTE_UPDATED = 'note.updated'
-    NOTE_ACCESS_UPDATED = 'note.access_updated'
-    NOTE_PINNED = 'note.pinned'
-    NOTE_UNPINNED = 'note.unpinned'
-    NOTE_DELETED = 'note.deleted'
-    MEMORY_CREATED = 'memory.created'
-    MEMORY_UPDATED = 'memory.updated'
-    MEMORY_DELETED = 'memory.deleted'
-    MEMORY_RESET = 'memory.reset'
-    KNOWLEDGE_CREATED = 'knowledge.created'
-    KNOWLEDGE_UPDATED = 'knowledge.updated'
-    KNOWLEDGE_DELETED = 'knowledge.deleted'
-    KNOWLEDGE_RESET = 'knowledge.reset'
-    KNOWLEDGE_REINDEXED = 'knowledge.reindexed'
-    KNOWLEDGE_ACCESS_UPDATED = 'knowledge.access_updated'
-    KNOWLEDGE_FILE_ADDED = 'knowledge.file.added'
-    KNOWLEDGE_FILE_UPDATED = 'knowledge.file.updated'
-    KNOWLEDGE_FILE_REMOVED = 'knowledge.file.removed'
-    KNOWLEDGE_FILE_MOVED = 'knowledge.file.moved'
-    KNOWLEDGE_DIRECTORY_CREATED = 'knowledge.directory.created'
-    KNOWLEDGE_DIRECTORY_UPDATED = 'knowledge.directory.updated'
-    KNOWLEDGE_DIRECTORY_DELETED = 'knowledge.directory.deleted'
-    KNOWLEDGE_EXTERNAL_CONNECTION_CREATED = 'knowledge.external_connection.created'
-    KNOWLEDGE_EXTERNAL_CONNECTION_UPDATED = 'knowledge.external_connection.updated'
-    KNOWLEDGE_EXTERNAL_CONNECTION_DELETED = 'knowledge.external_connection.deleted'
-    RETRIEVAL_CONTENT_PROCESSED = 'retrieval.content.processed'
-    RETRIEVAL_COLLECTION_DELETED = 'retrieval.collection.deleted'
-    RETRIEVAL_VECTOR_DB_RESET = 'retrieval.vector_db.reset'
-    RETRIEVAL_UPLOADS_RESET = 'retrieval.uploads.reset'
-    MODEL_CREATED = 'model.created'
-    MODEL_IMPORTED = 'model.imported'
-    MODEL_SYNCED = 'model.synced'
-    MODEL_UPDATED = 'model.updated'
-    MODEL_DELETED = 'model.deleted'
-    MODEL_ENABLED = 'model.enabled'
-    MODEL_DISABLED = 'model.disabled'
-    MODEL_ACCESS_UPDATED = 'model.access_updated'
-    MODEL_PROVIDER_CONFIG_UPDATED = 'model.provider_config.updated'
-    MODEL_PROVIDER_MODEL_CREATED = 'model.provider_model.created'
-    MODEL_PROVIDER_MODEL_DELETED = 'model.provider_model.deleted'
-    FUNCTION_CREATED = 'function.created'
-    FUNCTION_UPDATED = 'function.updated'
-    FUNCTION_DELETED = 'function.deleted'
-    FUNCTION_ENABLED = 'function.enabled'
-    FUNCTION_DISABLED = 'function.disabled'
-    FUNCTION_VALVES_UPDATED = 'function.valves_updated'
-    TOOL_CREATED = 'tool.created'
-    TOOL_UPDATED = 'tool.updated'
-    TOOL_DELETED = 'tool.deleted'
-    TOOL_ACCESS_UPDATED = 'tool.access_updated'
-    TOOL_VALVES_UPDATED = 'tool.valves_updated'
-    SKILL_CREATED = 'skill.created'
-    SKILL_UPDATED = 'skill.updated'
-    SKILL_DELETED = 'skill.deleted'
-    SKILL_ENABLED = 'skill.enabled'
-    SKILL_DISABLED = 'skill.disabled'
-    PROMPT_CREATED = 'prompt.created'
-    PROMPT_UPDATED = 'prompt.updated'
-    PROMPT_DELETED = 'prompt.deleted'
-    PROMPT_ENABLED = 'prompt.enabled'
-    PROMPT_DISABLED = 'prompt.disabled'
-    PROMPT_VERSION_UPDATED = 'prompt.version_updated'
-    PROMPT_ACCESS_UPDATED = 'prompt.access_updated'
-    PIPELINE_UPLOADED = 'pipeline.uploaded'
-    PIPELINE_ADDED = 'pipeline.added'
-    PIPELINE_DELETED = 'pipeline.deleted'
-    PIPELINE_VALVES_UPDATED = 'pipeline.valves_updated'
-    CALENDAR_CREATED = 'calendar.created'
-    CALENDAR_UPDATED = 'calendar.updated'
-    CALENDAR_DELETED = 'calendar.deleted'
-    CALENDAR_DEFAULT_UPDATED = 'calendar.default_updated'
-    CALENDAR_EVENT_CREATED = 'calendar.event.created'
-    CALENDAR_EVENT_UPDATED = 'calendar.event.updated'
-    CALENDAR_EVENT_DELETED = 'calendar.event.deleted'
-    CALENDAR_EVENT_RSVP_UPDATED = 'calendar.event.rsvp_updated'
-    AUTOMATION_CREATED = 'automation.created'
-    AUTOMATION_UPDATED = 'automation.updated'
-    AUTOMATION_ENABLED = 'automation.enabled'
-    AUTOMATION_DISABLED = 'automation.disabled'
-    AUTOMATION_DELETED = 'automation.deleted'
-    AUTOMATION_RUN_STARTED = 'automation.run_started'
-    AUTOMATION_RUN_COMPLETED = 'automation.run_completed'
-    AUTOMATION_RUN_FAILED = 'automation.run_failed'
-    FEEDBACK_CREATED = 'feedback.created'
-    FEEDBACK_UPDATED = 'feedback.updated'
-    FEEDBACK_DELETED = 'feedback.deleted'
-    FEEDBACK_DELETED_ALL = 'feedback.deleted_all'
-    IMAGE_GENERATED = 'image.generated'
-    IMAGE_EDITED = 'image.edited'
-    AUDIO_SPEECH_REQUESTED = 'audio.speech_requested'
-    AUDIO_TRANSCRIPTION_REQUESTED = 'audio.transcription_requested'
-    TERMINAL_SESSION_OPENED = 'terminal.session.opened'
-    TERMINAL_SESSION_CLOSED = 'terminal.session.closed'
+class EventDefinition(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    description: str | None = None
+    message: str | None = None
+
+    @model_validator(mode='after')
+    def defaults(self) -> 'EventDefinition':
+        title = self.name.replace('.', ' ').replace('_', ' ').title()
+        if self.description is None:
+            object.__setattr__(self, 'description', f'{title}.')
+        if self.message is None:
+            object.__setattr__(self, 'message', title)
+        return self
 
 
-EVENT_CATALOG = tuple(event.value for event in EVENTS)
+class EventDefinitions(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    SYSTEM_STARTUP_STARTED: EventDefinition = EventDefinition(name='system.startup.started')
+    SYSTEM_STARTUP_COMPLETED: EventDefinition = EventDefinition(name='system.startup.completed')
+    SYSTEM_SHUTDOWN_STARTED: EventDefinition = EventDefinition(name='system.shutdown.started')
+    SYSTEM_SHUTDOWN_COMPLETED: EventDefinition = EventDefinition(name='system.shutdown.completed')
+    CONFIG_IMPORTED: EventDefinition = EventDefinition(name='config.imported')
+    CONFIG_UPDATED: EventDefinition = EventDefinition(name='config.updated')
+    CONFIG_WEBHOOK_UPDATED: EventDefinition = EventDefinition(name='config.webhook.updated')
+    CONFIG_CONNECTIONS_UPDATED: EventDefinition = EventDefinition(name='config.connections.updated')
+    CONFIG_TOOL_SERVERS_UPDATED: EventDefinition = EventDefinition(name='config.tool_servers.updated')
+    CONFIG_TERMINAL_SERVERS_UPDATED: EventDefinition = EventDefinition(name='config.terminal_servers.updated')
+    CONFIG_CODE_EXECUTION_UPDATED: EventDefinition = EventDefinition(name='config.code_execution.updated')
+    CONFIG_MODELS_UPDATED: EventDefinition = EventDefinition(name='config.models.updated')
+    CONFIG_BANNERS_UPDATED: EventDefinition = EventDefinition(name='config.banners.updated')
+    CONFIG_SUGGESTIONS_UPDATED: EventDefinition = EventDefinition(name='config.suggestions.updated')
+    AUTH_SIGNUP: EventDefinition = EventDefinition(name='auth.signup')
+    AUTH_LOGIN: EventDefinition = EventDefinition(name='auth.login')
+    AUTH_LOGOUT: EventDefinition = EventDefinition(name='auth.logout')
+    AUTH_PASSWORD_CHANGED: EventDefinition = EventDefinition(name='auth.password_changed')
+    AUTH_API_KEY_CREATED: EventDefinition = EventDefinition(name='auth.api_key.created')
+    AUTH_API_KEY_DELETED: EventDefinition = EventDefinition(name='auth.api_key.deleted')
+    AUTH_OAUTH_SESSION_DELETED: EventDefinition = EventDefinition(name='auth.oauth_session.deleted')
+    USER_CREATED: EventDefinition = EventDefinition(name='user.created', description='A user account was created.', message='User created')
+    USER_UPDATED: EventDefinition = EventDefinition(name='user.updated')
+    USER_DELETED: EventDefinition = EventDefinition(name='user.deleted')
+    USER_ROLE_UPDATED: EventDefinition = EventDefinition(name='user.role_updated')
+    USER_STATUS_UPDATED: EventDefinition = EventDefinition(name='user.status_updated')
+    USER_SETTINGS_UPDATED: EventDefinition = EventDefinition(name='user.settings_updated')
+    USER_PROFILE_UPDATED: EventDefinition = EventDefinition(name='user.profile_updated')
+    USER_PERMISSIONS_UPDATED: EventDefinition = EventDefinition(name='user.permissions_updated')
+    GROUP_CREATED: EventDefinition = EventDefinition(name='group.created')
+    GROUP_UPDATED: EventDefinition = EventDefinition(name='group.updated')
+    GROUP_DELETED: EventDefinition = EventDefinition(name='group.deleted')
+    GROUP_MEMBER_ADDED: EventDefinition = EventDefinition(name='group.member_added')
+    GROUP_MEMBER_REMOVED: EventDefinition = EventDefinition(name='group.member_removed')
+    CHAT_CREATED: EventDefinition = EventDefinition(name='chat.created')
+    CHAT_IMPORTED: EventDefinition = EventDefinition(name='chat.imported')
+    CHAT_UPDATED: EventDefinition = EventDefinition(name='chat.updated')
+    CHAT_DELETED: EventDefinition = EventDefinition(name='chat.deleted')
+    CHAT_DELETED_ALL: EventDefinition = EventDefinition(name='chat.deleted_all')
+    CHAT_COMPACTED: EventDefinition = EventDefinition(name='chat.compacted')
+    CHAT_PINNED: EventDefinition = EventDefinition(name='chat.pinned')
+    CHAT_UNPINNED: EventDefinition = EventDefinition(name='chat.unpinned')
+    CHAT_CLONED: EventDefinition = EventDefinition(name='chat.cloned')
+    CHAT_ARCHIVED: EventDefinition = EventDefinition(name='chat.archived')
+    CHAT_UNARCHIVED: EventDefinition = EventDefinition(name='chat.unarchived')
+    CHAT_SHARED: EventDefinition = EventDefinition(name='chat.shared')
+    CHAT_UNSHARED: EventDefinition = EventDefinition(name='chat.unshared')
+    CHAT_FOLDER_UPDATED: EventDefinition = EventDefinition(name='chat.folder_updated')
+    CHAT_TAG_ADDED: EventDefinition = EventDefinition(name='chat.tag_added')
+    CHAT_TAG_REMOVED: EventDefinition = EventDefinition(name='chat.tag_removed')
+    MESSAGE_CREATED: EventDefinition = EventDefinition(name='message.created')
+    MESSAGE_UPDATED: EventDefinition = EventDefinition(name='message.updated')
+    MESSAGE_DELETED: EventDefinition = EventDefinition(name='message.deleted')
+    MESSAGE_EVENT_RECEIVED: EventDefinition = EventDefinition(name='message.event_received')
+    MESSAGE_REACTION_ADDED: EventDefinition = EventDefinition(name='message.reaction_added')
+    MESSAGE_REACTION_REMOVED: EventDefinition = EventDefinition(name='message.reaction_removed')
+    MESSAGE_PINNED: EventDefinition = EventDefinition(name='message.pinned')
+    MESSAGE_UNPINNED: EventDefinition = EventDefinition(name='message.unpinned')
+    CHANNEL_CREATED: EventDefinition = EventDefinition(name='channel.created')
+    CHANNEL_UPDATED: EventDefinition = EventDefinition(name='channel.updated')
+    CHANNEL_DELETED: EventDefinition = EventDefinition(name='channel.deleted')
+    CHANNEL_MEMBER_ADDED: EventDefinition = EventDefinition(name='channel.member_added')
+    CHANNEL_MEMBER_REMOVED: EventDefinition = EventDefinition(name='channel.member_removed')
+    CHANNEL_MEMBER_ACTIVE_UPDATED: EventDefinition = EventDefinition(name='channel.member_active_updated')
+    CHANNEL_WEBHOOK_CREATED: EventDefinition = EventDefinition(name='channel.webhook.created')
+    CHANNEL_WEBHOOK_UPDATED: EventDefinition = EventDefinition(name='channel.webhook.updated')
+    CHANNEL_WEBHOOK_DELETED: EventDefinition = EventDefinition(name='channel.webhook.deleted')
+    FILE_UPLOADED: EventDefinition = EventDefinition(name='file.uploaded')
+    FILE_CONTENT_UPDATED: EventDefinition = EventDefinition(name='file.content_updated')
+    FILE_RENAMED: EventDefinition = EventDefinition(name='file.renamed')
+    FILE_DELETED: EventDefinition = EventDefinition(name='file.deleted')
+    FILE_DELETED_ALL: EventDefinition = EventDefinition(name='file.deleted_all')
+    FOLDER_CREATED: EventDefinition = EventDefinition(name='folder.created')
+    FOLDER_UPDATED: EventDefinition = EventDefinition(name='folder.updated')
+    FOLDER_PARENT_UPDATED: EventDefinition = EventDefinition(name='folder.parent_updated')
+    FOLDER_ACCESS_UPDATED: EventDefinition = EventDefinition(name='folder.access_updated')
+    FOLDER_DELETED: EventDefinition = EventDefinition(name='folder.deleted')
+    NOTE_CREATED: EventDefinition = EventDefinition(name='note.created')
+    NOTE_UPDATED: EventDefinition = EventDefinition(name='note.updated')
+    NOTE_ACCESS_UPDATED: EventDefinition = EventDefinition(name='note.access_updated')
+    NOTE_PINNED: EventDefinition = EventDefinition(name='note.pinned')
+    NOTE_UNPINNED: EventDefinition = EventDefinition(name='note.unpinned')
+    NOTE_DELETED: EventDefinition = EventDefinition(name='note.deleted')
+    MEMORY_CREATED: EventDefinition = EventDefinition(name='memory.created')
+    MEMORY_UPDATED: EventDefinition = EventDefinition(name='memory.updated')
+    MEMORY_DELETED: EventDefinition = EventDefinition(name='memory.deleted')
+    MEMORY_RESET: EventDefinition = EventDefinition(name='memory.reset')
+    KNOWLEDGE_CREATED: EventDefinition = EventDefinition(name='knowledge.created')
+    KNOWLEDGE_UPDATED: EventDefinition = EventDefinition(name='knowledge.updated')
+    KNOWLEDGE_DELETED: EventDefinition = EventDefinition(name='knowledge.deleted')
+    KNOWLEDGE_RESET: EventDefinition = EventDefinition(name='knowledge.reset')
+    KNOWLEDGE_REINDEXED: EventDefinition = EventDefinition(name='knowledge.reindexed')
+    KNOWLEDGE_ACCESS_UPDATED: EventDefinition = EventDefinition(name='knowledge.access_updated')
+    KNOWLEDGE_FILE_ADDED: EventDefinition = EventDefinition(name='knowledge.file.added')
+    KNOWLEDGE_FILE_UPDATED: EventDefinition = EventDefinition(name='knowledge.file.updated')
+    KNOWLEDGE_FILE_REMOVED: EventDefinition = EventDefinition(name='knowledge.file.removed')
+    KNOWLEDGE_FILE_MOVED: EventDefinition = EventDefinition(name='knowledge.file.moved')
+    KNOWLEDGE_DIRECTORY_CREATED: EventDefinition = EventDefinition(name='knowledge.directory.created')
+    KNOWLEDGE_DIRECTORY_UPDATED: EventDefinition = EventDefinition(name='knowledge.directory.updated')
+    KNOWLEDGE_DIRECTORY_DELETED: EventDefinition = EventDefinition(name='knowledge.directory.deleted')
+    KNOWLEDGE_EXTERNAL_CONNECTION_CREATED: EventDefinition = EventDefinition(name='knowledge.external_connection.created')
+    KNOWLEDGE_EXTERNAL_CONNECTION_UPDATED: EventDefinition = EventDefinition(name='knowledge.external_connection.updated')
+    KNOWLEDGE_EXTERNAL_CONNECTION_DELETED: EventDefinition = EventDefinition(name='knowledge.external_connection.deleted')
+    RETRIEVAL_CONTENT_PROCESSED: EventDefinition = EventDefinition(name='retrieval.content.processed')
+    RETRIEVAL_COLLECTION_DELETED: EventDefinition = EventDefinition(name='retrieval.collection.deleted')
+    RETRIEVAL_VECTOR_DB_RESET: EventDefinition = EventDefinition(name='retrieval.vector_db.reset')
+    RETRIEVAL_UPLOADS_RESET: EventDefinition = EventDefinition(name='retrieval.uploads.reset')
+    MODEL_CREATED: EventDefinition = EventDefinition(name='model.created')
+    MODEL_IMPORTED: EventDefinition = EventDefinition(name='model.imported')
+    MODEL_SYNCED: EventDefinition = EventDefinition(name='model.synced')
+    MODEL_UPDATED: EventDefinition = EventDefinition(name='model.updated')
+    MODEL_DELETED: EventDefinition = EventDefinition(name='model.deleted')
+    MODEL_ENABLED: EventDefinition = EventDefinition(name='model.enabled')
+    MODEL_DISABLED: EventDefinition = EventDefinition(name='model.disabled')
+    MODEL_ACCESS_UPDATED: EventDefinition = EventDefinition(name='model.access_updated')
+    MODEL_PROVIDER_CONFIG_UPDATED: EventDefinition = EventDefinition(name='model.provider_config.updated')
+    MODEL_PROVIDER_MODEL_CREATED: EventDefinition = EventDefinition(name='model.provider_model.created')
+    MODEL_PROVIDER_MODEL_DELETED: EventDefinition = EventDefinition(name='model.provider_model.deleted')
+    FUNCTION_CREATED: EventDefinition = EventDefinition(name='function.created')
+    FUNCTION_UPDATED: EventDefinition = EventDefinition(name='function.updated')
+    FUNCTION_DELETED: EventDefinition = EventDefinition(name='function.deleted')
+    FUNCTION_ENABLED: EventDefinition = EventDefinition(name='function.enabled')
+    FUNCTION_DISABLED: EventDefinition = EventDefinition(name='function.disabled')
+    FUNCTION_VALVES_UPDATED: EventDefinition = EventDefinition(name='function.valves_updated')
+    TOOL_CREATED: EventDefinition = EventDefinition(name='tool.created')
+    TOOL_UPDATED: EventDefinition = EventDefinition(name='tool.updated')
+    TOOL_DELETED: EventDefinition = EventDefinition(name='tool.deleted')
+    TOOL_ACCESS_UPDATED: EventDefinition = EventDefinition(name='tool.access_updated')
+    TOOL_VALVES_UPDATED: EventDefinition = EventDefinition(name='tool.valves_updated')
+    SKILL_CREATED: EventDefinition = EventDefinition(name='skill.created')
+    SKILL_UPDATED: EventDefinition = EventDefinition(name='skill.updated')
+    SKILL_DELETED: EventDefinition = EventDefinition(name='skill.deleted')
+    SKILL_ENABLED: EventDefinition = EventDefinition(name='skill.enabled')
+    SKILL_DISABLED: EventDefinition = EventDefinition(name='skill.disabled')
+    PROMPT_CREATED: EventDefinition = EventDefinition(name='prompt.created')
+    PROMPT_UPDATED: EventDefinition = EventDefinition(name='prompt.updated')
+    PROMPT_DELETED: EventDefinition = EventDefinition(name='prompt.deleted')
+    PROMPT_ENABLED: EventDefinition = EventDefinition(name='prompt.enabled')
+    PROMPT_DISABLED: EventDefinition = EventDefinition(name='prompt.disabled')
+    PROMPT_VERSION_UPDATED: EventDefinition = EventDefinition(name='prompt.version_updated')
+    PROMPT_ACCESS_UPDATED: EventDefinition = EventDefinition(name='prompt.access_updated')
+    PIPELINE_UPLOADED: EventDefinition = EventDefinition(name='pipeline.uploaded')
+    PIPELINE_ADDED: EventDefinition = EventDefinition(name='pipeline.added')
+    PIPELINE_DELETED: EventDefinition = EventDefinition(name='pipeline.deleted')
+    PIPELINE_VALVES_UPDATED: EventDefinition = EventDefinition(name='pipeline.valves_updated')
+    CALENDAR_CREATED: EventDefinition = EventDefinition(name='calendar.created')
+    CALENDAR_UPDATED: EventDefinition = EventDefinition(name='calendar.updated')
+    CALENDAR_DELETED: EventDefinition = EventDefinition(name='calendar.deleted')
+    CALENDAR_DEFAULT_UPDATED: EventDefinition = EventDefinition(name='calendar.default_updated')
+    CALENDAR_EVENT_CREATED: EventDefinition = EventDefinition(name='calendar.event.created')
+    CALENDAR_EVENT_UPDATED: EventDefinition = EventDefinition(name='calendar.event.updated')
+    CALENDAR_EVENT_DELETED: EventDefinition = EventDefinition(name='calendar.event.deleted')
+    CALENDAR_EVENT_RSVP_UPDATED: EventDefinition = EventDefinition(name='calendar.event.rsvp_updated')
+    AUTOMATION_CREATED: EventDefinition = EventDefinition(name='automation.created')
+    AUTOMATION_UPDATED: EventDefinition = EventDefinition(name='automation.updated')
+    AUTOMATION_ENABLED: EventDefinition = EventDefinition(name='automation.enabled')
+    AUTOMATION_DISABLED: EventDefinition = EventDefinition(name='automation.disabled')
+    AUTOMATION_DELETED: EventDefinition = EventDefinition(name='automation.deleted')
+    AUTOMATION_RUN_STARTED: EventDefinition = EventDefinition(name='automation.run_started')
+    AUTOMATION_RUN_COMPLETED: EventDefinition = EventDefinition(name='automation.run_completed')
+    AUTOMATION_RUN_FAILED: EventDefinition = EventDefinition(name='automation.run_failed')
+    FEEDBACK_CREATED: EventDefinition = EventDefinition(name='feedback.created')
+    FEEDBACK_UPDATED: EventDefinition = EventDefinition(name='feedback.updated')
+    FEEDBACK_DELETED: EventDefinition = EventDefinition(name='feedback.deleted')
+    FEEDBACK_DELETED_ALL: EventDefinition = EventDefinition(name='feedback.deleted_all')
+    IMAGE_GENERATED: EventDefinition = EventDefinition(name='image.generated')
+    IMAGE_EDITED: EventDefinition = EventDefinition(name='image.edited')
+    AUDIO_SPEECH_REQUESTED: EventDefinition = EventDefinition(name='audio.speech_requested')
+    AUDIO_TRANSCRIPTION_REQUESTED: EventDefinition = EventDefinition(name='audio.transcription_requested')
+    TERMINAL_SESSION_OPENED: EventDefinition = EventDefinition(name='terminal.session.opened')
+    TERMINAL_SESSION_CLOSED: EventDefinition = EventDefinition(name='terminal.session.closed')
+
+
+EVENTS = EventDefinitions()
+EVENT_DEFINITIONS = tuple(getattr(EVENTS, field_name) for field_name in EventDefinitions.model_fields)
+EVENT_DEFINITIONS_BY_NAME = {definition.name: definition for definition in EVENT_DEFINITIONS}
+EVENT_CATALOG = tuple(definition.name for definition in EVENT_DEFINITIONS)
 EVENT_CATALOG_SET = set(EVENT_CATALOG)
+
+
+def get_event_catalog() -> list[dict[str, str]]:
+    return [
+        {
+            'event': definition.name,
+            'description': definition.description,
+            'message': definition.message,
+        }
+        for definition in EVENT_DEFINITIONS
+    ]
 
 SENSITIVE_KEYS = {
     'password',
@@ -236,18 +268,48 @@ def normalize_event_webhook(webhook: dict[str, Any], *, create: bool = False) ->
         if event_filter not in EVENT_CATALOG_SET:
             raise ValueError(f'Invalid event: {event_filter}')
 
+    targets = normalize_event_targets(webhook.get('targets'))
+
     return {
         'id': webhook_id,
         'name': str(webhook.get('name') or ('Default webhook' if webhook_id == DEFAULT_WEBHOOK_ID else 'Webhook')),
         'url': url,
         'enabled': bool(webhook.get('enabled', True)),
         'events': events,
+        'targets': targets,
         'created_at': int(webhook.get('created_at') or now),
         'updated_at': now if create or webhook.get('updated_at') is None else int(webhook.get('updated_at') or now),
     }
 
 
-def event_webhook_matches(webhook: dict[str, Any], event_name: str) -> bool:
+def normalize_event_targets(targets: Any) -> list[dict[str, str]] | None:
+    if targets is None:
+        return None
+    if not isinstance(targets, list):
+        raise ValueError('Invalid targets')
+
+    normalized = []
+    seen = set()
+    for target in targets:
+        if not isinstance(target, dict):
+            raise ValueError('Invalid target')
+
+        target_type = str(target.get('type') or '').strip()
+        target_id = str(target.get('id') or '').strip()
+        if target_type not in {'user', 'group'} or not target_id:
+            raise ValueError('Invalid target')
+
+        key = (target_type, target_id)
+        if key in seen:
+            continue
+
+        normalized.append({'type': target_type, 'id': target_id})
+        seen.add(key)
+
+    return normalized
+
+
+def event_filter_matches(webhook: dict[str, Any], event_name: str) -> bool:
     if not webhook.get('enabled', True):
         return False
 
@@ -261,11 +323,81 @@ def event_webhook_matches(webhook: dict[str, Any], event_name: str) -> bool:
     return False
 
 
+def event_user_ids(event: 'Event') -> set[str]:
+    user_ids = set()
+    actor = event.actor or {}
+    subject = event.subject or {}
+    data = event.data or {}
+
+    if actor.get('id'):
+        user_ids.add(str(actor['id']))
+
+    if subject.get('type') == 'user' and subject.get('id'):
+        user_ids.add(str(subject['id']))
+
+    if data.get('user_id'):
+        user_ids.add(str(data['user_id']))
+
+    for user_id in data.get('user_ids') or []:
+        if user_id:
+            user_ids.add(str(user_id))
+
+    return user_ids
+
+
+async def event_target_matches(
+    targets: list[dict[str, str]] | None,
+    user_ids: set[str],
+    user_group_ids: dict[str, set[str]] | None = None,
+) -> bool:
+    if targets is None:
+        return True
+    if not targets:
+        return False
+    if not user_ids:
+        return False
+
+    target_user_ids = {target['id'] for target in targets if target.get('type') == 'user'}
+    if target_user_ids.intersection(user_ids):
+        return True
+
+    target_group_ids = {target['id'] for target in targets if target.get('type') == 'group'}
+    if not target_group_ids:
+        return False
+
+    if user_group_ids is None:
+        from open_webui.models.groups import Groups
+
+        groups_by_user = await Groups.get_groups_by_member_ids(list(user_ids))
+        user_group_ids = {
+            user_id: {group.id for group in groups}
+            for user_id, groups in groups_by_user.items()
+        }
+
+    return any(group_ids.intersection(target_group_ids) for group_ids in user_group_ids.values())
+
+
+async def event_webhook_matches(webhook: dict[str, Any], event: 'Event') -> bool:
+    if not event_filter_matches(webhook, event.event):
+        return False
+
+    return await event_target_matches(webhook.get('targets'), event_user_ids(event))
+
+
 async def get_event_webhooks() -> list[dict[str, Any]]:
     webhooks = await Config.get(EVENT_WEBHOOKS_CONFIG_KEY, []) or []
     if not isinstance(webhooks, list):
         return []
-    return [normalize_event_webhook(webhook) for webhook in webhooks if isinstance(webhook, dict)]
+
+    normalized = []
+    for webhook in webhooks:
+        if not isinstance(webhook, dict):
+            continue
+        try:
+            normalized.append(normalize_event_webhook(webhook))
+        except ValueError:
+            log.exception('Invalid event webhook config skipped')
+    return normalized
 
 
 async def migrate_legacy_webhook_config() -> list[dict[str, Any]]:
@@ -285,6 +417,7 @@ async def migrate_legacy_webhook_config() -> list[dict[str, Any]]:
             'url': legacy_url,
             'enabled': True,
             'events': ['*'],
+            'targets': None,
             'created_at': now,
             'updated_at': now,
         },
@@ -338,9 +471,10 @@ async def delete_event_webhook(webhook_id: str) -> bool:
     return True
 
 
-@dataclass
-class Event:
-    schema: str
+class Event(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_: str = Field(alias='schema')
     id: str
     event: str
     resource: str
@@ -351,11 +485,12 @@ class Event:
     source: str
     actor: dict[str, Any] | None = None
     subject: dict[str, Any] | None = None
-    data: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
     message: str | None = None
 
-    def model_dump(self) -> dict[str, Any]:
-        return asdict(self)
+    def model_dump(self, *args, **kwargs) -> dict[str, Any]:
+        kwargs.setdefault('by_alias', True)
+        return super().model_dump(*args, **kwargs)
 
 
 def _sensitive(key: Any) -> bool:
@@ -399,9 +534,16 @@ def _actor(actor: Any | None) -> dict[str, Any] | None:
     return data
 
 
+def event_name(event: EventDefinition | str) -> str:
+    name = event.name if isinstance(event, EventDefinition) else str(event)
+    if name not in EVENT_CATALOG_SET:
+        raise ValueError(f'Unknown event: {name}')
+    return name
+
+
 def build_event(
     request_or_app: Any,
-    event: EVENTS,
+    event: EventDefinition | str,
     *,
     actor: Any | None = None,
     subject_id: Any | None = None,
@@ -410,9 +552,9 @@ def build_event(
     data: dict | None = None,
     message: str | None = None,
 ) -> Event:
-    event_name = event.value
+    event_name_value = event_name(event)
     app = getattr(request_or_app, 'app', request_or_app)
-    parts = event_name.split('.')
+    parts = event_name_value.split('.')
     resource = '.'.join(parts[:-1])
     instance_id = getattr(getattr(app, 'state', None), 'instance_id', None)
     subject = (
@@ -424,7 +566,7 @@ def build_event(
     return Event(
         schema=VERSION,
         id=str(uuid.uuid4()),
-        event=event_name,
+        event=event_name_value,
         resource=resource,
         operation=parts[-1],
         created_at=int(time.time()),
@@ -435,24 +577,38 @@ def build_event(
         subject=_sanitize(subject) if subject else None,
         data=_sanitize(data or {}),
         message=message,
-    )
+)
+
+
+async def dispatch_webhook_event(app: Any, event: Event) -> None:
+    name = getattr(getattr(app, 'state', None), 'WEBUI_NAME', 'Open WebUI')
+    subject = event.subject or {}
+    subject_id = subject.get('id')
+    definition = EVENT_DEFINITIONS_BY_NAME.get(event.event)
+    message = event.message or (definition.message if definition else event.event)
+    if subject_id:
+        message = f'{message} ({subject_id})'
+
+    for webhook in await get_event_webhooks():
+        if not webhook.get('url') or not await event_webhook_matches(webhook, event):
+            continue
+
+        try:
+            await post_webhook(name, webhook['url'], message, event.model_dump())
+        except Exception:
+            log.exception('Event webhook failed for %s', webhook.get('id'))
+
+
+def schedule_webhook_dispatch(app: Any, event: Event) -> None:
+    try:
+        asyncio.create_task(dispatch_webhook_event(app, event))
+    except RuntimeError:
+        log.exception('Event webhook delivery could not be scheduled for %s', event.event)
 
 
 class WebhookEventSink:
     async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
-        name = getattr(getattr(app, 'state', None), 'WEBUI_NAME', 'Open WebUI')
-        subject = event.subject or {}
-        subject_id = subject.get('id')
-        message = event.message or f'{event.event}: {subject.get("type") or event.resource}'
-        if subject_id:
-            message = f'{message} ({subject_id})'
-
-        for webhook in await get_event_webhooks():
-            if webhook.get('url') and event_webhook_matches(webhook, event.event):
-                try:
-                    await post_webhook(name, webhook['url'], message, event.model_dump())
-                except Exception:
-                    log.exception('Event webhook failed for %s', webhook.get('id'))
+        schedule_webhook_dispatch(app, event)
 
 
 async def dispatch_event_functions(app: Any, event: Event, request: Any | None = None) -> None:
@@ -519,7 +675,7 @@ EVENT_SINKS = [EventFunctionSink(), WebhookEventSink()]
 
 async def publish_event(
     request_or_app: Any,
-    event: EVENTS,
+    event: EventDefinition | str,
     *,
     actor: Any | None = None,
     subject_id: Any | None = None,
@@ -545,4 +701,4 @@ async def publish_event(
         try:
             await sink.handle_event(app, event_payload, request=request)
         except Exception:
-            log.exception('Event sink failed for %s', event.value)
+            log.exception('Event sink failed for %s', event_payload.event)

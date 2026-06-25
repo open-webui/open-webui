@@ -1572,17 +1572,31 @@ export const getVersionUpdates = async (token: string) => {
 	return res;
 };
 
+export type EventCatalogItem = {
+	event: string;
+	description: string;
+	message: string;
+};
+
+export type EventWebhookTarget = {
+	type: 'user' | 'group';
+	id: string;
+};
+
 export type EventWebhook = {
 	id: string;
 	name: string;
 	url: string;
 	enabled: boolean;
 	events: string[];
+	targets: EventWebhookTarget[] | null;
 	created_at?: number;
 	updated_at?: number;
 };
 
-export const getEvents = async (token: string) => {
+export const getEvents = async (
+	token: string
+): Promise<{ schema: string; events: EventCatalogItem[] }> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/events`, {

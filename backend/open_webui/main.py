@@ -117,9 +117,9 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SECURE,
 )
 from open_webui.events import (
-    EVENT_CATALOG,
     EVENTS,
     delete_event_webhook,
+    get_event_catalog as get_event_catalog_items,
     get_event_webhooks,
     migrate_legacy_webhook_config,
     publish_event,
@@ -2023,6 +2023,7 @@ class EventWebhookForm(BaseModel):
     url: str
     enabled: bool = True
     events: list[str] | None = None
+    targets: list[dict[str, str]] | None = None
 
 
 class EventWebhookUpdateForm(BaseModel):
@@ -2030,13 +2031,14 @@ class EventWebhookUpdateForm(BaseModel):
     url: str | None = None
     enabled: bool | None = None
     events: list[str] | None = None
+    targets: list[dict[str, str]] | None = None
 
 
 @app.get('/api/events')
 async def get_event_catalog(user=Depends(get_admin_user)):
     return {
         'schema': VERSION,
-        'events': list(EVENT_CATALOG),
+        'events': get_event_catalog_items(),
     }
 
 
@@ -2054,6 +2056,7 @@ async def create_event_webhook(form_data: EventWebhookForm, user=Depends(get_adm
                 'url': form_data.url,
                 'enabled': form_data.enabled,
                 'events': form_data.events,
+                'targets': form_data.targets,
             }
         )
     except ValueError as e:
@@ -2065,7 +2068,12 @@ async def create_event_webhook(form_data: EventWebhookForm, user=Depends(get_adm
         actor=user,
         subject_id=webhook['id'],
         subject_type='config',
-        data={'action': 'created', 'enabled': webhook.get('enabled'), 'events': webhook.get('events')},
+        data={
+            'action': 'created',
+            'enabled': webhook.get('enabled'),
+            'events': webhook.get('events'),
+            'targets': webhook.get('targets'),
+        },
     )
     return webhook
 
@@ -2094,7 +2102,12 @@ async def update_event_webhook(webhook_id: str, form_data: EventWebhookUpdateFor
         actor=user,
         subject_id=webhook_id,
         subject_type='config',
-        data={'action': 'updated', 'enabled': webhook.get('enabled'), 'events': webhook.get('events')},
+        data={
+            'action': 'updated',
+            'enabled': webhook.get('enabled'),
+            'events': webhook.get('events'),
+            'targets': webhook.get('targets'),
+        },
     )
     return webhook
 
