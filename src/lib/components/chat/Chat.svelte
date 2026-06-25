@@ -3177,96 +3177,94 @@
 							</div>
 
 							{#if readOnly}
-							<div class="pb-6 z-10">
-								<div
-									class="text-xs text-gray-400 dark:text-gray-500 text-center"
-								>
-									{$i18n.t('Read only')}
+								<div class="pb-6 z-10">
+									<div class="text-xs text-gray-400 dark:text-gray-500 text-center">
+										{$i18n.t('Read only')}
+									</div>
 								</div>
-							</div>
-						{:else}
-						<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
-								<MessageInput
-									bind:this={messageInput}
-									{history}
-									{taskIds}
-									{selectedModels}
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedSkillIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
-									{pendingOAuthTools}
-									bind:webSearchEnabled
-									bind:atSelectedModel
-									bind:showCommands
-									bind:dragged
-									toolServers={$toolServers}
-									{generating}
-									{stopResponse}
-									{createMessagePair}
-									{onUpload}
-									messageQueue={$chatRequestQueues[$chatId] ?? []}
-									{chatTasks}
-									onQueueSendNow={async (id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										const item = queue.find((m) => m.id === id);
-										if (item) {
-											// Remove from queue
+							{:else}
+								<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+									<MessageInput
+										bind:this={messageInput}
+										{history}
+										{taskIds}
+										{selectedModels}
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:selectedSkillIds
+										bind:selectedFilterIds
+										bind:imageGenerationEnabled
+										bind:codeInterpreterEnabled
+										{pendingOAuthTools}
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										bind:showCommands
+										bind:dragged
+										toolServers={$toolServers}
+										{generating}
+										{stopResponse}
+										{createMessagePair}
+										{onUpload}
+										messageQueue={$chatRequestQueues[$chatId] ?? []}
+										{chatTasks}
+										onQueueSendNow={async (id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											const item = queue.find((m) => m.id === id);
+											if (item) {
+												// Remove from queue
+												chatRequestQueues.update((q) => ({
+													...q,
+													[$chatId]: queue.filter((m) => m.id !== id)
+												}));
+												await stopResponse(false);
+												await tick();
+												await submitPrompt(item.prompt, item.files);
+											}
+										}}
+										onQueueEdit={(id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											const item = queue.find((m) => m.id === id);
+											if (item) {
+												// Remove from queue
+												chatRequestQueues.update((q) => ({
+													...q,
+													[$chatId]: queue.filter((m) => m.id !== id)
+												}));
+												// Set files and restore prompt to input
+												files = item.files;
+												messageInput?.setText(item.prompt);
+											}
+										}}
+										onQueueDelete={(id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
 											chatRequestQueues.update((q) => ({
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
-											await stopResponse(false);
-											await tick();
-											await submitPrompt(item.prompt, item.files);
-										}
-									}}
-									onQueueEdit={(id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										const item = queue.find((m) => m.id === id);
-										if (item) {
-											// Remove from queue
-											chatRequestQueues.update((q) => ({
-												...q,
-												[$chatId]: queue.filter((m) => m.id !== id)
-											}));
-											// Set files and restore prompt to input
-											files = item.files;
-											messageInput?.setText(item.prompt);
-										}
-									}}
-									onQueueDelete={(id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										chatRequestQueues.update((q) => ({
-											...q,
-											[$chatId]: queue.filter((m) => m.id !== id)
-										}));
-									}}
-									onChange={(data) => {
-										if (!$temporaryChatEnabled) {
-											saveDraft(data, $chatId);
-										}
-									}}
-									on:submit={async (e) => {
-										clearDraft($chatId);
-										if (e.detail || files.length > 0) {
-											await tick();
+										}}
+										onChange={(data) => {
+											if (!$temporaryChatEnabled) {
+												saveDraft(data, $chatId);
+											}
+										}}
+										on:submit={async (e) => {
+											clearDraft($chatId);
+											if (e.detail || files.length > 0) {
+												await tick();
 
-											submitHandler(e.detail);
-										}
-									}}
-								/>
+												submitHandler(e.detail);
+											}
+										}}
+									/>
 
-								<div
-									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-								>
-									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+									<div
+										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+									>
+										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+									</div>
 								</div>
-							</div>
 							{/if}
 						{:else}
 							<div class="flex items-center h-full">
