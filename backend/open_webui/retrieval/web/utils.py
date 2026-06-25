@@ -30,7 +30,7 @@ from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoa
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.config import (
-    ENABLE_RAG_LOCAL_WEB_FETCH,
+    ENABLE_LOCAL_WEB_FETCH,
     EXTERNAL_WEB_LOADER_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
     FIRECRAWL_API_BASE_URL,
@@ -98,8 +98,8 @@ def validate_url(url: Union[str, Sequence[str]]):
                 log.warning(f'URL blocked by filter list: {url}')
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
-        if not ENABLE_RAG_LOCAL_WEB_FETCH:
-            # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
+        if not ENABLE_LOCAL_WEB_FETCH:
+            # Local web fetch is disabled, filter out URLs that resolve to non-global IP addresses.
             parsed_url = urllib.parse.urlparse(url)
             # Get IPv4 and IPv6 addresses
             ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
@@ -140,7 +140,7 @@ def _ssrf_safe_new_conn(self):
     infos = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
     if not infos:
         raise OSError(f'getaddrinfo for {host!r} returned empty list')
-    if not ENABLE_RAG_LOCAL_WEB_FETCH:
+    if not ENABLE_LOCAL_WEB_FETCH:
         for _, _, _, _, sa in infos:
             if not ipaddress.ip_address(sa[0]).is_global:
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
@@ -196,7 +196,7 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
 
     async def resolve(self, host, port=0, family=socket.AF_INET):
         results = await super().resolve(host, port, family)
-        if not ENABLE_RAG_LOCAL_WEB_FETCH:
+        if not ENABLE_LOCAL_WEB_FETCH:
             for entry in results:
                 if not ipaddress.ip_address(entry['host']).is_global:
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)

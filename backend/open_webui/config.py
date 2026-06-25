@@ -1024,7 +1024,15 @@ RAG_OLLAMA_BASE_URL = os.getenv('RAG_OLLAMA_BASE_URL', OLLAMA_BASE_URL)
 RAG_OLLAMA_API_KEY = os.getenv('RAG_OLLAMA_API_KEY', '')
 
 
-ENABLE_RAG_LOCAL_WEB_FETCH = os.getenv('ENABLE_RAG_LOCAL_WEB_FETCH', 'False').lower() == 'true'
+ENABLE_LOCAL_WEB_FETCH = (
+    os.getenv(
+        'ENABLE_LOCAL_WEB_FETCH',
+        os.getenv('ENABLE_RAG_LOCAL_WEB_FETCH', 'False'),
+    ).lower()
+    == 'true'
+)
+# Deprecated compatibility alias; use ENABLE_LOCAL_WEB_FETCH for new deployments.
+ENABLE_RAG_LOCAL_WEB_FETCH = ENABLE_LOCAL_WEB_FETCH
 
 
 DEFAULT_WEB_FETCH_FILTER_LIST = [
