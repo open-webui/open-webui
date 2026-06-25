@@ -71,7 +71,9 @@
 										<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 										{#each engines as engine}
 											<option value={engine}
-												>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option
+												>{engine}{engine === 'jupyter' || engine === 'pyodide'
+													? ' (Legacy)'
+													: ''}</option
 											>
 										{/each}
 									</select>
@@ -82,6 +84,14 @@
 								<div class="text-gray-500 text-xs">
 									{$i18n.t(
 										'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
+									)}
+								</div>
+							{/if}
+
+							{#if config.CODE_EXECUTION_ENGINE === 'pyodide'}
+								<div class="text-gray-500 text-xs">
+									{$i18n.t(
+										'Pyodide is legacy and runs sandboxed without file persistence by default. Set ENABLE_PYODIDE_FILE_PERSISTENCE=true for same-origin persistence, which re-accepts the shared-chat code-execution risk.'
 									)}
 								</div>
 							{/if}
@@ -200,7 +210,9 @@
 										<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 										{#each engines as engine}
 											<option value={engine}
-												>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option
+												>{engine}{engine === 'jupyter' || engine === 'pyodide'
+													? ' (Legacy)'
+													: ''}</option
 											>
 										{/each}
 									</select>

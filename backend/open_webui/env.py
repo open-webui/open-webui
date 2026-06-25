@@ -1053,6 +1053,13 @@ if OFFLINE_MODE:
     ENABLE_VERSION_UPDATE_CHECK = False
 
 ####################################
+# ENABLE_PYODIDE_FILE_PERSISTENCE
+####################################
+
+# false (default) = opaque-origin sandbox, no persistence; true = same-origin worker with IDBFS persistence
+ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', 'false').lower() == 'true'
+
+####################################
 # Audit logging
 ####################################
 

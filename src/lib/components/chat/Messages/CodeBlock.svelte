@@ -4,7 +4,7 @@
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { config, pyodideWorker as pyodideWorkerStore } from '$lib/stores';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 	import { executeCode } from '$lib/apis/utils';
 	import {
 		copyToClipboard,
@@ -244,7 +244,7 @@
 		// Otherwise fall back to a throwaway worker.
 		const sharedWorker = $pyodideWorkerStore;
 		const isShared = !!sharedWorker;
-		const worker = sharedWorker ?? new PyodideWorker();
+		const worker = sharedWorker ?? createPyodideWorker();
 
 		if (!isShared) {
 			localPyodideWorker = worker;
