@@ -231,6 +231,76 @@ jobs:
         run: |
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
+  notify-helm-charts:
+    runs-on: ubuntu-latest
+    needs: [merge]
+    if: ${{ !cancelled() && needs.merge.result == 'success' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v')) }}
+    env:
+      HELM_CHARTS_DISPATCH_TOKEN: ${{ secrets.HELM_CHARTS_DISPATCH_TOKEN }}
+    steps:
+      - name: Check dispatch token
+        id: token
+        run: |
+          if [ -z "${HELM_CHARTS_DISPATCH_TOKEN}" ]; then
+            echo "::warning::HELM_CHARTS_DISPATCH_TOKEN is not configured; skipping Helm chart automation dispatch."
+            echo "present=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "present=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.token.outputs.present == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify published Open WebUI image
+        if: steps.token.outputs.present == 'true'
+        id: image
+        run: |
+          set -euo pipefail
+
+          image_name="ghcr.io/${GITHUB_REPOSITORY,,}"
+          ref_name="${GITHUB_REF_NAME}"
+
+          if [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
+            image_tag="dev"
+          else
+            image_tag="${ref_name#v}"
+          fi
+
+          docker buildx imagetools inspect "${image_name}:${image_tag}"
+          echo "tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Dispatch Helm chart automation
+        if: steps.token.outputs.present == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.HELM_CHARTS_DISPATCH_TOKEN }}
+          script: |
+            const isDev = context.ref === 'refs/heads/dev';
+            const eventType = isDev
+              ? 'open-webui-dev-image-published'
+              : 'open-webui-release-published';
+            const refName = context.ref.replace('refs/heads/', '').replace('refs/tags/', '');
+            const appVersion = refName.startsWith('v') ? refName.slice(1) : refName;
+            const payload = {
+              image_tag: isDev ? 'dev' : appVersion,
+              source_ref: context.ref,
+              source_sha: context.sha,
+              source_run_id: String(context.runId),
+              source_repository: context.repo.repo,
+            };
+
+            if (!isDev) {
+              payload.app_version = appVersion;
+            }
+
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: 'helm-charts',
+              event_type: eventType,
+              client_payload: payload,
+            });
+
   copy-to-dockerhub:
     runs-on: ubuntu-latest
     if: ${{ !cancelled() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
