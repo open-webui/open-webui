@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.0] - 2026-06-25
+## [0.10.0] - 2026-06-26
 
 ### Added
 
@@ -84,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧵 **Code blocks render in channel threads.** Code blocks now display correctly in a channel's thread view, where duplicated message identifiers previously broke their rendering. [Commit](https://github.com/open-webui/open-webui/commit/7d1f9415807a47e0da4f862327e9802a3b839753), [#25917](https://github.com/open-webui/open-webui/pull/25917)
 - 🔵 **No more false unread badges on chats.** Chats no longer show an unread indicator after automatic changes like title generation or pinning, archiving, and moving them between folders. [#25912](https://github.com/open-webui/open-webui/pull/25912)
 - 📌 **Pinned notes stay in sync.** Pinning or unpinning a note now updates consistently between the note editor and the sidebar, instead of showing a stale pin state. [#25918](https://github.com/open-webui/open-webui/pull/25918)
+- 📅 **All-day calendar events keep their date.** Saving an all-day calendar event no longer shifts it by a day for users in certain time zones. [#25864](https://github.com/open-webui/open-webui/pull/25864)
 - ➗ **Large math expressions no longer crash rendering.** Parsing math delimiters no longer overflows on very large or deeply nested input, so messages with heavy math render instead of failing. [#25845](https://github.com/open-webui/open-webui/pull/25845)
 - 🗄️ **Oversized chunks no longer break Milvus indexing.** Overly long text chunks are now trimmed before being sent to Milvus, so a single large chunk can no longer fail the whole batch and leave a file with no embeddings. [#25857](https://github.com/open-webui/open-webui/pull/25857), [#25858](https://github.com/open-webui/open-webui/pull/25858)
 - 📝 **Code editor stays open when empty.** The code editor drawer no longer collapses when its content is empty. [#25855](https://github.com/open-webui/open-webui/pull/25855)
@@ -101,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔀 **Native tool calling is now the default.** Every chat and model that had not explicitly chosen a tool-calling mode now runs Native, which relies on a model's built-in tool support, while the old behavior has been renamed "Legacy" and made the explicit opt-out; if your models depend on the previous approach you must switch them back to "Legacy" per chat, per model, or globally in your default model parameters to preserve their behavior. [Commit](https://github.com/open-webui/open-webui/commit/b1d40f340921c27eb9a965b9feeb2563856e25e2)
 - 🗂️ **Authentication settings moved to their own page.** LDAP, OAuth, and related authentication settings have moved out of the General settings page into a dedicated Authentication page in the admin panel. [Commit](https://github.com/open-webui/open-webui/commit/5cdcdbaeec9fc8156721c38c33ec37956962871c)
 - 🎓 **Several features are no longer beta.** Memories, Notes, Channels, and High Contrast Mode have graduated out of beta and no longer carry a beta label. [Commit](https://github.com/open-webui/open-webui/commit/7b55a63fc7ee323e9114713ce1d2f3f688aa37e6)
+- 🔧 **Local web fetch setting renamed.** The "ENABLE_RAG_LOCAL_WEB_FETCH" environment variable is now "ENABLE_LOCAL_WEB_FETCH", reflecting that it applies beyond retrieval; the old name still works as a deprecated alias. [Commit](https://github.com/open-webui/open-webui/commit/e3ba6984534898695b47ee4fc3d6b746e2865abc)
 
 ## [0.9.6] - 2026-06-01
 
