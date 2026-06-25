@@ -64,9 +64,21 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         return {}
 
     metadata = metadata or {}
+
+    # Extract user_message info for tree mapping
+    user_message = metadata.get('user_message') or {}
+    user_message_id = metadata.get('user_message_id', '') or (user_message.get('id', '') if user_message else '')
+    user_message_parent_id = user_message.get('parentId', '') if user_message else ''
+
     template_vars = {
         '{{CHAT_ID}}': metadata.get('chat_id', '') or '',
         '{{MESSAGE_ID}}': metadata.get('message_id', '') or '',
+        '{{USER_MESSAGE_ID}}': user_message_id or '',
+        '{{USER_MESSAGE_PARENT_ID}}': user_message_parent_id or '',
+        '{{FILE_ID}}': metadata.get('file_id', '') or '',
+        '{{FILE_NAME}}': metadata.get('file_name', '') or '',
+        '{{FILE_CONTENT_TYPE}}': metadata.get('file_content_type', '') or '',
+        '{{TASK}}': metadata.get('task', '') or '',
         '{{USER_ID}}': (user.id if user else '') or '',
         '{{USER_NAME}}': (user.name if user else '') or '',
         '{{USER_EMAIL}}': (user.email if user else '') or '',

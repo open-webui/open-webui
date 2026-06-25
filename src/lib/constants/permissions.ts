@@ -25,6 +25,7 @@ export const DEFAULT_PERMISSIONS = {
 		public_skills: false,
 		notes: false,
 		public_notes: false,
+		folders: false,
 		public_chats: false,
 		public_calendars: false
 	},
@@ -46,6 +47,7 @@ export const DEFAULT_PERMISSIONS = {
 		edit: true,
 		share: true,
 		export: true,
+		import: true,
 		stt: true,
 		tts: true,
 		call: true,
@@ -64,7 +66,8 @@ export const DEFAULT_PERMISSIONS = {
 		code_interpreter: true,
 		memories: true,
 		automations: false,
-		calendar: true
+		calendar: true,
+		webhooks: false
 	},
 	settings: {
 		interface: true

@@ -71,12 +71,12 @@
 	let functions = null;
 	let filteredItems = [];
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			setFilteredItems();
 		}, 300);
-	}
+	};
 
 	$: if (functions && selectedType !== undefined && viewOption !== undefined) {
 		setFilteredItems();
@@ -363,6 +363,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Functions')}
 					/>
 
@@ -372,6 +373,7 @@
 								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								on:click={() => {
 									query = '';
+									handleSearchInput();
 								}}
 							>
 								<XMark className="size-3" strokeWidth="2" />
@@ -408,7 +410,8 @@
 						items={[
 							{ value: 'pipe', label: $i18n.t('Pipe') },
 							{ value: 'filter', label: $i18n.t('Filter') },
-							{ value: 'action', label: $i18n.t('Action') }
+							{ value: 'action', label: $i18n.t('Action') },
+							{ value: 'event', label: $i18n.t('Event') }
 						]}
 					/>
 				</div>

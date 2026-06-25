@@ -393,6 +393,22 @@
 			</div>
 		{/if}
 
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Folders Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.folders} />
+			</div>
+			{#if defaultPermissions?.sharing?.folders && !permissions.sharing.folders}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
 		{#if permissions.chat.share}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
@@ -686,6 +702,22 @@
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
 				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat Import')}
+				</div>
+				<Switch bind:state={permissions.chat['import']} />
+			</div>
+			{#if defaultPermissions?.chat?.import && !permissions.chat['import']}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Allow Speech to Text')}
 				</div>
 				<Switch bind:state={permissions.chat.stt} />
@@ -961,6 +993,22 @@
 				<Switch bind:state={permissions.features.calendar} />
 			</div>
 			{#if defaultPermissions?.features?.calendar && !permissions.features.calendar}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('User Webhooks')}
+				</div>
+				<Switch bind:state={permissions.features.webhooks} />
+			</div>
+			{#if defaultPermissions?.features?.webhooks && !permissions.features.webhooks}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

@@ -286,6 +286,17 @@ class KnowledgeTable:
                     elif view_option == 'shared':
                         stmt = stmt.filter(Knowledge.user_id != user_id)
 
+                    source = filter.get('source')
+                    if source == 'external':
+                        stmt = stmt.filter(Knowledge.meta['source'].as_string() == 'external')
+                    elif source == 'local':
+                        stmt = stmt.filter(
+                            or_(
+                                Knowledge.meta.is_(None),
+                                Knowledge.meta['source'].as_string() != 'external',
+                            )
+                        )
+
                     stmt = AccessGrants.has_permission_filter(
                         db=db,
                         query=stmt,
@@ -756,6 +767,25 @@ class KnowledgeTable:
                     .filter_by(id=id)
                     .values(
                         data=data,
+                        updated_at=int(time.time()),
+                    )
+                )
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id, db=db)
+        except Exception as e:
+            log.exception(e)
+            return None
+
+    async def update_knowledge_meta_by_id(
+        self, id: str, meta: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[KnowledgeModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                await db.execute(
+                    update(Knowledge)
+                    .filter_by(id=id)
+                    .values(
+                        meta=meta,
                         updated_at=int(time.time()),
                     )
                 )
