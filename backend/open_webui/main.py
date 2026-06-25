@@ -372,6 +372,9 @@ from open_webui.config import (
     TASK_MODEL_EXTERNAL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
+    # Video Analysis (TwelveLabs)
+    TWELVELABS_API_KEY,
+    TWELVELABS_PEGASUS_MODEL,
     # Terminal Server
     TERMINAL_SERVER_CONNECTIONS,
     # Thread pool size for FastAPI/AnyIO
@@ -1283,6 +1286,16 @@ app.state.config.IMAGES_EDIT_COMFYUI_BASE_URL = IMAGES_EDIT_COMFYUI_BASE_URL
 app.state.config.IMAGES_EDIT_COMFYUI_API_KEY = IMAGES_EDIT_COMFYUI_API_KEY
 app.state.config.IMAGES_EDIT_COMFYUI_WORKFLOW = IMAGES_EDIT_COMFYUI_WORKFLOW
 app.state.config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = IMAGES_EDIT_COMFYUI_WORKFLOW_NODES
+
+
+########################################
+#
+# VIDEO ANALYSIS (TWELVELABS)
+#
+########################################
+
+app.state.config.TWELVELABS_API_KEY = TWELVELABS_API_KEY
+app.state.config.TWELVELABS_PEGASUS_MODEL = TWELVELABS_PEGASUS_MODEL
 
 
 ########################################

@@ -47,6 +47,7 @@ from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.tools.builtin import (
     add_memory,
+    analyze_video,
     calculate_timestamp,
     create_automation,
     create_calendar_event,
@@ -557,6 +558,13 @@ async def get_builtin_tools(
         and await has_user_permission('image_generation')
     ):
         builtin_functions.append(edit_image)
+
+    # Add video analysis tool if builtin category enabled AND a TwelveLabs API key is configured.
+    # Opt-in: absent an API key the tool is never offered, so behavior is unchanged by default.
+    if is_builtin_tool_enabled('video_analysis') and getattr(
+        request.app.state.config, 'TWELVELABS_API_KEY', None
+    ):
+        builtin_functions.append(analyze_video)
 
     # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
     if (

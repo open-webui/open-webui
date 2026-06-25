@@ -2270,6 +2270,24 @@ IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = ConfigVar(
 )
 
 ####################################
+# Video Analysis (TwelveLabs)
+####################################
+
+# Opt-in: the analyze_video builtin tool is only offered when an API key is set.
+TWELVELABS_API_KEY = ConfigVar(
+    'TWELVELABS_API_KEY',
+    'video_analysis.twelvelabs.api_key',
+    os.getenv('TWELVELABS_API_KEY', ''),
+)
+
+# Pegasus model used for video understanding/analysis.
+TWELVELABS_PEGASUS_MODEL = ConfigVar(
+    'TWELVELABS_PEGASUS_MODEL',
+    'video_analysis.twelvelabs.pegasus_model',
+    os.getenv('TWELVELABS_PEGASUS_MODEL', 'pegasus1.5'),
+)
+
+####################################
 # Audio
 ####################################
 
