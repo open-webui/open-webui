@@ -7,11 +7,14 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
+	import Folder from '$lib/components/icons/Folder.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import SearchInput from './SearchInput.svelte';
+	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +26,11 @@
 
 	let selectedItem = null;
 
+	// --- Directory browsing state within expanded KB ---
+	let currentDirectoryId = null; // null = root level of the KB
+	let selectedFileDirectories = [];
+	let selectedFileBreadcrumbs = [];
+
 	let selectedFileItemsPage = 1;
 
 	let selectedFileItems = null;
@@ -33,6 +41,9 @@
 	let selectedFileRequestId = 0;
 
 	$: if (selectedItem) {
+		currentDirectoryId = null;
+		selectedFileDirectories = [];
+		selectedFileBreadcrumbs = [];
 		initSelectedFileItems();
 	}
 
@@ -64,7 +75,8 @@
 			null,
 			null,
 			null,
-			selectedFileItemsPage
+			selectedFileItemsPage,
+			currentDirectoryId
 		).catch(() => {
 			return null;
 		});
@@ -72,6 +84,8 @@
 
 		if (res) {
 			selectedFileItemsTotal = res.total;
+			selectedFileDirectories = res.directories || [];
+			selectedFileBreadcrumbs = res.breadcrumbs || [];
 			const pageItems = res.items;
 
 			if ((pageItems ?? []).length === 0) {
@@ -91,6 +105,48 @@
 
 		selectedFileItemsLoading = false;
 		return res;
+	};
+
+	const navigateToDirectory = async (dirId) => {
+		currentDirectoryId = dirId;
+		selectedFileItemsPage = 1;
+		selectedFileItems = null;
+		selectedFileItemsTotal = null;
+		selectedFileAllItemsLoaded = false;
+		selectedFileItemsLoading = false;
+		await tick();
+		await getSelectedFileItemsPage();
+	};
+
+	const selectDirectory = async (dir) => {
+		// Fetch all files directly in this directory and select them all
+		const allFiles = [];
+		let page = 1;
+		while (true) {
+			const res = await searchKnowledgeFilesById(
+				localStorage.token,
+				selectedItem.id,
+				null,
+				null,
+				null,
+				null,
+				page,
+				dir.id
+			).catch(() => null);
+
+			if (!res || !res.items || res.items.length === 0) break;
+			allFiles.push(...res.items);
+			if (allFiles.length >= res.total) break;
+			page++;
+		}
+
+		for (const file of allFiles) {
+			onSelect({
+				type: 'file',
+				name: file?.meta?.name,
+				...file
+			});
+		}
 	};
 
 	let page = 1;
@@ -266,11 +322,77 @@
 								<div class=" py-1 flex justify-center">
 									<Spinner className="size-3" />
 								</div>
-							{:else if selectedFileItemsTotal === 0}
+							{:else if selectedFileItemsTotal === 0 && selectedFileDirectories.length === 0}
 								<div class=" text-xs text-gray-500 dark:text-gray-400 italic py-0.5 px-2">
 									{$i18n.t('No files in this knowledge base.')}
 								</div>
 							{:else}
+								{#if selectedFileBreadcrumbs.length > 0}
+									<div
+										class="px-2 py-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+									>
+										<button
+											type="button"
+											class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+											on:click={() => navigateToDirectory(null)}
+										>
+											<ArrowLeft className="size-3" strokeWidth="2" />
+										</button>
+
+										<button
+											type="button"
+											class="hover:text-gray-700 dark:hover:text-gray-200 transition truncate"
+											on:click={() => navigateToDirectory(null)}
+										>
+											{decodeString(selectedItem?.name)}
+										</button>
+										{#each selectedFileBreadcrumbs as crumb, i}
+											<span class="flex-shrink-0">/</span>
+											<button
+												type="button"
+												class="hover:text-gray-700 dark:hover:text-gray-200 transition truncate"
+												on:click={() => navigateToDirectory(crumb.id)}
+											>
+												{crumb.name}
+											</button>
+										{/each}
+									</div>
+								{/if}
+
+								{#each selectedFileDirectories as dir (dir.id)}
+									<div
+										class="h-[1.6875rem] px-2 rounded-xl w-full text-left flex items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+									>
+										<button
+											type="button"
+											class="flex-1 flex min-w-0 items-center gap-1.5"
+											on:click={() => navigateToDirectory(dir.id)}
+										>
+											<Tooltip content={$i18n.t('Directory')} placement="top">
+												<Folder className="size-3.5" />
+											</Tooltip>
+											<Tooltip content={dir.name} placement="top-start">
+												<div class="line-clamp-1 flex-1 text-[13px]">
+													{dir.name}
+												</div>
+											</Tooltip>
+										</button>
+
+										<div class="flex items-center gap-0.5 ml-1">
+											<Tooltip content={$i18n.t('Select directory')} placement="top">
+												<button
+													type="button"
+													class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition opacity-40 hover:opacity-100"
+													on:click|stopPropagation={() => selectDirectory(dir)}
+												>
+													<Plus className="size-3" />
+												</button>
+											</Tooltip>
+											<ChevronRight className="size-3 opacity-30" />
+										</div>
+									</div>
+								{/each}
+
 								{#each selectedFileItems as file, fileIdx (file.id)}
 									<button
 										class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
@@ -285,7 +407,7 @@
 										}}
 									>
 										<div class=" flex items-center gap-1.5">
-											<Tooltip content={$i18n.t('Collection')} placement="top">
+											<Tooltip content={$i18n.t('File')} placement="top">
 												<DocumentPage className="size-3.5" />
 											</Tooltip>
 
