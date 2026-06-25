@@ -320,9 +320,7 @@
 					<button
 						class="ml-12 flex items-center space-x-2 relative z-0"
 						on:click={() => {
-							const messageElement = document.getElementById(
-								`message-${replyToMessageId}`
-							);
+							const messageElement = document.getElementById(`message-${replyToMessageId}`);
 							if (messageElement) {
 								messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 								messageElement.classList.add('highlight');

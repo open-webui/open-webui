@@ -59,9 +59,7 @@
 			case 'custom': {
 				// Parse YYYY-MM-DD inputs; end date is inclusive (covers the full day)
 				const start = customStart ? Math.floor(new Date(customStart).getTime() / 1000) : null;
-				const end = customEnd
-					? Math.floor(new Date(customEnd).getTime() / 1000) + day - 1
-					: null;
+				const end = customEnd ? Math.floor(new Date(customEnd).getTime() / 1000) + day - 1 : null;
 				return { start, end };
 			}
 			default:
