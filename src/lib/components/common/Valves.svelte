@@ -6,6 +6,17 @@
 	import Switch from './Switch.svelte';
 	import SensitiveInput from './SensitiveInput.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
+	import DOMPurify from 'dompurify';
+	import { Marked } from 'marked';
+
+	// Render valve descriptions as markdown. An isolated Marked instance keeps
+	// this independent of the global chat markdown config (KaTeX/custom
+	// extensions), and the output is always sanitized with DOMPurify before being
+	// inserted as HTML — so descriptions may use basic markdown (bold, links,
+	// inline code, lists) with no XSS risk.
+	const descriptionMarkdown = new Marked({ breaks: true });
+	const renderDescription = (text) =>
+		DOMPurify.sanitize(descriptionMarkdown.parse(text ?? '', { async: false }));
 
 	export let valvesSpec = null;
 	export let valves = {};
@@ -213,8 +224,8 @@
 			{/if}
 
 			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
-					{valvesSpec.properties[property].description}
+				<div class="text-xs text-gray-500 valve-description">
+					{@html renderDescription(valvesSpec.properties[property].description)}
 				</div>
 			{/if}
 		</div>
@@ -222,3 +233,26 @@
 {:else}
 	<div class="text-xs">{$i18n.t('No valves')}</div>
 {/if}
+
+<style>
+	/* Keep markdown-rendered valve descriptions compact in their small text area. */
+	.valve-description :global(p) {
+		margin: 0;
+	}
+	.valve-description :global(p + p) {
+		margin-top: 0.25rem;
+	}
+	.valve-description :global(ul),
+	.valve-description :global(ol) {
+		margin: 0.25rem 0;
+		padding-left: 1.25rem;
+		list-style: revert;
+	}
+	.valve-description :global(a) {
+		text-decoration: underline;
+	}
+	.valve-description :global(code) {
+		font-family: ui-monospace, monospace;
+		font-size: 0.95em;
+	}
+</style>
