@@ -16,7 +16,21 @@ log = logging.getLogger(__name__)
 
 # Let this message reach those for whom it was written, and
 # may no network partition deny the word its destination.
-async def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
+def _event_text(message: str, description: str | None = None, event_data: dict | None = None) -> str:
+    lines = [message]
+    if description and description != message:
+        lines.append(description)
+
+    event_name = (event_data or {}).get('event')
+    if event_name:
+        lines.append(f'Event: {event_name}')
+
+    return '\n'.join(lines)
+
+
+async def post_webhook(
+    name: str, url: str, message: str, event_data: dict, description: str | None = None
+) -> bool:
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')
         # Block private-IP / loopback / cloud-metadata targets — the URL is
@@ -27,10 +41,11 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
 
         # Slack and Google Chat Webhooks
         if 'https://hooks.slack.com' in url or 'https://chat.googleapis.com' in url:
-            payload['text'] = message
+            payload['text'] = _event_text(message, description, event_data)
         # Discord Webhooks
         elif 'https://discord.com/api/webhooks' in url:
-            payload['content'] = message if len(message) < 2000 else f'{message[: 2000 - 20]}... (truncated)'
+            content = _event_text(message, description, event_data)
+            payload['content'] = content if len(content) < 2000 else f'{content[: 2000 - 20]}... (truncated)'
         # Microsoft Teams Webhooks
         elif 'webhook.office.com' in url:
             action = event_data.get('action', 'undefined')
@@ -42,6 +57,8 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             facts = [{'name': key, 'value': value} for key, value in user_dict.items()]
             if event_data.get('event'):
                 facts.insert(0, {'name': 'event', 'value': event_data.get('event')})
+            if description:
+                facts.insert(0, {'name': 'description', 'value': description})
             payload = {
                 '@type': 'MessageCard',
                 '@context': 'http://schema.org/extensions',
@@ -52,6 +69,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
                         'activityTitle': message,
                         'activitySubtitle': f'{name} ({VERSION}) - {action}',
                         'activityImage': WEBUI_FAVICON_URL,
+                        'text': description,
                         'facts': facts,
                         'markdown': True,
                     }
