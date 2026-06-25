@@ -353,7 +353,7 @@ async def event_target_matches(
     if targets is None:
         return True
     if not targets:
-        return False
+        return not user_ids
     if not user_ids:
         return False
 

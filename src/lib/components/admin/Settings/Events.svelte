@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -18,7 +18,8 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
+	import { getGroups, getGroupInfoById } from '$lib/apis/groups';
+	import { getUserInfoById, searchUsers } from '$lib/apis/users';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -32,9 +33,16 @@
 	let showWebhookModal = false;
 	let showDeleteConfirmDialog = false;
 	let editing: EventWebhook | null = null;
-	let targetMode: 'all' | 'selected' | 'none' = 'all';
+	let targetMode: 'all' | 'system' | 'selected' = 'all';
 	let targetUserIds: string[] = [];
 	let targetGroupIds: string[] = [];
+	let targetQuery = '';
+	let targetUserResults: any[] = [];
+	let targetGroupResults: any[] = [];
+	let groups: any[] = [];
+	let selectedUsers: Record<string, any> = {};
+	let selectedGroups: Record<string, any> = {};
+	let targetSearchTimer: ReturnType<typeof setTimeout>;
 	let form = {
 		id: '',
 		name: '',
@@ -62,18 +70,25 @@
 		});
 
 	const load = async () => {
-		const [catalog, webhookList] = await Promise.all([
+		const [catalog, webhookList, groupList] = await Promise.all([
 			getEvents(localStorage.token),
-			getEventWebhooks(localStorage.token)
+			getEventWebhooks(localStorage.token),
+			getGroups(localStorage.token, true).catch(() => [])
 		]);
 		eventItems = [...(catalog?.events ?? [])].sort((a, b) => a.event.localeCompare(b.event));
 		webhooks = sortWebhooks(webhookList ?? []);
+		groups = groupList ?? [];
 	};
 
 	const resetTargets = () => {
 		targetMode = 'all';
 		targetUserIds = [];
 		targetGroupIds = [];
+		targetQuery = '';
+		targetUserResults = [];
+		targetGroupResults = [];
+		selectedUsers = {};
+		selectedGroups = {};
 	};
 
 	const resetForm = () => {
@@ -95,7 +110,7 @@
 		showWebhookModal = true;
 	};
 
-	const editWebhook = (webhook: EventWebhook) => {
+	const editWebhook = async (webhook: EventWebhook) => {
 		editing = webhook;
 		showWebhookModal = true;
 		form = {
@@ -112,13 +127,14 @@
 			return;
 		}
 
-		targetMode = webhook.targets.length > 0 ? 'selected' : 'none';
+		targetMode = webhook.targets.length > 0 ? 'selected' : 'system';
 		targetUserIds = webhook.targets
 			.filter((target) => target.type === 'user')
 			.map((target) => target.id);
 		targetGroupIds = webhook.targets
 			.filter((target) => target.type === 'group')
 			.map((target) => target.id);
+		await hydrateSelectedTargets();
 	};
 
 	const eventSummary = (webhook: EventWebhook) => {
@@ -135,20 +151,22 @@
 	const targetSummary = (webhook: EventWebhook) => {
 		const targets = webhook.targets;
 		if (targets === null || targets === undefined) {
-			return $i18n.t('All users');
+			return $i18n.t('All users and system events');
 		}
 		if (targets.length === 0) {
-			return $i18n.t('No targets');
+			return $i18n.t('System events only');
 		}
 
 		const userCount = targets.filter((target) => target.type === 'user').length;
 		const groupCount = targets.filter((target) => target.type === 'group').length;
 		const parts = [];
 		if (userCount > 0) {
-			parts.push($i18n.t('{{count}} users', { count: userCount }));
+			parts.push(userCount === 1 ? $i18n.t('1 user') : $i18n.t('{{count}} users', { count: userCount }));
 		}
 		if (groupCount > 0) {
-			parts.push($i18n.t('{{count}} groups', { count: groupCount }));
+			parts.push(
+				groupCount === 1 ? $i18n.t('1 group') : $i18n.t('{{count}} groups', { count: groupCount })
+			);
 		}
 		return parts.join(' + ');
 	};
@@ -214,7 +232,7 @@
 		if (targetMode === 'all') {
 			return null;
 		}
-		if (targetMode === 'none') {
+		if (targetMode === 'system') {
 			return [];
 		}
 
@@ -222,6 +240,89 @@
 			...targetUserIds.map((id) => ({ type: 'user' as const, id })),
 			...targetGroupIds.map((id) => ({ type: 'group' as const, id }))
 		];
+	};
+
+	const hydrateSelectedTargets = async () => {
+		selectedUsers = {};
+		selectedGroups = {};
+
+		await Promise.all(
+			targetUserIds.map(async (id) => {
+				const user = await getUserInfoById(localStorage.token, id).catch(() => null);
+				if (user) {
+					selectedUsers = { ...selectedUsers, [id]: user };
+				}
+			})
+		);
+
+		await Promise.all(
+			targetGroupIds.map(async (id) => {
+				const group =
+					groups.find((group) => group.id === id) ??
+					(await getGroupInfoById(localStorage.token, id).catch(() => null));
+				if (group) {
+					selectedGroups = { ...selectedGroups, [id]: group };
+				}
+			})
+		);
+	};
+
+	const searchTargets = async () => {
+		const query = targetQuery.trim().toLowerCase();
+		if (!query) {
+			targetUserResults = [];
+			targetGroupResults = [];
+			return;
+		}
+
+		targetGroupResults = groups
+			.filter((group: any) => group.name?.toLowerCase().includes(query))
+			.filter((group: any) => !targetGroupIds.includes(group.id))
+			.slice(0, 5);
+
+		const res = await searchUsers(localStorage.token, targetQuery, 'name', 'asc', 1).catch(() => null);
+		targetUserResults = (res?.users ?? [])
+			.filter((user: any) => !targetUserIds.includes(user.id))
+			.slice(0, 5);
+	};
+
+	const handleTargetSearch = () => {
+		clearTimeout(targetSearchTimer);
+		targetSearchTimer = setTimeout(searchTargets, 250);
+	};
+
+	const addTargetUser = (user: any) => {
+		if (!targetUserIds.includes(user.id)) {
+			targetUserIds = [...targetUserIds, user.id];
+			selectedUsers = { ...selectedUsers, [user.id]: user };
+		}
+		targetQuery = '';
+		targetUserResults = [];
+		targetGroupResults = [];
+	};
+
+	const addTargetGroup = (group: any) => {
+		if (!targetGroupIds.includes(group.id)) {
+			targetGroupIds = [...targetGroupIds, group.id];
+			selectedGroups = { ...selectedGroups, [group.id]: group };
+		}
+		targetQuery = '';
+		targetUserResults = [];
+		targetGroupResults = [];
+	};
+
+	const removeTargetUser = (id: string) => {
+		targetUserIds = targetUserIds.filter((userId) => userId !== id);
+		const next = { ...selectedUsers };
+		delete next[id];
+		selectedUsers = next;
+	};
+
+	const removeTargetGroup = (id: string) => {
+		targetGroupIds = targetGroupIds.filter((groupId) => groupId !== id);
+		const next = { ...selectedGroups };
+		delete next[id];
+		selectedGroups = next;
 	};
 
 	const saveWebhook = async () => {
@@ -277,9 +378,12 @@
 	};
 
 	onMount(load);
+	onDestroy(() => {
+		clearTimeout(targetSearchTimer);
+	});
 </script>
 
-<Modal bind:show={showWebhookModal} size="md">
+<Modal bind:show={showWebhookModal} size="sm">
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<h1 class="text-lg font-medium self-center font-primary">
@@ -338,6 +442,122 @@
 							</Tooltip>
 						</div>
 					</div>
+				</div>
+
+				<div class="mt-3">
+					<div class="flex justify-between items-center gap-3">
+						<div
+							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						>
+							{$i18n.t('Send events for')}
+						</div>
+						<select
+							class="text-xs bg-transparent outline-hidden text-gray-700 dark:text-gray-300"
+							bind:value={targetMode}
+						>
+							<option value="all">{$i18n.t('All users and system events')}</option>
+							<option value="system">{$i18n.t('System events only')}</option>
+							<option value="selected">{$i18n.t('Specific users or groups')}</option>
+						</select>
+					</div>
+
+					<div class="mt-1 text-xs text-gray-500">
+						{#if targetMode === 'all'}
+							{$i18n.t(
+								'Receives matching events across the instance, including system/config events and events associated with any user.'
+							)}
+						{:else if targetMode === 'system'}
+							{$i18n.t('Receives matching events that are not associated with a user.')}
+						{:else}
+							{$i18n.t(
+								'Receives matching user-associated events only when the actor, user subject, or user data matches these users or current group members. System/config events are not sent.'
+							)}
+						{/if}
+					</div>
+
+					{#if targetMode === 'selected'}
+						<div class="mt-2">
+							{#if targetUserIds.length > 0 || targetGroupIds.length > 0}
+								<div class="flex flex-wrap gap-1 mb-2">
+									{#each targetGroupIds as id}
+										<div
+											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-850 px-2 py-1 text-xs"
+										>
+											<span class="truncate max-w-36">{selectedGroups[id]?.name ?? id}</span>
+											<span class="text-gray-500">{$i18n.t('group')}</span>
+											<button
+												type="button"
+												aria-label={$i18n.t('Remove')}
+												on:click={() => removeTargetGroup(id)}
+											>
+												<XMark className="size-3" strokeWidth="2" />
+											</button>
+										</div>
+									{/each}
+
+									{#each targetUserIds as id}
+										<div
+											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-850 px-2 py-1 text-xs"
+										>
+											<span class="truncate max-w-36">{selectedUsers[id]?.name ?? id}</span>
+											<span class="text-gray-500">{$i18n.t('user')}</span>
+											<button
+												type="button"
+												aria-label={$i18n.t('Remove')}
+												on:click={() => removeTargetUser(id)}
+											>
+												<XMark className="size-3" strokeWidth="2" />
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							<div class="relative">
+								<input
+									class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									type="text"
+									placeholder={$i18n.t('Search users or groups')}
+									autocomplete="off"
+									bind:value={targetQuery}
+									on:input={handleTargetSearch}
+								/>
+
+								{#if targetQuery.trim() && (targetGroupResults.length > 0 || targetUserResults.length > 0)}
+									<div
+										class="absolute z-10 mt-1 w-full rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 shadow-lg py-1 max-h-48 overflow-y-auto"
+									>
+										{#each targetGroupResults as group}
+											<button
+												type="button"
+												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-850"
+												on:click={() => addTargetGroup(group)}
+											>
+												<span class="truncate">{group.name}</span>
+												<span class="text-gray-500">{$i18n.t('Group')}</span>
+											</button>
+										{/each}
+
+										{#each targetUserResults as user}
+											<button
+												type="button"
+												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-850"
+												on:click={() => addTargetUser(user)}
+											>
+												<span class="truncate">
+													{user.name}
+													{#if user.email}
+														<span class="text-gray-500">({user.email})</span>
+													{/if}
+												</span>
+												<span class="text-gray-500">{$i18n.t('User')}</span>
+											</button>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<div class="mt-3">
@@ -424,36 +644,6 @@
 									'Event names may change as Open WebUI evolves. Use broad patterns like user.* for integrations that should continue across new related events.'
 								)}
 							</div>
-						</div>
-					{/if}
-				</div>
-
-				<div class="mt-3">
-					<div class="flex justify-between items-center gap-3">
-						<div
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
-							{$i18n.t('Audience')}
-						</div>
-						<select
-							class="text-xs bg-transparent outline-hidden text-gray-700 dark:text-gray-300"
-							bind:value={targetMode}
-						>
-							<option value="all">{$i18n.t('All users')}</option>
-							<option value="selected">{$i18n.t('Selected users and groups')}</option>
-							<option value="none">{$i18n.t('No targets')}</option>
-						</select>
-					</div>
-
-					{#if targetMode === 'selected'}
-						<div class="mt-2 max-h-56 overflow-y-auto">
-							<MemberSelector
-								bind:userIds={targetUserIds}
-								bind:groupIds={targetGroupIds}
-								includeUsers={true}
-								includeGroups={true}
-								includeSessionUser={true}
-							/>
 						</div>
 					{/if}
 				</div>
