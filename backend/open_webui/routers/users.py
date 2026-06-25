@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.auths import Auths
@@ -273,6 +274,12 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
 async def update_default_user_permissions(request: Request, form_data: UserPermissions, user=Depends(get_admin_user)):
     user_permissions = form_data.model_dump(by_alias=True)
     await Config.upsert({'user.permissions': user_permissions})
+    await publish_event(
+        request,
+        EVENTS.USER_PERMISSIONS_UPDATED,
+        actor=user,
+        subject_id='user.permissions', subject_type='config',
+    )
     return user_permissions
 
 
@@ -332,6 +339,12 @@ async def update_user_settings_by_session_user(
 
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:
+        await publish_event(
+            request,
+            EVENTS.USER_SETTINGS_UPDATED,
+            actor=user,
+            subject_id=user.id,
+        )
         return user.settings
     else:
         raise HTTPException(
@@ -380,6 +393,12 @@ async def update_user_status_by_session_user(
     # user already fetched by get_verified_user — no need to refetch
     updated = await Users.update_user_status_by_id(user.id, form_data, db=db)
     if updated:
+        await publish_event(
+            request,
+            EVENTS.USER_STATUS_UPDATED,
+            actor=user,
+            subject_id=user.id,
+        )
         return updated
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -562,6 +581,7 @@ async def get_user_active_status_by_id(
 
 @router.post('/{user_id}/update', response_model=UserModel | None)
 async def update_user_by_id(
+    request: Request,
     user_id: str,
     form_data: UserUpdateForm,
     session_user: UserModel = Depends(get_admin_user),
@@ -641,6 +661,29 @@ async def update_user_by_id(
             # privileges cached in SESSION_POOL are invalidated.
             if updated_user.role != user.role:
                 await disconnect_user_sessions(user_id)
+                await publish_event(
+                    request,
+                    EVENTS.USER_ROLE_UPDATED,
+                    actor=session_user,
+                    subject_id=user_id,
+                    data={'role': updated_user.role},
+                )
+            else:
+                await publish_event(
+                    request,
+                    EVENTS.USER_UPDATED,
+                    actor=session_user,
+                    subject_id=user_id,
+                    data={'updated_fields': list(update_data.keys())},
+                )
+            if form_data.password:
+                await publish_event(
+                    request,
+                    EVENTS.AUTH_PASSWORD_CHANGED,
+                    actor=session_user,
+                    subject_id=user_id, subject_type='user',
+                    source='admin',
+                )
             return updated_user
 
         raise HTTPException(
@@ -660,7 +703,9 @@ async def update_user_by_id(
 
 
 @router.delete('/{user_id}', response_model=bool)
-async def delete_user_by_id(user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_user_by_id(
+    request: Request, user_id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     # Prevent deletion of the primary admin user
     try:
         first_user = await Users.get_first_user(db=db)
@@ -683,6 +728,12 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user), db: Asyn
 
         if result:
             await disconnect_user_sessions(user_id)
+            await publish_event(
+                request,
+                EVENTS.USER_DELETED,
+                actor=user,
+                subject_id=user_id,
+            )
             return True
 
         raise HTTPException(

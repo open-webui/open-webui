@@ -56,6 +56,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
 )
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
 from open_webui.models.files import FileModel, Files, FileUpdateForm
 from open_webui.models.knowledge import Knowledges
@@ -288,6 +289,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'ENABLE_WEB_SEARCH': 'rag.web.search.enable',
     'EXA_API_KEY': 'rag.web.search.exa_api_key',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
+    'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
     'EXTERNAL_WEB_LOADER_API_KEY': 'rag.web.loader.external_web_loader_api_key',
     'EXTERNAL_WEB_LOADER_URL': 'rag.web.loader.external_web_loader_url',
@@ -632,6 +634,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'DATALAB_MARKER_OUTPUT_FORMAT': config.DATALAB_MARKER_OUTPUT_FORMAT,
         'EXTERNAL_DOCUMENT_LOADER_URL': config.EXTERNAL_DOCUMENT_LOADER_URL,
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+        'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
@@ -846,6 +849,7 @@ class ConfigForm(BaseModel):
 
     EXTERNAL_DOCUMENT_LOADER_URL: str | None = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: str | None = None
+    EXTERNAL_DOCUMENT_LOADER_HEADERS: dict | None = None
 
     TIKA_SERVER_URL: str | None = None
     DOCLING_SERVER_URL: str | None = None
@@ -1020,6 +1024,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY
         if form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY is not None
         else config.EXTERNAL_DOCUMENT_LOADER_API_KEY
+    )
+    config.EXTERNAL_DOCUMENT_LOADER_HEADERS = (
+        form_data.EXTERNAL_DOCUMENT_LOADER_HEADERS
+        if form_data.EXTERNAL_DOCUMENT_LOADER_HEADERS is not None
+        else config.EXTERNAL_DOCUMENT_LOADER_HEADERS
     )
     config.TIKA_SERVER_URL = (
         form_data.TIKA_SERVER_URL if form_data.TIKA_SERVER_URL is not None else config.TIKA_SERVER_URL
@@ -1336,6 +1345,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'DATALAB_MARKER_OUTPUT_FORMAT': config.DATALAB_MARKER_OUTPUT_FORMAT,
         'EXTERNAL_DOCUMENT_LOADER_URL': config.EXTERNAL_DOCUMENT_LOADER_URL,
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+        'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
@@ -1843,6 +1853,11 @@ async def process_file(
                     loader_config = await get_loader_config()
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
+                    loader.metadata = {
+                        'file_id': file.id,
+                        'file_name': file.filename,
+                        'file_content_type': file.meta.get('content_type'),
+                    }
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
@@ -1884,6 +1899,13 @@ async def process_file(
             if config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
+                await publish_event(
+                    request,
+                    EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+                    actor=user,
+                    subject_id=file.id, subject_type='file',
+                    data={'collection_name': None, 'filename': file.filename},
+                )
                 return {
                     'status': True,
                     'collection_name': None,
@@ -1936,6 +1958,13 @@ async def process_file(
                             )
                             await Files.update_file_hash_by_id(file.id, hash, db=session)
 
+                            await publish_event(
+                                request,
+                                EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+                                actor=user,
+                                subject_id=file.id, subject_type='file',
+                                data={'collection_name': collection_name, 'filename': file.filename},
+                            )
                             return {
                                 'status': True,
                                 'collection_name': collection_name,
@@ -2004,6 +2033,13 @@ async def process_text(
     config = await get_retrieval_config()
     result = await run_in_threadpool(save_docs_to_vector_db, request, docs, collection_name, config, user=user)
     if result:
+        await publish_event(
+            request,
+            EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+            actor=user,
+            subject_id=collection_name, subject_type='retrieval.collection',
+            data={'name': form_data.name, 'content_preview': text_content[:300]},
+        )
         return {
             'status': True,
             'collection_name': collection_name,
@@ -2716,6 +2752,7 @@ class DeleteForm(BaseModel):
 
 @router.post('/delete')
 async def delete_entries_from_collection(
+    request: Request,
     form_data: DeleteForm,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -2754,6 +2791,13 @@ async def delete_entries_from_collection(
                 collection_name=form_data.collection_name,
                 filter={'hash': hash},
             )
+            await publish_event(
+                request,
+                EVENTS.RETRIEVAL_COLLECTION_DELETED,
+                actor=user,
+                subject_id=form_data.collection_name,
+                data={'file_id': form_data.file_id},
+            )
             return {'status': True}
         else:
             return {'status': False}
@@ -2767,13 +2811,23 @@ async def delete_entries_from_collection(
 
 
 @router.post('/reset/db')
-async def reset_vector_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def reset_vector_db(
+    request: Request,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     await ASYNC_VECTOR_DB_CLIENT.reset()
     await Knowledges.delete_all_knowledge(db=db)
+    await publish_event(
+        request,
+        EVENTS.RETRIEVAL_VECTOR_DB_RESET,
+        actor=user,
+        subject_id='default',
+    )
 
 
 @router.post('/reset/uploads')
-async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
+async def reset_upload_dir(request: Request, user=Depends(get_admin_user)) -> bool:
     folder = f'{UPLOAD_DIR}'
     try:
         # Check if the directory exists
@@ -2792,6 +2846,12 @@ async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
             log.warning(f'The directory {folder} does not exist')
     except Exception as e:
         log.exception(f'Failed to process the directory {folder}. Reason: {e}')
+    await publish_event(
+        request,
+        EVENTS.RETRIEVAL_UPLOADS_RESET,
+        actor=user,
+        subject_id='all', subject_type='file.uploads',
+    )
     return True
 
 
@@ -2922,4 +2982,15 @@ async def process_files_batch(
                 file_result.status = 'failed'
                 file_errors.append(BatchProcessFilesResult(file_id=file_result.file_id, status='failed', error=str(e)))
 
-    return BatchProcessFilesResponse(results=file_results, errors=file_errors)
+    response = BatchProcessFilesResponse(results=file_results, errors=file_errors)
+    await publish_event(
+        request,
+        EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+        actor=user,
+        subject_id=collection_name, subject_type='retrieval.collection',
+        data={
+            'count': len([item for item in file_results if item.status == 'completed']),
+            'errors': len(file_errors),
+        },
+    )
+    return response

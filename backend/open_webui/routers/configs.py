@@ -8,14 +8,16 @@ import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from mcp.shared.auth import OAuthMetadata
 from open_webui.config import BannerModel
-from open_webui.models.config import Config
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.events import EVENTS, publish_event
+from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
+    apply_connection_oauth_options,
     decrypt_data,
     encrypt_data,
     get_discovery_urls,
@@ -89,6 +91,13 @@ class ImportConfigForm(BaseModel):
 @router.post('/import', response_model=dict)
 async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(form_data.config)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_IMPORTED,
+        actor=user,
+        subject_id='import',
+        data={'keys': list(form_data.config.keys())},
+    )
     return await Config.get_all()
 
 
@@ -129,7 +138,15 @@ async def set_connections_config(
     user=Depends(get_admin_user),
 ):
     await Config.upsert(config_updates(form_data.model_dump(), CONNECTIONS_CONFIG_KEYS))
-    return await get_config_values(CONNECTIONS_CONFIG_KEYS)
+    values = await get_config_values(CONNECTIONS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_CONNECTIONS_UPDATED,
+        actor=user,
+        subject_id='connections', subject_type='config',
+        data=values,
+    )
+    return values
 
 
 class OAuthClientRegistrationForm(BaseModel):
@@ -245,6 +262,7 @@ async def set_tool_servers_config(
                     oauth_client_info = await recover_static_oauth_client_metadata(
                         connection, oauth_client_info
                     )
+                    oauth_client_info = apply_connection_oauth_options(connection, oauth_client_info)
                     request.app.state.oauth_client_manager.add_client(
                         f'{server_type}:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
@@ -253,6 +271,13 @@ async def set_tool_servers_config(
                     log.debug(f'Failed to add OAuth client for MCP tool server: {e}')
                     continue
 
+    await publish_event(
+        request,
+        EVENTS.CONFIG_TOOL_SERVERS_UPDATED,
+        actor=user,
+        subject_id='tool_server.connections', subject_type='config',
+        data={'count': len(connections), 'types': [connection.get('type', 'openapi') for connection in connections]},
+    )
     return {'TOOL_SERVER_CONNECTIONS': connections}
 
 
@@ -298,6 +323,13 @@ async def set_terminal_servers_config(
 
     await set_terminal_servers(request)
 
+    await publish_event(
+        request,
+        EVENTS.CONFIG_TERMINAL_SERVERS_UPDATED,
+        actor=user,
+        subject_id='terminal_server.connections', subject_type='config',
+        data={'count': len(connections)},
+    )
     return {'TERMINAL_SERVER_CONNECTIONS': connections}
 
 
@@ -659,7 +691,20 @@ async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
     await Config.upsert(config_updates(form_data.model_dump(), CODE_EXECUTION_CONFIG_KEYS))
-    return await get_config_values(CODE_EXECUTION_CONFIG_KEYS)
+    values = await get_config_values(CODE_EXECUTION_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_CODE_EXECUTION_UPDATED,
+        actor=user,
+        subject_id='code_execution', subject_type='config',
+        data={
+            'code_execution_enabled': values.get('ENABLE_CODE_EXECUTION'),
+            'code_execution_engine': values.get('CODE_EXECUTION_ENGINE'),
+            'code_interpreter_enabled': values.get('ENABLE_CODE_INTERPRETER'),
+            'code_interpreter_engine': values.get('CODE_INTERPRETER_ENGINE'),
+        },
+    )
+    return values
 
 
 ############################
@@ -688,7 +733,19 @@ async def get_models_config(request: Request, user=Depends(get_admin_user)):
 @router.post('/models', response_model=ModelsConfigForm)
 async def set_models_config(request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(config_updates(form_data.model_dump(), MODELS_CONFIG_KEYS))
-    return await get_config_values(MODELS_CONFIG_KEYS)
+    values = await get_config_values(MODELS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_MODELS_UPDATED,
+        actor=user,
+        subject_id='models', subject_type='config',
+        data={
+            'default_models': values.get('DEFAULT_MODELS'),
+            'default_pinned_models': values.get('DEFAULT_PINNED_MODELS'),
+            'model_order_count': len(values.get('MODEL_ORDER_LIST') or []),
+        },
+    )
+    return values
 
 
 class PromptSuggestion(BaseModel):
@@ -708,7 +765,15 @@ async def set_default_suggestions(
 ):
     data = form_data.model_dump()
     await Config.upsert({'ui.prompt_suggestions': data['suggestions']})
-    return await Config.get('ui.prompt_suggestions')
+    suggestions = await Config.get('ui.prompt_suggestions')
+    await publish_event(
+        request,
+        EVENTS.CONFIG_SUGGESTIONS_UPDATED,
+        actor=user,
+        subject_id='ui.prompt_suggestions', subject_type='config',
+        data={'count': len(suggestions or [])},
+    )
+    return suggestions
 
 
 ############################
@@ -728,7 +793,15 @@ async def set_banners(
 ):
     data = form_data.model_dump()
     await Config.upsert({'ui.banners': data['banners']})
-    return await Config.get('ui.banners')
+    banners = await Config.get('ui.banners')
+    await publish_event(
+        request,
+        EVENTS.CONFIG_BANNERS_UPDATED,
+        actor=user,
+        subject_id='ui.banners', subject_type='config',
+        data={'count': len(banners or [])},
+    )
+    return banners
 
 
 @router.get('/banners', response_model=list[BannerModel])

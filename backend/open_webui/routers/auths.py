@@ -18,7 +18,8 @@ from open_webui.config import (
     ENABLE_PASSWORD_AUTH,
     OAUTH_PROVIDERS,
 )
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
@@ -72,7 +73,6 @@ from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
-from open_webui.utils.webhook import post_webhook
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -140,7 +140,12 @@ def config_updates(data: dict, key_map: dict[str, str]) -> dict:
 
 
 async def create_session_response(
-    request: Request, user, db, response: Response = None, set_cookie: bool = False
+    request: Request,
+    user,
+    db,
+    response: Response = None,
+    set_cookie: bool = False,
+    source: str = 'api',
 ) -> dict:
     """
     Create JWT token and build session response for a user.
@@ -177,6 +182,14 @@ async def create_session_response(
         )
 
     user_permissions = await get_permissions(user.id, await Config.get('user.permissions'), db=db)
+    await publish_event(
+        request,
+        EVENTS.AUTH_LOGIN,
+        actor=user,
+        subject_id=user.id, subject_type='user',
+        source=source,
+        data={'auth_method': source},
+    )
 
     return {
         'token': token,
@@ -279,6 +292,7 @@ async def get_session_user(
 
 @router.post('/update/profile', response_model=UserProfileImageResponse)
 async def update_profile(
+    request: Request,
     form_data: UpdateProfileForm,
     session_user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -290,6 +304,13 @@ async def update_profile(
             db=db,
         )
         if user:
+            await publish_event(
+                request,
+                EVENTS.USER_PROFILE_UPDATED,
+                actor=session_user,
+                subject_id=session_user.id,
+                data={'updated_fields': list(form_data.model_dump().keys())},
+            )
             return user
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.DEFAULT())
@@ -308,6 +329,7 @@ class UpdateTimezoneForm(BaseModel):
 
 @router.post('/update/timezone')
 async def update_timezone(
+    request: Request,
     form_data: UpdateTimezoneForm,
     session_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
@@ -317,6 +339,13 @@ async def update_timezone(
             session_user.id,
             {'timezone': form_data.timezone},
             db=db,
+        )
+        await publish_event(
+            request,
+            EVENTS.USER_UPDATED,
+            actor=session_user,
+            subject_id=session_user.id,
+            data={'updated_fields': ['timezone']},
         )
         return {'status': True}
     else:
@@ -330,6 +359,7 @@ async def update_timezone(
 
 @router.post('/update/password', response_model=bool)
 async def update_password(
+    request: Request,
     form_data: UpdatePasswordForm,
     session_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_async_session),
@@ -350,7 +380,15 @@ async def update_password(
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)
-            return await Auths.update_user_password_by_id(user.id, hashed, db=db)
+            success = await Auths.update_user_password_by_id(user.id, hashed, db=db)
+            if success:
+                await publish_event(
+                    request,
+                    EVENTS.AUTH_PASSWORD_CHANGED,
+                    actor=user,
+                    subject_id=user.id, subject_type='user',
+                )
+            return success
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
     else:
@@ -567,17 +605,14 @@ async def ldap_auth(
                         db=db,
                     )
 
-                    if await Config.get('webhook_url'):
-                        await post_webhook(
-                            request.app.state.WEBUI_NAME,
-                            await Config.get('webhook_url'),
-                            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                            {
-                                'action': 'signup',
-                                'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                                'user': user.model_dump_json(exclude_none=True),
-                            },
-                        )
+                    await publish_event(
+                        request,
+                        EVENTS.USER_CREATED,
+                        actor=user,
+                        subject_id=user.id,
+                        source='ldap',
+                        data={'role': user.role},
+                    )
 
                 except HTTPException:
                     raise
@@ -597,7 +632,7 @@ async def ldap_auth(
                     except Exception as e:
                         log.error(f'Failed to sync groups for user {user.id}: {e}')
 
-                return await create_session_response(request, user, db, response, set_cookie=True)
+                return await create_session_response(request, user, db, response, set_cookie=True, source='ldap')
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
@@ -625,7 +660,10 @@ async def signin(
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
 
+    auth_source = 'password'
+
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        auth_source = 'trusted_header'
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
 
@@ -646,6 +684,7 @@ async def signin(
                 str(uuid.uuid4()),
                 name,
                 db=db,
+                source='trusted_header',
             )
 
         user = await Auths.authenticate_user_by_email(email, db=db)
@@ -666,6 +705,7 @@ async def signin(
                     log.warning(f'Ignoring invalid trusted role header value: {trusted_role}')
 
     elif WEBUI_AUTH == False:
+        auth_source = 'system'
         admin_email = 'admin@localhost'
         admin_password = 'admin'
 
@@ -685,6 +725,7 @@ async def signin(
                 admin_password,
                 'User',
                 db=db,
+                source='system',
             )
 
             user = await Auths.authenticate_user(
@@ -715,7 +756,7 @@ async def signin(
         )
 
     if user:
-        return await create_session_response(request, user, db, response, set_cookie=True)
+        return await create_session_response(request, user, db, response, set_cookie=True, source=auth_source)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -733,6 +774,7 @@ async def signup_handler(
     profile_image_url: str = '/user.png',
     *,
     db: AsyncSession,
+    source: str = 'api',
 ) -> UserModel:
     """
     Core user-creation logic shared by the signup endpoint and
@@ -764,22 +806,19 @@ async def signup_handler(
         user = await Users.get_user_by_id(user.id, db=db)
         await Config.upsert({'ui.enable_signup': False})
 
-    if await Config.get('webhook_url'):
-        await post_webhook(
-            request.app.state.WEBUI_NAME,
-            await Config.get('webhook_url'),
-            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-            {
-                'action': 'signup',
-                'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                'user': user.model_dump_json(exclude_none=True),
-            },
-        )
-
     await apply_default_group_assignment(
         await Config.get('ui.default_group_id'),
         user.id,
         db=db,
+    )
+
+    await publish_event(
+        request,
+        EVENTS.USER_CREATED,
+        actor=user,
+        subject_id=user.id,
+        source=source,
+        data={'role': user.role},
     )
 
     return user
@@ -825,6 +864,14 @@ async def signup(
             form_data.profile_image_url,
             db=db,
         )
+        await publish_event(
+            request,
+            EVENTS.AUTH_SIGNUP,
+            actor=user,
+            subject_id=user.id,
+            subject_type='user',
+            data={'email': user.email},
+        )
         return await create_session_response(request, user, db, response, set_cookie=True)
     except HTTPException:
         raise
@@ -846,7 +893,18 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         token = request.cookies.get('token')
 
     if token:
+        actor = None
+        data = decode_token(token)
+        if data and data.get('id'):
+            actor = await Users.get_user_by_id(data['id'], db=db)
         await invalidate_token(request, token)
+        await publish_event(
+            request,
+            EVENTS.AUTH_LOGOUT,
+            actor=actor,
+            subject_id=actor.id if actor else None,
+            subject_type='user' if actor else None,
+        )
 
     response.delete_cookie('token')
     response.delete_cookie('oui-session')
@@ -930,6 +988,7 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
 
 @router.delete('/oauth/sessions/{provider:path}', response_model=bool)
 async def delete_oauth_session_by_provider(
+    request: Request,
     provider: str,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -945,6 +1004,14 @@ async def delete_oauth_session_by_provider(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='No OAuth session found for this provider',
         )
+    await publish_event(
+        request,
+        EVENTS.AUTH_OAUTH_SESSION_DELETED,
+        actor=user,
+        subject_id=user.id,
+        subject_type='user',
+        data={'provider': provider},
+    )
     return True
 
 
@@ -960,6 +1027,7 @@ async def add_user(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    admin_user = user
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT)
 
@@ -987,6 +1055,14 @@ async def add_user(
                 await Config.get('ui.default_group_id'),
                 user.id,
                 db=db,
+            )
+            await publish_event(
+                request,
+                EVENTS.USER_CREATED,
+                actor=admin_user,
+                subject_id=user.id,
+                source='admin',
+                data={'role': user.role},
             )
 
             expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
@@ -1326,6 +1402,12 @@ async def generate_api_key(
     success = await Users.update_user_api_key_by_id(user.id, api_key, db=db)
 
     if success:
+        await publish_event(
+            request,
+            EVENTS.AUTH_API_KEY_CREATED,
+            actor=user,
+            subject_id=user.id, subject_type='user',
+        )
         return {
             'api_key': api_key,
         }
@@ -1339,7 +1421,15 @@ async def delete_api_key(
     request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)
 ):
     await _check_api_key_permission(request, user, db)
-    return await Users.delete_user_api_key_by_id(user.id, db=db)
+    success = await Users.delete_user_api_key_by_id(user.id, db=db)
+    if success:
+        await publish_event(
+            request,
+            EVENTS.AUTH_API_KEY_DELETED,
+            actor=user,
+            subject_id=user.id, subject_type='user',
+        )
+    return success
 
 
 # get api key
@@ -1467,4 +1557,4 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
-    return await create_session_response(request, user, db)
+    return await create_session_response(request, user, db, source='oauth')

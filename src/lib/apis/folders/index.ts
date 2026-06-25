@@ -235,11 +235,7 @@ export const deleteFolderById = async (token: string, id: string, deleteContents
 	return res;
 };
 
-export const updateFolderAccessById = async (
-	token: string,
-	id: string,
-	accessGrants: any[]
-) => {
+export const updateFolderAccessById = async (token: string, id: string, accessGrants: any[]) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/access/update`, {

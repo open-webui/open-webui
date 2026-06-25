@@ -53,8 +53,9 @@ async def compact_messages_for_request(
         return messages, None, False
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+    token_threshold = _resolve_token_threshold(config['token_threshold'], metadata)
     if (
-        not _exceeds_token_threshold(messages, system_prompt, previous_summary, config['token_threshold'])
+        not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold)
         or len(messages) <= 3
     ):
         return messages, previous_summary, False
@@ -65,30 +66,80 @@ async def compact_messages_for_request(
     if not compacted_messages or not recent_messages:
         return messages, previous_summary, False
 
-    summary = await _generate_summary(
-        request,
-        user,
-        model_id,
-        models,
-        compacted_messages,
-        recent_messages,
-        previous_summary,
-        config['prompt_template'],
-    )
+    event_emitter = None
+    if metadata.get('chat_id') and metadata.get('message_id'):
+        from open_webui.socket.main import get_event_emitter
+
+        event_emitter = await get_event_emitter(metadata)
+
+    if event_emitter:
+        await event_emitter(
+            {
+                'type': 'context_compaction',
+                'data': {
+                    'action': 'context_compaction',
+                    'description': 'Compacting context',
+                    'done': False,
+                },
+            }
+        )
+
+    try:
+        summary = await _generate_summary(
+            request,
+            user,
+            model_id,
+            models,
+            compacted_messages,
+            recent_messages,
+            previous_summary,
+            config['prompt_template'],
+        )
+    except Exception:
+        if event_emitter:
+            await event_emitter(
+                {
+                    'type': 'context_compaction',
+                    'data': {
+                        'action': 'context_compaction',
+                        'description': 'Context compaction failed',
+                        'done': True,
+                        'error': True,
+                    },
+                }
+            )
+        raise
 
     chat_id = metadata.get('chat_id')
-    message_id = metadata.get('message_id')
-    if chat_id and message_id and not chat_id.startswith(('local:', 'channel:')):
-        await Chats.upsert_message_to_chat_by_id_and_message_id(chat_id, message_id, {'contextSummary': summary})
+    checkpoint_message_id = metadata.get('user_message_id') or metadata.get('message_id')
+    if chat_id and checkpoint_message_id and not chat_id.startswith(('local:', 'channel:')):
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            checkpoint_message_id,
+            {'contextSummary': summary},
+        )
 
     log.info(
-        'Compacted chat context for chat=%s message=%s dropped=%d kept=%d summary_chars=%d',
+        'Compacted chat context for chat=%s checkpoint=%s response=%s dropped=%d kept=%d summary_chars=%d',
         chat_id,
-        message_id,
+        checkpoint_message_id,
+        metadata.get('message_id'),
         len(compacted_messages),
         len(recent_messages),
         len(summary),
     )
+
+    if event_emitter:
+        await event_emitter(
+            {
+                'type': 'context_compaction',
+                'data': {
+                    'action': 'context_compaction',
+                    'description': 'Context compacted',
+                    'done': True,
+                },
+            }
+        )
 
     return recent_messages, summary, True
 
@@ -145,6 +196,21 @@ async def _load_config() -> dict:
         'token_threshold': int(values.get('chat.context_compaction.token_threshold', 80000) or 80000),
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
+
+
+def _parse_positive_int(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _resolve_token_threshold(global_threshold: int, metadata: dict) -> int:
+    configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
+    if configured_threshold is None:
+        return global_threshold
+    return min(configured_threshold, global_threshold)
 
 
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:

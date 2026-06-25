@@ -52,6 +52,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENV,
 )
+from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -294,7 +295,18 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
     else:
         request.app.state.faster_whisper_model = None
 
-    return await get_audio_config(request, user)
+    config = await get_audio_config(request, user)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='audio',
+        data={
+            'tts_engine': config.get('tts', {}).get('ENGINE'),
+            'stt_engine': config.get('stt', {}).get('ENGINE'),
+        },
+    )
+    return config
 
 
 def load_speech_pipeline(request):
@@ -563,6 +575,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     # Return cached result if available
     if file_path.is_file():
+        await publish_event(
+            request,
+            EVENTS.AUDIO_SPEECH_REQUESTED,
+            actor=user,
+            subject_id=name,
+            data={'engine': engine, 'cached': True},
+        )
         return FileResponse(file_path)
 
     try:
@@ -575,7 +594,20 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     if handler is None:
         raise HTTPException(status_code=400, detail=f'Unsupported TTS engine: {engine}')
 
-    return await handler(request, payload, file_path, file_body_path, user)
+    response = await handler(request, payload, file_path, file_body_path, user)
+    await publish_event(
+        request,
+        EVENTS.AUDIO_SPEECH_REQUESTED,
+        actor=user,
+        subject_id=name,
+        data={
+            'engine': engine,
+            'model': payload.get('model'),
+            'input_preview': str(payload.get('input', ''))[:300],
+            'cached': False,
+        },
+    )
+    return response
 
 
 async def _transcribe_whisper(request, file_path, languages, file_dir, id):
@@ -1166,6 +1198,17 @@ async def transcription(
 
             result = await transcribe(request, file_path, metadata, user)
 
+            await publish_event(
+                request,
+                EVENTS.AUDIO_TRANSCRIPTION_REQUESTED,
+                actor=user,
+                subject_id=str(id),
+                data={
+                    'filename': safe_name,
+                    'content_type': file.content_type,
+                    'language': language,
+                },
+            )
             return {
                 **result,
                 'filename': os.path.basename(file_path),

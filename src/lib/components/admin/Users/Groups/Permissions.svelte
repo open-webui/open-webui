@@ -409,7 +409,6 @@
 			{/if}
 		</div>
 
-
 		{#if permissions.chat.share}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">

@@ -55,7 +55,6 @@
 	let orderBy = 'updated_at';
 	let direction = 'desc'; // 'asc' or 'desc'
 
-
 	$: if (chats) {
 		init();
 	}

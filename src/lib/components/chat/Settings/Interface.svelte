@@ -420,7 +420,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div id="high-contrast-mode-label" class=" self-center text-xs">
-						{$i18n.t('High Contrast Mode')} ({$i18n.t('Beta')})
+						{$i18n.t('High Contrast Mode')}
 					</div>
 
 					<div class="flex items-center gap-2 p-1">

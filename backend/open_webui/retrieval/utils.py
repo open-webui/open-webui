@@ -43,6 +43,7 @@ from open_webui.models.config import Config
 from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.retrieval.external import retrieve_external_knowledge
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
@@ -84,6 +85,7 @@ LOADER_CONFIG_KEYS = {
     'DATALAB_MARKER_OUTPUT_FORMAT': 'rag.datalab_marker_output_format',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
+    'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'TIKA_SERVER_URL': 'rag.tika_server_url',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCLING_API_KEY': 'rag.docling_api_key',
@@ -130,18 +132,16 @@ def build_loader_from_config(request, config: dict):
     """Build a Loader instance with the admin's configured extraction engine settings."""
     from open_webui.retrieval.loaders.main import Loader
 
-    loader_config = {
-        key: config.get(key)
-        for key in LOADER_CONFIG_KEYS
-        if key.isupper()
-    }
+    loader_config = {key: config.get(key) for key in LOADER_CONFIG_KEYS if key.isupper()}
     return Loader(
         engine=loader_config['CONTENT_EXTRACTION_ENGINE'],
         **{key: value for key, value in loader_config.items() if key != 'CONTENT_EXTRACTION_ENGINE'},
     )
 
 
-def _extract_text_from_binary_response(request, response: requests.Response, url: str, loader_config: dict) -> tuple[str, list]:
+def _extract_text_from_binary_response(
+    request, response: requests.Response, url: str, loader_config: dict
+) -> tuple[str, list]:
     """Download response body to a temp file and extract text using the Loader pipeline."""
     import mimetypes
     import tempfile
@@ -774,11 +774,7 @@ async def query_collection_with_hybrid_search(
             return result
 
         native_task_results = await asyncio.gather(
-            *[
-                process_native_query(collection_name, query)
-                for collection_name in collection_names
-                for query in queries
-            ]
+            *[process_native_query(collection_name, query) for collection_name in collection_names for query in queries]
         )
         if native_task_results and all(result is not None for result in native_task_results):
             return merge_and_sort_query_results(native_task_results, k=k)
@@ -1485,50 +1481,61 @@ async def get_sources_from_items(
                     permission='read',
                 )
             ):
-                if item.get('context') == 'full' or bypass_embedding_and_retrieval:
-                    if knowledge_base and (
-                        user.role == 'admin'
-                        or knowledge_base.user_id == user.id
-                        or await AccessGrants.has_access(
-                            user_id=user.id,
-                            resource_type='knowledge',
-                            resource_id=knowledge_base.id,
-                            permission='read',
-                        )
-                    ):
-                        files = await Knowledges.get_files_by_id(knowledge_base.id)
+                if (knowledge_base.meta or {}).get('source') == 'external':
+                    query_result = await retrieve_external_knowledge(
+                        request,
+                        knowledge_base,
+                        queries=queries,
+                        count=k,
+                        user=user,
+                    )
+                    extracted_collections.append(knowledge_base.id)
 
-                        documents = []
-                        metadatas = []
-                        for file in files:
-                            documents.append(file.data.get('content', ''))
-                            metadatas.append(
-                                {
-                                    'file_id': file.id,
-                                    'name': file.filename,
-                                    'source': file.filename,
-                                }
-                            )
-
-                        query_result = {
-                            'documents': [documents],
-                            'metadatas': [metadatas],
-                        }
                 else:
-                    if item.get('legacy'):
-                        if BYPASS_RETRIEVAL_ACCESS_CONTROL:
-                            collection_names = item.get('collection_names', [])
-                        else:
-                            # Legacy KB: item.collection_names is client-supplied.
-                            # Validate against the KB's actual files to prevent
-                            # cross-tenant collection name substitution.
+                    if item.get('context') == 'full' or bypass_embedding_and_retrieval:
+                        if knowledge_base and (
+                            user.role == 'admin'
+                            or knowledge_base.user_id == user.id
+                            or await AccessGrants.has_access(
+                                user_id=user.id,
+                                resource_type='knowledge',
+                                resource_id=knowledge_base.id,
+                                permission='read',
+                            )
+                        ):
                             files = await Knowledges.get_files_by_id(knowledge_base.id)
-                            owned_names = {f'file-{f.id}' for f in files}
-                            owned_names.add(knowledge_base.id)
-                            valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
-                            collection_names = valid_names if valid_names else [knowledge_base.id]
+
+                            documents = []
+                            metadatas = []
+                            for file in files:
+                                documents.append(file.data.get('content', ''))
+                                metadatas.append(
+                                    {
+                                        'file_id': file.id,
+                                        'name': file.filename,
+                                        'source': file.filename,
+                                    }
+                                )
+
+                            query_result = {
+                                'documents': [documents],
+                                'metadatas': [metadatas],
+                            }
                     else:
-                        collection_names.append(item['id'])
+                        if item.get('legacy'):
+                            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                                collection_names = item.get('collection_names', [])
+                            else:
+                                # Legacy KB: item.collection_names is client-supplied.
+                                # Validate against the KB's actual files to prevent
+                                # cross-tenant collection name substitution.
+                                files = await Knowledges.get_files_by_id(knowledge_base.id)
+                                owned_names = {f'file-{f.id}' for f in files}
+                                owned_names.add(knowledge_base.id)
+                                valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
+                                collection_names = valid_names if valid_names else [knowledge_base.id]
+                        else:
+                            collection_names.append(item['id'])
 
         elif item.get('docs'):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
