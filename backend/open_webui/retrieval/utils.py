@@ -277,6 +277,8 @@ class VectorSearchRetriever(BaseRetriever):
             limit=self.top_k,
         )
 
+        if not result or not result.ids:
+            return []
         ids = result.ids[0]
         metadatas = result.metadatas[0]
         documents = result.documents[0]
