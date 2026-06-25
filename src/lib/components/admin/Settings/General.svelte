@@ -291,7 +291,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Memories')} ({$i18n.t('Beta')})
+							{$i18n.t('Memories')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
@@ -299,7 +299,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Notes')} ({$i18n.t('Beta')})
+							{$i18n.t('Notes')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_NOTES} />
@@ -307,7 +307,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Channels')} ({$i18n.t('Beta')})
+							{$i18n.t('Channels')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />

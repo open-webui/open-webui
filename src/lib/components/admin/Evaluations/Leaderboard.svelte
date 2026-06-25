@@ -241,8 +241,5 @@
 				'The evaluation leaderboard is based on the Elo rating system and is updated in real-time.'
 			)}
 		</div>
-		{$i18n.t(
-			'The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.'
-		)}
 	</div>
 </div>
