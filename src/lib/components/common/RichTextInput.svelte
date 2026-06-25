@@ -101,7 +101,7 @@
 				node.getAttribute('data-checked') === 'false'),
 		replacement: function (content, node) {
 			const checked = node.getAttribute('data-checked') === 'true';
-			content = content.replace(/^\s+/, '');
+			content = content.replace(/^\s*\[[ xX]\]\s*/, '').trim();
 			return `- [${checked ? 'x' : ' '}] ${content}\n`;
 		}
 	});
