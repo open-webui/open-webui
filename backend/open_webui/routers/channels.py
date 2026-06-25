@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
@@ -315,6 +316,13 @@ async def create_new_channel(
                 await enter_room_for_users(f'channel:{existing_channel.id}', participant_ids)
 
                 await Channels.update_member_active_status(existing_channel.id, user.id, True, db=db)
+                await publish_event(
+                    request,
+                    EVENTS.CHANNEL_MEMBER_ACTIVE_UPDATED,
+                    actor=user,
+                    subject_id=existing_channel.id,
+                    data={'is_active': True},
+                )
                 return ChannelModel(**existing_channel.model_dump())
 
         channel = await Channels.insert_new_channel(form_data, user.id, db=db)
@@ -329,6 +337,13 @@ async def create_new_channel(
             )
             await enter_room_for_users(f'channel:{channel.id}', participant_ids)
 
+            await publish_event(
+                request,
+                EVENTS.CHANNEL_CREATED,
+                actor=user,
+                subject_id=channel.id,
+                data={'type': channel.type, 'name': channel.name},
+            )
             return ChannelModel(**channel.model_dump())
         else:
             raise Exception('Error creating channel')
@@ -566,6 +581,13 @@ async def update_is_active_member_by_id_and_user_id(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     await Channels.update_member_active_status(channel.id, user.id, form_data.is_active, db=db)
+    await publish_event(
+        request,
+        EVENTS.CHANNEL_MEMBER_ACTIVE_UPDATED,
+        actor=user,
+        subject_id=channel.id,
+        data={'is_active': form_data.is_active},
+    )
     return True
 
 
@@ -600,6 +622,13 @@ async def add_members_by_id(
             channel.id, user.id, form_data.user_ids, form_data.group_ids, db=db
         )
 
+        await publish_event(
+            request,
+            EVENTS.CHANNEL_MEMBER_ADDED,
+            actor=user,
+            subject_id=channel.id,
+            data={'user_ids': form_data.user_ids, 'group_ids': form_data.group_ids},
+        )
         return memberships
     except Exception as e:
         log.exception(e)
@@ -635,6 +664,13 @@ async def remove_members_by_id(
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
 
+        await publish_event(
+            request,
+            EVENTS.CHANNEL_MEMBER_REMOVED,
+            actor=user,
+            subject_id=channel.id,
+            data={'user_ids': form_data.user_ids},
+        )
         return deleted
     except Exception as e:
         log.exception(e)
@@ -673,6 +709,13 @@ async def update_channel_by_id(
 
     try:
         channel = await Channels.update_channel_by_id(id, form_data, db=db)
+        await publish_event(
+            request,
+            EVENTS.CHANNEL_UPDATED,
+            actor=user,
+            subject_id=id,
+            data={'name': channel.name, 'type': channel.type},
+        )
         return ChannelModel(**channel.model_dump())
     except Exception as e:
         log.exception(e)
@@ -702,6 +745,13 @@ async def delete_channel_by_id(
 
     try:
         await Channels.delete_channel_by_id(id, db=db)
+        await publish_event(
+            request,
+            EVENTS.CHANNEL_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': channel.name, 'type': channel.type},
+        )
         return True
     except Exception as e:
         log.exception(e)
@@ -1160,6 +1210,16 @@ async def post_new_message(
 
         background_tasks.add_task(background_handler)
 
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_CREATED,
+            actor=user,
+            subject_id=message.id,
+            data={
+                'channel_id': channel.id,
+                'content_preview': message.content[:300],
+            },
+        )
         return message
 
     except HTTPException as e:
@@ -1287,6 +1347,13 @@ async def pin_channel_message(
         await Messages.update_is_pinned_by_id(message_id, form_data.is_pinned, user.id, db=db)
         message = await Messages.get_message_by_id(message_id, db=db)
         message_user = await Users.get_user_by_id(message.user_id, db=db)
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_PINNED if form_data.is_pinned else EVENTS.MESSAGE_UNPINNED,
+            actor=user,
+            subject_id=message_id, subject_type='message',
+            data={'channel_id': id},
+        )
         return MessageUserResponse(
             **{
                 **message.model_dump(),
@@ -1416,6 +1483,13 @@ async def update_message_by_id(
                 to=f'channel:{channel.id}',
             )
 
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_UPDATED,
+            actor=user,
+            subject_id=message_id,
+            data={'channel_id': id, 'content_preview': form_data.content[:300]},
+        )
         return MessageModel(**message.model_dump())
     except Exception as e:
         log.exception(e)
@@ -1487,6 +1561,13 @@ async def add_reaction_to_message(
             to=f'channel:{channel.id}',
         )
 
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_REACTION_ADDED,
+            actor=user,
+            subject_id=message_id,
+            data={'channel_id': id, 'reaction': form_data.name},
+        )
         return True
     except Exception as e:
         log.exception(e)
@@ -1555,6 +1636,13 @@ async def remove_reaction_by_id_and_user_id_and_name(
             to=f'channel:{channel.id}',
         )
 
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_REACTION_REMOVED,
+            actor=user,
+            subject_id=message_id,
+            data={'channel_id': id, 'reaction': form_data.name},
+        )
         return True
     except Exception as e:
         log.exception(e)
@@ -1646,6 +1734,13 @@ async def delete_message_by_id(
                     to=f'channel:{channel.id}',
                 )
 
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_DELETED,
+            actor=user,
+            subject_id=message_id,
+            data={'channel_id': id},
+        )
         return True
     except Exception as e:
         log.exception(e)
@@ -1731,6 +1826,13 @@ async def create_channel_webhook(
     if not webhook:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
+    await publish_event(
+        request,
+        EVENTS.CHANNEL_WEBHOOK_CREATED,
+        actor=user,
+        subject_id=webhook.id,
+        data={'channel_id': id, 'name': webhook.name},
+    )
     return webhook
 
 
@@ -1760,6 +1862,13 @@ async def update_channel_webhook(
     if not updated:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
+    await publish_event(
+        request,
+        EVENTS.CHANNEL_WEBHOOK_UPDATED,
+        actor=user,
+        subject_id=webhook_id,
+        data={'channel_id': id, 'name': updated.name},
+    )
     return updated
 
 
@@ -1784,7 +1893,16 @@ async def delete_channel_webhook(
     if not webhook or webhook.channel_id != id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    return await Channels.delete_webhook_by_id(webhook_id, db=db)
+    deleted = await Channels.delete_webhook_by_id(webhook_id, db=db)
+    if deleted:
+        await publish_event(
+            request,
+            EVENTS.CHANNEL_WEBHOOK_DELETED,
+            actor=user,
+            subject_id=webhook_id,
+            data={'channel_id': id},
+        )
+    return deleted
 
 
 ############################
@@ -1867,4 +1985,12 @@ async def post_webhook_message(
         to=f'channel:{channel.id}',
     )
 
+    await publish_event(
+        request,
+        EVENTS.MESSAGE_CREATED,
+        actor={'id': webhook.id, 'name': webhook.name, 'role': 'webhook', 'type': 'webhook'},
+        subject_id=message.id,
+        source='channel_webhook',
+        data={'channel_id': channel.id, 'content_preview': form_data.content[:300]},
+    )
     return {'success': True, 'message_id': message.id}

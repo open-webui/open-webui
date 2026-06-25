@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.calendar import (
     CalendarEventAttendees,
@@ -125,7 +126,15 @@ async def create_calendar(request: Request, form_data: CalendarForm, user: UserM
         form_data.access_grants,
         'sharing.public_calendars',
     )
-    return await Calendars.insert_new_calendar(user.id, form_data)
+    calendar = await Calendars.insert_new_calendar(user.id, form_data)
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_CREATED,
+        actor=user,
+        subject_id=calendar.id,
+        data={'name': calendar.name},
+    )
+    return calendar
 
 
 ####################
@@ -266,7 +275,15 @@ async def get_events(
 async def create_event(request: Request, form_data: CalendarEventForm, user: UserModel = Depends(get_verified_user)):
     await check_calendar_permission(request, user)
     await _check_calendar_access(form_data.calendar_id, user, 'write')
-    return await CalendarEvents.insert_new_event(user.id, form_data)
+    event = await CalendarEvents.insert_new_event(user.id, form_data)
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_EVENT_CREATED,
+        actor=user,
+        subject_id=event.id,
+        data={'calendar_id': event.calendar_id, 'title': event.title},
+    )
+    return event
 
 
 @router.get('/events/search', response_model=CalendarEventListResponse)
@@ -313,6 +330,13 @@ async def update_event(
     updated = await CalendarEvents.update_event_by_id(event_id, form_data)
     if not updated:
         raise HTTPException(status_code=500, detail='Failed to update')
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_EVENT_UPDATED,
+        actor=user,
+        subject_id=updated.id,
+        data={'calendar_id': updated.calendar_id, 'title': updated.title},
+    )
     return updated
 
 
@@ -328,6 +352,13 @@ async def delete_event(request: Request, event_id: str, user: UserModel = Depend
     result = await CalendarEvents.delete_event_by_id(event_id)
     if not result:
         raise HTTPException(status_code=500, detail='Failed to delete')
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_EVENT_DELETED,
+        actor=user,
+        subject_id=event_id,
+        data={'calendar_id': event.calendar_id, 'title': event.title},
+    )
     return {'status': True}
 
 
@@ -343,6 +374,13 @@ async def rsvp_event(
     result = await CalendarEventAttendees.update_rsvp(event_id, user.id, form_data.status)
     if not result:
         raise HTTPException(status_code=404, detail='Not an attendee of this event')
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_EVENT_RSVP_UPDATED,
+        actor=user,
+        subject_id=event_id,
+        data={'status': result.status},
+    )
     return {'status': True, 'rsvp': result.status}
 
 
@@ -386,6 +424,13 @@ async def update_calendar(
     updated = await Calendars.update_calendar_by_id(calendar_id, form_data)
     if not updated:
         raise HTTPException(status_code=500, detail='Failed to update')
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_UPDATED,
+        actor=user,
+        subject_id=updated.id,
+        data={'name': updated.name},
+    )
     return updated
 
 
@@ -410,6 +455,13 @@ async def delete_calendar(request: Request, calendar_id: str, user: UserModel = 
     result = await Calendars.delete_calendar_by_id(calendar_id)
     if not result:
         raise HTTPException(status_code=500, detail='Failed to delete')
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_DELETED,
+        actor=user,
+        subject_id=calendar_id,
+        data={'name': cal.name},
+    )
     return {'status': True}
 
 
@@ -419,4 +471,11 @@ async def set_default_calendar(request: Request, calendar_id: str, user: UserMod
     cal = await Calendars.set_default_calendar(user.id, calendar_id)
     if not cal:
         raise HTTPException(status_code=404, detail='Calendar not found')
+    await publish_event(
+        request,
+        EVENTS.CALENDAR_DEFAULT_UPDATED,
+        actor=user,
+        subject_id=cal.id,
+        data={'name': cal.name},
+    )
     return cal

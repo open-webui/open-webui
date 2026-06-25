@@ -34,12 +34,14 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
         # Microsoft Teams Webhooks
         elif 'webhook.office.com' in url:
             action = event_data.get('action', 'undefined')
-            user_data = event_data.get('user', '{}')
+            user_data = event_data.get('user') or event_data.get('actor') or {}
             if isinstance(user_data, dict):
                 user_dict = user_data
             else:
                 user_dict = json.loads(user_data)
-            facts = [{'name': name, 'value': value} for name, value in user_dict.items()]
+            facts = [{'name': key, 'value': value} for key, value in user_dict.items()]
+            if event_data.get('event'):
+                facts.insert(0, {'name': 'event', 'value': event_data.get('event')})
             payload = {
                 '@type': 'MessageCard',
                 '@context': 'http://schema.org/extensions',
@@ -57,7 +59,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             }
         # Default Payload
         else:
-            payload = {**event_data}
+            payload = event_data
 
         log.debug(f'payload: {payload}')
         async with aiohttp.ClientSession(

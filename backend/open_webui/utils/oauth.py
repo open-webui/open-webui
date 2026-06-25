@@ -62,7 +62,8 @@ from open_webui.config import (
     OAUTH_USERNAME_CLAIM,
     WEBHOOK_URL,
 )
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -73,7 +74,6 @@ from open_webui.env import (
     REDIS_KEY_PREFIX,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
-    WEBUI_NAME,
 )
 from open_webui.models.auths import Auths
 from open_webui.models.config import Config
@@ -84,7 +84,6 @@ from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.webhook import post_webhook
 from starlette.responses import RedirectResponse
 
 
@@ -1248,6 +1247,7 @@ class OAuthManager:
         """
         provider = session.provider
         token_data = session.token
+        auth_config = await get_oauth_runtime_config()
 
         if not token_data.get('refresh_token'):
             log.warning(f'No refresh token available for session {session.id}')
@@ -1837,20 +1837,16 @@ class OAuthManager:
                         await Users.update_user_role_by_id(user.id, 'admin', db=db)
                         user = await Users.get_user_by_id(user.id, db=db)
 
-                    if auth_config.WEBHOOK_URL:
-                        await post_webhook(
-                            WEBUI_NAME,
-                            auth_config.WEBHOOK_URL,
-                            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                            {
-                                'action': 'signup',
-                                'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                                'user': user.model_dump_json(exclude_none=True),
-                            },
-                        )
-
                     default_group_id = await Config.get('ui.default_group_id')
                     await apply_default_group_assignment(default_group_id, user.id, db=db)
+                    await publish_event(
+                        request,
+                        EVENTS.USER_CREATED,
+                        actor=user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'role': user.role, 'provider': provider},
+                    )
 
                 else:
                     raise HTTPException(

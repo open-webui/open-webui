@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
 import time
 import uuid
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -300,6 +302,13 @@ async def create_new_knowledge(
             knowledge.name,
             knowledge.description,
         )
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_CREATED,
+            actor=user,
+            subject_id=knowledge.id,
+            data={'name': knowledge.name},
+        )
         return knowledge
     else:
         raise HTTPException(
@@ -358,12 +367,19 @@ async def reindex_knowledge_files(
             # Don't raise, just continue
             continue
 
-        if failed_files:
-            log.warning(f'Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}')
-            for failed in failed_files:
-                log.warning(f'File ID: {failed["file_id"]}, Error: {failed["error"]}')
+    if failed_files:
+        log.warning(f'Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}')
+        for failed in failed_files:
+            log.warning(f'File ID: {failed["file_id"]}, Error: {failed["error"]}')
 
     log.info(f'Reindexing completed.')
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_REINDEXED,
+        actor=user,
+        subject_id='all',
+        data={'count': len(knowledge_bases)},
+    )
     return True
 
 
@@ -597,6 +613,7 @@ async def get_external_knowledge_connections(
 
 @router.post('/external/connections', response_model=dict)
 async def create_external_knowledge_connection(
+    request: Request,
     form_data: ExternalKnowledgeConnectionForm,
     user=Depends(get_admin_user),
 ):
@@ -604,7 +621,15 @@ async def create_external_knowledge_connection(
     connection = _external_connection_dict(form_data, user.id)
     connections.append(connection)
     await _set_external_connections(connections)
-    return _sanitize_external_connection(connection)
+    sanitized = _sanitize_external_connection(connection)
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_EXTERNAL_CONNECTION_CREATED,
+        actor=user,
+        subject_id=connection.get('id'),
+        data={'name': sanitized.get('name'), 'provider': sanitized.get('provider')},
+    )
+    return sanitized
 
 
 @router.get('/external/connections/{id}', response_model=dict)
@@ -621,6 +646,7 @@ async def get_external_knowledge_connection(
 
 @router.patch('/external/connections/{id}', response_model=dict)
 async def update_external_knowledge_connection(
+    request: Request,
     id: str,
     form_data: ExternalKnowledgeConnectionForm,
     user=Depends(get_admin_user),
@@ -633,11 +659,20 @@ async def update_external_knowledge_connection(
     connection = _external_connection_update_dict(form_data, connections[idx])
     connections[idx] = connection
     await _set_external_connections(connections)
-    return _sanitize_external_connection(connection)
+    sanitized = _sanitize_external_connection(connection)
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_EXTERNAL_CONNECTION_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'name': sanitized.get('name'), 'provider': sanitized.get('provider')},
+    )
+    return sanitized
 
 
 @router.delete('/external/connections/{id}', response_model=bool)
 async def delete_external_knowledge_connection(
+    request: Request,
     id: str,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -654,6 +689,13 @@ async def delete_external_knowledge_connection(
 
     connections = [connection for connection in await _get_external_connections() if connection.get('id') != id]
     await _set_external_connections(connections)
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_EXTERNAL_CONNECTION_DELETED,
+        actor=user,
+        subject_id=id,
+        data={'name': connection.get('name'), 'provider': connection.get('provider')},
+    )
     return True
 
 
@@ -1071,10 +1113,18 @@ async def update_knowledge_by_id(
             knowledge.name,
             knowledge.description,
         )
-        return KnowledgeFilesResponse(
+        response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=await Knowledges.get_file_metadatas_by_id(knowledge.id),
         )
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_UPDATED,
+            actor=user,
+            subject_id=knowledge.id,
+            data={'name': knowledge.name},
+        )
+        return response
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1132,10 +1182,18 @@ async def update_knowledge_access_by_id(
 
     knowledge.access_grants = await AccessGrants.set_access_grants('knowledge', id, form_data.access_grants, db=db)
 
-    return KnowledgeFilesResponse(
+    response = KnowledgeFilesResponse(
         **knowledge.model_dump(),
         files=await Knowledges.get_file_metadatas_by_id(id, db=db),
     )
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_ACCESS_UPDATED,
+        actor=user,
+        subject_id=knowledge.id,
+        data={'name': knowledge.name},
+    )
+    return response
 
 
 ############################
@@ -1360,10 +1418,18 @@ async def add_file_to_knowledge_by_id(
         )
 
     if knowledge:
-        return KnowledgeFilesResponse(
+        response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_FILE_ADDED,
+            actor=user,
+            subject_id=form_data.file_id,
+            data={'knowledge_id': knowledge.id, 'directory_id': form_data.directory_id},
+        )
+        return response
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1436,10 +1502,18 @@ async def update_file_from_knowledge_by_id(
         )
 
     if knowledge:
-        return KnowledgeFilesResponse(
+        response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_FILE_UPDATED,
+            actor=user,
+            subject_id=form_data.file_id,
+            data={'knowledge_id': knowledge.id},
+        )
+        return response
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1454,6 +1528,7 @@ async def update_file_from_knowledge_by_id(
 
 @router.post('/{id}/file/remove', response_model=KnowledgeFilesResponse | None)
 async def remove_file_from_knowledge_by_id(
+    request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
     delete_file: bool = Query(True),
@@ -1531,10 +1606,18 @@ async def remove_file_from_knowledge_by_id(
         await Files.delete_file_by_id(form_data.file_id, db=db)
 
     if knowledge:
-        return KnowledgeFilesResponse(
+        response = KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_FILE_REMOVED,
+            actor=user,
+            subject_id=form_data.file_id,
+            data={'knowledge_id': knowledge.id, 'delete_file': delete_file},
+        )
+        return response
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1549,7 +1632,10 @@ async def remove_file_from_knowledge_by_id(
 
 @router.delete('/{id}/delete', response_model=bool)
 async def delete_knowledge_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -1615,6 +1701,14 @@ async def delete_knowledge_by_id(
     await remove_knowledge_base_metadata_embedding(id)
 
     result = await Knowledges.delete_knowledge_by_id(id=id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': knowledge.name},
+        )
     return result
 
 
@@ -1625,6 +1719,7 @@ async def delete_knowledge_by_id(
 
 @router.post('/{id}/reset', response_model=KnowledgeResponse | None)
 async def reset_knowledge_by_id(
+    request: Request,
     id: str,
     include_directories: bool = Query(True),
     user=Depends(get_verified_user),
@@ -1662,6 +1757,14 @@ async def reset_knowledge_by_id(
         pass
 
     knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
+    if knowledge:
+        await publish_event(
+            request,
+            EVENTS.KNOWLEDGE_RESET,
+            actor=user,
+            subject_id=id,
+            data={'include_directories': include_directories},
+        )
     return knowledge
 
 
@@ -2070,6 +2173,7 @@ async def _verify_knowledge_write_access(id: str, user, db: AsyncSession):
 
 @router.post('/{id}/dirs/create', response_model=KnowledgeDirectoryModel)
 async def create_knowledge_directory(
+    request: Request,
     id: str,
     form_data: KnowledgeDirectoryCreateForm,
     user=Depends(get_verified_user),
@@ -2089,11 +2193,19 @@ async def create_knowledge_directory(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Failed to create directory. A directory with this name may already exist at this level.',
         )
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_DIRECTORY_CREATED,
+        actor=user,
+        subject_id=directory.id,
+        data={'knowledge_id': id, 'name': directory.name, 'parent_id': directory.parent_id},
+    )
     return directory
 
 
 @router.post('/{id}/dirs/{dir_id}/update', response_model=KnowledgeDirectoryModel)
 async def update_knowledge_directory(
+    request: Request,
     id: str,
     dir_id: str,
     form_data: KnowledgeDirectoryUpdateForm,
@@ -2121,11 +2233,19 @@ async def update_knowledge_directory(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Failed to update directory. This may be caused by a naming conflict or circular move.',
         )
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_DIRECTORY_UPDATED,
+        actor=user,
+        subject_id=result.id,
+        data={'knowledge_id': id, 'name': result.name, 'parent_id': result.parent_id},
+    )
     return result
 
 
 @router.delete('/{id}/dirs/{dir_id}/delete')
 async def delete_knowledge_directory(
+    request: Request,
     id: str,
     dir_id: str,
     move_files: bool = Query(True, description='If true, move contained files to parent. If false, delete them.'),
@@ -2152,11 +2272,19 @@ async def delete_knowledge_directory(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to delete directory.',
         )
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_DIRECTORY_DELETED,
+        actor=user,
+        subject_id=dir_id,
+        data={'knowledge_id': id, 'move_files': move_files},
+    )
     return {'status': True}
 
 
 @router.post('/{id}/file/move')
 async def move_file_in_knowledge(
+    request: Request,
     id: str,
     form_data: KnowledgeFileMoveForm,
     user=Depends(get_verified_user),
@@ -2191,4 +2319,11 @@ async def move_file_in_knowledge(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to move file.',
         )
+    await publish_event(
+        request,
+        EVENTS.KNOWLEDGE_FILE_MOVED,
+        actor=user,
+        subject_id=form_data.file_id,
+        data={'knowledge_id': id, 'directory_id': form_data.directory_id},
+    )
     return {'status': True}

@@ -121,6 +121,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
+from open_webui.events import EVENT_CATALOG, EVENT_VERSION, EVENTS, publish_event
 from open_webui.models.functions import Functions
 from open_webui.models.messages import Messages
 from open_webui.models.models import Models
@@ -185,6 +186,7 @@ from open_webui.tasks import (
     stop_task,
 )  # Import from tasks.py
 from open_webui.utils import logger
+from open_webui.utils.access_control import has_permission
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import (
     AuthTokenMiddleware,
@@ -296,6 +298,7 @@ async def lifespan(app: FastAPI):
     await import_legacy_config_json()
     await seed_registered_defaults()
     await initialize_runtime_config(app)
+    await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
@@ -387,8 +390,11 @@ async def lifespan(app: FastAPI):
 
     # Mark application as ready to accept traffic from a startup perspective.
     app.state.startup_complete = True
+    await publish_event(app, EVENTS.SYSTEM_STARTUP_COMPLETED, source='system')
 
     yield
+
+    await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_STARTED, source='system')
 
     # Shutdown: clean up shared resources
     from open_webui.utils.session_pool import close_session
@@ -397,6 +403,8 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
 
 app = FastAPI(
@@ -1249,6 +1257,39 @@ async def chat_completion(
                             folder_id=metadata.get('folder_id'),
                         ),
                     )
+                    await publish_event(
+                        request,
+                        EVENTS.CHAT_CREATED,
+                        actor=user,
+                        subject_id=chat_id,
+                        data={'title': 'New Chat'},
+                    )
+                    if user_message_id:
+                        await publish_event(
+                            request,
+                            EVENTS.MESSAGE_CREATED,
+                            actor=user,
+                            subject_id=user_message_id,
+                            data={
+                                'chat_id': chat_id,
+                                'role': 'user',
+                                'content_preview': user_message.get('content', '')[:300],
+                            },
+                        )
+                    for entry in message_ids:
+                        assistant_message_id = entry.get('message_id')
+                        if assistant_message_id:
+                            await publish_event(
+                                request,
+                                EVENTS.MESSAGE_CREATED,
+                                actor=user,
+                                subject_id=assistant_message_id,
+                                data={
+                                    'chat_id': chat_id,
+                                    'role': 'assistant',
+                                    'model': entry.get('model_id'),
+                                },
+                            )
 
                     # Insert chat files from user message if any
                     user_message_files = user_message.get('files', [])
@@ -1292,6 +1333,17 @@ async def chat_completion(
                             chat_id,
                             user_message['id'],
                             user_message,
+                        )
+                        await publish_event(
+                            request,
+                            EVENTS.MESSAGE_CREATED,
+                            actor=user,
+                            subject_id=user_message['id'],
+                            data={
+                                'chat_id': chat_id,
+                                'role': user_message.get('role', 'user'),
+                                'content_preview': user_message.get('content', '')[:300],
+                            },
                         )
 
                         # Link grandparent → user message (childrenIds)
@@ -1359,6 +1411,17 @@ async def chat_completion(
                                     'done': False,
                                     'model': target_model_id,
                                     'timestamp': int(time.time()),
+                                },
+                            )
+                            await publish_event(
+                                request,
+                                EVENTS.MESSAGE_CREATED,
+                                actor=user,
+                                subject_id=assistant_message_id,
+                                data={
+                                    'chat_id': chat_id,
+                                    'role': 'assistant',
+                                    'model': target_model_id,
                                 },
                             )
 
@@ -1953,10 +2016,25 @@ async def get_webhook_url(user=Depends(get_admin_user)):
     }
 
 
+@app.get('/api/events')
+async def get_event_catalog(user=Depends(get_admin_user)):
+    return {
+        'schema': EVENT_VERSION,
+        'events': list(EVENT_CATALOG),
+    }
+
+
 @app.post('/api/webhook')
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     await Config.upsert({'webhook_url': form_data.url})
     app.state.WEBHOOK_URL = form_data.url
+    await publish_event(
+        app,
+        EVENTS.CONFIG_WEBHOOK_UPDATED,
+        actor=user,
+        subject_id='webhook_url', subject_type='config',
+        data={'enabled': bool(form_data.url)},
+    )
     return {'url': form_data.url}
 
 

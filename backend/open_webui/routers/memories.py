@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories, MemoryModel
@@ -99,6 +100,13 @@ async def add_memory(
         ],
     )
 
+    await publish_event(
+        request,
+        EVENTS.MEMORY_CREATED,
+        actor=user,
+        subject_id=memory.id,
+        data={'content_preview': memory.content[:300]},
+    )
     return memory
 
 
@@ -214,6 +222,13 @@ async def reset_memory_from_vector_db(
         ],
     )
 
+    await publish_event(
+        request,
+        EVENTS.MEMORY_RESET,
+        actor=user,
+        subject_id=user.id, subject_type='user',
+        data={'count': len(memories)},
+    )
     return True
 
 
@@ -237,6 +252,12 @@ async def delete_memory_by_user_id(
             await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
         except Exception as e:
             log.error(e)
+        await publish_event(
+            request,
+            EVENTS.MEMORY_DELETED,
+            actor=user,
+            subject_id=user.id, subject_type='user',
+        )
         return True
 
     return False
@@ -282,6 +303,13 @@ async def update_memory_by_id(
             ],
         )
 
+    await publish_event(
+        request,
+        EVENTS.MEMORY_UPDATED,
+        actor=user,
+        subject_id=memory.id,
+        data={'content_preview': memory.content[:300]},
+    )
     return memory
 
 
@@ -303,6 +331,12 @@ async def delete_memory_by_id(
 
     if result:
         await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=[memory_id])
+        await publish_event(
+            request,
+            EVENTS.MEMORY_DELETED,
+            actor=user,
+            subject_id=memory_id,
+        )
         return True
 
     return False

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -380,6 +381,13 @@ async def create_new_tools(
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if tools:
+                await publish_event(
+                    request,
+                    EVENTS.TOOL_CREATED,
+                    actor=user,
+                    subject_id=tools.id,
+                    data={'name': tools.name},
+                )
                 return tools
             else:
                 raise HTTPException(
@@ -522,6 +530,13 @@ async def update_tools_by_id(
         tools = await Tools.update_tool_by_id(id, updated, db=db)
 
         if tools:
+            await publish_event(
+                request,
+                EVENTS.TOOL_UPDATED,
+                actor=user,
+                subject_id=tools.id,
+                data={'name': tools.name},
+            )
             return tools
         else:
             raise HTTPException(
@@ -586,7 +601,15 @@ async def update_tool_access_by_id(
 
     await AccessGrants.set_access_grants('tool', id, form_data.access_grants, db=db)
 
-    return await Tools.get_tool_by_id(id, db=db)
+    tools = await Tools.get_tool_by_id(id, db=db)
+    await publish_event(
+        request,
+        EVENTS.TOOL_ACCESS_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'name': tools.name if tools else None},
+    )
+    return tools
 
 
 ############################
@@ -628,6 +651,13 @@ async def delete_tools_by_id(
     if result:
         TOOLS = get_tools_cache(request)
         TOOLS.pop(id, None)
+        await publish_event(
+            request,
+            EVENTS.TOOL_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': tools.name},
+        )
 
     return result
 
@@ -770,6 +800,12 @@ async def update_tools_valves_by_id(
         valves = Valves(**form_data)
         valves_dict = valves.model_dump(exclude_unset=True)
         await Tools.update_tool_valves_by_id(id, valves_dict, db=db)
+        await publish_event(
+            request,
+            EVENTS.TOOL_VALVES_UPDATED,
+            actor=user,
+            subject_id=id,
+        )
         return valves_dict
     except Exception as e:
         log.exception(f'Failed to update tool valves by id {id}: {e}')
@@ -903,6 +939,13 @@ async def update_tools_user_valves_by_id(
             user_valves = UserValves(**form_data)
             user_valves_dict = user_valves.model_dump(exclude_unset=True)
             await Tools.update_user_valves_by_id_and_user_id(id, user.id, user_valves_dict, db=db)
+            await publish_event(
+                request,
+                EVENTS.TOOL_VALVES_UPDATED,
+                actor=user,
+                subject_id=id,
+                data={'scope': 'user'},
+            )
             return user_valves_dict
         except Exception as e:
             log.exception(f'Failed to update user valves by id {id}: {e}')

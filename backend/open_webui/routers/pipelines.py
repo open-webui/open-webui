@@ -411,13 +411,6 @@ async def get_pipelines(request: Request, urlIdx: Optional[int] = None, user=Dep
                 response.raise_for_status()
                 data = await response.json()
 
-        await publish_event(
-            request,
-            EVENTS.PIPELINE_VALVES_UPDATED,
-            actor=user,
-            subject_id=pipeline_id,
-            data={'url_idx': urlIdx},
-        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -458,6 +451,13 @@ async def get_pipeline_valves(
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_VALVES_UPDATED,
+            actor=user,
+            subject_id=pipeline_id,
+            data={'url_idx': urlIdx},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here

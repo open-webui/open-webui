@@ -9,6 +9,7 @@ from open_webui.config import (
     ENABLE_ADMIN_EXPORT,
 )
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -227,6 +228,13 @@ async def create_new_note(
 
     try:
         note = await Notes.insert_new_note(user.id, form_data, db=db)
+        await publish_event(
+            request,
+            EVENTS.NOTE_CREATED,
+            actor=user,
+            subject_id=note.id,
+            data={'title': note.title},
+        )
         return note
     except Exception as e:
         log.exception(e)
@@ -352,6 +360,13 @@ async def update_note_by_id(
             to=f'note:{note.id}',
         )
 
+        await publish_event(
+            request,
+            EVENTS.NOTE_UPDATED,
+            actor=user,
+            subject_id=note.id,
+            data={'title': note.title},
+        )
         return note
     except Exception as e:
         log.exception(e)
@@ -412,6 +427,12 @@ async def update_note_access_by_id(
     note = await Notes.get_note_by_id(id, db=db)
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
     note.is_pinned = note.id in pinned_note_ids
+    await publish_event(
+        request,
+        EVENTS.NOTE_ACCESS_UPDATED,
+        actor=user,
+        subject_id=note.id,
+    )
     return note
 
 
@@ -454,6 +475,12 @@ async def pin_note_by_id(
     note = await Notes.toggle_note_pinned_by_id(id, user.id, db=db)
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
     note.is_pinned = note.id in pinned_note_ids
+    await publish_event(
+        request,
+        EVENTS.NOTE_PINNED if note.is_pinned else EVENTS.NOTE_UNPINNED,
+        actor=user,
+        subject_id=note.id, subject_type='note',
+    )
     return note
 
 
@@ -495,6 +522,12 @@ async def delete_note_by_id(
 
     try:
         note = await Notes.delete_note_by_id(id, db=db)
+        await publish_event(
+            request,
+            EVENTS.NOTE_DELETED,
+            actor=user,
+            subject_id=id,
+        )
         return True
     except Exception as e:
         log.exception(e)
