@@ -4,10 +4,10 @@
 
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { formatFileSize, getLineCount } from '$lib/utils';
+	import { formatFileSize, getLineCount, decodeString } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
-	import { getKnowledgeById } from '$lib/apis/knowledge';
+	import { getKnowledgeById, searchKnowledgeFilesById } from '$lib/apis/knowledge';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
@@ -24,9 +24,14 @@
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
+	import Loader from './Loader.svelte';
 	import PDFViewer from './PDFViewer.svelte';
 	import PanzoomContainer from './PanzoomContainer.svelte';
 	import Reset from '../icons/Reset.svelte';
+	import Folder from '../icons/Folder.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import DocumentPage from '../icons/DocumentPage.svelte';
 
 	export let item;
 	export let show = false;
@@ -34,6 +39,16 @@
 
 	let enableFullContent = false;
 	let loading = false;
+
+	// --- Collection browsing state ---
+	let collectionDirectoryId = null;
+	let collectionDirectories = [];
+	let collectionBreadcrumbs = [];
+	let collectionFiles = [];
+	let collectionFilesTotal = 0;
+	let collectionFilesPage = 1;
+	let collectionAllFilesLoaded = false;
+	let collectionFilesLoading = false;
 
 	let isPDF = false;
 	let isAudio = false;
@@ -205,15 +220,14 @@
 		expandedContent = false;
 		if (item?.type === 'collection') {
 			loading = true;
-
-			const knowledge = await getKnowledgeById(localStorage.token, item.id).catch((e) => {
-				console.error('Error fetching knowledge base:', e);
-				return null;
-			});
-
-			if (knowledge) {
-				item.files = knowledge.files || [];
-			}
+			collectionDirectoryId = null;
+			collectionDirectories = [];
+			collectionBreadcrumbs = [];
+			collectionFiles = [];
+			collectionFilesTotal = 0;
+			collectionFilesPage = 1;
+			collectionAllFilesLoaded = false;
+			await loadCollectionPage();
 			loading = false;
 		} else if (item?.type === 'file') {
 			loading = true;
@@ -242,6 +256,59 @@
 		}
 
 		await tick();
+	};
+
+	const loadCollectionPage = async () => {
+		if (!item?.id) return;
+		collectionFilesLoading = true;
+
+		const res = await searchKnowledgeFilesById(
+			localStorage.token,
+			item.id,
+			null,
+			null,
+			null,
+			null,
+			collectionFilesPage,
+			collectionDirectoryId
+		).catch(() => null);
+
+		if (res) {
+			collectionFilesTotal = res.total;
+			collectionDirectories = res.directories || [];
+			collectionBreadcrumbs = res.breadcrumbs || [];
+			const pageItems = res.items || [];
+
+			if (pageItems.length === 0) {
+				collectionAllFilesLoaded = true;
+			} else {
+				collectionAllFilesLoaded = false;
+			}
+
+			if (collectionFilesPage === 1) {
+				collectionFiles = pageItems;
+			} else {
+				const existingIds = new Set(collectionFiles.map((f) => f.id));
+				const newItems = pageItems.filter((f) => !existingIds.has(f.id));
+				collectionFiles = [...collectionFiles, ...newItems];
+			}
+		}
+
+		collectionFilesLoading = false;
+	};
+
+	const navigateCollectionDirectory = async (dirId) => {
+		collectionDirectoryId = dirId;
+		collectionFilesPage = 1;
+		collectionFiles = [];
+		collectionAllFilesLoaded = false;
+		await loadCollectionPage();
+	};
+
+	const loadMoreCollectionFiles = async () => {
+		if (collectionAllFilesLoaded || collectionFilesLoading) return;
+		collectionFilesPage += 1;
+		await loadCollectionPage();
 	};
 
 	$: if (show) {
@@ -380,14 +447,97 @@
 		<div class="max-h-[75vh] overflow-auto">
 			{#if !loading}
 				{#if item?.type === 'collection'}
-					<div>
-						{#each item?.files as file}
-							<div class="flex items-center gap-2 mb-2">
-								<div class="flex-shrink-0 text-xs">
-									{file?.meta?.name}
-								</div>
+					<div class="flex flex-col gap-0.5">
+						<!-- Breadcrumb navigation -->
+						{#if collectionBreadcrumbs.length > 0}
+							<div
+								class="px-1 py-1.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800 mb-1"
+							>
+								<button
+									type="button"
+									class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+									on:click={() => navigateCollectionDirectory(null)}
+								>
+									<ArrowLeft className="size-3.5" strokeWidth="2" />
+								</button>
+
+								<button
+									type="button"
+									class="hover:text-gray-700 dark:hover:text-gray-200 transition truncate"
+									on:click={() => navigateCollectionDirectory(null)}
+								>
+									{decodeString(item?.name)}
+								</button>
+								{#each collectionBreadcrumbs as crumb, i}
+									<span class="flex-shrink-0">/</span>
+									<button
+										type="button"
+										class="hover:text-gray-700 dark:hover:text-gray-200 transition truncate"
+										on:click={() => navigateCollectionDirectory(crumb.id)}
+									>
+										{crumb.name}
+									</button>
+								{/each}
 							</div>
-						{/each}
+						{/if}
+
+						{#if collectionDirectories.length === 0 && collectionFiles.length === 0 && !collectionFilesLoading}
+							<div class="text-xs text-gray-500 dark:text-gray-400 italic py-2 px-1">
+								{$i18n.t('No files in this knowledge base.')}
+							</div>
+						{:else}
+							<!-- Directories -->
+							{#each collectionDirectories as dir (dir.id)}
+								<button
+									type="button"
+									class="px-1 py-1.5 rounded-lg w-full text-left flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+									on:click={() => navigateCollectionDirectory(dir.id)}
+								>
+									<Folder className="size-4 flex-shrink-0 text-gray-500" />
+									<div class="line-clamp-1 flex-1 dark:text-gray-100">{dir.name}</div>
+									<ChevronRight className="size-3 opacity-30 flex-shrink-0" />
+								</button>
+							{/each}
+
+							<!-- Files -->
+							{#each collectionFiles as file (file.id)}
+								<div class="px-1 py-1.5 rounded-lg w-full flex items-center gap-2 text-sm">
+									<DocumentPage className="size-4 flex-shrink-0 text-gray-500" />
+									<div class="line-clamp-1 flex-1 dark:text-gray-100">
+										{decodeString(file?.meta?.name || file.filename)}
+									</div>
+									{#if file?.meta?.size}
+										<div class="text-xs text-gray-400 flex-shrink-0">
+											{formatFileSize(file.meta.size)}
+										</div>
+									{/if}
+								</div>
+							{/each}
+
+							{#if !collectionAllFilesLoaded && !collectionFilesLoading}
+								<Loader
+									on:visible={() => {
+										loadMoreCollectionFiles();
+									}}
+								>
+									<div
+										class="w-full flex justify-center py-3 text-xs animate-pulse items-center gap-2"
+									>
+										<Spinner className="size-3" />
+										<div>{$i18n.t('Loading...')}</div>
+									</div>
+								</Loader>
+							{/if}
+						{/if}
+
+						<!-- File count -->
+						{#if collectionFilesTotal > 0}
+							<div
+								class="text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-100 dark:border-gray-800 mt-1"
+							>
+								{$i18n.t('{{COUNT}} files', { COUNT: collectionFilesTotal })}
+							</div>
+						{/if}
 					</div>
 				{/if}
 
