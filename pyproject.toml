@@ -147,6 +147,9 @@ mariadb = [
 unstructured = [
     "unstructured==0.18.31",
 ]
+twelvelabs = [
+    "twelvelabs==1.2.8",
+]
 
 all = [
     "pymongo==4.16.0",

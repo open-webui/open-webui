@@ -1417,6 +1417,16 @@ except json.JSONDecodeError:
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = images_edit_comfyui_workflow_nodes
 
 ####################################
+# Video Analysis (TwelveLabs)
+####################################
+
+# Opt-in: the analyze_video builtin tool is only offered when an API key is set.
+TWELVELABS_API_KEY = os.getenv('TWELVELABS_API_KEY', '')
+
+# Pegasus model used for video understanding/analysis.
+TWELVELABS_PEGASUS_MODEL = os.getenv('TWELVELABS_PEGASUS_MODEL', 'pegasus1.5')
+
+####################################
 # Audio
 ####################################
 
@@ -2825,6 +2835,8 @@ DEFAULT_CONFIG = {
     'images.edit.comfyui.api_key': IMAGES_EDIT_COMFYUI_API_KEY,
     'images.edit.comfyui.workflow': IMAGES_EDIT_COMFYUI_WORKFLOW,
     'images.edit.comfyui.nodes': IMAGES_EDIT_COMFYUI_WORKFLOW_NODES,
+    'video_analysis.twelvelabs.api_key': TWELVELABS_API_KEY,
+    'video_analysis.twelvelabs.pegasus_model': TWELVELABS_PEGASUS_MODEL,
     'audio.stt.whisper_model': WHISPER_MODEL,
     'audio.stt.deepgram.api_key': DEEPGRAM_API_KEY,
     'audio.stt.openai.api_base_url': AUDIO_STT_OPENAI_API_BASE_URL,
