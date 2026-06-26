@@ -1841,21 +1841,19 @@
 						);
 						messageContentParts.pop();
 
-						// dispatch only last sentence and make sure it hasn't been dispatched before
-						if (
-							messageContentParts.length > 0 &&
-							messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-						) {
-							message.lastSentence = messageContentParts[messageContentParts.length - 1];
+						// Dispatch ALL newly-completed sentences since the last tick — not just the
+						// final one. A fast stream (local models like LM Studio/Ollama) can finish
+						// several sentences within a single update; sending only the last silently
+						// drops the ones in between, so they are never spoken in call mode.
+						const dispatchedCount = message.dispatchedSentenceCount ?? 0;
+						for (let i = dispatchedCount; i < messageContentParts.length; i++) {
 							eventTarget.dispatchEvent(
 								new CustomEvent('chat', {
-									detail: {
-										id: message.id,
-										content: messageContentParts[messageContentParts.length - 1]
-									}
+									detail: { id: message.id, content: messageContentParts[i] }
 								})
 							);
 						}
+						message.dispatchedSentenceCount = messageContentParts.length;
 					}
 				}
 			}
@@ -1877,21 +1875,19 @@
 				);
 				messageContentParts.pop();
 
-				// dispatch only last sentence and make sure it hasn't been dispatched before
-				if (
-					messageContentParts.length > 0 &&
-					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-				) {
-					message.lastSentence = messageContentParts[messageContentParts.length - 1];
+				// Dispatch ALL newly-completed sentences since the last tick — not just the
+				// final one. A fast stream (local models like LM Studio/Ollama) can finish
+				// several sentences within a single update; sending only the last silently
+				// drops the ones in between, so they are never spoken in call mode.
+				const dispatchedCount = message.dispatchedSentenceCount ?? 0;
+				for (let i = dispatchedCount; i < messageContentParts.length; i++) {
 					eventTarget.dispatchEvent(
 						new CustomEvent('chat', {
-							detail: {
-								id: message.id,
-								content: messageContentParts[messageContentParts.length - 1]
-							}
+							detail: { id: message.id, content: messageContentParts[i] }
 						})
 					);
 				}
+				message.dispatchedSentenceCount = messageContentParts.length;
 			}
 		}
 
@@ -1920,18 +1916,24 @@
 
 			// Emit chat event for TTS (only when call overlay is active)
 			if ($showCallOverlay) {
-				let lastMessageContentPart =
-					getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					)?.at(-1) ?? '';
-				if (lastMessageContentPart) {
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: { id: message.id, content: lastMessageContentPart }
-						})
-					);
+				const finalParts = getMessageContentParts(
+					removeAllDetails(message.content),
+					$config?.audio?.tts?.split_on ?? 'punctuation'
+				);
+				// Flush any sentences not yet dispatched during streaming — including the
+				// final one, which is always held back as the incomplete tail — so the
+				// whole reply is spoken.
+				const doneDispatched = message.dispatchedSentenceCount ?? 0;
+				for (let i = doneDispatched; i < finalParts.length; i++) {
+					if (finalParts[i]) {
+						eventTarget.dispatchEvent(
+							new CustomEvent('chat', {
+								detail: { id: message.id, content: finalParts[i] }
+							})
+						);
+					}
 				}
+				message.dispatchedSentenceCount = finalParts.length;
 			}
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat:finish', {

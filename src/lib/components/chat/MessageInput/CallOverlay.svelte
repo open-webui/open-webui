@@ -483,6 +483,9 @@
 	// Audio cache map where key is the content and value is the Audio object.
 	const audioCache = new Map();
 	const emojiCache = new Map();
+	// Content whose TTS fetch outright FAILED (vs. still generating). The play loop skips
+	// these immediately instead of waiting, so one failure can't stall the whole queue.
+	const failedContent = new Set();
 
 	const fetchAudio = async (content) => {
 		if (!audioCache.has(content)) {
@@ -521,12 +524,15 @@
 						const blob = await res.blob();
 						const blobUrl = URL.createObjectURL(blob);
 						audioCache.set(content, new Audio(blobUrl));
+					} else {
+						failedContent.add(content); // TTS request failed — don't wait on it
 					}
 				} else {
 					audioCache.set(content, true);
 				}
 			} catch (error) {
 				console.error('Error synthesizing speech:', error);
+				failedContent.add(content);
 			}
 		}
 
@@ -536,6 +542,7 @@
 	let messages = {};
 
 	const monitorAndPlayAudio = async (id, signal) => {
+		const audioWaitCounts = {};
 		while (!signal.aborted) {
 			if (messages[id] && messages[id].length > 0) {
 				// Retrieve the next content string from the queue
@@ -570,12 +577,22 @@
 						await speakSpeechSynthesisHandler(content);
 					}
 				} else {
-					// If not available in the cache, push it back to the queue and delay
-					messages[id].unshift(content); // Re-queue the content at the start
-					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
-					await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
+					// Not cached yet. If its TTS fetch FAILED, drop it immediately so it can't
+					// block the queue. Otherwise it's still generating — a single-GPU TTS
+					// serializes long replies, so keep waiting (with a generous ~60s backstop
+					// so a truly stalled request still can't hang the turn forever).
+					audioWaitCounts[content] = (audioWaitCounts[content] ?? 0) + 1;
+					if (
+						failedContent.has(content) ||
+						(finishedMessages[id] && audioWaitCounts[content] > 300)
+					) {
+						console.warn(`No audio for "${content}"; skipping.`);
+					} else {
+						messages[id].unshift(content); // Re-queue and keep waiting for the audio
+						await new Promise((resolve) => setTimeout(resolve, 200));
+					}
 				}
-			} else if (finishedMessages[id] && messages[id] && messages[id].length === 0) {
+			} else if (finishedMessages[id]) {
 				// If the message is finished and there are no more messages to process, break the loop
 				assistantSpeaking = false;
 				break;
