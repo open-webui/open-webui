@@ -59,11 +59,21 @@ def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict
     }
 
 
-def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -> dict:
+def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None, request=None) -> dict:
     if not custom_headers or not isinstance(custom_headers, dict):
         return {}
 
     metadata = metadata or {}
+
+    # UA from the live request; fall back to metadata for detached RAG/tool calls.
+    user_agent = ''
+    if request is not None:
+        try:
+            user_agent = request.headers.get('user-agent', '') or ''
+        except Exception:
+            user_agent = ''
+    if not user_agent:
+        user_agent = metadata.get('user_agent', '') or ''
 
     # Extract user_message info for tree mapping
     user_message = metadata.get('user_message') or {}
@@ -83,6 +93,7 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None) -
         '{{USER_NAME}}': (user.name if user else '') or '',
         '{{USER_EMAIL}}': (user.email if user else '') or '',
         '{{USER_ROLE}}': (user.role if user else '') or '',
+        '{{USER_AGENT}}': user_agent,
     }
 
     parsed_headers = {}

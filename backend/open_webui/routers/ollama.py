@@ -38,7 +38,7 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.misc import calculate_sha256
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -99,6 +99,8 @@ async def send_request(
     stream: bool = False,
     content_type: str | None = None,
     metadata: dict | None = None,
+    api_config: dict | None = None,
+    request: Request | None = None,
 ):
     r = None
     streaming = False
@@ -114,6 +116,10 @@ async def send_request(
             headers = include_user_info_headers(headers, user)
             if metadata and metadata.get('chat_id'):
                 headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
+
+        # Custom per-connection headers last so admin-set headers take precedence.
+        if api_config and api_config.get('headers'):
+            headers.update(get_custom_headers(api_config['headers'], user, metadata, request=request))
 
         r = await session.request(
             method,
@@ -1098,6 +1104,8 @@ async def generate_chat_completion(
         stream=form_data.stream,
         content_type='application/x-ndjson',
         metadata=metadata,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -1183,6 +1191,8 @@ async def generate_openai_completion(
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -1240,6 +1250,8 @@ async def generate_openai_chat_completion(
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -1292,6 +1304,8 @@ async def generate_anthropic_messages(
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
+        api_config=api_config,
+        request=request,
     )
 
 
@@ -1350,6 +1364,8 @@ async def generate_responses(
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
+        api_config=api_config,
+        request=request,
     )
 
 
