@@ -359,10 +359,10 @@ async def edit_image(
     __message_id__: str = None,
 ) -> str:
     """
-    Edit existing images based on a text prompt.
+    Edit or composite existing images from a text prompt, including inserting one image into another.
 
     :param prompt: A description of the changes to make to the images
-    :param image_urls: A list of URLs of the images to edit
+    :param image_urls: A list of URLs of the images to edit, inpaint or combine
     :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
