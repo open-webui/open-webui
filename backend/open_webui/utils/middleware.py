@@ -112,7 +112,7 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.response import merge_usage, normalize_usage
+from open_webui.utils.response import extract_usage, merge_usage
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.task import (
     get_task_model_id,
@@ -3605,7 +3605,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     )
 
                     # Save message in the database
-                    usage = normalize_usage(response_data.get('usage', {}) or {})
+                    usage = extract_usage(response_data)
 
                     if not metadata.get('chat_id', '').startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -4159,8 +4159,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     choices = data.get('choices', [])
 
                                     # Normalize usage data to standard format
-                                    raw_usage = data.get('usage', {}) or {}
-                                    raw_usage.update(data.get('timings', {}))  # llama.cpp
+                                    raw_usage = extract_usage(data)
                                     if raw_usage:
                                         usage = merge_usage(usage, raw_usage)
                                         await event_emitter(

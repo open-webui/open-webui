@@ -51,6 +51,29 @@ def normalize_usage(usage: dict) -> dict:
     return result
 
 
+def extract_usage(data: dict) -> dict:
+    """
+    Extract usage metadata from provider response payloads.
+
+    OpenAI-compatible providers usually return token counts in `usage`.
+    llama.cpp additionally returns timing/token metadata in `timings`, and
+    some responses only include that object.
+    """
+    if not data:
+        return {}
+
+    raw_usage = {}
+    usage = data.get('usage')
+    if isinstance(usage, dict):
+        raw_usage.update(usage)
+
+    timings = data.get('timings')
+    if isinstance(timings, dict):
+        raw_usage.update(timings)
+
+    return normalize_usage(raw_usage) if raw_usage else {}
+
+
 USAGE_TOKEN_KEYS = {
     'input_tokens',
     'output_tokens',
