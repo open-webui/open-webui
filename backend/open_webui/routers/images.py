@@ -428,7 +428,7 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
             # ComfyUI on a private network), skip SSRF validation only when
             # the URL shares the exact same origin (scheme + host + port)
             # as the admin-configured base.  This avoids both the global
-            # ENABLE_RAG_LOCAL_WEB_FETCH hammer and a blanket trust flag
+            # ENABLE_LOCAL_WEB_FETCH hammer and a blanket trust flag
             # that would follow arbitrary redirects.
             if trusted_base_url and _is_same_origin(data, trusted_base_url):
                 log.debug(f'Skipping URL validation for trusted backend: {data}')
