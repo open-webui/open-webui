@@ -1154,12 +1154,26 @@ async def process_tool_result(
                     elif item.get('type') == 'resource':
                         resource = item.get('resource', {})
                         text = resource.get('text', '')
+                        blob = resource.get('blob', '')
                         if isinstance(text, str) and text:
                             try:
                                 text = json.loads(text)
                             except json.JSONDecodeError:
                                 pass
                             tool_response.append(text)
+                        elif blob:
+                            r_mime = resource.get('mimeType', '') or 'application/octet-stream'
+                            if r_mime.startswith('image/'):
+                                # Pass image blobs to the model as vision input.
+                                # Must stay a data URI so the native tool path
+                                # forwards it as an input_image part.
+                                tool_result_files.append(
+                                    {'type': 'image', 'url': f'data:{r_mime};base64,{blob}'}
+                                )
+                            else:
+                                tool_response.append(
+                                    f"[binary resource {resource.get('uri', '')} ({r_mime}) retrieved but not renderable as text]"
+                                )
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
             for item in tool_result:
