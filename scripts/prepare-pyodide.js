@@ -40,22 +40,22 @@ function initNetworkProxyFromEnv() {
 	const allProxy = process.env.all_proxy || process.env.ALL_PROXY;
 	const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY;
 	const httpProxy = process.env.http_proxy || process.env.HTTP_PROXY;
-	const preferedProxy = httpsProxy || allProxy || httpProxy;
+	const preferredProxy = httpsProxy || allProxy || httpProxy;
 	/**
 	 * use only http(s) proxy because socks5 proxy is not supported currently:
 	 * @see https://github.com/nodejs/undici/issues/2224
 	 */
-	if (!preferedProxy || !preferedProxy.startsWith('http')) return;
-	let preferedProxyURL;
+	if (!preferredProxy || !preferredProxy.startsWith('http')) return;
+	let preferredProxyURL;
 	try {
-		preferedProxyURL = new URL(preferedProxy).toString();
+		preferredProxyURL = new URL(preferredProxy).toString();
 	} catch {
-		console.warn(`Invalid network proxy URL: "${preferedProxy}"`);
+		console.warn(`Invalid network proxy URL: "${preferredProxy}"`);
 		return;
 	}
-	const dispatcher = new ProxyAgent({ uri: preferedProxyURL });
+	const dispatcher = new ProxyAgent({ uri: preferredProxyURL });
 	setGlobalDispatcher(dispatcher);
-	console.log(`Initialized network proxy "${preferedProxy}" from env`);
+	console.log(`Initialized network proxy "${preferredProxy}" from env`);
 }
 
 async function downloadPackages() {
