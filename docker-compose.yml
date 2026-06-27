@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-0}
+    restart: always
+    # 如果需要 GPU，请确保 Docker 支持 GPU 并启用下面一行（可选）
+    gpus: all
+
+volumes:
+  open-webui:
