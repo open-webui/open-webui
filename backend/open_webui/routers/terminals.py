@@ -7,10 +7,11 @@ Routes:
 
 import logging
 import posixpath
-from urllib.parse import unquote
+import unicodedata
+from urllib.parse import quote, unquote
 
 import aiohttp
-from fastapi import APIRouter, Depends, Request, Response, WebSocket
+from fastapi import APIRouter, Depends, Query, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.events import EVENTS, publish_event
@@ -79,6 +80,184 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
 
 
 PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+INLINE_IMAGE_EXTENSIONS = frozenset(('jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif'))
+
+
+def _is_absolute_terminal_path(path: str) -> bool:
+    normalized = path.replace('\\', '/')
+    return normalized.startswith('/') or (
+        len(normalized) >= 3 and normalized[1] == ':' and normalized[2] == '/' and normalized[0].isalpha()
+    )
+
+
+def _normalize_terminal_file_path(path: str) -> str | None:
+    if not path or '\x00' in path:
+        return None
+
+    decoded = path
+    for _ in range(8):
+        next_value = unquote(decoded)
+        if next_value == decoded:
+            break
+        decoded = next_value
+
+    normalized = decoded.replace('\\', '/')
+    if not _is_absolute_terminal_path(normalized):
+        return None
+
+    if '..' in [part for part in normalized.split('/') if part]:
+        return None
+
+    if normalized.startswith('/'):
+        return posixpath.normpath(normalized)
+
+    drive = normalized[:2]
+    rest = posixpath.normpath('/' + normalized[3:]).lstrip('/')
+    return f'{drive}/{rest}' if rest else f'{drive}/'
+
+
+def _is_inline_image_path(path: str) -> bool:
+    extension = path.replace('\\', '/').rsplit('.', 1)[-1].lower()
+    return extension in INLINE_IMAGE_EXTENSIONS
+
+
+def _sanitize_download_filename(filename: str) -> str:
+    sanitized = ''.join(char for char in filename if char.isprintable() and char not in {'"', '\\'})
+    return sanitized[:255] or 'download'
+
+
+def _ascii_filename_fallback(filename: str) -> str:
+    fallback = unicodedata.normalize('NFKD', filename).encode('ascii', 'ignore').decode('ascii')
+    sanitized = ''.join(char for char in fallback if 0x20 <= ord(char) < 0x7F and char not in {'"', '\\'})
+    return sanitized[:255] or 'download'
+
+
+@router.get('/{server_id}/files/content')
+async def get_terminal_file_content(
+    server_id: str,
+    request: Request,
+    path: str = Query(..., description='Terminal filesystem path to serve.'),
+    download: bool = Query(False, description='If true, force browser download.'),
+    user=Depends(get_verified_user),
+):
+    """Serve terminal files through Open WebUI without exposing upstream credentials."""
+    terminal_path = _normalize_terminal_file_path(path)
+    if terminal_path is None:
+        return JSONResponse({'error': 'Only absolute sandbox file paths are supported'}, status_code=400)
+
+    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connection = next((c for c in connections if c.get('id') == server_id), None)
+
+    if connection is None:
+        return JSONResponse({'error': f"Terminal server '{server_id}' not found"}, status_code=404)
+
+    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
+    if not await has_connection_access(user, connection, user_group_ids):
+        return JSONResponse({'error': 'Access denied'}, status_code=403)
+
+    base_url = (connection.get('url') or '').rstrip('/')
+    if not base_url:
+        return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
+
+    policy_id = connection.get('policy_id')
+    target_url = f'{base_url}/files/view'
+    if policy_id:
+        target_url = f'{base_url}/p/{policy_id}/files/view'
+
+    headers = {'X-User-Id': user.id}
+    for forwarded_header in ('range', 'if-range'):
+        value = request.headers.get(forwarded_header)
+        if value:
+            headers[forwarded_header] = value
+
+    cookies = {}
+    auth_type = connection.get('auth_type', 'bearer')
+    if auth_type == 'bearer':
+        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+    elif auth_type == 'session':
+        cookies = request.cookies
+        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif auth_type == 'system_oauth':
+        cookies = request.cookies
+        oauth_token = request.headers.get('x-oauth-access-token', '')
+        if oauth_token:
+            headers['Authorization'] = f'Bearer {oauth_token}'
+    # auth_type == "none": no Authorization header
+
+    session = aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(total=300, connect=10),
+        trust_env=True,
+    )
+
+    try:
+        upstream_response = await session.get(
+            target_url,
+            params={'path': terminal_path},
+            headers=headers,
+            cookies=cookies,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        )
+
+        filtered_headers = {
+            key: value
+            for key, value in upstream_response.headers.items()
+            if key.lower() not in STRIPPED_RESPONSE_HEADERS and key.lower() != 'content-disposition'
+        }
+        if TERMINAL_PROXY_HEADERS:
+            filtered_headers.update(TERMINAL_PROXY_HEADERS)
+        filtered_headers['Cache-Control'] = 'private, no-store'
+        filtered_headers['X-Content-Type-Options'] = 'nosniff'
+
+        if upstream_response.status >= 400:
+            status_code = upstream_response.status
+            upstream_response.release()
+            await session.close()
+            return JSONResponse(
+                {'error': f'Terminal file request failed with status {status_code}'},
+                status_code=status_code,
+                headers={
+                    'Cache-Control': 'private, no-store',
+                    'X-Content-Type-Options': 'nosniff',
+                },
+            )
+
+        filename = _sanitize_download_filename(
+            terminal_path.replace('\\', '/').rstrip('/').split('/')[-1] or 'download'
+        )
+        content_type = upstream_response.headers.get('content-type', '').lower()
+        can_inline = _is_inline_image_path(terminal_path) and content_type.startswith('image/')
+        disposition = 'inline' if not download and can_inline else 'attachment'
+        ascii_filename = _ascii_filename_fallback(filename)
+        quoted_filename = quote(filename, safe='')
+        filtered_headers['Content-Disposition'] = (
+            f'{disposition}; filename="{ascii_filename}"; filename*=UTF-8\'\'{quoted_filename}'
+        )
+
+        async def stream_content():
+            try:
+                async for chunk in upstream_response.content.iter_any():
+                    yield chunk
+            finally:
+                upstream_response.release()
+                await session.close()
+
+        return StreamingResponse(
+            content=stream_content(),
+            status_code=upstream_response.status,
+            headers=filtered_headers,
+        )
+
+    except Exception:
+        await session.close()
+        log.exception('Terminal file content proxy error')
+        return JSONResponse(
+            {'error': 'Terminal file request failed'},
+            status_code=502,
+            headers={
+                'Cache-Control': 'private, no-store',
+                'X-Content-Type-Options': 'nosniff',
+            },
+        )
 
 
 @router.api_route('/{server_id}/{path:path}', methods=PROXY_METHODS)

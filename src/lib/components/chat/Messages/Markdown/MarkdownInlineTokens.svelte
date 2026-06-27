@@ -1,19 +1,13 @@
 <script lang="ts">
-	import DOMPurify from 'dompurify';
-	import { toast } from 'svelte-sonner';
-
 	import type { Token } from 'marked';
-	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	const i18n = getContext('i18n');
-
-	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { copyToClipboard, unescapeHtml } from '$lib/utils';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { terminalServers } from '$lib/stores';
+	import { unescapeHtml } from '$lib/utils';
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
-	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
 	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
 	import CodespanToken from './MarkdownInlineTokens/CodespanToken.svelte';
@@ -24,8 +18,110 @@
 	export let id: string;
 	export let done = true;
 	export let tokens: Token[];
-	export let sourceIds = [];
-	export let onSourceClick: Function = () => {};
+	export let sourceIds: string[] = [];
+	export let onSourceClick: CallableFunction = () => {};
+
+	type TerminalServerEntry = {
+		id?: string | null;
+		connection_type?: 'system' | 'direct';
+	};
+
+	type SandboxTarget = {
+		terminalId: string | null;
+		path: string;
+	};
+
+	const isAbsoluteSandboxPath = (path: string): boolean => {
+		const normalized = path.replace(/\\/g, '/');
+		return (
+			normalized.startsWith('/') ||
+			(normalized.length >= 3 &&
+				normalized[1] === ':' &&
+				normalized[2] === '/' &&
+				/[A-Za-z]/.test(normalized[0]))
+		);
+	};
+
+	const getSystemTerminalId = (terminalId: string | null): string | null => {
+		if (!terminalId) {
+			return null;
+		}
+
+		const terminal = (($terminalServers ?? []) as TerminalServerEntry[]).find(
+			(server) => server?.id === terminalId && server?.connection_type !== 'direct'
+		);
+		return terminal?.id ?? null;
+	};
+
+	const getSandboxTerminalId = (): string | null => {
+		const systemTerminals = (($terminalServers ?? []) as TerminalServerEntry[]).filter(
+			(server) => server?.id && server?.connection_type !== 'direct'
+		);
+		return systemTerminals.length === 1 ? (systemTerminals[0].id ?? null) : null;
+	};
+
+	const normalizeExplicitSandboxPath = (path: string): string => {
+		if (/^\/[A-Za-z]:\//.test(path)) {
+			return path.slice(1);
+		}
+
+		return path;
+	};
+
+	const getSandboxTarget = (href: string): SandboxTarget | null => {
+		if (!href?.startsWith('sandbox:')) {
+			return null;
+		}
+
+		if (href.startsWith('sandbox://')) {
+			const match = /^sandbox:\/\/([^/]+)(\/.*)$/.exec(href);
+			if (!match) {
+				return null;
+			}
+
+			try {
+				const terminalId = decodeURIComponent(match[1]);
+				const path = normalizeExplicitSandboxPath(decodeURIComponent(match[2]));
+				if (!terminalId || !isAbsoluteSandboxPath(path) || path.includes('\0')) {
+					return null;
+				}
+				return { terminalId, path };
+			} catch {
+				return null;
+			}
+		}
+
+		try {
+			const path = href.slice('sandbox:'.length);
+			if (!isAbsoluteSandboxPath(path) || path.includes('\0')) {
+				return null;
+			}
+
+			return { terminalId: null, path };
+		} catch {
+			return null;
+		}
+	};
+
+	const resolveSandboxUrl = (href: string, download: boolean): string => {
+		const target = getSandboxTarget(href);
+		if (!target) {
+			return href;
+		}
+
+		const terminalId = target.terminalId
+			? getSystemTerminalId(target.terminalId)
+			: getSandboxTerminalId();
+		if (!terminalId) {
+			return href;
+		}
+
+		const params = new URLSearchParams({
+			path: target.path,
+			download: download ? 'true' : 'false'
+		});
+		return `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(terminalId)}/files/content?${params.toString()}`;
+	};
 
 	/**
 	 * Check if a URL is a same-origin note link and return the note ID if so.
@@ -71,32 +167,33 @@
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
-		<HtmlToken {id} {token} {onSourceClick} />
+		<HtmlToken {id} {token} />
 	{:else if token.type === 'link'}
-		{@const noteId = getNoteIdFromHref(token.href)}
+		{@const href = resolveSandboxUrl(token.href, true)}
+		{@const noteId = getNoteIdFromHref(href)}
 		{#if noteId}
-			<NoteLinkToken {noteId} href={token.href} />
+			<NoteLinkToken {noteId} {href} />
 		{:else if token.tokens}
 			<a
-				href={token.href}
+				{href}
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}
+				on:click={(e) => handleLinkClick(e, href)}
 			>
 				<svelte:self id={`${id}-a`} tokens={token.tokens} {onSourceClick} {done} />
 			</a>
 		{:else}
 			<a
-				href={token.href}
+				{href}
 				target="_blank"
 				rel="nofollow"
 				title={token.title}
-				on:click={(e) => handleLinkClick(e, token.href)}>{token.text}</a
+				on:click={(e) => handleLinkClick(e, href)}>{token.text}</a
 			>
 		{/if}
 	{:else if token.type === 'image'}
-		<Image src={token.href} alt={token.text} />
+		<Image src={resolveSandboxUrl(token.href, false)} alt={token.text} />
 	{:else if token.type === 'strong'}
 		<strong><svelte:self id={`${id}-strong`} tokens={token.tokens} {onSourceClick} /></strong>
 	{:else if token.type === 'em'}
@@ -118,18 +215,21 @@
 			width="100%"
 			frameborder="0"
 			on:load={(e) => {
+				const iframe = e.currentTarget as HTMLIFrameElement;
 				try {
-					e.currentTarget.style.height =
-						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
-				} catch {}
+					const body = iframe.contentWindow?.document.body;
+					if (body) {
+						iframe.style.height = body.scrollHeight + 20 + 'px';
+					}
+				} catch {
+					// Cross-origin iframe content cannot be measured.
+				}
 			}}
 		></iframe>
 	{:else if token.type === 'mention'}
 		<MentionToken {token} />
 	{:else if token.type === 'footnote'}
-		{@html DOMPurify.sanitize(
-			`<sup class="footnote-ref footnote-ref-text">${token.escapedText}</sup>`
-		) || ''}
+		<sup class="footnote-ref footnote-ref-text">{unescapeHtml(token.escapedText)}</sup>
 	{:else if token.type === 'citation'}
 		{#if (sourceIds ?? []).length > 0}
 			<SourceToken {id} {token} {sourceIds} onClick={onSourceClick} />

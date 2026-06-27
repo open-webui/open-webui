@@ -1148,6 +1148,16 @@ async def get_terminal_servers(request: Request):
     return terminal_servers
 
 
+TERMINAL_ARTIFACT_PROMPT = """When you create or identify a file that the user should open, download, or view, include a markdown link using the virtual sandbox: URI scheme.
+
+- The active system terminal id is: {terminal_id}
+- For downloadable files, write: [filename.ext](sandbox://{terminal_id}/absolute/path/filename.ext)
+- For images that should render in chat, write: ![short description](sandbox://{terminal_id}/absolute/path/image.ext)
+- Only use absolute paths. If you only have a relative path, resolve it against the current working directory before writing the link.
+- Do not invent sandbox: links. Only link files that were created, found, or verified in the terminal filesystem.
+- sandbox: is an Open WebUI file URI for this terminal-backed filesystem; it does not require the runtime to literally be a sandbox."""
+
+
 async def get_terminal_tools(
     request: Request,
     terminal_id: str,
@@ -1209,6 +1219,10 @@ async def get_terminal_tools(
         headers['X-Session-Id'] = session_id
 
     terminal_cwd = await get_terminal_cwd(connection.get('url', ''), headers, cookies)
+    artifact_prompt = TERMINAL_ARTIFACT_PROMPT.format(terminal_id=terminal_id)
+    if terminal_cwd:
+        artifact_prompt += f'\n\nThe current terminal working directory is: {terminal_cwd}'
+    system_prompt = '\n\n'.join(prompt for prompt in (system_prompt, artifact_prompt) if prompt)
 
     tools_dict = {}
     for spec in specs:
