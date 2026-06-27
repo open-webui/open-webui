@@ -1689,17 +1689,9 @@ USER_PERMISSIONS_WORKSPACE_SKILLS_ALLOW_PUBLIC_SHARING = (
 USER_PERMISSIONS_NOTES_ALLOW_SHARING = os.getenv('USER_PERMISSIONS_NOTES_ALLOW_SHARING', 'False').lower() == 'true'
 
 
-MISTRAL_OCR_USE_BASE64 = ConfigVar(
-    'MISTRAL_OCR_USE_BASE64',
-    'rag.mistral_ocr_use_base64',
-    os.getenv('MISTRAL_OCR_USE_BASE64', 'False').lower() == 'true',
-)
+MISTRAL_OCR_USE_BASE64 = os.getenv('MISTRAL_OCR_USE_BASE64', 'False').lower() == 'true'
 
-MISTRAL_OCR_MODEL = ConfigVar(
-    'MISTRAL_OCR_MODEL',
-    'rag.mistral_ocr_model',
-    os.getenv('MISTRAL_OCR_MODEL', 'mistral-ocr-latest'),
-)
+MISTRAL_OCR_MODEL = os.getenv('MISTRAL_OCR_MODEL', 'mistral-ocr-latest')
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     os.getenv('USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
@@ -2703,6 +2695,8 @@ DEFAULT_CONFIG = {
     'rag.document_intelligence_model': DOCUMENT_INTELLIGENCE_MODEL,
     'rag.mistral_ocr_api_base_url': MISTRAL_OCR_API_BASE_URL,
     'rag.mistral_ocr_api_key': MISTRAL_OCR_API_KEY,
+    'rag.mistral_ocr_use_base64': MISTRAL_OCR_USE_BASE64,
+    'rag.mistral_ocr_model': MISTRAL_OCR_MODEL,
     'rag.paddleocr_vl_base_url': PADDLEOCR_VL_BASE_URL,
     'rag.paddleocr_vl_token': PADDLEOCR_VL_TOKEN,
     'rag.bypass_embedding_and_retrieval': BYPASS_EMBEDDING_AND_RETRIEVAL,
