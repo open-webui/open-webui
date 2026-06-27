@@ -17,11 +17,15 @@ def process_metadata(
     metadata: dict[str, any],
 ) -> dict[str, any]:
     # Removes large fields, converts non-serializable types (datetime, list, dict) to strings,
-    # and sanitizes strings for database storage (strips null bytes and invalid surrogates).
+    # sanitizes strings for database storage (strips null bytes and invalid surrogates),
+    # and drops None values which ChromaDB cannot store as metadata.
     result = {}
     for key, value in metadata.items():
         # Skip large fields
         if key in KEYS_TO_EXCLUDE:
+            continue
+        # ChromaDB cannot store None as metadata value
+        if value is None:
             continue
         # Convert non-serializable fields to strings
         if isinstance(value, (datetime, list, dict)):
