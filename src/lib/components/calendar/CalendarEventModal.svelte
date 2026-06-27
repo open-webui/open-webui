@@ -39,7 +39,11 @@
 	const NS = 1_000_000;
 
 	function nsToDateStr(ns: number): string {
-		return new Date(ns / NS).toISOString().slice(0, 10);
+		const d = new Date(ns / NS);
+		const year = d.getFullYear();
+		const month = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
 	}
 
 	function nsToTimeStr(ns: number): string {

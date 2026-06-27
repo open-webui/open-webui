@@ -26,9 +26,11 @@ from zoneinfo import ZoneInfo
 from dateutil.rrule import rrulestr
 from fastapi import Request
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db
 from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
+from open_webui.models.config import Config
 from open_webui.models.users import Users
 from open_webui.utils.task import prompt_template
 from starlette.datastructures import Headers
@@ -172,7 +174,7 @@ async def scheduler_worker_loop(app) -> None:
     while True:
         try:
             # ── Automations ──
-            if getattr(app.state.config, 'ENABLE_AUTOMATIONS', False):
+            if await Config.get('automations.enable'):
                 try:
                     async with get_async_db() as db:
                         batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
@@ -184,7 +186,7 @@ async def scheduler_worker_loop(app) -> None:
                     log.exception('Scheduler: automation error')
 
             # ── Calendar Alerts ──
-            if getattr(app.state.config, 'ENABLE_CALENDAR', False):
+            if await Config.get('calendar.enable'):
                 try:
                     await _check_calendar_alerts(app)
                 except Exception:
@@ -239,7 +241,7 @@ def _resolve_model_tool_ids(app, model_id: str) -> list[str]:
     return list(tool_ids) if tool_ids else []
 
 
-def _resolve_model_features(app, model_id: str) -> dict:
+async def _resolve_model_features(app, model_id: str) -> dict:
     """Read model default features from model config.
 
     The frontend does this in Chat.svelte (model.info.meta.defaultFeatureIds
@@ -256,14 +258,13 @@ def _resolve_model_features(app, model_id: str) -> dict:
         return {}
 
     capabilities = meta.get('capabilities', {})
-    config = app.state.config
     features = {}
 
     # code_interpreter is excluded: it requires the frontend event emitter
     # and does not work in headless backend execution.
     feature_checks = {
-        'web_search': getattr(config, 'ENABLE_WEB_SEARCH', False),
-        'image_generation': getattr(config, 'ENABLE_IMAGE_GENERATION', False),
+        'web_search': await Config.get('rag.web.search.enable'),
+        'image_generation': await Config.get('image_generation.enable'),
     }
 
     for feature_id in default_feature_ids:
@@ -357,6 +358,30 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         user = await Users.get_user_by_id(automation.user_id)
         if not user:
             await _record_run(automation.id, 'error', error='User not found')
+            await publish_event(
+                app,
+                EVENTS.AUTOMATION_RUN_FAILED,
+                subject_id=automation.id,
+                data={'name': automation.name, 'error': 'User not found'},
+            )
+            return
+
+        # Re-gate the rehydrated owner: a demoted/deactivated or de-permissioned owner must not run.
+        from open_webui.utils.access_control import has_permission
+
+        if user.role not in ('user', 'admin') or (
+            user.role != 'admin'
+            and not await has_permission(user.id, 'features.automations', await Config.get('user.permissions'))
+        ):
+            error = 'Owner no longer permitted to run automations'
+            await _record_run(automation.id, 'error', error=error)
+            await publish_event(
+                app,
+                EVENTS.AUTOMATION_RUN_FAILED,
+                actor=user,
+                subject_id=automation.id,
+                data={'name': automation.name, 'error': error},
+            )
             return
 
         prompt = await prompt_template(automation.data['prompt'], user)
@@ -408,7 +433,15 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         )
 
         if not chat:
-            await _record_run(automation.id, 'error', error='Failed to create chat')
+            error = 'Failed to create chat'
+            await _record_run(automation.id, 'error', error=error)
+            await publish_event(
+                app,
+                EVENTS.AUTOMATION_RUN_FAILED,
+                actor=user,
+                subject_id=automation.id,
+                data={'name': automation.name, 'error': error},
+            )
             return
 
         # Notify frontend to refresh chat list
@@ -426,7 +459,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         # Resolve model defaults (frontend does this, backend doesn't)
         tool_ids = _resolve_model_tool_ids(app, model_id)
-        features = _resolve_model_features(app, model_id)
+        features = await _resolve_model_features(app, model_id)
         filter_ids = _resolve_model_filter_ids(app, model_id)
 
         # Resolve terminal from model config
@@ -478,10 +511,24 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         )
 
         await _record_run(automation.id, 'success', chat_id=chat.id)
+        await publish_event(
+            app,
+            EVENTS.AUTOMATION_RUN_COMPLETED,
+            actor=user,
+            subject_id=automation.id,
+            data={'name': automation.name, 'chat_id': chat.id},
+        )
 
     except Exception as e:
         log.exception(f'Automation {automation.id} failed')
-        await _record_run(automation.id, 'error', error=str(e)[:4000])
+        error = str(e)[:4000]
+        await _record_run(automation.id, 'error', error=error)
+        await publish_event(
+            app,
+            EVENTS.AUTOMATION_RUN_FAILED,
+            subject_id=automation.id,
+            data={'name': automation.name, 'error': error},
+        )
 
 
 ####################
@@ -551,7 +598,7 @@ async def _check_calendar_alerts(app) -> None:
         # Send webhook notification if user has one configured
         try:
             webui_name = getattr(app.state, 'WEBUI_NAME', 'Open WebUI')
-            enable_user_webhooks = getattr(app.state.config, 'ENABLE_USER_WEBHOOKS', False)
+            enable_user_webhooks = await Config.get('ui.enable_user_webhooks')
 
             if enable_user_webhooks:
                 user = await Users.get_user_by_id(event.user_id)

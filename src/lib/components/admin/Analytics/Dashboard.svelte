@@ -24,12 +24,20 @@
 	// Time period - persist in localStorage
 	let selectedPeriod =
 		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
+
+	// Custom date range (YYYY-MM-DD) - persist in localStorage
+	let customStart =
+		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsCustomStart')) || '';
+	let customEnd =
+		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsCustomEnd')) || '';
+
 	$: periods = [
 		{ value: '24h', label: $i18n.t('Last 24 hours') },
 		{ value: '7d', label: $i18n.t('Last 7 days') },
 		{ value: '30d', label: $i18n.t('Last 30 days') },
 		{ value: '90d', label: $i18n.t('Last 90 days') },
-		{ value: 'all', label: $i18n.t('All time') }
+		{ value: 'all', label: $i18n.t('All time') },
+		{ value: 'custom', label: $i18n.t('Custom range') }
 	];
 
 	// User group filter
@@ -48,6 +56,12 @@
 				return { start: now - 30 * day, end: now };
 			case '90d':
 				return { start: now - 90 * day, end: now };
+			case 'custom': {
+				// Parse YYYY-MM-DD inputs; end date is inclusive (covers the full day)
+				const start = customStart ? Math.floor(new Date(customStart).getTime() / 1000) : null;
+				const end = customEnd ? Math.floor(new Date(customEnd).getTime() / 1000) + day - 1 : null;
+				return { start, end };
+			}
 			default:
 				return { start: null, end: null };
 		}
@@ -55,7 +69,13 @@
 
 	// Data
 	let summary = { total_messages: 0, total_chats: 0, total_models: 0, total_users: 0 };
-	let modelStats: Array<{ model_id: string; count: number; name?: string }> = [];
+	let modelStats: Array<{
+		model_id: string;
+		count: number;
+		unique_users?: number;
+		unique_chats?: number;
+		name?: string;
+	}> = [];
 	let userStats: Array<{ user_id: string; name?: string; email?: string; count: number }> = [];
 	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
 	let tokenStats: Record<
@@ -140,7 +160,13 @@
 		loading = false;
 	};
 
-	$: if (selectedPeriod || selectedGroupId !== undefined) {
+	// Reload when the period, group, or custom range changes.
+	// In custom mode, wait until both dates are set to avoid a half-specified query.
+	$: if (selectedPeriod === 'custom' ? customStart && customEnd : selectedPeriod) {
+		// reference customStart/customEnd so this block reruns when they change
+		customStart;
+		customEnd;
+		selectedGroupId;
 		loadDashboard();
 	}
 
@@ -162,6 +188,16 @@
 			const aTokens = tokenStats[a.model_id]?.total_tokens ?? 0;
 			const bTokens = tokenStats[b.model_id]?.total_tokens ?? 0;
 			return modelDirection === 'asc' ? aTokens - bTokens : bTokens - aTokens;
+		}
+		if (modelOrderBy === 'users') {
+			const aUsers = a.unique_users ?? 0;
+			const bUsers = b.unique_users ?? 0;
+			return modelDirection === 'asc' ? aUsers - bUsers : bUsers - aUsers;
+		}
+		if (modelOrderBy === 'chats') {
+			const aChats = a.unique_chats ?? 0;
+			const bChats = b.unique_chats ?? 0;
+			return modelDirection === 'asc' ? aChats - bChats : bChats - aChats;
 		}
 		return modelDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -187,7 +223,11 @@
 		localStorage.setItem('analyticsPeriod', selectedPeriod);
 	}
 
-	onMount(loadDashboard);
+	// Persist custom date range
+	$: if (typeof localStorage !== 'undefined') {
+		localStorage.setItem('analyticsCustomStart', customStart);
+		localStorage.setItem('analyticsCustomEnd', customEnd);
+	}
 </script>
 
 <!-- Header with title and period selector -->
@@ -208,6 +248,21 @@
 					<option value={group.id}>{group.name}</option>
 				{/each}
 			</select>
+		{/if}
+		{#if selectedPeriod === 'custom'}
+			<input
+				type="date"
+				bind:value={customStart}
+				max={customEnd || undefined}
+				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none"
+			/>
+			<span class="text-xs text-gray-400">–</span>
+			<input
+				type="date"
+				bind:value={customEnd}
+				min={customStart || undefined}
+				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none"
+			/>
 		{/if}
 		<select
 			bind:value={selectedPeriod}
@@ -342,6 +397,42 @@
 							<th
 								scope="col"
 								class="px-2.5 py-2 cursor-pointer select-none text-right"
+								on:click={() => toggleModelSort('users')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									{$i18n.t('Users')}
+									{#if modelOrderBy === 'users'}
+										<span class="font-normal">
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right"
+								on:click={() => toggleModelSort('chats')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									{$i18n.t('Chats')}
+									{#if modelOrderBy === 'chats'}
+										<span class="font-normal">
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right"
 								on:click={() => toggleModelSort('tokens')}
 							>
 								<div class="flex gap-1.5 items-center justify-end">
@@ -401,6 +492,8 @@
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{model.count.toLocaleString()}</td>
+								<td class="px-3 py-1 text-right">{(model.unique_users ?? 0).toLocaleString()}</td>
+								<td class="px-3 py-1 text-right">{(model.unique_chats ?? 0).toLocaleString()}</td>
 								<td class="px-3 py-1 text-right"
 									>{formatNumber(tokenStats[model.model_id]?.total_tokens ?? 0)}</td
 								>
@@ -413,7 +506,7 @@
 						{/each}
 						{#if sortedModels.length === 0}
 							<tr
-								><td colspan="5" class="px-3 py-2 text-center text-gray-400"
+								><td colspan="7" class="px-3 py-2 text-center text-gray-400"
 									>{$i18n.t('No data')}</td
 								></tr
 							>

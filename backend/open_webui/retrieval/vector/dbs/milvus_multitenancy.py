@@ -31,10 +31,15 @@ from pymilvus import (
     connections,
     utility,
 )
+from pymilvus.exceptions import MilvusException
 
 log = logging.getLogger(__name__)
 
 RESOURCE_ID_FIELD = 'resource_id'
+# Milvus VARCHAR hard cap for the `text` field (see _create_shared_collection).
+# Chunks longer than this are truncated before insert so one oversized chunk
+# can't fail the whole batch (and leave the file with zero embeddings).
+MILVUS_TEXT_MAX_LENGTH = 65535
 
 # Milvus expressions are SQL-like strings with no parameterized-query API;
 # values get interpolated into single-quoted literals. Reject anything that
@@ -169,17 +174,34 @@ class MilvusClient(VectorDBBase):
         self._ensure_collection(mt_collection, dimension)
         collection = Collection(mt_collection)
 
-        entities = [
-            {
-                'id': item['id'],
-                'vector': item['vector'],
-                'text': item['text'],
-                'metadata': item['metadata'],
-                RESOURCE_ID_FIELD: resource_id,
-            }
-            for item in items
-        ]
-        collection.insert(entities)
+        entities = []
+        for item in items:
+            text = item['text'] or ''
+            if len(text) > MILVUS_TEXT_MAX_LENGTH:
+                log.warning(
+                    f'Milvus: truncating text id={item["id"]} '
+                    f'{len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars '
+                    f'(collection={mt_collection}, resource_id={resource_id})'
+                )
+                text = text[:MILVUS_TEXT_MAX_LENGTH]
+            entities.append(
+                {
+                    'id': item['id'],
+                    'vector': item['vector'],
+                    'text': text,
+                    'metadata': item['metadata'],
+                    RESOURCE_ID_FIELD: resource_id,
+                }
+            )
+
+        try:
+            collection.insert(entities)
+        except MilvusException as e:
+            log.error(
+                f'Milvus insert failed (collection={mt_collection}, '
+                f'resource_id={resource_id}, items={len(entities)}): {e}'
+            )
+            raise
 
     def search(
         self,

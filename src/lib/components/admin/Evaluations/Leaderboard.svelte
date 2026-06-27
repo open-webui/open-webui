@@ -46,8 +46,9 @@
 		try {
 			const result = await getLeaderboard(localStorage.token, searchQuery);
 			const statsMap = new Map((result?.entries ?? []).map((e) => [e.model_id, e]));
+			const modelMap = new Map(($models ?? []).map((m) => [m.id, m]));
 
-			rankedModels = $models
+			const activeModels = $models
 				.filter((m) => m?.owned_by !== 'arena' && !m?.info?.meta?.hidden)
 				.map((model) => {
 					const s = statsMap.get(model.id);
@@ -61,12 +62,27 @@
 						},
 						top_tags: s?.top_tags ?? []
 					};
-				})
-				.sort((a, b) => {
-					if (a.rating === '-') return 1;
-					if (b.rating === '-') return -1;
-					return b.rating - a.rating;
 				});
+
+			const evaluatedModels = (result?.entries ?? [])
+				.filter((entry) => !modelMap.has(entry.model_id))
+				.map((entry) => ({
+					id: entry.model_id,
+					name: entry.model_id,
+					rating: entry.rating,
+					stats: {
+						count: entry.won + entry.lost,
+						won: entry.won.toString(),
+						lost: entry.lost.toString()
+					},
+					top_tags: entry.top_tags ?? []
+				}));
+
+			rankedModels = [...activeModels, ...evaluatedModels].sort((a, b) => {
+				if (a.rating === '-') return 1;
+				if (b.rating === '-') return -1;
+				return b.rating - a.rating;
+			});
 		} catch (err) {
 			console.error('Leaderboard load failed:', err);
 		}
@@ -225,8 +241,5 @@
 				'The evaluation leaderboard is based on the Elo rating system and is updated in real-time.'
 			)}
 		</div>
-		{$i18n.t(
-			'The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.'
-		)}
 	</div>
 </div>

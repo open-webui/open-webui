@@ -187,20 +187,22 @@
 		<div>
 			<div class="mb-1 text-sm font-medium">{$i18n.t('Chats')}</div>
 
-			<div>
-				<div class="py-0.5 flex w-full justify-between">
-					<div class="self-center text-xs">{$i18n.t('Import Chats')}</div>
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							chatImportInputElement.click();
-						}}
-						type="button"
-					>
-						<span class="self-center">{$i18n.t('Import')}</span>
-					</button>
+			{#if $user?.role === 'admin' || ($user.permissions?.chat?.import ?? true)}
+				<div>
+					<div class="py-0.5 flex w-full justify-between">
+						<div class="self-center text-xs">{$i18n.t('Import Chats')}</div>
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								chatImportInputElement.click();
+							}}
+							type="button"
+						>
+							<span class="self-center">{$i18n.t('Import')}</span>
+						</button>
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 				<div>
