@@ -635,9 +635,7 @@ class MistralLoader:
                     ocr_response = await self._process_ocr_async(session, self._get_file_data_url())
                     documents = self._process_results(ocr_response)
                     total_time = time.time() - start_time
-                    log.info(
-                        f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents'
-                    )
+                    log.info(f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
                     return documents
 
                 # 1. Upload file with streaming
