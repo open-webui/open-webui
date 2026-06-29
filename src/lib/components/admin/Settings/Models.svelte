@@ -786,10 +786,11 @@
 			edit
 			model={models.find((m) => m.id === selectedModelId)}
 			preset={false}
-			onSubmit={(model) => {
+			onSubmit={async (model) => {
 				console.log(model);
-				upsertModelHandler(model);
+				await upsertModelHandler(model);
 				selectedModelId = null;
+				await init();
 			}}
 			onBack={async () => {
 				selectedModelId = null;
