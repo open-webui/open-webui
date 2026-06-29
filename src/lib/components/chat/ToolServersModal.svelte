@@ -64,7 +64,7 @@
 							disabled={toolSpecs.length === 0}
 						>
 							<div class="min-w-0 flex-1">
-								<div class="flex items-center gap-2 min-w-0">
+								<div class="flex items-center gap-1 min-w-0">
 									<div class="text-sm font-medium dark:text-gray-100 text-gray-800 truncate">
 										{tool?.name}
 									</div>
