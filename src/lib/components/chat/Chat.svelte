@@ -876,7 +876,13 @@
 			return;
 		}
 
-		await loadChat();
+		const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, $chatId)
+			.then((res) => res?.task_ids ?? [])
+			.catch(() => null);
+
+		if (pendingTaskIds?.length === 0) {
+			await loadChat();
+		}
 	};
 
 	onMount(() => {
