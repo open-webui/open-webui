@@ -359,10 +359,9 @@ async def edit_image(
     __message_id__: str = None,
 ) -> str:
     """
-    Edit existing images based on a text prompt.
+    Transform one or more existing images according to a text prompt.
 
-    :param prompt: A description of the changes to make to the images
-    :param image_urls: A list of URLs of the images to edit
+    :param prompt: A description of the transformation to apply to the provided images
     :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
