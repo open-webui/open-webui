@@ -848,11 +848,14 @@ async def _make_channel_emitter(request_info):
     async def _emit_channel_update(content: str, done: bool = False):
         from open_webui.models.messages import MessageForm, Messages
 
+        msg = await Messages.get_message_by_id(message_id)
+        if not msg or msg.channel_id != channel_id:
+            return
+
         update_form = MessageForm(content=content)
         if done:
             # Merge done flag into existing meta (preserve model_id etc.)
-            msg = await Messages.get_message_by_id(message_id)
-            existing_meta = (msg.meta or {}) if msg else {}
+            existing_meta = msg.meta or {}
             update_form = MessageForm(
                 content=content,
                 meta={**existing_meta, 'done': True},
