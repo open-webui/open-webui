@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -160,8 +161,6 @@ bearer_security = HTTPBearer(auto_error=False)
 
 async def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt in a thread pool (non-blocking)."""
-    import asyncio
-
     return (await asyncio.to_thread(bcrypt.hashpw, password.encode('utf-8'), bcrypt.gensalt())).decode('utf-8')
 
 
@@ -179,15 +178,15 @@ def validate_password(password: str) -> bool:
     return True
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return (
-        bcrypt.checkpw(
-            plain_password.encode('utf-8'),
-            hashed_password.encode('utf-8'),
-        )
-        if hashed_password
-        else None
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password using bcrypt in a thread pool."""
+    if not hashed_password:
+        return False
+
+    return await asyncio.to_thread(
+        bcrypt.checkpw,
+        plain_password.encode('utf-8'),
+        hashed_password.encode('utf-8'),
     )
 
 

@@ -148,15 +148,15 @@ class AuthsTable:
         log.info('authenticate_user: %s', email)
         resolved = await Users.get_user_by_email(email, db=db)
         if not resolved:
-            verify_password(PLACEHOLDER_HASH)
+            await verify_password(PLACEHOLDER_HASH)
             return
         # load the credential row and verify the password hash
         async with get_async_db_context(db) as session:
             credential = await session.get(Auth, resolved.id)
             if not credential or not credential.active:
-                verify_password(PLACEHOLDER_HASH)
+                await verify_password(PLACEHOLDER_HASH)
                 return
-            if not verify_password(credential.password):
+            if not await verify_password(credential.password):
                 return
             return resolved
 
