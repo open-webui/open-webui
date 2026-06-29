@@ -153,9 +153,8 @@ def normalize_openai_edit_image_data_url(data_url: str) -> str:
     return data_url
 
 
-def get_image_file_item(base64_string, param_name='image', normalize=False):
-    data = normalize_openai_edit_image_data_url(base64_string) if normalize else base64_string
-    header, encoded = data.split(',', 1)
+def get_image_file_item(base64_string, param_name='image'):
+    header, encoded = base64_string.split(',', 1)
     mime_type = header.split(';')[0].lstrip('data:') or 'image/png'
     image_data = base64.b64decode(encoded)
     extension = IMAGE_FILE_EXTENSIONS.get(mime_type.lower()) or mimetypes.guess_extension(mime_type) or '.png'
@@ -1007,21 +1006,15 @@ async def image_edits(
 
             files = []
             if isinstance(form_data.image, str):
-                files = [
-                    get_image_file_item(
-                        form_data.image,
-                        normalize=ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION,
-                    )
-                ]
+                image = form_data.image
+                if ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION:
+                    image = normalize_openai_edit_image_data_url(image)
+                files = [get_image_file_item(image)]
             elif isinstance(form_data.image, list):
                 for img in form_data.image:
-                    files.append(
-                        get_image_file_item(
-                            img,
-                            'image[]',
-                            normalize=ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION,
-                        )
-                    )
+                    if ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION:
+                        img = normalize_openai_edit_image_data_url(img)
+                    files.append(get_image_file_item(img, 'image[]'))
 
             url_search_params = ''
             if image_config.IMAGES_EDIT_OPENAI_API_VERSION:
