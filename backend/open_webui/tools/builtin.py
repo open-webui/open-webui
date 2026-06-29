@@ -35,9 +35,9 @@ from open_webui.routers.images import (
 from open_webui.routers.memories import (
     AddMemoryForm,
     MemoryUpdateModel,
-    QueryMemoryForm,
+    SearchMemoriesForm,
     UpdateMemoriesForm,
-    query_memory,
+    search_memories as _search_memories,
     update_memories as _update_memories,
     update_memory_by_id,
 )
@@ -592,17 +592,22 @@ async def execute_code(
 
 
 async def search_memories(
-    query: str,
+    query: str = '',
     count: int = 5,
+    type: str = 'all',
+    path: Optional[str] = None,
+    memory_id: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
-    Search saved user memories for preferences, facts, or prior context that
-    may help personalize the answer.
+    Search or browse saved user memories.
 
-    :param query: The search query to find relevant memories
+    :param query: Optional query to search memory content and path
     :param count: Number of memories to return (default 5)
+    :param type: "user", "context", or "all"
+    :param path: Optional logical memory path prefix
+    :param memory_id: Optional exact memory ID to read
     :return: JSON with matching memories and their dates
     """
     if __request__ is None:
@@ -611,41 +616,34 @@ async def search_memories(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        memory_results = await query_memory(
-            __request__,
-            QueryMemoryForm(content=query, k=count),
+        memories = await _search_memories(
+            SearchMemoriesForm(
+                query=query or None,
+                type=type if type in {'user', 'context', 'all'} else 'all',
+                path=path,
+                memory_id=memory_id,
+                limit=count,
+            ),
             user,
         )
 
-        if not memory_results or not hasattr(memory_results, 'documents') or not memory_results.documents:
+        if not memories:
             return json.dumps([])
 
-        memories = []
-        for memory_index, memory_text in enumerate(memory_results.documents[0]):
-            memory_id = None
-            if memory_results.ids and memory_results.ids[0]:
-                memory_id = memory_results.ids[0][memory_index]
-
-            metadata = {}
-            if memory_results.metadatas and memory_results.metadatas[0] and len(memory_results.metadatas[0]) > memory_index:
-                metadata = memory_results.metadatas[0][memory_index] or {}
-
-            created_at = 'Unknown'
-            if metadata.get('created_at'):
-                created_at = time.strftime(
-                    '%Y-%m-%d',
-                    time.localtime(metadata['created_at']),
-                )
-
-            memories.append(
+        return json.dumps(
+            [
                 {
-                    'id': memory_id,
-                    'type': Memories.normalize_memory_type(metadata.get('type')),
-                    'date': created_at,
-                    'content': memory_text,
+                    'id': memory.id,
+                    'type': memory.type,
+                    'path': memory.path,
+                    'content': memory.content,
+                    'created_at': time.strftime('%Y-%m-%d', time.localtime(memory.created_at)),
+                    'updated_at': time.strftime('%Y-%m-%d', time.localtime(memory.updated_at)),
                 }
-            )
-        return json.dumps(memories, ensure_ascii=False)
+                for memory in memories
+            ],
+            ensure_ascii=False,
+        )
     except Exception as e:
         log.exception(f'search_memories error: {e}')
         return json.dumps({'error': str(e)})
@@ -654,6 +652,7 @@ async def search_memories(
 async def add_memory(
     content: str,
     type: str = 'user',
+    path: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -662,6 +661,7 @@ async def add_memory(
 
     :param content: The memory content to store
     :param type: Use "user" for facts/preferences about the user, or "context" for other durable context
+    :param path: Optional logical memory path
     :return: Confirmation that the memory was stored
     """
     if __request__ is None:
@@ -672,11 +672,14 @@ async def add_memory(
 
         memory = await _add_memory(
             __request__,
-            AddMemoryForm(content=content, type=Memories.normalize_memory_type(type)),
+            AddMemoryForm(content=content, type=Memories.normalize_memory_type(type), path=path),
             user,
         )
 
-        return json.dumps({'status': 'success', 'id': memory.id, 'type': memory.type}, ensure_ascii=False)
+        return json.dumps(
+            {'status': 'success', 'id': memory.id, 'type': memory.type, 'path': memory.path},
+            ensure_ascii=False,
+        )
     except Exception as e:
         log.exception(f'add_memory error: {e}')
         return json.dumps({'error': str(e)})
@@ -694,8 +697,9 @@ async def update_memory(
     Use type "context" for other durable context that may help future chats.
 
     Operation shapes:
-    - {"action": "add", "content": "...", "type": "user"|"context"}
-    - {"action": "replace", "id": "...", "content": "...", "type": "user"|"context"}
+    - {"action": "add", "content": "...", "type": "user"|"context", "path": "..."}
+    - {"action": "replace", "id": "...", "content": "...", "type": "user"|"context", "path": "..."}
+    - {"action": "move", "id": "...", "path": "..."}
     - {"action": "remove", "id": "..."}
 
     :param operations: Memory operations to apply in one request
@@ -721,6 +725,7 @@ async def replace_memory_content(
     memory_id: str,
     content: str,
     type: Optional[str] = None,
+    path: Optional[str] = None,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -730,6 +735,7 @@ async def replace_memory_content(
     :param memory_id: The ID of the memory to update
     :param content: The new content for the memory
     :param type: Optional "user" or "context" type for the updated memory
+    :param path: Optional logical memory path
     :return: Confirmation that the memory was updated
     """
     if __request__ is None:
@@ -741,12 +747,22 @@ async def replace_memory_content(
         memory = await update_memory_by_id(
             memory_id=memory_id,
             request=__request__,
-            form_data=MemoryUpdateModel(content=content, type=Memories.normalize_memory_type(type) if type else None),
+            form_data=MemoryUpdateModel(
+                content=content,
+                type=Memories.normalize_memory_type(type) if type else None,
+                path=path,
+            ),
             user=user,
         )
 
         return json.dumps(
-            {'status': 'success', 'id': memory.id, 'type': memory.type, 'content': memory.content},
+            {
+                'status': 'success',
+                'id': memory.id,
+                'type': memory.type,
+                'path': memory.path,
+                'content': memory.content,
+            },
             ensure_ascii=False,
         )
     except Exception as e:
@@ -808,6 +824,7 @@ async def list_memories(
                 {
                     'id': m.id,
                     'type': m.type,
+                    'path': m.path,
                     'content': m.content,
                     'created_at': time.strftime('%Y-%m-%d %H:%M', time.localtime(m.created_at)),
                     'updated_at': time.strftime('%Y-%m-%d %H:%M', time.localtime(m.updated_at)),

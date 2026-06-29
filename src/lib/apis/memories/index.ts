@@ -28,7 +28,7 @@ export const getMemories = async (token: string) => {
 	return res;
 };
 
-export const addNewMemory = async (token: string, content: string, type = 'user') => {
+export const addNewMemory = async (token: string, content: string, type = 'user', path = '') => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/add`, {
@@ -40,7 +40,8 @@ export const addNewMemory = async (token: string, content: string, type = 'user'
 		},
 		body: JSON.stringify({
 			content: content,
-			type
+			type,
+			path
 		})
 	})
 		.then(async (res) => {
@@ -64,10 +65,11 @@ export const updateMemoryById = async (
 	token: string,
 	id: string,
 	content: string,
-	type?: string
+	type?: string,
+	path?: string
 ) => {
 	let error = null;
-	const body = type ? { content, type } : { content };
+	const body = { content, ...(type ? { type } : {}), ...(path !== undefined ? { path } : {}) };
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
 		method: 'POST',

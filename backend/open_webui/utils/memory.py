@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from typing import Any
 
 from fastapi import HTTPException
@@ -24,6 +25,21 @@ def clean_memory_content(content: str | None) -> str:
     return value
 
 
+def clean_memory_path(path: str | None) -> str | None:
+    value = re.sub(r'/+', '/', (path or '').strip().strip('/'))
+    if not value:
+        return None
+    parts = value.split('/')
+    if any(part in {'', '.', '..'} for part in parts) or any(ord(char) < 32 for char in value):
+        raise HTTPException(status_code=400, detail='Invalid memory path')
+    return value
+
+
+def memory_vector_text(content: str, path: str | None = None) -> str:
+    path = clean_memory_path(path)
+    return f'{path}\n{content}' if path else content
+
+
 def validate_memory_operations(form_data) -> list[dict]:
     if not form_data.operations:
         raise HTTPException(status_code=400, detail='No memory operations provided')
@@ -36,12 +52,18 @@ def validate_memory_operations(form_data) -> list[dict]:
         if action == 'add':
             op['content'] = clean_memory_content(op.get('content'))
             op['type'] = Memories.normalize_memory_type(op.get('type'))
+            op['path'] = clean_memory_path(op.get('path'))
         elif action == 'replace':
             if not op.get('id'):
                 raise HTTPException(status_code=400, detail='Memory id is required for replace')
             op['content'] = clean_memory_content(op.get('content'))
             if op.get('type') is not None:
                 op['type'] = Memories.normalize_memory_type(op.get('type'))
+            op['path'] = clean_memory_path(op.get('path'))
+        elif action == 'move':
+            if not op.get('id'):
+                raise HTTPException(status_code=400, detail='Memory id is required for move')
+            op['path'] = clean_memory_path(op.get('path'))
         elif action == 'remove':
             if not op.get('id'):
                 raise HTTPException(status_code=400, detail='Memory id is required for remove')
@@ -77,15 +99,24 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
     if not query:
         return form_data
 
+    all_memories = await Memories.get_memories_by_user_id(user.id)
+    results = None
     try:
         from open_webui.routers.memories import QueryMemoryForm, query_memory
 
-        results = await query_memory(request, QueryMemoryForm(content=query, k=6), user)
+        results = await query_memory(request, QueryMemoryForm(content=query, k=8), user)
     except Exception as e:
         log.debug(e)
-        return form_data
 
     sections = {'user': [], 'context': []}
+    seen_ids = set()
+    for memory in sorted(
+        [memory for memory in (all_memories or []) if memory.type == 'user'],
+        key=lambda item: (item.path or '', item.updated_at),
+    ):
+        seen_ids.add(memory.id)
+        sections['user'].append(f'{memory.path}: {memory.content}' if memory.path else memory.content)
+
     if results and hasattr(results, 'documents') and results.documents:
         for doc_idx, doc in enumerate(results.documents[0]):
             if not doc:
@@ -95,21 +126,37 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
             if results.metadatas and results.metadatas[0] and len(results.metadatas[0]) > doc_idx:
                 metadata = results.metadatas[0][doc_idx] or {}
 
-            sections[Memories.normalize_memory_type(metadata.get('type'))].append(str(doc))
+            memory_id = None
+            if results.ids and results.ids[0] and len(results.ids[0]) > doc_idx:
+                memory_id = results.ids[0][doc_idx]
+            if memory_id and memory_id in seen_ids:
+                continue
+            if memory_id:
+                seen_ids.add(memory_id)
+
+            content = str(doc)
+            if metadata.get('path') and content.startswith(f"{metadata.get('path')}\n"):
+                content = content[len(metadata.get('path')) + 1 :]
+            label = f"{metadata.get('path')}: {content}" if metadata.get('path') else content
+            sections[Memories.normalize_memory_type(metadata.get('type'))].append(label)
 
     parts = []
     if sections['user']:
-        parts.append('User:\n' + '\n'.join(f'- {memory}' for memory in sections['user']))
+        parts.append('[User Memory]\n' + '\n'.join(f'- {memory}' for memory in sections['user']))
     if sections['context']:
-        parts.append('Context:\n' + '\n'.join(f'- {memory}' for memory in sections['context']))
+        parts.append('[Relevant Context]\n' + '\n'.join(f'- {memory}' for memory in sections['context']))
     if not parts:
         return form_data
 
-    limit = await Config.get('memories.context_char_limit', 2000)
+    config = await Config.get_many('memories.user_char_limit', 'memories.context_char_limit')
     try:
-        limit = max(250, int(limit))
+        user_limit = max(250, int(config.get('memories.user_char_limit') or 2000))
     except Exception:
-        limit = 2000
+        user_limit = 2000
+    try:
+        context_limit = max(250, int(config.get('memories.context_char_limit') or 2000))
+    except Exception:
+        context_limit = 2000
 
     messages = form_data['messages']
     if messages and messages[0].get('role') == 'system':
@@ -120,7 +167,16 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
             if end != -1:
                 messages[0]['content'] = (content[:start] + content[end + len(MEMORY_CONTEXT_CLOSE) :]).strip()
 
-    memory_context = f'{MEMORY_CONTEXT_OPEN}\n' + '\n\n'.join(parts)[:limit] + f'\n{MEMORY_CONTEXT_CLOSE}'
+    rendered = '\n\n'.join(
+        [
+            parts[0][:user_limit] if parts and parts[0].startswith('[User Memory]') else '',
+            parts[-1][:context_limit] if parts and parts[-1].startswith('[Relevant Context]') else '',
+        ]
+    ).strip()
+    if not rendered:
+        return form_data
+
+    memory_context = f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}'
     form_data['messages'] = add_or_update_system_message(memory_context, messages, append=True)
     return form_data
 
@@ -195,7 +251,7 @@ async def _review_memory(
 ) -> None:
     existing_memories = await Memories.get_memories_by_user_id(user.id)
     existing_lines = [
-        f'- id={memory.id} type={memory.type} content={memory.content}'
+        f'- id={memory.id} type={memory.type} path={memory.path or ""} content={memory.content}'
         for memory in (existing_memories or [])[:80]
     ]
 
@@ -234,7 +290,7 @@ async def _review_memory(
     if operations:
         from open_webui.routers.memories import UpdateMemoriesForm, update_memories
 
-        await update_memories(request, UpdateMemoriesForm(operations=operations), user)
+        await update_memories(request, UpdateMemoriesForm(operations=operations, source='background_review'), user)
 
 
 async def _generate_memory_operations(
@@ -257,12 +313,13 @@ Memory types:
 Rules:
 - Save only information likely to matter in future chats.
 - Do not save secrets, credentials, transient task steps, or unsupported guesses.
-- Prefer replace/remove over duplicate add when an existing memory should change.
+- Prefer replace/move/remove over duplicate add when an existing memory should change.
 - Do not invent type, status, trait, score, importance, or stability schemas.
 - Return only JSON in this shape:
   {{"operations":[
-    {{"action":"add","type":"user|context","content":"..."}},
-    {{"action":"replace","id":"...","type":"user|context","content":"..."}},
+    {{"action":"add","type":"user|context","path":"...","content":"..."}},
+    {{"action":"replace","id":"...","type":"user|context","path":"...","content":"..."}},
+    {{"action":"move","id":"...","path":"..."}},
     {{"action":"remove","id":"..."}}
   ]}}
 - Use an empty operations array if nothing should be remembered.

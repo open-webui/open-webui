@@ -4,10 +4,9 @@
 	import { getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import AddMemoryModal from './AddMemoryModal.svelte';
+	import MemoryModal from './MemoryModal.svelte';
 	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import EditMemoryModal from './EditMemoryModal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -26,6 +25,7 @@
 		id: string;
 		content: string;
 		type?: string;
+		path?: string;
 		updated_at?: number;
 	};
 
@@ -35,8 +35,7 @@
 
 	let query = '';
 
-	let showAddMemoryModal = false;
-	let showEditMemoryModal = false;
+	let showMemoryModal = false;
 	let selectedMemory: Memory | null = null;
 
 	let showClearConfirmDialog = false;
@@ -50,7 +49,7 @@
 
 	const editMemory = (memory: Memory) => {
 		selectedMemory = memory;
-		showEditMemoryModal = true;
+		showMemoryModal = true;
 	};
 
 	const confirmDeleteMemory = (memory: Memory) => {
@@ -65,7 +64,14 @@
 		memory.updated_at ? dayjs(memory.updated_at * 1000).format('MMM D, h:mm A') : '';
 
 	$: filteredMemories = query
-		? memories.filter((memory) => memory.content?.toLowerCase().includes(query.toLowerCase()))
+		? memories.filter((memory) => {
+				const value = query.toLowerCase();
+				return (
+					memory.content?.toLowerCase().includes(value) ||
+					memory.path?.toLowerCase().includes(value) ||
+					memory.type?.toLowerCase().includes(value)
+				);
+			})
 		: memories;
 
 	$: sortedMemories = [...filteredMemories].sort(
@@ -171,6 +177,13 @@
 										>
 											{memoryTypeLabel(memory)}
 										</span>
+										{#if memory.path}
+											<span
+												class="hidden sm:block shrink min-w-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-500"
+											>
+												{memory.path}
+											</span>
+										{/if}
 										{#if memoryUpdatedAt(memory)}
 											<div
 												class="hidden sm:block shrink-0 text-[11px] leading-5 text-gray-400 dark:text-gray-500"
@@ -235,7 +248,8 @@
 				<button
 					class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
 					on:click={() => {
-						showAddMemoryModal = true;
+						selectedMemory = null;
+						showMemoryModal = true;
 					}}>{$i18n.t('Add Memory')}</button
 				>
 			</div>
@@ -284,15 +298,8 @@
 	</div>
 </ConfirmDialog>
 
-<AddMemoryModal
-	bind:show={showAddMemoryModal}
-	on:save={async () => {
-		await loadMemories();
-	}}
-/>
-
-<EditMemoryModal
-	bind:show={showEditMemoryModal}
+<MemoryModal
+	bind:show={showMemoryModal}
 	memory={selectedMemory}
 	on:save={async () => {
 		await loadMemories();
