@@ -2977,12 +2977,13 @@
 		const loaded = chat?.chat ?? {};
 		if (equal(params, loaded.params ?? {}) && equal(chatFiles, loaded.files ?? [])) return;
 
-		const res = await updateChatById(localStorage.token, $chatId, { params, files: chatFiles }).catch(
-			(err) => {
-				console.error('[controls autosave]', err);
-				return null;
-			}
-		);
+		const res = await updateChatById(localStorage.token, $chatId, {
+			params,
+			files: chatFiles
+		}).catch((err) => {
+			console.error('[controls autosave]', err);
+			return null;
+		});
 		// Refresh the dedupe baseline so a later revert still saves.
 		if (res) chat = res;
 	};

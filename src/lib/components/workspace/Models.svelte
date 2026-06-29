@@ -254,8 +254,6 @@
 		return allModels;
 	};
 
-
-
 	const enableAllHandler = async () => {
 		const allModels = await fetchAllWorkspaceModels();
 		const modelsToEnable = allModels.filter((m) => !(m.is_active ?? true));
