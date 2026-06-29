@@ -221,6 +221,7 @@ from open_webui.utils.chat import (
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
+    background_tasks_handler,
     build_chat_response_context,
     process_chat_payload,
     process_chat_response,
@@ -1158,6 +1159,10 @@ async def chat_completion(
         if is_new_chat:
             metadata['chat_id'] = str(uuid4())
 
+        initial_title_generation = None
+        if is_new_chat and tasks and TASKS.TITLE_GENERATION in tasks:
+            initial_title_generation = tasks.pop(TASKS.TITLE_GENERATION)
+
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
 
@@ -1305,6 +1310,29 @@ async def chat_completion(
                         except Exception as e:
                             log.debug(f'Error inserting chat files: {e}')
                             pass
+
+                    if initial_title_generation is not None and all_assistant_ids:
+                        title_metadata = {
+                            **metadata,
+                            'message_id': all_assistant_ids[0],
+                        }
+                        event_emitter = await get_event_emitter(title_metadata, update_db=False)
+                        title_ctx = {
+                            'request': request,
+                            'form_data': form_data,
+                            'user': user,
+                            'metadata': title_metadata,
+                            'tasks': {TASKS.TITLE_GENERATION: initial_title_generation},
+                            'event_emitter': event_emitter,
+                        }
+
+                        async def run_initial_title_generation():
+                            try:
+                                await background_tasks_handler(title_ctx)
+                            except Exception as e:
+                                log.debug(f'Error generating initial chat title: {e}')
+
+                        asyncio.create_task(run_initial_title_generation())
                 else:
                     # Existing chat — verify ownership
                     if not await Chats.is_chat_owner(chat_id, user.id) and user.role != 'admin':
@@ -1579,7 +1607,7 @@ async def chat_completion(
             # Resolve the model object for this specific model
             resolved_model = request.app.state.MODELS.get(target_model_id, model)
 
-            # Only the first model runs title/tags generation;
+            # Only the first model runs chat-level background tasks;
             # subsequent models only run follow-ups.
             task_id, _ = await create_task(
                 request.app.state.redis,
