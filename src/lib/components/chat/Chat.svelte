@@ -1199,6 +1199,13 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
+
+		// Mark the outgoing chat as read before resetting; in-place created chats
+		// keep chatIdProp undefined, so navigateHandler never marks them read.
+		if ($chatId && !$temporaryChatEnabled) {
+			updateLastReadAt($chatId);
+		}
+
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
