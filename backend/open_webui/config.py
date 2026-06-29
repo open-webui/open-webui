@@ -1179,6 +1179,12 @@ PERPLEXITY_SEARCH_CONTEXT_USAGE = os.getenv('PERPLEXITY_SEARCH_CONTEXT_USAGE', '
 
 PERPLEXITY_SEARCH_API_URL = os.getenv('PERPLEXITY_SEARCH_API_URL', 'https://api.perplexity.ai/search')
 
+MICROSOFT_WEB_IQ_API_BASE_URL = os.getenv('MICROSOFT_WEB_IQ_API_BASE_URL', 'https://api.microsoft.ai/v3')
+
+MICROSOFT_WEB_IQ_API_KEY = os.getenv('MICROSOFT_WEB_IQ_API_KEY', '')
+
+MICROSOFT_WEB_IQ_LANGUAGE = os.getenv('MICROSOFT_WEB_IQ_LANGUAGE', 'en')
+
 SOUGOU_API_SID = os.getenv('SOUGOU_API_SID', '')
 
 SOUGOU_API_SK = os.getenv('SOUGOU_API_SK', '')
@@ -2805,6 +2811,9 @@ DEFAULT_CONFIG = {
     'rag.web.search.perplexity_model': PERPLEXITY_MODEL,
     'rag.web.search.perplexity_search_context_usage': PERPLEXITY_SEARCH_CONTEXT_USAGE,
     'rag.web.search.perplexity_search_api_url': PERPLEXITY_SEARCH_API_URL,
+    'rag.web.search.microsoft_web_iq_api_base_url': MICROSOFT_WEB_IQ_API_BASE_URL,
+    'rag.web.search.microsoft_web_iq_api_key': MICROSOFT_WEB_IQ_API_KEY,
+    'rag.web.search.microsoft_web_iq_language': MICROSOFT_WEB_IQ_LANGUAGE,
     'rag.web.search.sougou_api_sid': SOUGOU_API_SID,
     'rag.web.search.sougou_api_sk': SOUGOU_API_SK,
     'rag.web.search.tavily_api_key': TAVILY_API_KEY,

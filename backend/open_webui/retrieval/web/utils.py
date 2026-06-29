@@ -36,6 +36,9 @@ from open_webui.config import (
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     FIRECRAWL_TIMEOUT,
+    MICROSOFT_WEB_IQ_API_BASE_URL,
+    MICROSOFT_WEB_IQ_API_KEY,
+    MICROSOFT_WEB_IQ_LANGUAGE,
     PLAYWRIGHT_TIMEOUT,
     PLAYWRIGHT_WS_URL,
     TAVILY_API_KEY,
@@ -52,6 +55,7 @@ from open_webui.env import (
     USER_AGENT,
 )
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
+from open_webui.retrieval.loaders.microsoft_web_iq import MicrosoftWebIQLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_host_allowed
@@ -356,6 +360,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def __init__(
         self,
         web_paths: Union[str, List[str]],
+        api_base_url: str,
         api_key: str,
         extract_depth: Literal['basic', 'advanced'] = 'basic',
         continue_on_failure: bool = True,
@@ -389,6 +394,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 
         # Store parameters for creating TavilyLoader instances
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_base_url = api_base_url
         self.api_key = api_key
         self.extract_depth = extract_depth
         self.continue_on_failure = continue_on_failure
@@ -460,6 +466,67 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         except Exception as e:
             if self.continue_on_failure:
                 log.exception(f'Error loading URLs: {e}')
+            else:
+                raise e
+
+
+class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    def __init__(
+        self,
+        web_paths: Union[str, List[str]],
+        api_key: str,
+        language: str = 'en',
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        requests_per_second: Optional[float] = None,
+        continue_on_failure: bool = True,
+        timeout: Optional[int] = None,
+    ):
+        self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_key = api_key
+        self.language = language
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+        self.continue_on_failure = continue_on_failure
+        self.timeout = timeout
+
+    def lazy_load(self) -> Iterator[Document]:
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f'SSL verification failed for {url}: {str(e)}')
+                if not self.continue_on_failure:
+                    raise e
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning('No valid URLs to process after SSL verification')
+                return
+            raise ValueError('No valid URLs to process after SSL verification')
+
+        loader = MicrosoftWebIQLoader(
+            urls=valid_urls,
+            api_base_url=self.api_base_url,
+            api_key=self.api_key,
+            language=self.language,
+            verify_ssl=self.verify_ssl,
+            timeout=self.timeout,
+            continue_on_failure=self.continue_on_failure,
+        )
+        yield from loader.lazy_load()
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        try:
+            docs = await run_in_threadpool(lambda: list(self.lazy_load()))
+            for doc in docs:
+                yield doc
+        except Exception as e:
+            if self.continue_on_failure:
+                log.warning(f'Error browsing URLs with Microsoft Web IQ: {e}')
             else:
                 raise e
 
@@ -813,6 +880,17 @@ def get_web_loader(
         web_loader_args['api_key'] = TAVILY_API_KEY
         web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH
 
+    if WEB_LOADER_ENGINE == 'microsoft_web_iq':
+        WebLoaderClass = SafeMicrosoftWebIQLoader
+        web_loader_args['api_base_url'] = MICROSOFT_WEB_IQ_API_BASE_URL
+        web_loader_args['api_key'] = MICROSOFT_WEB_IQ_API_KEY
+        web_loader_args['language'] = MICROSOFT_WEB_IQ_LANGUAGE
+        if WEB_LOADER_TIMEOUT:
+            try:
+                web_loader_args['timeout'] = int(WEB_LOADER_TIMEOUT)
+            except ValueError:
+                pass
+
     if WEB_LOADER_ENGINE == 'external':
         WebLoaderClass = ExternalWebLoader
         web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL
@@ -831,5 +909,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'external', or 'microsoft_web_iq'."
         )

@@ -95,6 +95,7 @@ from open_webui.retrieval.web.kagi import search_kagi
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.microsoft_web_iq import search_microsoft_web_iq
 from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity import search_perplexity
@@ -317,6 +318,9 @@ RETRIEVAL_CONFIG_KEYS = {
     'MINERU_API_URL': 'rag.mineru_api_url',
     'MINERU_FILE_EXTENSIONS': 'rag.mineru_file_extensions',
     'MINERU_PARAMS': 'rag.mineru_params',
+    'MICROSOFT_WEB_IQ_API_BASE_URL': 'rag.web.search.microsoft_web_iq_api_base_url',
+    'MICROSOFT_WEB_IQ_API_KEY': 'rag.web.search.microsoft_web_iq_api_key',
+    'MICROSOFT_WEB_IQ_LANGUAGE': 'rag.web.search.microsoft_web_iq_language',
     'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
     'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
     'MOJEEK_SEARCH_API_KEY': 'rag.web.search.mojeek_search_api_key',
@@ -724,6 +728,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
             'PERPLEXITY_SEARCH_API_URL': config.PERPLEXITY_SEARCH_API_URL,
+            'MICROSOFT_WEB_IQ_API_BASE_URL': config.MICROSOFT_WEB_IQ_API_BASE_URL,
+            'MICROSOFT_WEB_IQ_API_KEY': config.MICROSOFT_WEB_IQ_API_KEY,
+            'MICROSOFT_WEB_IQ_LANGUAGE': config.MICROSOFT_WEB_IQ_LANGUAGE,
             'SOUGOU_API_SID': config.SOUGOU_API_SID,
             'SOUGOU_API_SK': config.SOUGOU_API_SK,
             'WEB_LOADER_ENGINE': config.WEB_LOADER_ENGINE,
@@ -797,6 +804,9 @@ class WebConfig(BaseModel):
     PERPLEXITY_MODEL: str | None = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
     PERPLEXITY_SEARCH_API_URL: str | None = None
+    MICROSOFT_WEB_IQ_API_BASE_URL: str | None = None
+    MICROSOFT_WEB_IQ_API_KEY: str | None = None
+    MICROSOFT_WEB_IQ_LANGUAGE: str | None = None
     SOUGOU_API_SID: str | None = None
     SOUGOU_API_SK: str | None = None
     WEB_LOADER_ENGINE: str | None = None
@@ -1298,6 +1308,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
         config.PERPLEXITY_SEARCH_CONTEXT_USAGE = form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
         config.PERPLEXITY_SEARCH_API_URL = form_data.web.PERPLEXITY_SEARCH_API_URL
+        config.MICROSOFT_WEB_IQ_API_BASE_URL = form_data.web.MICROSOFT_WEB_IQ_API_BASE_URL
+        config.MICROSOFT_WEB_IQ_API_KEY = form_data.web.MICROSOFT_WEB_IQ_API_KEY
+        config.MICROSOFT_WEB_IQ_LANGUAGE = form_data.web.MICROSOFT_WEB_IQ_LANGUAGE
         config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1325,6 +1338,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.YOUCOM_API_KEY = form_data.web.YOUCOM_API_KEY
         config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
         config.LINKUP_SEARCH_PARAMS = form_data.web.LINKUP_SEARCH_PARAMS
+
+    await config.save()
 
     return {
         'status': True,
@@ -1438,6 +1453,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
             'PERPLEXITY_SEARCH_API_URL': config.PERPLEXITY_SEARCH_API_URL,
+            'MICROSOFT_WEB_IQ_API_BASE_URL': config.MICROSOFT_WEB_IQ_API_BASE_URL,
+            'MICROSOFT_WEB_IQ_API_KEY': config.MICROSOFT_WEB_IQ_API_KEY,
+            'MICROSOFT_WEB_IQ_LANGUAGE': config.MICROSOFT_WEB_IQ_LANGUAGE,
             'SOUGOU_API_SID': config.SOUGOU_API_SID,
             'SOUGOU_API_SK': config.SOUGOU_API_SK,
             'WEB_LOADER_ENGINE': config.WEB_LOADER_ENGINE,
@@ -2394,6 +2412,20 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             model=config.PERPLEXITY_MODEL,
             search_context_usage=config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
         )
+    elif engine == 'microsoft_web_iq':
+        if config.MICROSOFT_WEB_IQ_API_KEY:
+            return await asyncio.to_thread(
+                search_microsoft_web_iq,
+                config.MICROSOFT_WEB_IQ_API_BASE_URL,
+                config.MICROSOFT_WEB_IQ_API_KEY,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                config.MICROSOFT_WEB_IQ_LANGUAGE,
+                user,
+            )
+        else:
+            raise Exception('No MICROSOFT_WEB_IQ_API_KEY found in environment variables')
     elif engine == 'sougou':
         if config.SOUGOU_API_SID and config.SOUGOU_API_SK:
             return await asyncio.to_thread(
