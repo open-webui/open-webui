@@ -4413,6 +4413,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                                             data = {
                                                 'content': serialize_output(full_output() + pending_fc_items),
+                                                'output': full_output() + pending_fc_items,
                                             }
                                             delta_type = 'tool_call'
 
@@ -4472,7 +4473,10 @@ async def streaming_chat_response_handler(response, ctx):
                                                     }
                                                 ]
 
-                                            data = {'content': serialize_output(full_output())}
+                                            data = {
+                                                'content': serialize_output(full_output()),
+                                                'output': full_output(),
+                                            }
                                             delta_type = 'content'
 
                                         if reasoning_details:
@@ -4637,9 +4641,15 @@ async def streaming_chat_response_handler(response, ctx):
                                                     'output': full_output(),
                                                 },
                                             )
+                                            data = {
+                                                'content': serialize_output(full_output()),
+                                                'output': full_output(),
+                                            }
+                                            delta_type = 'content'
                                         else:
                                             data = {
                                                 'content': serialize_output(full_output()),
+                                                'output': full_output(),
                                             }
                                             delta_type = 'content'
 
