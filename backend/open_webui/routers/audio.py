@@ -1192,8 +1192,12 @@ async def transcription(
         if not os.path.realpath(file_path).startswith(os.path.realpath(file_dir)):
             raise ValueError('Invalid file path detected')
 
-        with open(file_path, 'wb') as f:
-            f.write(contents)
+        def _write_upload():
+            with open(file_path, 'wb') as f:
+                f.write(contents)
+
+        # Audio uploads can be large; write to disk off the event loop.
+        await asyncio.to_thread(_write_upload)
 
         try:
             metadata = None

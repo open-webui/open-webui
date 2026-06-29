@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import shutil
@@ -236,9 +237,12 @@ async def upload_pipeline(
 
     response = None
     try:
-        # Save the uploaded file
-        with open(file_path, 'wb') as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Save the uploaded file off the event loop (uploads can be large).
+        def _save_upload():
+            with open(file_path, 'wb') as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+        await asyncio.to_thread(_save_upload)
 
         url, key = await get_openai_connection(urlIdx)
 

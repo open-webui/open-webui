@@ -191,10 +191,16 @@ def _is_text_content_type(content_type: str) -> bool:
 
 
 async def get_content_from_url(request, url: str) -> str:
-    from open_webui.retrieval.web.utils import validate_url, _SSRFSafeAdapter
-
-
     loader_config = await get_loader_config()
+
+    # The rest of this function performs synchronous, blocking work: an SSRF-guarded
+    # `requests` probe and a synchronous document loader (`loader.load()`). Run it in a
+    # worker thread so the event loop stays free while waiting on network/parsing.
+    return await asyncio.to_thread(_get_content_from_url_sync, request, url, loader_config)
+
+
+def _get_content_from_url_sync(request, url: str, loader_config):
+    from open_webui.retrieval.web.utils import validate_url, _SSRFSafeAdapter
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
