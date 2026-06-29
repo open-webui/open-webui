@@ -282,21 +282,7 @@ class VectorSearchRetriever(BaseRetriever):
             limit=self.top_k,
         )
 
-        ids = result.ids[0]
-        metadatas = result.metadatas[0]
-        documents = result.documents[0]
-
-        results = []
-        for idx in range(len(ids)):
-            metadata = metadatas[idx]
-            metadata[CHUNK_HASH_KEY] = _content_hash(documents[idx])
-            results.append(
-                Document(
-                    metadata=metadata,
-                    page_content=documents[idx],
-                )
-            )
-        return results
+        return _search_result_to_documents(result)
 
 
 def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
@@ -365,7 +351,7 @@ def get_enriched_texts(collection_result: GetResult) -> list[str]:
     return enriched_texts
 
 
-def _search_result_to_documents(result: SearchResult) -> list[Document]:
+def _search_result_to_documents(result: SearchResult | None) -> list[Document]:
     ids = result.ids[0] if result and result.ids else []
     metadatas = result.metadatas[0] if result and result.metadatas else []
     documents = result.documents[0] if result and result.documents else []
