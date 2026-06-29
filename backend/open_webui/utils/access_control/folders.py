@@ -3,10 +3,11 @@ from open_webui.models.folders import FolderModel, Folders
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def has_folder_access(
-    user_id: str, folder: FolderModel, permission: str, db: AsyncSession
-) -> bool:
+async def has_folder_access(user_id: str, folder: FolderModel, permission: str, db: AsyncSession) -> bool:
     """Check if user has access to folder directly or via ancestor inheritance."""
+    if folder.user_id == user_id:
+        return True
+
     if await AccessGrants.has_access(
         user_id=user_id,
         resource_type='folder',
