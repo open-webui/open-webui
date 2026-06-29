@@ -34,6 +34,7 @@ from sqlalchemy import (
     update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
@@ -294,6 +295,58 @@ class ChatTable:
                 changed = True
 
         return changed
+
+    def _repair_chat_current_id(self, chat: dict) -> bool:
+        history = chat.get('history')
+        if not isinstance(history, dict):
+            return False
+
+        messages = history.get('messages')
+        if not isinstance(messages, dict):
+            return False
+
+        current_id = history.get('currentId')
+        current_message = messages.get(current_id)
+        output = []
+        if isinstance(current_message, dict):
+            output = current_message.get('output') or []
+
+        output_role = next(
+            (item.get('role') for item in output if isinstance(item, dict) and item.get('role')),
+            None,
+        )
+        current_is_bad_leaf = (
+            isinstance(current_message, dict)
+            and output_role == 'assistant'
+            and current_message.get('parentId') is None
+            and not current_message.get('timestamp')
+            and len(messages) > 1
+        )
+        if (
+            isinstance(current_message, dict)
+            and current_message.get('id')
+            and current_message.get('role')
+            and not current_is_bad_leaf
+        ):
+            return False
+
+        latest_leaf_id = None
+        latest_timestamp = -1
+        for message_id, message in messages.items():
+            if not isinstance(message, dict) or not message.get('role'):
+                continue
+
+            children_ids = message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else []
+            timestamp = message.get('timestamp') or 0
+            if len(children_ids) == 0 and timestamp > latest_timestamp:
+                latest_leaf_id = message_id
+                latest_timestamp = timestamp
+
+        if not latest_leaf_id or latest_leaf_id == current_id:
+            return False
+
+        history['currentId'] = latest_leaf_id
+        return True
 
     async def insert_new_chat(
         self, id: str, user_id: str, form_data: ChatForm, db: AsyncSession | None = None
@@ -631,13 +684,13 @@ class ChatTable:
             )
             role = message.get('role') or output_role
             if not role:
-                role = (
-                    'assistant'
-                    if parent and parent.get('role') == 'user'
-                    else 'user'
-                    if parent and parent.get('role') == 'assistant'
-                    else 'assistant'
-                )
+                parent_role = parent.get('role') if parent else None
+                if parent_role == 'user':
+                    role = 'assistant'
+                elif parent_role == 'assistant':
+                    role = 'user'
+                else:
+                    role = 'assistant'
 
             messages[message_id] = {
                 **message,
@@ -1093,7 +1146,10 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                if self._sanitize_chat_row(chat_item):
+                repaired_history = self._repair_chat_current_id(chat_item.chat or {})
+                if repaired_history:
+                    flag_modified(chat_item, 'chat')
+                if self._sanitize_chat_row(chat_item) or repaired_history:
                     await session.commit()
                     await session.refresh(chat_item)
 
@@ -1129,7 +1185,17 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 result = await session.execute(select(Chat).filter_by(id=id, user_id=user_id))
                 chat = result.scalars().first()
-                return ChatModel.model_validate(chat) if chat else None
+                if not chat:
+                    return None
+
+                repaired_history = self._repair_chat_current_id(chat.chat or {})
+                if repaired_history:
+                    flag_modified(chat, 'chat')
+                if self._sanitize_chat_row(chat) or repaired_history:
+                    await session.commit()
+                    await session.refresh(chat)
+
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
