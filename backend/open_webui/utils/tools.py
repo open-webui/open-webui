@@ -1126,7 +1126,7 @@ async def set_terminal_servers(request: Request):
         server_configs.append(
             {
                 'url': base_url,
-                'key': connection.get('key', ''),
+                'key': normalize_bearer_token(connection.get('key', '')),
                 'auth_type': connection.get('auth_type', 'bearer'),
                 'path': connection.get('path', '/openapi.json'),
                 'spec_type': 'url',
@@ -1358,7 +1358,7 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
                 # Fetch from URL
                 task = get_tool_server_data(
                     spec_url,
-                    bearer_auth_header(token) or None,
+                    {'Authorization': f'Bearer {token}'} if token else None,
                 )
             elif spec_type == 'json' and server.get('spec', ''):
                 # Use provided JSON spec
