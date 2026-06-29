@@ -357,8 +357,10 @@ async def get_all_models(request: Request, user: UserModel | None = None):
 
     # Fan-out tag requests to every backend
     tasks = []
-    for idx, url in enumerate(await Config.get('ollama.base_urls', [])):
-        api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), idx, url)
+    base_urls = await Config.get('ollama.base_urls', [])
+    api_configs = await Config.get('ollama.api_configs', {})
+    for idx, url in enumerate(base_urls):
+        api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
             tasks.append(send_get_request(f'{url}/api/tags', user=user))
         elif api_config.get('enable', True):
@@ -368,12 +370,16 @@ async def get_all_models(request: Request, user: UserModel | None = None):
 
     responses = await asyncio.gather(*tasks)
 
+    # Track which backends failed so we can skip them for /api/ps
+    failed_idxs: set[int] = set()
+
     # Post-process each response: apply prefix_id, tags, model filtering
     for idx, response in enumerate(responses):
         if not response:
+            failed_idxs.add(idx)
             continue
-        url = (await Config.get('ollama.base_urls', []))[idx]
-        api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), idx, url)
+        url = base_urls[idx]
+        api_config = resolve_api_config(api_configs, idx, url)
 
         connection_type = api_config.get('connection_type', 'local')
         prefix_id = api_config.get('prefix_id')
@@ -395,7 +401,7 @@ async def get_all_models(request: Request, user: UserModel | None = None):
 
     # Annotate with expiry info from loaded-model state
     try:
-        loaded = await get_ollama_loaded_models(request, user=user)
+        loaded = await get_ollama_loaded_models(request, user=user, skip_idxs=failed_idxs)
         expires_map = {m['model']: m['expires_at'] for m in loaded['models'] if 'expires_at' in m}
         for m in models_dict['models']:
             if m['model'] in expires_map:
@@ -457,14 +463,20 @@ async def get_ollama_tags(
 async def get_ollama_loaded_models(
     request: Request,
     user=Depends(get_admin_user),
+    skip_idxs: set[int] | None = None,
 ) -> dict:
     """List models currently loaded in Ollama memory across all backends."""
     if not await Config.get('ollama.enable'):
         return {'models': []}
 
     tasks = []
-    for idx, url in enumerate(await Config.get('ollama.base_urls', [])):
-        api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), idx, url)
+    base_urls = await Config.get('ollama.base_urls', [])
+    api_configs = await Config.get('ollama.api_configs', {})
+    for idx, url in enumerate(base_urls):
+        if skip_idxs and idx in skip_idxs:
+            tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+            continue
+        api_config = resolve_api_config(api_configs, idx, url)
         if not api_config:
             tasks.append(send_get_request(f'{url}/api/ps', user=user))
         elif api_config.get('enable', True):
@@ -477,7 +489,7 @@ async def get_ollama_loaded_models(
     for idx, response in enumerate(responses):
         if not response:
             continue
-        api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), idx, (await Config.get('ollama.base_urls', []))[idx])
+        api_config = resolve_api_config(api_configs, idx, base_urls[idx])
         prefix_id = api_config.get('prefix_id')
         if prefix_id:
             for m in response.get('models', []):
