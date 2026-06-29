@@ -1138,6 +1138,10 @@ SERPER_API_KEY = os.getenv('SERPER_API_KEY', '')
 
 SERPLY_API_KEY = os.getenv('SERPLY_API_KEY', '')
 
+SERPHOUSE_API_KEY = os.getenv('SERPHOUSE_API_KEY', '')
+
+SERPHOUSE_DOMAIN = os.getenv('SERPHOUSE_DOMAIN', 'google.com')
+
 DDGS_BACKEND = os.getenv('DDGS_BACKEND', 'auto')
 
 JINA_API_KEY = os.getenv('JINA_API_KEY', '')
@@ -2764,6 +2768,8 @@ DEFAULT_CONFIG = {
     'rag.web.search.serpstack_https': SERPSTACK_HTTPS,
     'rag.web.search.serper_api_key': SERPER_API_KEY,
     'rag.web.search.serply_api_key': SERPLY_API_KEY,
+    'rag.web.search.serphouse_api_key': SERPHOUSE_API_KEY,
+    'rag.web.search.serphouse_domain': SERPHOUSE_DOMAIN,
     'rag.web.search.ddgs_backend': DDGS_BACKEND,
     'rag.web.search.jina_api_key': JINA_API_KEY,
     'rag.web.search.jina_api_base_url': JINA_API_BASE_URL,
