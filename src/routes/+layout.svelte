@@ -394,34 +394,44 @@
 
 		console.log('executeTool', data, toolServer);
 
-		if (toolServer) {
-			const res = await executeToolServer(
-				token,
-				toolServer.url,
-				data?.name,
-				data?.params,
-				toolServerData,
-				chatId
-			);
+		try {
+			if (toolServer) {
+				const res = await executeToolServer(
+					token,
+					toolServer.url,
+					data?.name,
+					data?.params,
+					toolServerData,
+					chatId
+				);
 
-			console.log('executeToolServer', res);
+				console.log('executeToolServer', res);
 
-			if (data?.name === 'display_file' && data?.params?.path) {
-				if (res?.exists !== false) {
-					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+				if (data?.name === 'display_file' && data?.params?.path) {
+					if (res?.exists !== false) {
+						displayFileHandler(data.params.path, { showControls, showFileNavPath });
+					}
+				}
+
+				if (['write_file'].includes(data?.name) && data?.params?.path) {
+					showFileNavDir.set(res?.path ?? data.params.path);
+				}
+
+				if (cb) {
+					cb(structuredClone(res));
+				}
+			} else {
+				if (cb) {
+					cb({ error: 'Tool Server Not Found' });
 				}
 			}
-
-			if (['write_file'].includes(data?.name) && data?.params?.path) {
-				showFileNavDir.set(res?.path ?? data.params.path);
-			}
-
+		} catch (error) {
+			// Ensure cb() always fires - the backend's sio.call blocks waiting for this
+			// callback, so a thrown error here (network failure, bad response, etc.)
+			// would otherwise hang the call indefinitely.
+			console.error('executeTool error', error);
 			if (cb) {
-				cb(structuredClone(res));
-			}
-		} else {
-			if (cb) {
-				cb({ error: 'Tool Server Not Found' });
+				cb({ error: error?.message ?? 'Tool execution failed' });
 			}
 		}
 	};
