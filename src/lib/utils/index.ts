@@ -254,12 +254,17 @@ export const sanitizeHistory = (history) => {
 		}
 	}
 
+	const detachedMessageIds = new Set();
+
 	// Reconstruct missing parentId and role
 	for (const [id, message] of Object.entries(history.messages)) {
 		// Well-formed: has role and explicit parentId (null is valid for root)
 		if (message.role && message.parentId !== undefined) continue;
 
 		if (message.parentId === undefined) {
+			if (!parentByChildId[id]) {
+				detachedMessageIds.add(id);
+			}
 			message.parentId = parentByChildId[id] ?? null;
 		}
 
@@ -281,17 +286,59 @@ export const sanitizeHistory = (history) => {
 		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
 	}
 
-	// Recover currentId if it points to a missing or incomplete node
-	const currentMessage = history.messages?.[history.currentId];
-	if (!currentMessage?.id || !currentMessage?.role) {
+	const getReachableMessageIds = (rootIds) => {
+		const reachableIds = new Set();
+		const queue = [...rootIds];
+
+		while (queue.length > 0) {
+			const id = queue.shift();
+			if (reachableIds.has(id) || !history.messages[id]) continue;
+
+			reachableIds.add(id);
+			queue.push(...history.messages[id].childrenIds);
+		}
+
+		return reachableIds;
+	};
+
+	let rootIds = Object.entries(history.messages)
+		.filter(
+			([id, message]) =>
+				(message.parentId === null || message.parentId === undefined) && !detachedMessageIds.has(id)
+		)
+		.map(([id]) => id);
+
+	if (rootIds.length === 0) {
+		rootIds = Object.entries(history.messages)
+			.filter(([, message]) => message.parentId === null || message.parentId === undefined)
+			.map(([id]) => id);
+	}
+
+	const reachableIds = getReachableMessageIds(rootIds);
+	const getLatestLeafId = (candidateIds) => {
 		let latestLeafId = null;
 		let latestTimestamp = -1;
-		for (const [id, message] of Object.entries(history.messages)) {
-			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
+
+		for (const id of candidateIds) {
+			const message = history.messages[id];
+			if (!message) continue;
+
+			const hasReachableChildren = message.childrenIds.some((childId) => candidateIds.has(childId));
+			const timestamp = message.timestamp ?? 0;
+			if (!hasReachableChildren && timestamp > latestTimestamp) {
 				latestLeafId = id;
-				latestTimestamp = message.timestamp ?? 0;
+				latestTimestamp = timestamp;
 			}
 		}
+
+		return latestLeafId;
+	};
+
+	// Recover currentId if it points to a missing, incomplete, or detached node
+	const currentMessage = history.messages?.[history.currentId];
+	if (!currentMessage?.id || !currentMessage?.role || !reachableIds.has(history.currentId)) {
+		const latestLeafId =
+			getLatestLeafId(reachableIds) ?? getLatestLeafId(new Set(Object.keys(history.messages)));
 		history.currentId = latestLeafId ?? Object.keys(history.messages)[0] ?? null;
 	}
 };
