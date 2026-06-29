@@ -69,13 +69,15 @@
 										{tool?.name}
 									</div>
 									{#if status}
-										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
 										<span class="text-[11px] {status.pill} shrink-0">{status.label}</span>
 									{/if}
 									{#if toolSpecs.length > 0}
 										<span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">
 											{toolSpecs.length}
 										</span>
+									{/if}
+									{#if status}
+										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
 									{/if}
 								</div>
 
