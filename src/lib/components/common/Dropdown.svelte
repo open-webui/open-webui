@@ -21,7 +21,7 @@
 	export let contentClass = '';
 
 	/** Max height for the dropdown content */
-	export let maxHeight = '18rem';
+	export let maxHeight = 'min(32rem, calc(100dvh - 2rem))';
 
 	/** Side offset in px */
 	export let sideOffset = 4;
