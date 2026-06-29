@@ -296,16 +296,23 @@
 
 	const getHighlightedSnippet = (snippet: string, query: string) => {
 		const match = getSnippetQuery(query).toLowerCase();
-		const index = match ? snippet.toLowerCase().indexOf(match) : -1;
+		const matchIndex = match ? snippet.toLowerCase().indexOf(match) : -1;
 
-		if (index === -1) {
+		if (matchIndex === -1) {
 			return [{ text: snippet, highlight: false }];
 		}
 
+		const start = Math.max(matchIndex - 60, 0);
+		const end = Math.min(matchIndex + match.length + 80, snippet.length);
+		const visibleSnippet = `${start > 0 ? '...' : ''}${snippet.slice(start, end)}${
+			end < snippet.length ? '...' : ''
+		}`;
+		const index = visibleSnippet.toLowerCase().indexOf(match);
+
 		return [
-			{ text: snippet.slice(0, index), highlight: false },
-			{ text: snippet.slice(index, index + match.length), highlight: true },
-			{ text: snippet.slice(index + match.length), highlight: false }
+			{ text: visibleSnippet.slice(0, index), highlight: false },
+			{ text: visibleSnippet.slice(index, index + match.length), highlight: true },
+			{ text: visibleSnippet.slice(index + match.length), highlight: false }
 		].filter((part) => part.text);
 	};
 
