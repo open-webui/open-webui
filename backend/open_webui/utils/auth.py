@@ -237,25 +237,25 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
-async def is_valid_token(request, decoded) -> bool:
+async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
     2. Per-user (revoked_at) — used by OIDC back-channel logout when
        individual jti values are unknown; rejects tokens with iat <= revoked_at.
     """
-    if request.app.state.redis:
+    if redis:
         # Per-token revocation
         jti = decoded.get('jti')
         if jti:
-            revoked = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
+            revoked = await redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
             if revoked:
                 return False
 
         # Per-user revocation (OIDC back-channel logout)
         user_id = decoded.get('id')
         if user_id:
-            revoked_at = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
+            revoked_at = await redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
             if revoked_at:
                 try:
                     revoked_at_ts = int(revoked_at)
@@ -365,7 +365,7 @@ async def get_current_user(
             )
 
         if data is not None and 'id' in data:
-            if data.get('jti') and not await is_valid_token(request, data):
+            if not await is_valid_token(data, getattr(request.app.state, 'redis', None)):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail='Invalid token',

@@ -38,7 +38,7 @@ from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import decode_token
+from open_webui.utils.auth import decode_token, is_valid_token
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
@@ -342,9 +342,12 @@ async def usage(sid, data):
 async def connect(sid, environ, auth):
     user = None
     if auth and 'token' in auth:
+        scope = (environ or {}).get('asgi.scope') or {}
+        fastapi_app = scope.get('app')
+        redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
         data = decode_token(auth['token'])
 
-        if data is not None and 'id' in data:
+        if data is not None and 'id' in data and await is_valid_token(data, redis):
             user = await Users.get_user_by_id(data['id'])
 
         if user:
@@ -369,8 +372,12 @@ async def user_join(sid, data):
     if not auth or 'token' not in auth:
         return
 
+    environ = sio.get_environ(sid) or {}
+    scope = environ.get('asgi.scope') or {}
+    fastapi_app = scope.get('app')
+    redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
     token_data = decode_token(auth['token'])
-    if token_data is None or 'id' not in token_data:
+    if token_data is None or 'id' not in token_data or not await is_valid_token(token_data, redis):
         return
 
     user = await Users.get_user_by_id(token_data['id'])
@@ -416,8 +423,12 @@ async def join_channel(sid, data):
     if not auth or 'token' not in auth:
         return
 
+    environ = sio.get_environ(sid) or {}
+    scope = environ.get('asgi.scope') or {}
+    fastapi_app = scope.get('app')
+    redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
     data = decode_token(auth['token'])
-    if data is None or 'id' not in data:
+    if data is None or 'id' not in data or not await is_valid_token(data, redis):
         return
 
     user = await Users.get_user_by_id(data['id'])
@@ -438,8 +449,12 @@ async def join_note(sid, data):
     if not auth or 'token' not in auth:
         return
 
+    environ = sio.get_environ(sid) or {}
+    scope = environ.get('asgi.scope') or {}
+    fastapi_app = scope.get('app')
+    redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
     token_data = decode_token(auth['token'])
-    if token_data is None or 'id' not in token_data:
+    if token_data is None or 'id' not in token_data or not await is_valid_token(token_data, redis):
         return
 
     user = await Users.get_user_by_id(token_data['id'])
