@@ -328,7 +328,8 @@ class MessageTable:
         async with get_async_db_context(db) as db:
             message = await db.get(Message, parent_id)
 
-            if not message:
+            # Thread parent must belong to the requested channel; never disclose a foreign-channel message.
+            if not message or message.channel_id != channel_id:
                 return []
 
             result = await db.execute(
