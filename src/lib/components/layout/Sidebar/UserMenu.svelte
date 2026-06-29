@@ -613,7 +613,7 @@
 					<div class=" self-center mr-3">
 						<Keyboard className="size-5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Keyboard shortcuts')}</div>
+					<div class=" self-center truncate">{$i18n.t('Keyboard Shortcuts')}</div>
 				</button>
 			{/if}
 
