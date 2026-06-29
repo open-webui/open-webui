@@ -127,7 +127,7 @@
 				</div>
 
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-					{groups.length}
+					{filteredGroups.length}
 				</div>
 			</div>
 
