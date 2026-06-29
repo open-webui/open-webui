@@ -15,9 +15,7 @@ from typing import (
     Callable,
     Optional,
     Type,
-    Union,
     get_args,
-    get_origin,
     get_type_hints,
 )
 from urllib.parse import quote, urlencode
@@ -171,6 +169,28 @@ async def get_async_tool_function_and_apply_extra_params(
     function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
+    try:
+        type_hints = get_type_hints(function)
+    except Exception:
+        type_hints = {}
+
+    def coerce_kwargs(kwargs):
+        for name, value in kwargs.items():
+            if name not in sig.parameters or value is None:
+                continue
+
+            annotation = type_hints.get(name, sig.parameters[name].annotation)
+            args = set(get_args(annotation))
+            if isinstance(value, str) and (annotation is int or args == {int, type(None)}):
+                kwargs[name] = int(value)
+            elif (
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and (annotation is str or args == {str, type(None)})
+            ):
+                kwargs[name] = str(value)
+        return kwargs
+
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
 
@@ -190,12 +210,12 @@ async def get_async_tool_function_and_apply_extra_params(
         # wrap the functools.partial as python-genai has trouble with it
         # https://github.com/googleapis/python-genai/issues/907
         async def new_function(*args, **kwargs):
-            return await partial_func(*args, **kwargs)
+            return await partial_func(*args, **coerce_kwargs(kwargs))
 
     else:
         # Make it a coroutine function when it is not already
         async def new_function(*args, **kwargs):
-            return partial_func(*args, **kwargs)
+            return partial_func(*args, **coerce_kwargs(kwargs))
 
     update_wrapper(new_function, function)
     new_function.__signature__ = new_sig
