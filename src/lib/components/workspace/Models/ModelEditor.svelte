@@ -10,6 +10,7 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
 	import { getBaseModelTags, getModelTags } from '$lib/apis/models';
+	import { getVoices } from '$lib/apis/audio';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -28,6 +29,7 @@
 	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';
+	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
@@ -108,12 +110,18 @@
 	let terminalId = '';
 	let tts = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
+	let voices: { id: string; name?: string }[] = [];
 
 	const loadSuggestionTags = async () => {
 		const res: string[] = await (preset ? getModelTags : getBaseModelTags)(
 			localStorage.token
 		).catch(() => []);
 		suggestionTags = res.map((tag) => ({ name: tag }));
+	};
+
+	const loadVoices = async () => {
+		const res = await getVoices(localStorage.token).catch(() => null);
+		voices = res?.voices ?? [];
 	};
 
 	const submitHandler = async () => {
@@ -266,6 +274,9 @@
 		}
 		if (suggestionTags.length === 0) {
 			await loadSuggestionTags();
+		}
+		if (voices.length === 0) {
+			await loadVoices();
 		}
 
 		// Fetch admin-configured default model metadata so the editor
@@ -855,10 +866,9 @@
 								{$i18n.t('TTS Voice')}
 							</div>
 						</div>
-						<input
-							class="w-full text-sm bg-transparent outline-hidden"
-							type="text"
+						<TTSVoiceInput
 							bind:value={tts.voice}
+							{voices}
 							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 						/>
 					</div>
