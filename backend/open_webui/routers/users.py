@@ -642,7 +642,7 @@ async def update_user_by_id(
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
 
-            hashed = get_password_hash(form_data.password)
+            hashed = await get_password_hash(form_data.password)
             await Auths.update_user_password_by_id(user_id, hashed, db=db)
 
         # Build update dict from only the provided fields
