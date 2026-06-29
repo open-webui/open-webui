@@ -179,6 +179,8 @@ class WorkspacePermissions(BaseModel):
     prompts_export: bool = False
     tools_import: bool = False
     tools_export: bool = False
+    skills_import: bool = False
+    skills_export: bool = False
 
 
 class SharingPermissions(BaseModel):

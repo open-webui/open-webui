@@ -131,7 +131,7 @@ async def export_skills(
 ):
     if user.role != 'admin' and not await has_permission(
         user.id,
-        'workspace.skills',
+        'workspace.skills_export',
         await Config.get('user.permissions'),
         db=db,
     ):
@@ -158,8 +158,13 @@ async def create_new_skill(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'workspace.skills', await Config.get('user.permissions'), db=db
+    if user.role != 'admin' and not (
+        await has_permission(
+            user.id, 'workspace.skills', await Config.get('user.permissions'), db=db
+        )
+        or await has_permission(
+            user.id, 'workspace.skills_import', await Config.get('user.permissions'), db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

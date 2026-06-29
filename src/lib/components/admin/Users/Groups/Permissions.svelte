@@ -174,7 +174,22 @@
 				<Switch bind:state={permissions.workspace.skills} />
 			</Tooltip>
 
-			{#if defaultPermissions?.workspace?.skills && !permissions.workspace.skills}
+			{#if permissions.workspace.skills}
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Import Skills')}
+						</div>
+						<Switch bind:state={permissions.workspace.skills_import} />
+					</div>
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Export Skills')}
+						</div>
+						<Switch bind:state={permissions.workspace.skills_export} />
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.skills}
 				<div class="pb-0.5">
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
