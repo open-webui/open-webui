@@ -556,7 +556,7 @@ async def initialize_runtime_config(app: FastAPI):
 
     for tool_server_connection in connections:
         if tool_server_connection.get('type', 'openapi') == 'mcp':
-            server_id = tool_server_connection.get('info', {}).get('id')
+            server_id = (tool_server_connection.get('info') or {}).get('id')
             auth_type = tool_server_connection.get('auth_type', 'none')
 
             if server_id and auth_type in ('oauth_2.1', 'oauth_2.1_static'):
@@ -2257,7 +2257,7 @@ async def register_client(request, client_id: str) -> bool:
     tool_server_connections = await Config.get('tool_server.connections', []) or []
     for idx, conn in enumerate(tool_server_connections):
         if conn.get('type', 'openapi') == server_type:
-            info = conn.get('info', {})
+            info = conn.get('info') or {}
             if info.get('id') == server_id:
                 connection = conn
                 connection_idx = idx
@@ -2275,7 +2275,7 @@ async def register_client(request, client_id: str) -> bool:
     try:
         if auth_type == 'oauth_2.1_static':
             # Static credentials: rebuild from admin-provided credentials + fresh metadata
-            info = connection.get('info', {})
+            info = connection.get('info') or {}
             oauth_client_id = info.get('oauth_client_id') or ''
             oauth_client_secret = info.get('oauth_client_secret') or ''
             if not oauth_client_id or not oauth_client_secret:
@@ -2312,7 +2312,7 @@ async def register_client(request, client_id: str) -> bool:
         connections[connection_idx] = {
             **connection,
             'info': {
-                **connection.get('info', {}),
+                **(connection.get('info') or {}),
                 'oauth_client_info': encrypt_data(oauth_client_info.model_dump(mode='json')),
             },
         }

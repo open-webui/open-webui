@@ -697,6 +697,11 @@
 									<div class="text-ellipsis line-clamp-1 w-full">
 										{chat?.title}
 									</div>
+									{#if chat?.snippet}
+										<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+											{chat.snippet}
+										</div>
+									{/if}
 								</a>
 							{/if}
 
