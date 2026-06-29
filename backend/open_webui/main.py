@@ -2265,6 +2265,7 @@ async def register_client(request, client_id: str) -> bool:
 
     server_url = connection.get('url')
     auth_type = connection.get('auth_type', 'none')
+    oauth_scope = (connection.get('info') or {}).get('oauth_scope') or (connection.get('config') or {}).get('oauth_scope')
     oauth_server_key = (connection.get('config') or {}).get('oauth_server_key')
 
     try:
@@ -2288,6 +2289,7 @@ async def register_client(request, client_id: str) -> bool:
                 server_url,
                 oauth_client_id=oauth_client_id,
                 oauth_client_secret=oauth_client_secret,
+                oauth_scope=oauth_scope,
             )
         else:
             oauth_client_info = await get_oauth_client_info_with_dynamic_client_registration(
@@ -2295,6 +2297,7 @@ async def register_client(request, client_id: str) -> bool:
                 client_id,
                 server_url,
                 oauth_server_key,
+                oauth_scope=oauth_scope,
             )
     except Exception as e:
         log.error(f'OAuth client re-registration failed for {client_id}: {e}')

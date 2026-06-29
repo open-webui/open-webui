@@ -465,6 +465,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
     client_id: str,
     oauth_server_url: str,
     oauth_server_key: Optional[str] = None,
+    oauth_scope: str | None = None,
 ) -> OAuthClientInformationFull:
     try:
         oauth_server_metadata = None
@@ -487,7 +488,10 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         # Prefer the resource-specific scopes from the Protected Resource Metadata
         # (RFC 9728) over the AS's full scopes_supported catalog, for least
         # privilege. Mirrors the static-credentials flow (#24690).
-        if resource_metadata.scopes_supported:
+        scope_override = ' '.join(oauth_scope.replace(',', ' ').split()) if oauth_scope else None
+        if scope_override:
+            oauth_client_metadata.scope = scope_override
+        elif resource_metadata.scopes_supported:
             oauth_client_metadata.scope = ' '.join(resource_metadata.scopes_supported)
 
         discovery_urls = resource_metadata.get_discovery_urls(oauth_server_url)
@@ -587,6 +591,7 @@ async def get_oauth_client_info_with_static_credentials(
     oauth_server_url: str,
     oauth_client_id: str,
     oauth_client_secret: str,
+    oauth_scope: str | None = None,
 ) -> OAuthClientInformationFull:
     """
     Build an OAuthClientInformationFull from user-provided static credentials.
@@ -621,7 +626,9 @@ async def get_oauth_client_info_with_static_credentials(
         # Unlike the Authorization Server's scopes_supported (which is a full catalog
         # of every scope the server can grant), the PRM scopes_supported represents
         # what this specific resource requires — making it safe to request them all.
-        scope = ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
+        scope = (' '.join(oauth_scope.replace(',', ' ').split()) if oauth_scope else None) or (
+            ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
+        )
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'
@@ -687,10 +694,18 @@ def get_connection_oauth_resource_parameter(connection: dict) -> OAuthResourcePa
 
 
 def apply_connection_oauth_options(connection: dict, oauth_client_info: dict) -> dict:
-    return {
+    info = connection.get('info') or {}
+    config = connection.get('config') or {}
+    oauth_scope = info.get('oauth_scope') or config.get('oauth_scope')
+    oauth_scope = ' '.join(oauth_scope.replace(',', ' ').split()) if oauth_scope else None
+
+    options = {
         **oauth_client_info,
         'oauth_resource_parameter': get_connection_oauth_resource_parameter(connection),
     }
+    if oauth_scope:
+        options['scope'] = oauth_scope
+    return options
 
 
 def scope_has_resource_indicator(scope: str | None) -> bool:

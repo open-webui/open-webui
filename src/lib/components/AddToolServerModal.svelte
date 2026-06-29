@@ -61,6 +61,7 @@
 	let oauthClientId = '';
 	let oauthClientSecret = '';
 	let oauthServerUrl = '';
+	let oauthScope = '';
 	let oauthResourceParameter = 'auto';
 
 	let enable = true;
@@ -93,9 +94,11 @@
 			client_id: string;
 			client_secret?: string;
 			oauth_server_url?: string;
+			oauth_scope?: string;
 		} = {
 			url: url,
 			client_id: id,
+			...(oauthScope ? { oauth_scope: oauthScope } : {}),
 			...(auth_type === 'oauth_2.1_static'
 				? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
 				: {})
@@ -226,6 +229,7 @@
 					id = data.info.id ?? '';
 					name = data.info.name ?? '';
 					description = data.info.description ?? '';
+					oauthScope = data.info.oauth_scope ?? '';
 					oauthResourceParameter = data.info.oauth_resource_parameter ?? 'auto';
 				}
 
@@ -262,7 +266,10 @@
 					name: name,
 					description: description,
 					...(type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)
-						? { oauth_resource_parameter: oauthResourceParameter }
+						? {
+								...(oauthScope ? { oauth_scope: oauthScope } : {}),
+								oauth_resource_parameter: oauthResourceParameter
+							}
 						: {})
 				}
 			}
@@ -348,7 +355,10 @@
 				name: name,
 				description: description,
 				...(type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)
-					? { oauth_resource_parameter: oauthResourceParameter }
+					? {
+							...(oauthScope ? { oauth_scope: oauthScope } : {}),
+							oauth_resource_parameter: oauthResourceParameter
+						}
 					: {}),
 				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
 				...(auth_type === 'oauth_2.1_static'
@@ -385,6 +395,7 @@
 		oauthClientId = '';
 		oauthClientSecret = '';
 		oauthServerUrl = '';
+		oauthScope = '';
 		oauthResourceParameter = 'auto';
 
 		enable = true;
@@ -413,6 +424,7 @@
 			oauthClientId = connection.info?.oauth_client_id ?? '';
 			oauthClientSecret = connection.info?.oauth_client_secret ?? '';
 			oauthServerUrl = connection.info?.oauth_server_url ?? '';
+			oauthScope = connection.info?.oauth_scope ?? '';
 			oauthResourceParameter = connection.info?.oauth_resource_parameter ?? 'auto';
 
 			enable = connection.config?.enable ?? true;
@@ -885,6 +897,27 @@
 							{/if}
 
 							{#if type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label
+											for="oauth-scope"
+											class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>{$i18n.t('OAuth Scopes')}</label
+										>
+
+										<div class="flex flex-1 items-center">
+											<input
+												id="oauth-scope"
+												class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												type="text"
+												bind:value={oauthScope}
+												placeholder={$i18n.t('Use discovered scopes')}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<label
