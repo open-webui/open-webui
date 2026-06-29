@@ -18,13 +18,14 @@ import logging
 import os
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
 from fastapi import Request
+from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db
@@ -32,6 +33,8 @@ from open_webui.models.automations import AutomationModel, AutomationRuns, Autom
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.users import Users
+from open_webui.utils.auth import create_token
+from open_webui.utils.misc import parse_duration
 from open_webui.utils.task import prompt_template
 from starlette.datastructures import Headers
 
@@ -204,11 +207,18 @@ async def scheduler_worker_loop(app) -> None:
 ####################
 
 
-def _build_request(app) -> Request:
+def _build_request(
+    app,
+    token: Optional[str] = None,
+) -> Request:
     """Build a minimal ASGI Request for chat_completion.
 
     Mirrors the mock-request pattern used in main.py lifespan
     (model pre-fetch, tool server init) for consistency.
+
+    When token is provided, attach it as
+    request.state.token so session-auth tool servers and terminals can
+    authenticate headless scheduled runs as the automation owner.
     """
     scope = {
         'type': 'http',
@@ -224,7 +234,7 @@ def _build_request(app) -> Request:
     }
     request = Request(scope)
     # Ensure request.state is initialized with required attributes
-    request.state.token = None
+    request.state.token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=token) if token else None
     request.state.enable_api_keys = False
     return request
 
@@ -493,7 +503,15 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
-        request = _build_request(app)
+        try:
+            expires_delta = parse_duration(str(await Config.get('automations.auth_token_expires_in', '1h')))
+        except ValueError:
+            expires_delta = None
+        token = create_token(
+            data={'id': user.id, 'typ': 'automation'},
+            expires_delta=expires_delta or timedelta(hours=1),
+        )
+        request = _build_request(app, token=token)
         await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
         # Notify user
