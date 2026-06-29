@@ -313,6 +313,8 @@ Memory types:
 Rules:
 - Save only information likely to matter in future chats.
 - Do not save secrets, credentials, transient task steps, or unsupported guesses.
+- Use path when there is a clear path for the memory.
+- Leave path empty when there is no clear place for the memory.
 - Prefer replace/move/remove over duplicate add when an existing memory should change.
 - Do not invent type, status, trait, score, importance, or stability schemas.
 - Return only JSON in this shape:

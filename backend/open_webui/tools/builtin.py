@@ -606,7 +606,7 @@ async def search_memories(
     :param query: Optional query to search memory content and path
     :param count: Number of memories to return (default 5)
     :param type: "user", "context", or "all"
-    :param path: Optional logical memory path prefix
+    :param path: Optional memory path prefix
     :param memory_id: Optional exact memory ID to read
     :return: JSON with matching memories and their dates
     """
@@ -661,7 +661,7 @@ async def add_memory(
 
     :param content: The memory content to store
     :param type: Use "user" for facts/preferences about the user, or "context" for other durable context
-    :param path: Optional logical memory path
+    :param path: Optional memory path
     :return: Confirmation that the memory was stored
     """
     if __request__ is None:
@@ -695,6 +695,7 @@ async def update_memory(
 
     Use type "user" for facts, preferences, or instructions about the user.
     Use type "context" for other durable context that may help future chats.
+    Use path when there is a clear path for the memory. Leave path empty when unsure.
 
     Operation shapes:
     - {"action": "add", "content": "...", "type": "user"|"context", "path": "..."}
@@ -735,7 +736,7 @@ async def replace_memory_content(
     :param memory_id: The ID of the memory to update
     :param content: The new content for the memory
     :param type: Optional "user" or "context" type for the updated memory
-    :param path: Optional logical memory path
+    :param path: Optional memory path
     :return: Confirmation that the memory was updated
     """
     if __request__ is None:
