@@ -2000,11 +2000,23 @@ export const renderMermaidDiagram = async (
 	}
 };
 
-export const renderVegaVisualization = async (spec: string, i18n?: any) => {
+export const renderVegaVisualization = async (spec: string, lang: string = '', i18n?: any) => {
 	const vega = await import('vega');
 	const parsedSpec = JSON.parse(spec);
+	const hasVegaLiteKeys =
+		'mark' in parsedSpec ||
+		'encoding' in parsedSpec ||
+		'layer' in parsedSpec ||
+		'hconcat' in parsedSpec ||
+		'vconcat' in parsedSpec ||
+		'repeat' in parsedSpec ||
+		'facet' in parsedSpec;
+	const isVegaLite =
+		lang === 'vega-lite' ||
+		(parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) ||
+		hasVegaLiteKeys;
 	let vegaSpec = parsedSpec;
-	if (parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) {
+	if (isVegaLite) {
 		const vegaLite = await import('vega-lite');
 		vegaSpec = vegaLite.compile(parsedSpec).spec;
 	}
