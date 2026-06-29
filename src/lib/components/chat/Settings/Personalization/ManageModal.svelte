@@ -161,9 +161,7 @@
 					{:else}
 						<div class="text-left text-sm w-full max-h-[28rem] overflow-y-auto space-y-0.5">
 							{#each sortedMemories as memory (memory.id)}
-								<div
-									class="group w-full flex justify-between items-center text-sm py-1 px-1"
-								>
+								<div class="group w-full flex justify-between items-center text-sm py-1 px-1">
 									<button
 										type="button"
 										class="flex-1 min-w-0 text-left flex items-center gap-1.5 pr-2 text-gray-900 dark:text-gray-100 hover:text-black dark:hover:text-white transition leading-5"
@@ -172,9 +170,7 @@
 										<div class="truncate leading-5">
 											{memory.content}
 										</div>
-										<span
-											class="shrink-0 text-[11px] leading-5 text-gray-400 dark:text-gray-500"
-										>
+										<span class="shrink-0 text-[11px] leading-5 text-gray-400 dark:text-gray-500">
 											{memoryTypeLabel(memory)}
 										</span>
 										{#if memory.path}

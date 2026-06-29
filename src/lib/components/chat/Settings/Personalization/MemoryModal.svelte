@@ -30,16 +30,19 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		const res = await (edit
-			? updateMemoryById(localStorage.token, memory.id, content, type, path)
-			: addNewMemory(localStorage.token, content, type, path)
+		const res = await (
+			edit
+				? updateMemoryById(localStorage.token, memory.id, content, type, path)
+				: addNewMemory(localStorage.token, content, type, path)
 		).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			toast.success(edit ? $i18n.t('Memory updated successfully') : $i18n.t('Memory added successfully'));
+			toast.success(
+				edit ? $i18n.t('Memory updated successfully') : $i18n.t('Memory added successfully')
+			);
 			show = false;
 			dispatch('save');
 		}
