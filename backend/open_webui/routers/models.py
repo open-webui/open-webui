@@ -654,7 +654,8 @@ async def toggle_model_by_id(
                     request,
                     EVENTS.MODEL_ENABLED if model.is_active else EVENTS.MODEL_DISABLED,
                     actor=user,
-                    subject_id=model.id, subject_type='model',
+                    subject_id=model.id,
+                    subject_type='model',
                     data={'name': model.name},
                 )
                 return model
@@ -867,7 +868,9 @@ async def delete_model_by_id(
 
 
 @router.delete('/delete/all', response_model=bool)
-async def delete_all_models(request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_models(
+    request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     result = await Models.delete_all_models(db=db)
     if result:
         await publish_event(request, EVENTS.MODEL_DELETED, actor=user, subject_type='model')

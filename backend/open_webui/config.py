@@ -405,14 +405,28 @@ CODE_INTERPRETER_PROMPT_TEMPLATE = os.getenv('CODE_INTERPRETER_PROMPT_TEMPLATE',
 
 CODE_INTERPRETER_JUPYTER_URL = os.getenv('CODE_INTERPRETER_JUPYTER_URL', os.getenv('CODE_EXECUTION_JUPYTER_URL', ''))
 
-CODE_INTERPRETER_JUPYTER_AUTH = os.getenv( 'CODE_INTERPRETER_JUPYTER_AUTH', os.getenv('CODE_EXECUTION_JUPYTER_AUTH', ''), )
+CODE_INTERPRETER_JUPYTER_AUTH = os.getenv(
+    'CODE_INTERPRETER_JUPYTER_AUTH',
+    os.getenv('CODE_EXECUTION_JUPYTER_AUTH', ''),
+)
 
-CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = os.getenv( 'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN', os.getenv('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''), )
+CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = os.getenv(
+    'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN',
+    os.getenv('CODE_EXECUTION_JUPYTER_AUTH_TOKEN', ''),
+)
 
 
-CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = os.getenv( 'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD', os.getenv('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''), )
+CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = os.getenv(
+    'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD',
+    os.getenv('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
+)
 
-CODE_INTERPRETER_JUPYTER_TIMEOUT = int( os.getenv( 'CODE_INTERPRETER_JUPYTER_TIMEOUT', os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT', '60'), ) )
+CODE_INTERPRETER_JUPYTER_TIMEOUT = int(
+    os.getenv(
+        'CODE_INTERPRETER_JUPYTER_TIMEOUT',
+        os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT', '60'),
+    )
+)
 
 CODE_INTERPRETER_BLOCKED_MODULES = [
     library.strip() for library in os.getenv('CODE_INTERPRETER_BLOCKED_MODULES', '').split(',') if library.strip()
@@ -834,7 +848,9 @@ DATALAB_MARKER_PAGINATE = os.getenv('DATALAB_MARKER_PAGINATE', 'false').lower() 
 
 DATALAB_MARKER_STRIP_EXISTING_OCR = os.getenv('DATALAB_MARKER_STRIP_EXISTING_OCR', 'false').lower() == 'true'
 
-DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = os.getenv('DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION', 'false').lower() == 'true'
+DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = (
+    os.getenv('DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION', 'false').lower() == 'true'
+)
 
 DATALAB_MARKER_FORMAT_LINES = os.getenv('DATALAB_MARKER_FORMAT_LINES', 'false').lower() == 'true'
 
@@ -910,7 +926,9 @@ RAG_HYBRID_BM25_WEIGHT = float(os.getenv('RAG_HYBRID_BM25_WEIGHT', '0.5'))
 
 ENABLE_RAG_HYBRID_SEARCH = os.getenv('ENABLE_RAG_HYBRID_SEARCH', '').lower() == 'true'
 
-ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = os.getenv('ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS', 'False').lower() == 'true'
+ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
+    os.getenv('ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS', 'False').lower() == 'true'
+)
 
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 
@@ -920,12 +938,18 @@ RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_M
 
 RAG_FILE_CONTENT_SEARCH_MAX_CHARS = int(os.getenv('RAG_FILE_CONTENT_SEARCH_MAX_CHARS', str(64 * 1024 * 1024)))
 
-FILE_IMAGE_COMPRESSION_WIDTH = int(os.getenv('FILE_IMAGE_COMPRESSION_WIDTH')) if os.getenv('FILE_IMAGE_COMPRESSION_WIDTH') else None
+FILE_IMAGE_COMPRESSION_WIDTH = (
+    int(os.getenv('FILE_IMAGE_COMPRESSION_WIDTH')) if os.getenv('FILE_IMAGE_COMPRESSION_WIDTH') else None
+)
 
-FILE_IMAGE_COMPRESSION_HEIGHT = int(os.getenv('FILE_IMAGE_COMPRESSION_HEIGHT')) if os.getenv('FILE_IMAGE_COMPRESSION_HEIGHT') else None
+FILE_IMAGE_COMPRESSION_HEIGHT = (
+    int(os.getenv('FILE_IMAGE_COMPRESSION_HEIGHT')) if os.getenv('FILE_IMAGE_COMPRESSION_HEIGHT') else None
+)
 
 
-RAG_ALLOWED_FILE_EXTENSIONS = [ext.strip() for ext in os.getenv('RAG_ALLOWED_FILE_EXTENSIONS', '').split(',') if ext.strip()]
+RAG_ALLOWED_FILE_EXTENSIONS = [
+    ext.strip() for ext in os.getenv('RAG_ALLOWED_FILE_EXTENSIONS', '').split(',') if ext.strip()
+]
 
 RAG_EMBEDDING_ENGINE = os.getenv('RAG_EMBEDDING_ENGINE', '')
 
@@ -944,7 +968,9 @@ RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = os.getenv('RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE', 'True').lower() == 'true'
 
-RAG_EMBEDDING_BATCH_SIZE = int(os.getenv('RAG_EMBEDDING_BATCH_SIZE') or os.getenv('RAG_EMBEDDING_OPENAI_BATCH_SIZE', '1'))
+RAG_EMBEDDING_BATCH_SIZE = int(
+    os.getenv('RAG_EMBEDDING_BATCH_SIZE') or os.getenv('RAG_EMBEDDING_OPENAI_BATCH_SIZE', '1')
+)
 
 ENABLE_ASYNC_EMBEDDING = os.getenv('ENABLE_ASYNC_EMBEDDING', 'True').lower() == 'true'
 
@@ -1081,7 +1107,9 @@ WEB_SEARCH_CONFIRMATION_CONTENT = os.getenv(
 
 WEB_SEARCH_ENGINE = os.getenv('WEB_SEARCH_ENGINE', '')
 
-BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = os.getenv('BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true'
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+    os.getenv('BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true'
+)
 
 
 BYPASS_WEB_SEARCH_WEB_LOADER = os.getenv('BYPASS_WEB_SEARCH_WEB_LOADER', 'False').lower() == 'true'
@@ -1105,7 +1133,9 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = web_search_domain_filter_list
 
 WEB_SEARCH_CONCURRENT_REQUESTS = int(os.getenv('WEB_SEARCH_CONCURRENT_REQUESTS', '0'))
 
-WEB_FETCH_MAX_CONTENT_LENGTH = int(os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH') else None
+WEB_FETCH_MAX_CONTENT_LENGTH = (
+    int(os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH')) if os.getenv('WEB_FETCH_MAX_CONTENT_LENGTH') else None
+)
 
 WEB_LOADER_ENGINE = os.getenv('WEB_LOADER_ENGINE', '')
 
@@ -1230,7 +1260,7 @@ YANDEX_WEB_SEARCH_API_KEY = os.getenv('YANDEX_WEB_SEARCH_API_KEY', '')
 
 YANDEX_WEB_SEARCH_CONFIG = os.getenv('YANDEX_WEB_SEARCH_CONFIG', '')
 
-YOUCOM_API_KEY = os.getenv('YOUCOM_API_KEY', os.getenv('YDC_API_KEY',''))
+YOUCOM_API_KEY = os.getenv('YOUCOM_API_KEY', os.getenv('YDC_API_KEY', ''))
 
 LINKUP_API_KEY = os.getenv('LINKUP_API_KEY', '')
 
@@ -1483,9 +1513,20 @@ AUDIO_STT_ENGINE = os.getenv('AUDIO_STT_ENGINE', '')
 
 AUDIO_STT_MODEL = os.getenv('AUDIO_STT_MODEL', '')
 
-AUDIO_STT_SUPPORTED_CONTENT_TYPES = [ content_type.strip() for content_type in os.getenv('AUDIO_STT_SUPPORTED_CONTENT_TYPES', '').split(',') if content_type.strip() ]
+AUDIO_STT_SUPPORTED_CONTENT_TYPES = [
+    content_type.strip()
+    for content_type in os.getenv('AUDIO_STT_SUPPORTED_CONTENT_TYPES', '').split(',')
+    if content_type.strip()
+]
 
-AUDIO_STT_ALLOWED_EXTENSIONS = [ ext.strip() for ext in os.getenv( 'AUDIO_STT_ALLOWED_EXTENSIONS', 'mp3,wav,m4a,webm,ogg,flac,mp4,mpga,mpeg', ).split(',') if ext.strip() ]
+AUDIO_STT_ALLOWED_EXTENSIONS = [
+    ext.strip()
+    for ext in os.getenv(
+        'AUDIO_STT_ALLOWED_EXTENSIONS',
+        'mp3,wav,m4a,webm,ogg,flac,mp4,mpga,mpeg',
+    ).split(',')
+    if ext.strip()
+]
 
 AUDIO_STT_AZURE_API_KEY = os.getenv('AUDIO_STT_AZURE_API_KEY', '')
 
@@ -1530,7 +1571,9 @@ AUDIO_TTS_AZURE_SPEECH_REGION = os.getenv('AUDIO_TTS_AZURE_SPEECH_REGION', '')
 
 AUDIO_TTS_AZURE_SPEECH_BASE_URL = os.getenv('AUDIO_TTS_AZURE_SPEECH_BASE_URL', '')
 
-AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = os.getenv('AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3')
+AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = os.getenv(
+    'AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT', 'audio-24khz-160kbitrate-mono-mp3'
+)
 
 AUDIO_TTS_MISTRAL_API_KEY = os.getenv('AUDIO_TTS_MISTRAL_API_KEY', '')
 
@@ -1728,9 +1771,7 @@ USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
     os.getenv('USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
 )
 
-USER_PERMISSIONS_FOLDERS_ALLOW_SHARING = (
-    os.getenv('USER_PERMISSIONS_FOLDERS_ALLOW_SHARING', 'False').lower() == 'true'
-)
+USER_PERMISSIONS_FOLDERS_ALLOW_SHARING = os.getenv('USER_PERMISSIONS_FOLDERS_ALLOW_SHARING', 'False').lower() == 'true'
 
 
 USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING = (
@@ -2312,7 +2353,13 @@ Responses from models: {{responses}}"""
 
 ENABLE_API_KEYS = os.getenv('ENABLE_API_KEYS', 'False').lower() == 'true'
 
-ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = os.getenv( 'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS', os.getenv('ENABLE_API_KEY_ENDPOINT_RESTRICTIONS', 'False'), ).lower() == 'true'
+ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
+    os.getenv(
+        'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS',
+        os.getenv('ENABLE_API_KEY_ENDPOINT_RESTRICTIONS', 'False'),
+    ).lower()
+    == 'true'
+)
 
 API_KEYS_ALLOWED_ENDPOINTS = os.getenv('API_KEYS_ALLOWED_ENDPOINTS', os.getenv('API_KEY_ALLOWED_ENDPOINTS', ''))
 
@@ -2368,7 +2415,10 @@ MICROSOFT_CLIENT_TENANT_ID = os.getenv('MICROSOFT_CLIENT_TENANT_ID', '')
 
 MICROSOFT_CLIENT_LOGIN_BASE_URL = os.getenv('MICROSOFT_CLIENT_LOGIN_BASE_URL', 'https://login.microsoftonline.com')
 
-MICROSOFT_CLIENT_PICTURE_URL = os.getenv( 'MICROSOFT_CLIENT_PICTURE_URL', 'https://graph.microsoft.com/v1.0/me/photo/$value', )
+MICROSOFT_CLIENT_PICTURE_URL = os.getenv(
+    'MICROSOFT_CLIENT_PICTURE_URL',
+    'https://graph.microsoft.com/v1.0/me/photo/$value',
+)
 
 
 MICROSOFT_OAUTH_SCOPE = os.getenv('MICROSOFT_OAUTH_SCOPE', 'openid email profile')
@@ -2441,9 +2491,15 @@ OAUTH_ROLES_CLAIM = os.getenv('OAUTH_ROLES_CLAIM', 'roles')
 
 OAUTH_ROLES_SEPARATOR = os.getenv('OAUTH_ROLES_SEPARATOR', ',')
 
-OAUTH_ALLOWED_ROLES = [ role.strip() for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(OAUTH_ROLES_SEPARATOR) if role ]
+OAUTH_ALLOWED_ROLES = [
+    role.strip()
+    for role in os.getenv('OAUTH_ALLOWED_ROLES', f'user{OAUTH_ROLES_SEPARATOR}admin').split(OAUTH_ROLES_SEPARATOR)
+    if role
+]
 
-OAUTH_ADMIN_ROLES = [role.strip() for role in os.getenv('OAUTH_ADMIN_ROLES', 'admin').split(OAUTH_ROLES_SEPARATOR) if role]
+OAUTH_ADMIN_ROLES = [
+    role.strip() for role in os.getenv('OAUTH_ADMIN_ROLES', 'admin').split(OAUTH_ROLES_SEPARATOR) if role
+]
 
 OAUTH_ALLOWED_DOMAINS = [domain.strip() for domain in os.getenv('OAUTH_ALLOWED_DOMAINS', '*').split(',')]
 
@@ -2540,11 +2596,7 @@ def load_oauth_providers():
             'sub_claim': 'id',
         }
 
-    if (
-        OAUTH_CLIENT_ID
-        and (OAUTH_CLIENT_SECRET or OAUTH_CODE_CHALLENGE_METHOD)
-        and OPENID_PROVIDER_URL
-    ):
+    if OAUTH_CLIENT_ID and (OAUTH_CLIENT_SECRET or OAUTH_CODE_CHALLENGE_METHOD) and OPENID_PROVIDER_URL:
 
         def oidc_oauth_register(oauth: OAuth):
             client_kwargs = {

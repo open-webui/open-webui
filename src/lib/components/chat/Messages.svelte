@@ -35,6 +35,7 @@
 	export let atSelectedModel;
 
 	let messages = [];
+	let deletedMessageIds = new Set<string>();
 
 	export let setInputText: Function = () => {};
 
@@ -168,10 +169,16 @@
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			const res = await updateChatById(localStorage.token, chatId, {
-				history: history,
-				messages: messages
-			});
+			const res = await updateChatById(
+				localStorage.token,
+				chatId,
+				{
+					history: history,
+					messages: messages
+				},
+				Array.from(deletedMessageIds)
+			);
+			deletedMessageIds.clear();
 
 			// Refresh local message content from backend (e.g. re-derived via serialize_output)
 			if (res?.chat?.history?.messages) {
@@ -461,9 +468,11 @@
 		// Delete the message and its children
 		[messageId, ...childMessageIds].forEach((id) => {
 			delete history.messages[id];
+			deletedMessageIds.add(id);
 		});
 
-		showMessage({ id: parentMessageId }, false);
+		showMessage({ id: parentMessageId }, false, false);
+		await updateChat();
 	};
 
 	const triggerScroll = () => {

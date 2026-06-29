@@ -373,7 +373,8 @@ async def delete_feedbacks(
             request,
             EVENTS.FEEDBACK_DELETED_ALL,
             actor=user,
-            subject_id=user.id, subject_type='user',
+            subject_id=user.id,
+            subject_type='user',
         )
     return success
 

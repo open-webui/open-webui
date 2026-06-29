@@ -575,9 +575,7 @@ async def delete_all_user_chats(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role == 'user' and not await has_permission(
-        user.id, 'chat.delete', await Config.get('user.permissions')
-    ):
+    if user.role == 'user' and not await has_permission(user.id, 'chat.delete', await Config.get('user.permissions')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -589,7 +587,8 @@ async def delete_all_user_chats(
             request,
             EVENTS.CHAT_DELETED_ALL,
             actor=user,
-            subject_id=user.id, subject_type='user',
+            subject_id=user.id,
+            subject_type='user',
         )
     return result
 
@@ -1001,7 +1000,8 @@ async def unshare_all_chats(
             request,
             EVENTS.CHAT_UNSHARED,
             actor=user,
-            subject_id=user.id, subject_type='user',
+            subject_id=user.id,
+            subject_type='user',
             data={'count': len(chat_ids), 'chat_ids': chat_ids},
         )
     return result
@@ -1215,6 +1215,12 @@ async def update_chat_by_id(
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
+        if 'history' in form_data.chat:
+            updated_chat['history'] = Chats.merge_history(
+                chat.chat.get('history'),
+                form_data.chat.get('history'),
+                form_data.deleted_message_ids,
+            )
 
         # Re-derive content from output for assistant messages so that frontend
         # edits to output items are reflected in content. Only when output
@@ -1222,7 +1228,7 @@ async def update_chat_by_id(
         # (e.g. a `replace` event or an outlet filter footer) would be reverted.
         existing_messages = (chat.chat.get('history') or {}).get('messages') or {}
         for msg_id, msg in updated_chat.get('history', {}).get('messages', {}).items():
-            if msg.get('role') == 'assistant' and msg.get('output'):
+            if isinstance(msg, dict) and msg.get('role') == 'assistant' and msg.get('output'):
                 if msg.get('output') != existing_messages.get(msg_id, {}).get('output'):
                     msg['content'] = serialize_output(msg['output'])
 
@@ -1233,7 +1239,7 @@ async def update_chat_by_id(
         # history with potential edits, deletions, or new branches.
         messages = (updated_chat.get('history') or {}).get('messages') or {}
         if messages:
-            await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
+            await Chats.reconcile_messages_by_chat_id(id, user.id, messages, form_data.deleted_message_ids)
 
         await publish_event(
             request,
@@ -1470,7 +1476,8 @@ async def pin_chat_by_id(
             request,
             EVENTS.CHAT_PINNED if chat.pinned else EVENTS.CHAT_UNPINNED,
             actor=user,
-            subject_id=id, subject_type='chat',
+            subject_id=id,
+            subject_type='chat',
         )
         return chat
     else:
@@ -1643,7 +1650,8 @@ async def archive_chat_by_id(
             request,
             EVENTS.CHAT_ARCHIVED if chat.archived else EVENTS.CHAT_UNARCHIVED,
             actor=user,
-            subject_id=id, subject_type='chat',
+            subject_id=id,
+            subject_type='chat',
         )
         return ChatResponse(**chat.model_dump())
     else:
@@ -1660,9 +1668,7 @@ async def share_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.share', await Config.get('user.permissions')
-    ):
+    if user.role != 'admin' and not await has_permission(user.id, 'chat.share', await Config.get('user.permissions')):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)

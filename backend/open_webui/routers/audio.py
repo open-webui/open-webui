@@ -292,8 +292,7 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
 
     if form_data.stt.ENGINE == '':
         request.app.state.faster_whisper_model = await asyncio.to_thread(
-            set_faster_whisper_model,
-            form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
+            set_faster_whisper_model, form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
         )
     else:
         request.app.state.faster_whisper_model = None
@@ -560,9 +559,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.tts', await Config.get('user.permissions')
-    ):
+    if user.role != 'admin' and not await has_permission(user.id, 'chat.tts', await Config.get('user.permissions')):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -1152,9 +1149,7 @@ async def transcription(
     language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.stt', await Config.get('user.permissions')
-    ):
+    if user.role != 'admin' and not await has_permission(user.id, 'chat.stt', await Config.get('user.permissions')):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

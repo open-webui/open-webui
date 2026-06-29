@@ -54,10 +54,7 @@ async def compact_messages_for_request(
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
     token_threshold = _resolve_token_threshold(config['token_threshold'], metadata)
-    if (
-        not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold)
-        or len(messages) <= 3
-    ):
+    if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
         return messages, previous_summary, False
 
     boundary = _find_compaction_boundary(messages)

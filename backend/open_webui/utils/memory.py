@@ -355,9 +355,9 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
                 seen_ids.add(memory_id)
 
             content = str(doc)
-            if metadata.get('path') and content.startswith(f"{metadata.get('path')}\n"):
+            if metadata.get('path') and content.startswith(f'{metadata.get("path")}\n'):
                 content = content[len(metadata.get('path')) + 1 :]
-            label = f"{metadata.get('path')}: {content}" if metadata.get('path') else content
+            label = f'{metadata.get("path")}: {content}' if metadata.get('path') else content
             sections[Memories.normalize_memory_type(metadata.get('type'))].append(label)
 
     parts = []

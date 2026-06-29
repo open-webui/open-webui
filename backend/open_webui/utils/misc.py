@@ -254,12 +254,7 @@ def convert_output_to_messages(
 
     def flush_pending():
         nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
-        if (
-            not pending_content
-            and not pending_tool_calls
-            and not pending_reasoning
-            and not pending_reasoning_details
-        ):
+        if not pending_content and not pending_tool_calls and not pending_reasoning and not pending_reasoning_details:
             return
 
         message = {

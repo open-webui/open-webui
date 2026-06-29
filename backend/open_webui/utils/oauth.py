@@ -178,10 +178,7 @@ def _default_value(value):
 async def get_oauth_runtime_config() -> SimpleNamespace:
     keys = [key for key, _default in OAUTH_RUNTIME_CONFIG.values()]
     stored = await Config.get_many(*keys)
-    values = {
-        name: stored.get(key, _default_value(default))
-        for name, (key, default) in OAUTH_RUNTIME_CONFIG.items()
-    }
+    values = {name: stored.get(key, _default_value(default)) for name, (key, default) in OAUTH_RUNTIME_CONFIG.items()}
     return SimpleNamespace(**values)
 
 
@@ -715,10 +712,7 @@ def apply_connection_oauth_options(connection: dict, oauth_client_info: dict) ->
 def scope_has_resource_indicator(scope: str | None) -> bool:
     if not scope:
         return False
-    return any(
-        scope_value.startswith(('https://', 'http://', 'api://'))
-        for scope_value in scope.split()
-    )
+    return any(scope_value.startswith(('https://', 'http://', 'api://')) for scope_value in scope.split())
 
 
 def should_send_oauth_resource(client_info: OAuthClientInformationFull | None) -> bool:
@@ -852,9 +846,7 @@ class OAuthClientManager:
 
             try:
                 oauth_client_info = resolve_oauth_client_info(connection)
-                oauth_client_info = await recover_static_oauth_client_metadata(
-                    connection, oauth_client_info
-                )
+                oauth_client_info = await recover_static_oauth_client_metadata(connection, oauth_client_info)
                 oauth_client_info = apply_connection_oauth_options(connection, oauth_client_info)
                 return self.add_client(expected_client_id, OAuthClientInformationFull(**oauth_client_info))['client']
             except Exception as e:

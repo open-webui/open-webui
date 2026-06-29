@@ -27,9 +27,7 @@ def _event_text(message: str, description: str | None = None, event_data: dict |
     return '\n'.join(lines)
 
 
-async def post_webhook(
-    name: str, url: str, message: str, event_data: dict, description: str | None = None
-) -> bool:
+async def post_webhook(name: str, url: str, message: str, event_data: dict, description: str | None = None) -> bool:
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')
         # Block private-IP / loopback / cloud-metadata targets — the URL is

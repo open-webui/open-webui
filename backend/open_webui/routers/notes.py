@@ -479,7 +479,8 @@ async def pin_note_by_id(
         request,
         EVENTS.NOTE_PINNED if note.is_pinned else EVENTS.NOTE_UNPINNED,
         actor=user,
-        subject_id=note.id, subject_type='note',
+        subject_id=note.id,
+        subject_type='note',
     )
     return note
 

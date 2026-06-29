@@ -291,7 +291,8 @@ async def toggle_function_by_id(
                 request,
                 EVENTS.FUNCTION_ENABLED if function.is_active else EVENTS.FUNCTION_DISABLED,
                 actor=user,
-                subject_id=function.id, subject_type='function',
+                subject_id=function.id,
+                subject_type='function',
                 data={'type': function.type, 'name': function.name},
             )
             return function

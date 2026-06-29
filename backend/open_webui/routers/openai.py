@@ -356,9 +356,7 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
 
 @router.post('/audio/speech')
 async def speech(request: Request, user=Depends(get_verified_user)):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'chat.tts', await Config.get('user.permissions')
-    ):
+    if user.role != 'admin' and not await has_permission(user.id, 'chat.tts', await Config.get('user.permissions')):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

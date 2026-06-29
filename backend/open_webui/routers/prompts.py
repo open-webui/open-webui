@@ -532,7 +532,8 @@ async def toggle_prompt_active(
             request,
             EVENTS.PROMPT_ENABLED if result.is_active else EVENTS.PROMPT_DISABLED,
             actor=user,
-            subject_id=result.id, subject_type='prompt',
+            subject_id=result.id,
+            subject_type='prompt',
             data={'name': result.name, 'command': result.command},
         )
         return result

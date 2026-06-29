@@ -1476,6 +1476,7 @@ async def chat_completion_tools_handler(
 
     return body, {'sources': sources}
 
+
 async def chat_web_search_handler(request: Request, form_data: dict, extra_params: dict, user):
     event_emitter = extra_params['__event_emitter__']
     await event_emitter(
@@ -3636,9 +3637,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'end_tag': '</think>',
                                 'attributes': {'type': 'reasoning_content'},
                                 'content': (
-                                    [{'type': 'output_text', 'text': reasoning_content}]
-                                    if reasoning_content
-                                    else []
+                                    [{'type': 'output_text', 'text': reasoning_content}] if reasoning_content else []
                                 ),
                                 'summary': None,
                             }
@@ -4148,19 +4147,19 @@ async def streaming_chat_response_handler(response, ctx):
                             # error events so frontend and DB paths still receive them.
                             try:
                                 raw_obj = json.loads(data)
-                                raw_error = raw_obj.get("error") if isinstance(raw_obj, dict) else None
+                                raw_error = raw_obj.get('error') if isinstance(raw_obj, dict) else None
                                 if raw_error:
                                     try:
                                         Chats.upsert_message_to_chat_by_id_and_message_id(
-                                            metadata["chat_id"],
-                                            metadata["message_id"],
+                                            metadata['chat_id'],
+                                            metadata['message_id'],
                                             {
-                                                "error": {"content": raw_error},
+                                                'error': {'content': raw_error},
                                             },
                                         )
                                     except Exception:
                                         pass
-                                    await event_emitter({ "type": "chat:completion", "data": { "error": raw_error } })
+                                    await event_emitter({'type': 'chat:completion', 'data': {'error': raw_error}})
                             except Exception:
                                 pass
                             continue
@@ -4390,9 +4389,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function'][
-                                                            'arguments'
-                                                        ] += delta_arguments
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:

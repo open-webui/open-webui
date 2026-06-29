@@ -210,7 +210,9 @@ class MemoriesTable:
                     )
                     db.add(memory)
                     await db.flush()
-                    results.append({'action': action, 'status': 'created', 'memory': MemoryModel.model_validate(memory)})
+                    results.append(
+                        {'action': action, 'status': 'created', 'memory': MemoryModel.model_validate(memory)}
+                    )
 
                 elif action == 'replace':
                     memory_id = operation.get('id')
@@ -228,7 +230,9 @@ class MemoriesTable:
                         memory.meta = {**(memory.meta or {}), **operation.get('meta')}
                     memory.updated_at = now
                     await db.flush()
-                    results.append({'action': action, 'status': 'updated', 'memory': MemoryModel.model_validate(memory)})
+                    results.append(
+                        {'action': action, 'status': 'updated', 'memory': MemoryModel.model_validate(memory)}
+                    )
 
                 elif action == 'move':
                     memory_id = operation.get('id')
@@ -241,7 +245,9 @@ class MemoriesTable:
                         memory.meta = {**(memory.meta or {}), **operation.get('meta')}
                     memory.updated_at = now
                     await db.flush()
-                    results.append({'action': action, 'status': 'updated', 'memory': MemoryModel.model_validate(memory)})
+                    results.append(
+                        {'action': action, 'status': 'updated', 'memory': MemoryModel.model_validate(memory)}
+                    )
 
                 elif action == 'remove':
                     memory_id = operation.get('id')

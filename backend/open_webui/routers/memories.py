@@ -39,9 +39,7 @@ async def check_memories_permission(user):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'features.memories', config.get('user.permissions')
-    ):
+    if user.role != 'admin' and not await has_permission(user.id, 'features.memories', config.get('user.permissions')):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -431,7 +429,8 @@ async def reset_memory_from_vector_db(
         request,
         EVENTS.MEMORY_RESET,
         actor=user,
-        subject_id=user.id, subject_type='user',
+        subject_id=user.id,
+        subject_type='user',
         data={'count': len(memories)},
     )
     return True
@@ -461,7 +460,8 @@ async def delete_memory_by_user_id(
             request,
             EVENTS.MEMORY_DELETED,
             actor=user,
-            subject_id=user.id, subject_type='user',
+            subject_id=user.id,
+            subject_type='user',
         )
         return True
 

@@ -182,9 +182,7 @@ async def get_shared_folders(
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     group_ids = {g.id for g in groups}
 
-    folder_perms = await Folders.get_shared_folder_ids_for_user(
-        user.id, group_ids, db=db
-    )
+    folder_perms = await Folders.get_shared_folder_ids_for_user(user.id, group_ids, db=db)
 
     # Filter out folders owned by the user
     results = []
@@ -199,28 +197,30 @@ async def get_shared_folders(
             owner = await Users.get_user_by_id(folder.user_id, db=db)
             owner_cache[folder.user_id] = owner.name if owner else 'Unknown'
 
-        results.append({
-            **folder.model_dump(),
-            'owner_name': owner_cache[folder.user_id],
-            'permission': permission,
-        })
+        results.append(
+            {
+                **folder.model_dump(),
+                'owner_name': owner_cache[folder.user_id],
+                'permission': permission,
+            }
+        )
 
     # Also include child folders of shared folders (inheritance)
     shared_root_ids = {r['id'] for r in results}
     for root_id in list(shared_root_ids):
         root_folder = await Folders.get_folder_by_id(root_id, db=db)
         if root_folder:
-            children = await Folders.get_children_folders_by_id_and_user_id(
-                root_id, root_folder.user_id, db=db
-            )
+            children = await Folders.get_children_folders_by_id_and_user_id(root_id, root_folder.user_id, db=db)
             if children:
                 for child in children:
                     if child.id not in {r['id'] for r in results}:
-                        results.append({
-                            **child.model_dump(),
-                            'owner_name': owner_cache.get(child.user_id, 'Unknown'),
-                            'permission': folder_perms.get(root_id, 'read'),
-                        })
+                        results.append(
+                            {
+                                **child.model_dump(),
+                                'owner_name': owner_cache.get(child.user_id, 'Unknown'),
+                                'permission': folder_perms.get(root_id, 'read'),
+                            }
+                        )
 
     return results
 
@@ -231,7 +231,9 @@ async def get_shared_folders(
 
 
 @router.get('/{id}', response_model=None)
-async def get_folder_by_id(request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_folder_by_id(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
     if folder:
@@ -443,7 +445,8 @@ async def update_folder_access_by_id(
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
-        user.id, user.role,
+        user.id,
+        user.role,
         form_data.access_grants,
         None,
         db=db,
@@ -509,10 +512,7 @@ async def get_shared_folder_chats(
         chat['owner_name'] = owner_cache[uid]
 
     return {
-        'chats': [
-            {**chat, 'readonly': chat['user_id'] != user.id}
-            for chat in chats
-        ],
+        'chats': [{**chat, 'readonly': chat['user_id'] != user.id} for chat in chats],
         'folder_permission': 'write' if has_write else 'read',
     }
 

@@ -266,7 +266,8 @@ async def toggle_automation_by_id(
         request,
         EVENTS.AUTOMATION_ENABLED if toggled.is_active else EVENTS.AUTOMATION_DISABLED,
         actor=user,
-        subject_id=toggled.id, subject_type='automation',
+        subject_id=toggled.id,
+        subject_type='automation',
         data={'name': toggled.name},
     )
     return response

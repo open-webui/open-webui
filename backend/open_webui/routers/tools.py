@@ -76,8 +76,7 @@ async def get_tools(
     for tool in await Tools.get_tools(defer_content=True, db=db):
         tool_module = tools_cache.get(tool.id)
         has_user_valves = (
-            hasattr(tool_module, 'UserValves') if tool_module
-            else (tool.meta.has_user_valves if tool.meta else False)
+            hasattr(tool_module, 'UserValves') if tool_module else (tool.meta.has_user_valves if tool.meta else False)
         )
         tools.append(
             ToolUserResponse(

@@ -244,9 +244,7 @@ class ToolsTable:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(
-                    update(Tool)
-                    .filter_by(id=id)
-                    .values(valves=encrypt_valves(valves), updated_at=int(time.time()))
+                    update(Tool).filter_by(id=id).values(valves=encrypt_valves(valves), updated_at=int(time.time()))
                 )
                 await db.commit()
                 return await self.get_tool_by_id(id, db=db)

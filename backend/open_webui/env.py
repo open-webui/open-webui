@@ -599,9 +599,7 @@ except (ValueError, TypeError):
 # SSL verification for tool server connections specifically.
 # Accepts "True", "False", or a path to a CA bundle file.
 # When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
-AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = _parse_ssl_env(
-    os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True')
-)
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True'))
 
 AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER', '')
 

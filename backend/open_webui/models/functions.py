@@ -164,11 +164,7 @@ class FunctionsTable:
                     func_data['updated_at'] = int(time.time())
 
                     if func.id in existing_ids:
-                        await db.execute(
-                            update(Function)
-                            .filter_by(id=func.id)
-                            .values(**func_data)
-                        )
+                        await db.execute(update(Function).filter_by(id=func.id).values(**func_data))
                     else:
                         new_func = Function(**func_data)
                         db.add(new_func)

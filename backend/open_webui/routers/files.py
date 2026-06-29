@@ -270,9 +270,7 @@ async def upload_file(
         result_meta = result.meta or {}
 
     result_content_type = (
-        result_meta.get('content_type')
-        if isinstance(result_meta, dict)
-        else getattr(result_meta, 'content_type', None)
+        result_meta.get('content_type') if isinstance(result_meta, dict) else getattr(result_meta, 'content_type', None)
     )
     await publish_event(
         request,
@@ -532,7 +530,9 @@ async def count_files(
 
 
 @router.delete('/all')
-async def delete_all_files(request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_files(
+    request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     result = await Files.delete_all_files(db=db)
     if result:
         try:

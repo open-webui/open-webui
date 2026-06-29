@@ -186,7 +186,8 @@ async def create_session_response(
         request,
         EVENTS.AUTH_LOGIN,
         actor=user,
-        subject_id=user.id, subject_type='user',
+        subject_id=user.id,
+        subject_type='user',
         source=source,
         data={'auth_method': source},
     )
@@ -386,7 +387,8 @@ async def update_password(
                     request,
                     EVENTS.AUTH_PASSWORD_CHANGED,
                     actor=user,
-                    subject_id=user.id, subject_type='user',
+                    subject_id=user.id,
+                    subject_type='user',
                 )
             return success
         else:
@@ -1372,9 +1374,7 @@ async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user
 async def _check_api_key_permission(request: Request, user, db: AsyncSession):
     if not await Config.get('auth.enable_api_keys') or (
         user.role != 'admin'
-        and not await has_permission(
-            user.id, 'features.api_keys', await Config.get('user.permissions'), db=db
-        )
+        and not await has_permission(user.id, 'features.api_keys', await Config.get('user.permissions'), db=db)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -1397,7 +1397,8 @@ async def generate_api_key(
             request,
             EVENTS.AUTH_API_KEY_CREATED,
             actor=user,
-            subject_id=user.id, subject_type='user',
+            subject_id=user.id,
+            subject_type='user',
         )
         return {
             'api_key': api_key,
@@ -1418,16 +1419,15 @@ async def delete_api_key(
             request,
             EVENTS.AUTH_API_KEY_DELETED,
             actor=user,
-            subject_id=user.id, subject_type='user',
+            subject_id=user.id,
+            subject_type='user',
         )
     return success
 
 
 # get api key
 @router.get('/api_key', response_model=ApiKey)
-async def get_api_key(
-    request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)
-):
+async def get_api_key(request: Request, user=Depends(get_current_user), db: AsyncSession = Depends(get_async_session)):
     await _check_api_key_permission(request, user, db)
     api_key = await Users.get_user_api_key_by_id(user.id, db=db)
     if api_key:

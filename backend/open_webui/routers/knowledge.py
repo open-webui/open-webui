@@ -570,7 +570,9 @@ async def _set_external_connections(connections: list[dict]) -> None:
     await Config.upsert({EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY: connections})
 
 
-def _external_connection_dict(form_data: ExternalKnowledgeConnectionForm, user_id: str, id: Optional[str] = None) -> dict:
+def _external_connection_dict(
+    form_data: ExternalKnowledgeConnectionForm, user_id: str, id: Optional[str] = None
+) -> dict:
     provider, config = _validate_external_connection_form(form_data)
     now = int(time.time())
     return {
@@ -1703,9 +1705,7 @@ async def delete_knowledge_by_id(
         connection_id = (knowledge.meta or {}).get('external', {}).get('connection_id')
         if connection_id:
             connections = [
-                connection
-                for connection in await _get_external_connections()
-                if connection.get('id') != connection_id
+                connection for connection in await _get_external_connections() if connection.get('id') != connection_id
             ]
             await _set_external_connections(connections)
     else:

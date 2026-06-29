@@ -280,7 +280,8 @@ async def update_default_user_permissions(request: Request, form_data: UserPermi
         request,
         EVENTS.USER_PERMISSIONS_UPDATED,
         actor=user,
-        subject_id='user.permissions', subject_type='config',
+        subject_id='user.permissions',
+        subject_type='config',
     )
     return user_permissions
 
@@ -691,7 +692,8 @@ async def update_user_by_id(
                     request,
                     EVENTS.AUTH_PASSWORD_CHANGED,
                     actor=session_user,
-                    subject_id=user_id, subject_type='user',
+                    subject_id=user_id,
+                    subject_type='user',
                     source='admin',
                 )
             return updated_user

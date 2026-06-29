@@ -192,7 +192,7 @@ async def _retrieve_milvus(connection, auth_config, knowledge, query, count, emb
     }
 
     normalized = []
-    for hit in (response[0] if response else []):
+    for hit in response[0] if response else []:
         item = dict(hit)
         entity = item.get('entity') or {}
         result = {

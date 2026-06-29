@@ -42,9 +42,7 @@ async def check_calendar_permission(request: Request, user):
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'features.calendar', config.get('user.permissions')
-    ):
+    if user.role != 'admin' and not await has_permission(user.id, 'features.calendar', config.get('user.permissions')):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,

@@ -144,9 +144,7 @@ class FolderTable:
         except Exception:
             return None
 
-    async def get_folder_by_id(
-        self, id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[FolderModel]:
+    async def get_folder_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[FolderModel]:
         """Fetch folder by ID only (no user_id filter). Used for shared access."""
         try:
             async with get_async_db_context(db) as db:
@@ -159,8 +157,7 @@ class FolderTable:
             return None
 
     async def get_shared_folder_ids_for_user(
-        self, user_id: str, user_group_ids: set[str],
-        db: Optional[AsyncSession] = None
+        self, user_id: str, user_group_ids: set[str], db: Optional[AsyncSession] = None
     ) -> dict[str, str]:
         """
         Returns {folder_id: highest_permission} for all folders shared with user.
@@ -175,8 +172,7 @@ class FolderTable:
             ]
             if user_group_ids:
                 conditions.append(
-                    and_(AccessGrant.principal_type == 'group',
-                         AccessGrant.principal_id.in_(user_group_ids))
+                    and_(AccessGrant.principal_type == 'group', AccessGrant.principal_id.in_(user_group_ids))
                 )
             result = await db.execute(
                 select(AccessGrant).filter(

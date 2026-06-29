@@ -54,16 +54,8 @@ async def fetch_openai_models(request: Request, user: UserModel = None):
 
 async def get_all_base_models(request: Request, user: UserModel = None):
     config = await Config.get_many('openai.enable', 'ollama.enable')
-    openai_task = (
-        fetch_openai_models(request, user)
-        if config.get('openai.enable')
-        else asyncio.sleep(0, result=[])
-    )
-    ollama_task = (
-        fetch_ollama_models(request, user)
-        if config.get('ollama.enable')
-        else asyncio.sleep(0, result=[])
-    )
+    openai_task = fetch_openai_models(request, user) if config.get('openai.enable') else asyncio.sleep(0, result=[])
+    ollama_task = fetch_ollama_models(request, user) if config.get('ollama.enable') else asyncio.sleep(0, result=[])
     function_task = get_function_models(request)
 
     openai_models, ollama_models, function_models = await asyncio.gather(openai_task, ollama_task, function_task)

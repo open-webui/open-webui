@@ -280,10 +280,7 @@ class MilvusClient(VectorDBBase):
         for item in items:
             text = item['text'] or ''
             if len(text) > MILVUS_TEXT_MAX_LENGTH:
-                log.warning(
-                    f'Milvus: truncating text id={item["id"]} '
-                    f'{len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars'
-                )
+                log.warning(f'Milvus: truncating text id={item["id"]} {len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars')
                 text = text[:MILVUS_TEXT_MAX_LENGTH]
             data.append(
                 {
@@ -299,10 +296,7 @@ class MilvusClient(VectorDBBase):
                 data=data,
             )
         except MilvusException as e:
-            log.error(
-                f'Milvus insert failed for {self.collection_prefix}_{collection_name} '
-                f'({len(items)} items): {e}'
-            )
+            log.error(f'Milvus insert failed for {self.collection_prefix}_{collection_name} ({len(items)} items): {e}')
             raise
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
@@ -324,10 +318,7 @@ class MilvusClient(VectorDBBase):
         for item in items:
             text = item['text'] or ''
             if len(text) > MILVUS_TEXT_MAX_LENGTH:
-                log.warning(
-                    f'Milvus: truncating text id={item["id"]} '
-                    f'{len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars'
-                )
+                log.warning(f'Milvus: truncating text id={item["id"]} {len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars')
                 text = text[:MILVUS_TEXT_MAX_LENGTH]
             data.append(
                 {
@@ -343,10 +334,7 @@ class MilvusClient(VectorDBBase):
                 data=data,
             )
         except MilvusException as e:
-            log.error(
-                f'Milvus upsert failed for {self.collection_prefix}_{collection_name} '
-                f'({len(items)} items): {e}'
-            )
+            log.error(f'Milvus upsert failed for {self.collection_prefix}_{collection_name} ({len(items)} items): {e}')
             raise
 
     def delete(

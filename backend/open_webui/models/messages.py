@@ -540,10 +540,7 @@ class MessageTable:
                 )
                 grouped[mid][reaction.name]['count'] += 1
 
-            return {
-                mid: [Reactions(**r) for r in reactions.values()]
-                for mid, reactions in grouped.items()
-            }
+            return {mid: [Reactions(**r) for r in reactions.values()] for mid, reactions in grouped.items()}
 
     async def get_thread_reply_counts_by_message_ids(
         self, ids: list[str], db: Optional[AsyncSession] = None

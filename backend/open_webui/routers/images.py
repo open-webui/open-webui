@@ -201,25 +201,12 @@ async def set_image_model(request: Request, model: str):
 async def get_image_model(request):
     image_config = await get_image_config()
     if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-        return (
-            image_config.IMAGE_GENERATION_MODEL
-            if image_config.IMAGE_GENERATION_MODEL
-            else 'dall-e-2'
-        )
+        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'dall-e-2'
     elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
-        return (
-            image_config.IMAGE_GENERATION_MODEL
-            if image_config.IMAGE_GENERATION_MODEL
-            else 'imagen-3.0-generate-002'
-        )
+        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'imagen-3.0-generate-002'
     elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
-        return (
-            image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else ''
-        )
-    elif (
-        image_config.IMAGE_GENERATION_ENGINE == 'automatic1111'
-        or image_config.IMAGE_GENERATION_ENGINE == ''
-    ):
+        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else ''
+    elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
         try:
             session = await get_session()
             async with session.get(
@@ -433,10 +420,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                         info['CheckpointLoaderSimple']['input']['required']['ckpt_name'][0],
                     )
                 )
-        elif (
-            image_config.IMAGE_GENERATION_ENGINE == 'automatic1111'
-            or image_config.IMAGE_GENERATION_ENGINE == ''
-        ):
+        elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
             session = await get_session()
             async with session.get(
                 url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models',
@@ -592,7 +576,8 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
         request,
         EVENTS.IMAGE_GENERATED,
         actor=user,
-        subject_id=None, subject_type='image',
+        subject_id=None,
+        subject_type='image',
         data={
             'model': form_data.model,
             'size': form_data.size,
@@ -658,11 +643,7 @@ async def image_generations(
                     )
                     else {'response_format': 'b64_json'}
                 ),
-                **(
-                    {}
-                    if not image_config.IMAGES_OPENAI_API_PARAMS
-                    else image_config.IMAGES_OPENAI_API_PARAMS
-                ),
+                **({} if not image_config.IMAGES_OPENAI_API_PARAMS else image_config.IMAGES_OPENAI_API_PARAMS),
             }
 
             session = await get_session()
@@ -803,10 +784,7 @@ async def image_generations(
                 )
                 images.append({'url': url})
             return images
-        elif (
-            image_config.IMAGE_GENERATION_ENGINE == 'automatic1111'
-            or image_config.IMAGE_GENERATION_ENGINE == ''
-        ):
+        elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
             if form_data.model:
                 await set_image_model(request, form_data.model)
 
@@ -892,7 +870,8 @@ async def edit_images(request: Request, form_data: EditImageForm, user=Depends(g
         request,
         EVENTS.IMAGE_EDITED,
         actor=user,
-        subject_id=None, subject_type='image',
+        subject_id=None,
+        subject_type='image',
         data={
             'model': form_data.model,
             'size': form_data.size,
