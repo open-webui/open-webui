@@ -8,7 +8,6 @@ IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 
-import asyncio
 import json
 import logging
 import time
@@ -262,7 +261,7 @@ async def fetch_url(
         return json.dumps({'error': 'Request context not available'})
 
     try:
-        content, _ = await asyncio.to_thread(get_content_from_url, __request__, url)
+        content, _ = await get_content_from_url(__request__, url)
 
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
         # Guard: content may be None if the web loader silently failed
