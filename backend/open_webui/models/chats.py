@@ -551,6 +551,68 @@ class ChatTable:
             if msg.get('parentId') and msg['parentId'] not in messages_map
         }
 
+    @staticmethod
+    def merge_history(existing_history: dict | None, incoming_history: dict | None) -> dict:
+        existing = (existing_history or {}).get('messages') or {}
+        incoming = (incoming_history or {}).get('messages') or {}
+        merged = {**existing, **incoming}
+        merged = {message_id: message for message_id, message in merged.items() if isinstance(message, dict)}
+
+        for message in merged.values():
+            message['childrenIds'] = []
+        for message_id, message in merged.items():
+            parent_id = message.get('parentId')
+            if parent_id in merged:
+                merged[parent_id]['childrenIds'].append(message_id)
+
+        current_id = (incoming_history or {}).get('currentId')
+        if current_id not in merged:
+            current_id = (existing_history or {}).get('currentId')
+            if current_id not in merged:
+                current_id = None
+
+        return {**(existing_history or {}), **(incoming_history or {}), 'messages': merged, 'currentId': current_id}
+
+    @staticmethod
+    def delete_message_from_history(history: dict, message_id: str) -> set[str]:
+        messages = history.get('messages') or {}
+        message = messages.get(message_id)
+        if not isinstance(message, dict):
+            return set()
+
+        parent_id = message.get('parentId')
+        child_ids = [child_id for child_id in (message.get('childrenIds') or []) if child_id in messages]
+        grandchild_ids = [
+            grandchild_id
+            for child_id in child_ids
+            for grandchild_id in (messages.get(child_id, {}).get('childrenIds') or [])
+            if grandchild_id in messages
+        ]
+
+        if parent_id in messages:
+            messages[parent_id]['childrenIds'] = [
+                child_id for child_id in (messages[parent_id].get('childrenIds') or []) if child_id != message_id
+            ] + grandchild_ids
+
+        for grandchild_id in grandchild_ids:
+            messages[grandchild_id]['parentId'] = parent_id
+
+        deleted_ids = {message_id, *child_ids}
+        for deleted_id in deleted_ids:
+            messages.pop(deleted_id, None)
+
+        current_id = parent_id
+        child_ids = (
+            [child_id for child_id, child in messages.items() if child.get('parentId') is None]
+            if current_id is None
+            else messages.get(current_id, {}).get('childrenIds', [])
+        )
+        while child_ids:
+            current_id = child_ids[-1]
+            child_ids = messages.get(current_id, {}).get('childrenIds', [])
+        history['currentId'] = current_id if current_id in messages else None
+        return deleted_ids
+
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
         """Write messages to the ``chat_message`` table so future lookups
         use the fast path.  Errors are logged but never raised.
@@ -571,18 +633,11 @@ class ChatTable:
     async def reconcile_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
         """Sync ``chat_message`` rows with the committed JSON blob.
 
-        Upserts current messages via ``backfill_messages_by_chat_id``
-        and deletes orphaned rows whose message_id no longer appears
-        in the blob.  Best-effort: errors are logged but never raised.
+        Upserts current messages via ``backfill_messages_by_chat_id``.
+        Best-effort: errors are logged but never raised.
         """
         try:
             await self.backfill_messages_by_chat_id(chat_id, user_id, messages)
-
-            existing_map = await ChatMessages.get_messages_map_by_chat_id(chat_id)
-            if existing_map is not None:
-                orphaned_ids = set(existing_map.keys()) - set(messages.keys())
-                if orphaned_ids:
-                    await ChatMessages.delete_message_ids_by_chat_id(chat_id, orphaned_ids)
         except Exception as e:
             log.warning('Failed to reconcile chat_message rows for chat %s: %s', chat_id, e)
 
@@ -717,6 +772,26 @@ class ChatTable:
             log.warning(f'Failed to write to chat_message table: {e}')
 
         return await self.update_chat_by_id(id, chat)
+
+    async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
+        chat_model = await self.get_chat_by_id(id)
+        if chat_model is None:
+            return None
+
+        chat = chat_model.chat
+        history = chat.get('history', {})
+        deleted_ids = self.delete_message_from_history(history, message_id)
+        if not deleted_ids:
+            return chat_model
+
+        messages = history.get('messages') or {}
+        chat['history'] = history
+        updated_chat = await self.update_chat_by_id(id, chat)
+
+        await self.backfill_messages_by_chat_id(id, chat_model.user_id, messages)
+        await ChatMessages.delete_message_ids_by_chat_id(id, deleted_ids)
+
+        return updated_chat
 
     async def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict

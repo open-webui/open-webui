@@ -1219,7 +1219,6 @@ async def update_chat_by_id(
             updated_chat['history'] = Chats.merge_history(
                 chat.chat.get('history'),
                 form_data.chat.get('history'),
-                form_data.deleted_message_ids,
             )
 
         # Re-derive content from output for assistant messages so that frontend
@@ -1234,12 +1233,11 @@ async def update_chat_by_id(
 
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
 
-        # Reconcile chat_message rows with the committed blob.
-        # This is the only caller where the frontend pushes a full
-        # history with potential edits, deletions, or new branches.
+        # Reconcile chat_message rows without inferring deletes from missing IDs.
+        # Message deletion has its own endpoint below.
         messages = (updated_chat.get('history') or {}).get('messages') or {}
         if messages:
-            await Chats.reconcile_messages_by_chat_id(id, user.id, messages, form_data.deleted_message_ids)
+            await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
 
         await publish_event(
             request,
@@ -1321,6 +1319,45 @@ async def update_chat_message_by_id(
         actor=user,
         subject_id=message_id,
         data={'chat_id': id, 'content_preview': form_data.content[:300]},
+    )
+    return ChatResponse(**chat.model_dump())
+
+
+@router.delete('/{id}/messages/{message_id}', response_model=ChatResponse | None)
+async def delete_chat_message_by_id(
+    request: Request,
+    id: str,
+    message_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat = await Chats.get_chat_by_id(id, db=db)
+
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if chat.user_id != user.id and user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    chat = await Chats.delete_message_from_chat_by_id_and_message_id(id, message_id)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    await publish_event(
+        request,
+        EVENTS.MESSAGE_DELETED,
+        actor=user,
+        subject_id=message_id,
+        data={'chat_id': id},
     )
     return ChatResponse(**chat.model_dump())
 
