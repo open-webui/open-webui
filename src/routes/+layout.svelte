@@ -1,7 +1,7 @@
 <script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 	import { Toaster, toast } from 'svelte-sonner';
 
 	let loadingProgress = spring(0, {
@@ -102,6 +102,7 @@
 
 	let loaded = false;
 	let tokenTimer = null;
+	let isAuthRedirectInProgress = false;
 
 	let showRefresh = false;
 
@@ -237,7 +238,7 @@
 	const getOrCreateWorker = () => {
 		let worker = $pyodideWorker;
 		if (!worker) {
-			worker = new PyodideWorker();
+			worker = createPyodideWorker();
 			pyodideWorker.set(worker);
 		}
 		return worker;
@@ -475,7 +476,7 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		// Calendar alerts are not chat-scoped — handle before chat_id checks
+		// Calendar alerts are not chat-scoped, handle before chat_id checks
 		if (type === 'calendar:alert' && data) {
 			const timeStr =
 				data.minutes_until <= 0
@@ -760,6 +761,53 @@
 	};
 
 	const TOKEN_EXPIRY_BUFFER = 60; // seconds
+	const resolveFetchUrl = (input) => {
+		if (input instanceof Request) {
+			return new URL(input.url, window.location.origin);
+		}
+
+		return new URL(input, window.location.origin);
+	};
+
+	const resolveFetchHeaders = (input, init) => {
+		if (init?.headers) {
+			return new Headers(init.headers);
+		}
+
+		if (input instanceof Request) {
+			return input.headers;
+		}
+
+		return new Headers();
+	};
+
+	const isAuthenticatedBackendFetch = (input, init) => {
+		try {
+			const requestUrl = resolveFetchUrl(input);
+			const backendOrigin = new URL(WEBUI_BASE_URL || '/', window.location.origin).origin;
+
+			return requestUrl.origin === backendOrigin && resolveFetchHeaders(input, init).has('authorization');
+		} catch {
+			return false;
+		}
+	};
+
+	const redirectToAuthAfterUnauthorized = () => {
+		if (isAuthRedirectInProgress || window.location.pathname === '/auth') {
+			return;
+		}
+
+		isAuthRedirectInProgress = true;
+		user.set(null);
+		localStorage.removeItem('token');
+		toast.error($i18n.t('Session expired. Please sign in again.'));
+
+		const currentPath = `${window.location.pathname}${window.location.search}`;
+		goto(`/auth?redirect=${encodeURIComponent(currentPath)}`).finally(() => {
+			isAuthRedirectInProgress = false;
+		});
+	};
+
 	const checkTokenExpiry = async () => {
 		const exp = $user?.expires_at; // token expiry time in unix timestamp
 		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
@@ -882,6 +930,17 @@
 	};
 
 	onMount(async () => {
+		const originalFetch = window.fetch.bind(window);
+		window.fetch = async (input, init) => {
+			const response = await originalFetch(input, init);
+
+			if (response.status === 401 && localStorage.token && isAuthenticatedBackendFetch(input, init)) {
+				redirectToAuthAfterUnauthorized();
+			}
+
+			return response;
+		};
+
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
@@ -992,18 +1051,6 @@
 
 				$socket?.on('events', chatEventHandler);
 				$socket?.on('events:channel', channelEventHandler);
-
-				const userSettings = await getUserSettings(localStorage.token);
-				if (userSettings) {
-					settings.set(userSettings.ui);
-				} else {
-					try {
-						settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-					} catch {
-						settings.set({});
-					}
-				}
-				setTextScale($settings?.textScale ?? 1);
 
 				// Set up the token expiry check
 				if (tokenTimer) {
@@ -1210,4 +1257,10 @@
 	richColors
 	position="top-right"
 	closeButton
+	toastOptions={{
+		classes: {
+			closeButton:
+				'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
+		}
+	}}
 />

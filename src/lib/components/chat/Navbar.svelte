@@ -43,6 +43,7 @@
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
+	export let readOnly: boolean = false;
 	export let shareEnabled: boolean = false;
 	export let scrollTop = 0;
 	export let scrollToTop: (() => void) | null = null;
@@ -122,7 +123,11 @@
 			"
 				>
 					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						<ModelSelector
+							bind:selectedModels
+							showSetDefault={!shareEnabled && !readOnly}
+							disabled={readOnly}
+						/>
 					{/if}
 				</div>
 
@@ -203,6 +208,7 @@
 						<Menu
 							{chat}
 							{shareEnabled}
+							{readOnly}
 							{scrollToTop}
 							shareHandler={() => {
 								showShareChatModal = !showShareChatModal;

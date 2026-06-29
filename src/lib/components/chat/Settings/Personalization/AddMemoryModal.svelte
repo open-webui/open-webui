@@ -2,7 +2,7 @@
 	import { createEventDispatcher, getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
+	import { addNewMemory } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -14,11 +14,12 @@
 
 	let loading = false;
 	let content = '';
+	let type = 'user';
 
 	const submitHandler = async () => {
 		loading = true;
 
-		const res = await addNewMemory(localStorage.token, content).catch((error) => {
+		const res = await addNewMemory(localStorage.token, content, type).catch((error) => {
 			toast.error(`${error}`);
 
 			return null;
@@ -28,6 +29,7 @@
 			console.log(res);
 			toast.success($i18n.t('Memory added successfully'));
 			content = '';
+			type = 'user';
 			show = false;
 			dispatch('save');
 		}
@@ -60,18 +62,34 @@
 						submitHandler();
 					}}
 				>
-					<div class="">
+					<div class="px-1">
+						<div class="flex w-full justify-between items-center mb-1.5">
+							<div class="text-xs text-gray-500">{$i18n.t('Type')}</div>
+
+							<button
+								type="button"
+								class="text-xs text-gray-700 dark:text-gray-300"
+								on:click={() => {
+									type = type === 'user' ? 'context' : 'user';
+								}}
+							>
+								{#if type === 'user'}
+									{$i18n.t('User')}
+								{:else}
+									{$i18n.t('Context')}
+								{/if}
+							</button>
+						</div>
+
 						<textarea
 							bind:value={content}
-							class=" bg-transparent w-full text-sm rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
+							class="bg-transparent w-full text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 							rows="6"
 							style="resize: vertical;"
-							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
+							placeholder={type === 'user'
+								? $i18n.t('Add a preference, fact, or instruction about you')
+								: $i18n.t('Add durable context for future chats')}
 						/>
-
-						<div class="text-xs text-gray-500">
-							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
-						</div>
 					</div>
 
 					<div class="flex justify-end pt-1 text-sm font-medium">

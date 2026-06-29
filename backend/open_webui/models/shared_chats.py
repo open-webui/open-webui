@@ -201,5 +201,15 @@ class SharedChatsTable:
         except Exception:
             return False
 
+    async def delete_all_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
+        """Delete all shared chats created by a user."""
+        try:
+            async with get_async_db_context(db) as db:
+                await db.execute(delete(SharedChat).filter_by(user_id=user_id))
+                await db.commit()
+                return True
+        except Exception:
+            return False
+
 
 SharedChats = SharedChatsTable()

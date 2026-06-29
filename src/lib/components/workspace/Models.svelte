@@ -147,7 +147,7 @@
 
 		const url = 'https://openwebui.com';
 
-		const tab = await window.open(`${url}/models/create`, '_blank');
+		const tab = await window.open(`${url}/post?type=model`, '_blank');
 
 		const messageHandler = (event) => {
 			if (event.origin !== url) return;

@@ -1,5 +1,8 @@
 <script>
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
+
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
@@ -12,7 +15,7 @@
 </script>
 
 {#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
-	{#each Object.keys(valvesSpec.properties) as property, idx}
+	{#each Object.keys(valvesSpec.properties) as property}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -213,8 +216,11 @@
 			{/if}
 
 			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
-					{valvesSpec.properties[property].description}
+				<div class="markdown-prose-xs max-w-full text-gray-500 dark:text-gray-400">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html DOMPurify.sanitize(
+						marked.parse(valvesSpec.properties[property].description ?? '', { async: false })
+					)}
 				</div>
 			{/if}
 		</div>

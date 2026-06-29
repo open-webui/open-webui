@@ -42,6 +42,7 @@ from open_webui.env import (
     REDIS_KEY_PREFIX,
 )
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
@@ -81,6 +82,7 @@ from open_webui.tools.builtin import (
     toggle_automation,
     update_automation,
     update_calendar_event,
+    update_memory,
     update_task,
     view_channel_message,
     view_channel_thread,
@@ -94,7 +96,7 @@ from open_webui.tools.builtin import (
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.misc import is_string_allowed
-from open_webui.utils.plugin import load_tool_module_by_id
+from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
 from pydantic import BaseModel, Field, create_model
 from pydantic.fields import FieldInfo
 
@@ -249,11 +251,13 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                 log.warning(f'Access denied to tool {tool_id} for user {user.id}')
                 continue
 
-            module = request.app.state.TOOLS.get(tool_id)
-            if module is None or request.app.state.TOOL_CONTENTS.get(tool_id) != tool.content:
+            tools_cache = get_tools_cache(request)
+            tool_contents_cache = get_tool_contents_cache(request)
+            module = tools_cache.get(tool_id)
+            if module is None or tool_contents_cache.get(tool_id) != tool.content:
                 module, _ = await load_tool_module_by_id(tool_id, content=tool.content)
-                request.app.state.TOOLS[tool_id] = module
-                request.app.state.TOOL_CONTENTS[tool_id] = tool.content
+                tools_cache[tool_id] = module
+                tool_contents_cache[tool_id] = tool.content
 
             __user__ = {
                 **extra_params['__user__'],
@@ -345,7 +349,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                         continue
 
                     tool_server_idx = tool_server_data.get('idx', 0)
-                    connections = request.app.state.config.TOOL_SERVER_CONNECTIONS
+                    connections = await Config.get('tool_server.connections', [])
                     if tool_server_idx >= len(connections):
                         log.warning(
                             f'Tool server index {tool_server_idx} out of range '
@@ -451,6 +455,16 @@ async def get_builtin_tools(
 
     # Helper to check user-level feature permission (admins always pass)
     user = extra_params.get('__user__', {})
+    config = await Config.get_many(
+        'rag.web.search.enable',
+        'image_generation.enable',
+        'images.edit.enable',
+        'code_interpreter.enable',
+        'notes.enable',
+        'channels.enable',
+        'automations.enable',
+        'calendar.enable',
+    )
 
     async def has_user_permission(feature_key: str) -> bool:
         if user.get('role') == 'admin':
@@ -458,7 +472,7 @@ async def get_builtin_tools(
         return await has_permission(
             user.get('id', ''),
             f'features.{feature_key}',
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
         )
 
     # Time utilities - available for date calculations
@@ -514,26 +528,28 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('chats'):
         builtin_functions.extend([search_chats, view_chat])
 
-    # Add memory tools if builtin category enabled AND enabled for this chat
+    # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
         is_builtin_tool_enabled('memory')
-        and (features.get('memory') or get_model_capability('memory', False))
+        and features.get('memory')
+        and get_model_capability('memory')
         and await has_user_permission('memories')
     ):
         builtin_functions.extend(
             [
                 search_memories,
+                list_memories,
+                update_memory,
                 add_memory,
                 replace_memory_content,
                 delete_memory,
-                list_memories,
             ]
         )
 
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (
         is_builtin_tool_enabled('web_search')
-        and getattr(request.app.state.config, 'ENABLE_WEB_SEARCH', False)
+        and config.get('rag.web.search.enable')
         and get_model_capability('web_search')
         and features.get('web_search')
         and await has_user_permission('web_search')
@@ -543,7 +559,7 @@ async def get_builtin_tools(
     # Add image generation/edit tools if builtin category enabled AND enabled globally AND model has image_generation capability
     if (
         is_builtin_tool_enabled('image_generation')
-        and getattr(request.app.state.config, 'ENABLE_IMAGE_GENERATION', False)
+        and config.get('image_generation.enable')
         and get_model_capability('image_generation')
         and features.get('image_generation')
         and await has_user_permission('image_generation')
@@ -551,7 +567,7 @@ async def get_builtin_tools(
         builtin_functions.append(generate_image)
     if (
         is_builtin_tool_enabled('image_generation')
-        and getattr(request.app.state.config, 'ENABLE_IMAGE_EDIT', False)
+        and config.get('images.edit.enable')
         and get_model_capability('image_generation')
         and features.get('image_generation')
         and await has_user_permission('image_generation')
@@ -561,7 +577,7 @@ async def get_builtin_tools(
     # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
     if (
         is_builtin_tool_enabled('code_interpreter')
-        and getattr(request.app.state.config, 'ENABLE_CODE_INTERPRETER', True)
+        and config.get('code_interpreter.enable')
         and get_model_capability('code_interpreter')
         and features.get('code_interpreter')
         and await has_user_permission('code_interpreter')
@@ -571,7 +587,7 @@ async def get_builtin_tools(
     # Notes tools - search, view, create, and update user's notes
     if (
         is_builtin_tool_enabled('notes')
-        and getattr(request.app.state.config, 'ENABLE_NOTES', False)
+        and config.get('notes.enable')
         and await has_user_permission('notes')
     ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
@@ -579,7 +595,7 @@ async def get_builtin_tools(
     # Channels tools - search channels and messages
     if (
         is_builtin_tool_enabled('channels')
-        and getattr(request.app.state.config, 'ENABLE_CHANNELS', False)
+        and config.get('channels.enable')
         and await has_user_permission('channels')
     ):
         builtin_functions.extend(
@@ -602,7 +618,7 @@ async def get_builtin_tools(
     # Automation tools - create and manage scheduled automations from chat
     if (
         is_builtin_tool_enabled('automations')
-        and getattr(request.app.state.config, 'ENABLE_AUTOMATIONS', False)
+        and config.get('automations.enable')
         and await has_user_permission('automations')
     ):
         builtin_functions.extend(
@@ -612,7 +628,7 @@ async def get_builtin_tools(
     # Calendar tools - search/create/update/delete events
     if (
         is_builtin_tool_enabled('calendar')
-        and getattr(request.app.state.config, 'ENABLE_CALENDAR', False)
+        and config.get('calendar.enable')
         and await has_user_permission('calendar')
     ):
         builtin_functions.extend(
@@ -958,7 +974,7 @@ def convert_openapi_to_tool_payload(openapi_spec):
 
 async def set_tool_servers(request: Request):
     try:
-        request.app.state.TOOL_SERVERS = await get_tool_servers_data(request.app.state.config.TOOL_SERVER_CONNECTIONS)
+        request.app.state.TOOL_SERVERS = await get_tool_servers_data(await Config.get('tool_server.connections', []))
     except Exception as e:
         log.error(f'Error fetching tool server data: {e}')
         request.app.state.TOOL_SERVERS = getattr(request.app.state, 'TOOL_SERVERS', None) or []
@@ -1055,7 +1071,7 @@ async def get_terminal_system_prompt(
 
 async def set_terminal_servers(request: Request):
     """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
 
     # Build server configs compatible with get_tool_servers_data
     # Terminal connections store id/name at top level; translate to info dict
@@ -1148,7 +1164,7 @@ async def get_terminal_tools(
     - Loads specs from cache
     - Builds callables that route through the terminal proxy
     """
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == terminal_id), None)
     if connection is None:
         log.warning(f'Terminal server not found: {terminal_id}')

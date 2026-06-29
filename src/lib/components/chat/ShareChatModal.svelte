@@ -104,7 +104,6 @@
 			} else {
 				chat = null;
 				accessGrants = [];
-				console.log(chat);
 			}
 		})();
 	}
@@ -159,6 +158,8 @@
 							bind:accessGrants
 							accessRoles={['read']}
 							sharePublic={$user?.permissions?.sharing?.public_chats || $user?.role === 'admin'}
+							shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) ||
+								$user?.role === 'admin'}
 							onChange={saveAccessGrants}
 						/>
 					</div>
