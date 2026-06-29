@@ -338,11 +338,22 @@ async def upload_file_handler(
             contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
         except OSError as e:
             if e.errno != errno.ENAMETOOLONG:
-                raise
+                log.exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e.strerror or 'Error uploading file'),
+                )
 
             file.file.seek(0)
             filename = f'{id}.{file_extension}' if file_extension else id
-            contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
+            try:
+                contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
+            except OSError as e:
+                log.exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e.strerror or 'Error uploading file'),
+                )
         max_size = await Config.get('rag.file.max_size')
         if max_size and len(contents) > int(max_size) * 1024 * 1024:
             await asyncio.to_thread(Storage.delete_file, file_path)
