@@ -31,6 +31,7 @@ from open_webui.utils.access_control import (
     has_permission,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import translate_exception
 from open_webui.utils.plugin import (
     get_tools_cache,
     get_tool_module_from_cache,
@@ -857,9 +858,10 @@ async def get_tools_user_valves_by_id(
         user_valves = await Tools.get_user_valves_by_id_and_user_id(id, user.id, db=db)
         return user_valves
     except Exception as e:
+        log.exception(f'Error getting tool user valves by id {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error getting tool user valves'),
         )
 
 

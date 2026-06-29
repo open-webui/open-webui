@@ -118,6 +118,7 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import translate_exception
 from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
@@ -181,8 +182,8 @@ def get_rf(
                 )
 
             except Exception as e:
-                log.error(f'ColBERT: {e}')
-                raise Exception(ERROR_MESSAGES.DEFAULT(e))
+                log.exception(f'ColBERT: {e}')
+                raise Exception(ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error loading reranking model'))
         else:
             if engine == 'external':
                 try:
@@ -195,8 +196,8 @@ def get_rf(
                         timeout=timeout_value,
                     )
                 except Exception as e:
-                    log.error(f'ExternalReranking: {e}')
-                    raise Exception(ERROR_MESSAGES.DEFAULT(e))
+                    log.exception(f'ExternalReranking: {e}')
+                    raise Exception(ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error loading reranking model'))
             else:
                 import sentence_transformers
                 import torch
@@ -605,7 +606,7 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         log.exception(f'Problem updating embedding model: {e}')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error updating embedding configuration'),
         )
 
 
@@ -1207,7 +1208,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         log.exception(f'Problem updating reranking model: {e}')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error updating reranking configuration'),
         )
 
     # Chunking settings
@@ -2654,7 +2655,10 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
             }
     except Exception as e:
         log.exception('Web search content loading failed')
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or ERROR_MESSAGES.WEB_SEARCH_ERROR()),
+        )
 
 
 async def _validate_collection_access(collection_names: list[str], user, access_type: str = 'read') -> None:
@@ -2732,7 +2736,7 @@ async def query_doc_handler(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error querying knowledge base'),
         )
 
 
@@ -2798,7 +2802,7 @@ async def query_collection_handler(
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error querying knowledge base'),
         )
 
 

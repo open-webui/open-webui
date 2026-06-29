@@ -22,6 +22,7 @@ from open_webui.models.functions import (
     FunctionWithValvesModel,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import translate_exception
 from open_webui.utils.plugin import (
     get_functions_cache,
     get_function_module_from_cache,
@@ -538,9 +539,10 @@ async def get_function_user_valves_by_id(
             user_valves = await Functions.get_user_valves_by_id_and_user_id(id, user.id, db=db)
             return user_valves
         except Exception as e:
+            log.exception(f'Error getting function user valves by id {id}: {e}')
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error getting function user valves'),
             )
     else:
         raise HTTPException(

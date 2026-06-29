@@ -8,6 +8,7 @@ from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
+from open_webui.utils.errors import translate_exception
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import (
     GroupForm,
@@ -83,11 +84,13 @@ async def create_new_group(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error creating group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error creating a new group: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error creating group'),
         )
 
 
@@ -162,11 +165,13 @@ async def get_users_in_group(id: str, user=Depends(get_admin_user), db: AsyncSes
     try:
         users = await Users.get_users_by_group_id(id, db=db)
         return users
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error adding users to group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error getting group members'),
         )
 
 
@@ -202,11 +207,13 @@ async def update_group_by_id(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error updating group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error updating group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error updating group'),
         )
 
 
@@ -245,11 +252,13 @@ async def add_user_to_group(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error adding users to group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error adding users to group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error adding users to group'),
         )
 
 
@@ -280,11 +289,13 @@ async def remove_users_from_group(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error removing users from group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error removing users from group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error removing users from group'),
         )
 
 
@@ -312,11 +323,13 @@ async def delete_group_by_id(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error deleting group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error deleting group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error deleting group'),
         )
 
 

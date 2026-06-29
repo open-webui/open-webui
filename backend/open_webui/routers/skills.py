@@ -6,6 +6,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
+from open_webui.utils.errors import translate_exception
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
@@ -209,11 +210,13 @@ async def create_new_skill(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error creating skill'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Failed to create skill: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error creating skill'),
         )
 
 
@@ -334,10 +337,13 @@ async def update_skill_by_id(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error updating skill'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
+        log.exception(f'Failed to update skill {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=ERROR_MESSAGES.DEFAULT(translate_exception(e) or 'Error updating skill'),
         )
 
 
