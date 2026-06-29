@@ -110,7 +110,7 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
-from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.payload import apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
 from open_webui.utils.sanitize import sanitize_code
@@ -2650,8 +2650,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if 'memory' in features and features['memory']:
             # Skip forced memory injection when native FC is enabled - model can use memory tools
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
-                form_data = await chat_memory_handler(request, form_data, extra_params, user)
+            form_data = await chat_memory_handler(request, form_data, user)
 
         if 'web_search' in features and features['web_search']:
             # Skip forced RAG web search when native FC is enabled - model can use web_search tool
@@ -3358,6 +3357,17 @@ async def background_tasks_handler(ctx):
                             )
                         except Exception as e:
                             pass
+
+        if messages:
+            await review_memory_after_turn(
+                request=request,
+                user=user,
+                model=ctx['model'],
+                metadata=metadata,
+                form_data=form_data,
+                assistant_message=ctx.get('assistant_message') or {},
+                messages=messages,
+            )
 
 
 async def outlet_filter_handler(ctx):
