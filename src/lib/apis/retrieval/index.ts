@@ -58,6 +58,7 @@ type RAGConfigForm = {
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
+	web?: Record<string, unknown>;
 	youtube?: YoutubeConfigForm;
 };
 

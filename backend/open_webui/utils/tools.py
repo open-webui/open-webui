@@ -476,7 +476,7 @@ async def get_builtin_tools(
     # Helper to check user-level feature permission (admins always pass)
     user = extra_params.get('__user__', {})
     config = await Config.get_many(
-        'rag.web.search.enable',
+        'web.search.enable',
         'image_generation.enable',
         'images.edit.enable',
         'code_interpreter.enable',
@@ -569,7 +569,7 @@ async def get_builtin_tools(
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (
         is_builtin_tool_enabled('web_search')
-        and config.get('rag.web.search.enable')
+        and config.get('web.search.enable')
         and get_model_capability('web_search')
         and features.get('web_search')
         and await has_user_permission('web_search')
