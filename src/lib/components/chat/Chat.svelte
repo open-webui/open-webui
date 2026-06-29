@@ -106,6 +106,7 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
+	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
@@ -139,6 +140,7 @@
 	let eventConfirmationInputPlaceholder = '';
 	let eventConfirmationInputValue = '';
 	let eventConfirmationInputType = '';
+	let eventConfirmationInputOptions: ({ label?: string; value: string } | string)[] = [];
 	let eventCallback = null;
 
 	let selectedModels = [''];
@@ -158,6 +160,49 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let webSearchActive = false;
+	let showWebSearchConfirm = false;
+	let pendingWebSearchPrompt: string | null = null;
+	let webSearchConfirmed = false;
+
+	$: {
+		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
+		const allModelsSupportWebSearch =
+			currentModels.filter(
+				(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+			).length === currentModels.length;
+
+		webSearchActive = Boolean(
+			$config?.features?.enable_web_search &&
+			($user?.role === 'admin' || $user?.permissions?.features?.web_search) &&
+			(webSearchEnabled ||
+				(allModelsSupportWebSearch && ($settings?.webSearch ?? false) === 'always'))
+		);
+	}
+
+	const openWebSearchConfirm = () => {
+		window.setTimeout(() => {
+			showWebSearchConfirm = true;
+		}, 0);
+	};
+
+	const handleWebSearchToggle = (enabled: boolean) => {
+		if (enabled && $config?.features?.enable_web_search_confirmation && !webSearchConfirmed) {
+			webSearchEnabled = false;
+			pendingWebSearchPrompt = null;
+			openWebSearchConfirm();
+		}
+	};
+
+	const resetWebSearchConfirmation = () => {
+		webSearchConfirmed = false;
+		pendingWebSearchPrompt = null;
+		showWebSearchConfirm = false;
+	};
+
+	$: if (!webSearchActive) {
+		resetWebSearchConfirmation();
+	}
 
 	let showCommands = false;
 
@@ -671,6 +716,7 @@
 
 					eventConfirmationInput = false;
 					showEventConfirmation = true;
+					eventConfirmationInputOptions = [];
 
 					eventConfirmationTitle = data.title;
 					eventConfirmationMessage = data.message;
@@ -698,7 +744,8 @@
 					eventConfirmationMessage = data.message;
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
-					eventConfirmationInputType = data?.type ?? '';
+					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
+					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
 				} else {
@@ -819,11 +866,25 @@
 		} catch {}
 	};
 
+	const handleSocketConnect = async () => {
+		if (!chatIdProp || $temporaryChatEnabled) {
+			return;
+		}
+
+		const currentMessage = history.currentId ? history.messages[history.currentId] : null;
+		if (currentMessage?.role !== 'assistant' || currentMessage.done) {
+			return;
+		}
+
+		await loadChat();
+	};
+
 	onMount(() => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
+		$socket?.on('connect', handleSocketConnect);
 
 		$audioQueue?.destroy();
 
@@ -940,6 +1001,7 @@
 				selectedFolderSubscribe();
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
+				$socket?.off('connect', handleSocketConnect);
 				dismissContextCompactionToast();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
@@ -1203,6 +1265,7 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
+		resetWebSearchConfirmation();
 
 		// Mark the outgoing chat as read before resetting; in-place created chats
 		// keep chatIdProp undefined, so navigateHandler never marks them read.
@@ -2080,6 +2143,16 @@
 			return;
 		}
 
+		if (
+			$config?.features?.enable_web_search_confirmation &&
+			webSearchActive &&
+			!webSearchConfirmed
+		) {
+			pendingWebSearchPrompt = userPrompt ?? '';
+			openWebSearchConfirm();
+			return;
+		}
+
 		// Check if the assistant is still generating the main response
 		// (don't block on background tasks like title gen, follow-ups, tags)
 		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
@@ -2278,23 +2351,8 @@
 					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
 						? codeInterpreterEnabled
 						: false,
-				web_search:
-					$config?.features?.enable_web_search &&
-					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-						? webSearchEnabled
-						: false
+				web_search: webSearchActive
 			};
-
-		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
-		if (
-			currentModels.filter(
-				(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
-			).length === currentModels.length
-		) {
-			if ($config?.features?.enable_web_search && ($settings?.webSearch ?? false) === 'always') {
-				features = { ...features, web_search: true };
-			}
-		}
 
 		if ($settings?.memory ?? $config?.features?.enable_memories ?? false) {
 			features = { ...features, memory: true };
@@ -2981,6 +3039,18 @@
 
 	let showDeleteConfirm = false;
 
+	const confirmWebSearch = async () => {
+		const userPrompt = pendingWebSearchPrompt;
+		pendingWebSearchPrompt = null;
+		webSearchConfirmed = true;
+
+		if (userPrompt !== null) {
+			await submitHandler(userPrompt);
+		} else {
+			webSearchEnabled = true;
+		}
+	};
+
 	const deleteChatHandler = async (id: string) => {
 		showDeleteConfirm = true;
 	};
@@ -3017,6 +3087,23 @@
 
 <audio id="audioElement" style="display: none;"></audio>
 
+<WebSearchConfirmDialog
+	bind:show={showWebSearchConfirm}
+	title={$i18n.t('Use Web Search?')}
+	message={($config?.features?.web_search_confirmation_content ?? '').trim() !== ''
+		? ($config?.features?.web_search_confirmation_content ?? '')
+		: $i18n.t('Your query will be sent to the configured web search provider.')}
+	confirmLabel={$i18n.t('Continue')}
+	cancelLabel={$i18n.t('Cancel')}
+	on:confirm={confirmWebSearch}
+	on:cancel={() => {
+		if (pendingWebSearchPrompt === null) {
+			webSearchEnabled = false;
+		}
+		pendingWebSearchPrompt = null;
+	}}
+/>
+
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete chat?')}
@@ -3037,8 +3124,11 @@
 	inputPlaceholder={eventConfirmationInputPlaceholder}
 	inputValue={eventConfirmationInputValue}
 	inputType={eventConfirmationInputType}
+	inputOptions={eventConfirmationInputOptions}
 	on:confirm={(e) => {
-		if (e.detail) {
+		if (eventConfirmationInput) {
+			eventCallback(e.detail);
+		} else if (e.detail) {
 			eventCallback(e.detail);
 		} else {
 			eventCallback(true);
@@ -3257,6 +3347,7 @@
 												saveDraft(data, $chatId);
 											}
 										}}
+										onWebSearchToggle={handleWebSearchToggle}
 										on:submit={async (e) => {
 											clearDraft($chatId);
 											if (e.detail || files.length > 0) {
@@ -3298,6 +3389,7 @@
 									{createMessagePair}
 									{onSelect}
 									{onUpload}
+									onWebSearchToggle={handleWebSearchToggle}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data);

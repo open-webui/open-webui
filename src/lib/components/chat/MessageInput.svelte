@@ -109,6 +109,7 @@
 
 	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
+	export let onWebSearchToggle: Function = () => {};
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
@@ -1763,6 +1764,7 @@
 											bind:webSearchEnabled
 											bind:imageGenerationEnabled
 											bind:codeInterpreterEnabled
+											{onWebSearchToggle}
 											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 											onShowValves={(e) => {
 												const { type, id } = e;

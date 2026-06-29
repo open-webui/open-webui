@@ -238,7 +238,7 @@ async def set_tool_servers_config(
 
         if auth_type in ('oauth_2.1', 'oauth_2.1_static'):
             # Remove existing OAuth clients for tool servers
-            server_id = connection.get('info', {}).get('id')
+            server_id = (connection.get('info') or {}).get('id')
             client_key = f'{server_type}:{server_id}'
 
             try:
@@ -255,7 +255,7 @@ async def set_tool_servers_config(
     for connection in connections:
         server_type = connection.get('type', 'openapi')
         if server_type == 'mcp':
-            server_id = connection.get('info', {}).get('id')
+            server_id = (connection.get('info') or {}).get('id')
             auth_type = connection.get('auth_type', 'none')
 
             if auth_type in ('oauth_2.1', 'oauth_2.1_static') and server_id:

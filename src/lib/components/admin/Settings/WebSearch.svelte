@@ -167,6 +167,31 @@
 						</div>
 					</div>
 
+					<div class="mb-2.5 flex w-full justify-between">
+						<div class="self-center text-xs font-medium">
+							{$i18n.t('Web Search Confirmation')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip content={$i18n.t('Require users to confirm before using Web Search.')}>
+								<Switch bind:state={webConfig.ENABLE_WEB_SEARCH_CONFIRMATION} />
+							</Tooltip>
+						</div>
+					</div>
+
+					{#if webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
+						<div class="mb-2.5">
+							<div class="self-center text-xs font-medium mb-2">
+								{$i18n.t('Web Search Confirmation Content')}
+							</div>
+							<Textarea
+								placeholder={$i18n.t(
+									'Your query will be sent to the configured web search provider.'
+								)}
+								bind:value={webConfig.WEB_SEARCH_CONFIRMATION_CONTENT}
+							/>
+						</div>
+					{/if}
+
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Web Search Engine')}
