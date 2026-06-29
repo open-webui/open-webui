@@ -372,53 +372,57 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
                 headers={'Content-Type': 'application/json'},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
-                if response.status == 401:
-                    resource_metadata_urls = []
-                    match = re.search(
-                        r'resource_metadata=(?:"([^"]+)"|([^\s,]+))',
-                        response.headers.get('WWW-Authenticate', ''),
-                    )
-                    if match:
-                        resource_metadata_urls = [match.group(1) or match.group(2)]
-                        log.debug(f'Found resource_metadata URL: {resource_metadata_urls[0]}')
-                    else:
-                        # Fall back to well-known resource metadata URIs (RFC 9728 §4.2)
-                        parsed, base_url = get_parsed_and_base_url(server_url)
-                        if parsed.path and parsed.path != '/':
-                            path = parsed.path.rstrip('/')
-                            resource_metadata_urls.append(
-                                urllib.parse.urljoin(base_url, f'/.well-known/oauth-protected-resource{path}')
-                            )
+                # Discover Protected Resource Metadata regardless of HTTP status.
+                # A 401 carries a WWW-Authenticate header pointing at the PRM, but
+                # some MCP servers (e.g. Google's gmail/drive/calendar remote MCPs)
+                # answer 200 to an anonymous `initialize`, so we must still fall
+                # back to the RFC 9728 well-known URIs when there is no 401/header.
+                resource_metadata_urls = []
+                match = re.search(
+                    r'resource_metadata=(?:"([^"]+)"|([^\s,]+))',
+                    response.headers.get('WWW-Authenticate', ''),
+                )
+                if match:
+                    resource_metadata_urls = [match.group(1) or match.group(2)]
+                    log.debug(f'Found resource_metadata URL: {resource_metadata_urls[0]}')
+                else:
+                    # Fall back to well-known resource metadata URIs (RFC 9728 §4.2)
+                    parsed, base_url = get_parsed_and_base_url(server_url)
+                    if parsed.path and parsed.path != '/':
+                        path = parsed.path.rstrip('/')
                         resource_metadata_urls.append(
-                            urllib.parse.urljoin(base_url, '/.well-known/oauth-protected-resource')
+                            urllib.parse.urljoin(base_url, f'/.well-known/oauth-protected-resource{path}')
                         )
-                        log.debug(f'No resource_metadata in header, trying well-known URIs: {resource_metadata_urls}')
+                    resource_metadata_urls.append(
+                        urllib.parse.urljoin(base_url, '/.well-known/oauth-protected-resource')
+                    )
+                    log.debug(f'No resource_metadata in header, trying well-known URIs: {resource_metadata_urls}')
 
-                    # Fetch Protected Resource metadata from candidate URLs
-                    for resource_metadata_url in resource_metadata_urls:
-                        try:
-                            async with session.get(
-                                resource_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                            ) as resource_response:
-                                if resource_response.status == 200:
-                                    resource_metadata = await resource_response.json()
+                # Fetch Protected Resource metadata from candidate URLs
+                for resource_metadata_url in resource_metadata_urls:
+                    try:
+                        async with session.get(
+                            resource_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                        ) as resource_response:
+                            if resource_response.status == 200:
+                                resource_metadata = await resource_response.json()
 
-                                    resource = resource_metadata.get('resource') or None
-                                    if resource:
-                                        log.debug(f'Discovered resource indicator: {resource}')
+                                resource = resource_metadata.get('resource') or None
+                                if resource:
+                                    log.debug(f'Discovered resource indicator: {resource}')
 
-                                    servers = resource_metadata.get('authorization_servers', [])
-                                    scopes = resource_metadata.get('scopes_supported', [])
-                                    if scopes:
-                                        log.debug(f'Discovered resource scopes: {scopes}')
+                                servers = resource_metadata.get('authorization_servers', [])
+                                scopes = resource_metadata.get('scopes_supported', [])
+                                if scopes:
+                                    log.debug(f'Discovered resource scopes: {scopes}')
 
-                                    if servers:
-                                        authorization_servers = servers
-                                        log.debug(f'Discovered authorization servers: {servers}')
-                                        break
-                        except Exception as e:
-                            log.debug(f'Failed to fetch resource metadata from {resource_metadata_url}: {e}')
-                            continue
+                                if servers:
+                                    authorization_servers = servers
+                                    log.debug(f'Discovered authorization servers: {servers}')
+                                    break
+                    except Exception as e:
+                        log.debug(f'Failed to fetch resource metadata from {resource_metadata_url}: {e}')
+                        continue
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
