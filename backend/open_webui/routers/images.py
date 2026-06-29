@@ -16,8 +16,10 @@ from urllib.parse import quote, urlparse
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
+from PIL import Image, ImageOps
 from open_webui.config import (
     CACHE_DIR,
+    ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION,
     IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN,
     IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
 )
@@ -52,6 +54,14 @@ IMAGE_CACHE_DIR = CACHE_DIR / 'image' / 'generations'
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter()
+
+IMAGE_FILE_EXTENSIONS = {
+    'image/jpeg': '.jpg',
+    'image/jpg': '.jpg',
+    'image/mpo': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+}
 
 IMAGE_CONFIG_KEYS = {
     'ENABLE_IMAGE_GENERATION': 'image_generation.enable',
@@ -102,6 +112,61 @@ async def get_image_config() -> SimpleNamespace:
 
 def config_updates(data: dict, key_map: dict[str, str]) -> dict:
     return {key_map[field]: value for field, value in data.items() if field in key_map}
+
+
+def normalize_openai_edit_image_data_url(data_url: str) -> str:
+    if not data_url.startswith('data:') or ',' not in data_url:
+        return data_url
+
+    header, encoded = data_url.split(',', 1)
+    mime_type = header.split(';')[0].lstrip('data:').lower()
+    if mime_type not in {'image/jpeg', 'image/jpg', 'image/mpo'}:
+        return data_url
+
+    try:
+        image_bytes = base64.b64decode(encoded)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            orientation = image.getexif().get(274)
+            needs_normalization = (
+                mime_type == 'image/mpo'
+                or image.format == 'MPO'
+                or getattr(image, 'n_frames', 1) > 1
+                or orientation not in (None, 1)
+                or image.mode not in ('RGB', 'L')
+            )
+
+            if not needs_normalization:
+                return data_url
+
+            image.seek(0)
+            image = ImageOps.exif_transpose(image)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            output = io.BytesIO()
+            image.save(output, format='JPEG', quality=95)
+            normalized_image = base64.b64encode(output.getvalue()).decode('utf-8')
+            return f'data:image/jpeg;base64,{normalized_image}'
+    except Exception as e:
+        log.debug(f'Image edit normalization skipped: {e}')
+
+    return data_url
+
+
+def get_image_file_item(base64_string, param_name='image', normalize=False):
+    data = normalize_openai_edit_image_data_url(base64_string) if normalize else base64_string
+    header, encoded = data.split(',', 1)
+    mime_type = header.split(';')[0].lstrip('data:') or 'image/png'
+    image_data = base64.b64decode(encoded)
+    extension = IMAGE_FILE_EXTENSIONS.get(mime_type.lower()) or mimetypes.guess_extension(mime_type) or '.png'
+    return (
+        param_name,
+        (
+            f'{uuid.uuid4()}{extension}',
+            io.BytesIO(image_data),
+            mime_type,
+        ),
+    )
 
 
 async def set_image_model(request: Request, model: str):
@@ -915,20 +980,6 @@ async def image_edits(
             detail=ERROR_MESSAGES.DEFAULT(e, 'Error loading image'),
         )
 
-    def get_image_file_item(base64_string, param_name='image'):
-        data = base64_string
-        header, encoded = data.split(',', 1)
-        mime_type = header.split(';')[0].lstrip('data:')
-        image_data = base64.b64decode(encoded)
-        return (
-            param_name,
-            (
-                f'{uuid.uuid4()}.png',
-                io.BytesIO(image_data),
-                mime_type if mime_type else 'image/png',
-            ),
-        )
-
     try:
         if image_config.IMAGE_EDIT_ENGINE == 'openai':
             headers = {
@@ -956,10 +1007,21 @@ async def image_edits(
 
             files = []
             if isinstance(form_data.image, str):
-                files = [get_image_file_item(form_data.image)]
+                files = [
+                    get_image_file_item(
+                        form_data.image,
+                        normalize=ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION,
+                    )
+                ]
             elif isinstance(form_data.image, list):
                 for img in form_data.image:
-                    files.append(get_image_file_item(img, 'image[]'))
+                    files.append(
+                        get_image_file_item(
+                            img,
+                            'image[]',
+                            normalize=ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION,
+                        )
+                    )
 
             url_search_params = ''
             if image_config.IMAGES_EDIT_OPENAI_API_VERSION:
