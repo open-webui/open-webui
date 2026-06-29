@@ -28,6 +28,16 @@
 		if (pinnedNotesList && !$mobile) {
 			new Sortable(pinnedNotesList, {
 				animation: 150,
+				setData: function (dataTransfer, dragEl) {
+					dataTransfer.setData(
+						'text/plain',
+						JSON.stringify({
+							type: 'note',
+							id: dragEl.dataset.id
+						})
+					);
+					dataTransfer.setData('application/x-open-webui-drag', '');
+				},
 				onUpdate: async (event) => {
 					const noteId = event.item.dataset.id;
 					const newIndex = event.newIndex;
@@ -54,16 +64,6 @@
 		<div
 			class="flex items-center text-gray-800 dark:text-gray-200 cursor-grab relative group rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 			data-id={note.id}
-			draggable="true"
-			on:dragstart={(e) => {
-				e.dataTransfer.setData(
-					'text/plain',
-					JSON.stringify({
-						type: 'note',
-						id: note.id
-					})
-				);
-			}}
 		>
 			<a
 				class="grow flex items-center gap-2.5 text-sm"
