@@ -1443,10 +1443,13 @@ async def download_file_stream(
 
             if done:
                 f.close()
-                hashed = calculate_sha256(file_path, chunk_size)
+                hashed = await asyncio.to_thread(calculate_sha256, file_path, chunk_size)
 
-                with open(file_path, 'rb') as blob_f:
-                    blob_data = blob_f.read()
+                def _read_blob():
+                    with open(file_path, 'rb') as blob_f:
+                        return blob_f.read()
+
+                blob_data = await asyncio.to_thread(_read_blob)
 
                 blob_url = f'{ollama_url}/api/blobs/sha256:{hashed}'
                 async with session.post(
@@ -1507,12 +1510,16 @@ async def upload_model(
 
     # Stage 1: persist the uploaded file to disk
     chunk_size = 1024 * 1024 * 2  # 2 MiB
-    with open(file_path, 'wb') as out_f:
-        while True:
-            chunk = file.file.read(chunk_size)
-            if not chunk:
-                break
-            out_f.write(chunk)
+
+    def _persist_upload():
+        with open(file_path, 'wb') as out_f:
+            while True:
+                chunk = file.file.read(chunk_size)
+                if not chunk:
+                    break
+                out_f.write(chunk)
+
+    await asyncio.to_thread(_persist_upload)
 
     async def file_process_stream():
         nonlocal ollama_url
@@ -1520,7 +1527,7 @@ async def upload_model(
         log.info(f'Total Model Size: {total_size}')
 
         # Stage 2: hash the file and emit SSE progress
-        file_hash = calculate_sha256(file_path, chunk_size)
+        file_hash = await asyncio.to_thread(calculate_sha256, file_path, chunk_size)
         log.info(f'Model Hash: {file_hash}')
 
         try:
@@ -1532,8 +1539,11 @@ async def upload_model(
                     yield f'data: {json.dumps({"progress": progress, "total": total_size, "completed": bytes_read})}\n\n'
 
             # Stage 3: push blob to Ollama
-            with open(file_path, 'rb') as f:
-                blob_data = f.read()
+            def _read_blob():
+                with open(file_path, 'rb') as f:
+                    return f.read()
+
+            blob_data = await asyncio.to_thread(_read_blob)
 
             session = await get_session()
             blob_url = f'{ollama_url}/api/blobs/sha256:{file_hash}'
