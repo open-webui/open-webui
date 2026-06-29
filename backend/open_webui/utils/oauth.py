@@ -672,7 +672,7 @@ def resolve_oauth_client_info(connection: dict) -> dict:
     For oauth_2.1_static, overlays admin-provided credentials from
     info.oauth_client_id and info.oauth_client_secret onto the blob.
     """
-    info = connection.get('info', {})
+    info = connection.get('info') or {}
     data = decrypt_data(info.get('oauth_client_info', ''))
 
     if connection.get('auth_type') == 'oauth_2.1_static':
@@ -838,7 +838,7 @@ class OAuthClientManager:
             if connection.get('auth_type', 'none') not in ('oauth_2.1', 'oauth_2.1_static'):
                 continue
 
-            server_id = connection.get('info', {}).get('id')
+            server_id = (connection.get('info') or {}).get('id')
             if not server_id:
                 continue
 
@@ -846,7 +846,7 @@ class OAuthClientManager:
             if client_id != expected_client_id:
                 continue
 
-            oauth_client_info = connection.get('info', {}).get('oauth_client_info', '')
+            oauth_client_info = (connection.get('info') or {}).get('oauth_client_info', '')
             if not oauth_client_info:
                 continue
 

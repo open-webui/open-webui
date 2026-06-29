@@ -122,12 +122,13 @@ async def get_tools(
 
     # MCP Tool Servers
     for server in await Config.get('tool_server.connections', []):
-        if server.get('type', 'openapi') == 'mcp' and server.get('config', {}).get('enable'):
-            server_id = server.get('info', {}).get('id')
+        if server.get('type', 'openapi') == 'mcp' and (server.get('config') or {}).get('enable'):
+            info = server.get('info') or {}
+            server_id = info.get('id')
             auth_type = server.get('auth_type', 'none')
 
             session_token = None
-            if auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+            if auth_type in ('oauth_2.1', 'oauth_2.1_static') and server_id:
                 splits = server_id.split(':')
                 server_id = splits[-1] if len(splits) > 1 else server_id
 
@@ -135,9 +136,9 @@ async def get_tools(
                     user.id, f'mcp:{server_id}'
                 )
 
-            server_config = server.get('config', {})
+            server_config = server.get('config') or {}
 
-            tool_id = f'server:mcp:{server.get("info", {}).get("id")}'
+            tool_id = f'server:mcp:{info.get("id")}'
             server_access_grants[tool_id] = server_config.get('access_grants', [])
 
             tools.append(
@@ -145,9 +146,9 @@ async def get_tools(
                     **{
                         'id': tool_id,
                         'user_id': tool_id,
-                        'name': server.get('info', {}).get('name', 'MCP Tool Server'),
+                        'name': info.get('name', 'MCP Tool Server'),
                         'meta': {
-                            'description': server.get('info', {}).get('description', ''),
+                            'description': info.get('description', ''),
                         },
                         'updated_at': int(time.time()),
                         'created_at': int(time.time()),
