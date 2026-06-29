@@ -111,6 +111,7 @@
 		});
 
 		if (res) {
+			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			init();
 		}
 	};

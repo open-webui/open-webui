@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getBackendConfig, getVersionUpdates } from '$lib/apis';
 	import { getAdminConfig, updateAdminConfig } from '$lib/apis/auths';
 	import { getBanners, setBanners } from '$lib/apis/configs';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -15,6 +15,7 @@
 	import { toast } from 'svelte-sonner';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Banners from './Interface/Banners.svelte';
+	import Events from './Events.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -27,7 +28,6 @@
 	};
 
 	let adminConfig = null;
-	let webhookUrl = '';
 
 	let banners: Banner[] = [];
 
@@ -51,7 +51,6 @@
 	};
 
 	const updateHandler = async () => {
-		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
 
 		await updateBanners();
@@ -66,15 +65,7 @@
 	};
 
 	onMount(async () => {
-		await Promise.all([
-			(async () => {
-				adminConfig = await getAdminConfig(localStorage.token);
-			})(),
-
-			(async () => {
-				webhookUrl = await getWebhookUrl(localStorage.token);
-			})()
-		]);
+		adminConfig = await getAdminConfig(localStorage.token);
 
 		banners = [...$_banners];
 	});
@@ -300,7 +291,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Memories')} ({$i18n.t('Beta')})
+							{$i18n.t('Memories')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
@@ -308,7 +299,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Notes')} ({$i18n.t('Beta')})
+							{$i18n.t('Notes')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_NOTES} />
@@ -316,7 +307,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Channels')} ({$i18n.t('Beta')})
+							{$i18n.t('Channels')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
@@ -385,21 +376,9 @@
 						</div>
 					</div>
 
-					<div class=" w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Webhook URL')}</div>
-						</div>
-
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={`https://example.com/webhook`}
-								bind:value={webhookUrl}
-							/>
-						</div>
-					</div>
 				</div>
+
+				<Events />
 
 				<div class="mb-3.5">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>

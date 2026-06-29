@@ -56,6 +56,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
 )
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
 from open_webui.models.files import FileModel, Files, FileUpdateForm
 from open_webui.models.knowledge import Knowledges
@@ -94,6 +95,7 @@ from open_webui.retrieval.web.kagi import search_kagi
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.microsoft_web_iq import search_microsoft_web_iq
 from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity import search_perplexity
@@ -102,6 +104,7 @@ from open_webui.retrieval.web.searchapi import search_searchapi
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.serper import search_serper
+from open_webui.retrieval.web.serphouse import search_serphouse
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.sougou import search_sougou
@@ -288,6 +291,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'ENABLE_WEB_SEARCH': 'rag.web.search.enable',
     'EXA_API_KEY': 'rag.web.search.exa_api_key',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
+    'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
     'EXTERNAL_WEB_LOADER_API_KEY': 'rag.web.loader.external_web_loader_api_key',
     'EXTERNAL_WEB_LOADER_URL': 'rag.web.loader.external_web_loader_url',
@@ -314,6 +318,9 @@ RETRIEVAL_CONFIG_KEYS = {
     'MINERU_API_URL': 'rag.mineru_api_url',
     'MINERU_FILE_EXTENSIONS': 'rag.mineru_file_extensions',
     'MINERU_PARAMS': 'rag.mineru_params',
+    'MICROSOFT_WEB_IQ_API_BASE_URL': 'rag.web.search.microsoft_web_iq_api_base_url',
+    'MICROSOFT_WEB_IQ_API_KEY': 'rag.web.search.microsoft_web_iq_api_key',
+    'MICROSOFT_WEB_IQ_LANGUAGE': 'rag.web.search.microsoft_web_iq_language',
     'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
     'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
     'MOJEEK_SEARCH_API_KEY': 'rag.web.search.mojeek_search_api_key',
@@ -355,6 +362,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'SERPAPI_API_KEY': 'rag.web.search.serpapi_api_key',
     'SERPAPI_ENGINE': 'rag.web.search.serpapi_engine',
     'SERPER_API_KEY': 'rag.web.search.serper_api_key',
+    'SERPHOUSE_API_KEY': 'rag.web.search.serphouse_api_key',
+    'SERPHOUSE_DOMAIN': 'rag.web.search.serphouse_domain',
     'SERPLY_API_KEY': 'rag.web.search.serply_api_key',
     'SERPSTACK_API_KEY': 'rag.web.search.serpstack_api_key',
     'SERPSTACK_HTTPS': 'rag.web.search.serpstack_https',
@@ -632,6 +641,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'DATALAB_MARKER_OUTPUT_FORMAT': config.DATALAB_MARKER_OUTPUT_FORMAT,
         'EXTERNAL_DOCUMENT_LOADER_URL': config.EXTERNAL_DOCUMENT_LOADER_URL,
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+        'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
@@ -700,6 +710,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPSTACK_API_KEY': config.SERPSTACK_API_KEY,
             'SERPSTACK_HTTPS': config.SERPSTACK_HTTPS,
             'SERPER_API_KEY': config.SERPER_API_KEY,
+            'SERPHOUSE_API_KEY': config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'DDGS_BACKEND': config.DDGS_BACKEND,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
@@ -716,6 +728,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
             'PERPLEXITY_SEARCH_API_URL': config.PERPLEXITY_SEARCH_API_URL,
+            'MICROSOFT_WEB_IQ_API_BASE_URL': config.MICROSOFT_WEB_IQ_API_BASE_URL,
+            'MICROSOFT_WEB_IQ_API_KEY': config.MICROSOFT_WEB_IQ_API_KEY,
+            'MICROSOFT_WEB_IQ_LANGUAGE': config.MICROSOFT_WEB_IQ_LANGUAGE,
             'SOUGOU_API_SID': config.SOUGOU_API_SID,
             'SOUGOU_API_SK': config.SOUGOU_API_SK,
             'WEB_LOADER_ENGINE': config.WEB_LOADER_ENGINE,
@@ -771,6 +786,8 @@ class WebConfig(BaseModel):
     SERPSTACK_API_KEY: str | None = None
     SERPSTACK_HTTPS: bool | None = None
     SERPER_API_KEY: str | None = None
+    SERPHOUSE_API_KEY: str | None = None
+    SERPHOUSE_DOMAIN: str | None = None
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
     TAVILY_API_KEY: str | None = None
@@ -787,6 +804,9 @@ class WebConfig(BaseModel):
     PERPLEXITY_MODEL: str | None = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: str | None = None
     PERPLEXITY_SEARCH_API_URL: str | None = None
+    MICROSOFT_WEB_IQ_API_BASE_URL: str | None = None
+    MICROSOFT_WEB_IQ_API_KEY: str | None = None
+    MICROSOFT_WEB_IQ_LANGUAGE: str | None = None
     SOUGOU_API_SID: str | None = None
     SOUGOU_API_SK: str | None = None
     WEB_LOADER_ENGINE: str | None = None
@@ -846,6 +866,7 @@ class ConfigForm(BaseModel):
 
     EXTERNAL_DOCUMENT_LOADER_URL: str | None = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: str | None = None
+    EXTERNAL_DOCUMENT_LOADER_HEADERS: dict | None = None
 
     TIKA_SERVER_URL: str | None = None
     DOCLING_SERVER_URL: str | None = None
@@ -863,7 +884,7 @@ class ConfigForm(BaseModel):
     MINERU_API_MODE: str | None = None
     MINERU_API_URL: str | None = None
     MINERU_API_KEY: str | None = None
-    MINERU_API_TIMEOUT: str | None = None
+    MINERU_API_TIMEOUT: int | None = None
     MINERU_PARAMS: dict | None = None
     MINERU_FILE_EXTENSIONS: list[str] | None = None
 
@@ -1020,6 +1041,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY
         if form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY is not None
         else config.EXTERNAL_DOCUMENT_LOADER_API_KEY
+    )
+    config.EXTERNAL_DOCUMENT_LOADER_HEADERS = (
+        form_data.EXTERNAL_DOCUMENT_LOADER_HEADERS
+        if form_data.EXTERNAL_DOCUMENT_LOADER_HEADERS is not None
+        else config.EXTERNAL_DOCUMENT_LOADER_HEADERS
     )
     config.TIKA_SERVER_URL = (
         form_data.TIKA_SERVER_URL if form_data.TIKA_SERVER_URL is not None else config.TIKA_SERVER_URL
@@ -1264,6 +1290,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.SERPSTACK_API_KEY = form_data.web.SERPSTACK_API_KEY
         config.SERPSTACK_HTTPS = form_data.web.SERPSTACK_HTTPS
         config.SERPER_API_KEY = form_data.web.SERPER_API_KEY
+        config.SERPHOUSE_API_KEY = form_data.web.SERPHOUSE_API_KEY
+        config.SERPHOUSE_DOMAIN = form_data.web.SERPHOUSE_DOMAIN
         config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
         config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
@@ -1280,6 +1308,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
         config.PERPLEXITY_SEARCH_CONTEXT_USAGE = form_data.web.PERPLEXITY_SEARCH_CONTEXT_USAGE
         config.PERPLEXITY_SEARCH_API_URL = form_data.web.PERPLEXITY_SEARCH_API_URL
+        config.MICROSOFT_WEB_IQ_API_BASE_URL = form_data.web.MICROSOFT_WEB_IQ_API_BASE_URL
+        config.MICROSOFT_WEB_IQ_API_KEY = form_data.web.MICROSOFT_WEB_IQ_API_KEY
+        config.MICROSOFT_WEB_IQ_LANGUAGE = form_data.web.MICROSOFT_WEB_IQ_LANGUAGE
         config.SOUGOU_API_SID = form_data.web.SOUGOU_API_SID
         config.SOUGOU_API_SK = form_data.web.SOUGOU_API_SK
 
@@ -1307,6 +1338,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.YOUCOM_API_KEY = form_data.web.YOUCOM_API_KEY
         config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
         config.LINKUP_SEARCH_PARAMS = form_data.web.LINKUP_SEARCH_PARAMS
+
+    await config.save()
 
     return {
         'status': True,
@@ -1336,6 +1369,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'DATALAB_MARKER_OUTPUT_FORMAT': config.DATALAB_MARKER_OUTPUT_FORMAT,
         'EXTERNAL_DOCUMENT_LOADER_URL': config.EXTERNAL_DOCUMENT_LOADER_URL,
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+        'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
@@ -1402,6 +1436,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SERPSTACK_API_KEY': config.SERPSTACK_API_KEY,
             'SERPSTACK_HTTPS': config.SERPSTACK_HTTPS,
             'SERPER_API_KEY': config.SERPER_API_KEY,
+            'SERPHOUSE_API_KEY': config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
@@ -1417,6 +1453,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'PERPLEXITY_MODEL': config.PERPLEXITY_MODEL,
             'PERPLEXITY_SEARCH_CONTEXT_USAGE': config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
             'PERPLEXITY_SEARCH_API_URL': config.PERPLEXITY_SEARCH_API_URL,
+            'MICROSOFT_WEB_IQ_API_BASE_URL': config.MICROSOFT_WEB_IQ_API_BASE_URL,
+            'MICROSOFT_WEB_IQ_API_KEY': config.MICROSOFT_WEB_IQ_API_KEY,
+            'MICROSOFT_WEB_IQ_LANGUAGE': config.MICROSOFT_WEB_IQ_LANGUAGE,
             'SOUGOU_API_SID': config.SOUGOU_API_SID,
             'SOUGOU_API_SK': config.SOUGOU_API_SK,
             'WEB_LOADER_ENGINE': config.WEB_LOADER_ENGINE,
@@ -1843,6 +1882,11 @@ async def process_file(
                     loader_config = await get_loader_config()
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
+                    loader.metadata = {
+                        'file_id': file.id,
+                        'file_name': file.filename,
+                        'file_content_type': file.meta.get('content_type'),
+                    }
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
@@ -1884,6 +1928,13 @@ async def process_file(
             if config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
+                await publish_event(
+                    request,
+                    EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+                    actor=user,
+                    subject_id=file.id, subject_type='file',
+                    data={'collection_name': None, 'filename': file.filename},
+                )
                 return {
                     'status': True,
                     'collection_name': None,
@@ -1936,6 +1987,13 @@ async def process_file(
                             )
                             await Files.update_file_hash_by_id(file.id, hash, db=session)
 
+                            await publish_event(
+                                request,
+                                EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+                                actor=user,
+                                subject_id=file.id, subject_type='file',
+                                data={'collection_name': collection_name, 'filename': file.filename},
+                            )
                             return {
                                 'status': True,
                                 'collection_name': collection_name,
@@ -2004,6 +2062,13 @@ async def process_text(
     config = await get_retrieval_config()
     result = await run_in_threadpool(save_docs_to_vector_db, request, docs, collection_name, config, user=user)
     if result:
+        await publish_event(
+            request,
+            EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+            actor=user,
+            subject_id=collection_name, subject_type='retrieval.collection',
+            data={'name': form_data.name, 'content_preview': text_content[:300]},
+        )
         return {
             'status': True,
             'collection_name': collection_name,
@@ -2027,7 +2092,7 @@ async def process_web(
 ):
     config = await get_retrieval_config()
     try:
-        content, docs = await run_in_threadpool(get_content_from_url, request, form_data.url)
+        content, docs = await get_content_from_url(request, form_data.url)
         log.debug(f'text_content: {content}')
 
         if process:
@@ -2223,6 +2288,17 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No SERPER_API_KEY found in environment variables')
+    elif engine == 'serphouse':
+        if config.SERPHOUSE_API_KEY:
+            return await search_serphouse(
+                config.SERPHOUSE_API_KEY,
+                config.SERPHOUSE_DOMAIN,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No SERPHOUSE_API_KEY found in environment variables')
     elif engine == 'serply':
         if config.SERPLY_API_KEY:
             return await asyncio.to_thread(
@@ -2336,6 +2412,20 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             model=config.PERPLEXITY_MODEL,
             search_context_usage=config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
         )
+    elif engine == 'microsoft_web_iq':
+        if config.MICROSOFT_WEB_IQ_API_KEY:
+            return await asyncio.to_thread(
+                search_microsoft_web_iq,
+                config.MICROSOFT_WEB_IQ_API_BASE_URL,
+                config.MICROSOFT_WEB_IQ_API_KEY,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                config.MICROSOFT_WEB_IQ_LANGUAGE,
+                user,
+            )
+        else:
+            raise Exception('No MICROSOFT_WEB_IQ_API_KEY found in environment variables')
     elif engine == 'sougou':
         if config.SOUGOU_API_SID and config.SOUGOU_API_SK:
             return await asyncio.to_thread(
@@ -2580,6 +2670,7 @@ class QueryDocForm(BaseModel):
     k_reranker: int | None = None
     r: float | None = None
     hybrid: bool | None = None
+    hybrid_bm25_weight: float | None = None
 
 
 @router.post('/query/doc')
@@ -2593,13 +2684,9 @@ async def query_doc_handler(
 
     try:
         if config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
-            collection_results = {}
-            collection_results[form_data.collection_name] = await ASYNC_VECTOR_DB_CLIENT.get(
-                collection_name=form_data.collection_name
-            )
             return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
-                collection_result=collection_results[form_data.collection_name],
+                collection_result=None,
                 query=form_data.query,
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
@@ -2614,10 +2701,9 @@ async def query_doc_handler(
                 r=(form_data.r if form_data.r else config.RELEVANCE_THRESHOLD),
                 hybrid_bm25_weight=(
                     form_data.hybrid_bm25_weight
-                    if form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight is not None
                     else config.HYBRID_BM25_WEIGHT
                 ),
-                user=user,
             )
         else:
             query_embedding = await request.app.state.EMBEDDING_FUNCTION(
@@ -2678,7 +2764,7 @@ async def query_collection_handler(
                 r=(form_data.r if form_data.r else config.RELEVANCE_THRESHOLD),
                 hybrid_bm25_weight=(
                     form_data.hybrid_bm25_weight
-                    if form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight is not None
                     else config.HYBRID_BM25_WEIGHT
                 ),
                 enable_enriched_texts=(
@@ -2720,6 +2806,7 @@ class DeleteForm(BaseModel):
 
 @router.post('/delete')
 async def delete_entries_from_collection(
+    request: Request,
     form_data: DeleteForm,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -2758,6 +2845,13 @@ async def delete_entries_from_collection(
                 collection_name=form_data.collection_name,
                 filter={'hash': hash},
             )
+            await publish_event(
+                request,
+                EVENTS.RETRIEVAL_COLLECTION_DELETED,
+                actor=user,
+                subject_id=form_data.collection_name,
+                data={'file_id': form_data.file_id},
+            )
             return {'status': True}
         else:
             return {'status': False}
@@ -2771,13 +2865,23 @@ async def delete_entries_from_collection(
 
 
 @router.post('/reset/db')
-async def reset_vector_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def reset_vector_db(
+    request: Request,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     await ASYNC_VECTOR_DB_CLIENT.reset()
     await Knowledges.delete_all_knowledge(db=db)
+    await publish_event(
+        request,
+        EVENTS.RETRIEVAL_VECTOR_DB_RESET,
+        actor=user,
+        subject_id='default',
+    )
 
 
 @router.post('/reset/uploads')
-async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
+async def reset_upload_dir(request: Request, user=Depends(get_admin_user)) -> bool:
     folder = f'{UPLOAD_DIR}'
     try:
         # Check if the directory exists
@@ -2796,6 +2900,12 @@ async def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
             log.warning(f'The directory {folder} does not exist')
     except Exception as e:
         log.exception(f'Failed to process the directory {folder}. Reason: {e}')
+    await publish_event(
+        request,
+        EVENTS.RETRIEVAL_UPLOADS_RESET,
+        actor=user,
+        subject_id='all', subject_type='file.uploads',
+    )
     return True
 
 
@@ -2926,4 +3036,15 @@ async def process_files_batch(
                 file_result.status = 'failed'
                 file_errors.append(BatchProcessFilesResult(file_id=file_result.file_id, status='failed', error=str(e)))
 
-    return BatchProcessFilesResponse(results=file_results, errors=file_errors)
+    response = BatchProcessFilesResponse(results=file_results, errors=file_errors)
+    await publish_event(
+        request,
+        EVENTS.RETRIEVAL_CONTENT_PROCESSED,
+        actor=user,
+        subject_id=collection_name, subject_type='retrieval.collection',
+        data={
+            'count': len([item for item in file_results if item.status == 'completed']),
+            'errors': len(file_errors),
+        },
+    )
+    return response

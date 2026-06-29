@@ -164,6 +164,7 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
+	let contextCompactionToastId = null;
 
 	let chat = null;
 	let tags = [];
@@ -498,6 +499,43 @@
 		}
 	};
 
+	const dismissContextCompactionToast = () => {
+		if (contextCompactionToastId !== null) {
+			toast.dismiss(contextCompactionToastId);
+			contextCompactionToastId = null;
+		}
+	};
+
+	const handleContextCompactionStatus = (status) => {
+		if (status?.action !== 'context_compaction') {
+			return;
+		}
+
+		if (status?.done) {
+			if (contextCompactionToastId !== null) {
+				if (status?.error) {
+					toast.error($i18n.t('Context compaction failed'), {
+						id: contextCompactionToastId,
+						duration: 3000
+					});
+				} else {
+					toast.success($i18n.t('Context compacted'), {
+						id: contextCompactionToastId,
+						duration: 1800
+					});
+				}
+				contextCompactionToastId = null;
+			}
+			return;
+		}
+
+		if (contextCompactionToastId === null) {
+			contextCompactionToastId = toast.loading($i18n.t('Compacting context'), {
+				duration: Infinity
+			});
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
@@ -515,9 +553,16 @@
 					} else {
 						message.statusHistory = [data];
 					}
+				} else if (type === 'context_compaction') {
+					handleContextCompactionStatus(data);
+				} else if (type === 'chat:active') {
+					if (!data?.active) {
+						taskIds = null;
+					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
+					dismissContextCompactionToast();
 					if (event.message_id === history.currentId) {
 						taskIds = null;
 						// Set all response messages to done
@@ -895,6 +940,7 @@
 				selectedFolderSubscribe();
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
+				dismissContextCompactionToast();
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
 			} catch (e) {
@@ -1157,6 +1203,13 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
+
+		// Mark the outgoing chat as read before resetting; in-place created chats
+		// keep chatIdProp undefined, so navigateHandler never marks them read.
+		if ($chatId && !$temporaryChatEnabled) {
+			updateLastReadAt($chatId);
+		}
+
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
@@ -1435,8 +1488,8 @@
 
 				chatTitle.set(chatContent.title);
 
-				params = chatContent?.params ?? {};
-				chatFiles = chatContent?.files ?? [];
+				params = structuredClone(chatContent?.params ?? {});
+				chatFiles = structuredClone(chatContent?.files ?? []);
 
 				// Load tasks from chat-level DB field
 				chatTasks = chat?.tasks ?? [];
@@ -1565,7 +1618,6 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
-		taskIds = null;
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -2535,10 +2587,8 @@
 			} else {
 				// Backend returns task_ids (multi-model) or task_id (single model)
 				const newTaskIds = res.task_ids ?? (res.task_id ? [res.task_id] : []);
-				if (taskIds) {
-					taskIds.push(...newTaskIds);
-				} else {
-					taskIds = newTaskIds;
+				if (newTaskIds.length > 0) {
+					taskIds = [...(taskIds ?? []), ...newTaskIds];
 				}
 
 				// Backend returns chat_id for new chats — set store + URL.
@@ -3135,96 +3185,94 @@
 							</div>
 
 							{#if readOnly}
-							<div class="pb-6 z-10">
-								<div
-									class="text-xs text-gray-400 dark:text-gray-500 text-center"
-								>
-									{$i18n.t('Read only')}
+								<div class="pb-6 z-10">
+									<div class="text-xs text-gray-400 dark:text-gray-500 text-center">
+										{$i18n.t('Read only')}
+									</div>
 								</div>
-							</div>
-						{:else}
-						<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
-								<MessageInput
-									bind:this={messageInput}
-									{history}
-									{taskIds}
-									{selectedModels}
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedSkillIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
-									{pendingOAuthTools}
-									bind:webSearchEnabled
-									bind:atSelectedModel
-									bind:showCommands
-									bind:dragged
-									toolServers={$toolServers}
-									{generating}
-									{stopResponse}
-									{createMessagePair}
-									{onUpload}
-									messageQueue={$chatRequestQueues[$chatId] ?? []}
-									{chatTasks}
-									onQueueSendNow={async (id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										const item = queue.find((m) => m.id === id);
-										if (item) {
-											// Remove from queue
+							{:else}
+								<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+									<MessageInput
+										bind:this={messageInput}
+										{history}
+										{taskIds}
+										{selectedModels}
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:selectedSkillIds
+										bind:selectedFilterIds
+										bind:imageGenerationEnabled
+										bind:codeInterpreterEnabled
+										{pendingOAuthTools}
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										bind:showCommands
+										bind:dragged
+										toolServers={$toolServers}
+										{generating}
+										{stopResponse}
+										{createMessagePair}
+										{onUpload}
+										messageQueue={$chatRequestQueues[$chatId] ?? []}
+										{chatTasks}
+										onQueueSendNow={async (id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											const item = queue.find((m) => m.id === id);
+											if (item) {
+												// Remove from queue
+												chatRequestQueues.update((q) => ({
+													...q,
+													[$chatId]: queue.filter((m) => m.id !== id)
+												}));
+												await stopResponse(false);
+												await tick();
+												await submitPrompt(item.prompt, item.files);
+											}
+										}}
+										onQueueEdit={(id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
+											const item = queue.find((m) => m.id === id);
+											if (item) {
+												// Remove from queue
+												chatRequestQueues.update((q) => ({
+													...q,
+													[$chatId]: queue.filter((m) => m.id !== id)
+												}));
+												// Set files and restore prompt to input
+												files = item.files;
+												messageInput?.setText(item.prompt);
+											}
+										}}
+										onQueueDelete={(id) => {
+											const queue = $chatRequestQueues[$chatId] ?? [];
 											chatRequestQueues.update((q) => ({
 												...q,
 												[$chatId]: queue.filter((m) => m.id !== id)
 											}));
-											await stopResponse(false);
-											await tick();
-											await submitPrompt(item.prompt, item.files);
-										}
-									}}
-									onQueueEdit={(id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										const item = queue.find((m) => m.id === id);
-										if (item) {
-											// Remove from queue
-											chatRequestQueues.update((q) => ({
-												...q,
-												[$chatId]: queue.filter((m) => m.id !== id)
-											}));
-											// Set files and restore prompt to input
-											files = item.files;
-											messageInput?.setText(item.prompt);
-										}
-									}}
-									onQueueDelete={(id) => {
-										const queue = $chatRequestQueues[$chatId] ?? [];
-										chatRequestQueues.update((q) => ({
-											...q,
-											[$chatId]: queue.filter((m) => m.id !== id)
-										}));
-									}}
-									onChange={(data) => {
-										if (!$temporaryChatEnabled) {
-											saveDraft(data, $chatId);
-										}
-									}}
-									on:submit={async (e) => {
-										clearDraft($chatId);
-										if (e.detail || files.length > 0) {
-											await tick();
+										}}
+										onChange={(data) => {
+											if (!$temporaryChatEnabled) {
+												saveDraft(data, $chatId);
+											}
+										}}
+										on:submit={async (e) => {
+											clearDraft($chatId);
+											if (e.detail || files.length > 0) {
+												await tick();
 
-											submitHandler(e.detail);
-										}
-									}}
-								/>
+												submitHandler(e.detail);
+											}
+										}}
+									/>
 
-								<div
-									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-								>
-									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+									<div
+										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+									>
+										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+									</div>
 								</div>
-							</div>
 							{/if}
 						{:else}
 							<div class="flex items-center h-full">

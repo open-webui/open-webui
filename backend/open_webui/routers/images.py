@@ -23,6 +23,7 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
@@ -246,7 +247,20 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
     updates['images.edit.comfyui.base_url'] = form_data.IMAGES_EDIT_COMFYUI_BASE_URL.strip('/')
     await Config.upsert(updates)
     await set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
-    return await get_config_values(IMAGE_CONFIG_KEYS)
+    values = await get_config_values(IMAGE_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='images',
+        data={
+            'image_generation_enabled': values.get('ENABLE_IMAGE_GENERATION'),
+            'image_edit_enabled': values.get('ENABLE_IMAGE_EDIT'),
+            'image_generation_engine': values.get('IMAGE_GENERATION_ENGINE'),
+            'image_edit_engine': values.get('IMAGE_EDIT_ENGINE'),
+        },
+    )
+    return values
 
 
 def get_automatic1111_api_auth(image_config):
@@ -414,12 +428,12 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
             # ComfyUI on a private network), skip SSRF validation only when
             # the URL shares the exact same origin (scheme + host + port)
             # as the admin-configured base.  This avoids both the global
-            # ENABLE_RAG_LOCAL_WEB_FETCH hammer and a blanket trust flag
+            # ENABLE_LOCAL_WEB_FETCH hammer and a blanket trust flag
             # that would follow arbitrary redirects.
             if trusted_base_url and _is_same_origin(data, trusted_base_url):
                 log.debug(f'Skipping URL validation for trusted backend: {data}')
             else:
-                validate_url(data)
+                await asyncio.to_thread(validate_url, data)
             session = await get_session()
             async with session.get(
                 data,
@@ -501,7 +515,20 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    return await image_generations(request, form_data, user=user)
+    result = await image_generations(request, form_data, user=user)
+    await publish_event(
+        request,
+        EVENTS.IMAGE_GENERATED,
+        actor=user,
+        subject_id=None, subject_type='image',
+        data={
+            'model': form_data.model,
+            'size': form_data.size,
+            'n': form_data.n,
+            'prompt_preview': form_data.prompt[:300],
+        },
+    )
+    return result
 
 
 async def image_generations(
@@ -773,21 +800,35 @@ async def edit_images(request: Request, form_data: EditImageForm, user=Depends(g
     # global image-edit switch and the per-user image-generation permission. The internal
     # callers (edit_image tool, chat middleware) gate themselves and call image_edits()
     # directly, so they are unaffected by this wrapper.
-    if not request.app.state.config.ENABLE_IMAGE_EDIT:
+    image_config = await get_image_config()
+    if not image_config.ENABLE_IMAGE_EDIT:
         raise HTTPException(
             status_code=403,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
     if user.role != 'admin' and not await has_permission(
-        user.id, 'features.image_generation', request.app.state.config.USER_PERMISSIONS
+        user.id, 'features.image_generation', image_config.USER_PERMISSIONS
     ):
         raise HTTPException(
             status_code=403,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    return await image_edits(request, form_data, user=user)
+    result = await image_edits(request, form_data, user=user)
+    await publish_event(
+        request,
+        EVENTS.IMAGE_EDITED,
+        actor=user,
+        subject_id=None, subject_type='image',
+        data={
+            'model': form_data.model,
+            'size': form_data.size,
+            'n': form_data.n,
+            'prompt_preview': form_data.prompt[:300],
+        },
+    )
+    return result
 
 
 async def image_edits(
@@ -821,7 +862,7 @@ async def image_edits(
                 # called only on the originally-submitted URL; following 3xx redirects
                 # without re-validation would let an attacker reach private IPs via a
                 # public host that redirects internally (e.g. cloud-metadata exfil).
-                validate_url(data)
+                await asyncio.to_thread(validate_url, data)
                 # SSRF-safe session: re-checks the connect-time IP so a rebinding DNS answer
                 # that passed validate_url cannot reach an internal address.
                 async with get_ssrf_safe_session() as session:

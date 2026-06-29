@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.automations import (
     AutomationForm,
@@ -175,7 +176,15 @@ async def create_new_automation(
 
     tz = user.timezone
     automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return await enrich_automation(automation, db, tz=tz)
+    response = await enrich_automation(automation, db, tz=tz)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_CREATED,
+        actor=user,
+        subject_id=automation.id,
+        data={'name': automation.name, 'is_active': automation.is_active},
+    )
+    return response
 
 
 ############################
@@ -225,7 +234,15 @@ async def update_automation_by_id(
 
     tz = user.timezone
     updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return await enrich_automation(updated, db, tz=tz)
+    response = await enrich_automation(updated, db, tz=tz)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_UPDATED,
+        actor=user,
+        subject_id=updated.id,
+        data={'name': updated.name, 'is_active': updated.is_active},
+    )
+    return response
 
 
 ############################
@@ -244,7 +261,15 @@ async def toggle_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
-    return await enrich_automation(toggled, db, tz=user.timezone)
+    response = await enrich_automation(toggled, db, tz=user.timezone)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_ENABLED if toggled.is_active else EVENTS.AUTOMATION_DISABLED,
+        actor=user,
+        subject_id=toggled.id, subject_type='automation',
+        data={'name': toggled.name},
+    )
+    return response
 
 
 ############################
@@ -263,6 +288,13 @@ async def run_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     asyncio.create_task(execute_automation(request.app, automation))
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_RUN_STARTED,
+        actor=user,
+        subject_id=automation.id,
+        data={'name': automation.name},
+    )
     return await enrich_automation(automation, db, tz=user.timezone)
 
 
@@ -282,7 +314,16 @@ async def delete_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     await AutomationRuns.delete_by_automation(id, db=db)
-    return await Automations.delete(id, db=db)
+    result = await Automations.delete(id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.AUTOMATION_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': automation.name},
+        )
+    return result
 
 
 ############################

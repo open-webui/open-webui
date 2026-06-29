@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
-	import { getAdminDetails } from '$lib/apis/auths';
+	import { getAdminDetails, userSignOut } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
 	import { config } from '$lib/stores';
 
@@ -70,8 +70,12 @@
 					<button
 						class="text-xs text-center w-full mt-2 text-gray-400 underline"
 						on:click={async () => {
+							const res = await userSignOut().catch((err) => {
+								console.error(err);
+								return null;
+							});
 							localStorage.removeItem('token');
-							location.href = '/auth';
+							location.href = res?.redirect_url ?? '/auth';
 						}}>{$i18n.t('Sign Out')}</button
 					>
 				</div>

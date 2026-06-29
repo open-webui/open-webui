@@ -18,6 +18,7 @@ from fastapi import (
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.routers.openai import get_all_models_responses
 from open_webui.utils.auth import get_admin_user
@@ -262,6 +263,13 @@ async def upload_pipeline(
                     response.raise_for_status()
                     data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_UPLOADED,
+            actor=user,
+            subject_id=data.get('id') or filename,
+            data={'url_idx': urlIdx, 'filename': filename},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -311,6 +319,13 @@ async def add_pipeline(request: Request, form_data: AddPipelineForm, user=Depend
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_ADDED,
+            actor=user,
+            subject_id=data.get('id') or form_data.url,
+            data={'url_idx': urlIdx, 'url': form_data.url},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -354,6 +369,13 @@ async def delete_pipeline(request: Request, form_data: DeletePipelineForm, user=
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_DELETED,
+            actor=user,
+            subject_id=form_data.id,
+            data={'url_idx': urlIdx},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -429,6 +451,13 @@ async def get_pipeline_valves(
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_VALVES_UPDATED,
+            actor=user,
+            subject_id=pipeline_id,
+            data={'url_idx': urlIdx},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here

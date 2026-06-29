@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import (
@@ -58,6 +59,7 @@ async def get_groups(
 
 @router.post('/create', response_model=Optional[GroupResponse])
 async def create_new_group(
+    request: Request,
     form_data: GroupForm,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -65,6 +67,13 @@ async def create_new_group(
     try:
         group = await Groups.insert_new_group(user.id, form_data, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_CREATED,
+                actor=user,
+                subject_id=group.id,
+                data={'name': group.name},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -168,6 +177,7 @@ async def get_users_in_group(id: str, user=Depends(get_admin_user), db: AsyncSes
 
 @router.post('/id/{id}/update', response_model=Optional[GroupResponse])
 async def update_group_by_id(
+    request: Request,
     id: str,
     form_data: GroupUpdateForm,
     user=Depends(get_admin_user),
@@ -176,6 +186,13 @@ async def update_group_by_id(
     try:
         group = await Groups.update_group_by_id(id, form_data, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_UPDATED,
+                actor=user,
+                subject_id=id,
+                data={'name': group.name},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -200,6 +217,7 @@ async def update_group_by_id(
 
 @router.post('/id/{id}/users/add', response_model=Optional[GroupResponse])
 async def add_user_to_group(
+    request: Request,
     id: str,
     form_data: UserIdsForm,
     user=Depends(get_admin_user),
@@ -211,6 +229,13 @@ async def add_user_to_group(
 
         group = await Groups.add_users_to_group(id, form_data.user_ids, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_MEMBER_ADDED,
+                actor=user,
+                subject_id=id,
+                data={'user_ids': form_data.user_ids},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -230,6 +255,7 @@ async def add_user_to_group(
 
 @router.post('/id/{id}/users/remove', response_model=Optional[GroupResponse])
 async def remove_users_from_group(
+    request: Request,
     id: str,
     form_data: UserIdsForm,
     user=Depends(get_admin_user),
@@ -238,6 +264,13 @@ async def remove_users_from_group(
     try:
         group = await Groups.remove_users_from_group(id, form_data.user_ids, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_MEMBER_REMOVED,
+                actor=user,
+                subject_id=id,
+                data={'user_ids': form_data.user_ids},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -261,10 +294,18 @@ async def remove_users_from_group(
 
 
 @router.delete('/id/{id}/delete', response_model=bool)
-async def delete_group_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_group_by_id(
+    request: Request, id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     try:
         result = await Groups.delete_group_by_id(id, db=db)
         if result:
+            await publish_event(
+                request,
+                EVENTS.GROUP_DELETED,
+                actor=user,
+                subject_id=id,
+            )
             return result
         else:
             raise HTTPException(

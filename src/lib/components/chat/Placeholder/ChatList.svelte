@@ -19,6 +19,7 @@
 	export let allChatsLoaded = false;
 
 	export let loadHandler: Function = null;
+	export let showOwnerInfo = false;
 
 	let chatList = null;
 
@@ -54,7 +55,6 @@
 
 	let orderBy = 'updated_at';
 	let direction = 'desc'; // 'asc' or 'desc'
-
 
 	$: if (chats) {
 		init();
@@ -164,12 +164,12 @@
 						{dayjs(chat?.updated_at * 1000).calendar()}
 					</div>
 
-					{#if chat.user_id && chat.owner_name}
+					{#if showOwnerInfo && chat.user_id && chat.owner_name}
 						<Tooltip content={chat.owner_name}>
 							<img
 								src="/api/v1/users/{chat.user_id}/profile/image"
 								alt=""
-								class="size-5 rounded-full shrink-0 object-cover"
+								class="size-4 rounded-full shrink-0 object-cover"
 							/>
 						</Tooltip>
 					{/if}

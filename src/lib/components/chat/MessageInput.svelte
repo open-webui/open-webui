@@ -471,40 +471,62 @@
 	let user = null;
 	export let placeholder = '';
 
-	let visionCapableModels = [];
-	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+	type ModelCapability =
+		| 'vision'
+		| 'file_upload'
+		| 'web_search'
+		| 'image_generation'
+		| 'code_interpreter'
+		| 'terminal';
+	type ModelCapabilitiesById = Record<string, Partial<Record<ModelCapability, boolean>>>;
+
+	let modelCapabilitiesById: ModelCapabilitiesById = {};
+	$: modelCapabilitiesById = Object.fromEntries(
+		($models ?? []).map((model) => [model.id, model.info?.meta?.capabilities ?? {}])
 	);
 
+	const getCapableModelIds = (
+		modelIds: string[],
+		capability: ModelCapability,
+		capabilitiesById: ModelCapabilitiesById
+	) => modelIds.filter((id) => capabilitiesById[id]?.[capability] ?? true);
+
+	let visionCapableModels = [];
+	$: visionCapableModels = getCapableModelIds(selectedModelIds, 'vision', modelCapabilitiesById);
+
 	let fileUploadCapableModels = [];
-	$: fileUploadCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.file_upload ?? true
+	$: fileUploadCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'file_upload',
+		modelCapabilitiesById
 	);
 
 	let webSearchCapableModels = [];
-	$: webSearchCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+	$: webSearchCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'web_search',
+		modelCapabilitiesById
 	);
 
 	let imageGenerationCapableModels = [];
-	$: imageGenerationCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.image_generation ?? true
+	$: imageGenerationCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'image_generation',
+		modelCapabilitiesById
 	);
 
 	let codeInterpreterCapableModels = [];
-	$: codeInterpreterCapableModels = (
-		atSelectedModel?.id ? [atSelectedModel.id] : selectedModels
-	).filter(
-		(model) =>
-			$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
+	$: codeInterpreterCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'code_interpreter',
+		modelCapabilitiesById
 	);
 
 	let terminalCapableModels = [];
-	$: terminalCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.terminal ?? true
+	$: terminalCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'terminal',
+		modelCapabilitiesById
 	);
 
 	let toggleFilters = [];
@@ -520,23 +542,20 @@
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			webSearchCapableModels.length &&
+		selectedModelIds.length === webSearchCapableModels.length &&
 		$config?.features?.enable_web_search &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			imageGenerationCapableModels.length &&
+		selectedModelIds.length === imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		!$selectedTerminalId &&
-		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
-			codeInterpreterCapableModels.length &&
+		selectedModelIds.length === codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
@@ -602,7 +621,7 @@
 			return null;
 		}
 
-		if (fileUploadCapableModels.length !== selectedModels.length) {
+		if (fileUploadCapableModels.length !== selectedModelIds.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
 			return null;
 		}
@@ -1385,11 +1404,11 @@
 														alt=""
 														imageClassName=" size-10 rounded-xl object-cover"
 													/>
-													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
+													{#if selectedModelIds.length !== visionCapableModels.length}
 														<Tooltip
 															className=" absolute top-1 left-1"
 															content={$i18n.t('{{ models }}', {
-																models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
+																models: selectedModelIds
 																	.filter((id) => !visionCapableModels.includes(id))
 																	.join(', ')
 															})}
@@ -1662,7 +1681,7 @@
 								<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 									<InputMenu
 										bind:files
-										selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+										selectedModels={selectedModelIds}
 										{fileUploadCapableModels}
 										{screenCaptureHandler}
 										{inputFilesHandler}
@@ -1728,7 +1747,7 @@
 										/>
 
 										<IntegrationsMenu
-											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+											selectedModels={selectedModelIds}
 											{toggleFilters}
 											{showWebSearchButton}
 											{showImageGenerationButton}

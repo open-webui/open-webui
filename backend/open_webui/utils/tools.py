@@ -15,9 +15,7 @@ from typing import (
     Callable,
     Optional,
     Type,
-    Union,
     get_args,
-    get_origin,
     get_type_hints,
 )
 from urllib.parse import quote, urlencode
@@ -82,6 +80,7 @@ from open_webui.tools.builtin import (
     toggle_automation,
     update_automation,
     update_calendar_event,
+    update_memory,
     update_task,
     view_channel_message,
     view_channel_thread,
@@ -95,7 +94,7 @@ from open_webui.tools.builtin import (
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.misc import is_string_allowed
-from open_webui.utils.plugin import load_tool_module_by_id
+from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
 from pydantic import BaseModel, Field, create_model
 from pydantic.fields import FieldInfo
 
@@ -170,6 +169,28 @@ async def get_async_tool_function_and_apply_extra_params(
     function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
+    try:
+        type_hints = get_type_hints(function)
+    except Exception:
+        type_hints = {}
+
+    def coerce_kwargs(kwargs):
+        for name, value in kwargs.items():
+            if name not in sig.parameters or value is None:
+                continue
+
+            annotation = type_hints.get(name, sig.parameters[name].annotation)
+            args = set(get_args(annotation))
+            if isinstance(value, str) and (annotation is int or args == {int, type(None)}):
+                kwargs[name] = int(value)
+            elif (
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and (annotation is str or args == {str, type(None)})
+            ):
+                kwargs[name] = str(value)
+        return kwargs
+
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
 
@@ -189,12 +210,12 @@ async def get_async_tool_function_and_apply_extra_params(
         # wrap the functools.partial as python-genai has trouble with it
         # https://github.com/googleapis/python-genai/issues/907
         async def new_function(*args, **kwargs):
-            return await partial_func(*args, **kwargs)
+            return await partial_func(*args, **coerce_kwargs(kwargs))
 
     else:
         # Make it a coroutine function when it is not already
         async def new_function(*args, **kwargs):
-            return partial_func(*args, **kwargs)
+            return partial_func(*args, **coerce_kwargs(kwargs))
 
     update_wrapper(new_function, function)
     new_function.__signature__ = new_sig
@@ -250,11 +271,13 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                 log.warning(f'Access denied to tool {tool_id} for user {user.id}')
                 continue
 
-            module = request.app.state.TOOLS.get(tool_id)
-            if module is None or request.app.state.TOOL_CONTENTS.get(tool_id) != tool.content:
+            tools_cache = get_tools_cache(request)
+            tool_contents_cache = get_tool_contents_cache(request)
+            module = tools_cache.get(tool_id)
+            if module is None or tool_contents_cache.get(tool_id) != tool.content:
                 module, _ = await load_tool_module_by_id(tool_id, content=tool.content)
-                request.app.state.TOOLS[tool_id] = module
-                request.app.state.TOOL_CONTENTS[tool_id] = tool.content
+                tools_cache[tool_id] = module
+                tool_contents_cache[tool_id] = tool.content
 
             __user__ = {
                 **extra_params['__user__'],
@@ -525,19 +548,21 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('chats'):
         builtin_functions.extend([search_chats, view_chat])
 
-    # Add memory tools if builtin category enabled AND enabled for this chat
+    # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
         is_builtin_tool_enabled('memory')
-        and (features.get('memory') or get_model_capability('memory', False))
+        and features.get('memory')
+        and get_model_capability('memory')
         and await has_user_permission('memories')
     ):
         builtin_functions.extend(
             [
                 search_memories,
+                list_memories,
+                update_memory,
                 add_memory,
                 replace_memory_content,
                 delete_memory,
-                list_memories,
             ]
         )
 

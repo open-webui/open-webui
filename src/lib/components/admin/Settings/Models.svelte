@@ -10,6 +10,7 @@
 	import {
 		createNewModel,
 		deleteAllModels,
+		getBaseModelTags,
 		getBaseModels,
 		toggleModelById,
 		updateModelById,
@@ -46,7 +47,10 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
+	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+
+	type ModelListItem = { id: string; name?: string };
 
 	let shiftKey = false;
 
@@ -56,8 +60,8 @@
 
 	let models = null;
 
-	let workspaceModels = null;
-	let baseModels = null;
+	let workspaceModels: ModelListItem[] = [];
+	let baseModels: ModelListItem[] = [];
 
 	let filteredModels = [];
 	let selectedModelId = null;
@@ -66,6 +70,8 @@
 	let showManageModal = false;
 
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
+	let tags: string[] = [];
+	let selectedTag = '';
 
 	const perPage = 30;
 	let currentPage = 1;
@@ -175,27 +181,35 @@
 	const init = async () => {
 		models = null;
 
-		workspaceModels = await getBaseModels(localStorage.token);
+		tags = await getBaseModelTags(localStorage.token);
+		if (selectedTag && !tags.includes(selectedTag)) {
+			selectedTag = '';
+		}
+
+		workspaceModels = await getBaseModels(localStorage.token, selectedTag);
 		baseModels = await getModels(localStorage.token, null, true);
+		const workspaceModelIds = new Set<string>(workspaceModels.map((wm: ModelListItem) => wm.id));
 
-		models = baseModels.map((m) => {
-			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+		models = baseModels
+			.filter((m: ModelListItem) => !selectedTag || workspaceModelIds.has(m.id))
+			.map((m: ModelListItem) => {
+				const workspaceModel = workspaceModels.find((wm: ModelListItem) => wm.id === m.id);
 
-			if (workspaceModel) {
-				return {
-					...m,
-					...workspaceModel
-				};
-			} else {
-				return {
-					...m,
-					id: m.id,
-					name: m.name,
+				if (workspaceModel) {
+					return {
+						...m,
+						...workspaceModel
+					};
+				} else {
+					return {
+						...m,
+						id: m.id,
+						name: m.name,
 
-					is_active: true
-				};
-			}
-		});
+						is_active: true
+					};
+				}
+			});
 
 		_models.set(
 			await getModels(
@@ -501,6 +515,16 @@
 					class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent whitespace-nowrap"
 				>
 					<AdminViewSelector bind:value={viewOption} />
+					{#if (tags ?? []).length > 0}
+						<TagSelector
+							bind:value={selectedTag}
+							items={tags.map((tag) => ({ value: tag, label: tag }))}
+							onChange={async () => {
+								currentPage = 1;
+								await init();
+							}}
+						/>
+					{/if}
 				</div>
 
 				<div class="flex-1"></div>
@@ -762,10 +786,11 @@
 			edit
 			model={models.find((m) => m.id === selectedModelId)}
 			preset={false}
-			onSubmit={(model) => {
+			onSubmit={async (model) => {
 				console.log(model);
-				upsertModelHandler(model);
+				await upsertModelHandler(model);
 				selectedModelId = null;
+				await init();
 			}}
 			onBack={async () => {
 				selectedModelId = null;

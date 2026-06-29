@@ -38,6 +38,7 @@ from open_webui.models.config import Config
 
 
 async def seed_registered_defaults():
+    await Config.repair_flattened_dict_configs()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
 
@@ -392,6 +393,9 @@ CODE_EXECUTION_JUPYTER_TIMEOUT = int(os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT',
 ENABLE_CODE_INTERPRETER = os.getenv('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true'
 
 ENABLE_MEMORIES = os.getenv('ENABLE_MEMORIES', 'True').lower() == 'true'
+ENABLE_MEMORY_BACKGROUND_REVIEW = os.getenv('ENABLE_MEMORY_BACKGROUND_REVIEW', 'False').lower() == 'true'
+MEMORIES_REVIEW_INTERVAL_TURNS = int(os.getenv('MEMORIES_REVIEW_INTERVAL_TURNS', '10'))
+MEMORIES_CONTEXT_CHAR_LIMIT = int(os.getenv('MEMORIES_CONTEXT_CHAR_LIMIT', '2000'))
 
 CODE_INTERPRETER_ENGINE = os.getenv('CODE_INTERPRETER_ENGINE', 'pyodide')
 
@@ -856,6 +860,16 @@ EXTERNAL_DOCUMENT_LOADER_URL = os.getenv('EXTERNAL_DOCUMENT_LOADER_URL', '')
 
 EXTERNAL_DOCUMENT_LOADER_API_KEY = os.getenv('EXTERNAL_DOCUMENT_LOADER_API_KEY', '')
 
+external_document_loader_headers = os.getenv('EXTERNAL_DOCUMENT_LOADER_HEADERS', '')
+try:
+    external_document_loader_headers = json.loads(external_document_loader_headers)
+except json.JSONDecodeError:
+    external_document_loader_headers = {}
+if not isinstance(external_document_loader_headers, dict):
+    external_document_loader_headers = {}
+
+EXTERNAL_DOCUMENT_LOADER_HEADERS = external_document_loader_headers
+
 TIKA_SERVER_URL = os.getenv('TIKA_SERVER_URL', 'http://tika:9998')
 
 DOCLING_SERVER_URL = os.getenv('DOCLING_SERVER_URL', 'http://docling:5001')
@@ -901,6 +915,8 @@ RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 
 RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None
+
+RAG_FILE_CONTENT_SEARCH_MAX_CHARS = int(os.getenv('RAG_FILE_CONTENT_SEARCH_MAX_CHARS', str(64 * 1024 * 1024)))
 
 FILE_IMAGE_COMPRESSION_WIDTH = int(os.getenv('FILE_IMAGE_COMPRESSION_WIDTH')) if os.getenv('FILE_IMAGE_COMPRESSION_WIDTH') else None
 
@@ -1013,7 +1029,15 @@ RAG_OLLAMA_BASE_URL = os.getenv('RAG_OLLAMA_BASE_URL', OLLAMA_BASE_URL)
 RAG_OLLAMA_API_KEY = os.getenv('RAG_OLLAMA_API_KEY', '')
 
 
-ENABLE_RAG_LOCAL_WEB_FETCH = os.getenv('ENABLE_RAG_LOCAL_WEB_FETCH', 'False').lower() == 'true'
+ENABLE_LOCAL_WEB_FETCH = (
+    os.getenv(
+        'ENABLE_LOCAL_WEB_FETCH',
+        os.getenv('ENABLE_RAG_LOCAL_WEB_FETCH', 'False'),
+    ).lower()
+    == 'true'
+)
+# Deprecated compatibility alias; use ENABLE_LOCAL_WEB_FETCH for new deployments.
+ENABLE_RAG_LOCAL_WEB_FETCH = ENABLE_LOCAL_WEB_FETCH
 
 
 DEFAULT_WEB_FETCH_FILTER_LIST = [
@@ -1119,6 +1143,10 @@ SERPER_API_KEY = os.getenv('SERPER_API_KEY', '')
 
 SERPLY_API_KEY = os.getenv('SERPLY_API_KEY', '')
 
+SERPHOUSE_API_KEY = os.getenv('SERPHOUSE_API_KEY', '')
+
+SERPHOUSE_DOMAIN = os.getenv('SERPHOUSE_DOMAIN', 'google.com')
+
 DDGS_BACKEND = os.getenv('DDGS_BACKEND', 'auto')
 
 JINA_API_KEY = os.getenv('JINA_API_KEY', '')
@@ -1153,6 +1181,12 @@ PERPLEXITY_SEARCH_CONTEXT_USAGE = os.getenv('PERPLEXITY_SEARCH_CONTEXT_USAGE', '
 
 PERPLEXITY_SEARCH_API_URL = os.getenv('PERPLEXITY_SEARCH_API_URL', 'https://api.perplexity.ai/search')
 
+MICROSOFT_WEB_IQ_API_BASE_URL = os.getenv('MICROSOFT_WEB_IQ_API_BASE_URL', 'https://api.microsoft.ai/v3')
+
+MICROSOFT_WEB_IQ_API_KEY = os.getenv('MICROSOFT_WEB_IQ_API_KEY', '')
+
+MICROSOFT_WEB_IQ_LANGUAGE = os.getenv('MICROSOFT_WEB_IQ_LANGUAGE', 'en')
+
 SOUGOU_API_SID = os.getenv('SOUGOU_API_SID', '')
 
 SOUGOU_API_SK = os.getenv('SOUGOU_API_SK', '')
@@ -1185,7 +1219,7 @@ YANDEX_WEB_SEARCH_API_KEY = os.getenv('YANDEX_WEB_SEARCH_API_KEY', '')
 
 YANDEX_WEB_SEARCH_CONFIG = os.getenv('YANDEX_WEB_SEARCH_CONFIG', '')
 
-YOUCOM_API_KEY = os.getenv('YOUCOM_API_KEY', '')
+YOUCOM_API_KEY = os.getenv('YOUCOM_API_KEY', os.getenv('YDC_API_KEY',''))
 
 LINKUP_API_KEY = os.getenv('LINKUP_API_KEY', '')
 
@@ -1624,6 +1658,14 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT = (
     os.getenv('USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT', 'False').lower() == 'true'
 )
 
+USER_PERMISSIONS_WORKSPACE_SKILLS_IMPORT = (
+    os.getenv('USER_PERMISSIONS_WORKSPACE_SKILLS_IMPORT', 'False').lower() == 'true'
+)
+
+USER_PERMISSIONS_WORKSPACE_SKILLS_EXPORT = (
+    os.getenv('USER_PERMISSIONS_WORKSPACE_SKILLS_EXPORT', 'False').lower() == 'true'
+)
+
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING = (
     os.getenv('USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING', 'False').lower() == 'true'
@@ -1787,6 +1829,8 @@ DEFAULT_USER_PERMISSIONS = {
         'prompts_export': USER_PERMISSIONS_WORKSPACE_PROMPTS_EXPORT,
         'tools_import': USER_PERMISSIONS_WORKSPACE_TOOLS_IMPORT,
         'tools_export': USER_PERMISSIONS_WORKSPACE_TOOLS_EXPORT,
+        'skills_import': USER_PERMISSIONS_WORKSPACE_SKILLS_IMPORT,
+        'skills_export': USER_PERMISSIONS_WORKSPACE_SKILLS_EXPORT,
     },
     'sharing': {
         'models': USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_SHARING,
@@ -1868,12 +1912,24 @@ AUTOMATION_MAX_COUNT = os.getenv('AUTOMATION_MAX_COUNT', '')
 
 AUTOMATION_MIN_INTERVAL = os.getenv('AUTOMATION_MIN_INTERVAL', '')
 
+AUTOMATION_AUTH_TOKEN_EXPIRES_IN = os.getenv('AUTOMATION_AUTH_TOKEN_EXPIRES_IN', '1h')
+
 ENABLE_NOTES = os.getenv('ENABLE_NOTES', 'True').lower() == 'true'
 
 ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
 
 ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true'
-EVALUATION_ARENA_MODELS = []
+try:
+    evaluation_arena_models = json.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
+    if not isinstance(evaluation_arena_models, list) or not all(
+        isinstance(model, dict) for model in evaluation_arena_models
+    ):
+        raise ValueError('EVALUATION_ARENA_MODELS must be a JSON list of objects')
+except Exception as e:
+    log.exception(f'Error loading EVALUATION_ARENA_MODELS: {e}')
+    evaluation_arena_models = []
+
+EVALUATION_ARENA_MODELS = evaluation_arena_models
 
 DEFAULT_ARENA_MODEL = {
     'id': 'arena-model',
@@ -1988,6 +2044,12 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', None)
 TASK_MODEL = os.getenv('TASK_MODEL', '')
 
 TASK_MODEL_EXTERNAL = os.getenv('TASK_MODEL_EXTERNAL', '')
+
+ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
+
+CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THRESHOLD', '80000'))
+
+CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
 
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
 
@@ -2612,6 +2674,9 @@ DEFAULT_CONFIG = {
     'code_execution.jupyter.timeout': CODE_EXECUTION_JUPYTER_TIMEOUT,
     'code_interpreter.enable': ENABLE_CODE_INTERPRETER,
     'memories.enable': ENABLE_MEMORIES,
+    'memories.background_review.enable': ENABLE_MEMORY_BACKGROUND_REVIEW,
+    'memories.review_interval_turns': MEMORIES_REVIEW_INTERVAL_TURNS,
+    'memories.context_char_limit': MEMORIES_CONTEXT_CHAR_LIMIT,
     'code_interpreter.engine': CODE_INTERPRETER_ENGINE,
     'code_interpreter.prompt_template': CODE_INTERPRETER_PROMPT_TEMPLATE,
     'code_interpreter.jupyter.url': CODE_INTERPRETER_JUPYTER_URL,
@@ -2645,6 +2710,7 @@ DEFAULT_CONFIG = {
     'rag.mineru_file_extensions': MINERU_FILE_EXTENSIONS,
     'rag.external_document_loader_url': EXTERNAL_DOCUMENT_LOADER_URL,
     'rag.external_document_loader_api_key': EXTERNAL_DOCUMENT_LOADER_API_KEY,
+    'rag.external_document_loader_headers': EXTERNAL_DOCUMENT_LOADER_HEADERS,
     'rag.tika_server_url': TIKA_SERVER_URL,
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
@@ -2728,6 +2794,8 @@ DEFAULT_CONFIG = {
     'rag.web.search.serpstack_https': SERPSTACK_HTTPS,
     'rag.web.search.serper_api_key': SERPER_API_KEY,
     'rag.web.search.serply_api_key': SERPLY_API_KEY,
+    'rag.web.search.serphouse_api_key': SERPHOUSE_API_KEY,
+    'rag.web.search.serphouse_domain': SERPHOUSE_DOMAIN,
     'rag.web.search.ddgs_backend': DDGS_BACKEND,
     'rag.web.search.jina_api_key': JINA_API_KEY,
     'rag.web.search.jina_api_base_url': JINA_API_BASE_URL,
@@ -2745,6 +2813,9 @@ DEFAULT_CONFIG = {
     'rag.web.search.perplexity_model': PERPLEXITY_MODEL,
     'rag.web.search.perplexity_search_context_usage': PERPLEXITY_SEARCH_CONTEXT_USAGE,
     'rag.web.search.perplexity_search_api_url': PERPLEXITY_SEARCH_API_URL,
+    'rag.web.search.microsoft_web_iq_api_base_url': MICROSOFT_WEB_IQ_API_BASE_URL,
+    'rag.web.search.microsoft_web_iq_api_key': MICROSOFT_WEB_IQ_API_KEY,
+    'rag.web.search.microsoft_web_iq_language': MICROSOFT_WEB_IQ_LANGUAGE,
     'rag.web.search.sougou_api_sid': SOUGOU_API_SID,
     'rag.web.search.sougou_api_sk': SOUGOU_API_SK,
     'rag.web.search.tavily_api_key': TAVILY_API_KEY,
@@ -2850,6 +2921,7 @@ DEFAULT_CONFIG = {
     'automations.enable': ENABLE_AUTOMATIONS,
     'automations.max_count': AUTOMATION_MAX_COUNT,
     'automations.min_interval': AUTOMATION_MIN_INTERVAL,
+    'automations.auth_token_expires_in': AUTOMATION_AUTH_TOKEN_EXPIRES_IN,
     'notes.enable': ENABLE_NOTES,
     'users.enable_status': ENABLE_USER_STATUS,
     'evaluation.arena.enable': ENABLE_EVALUATION_ARENA_MODELS,
@@ -2863,6 +2935,9 @@ DEFAULT_CONFIG = {
     'auth.admin.email': ADMIN_EMAIL,
     'task.model.default': TASK_MODEL,
     'task.model.external': TASK_MODEL_EXTERNAL,
+    'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
+    'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,
+    'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

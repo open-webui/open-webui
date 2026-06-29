@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -130,7 +131,7 @@ async def export_skills(
 ):
     if user.role != 'admin' and not await has_permission(
         user.id,
-        'workspace.skills',
+        'workspace.skills_export',
         await Config.get('user.permissions'),
         db=db,
     ):
@@ -157,8 +158,13 @@ async def create_new_skill(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'workspace.skills', await Config.get('user.permissions'), db=db
+    if user.role != 'admin' and not (
+        await has_permission(
+            user.id, 'workspace.skills', await Config.get('user.permissions'), db=db
+        )
+        or await has_permission(
+            user.id, 'workspace.skills_import', await Config.get('user.permissions'), db=db
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -190,6 +196,13 @@ async def create_new_skill(
     try:
         skill = await Skills.insert_new_skill(user.id, form_data, db=db)
         if skill:
+            await publish_event(
+                request,
+                EVENTS.SKILL_CREATED,
+                actor=user,
+                subject_id=skill.id,
+                data={'name': skill.name},
+            )
             return skill
         else:
             raise HTTPException(
@@ -308,6 +321,13 @@ async def update_skill_by_id(
         skill = await Skills.update_skill_by_id(id, updated, db=db)
 
         if skill:
+            await publish_event(
+                request,
+                EVENTS.SKILL_UPDATED,
+                actor=user,
+                subject_id=skill.id,
+                data={'name': skill.name},
+            )
             return skill
         else:
             raise HTTPException(
@@ -371,7 +391,15 @@ async def update_skill_access_by_id(
 
     await AccessGrants.set_access_grants('skill', id, form_data.access_grants, db=db)
 
-    return await Skills.get_skill_by_id(id, db=db)
+    skill = await Skills.get_skill_by_id(id, db=db)
+    await publish_event(
+        request,
+        EVENTS.SKILL_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'access_updated': True, 'name': skill.name if skill else None},
+    )
+    return skill
 
 
 ############################
@@ -380,7 +408,12 @@ async def update_skill_access_by_id(
 
 
 @router.post('/id/{id}/toggle', response_model=Optional[SkillModel])
-async def toggle_skill_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def toggle_skill_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     skill = await Skills.get_skill_by_id(id, db=db)
     if skill:
         if (
@@ -397,6 +430,13 @@ async def toggle_skill_by_id(id: str, user=Depends(get_verified_user), db: Async
             skill = await Skills.toggle_skill_by_id(id, db=db)
 
             if skill:
+                await publish_event(
+                    request,
+                    EVENTS.SKILL_ENABLED if skill.is_active else EVENTS.SKILL_DISABLED,
+                    actor=user,
+                    subject_id=skill.id,
+                    data={'name': skill.name},
+                )
                 return skill
             else:
                 raise HTTPException(
@@ -451,4 +491,12 @@ async def delete_skill_by_id(
         )
 
     result = await Skills.delete_skill_by_id(id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.SKILL_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': skill.name},
+        )
     return result

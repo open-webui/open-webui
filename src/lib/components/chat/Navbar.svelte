@@ -123,7 +123,11 @@
 			"
 				>
 					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled && !readOnly} disabled={readOnly} />
+						<ModelSelector
+							bind:selectedModels
+							showSetDefault={!shareEnabled && !readOnly}
+							disabled={readOnly}
+						/>
 					{/if}
 				</div>
 

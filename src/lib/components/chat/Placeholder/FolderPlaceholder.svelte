@@ -24,6 +24,12 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	$: showOwnerInfo = Boolean(
+		folder?.shared ||
+		(folder?.user_id && folder.user_id !== $user?.id) ||
+		(folder?.access_grants?.length ?? 0) > 0
+	);
+
 	const loadChats = async () => {
 		// getSharedFolderChats returns all users' chats in one shot; no pagination
 		allChatsLoaded = true;
@@ -38,18 +44,18 @@
 		if (folder && folder.id) {
 			// Always use the shared folder endpoint so owners also see
 			// chats created by users who have write access to this folder.
-			const res = await getSharedFolderChats(localStorage.token, folder.id).catch(
-				(error) => {
-					console.error(error);
-					return null;
-				}
-			);
+			const res = await getSharedFolderChats(localStorage.token, folder.id).catch((error) => {
+				console.error(error);
+				return null;
+			});
 			if (res && res.chats) {
 				chats = res.chats;
 				allChatsLoaded = true;
 			} else {
 				// Fallback to regular API (e.g. if user has no shared access)
-				const fallback = await getChatListByFolderId(localStorage.token, folder.id, page).catch(() => []);
+				const fallback = await getChatListByFolderId(localStorage.token, folder.id, page).catch(
+					() => []
+				);
 				chats = fallback || [];
 			}
 		} else {
@@ -96,7 +102,13 @@
 			<FolderKnowledge />
 		{:else if selectedTab === 'chats'}
 			{#if chats !== null}
-				<ChatList {chats} {chatListLoading} {allChatsLoaded} loadHandler={loadChats} />
+				<ChatList
+					{chats}
+					{chatListLoading}
+					{allChatsLoaded}
+					loadHandler={loadChats}
+					{showOwnerInfo}
+				/>
 			{:else}
 				<div class="py-10">
 					<Spinner />

@@ -9,6 +9,7 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
+	import { getBaseModelTags, getModelTags } from '$lib/apis/models';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -106,6 +107,14 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	export let suggestionTags: { name: string }[] = [];
+
+	const loadSuggestionTags = async () => {
+		const res: string[] = await (preset ? getModelTags : getBaseModelTags)(
+			localStorage.token
+		).catch(() => []);
+		suggestionTags = res.map((tag) => ({ name: tag }));
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -254,6 +263,9 @@
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
 			await functions.set(await getFunctions(localStorage.token));
+		}
+		if (suggestionTags.length === 0) {
+			await loadSuggestionTags();
 		}
 
 		// Fetch admin-configured default model metadata so the editor
@@ -605,7 +617,7 @@
 											<option value={null} class=" text-gray-900"
 												>{$i18n.t('Select a base model')}</option
 											>
-											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
+											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false) && (!(m?.info?.meta?.hidden ?? false) || m.id === info.base_model_id)) as model}
 												<option value={model.id} class=" text-gray-900">{model.name}</option>
 											{/each}
 										</select>
@@ -651,6 +663,7 @@
 								<div class="">
 									<Tags
 										tags={info?.meta?.tags ?? []}
+										{suggestionTags}
 										on:delete={(e) => {
 											const tagName = e.detail;
 											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);

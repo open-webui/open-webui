@@ -22,6 +22,7 @@ from open_webui.config import (
     CACHE_DIR,
 )
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -310,6 +311,18 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
             'openai.api_configs': api_configs,
         }
     )
+    await publish_event(
+        request,
+        EVENTS.MODEL_PROVIDER_CONFIG_UPDATED,
+        actor=user,
+        subject_id='openai',
+        subject_type='model.provider_config',
+        data={
+            'provider': 'openai',
+            'enabled': form_data.ENABLE_OPENAI_API,
+            'base_url_count': len(form_data.OPENAI_API_BASE_URLS),
+        },
+    )
 
     return {
         'ENABLE_OPENAI_API': form_data.ENABLE_OPENAI_API,
@@ -509,7 +522,9 @@ async def get_filtered_models(models, user, db=None):
 
 @cached(
     ttl=MODELS_CACHE_TTL,
-    key=lambda _, user: f'openai_all_models_{user.id}' if user else 'openai_all_models',
+    # key_builder (not key) is the per-call hook in aiocache 0.12; `key=` is a
+    # static key, so a `key=lambda` collapsed every caller to one shared entry.
+    key_builder=lambda _func, request, user=None: f'openai_all_models_{user.id}' if user else 'openai_all_models',
 )
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info('get_all_models()')

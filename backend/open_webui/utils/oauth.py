@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import fnmatch
 import hashlib
@@ -62,7 +63,8 @@ from open_webui.config import (
     OAUTH_USERNAME_CLAIM,
     WEBHOOK_URL,
 )
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -73,7 +75,6 @@ from open_webui.env import (
     REDIS_KEY_PREFIX,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
-    WEBUI_NAME,
 )
 from open_webui.models.auths import Auths
 from open_webui.models.config import Config
@@ -84,7 +85,6 @@ from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.webhook import post_webhook
 from starlette.responses import RedirectResponse
 
 
@@ -93,9 +93,13 @@ class OAuthClientMetadata(MCPOAuthClientMetadata):
     pass
 
 
+OAuthResourceParameterMode = Literal['auto', 'include', 'omit']
+
+
 class OAuthClientInformationFull(OAuthClientMetadata):
     issuer: Optional[str] = None  # URL of the OAuth server that issued this client
     resource: Optional[str] = None  # RFC 8707 resource indicator for JWT audience
+    oauth_resource_parameter: OAuthResourceParameterMode = 'auto'
 
     client_id: str
     client_secret: str | None = None
@@ -109,6 +113,8 @@ from open_webui.env import GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
 
 OAUTH_RUNTIME_CONFIG = {
     'DEFAULT_USER_ROLE': ('ui.default_user_role', DEFAULT_USER_ROLE),
@@ -366,53 +372,57 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
                 headers={'Content-Type': 'application/json'},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
-                if response.status == 401:
-                    resource_metadata_urls = []
-                    match = re.search(
-                        r'resource_metadata=(?:"([^"]+)"|([^\s,]+))',
-                        response.headers.get('WWW-Authenticate', ''),
-                    )
-                    if match:
-                        resource_metadata_urls = [match.group(1) or match.group(2)]
-                        log.debug(f'Found resource_metadata URL: {resource_metadata_urls[0]}')
-                    else:
-                        # Fall back to well-known resource metadata URIs (RFC 9728 §4.2)
-                        parsed, base_url = get_parsed_and_base_url(server_url)
-                        if parsed.path and parsed.path != '/':
-                            path = parsed.path.rstrip('/')
-                            resource_metadata_urls.append(
-                                urllib.parse.urljoin(base_url, f'/.well-known/oauth-protected-resource{path}')
-                            )
+                # Discover Protected Resource Metadata regardless of HTTP status.
+                # A 401 carries a WWW-Authenticate header pointing at the PRM, but
+                # some MCP servers (e.g. Google's gmail/drive/calendar remote MCPs)
+                # answer 200 to an anonymous `initialize`, so we must still fall
+                # back to the RFC 9728 well-known URIs when there is no 401/header.
+                resource_metadata_urls = []
+                match = re.search(
+                    r'resource_metadata=(?:"([^"]+)"|([^\s,]+))',
+                    response.headers.get('WWW-Authenticate', ''),
+                )
+                if match:
+                    resource_metadata_urls = [match.group(1) or match.group(2)]
+                    log.debug(f'Found resource_metadata URL: {resource_metadata_urls[0]}')
+                else:
+                    # Fall back to well-known resource metadata URIs (RFC 9728 §4.2)
+                    parsed, base_url = get_parsed_and_base_url(server_url)
+                    if parsed.path and parsed.path != '/':
+                        path = parsed.path.rstrip('/')
                         resource_metadata_urls.append(
-                            urllib.parse.urljoin(base_url, '/.well-known/oauth-protected-resource')
+                            urllib.parse.urljoin(base_url, f'/.well-known/oauth-protected-resource{path}')
                         )
-                        log.debug(f'No resource_metadata in header, trying well-known URIs: {resource_metadata_urls}')
+                    resource_metadata_urls.append(
+                        urllib.parse.urljoin(base_url, '/.well-known/oauth-protected-resource')
+                    )
+                    log.debug(f'No resource_metadata in header, trying well-known URIs: {resource_metadata_urls}')
 
-                    # Fetch Protected Resource metadata from candidate URLs
-                    for resource_metadata_url in resource_metadata_urls:
-                        try:
-                            async with session.get(
-                                resource_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
-                            ) as resource_response:
-                                if resource_response.status == 200:
-                                    resource_metadata = await resource_response.json()
+                # Fetch Protected Resource metadata from candidate URLs
+                for resource_metadata_url in resource_metadata_urls:
+                    try:
+                        async with session.get(
+                            resource_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                        ) as resource_response:
+                            if resource_response.status == 200:
+                                resource_metadata = await resource_response.json()
 
-                                    resource = resource_metadata.get('resource') or None
-                                    if resource:
-                                        log.debug(f'Discovered resource indicator: {resource}')
+                                resource = resource_metadata.get('resource') or None
+                                if resource:
+                                    log.debug(f'Discovered resource indicator: {resource}')
 
-                                    servers = resource_metadata.get('authorization_servers', [])
-                                    scopes = resource_metadata.get('scopes_supported', [])
-                                    if scopes:
-                                        log.debug(f'Discovered resource scopes: {scopes}')
+                                servers = resource_metadata.get('authorization_servers', [])
+                                scopes = resource_metadata.get('scopes_supported', [])
+                                if scopes:
+                                    log.debug(f'Discovered resource scopes: {scopes}')
 
-                                    if servers:
-                                        authorization_servers = servers
-                                        log.debug(f'Discovered authorization servers: {servers}')
-                                        break
-                        except Exception as e:
-                            log.debug(f'Failed to fetch resource metadata from {resource_metadata_url}: {e}')
-                            continue
+                                if servers:
+                                    authorization_servers = servers
+                                    log.debug(f'Discovered authorization servers: {servers}')
+                                    break
+                    except Exception as e:
+                        log.debug(f'Failed to fetch resource metadata from {resource_metadata_url}: {e}')
+                        continue
     except Exception as e:
         log.debug(f'MCP Protected Resource discovery failed: {e}')
 
@@ -459,6 +469,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
     client_id: str,
     oauth_server_url: str,
     oauth_server_key: Optional[str] = None,
+    oauth_scope: str | None = None,
 ) -> OAuthClientInformationFull:
     try:
         oauth_server_metadata = None
@@ -481,7 +492,10 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         # Prefer the resource-specific scopes from the Protected Resource Metadata
         # (RFC 9728) over the AS's full scopes_supported catalog, for least
         # privilege. Mirrors the static-credentials flow (#24690).
-        if resource_metadata.scopes_supported:
+        scope_override = ' '.join(oauth_scope.replace(',', ' ').split()) if oauth_scope else None
+        if scope_override:
+            oauth_client_metadata.scope = scope_override
+        elif resource_metadata.scopes_supported:
             oauth_client_metadata.scope = ' '.join(resource_metadata.scopes_supported)
 
         discovery_urls = resource_metadata.get_discovery_urls(oauth_server_url)
@@ -581,6 +595,7 @@ async def get_oauth_client_info_with_static_credentials(
     oauth_server_url: str,
     oauth_client_id: str,
     oauth_client_secret: str,
+    oauth_scope: str | None = None,
 ) -> OAuthClientInformationFull:
     """
     Build an OAuthClientInformationFull from user-provided static credentials.
@@ -615,7 +630,9 @@ async def get_oauth_client_info_with_static_credentials(
         # Unlike the Authorization Server's scopes_supported (which is a full catalog
         # of every scope the server can grant), the PRM scopes_supported represents
         # what this specific resource requires — making it safe to request them all.
-        scope = ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
+        scope = (' '.join(oauth_scope.replace(',', ' ').split()) if oauth_scope else None) or (
+            ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
+        )
 
         # Determine token_endpoint_auth_method
         token_endpoint_auth_method = 'client_secret_post'
@@ -664,6 +681,97 @@ def resolve_oauth_client_info(connection: dict) -> dict:
             data['client_secret'] = info['oauth_client_secret']
 
     return data
+
+
+def normalize_oauth_resource_parameter(value: str | None) -> OAuthResourceParameterMode:
+    if value in OAUTH_RESOURCE_PARAMETER_MODES:
+        return value
+    return 'auto'
+
+
+def get_connection_oauth_resource_parameter(connection: dict) -> OAuthResourceParameterMode:
+    info = connection.get('info') or {}
+    config = connection.get('config') or {}
+    return normalize_oauth_resource_parameter(
+        info.get('oauth_resource_parameter') or config.get('oauth_resource_parameter')
+    )
+
+
+def apply_connection_oauth_options(connection: dict, oauth_client_info: dict) -> dict:
+    info = connection.get('info') or {}
+    config = connection.get('config') or {}
+    oauth_scope = info.get('oauth_scope') or config.get('oauth_scope')
+    oauth_scope = ' '.join(oauth_scope.replace(',', ' ').split()) if oauth_scope else None
+
+    options = {
+        **oauth_client_info,
+        'oauth_resource_parameter': get_connection_oauth_resource_parameter(connection),
+    }
+    if oauth_scope:
+        options['scope'] = oauth_scope
+    return options
+
+
+def scope_has_resource_indicator(scope: str | None) -> bool:
+    if not scope:
+        return False
+    return any(
+        scope_value.startswith(('https://', 'http://', 'api://'))
+        for scope_value in scope.split()
+    )
+
+
+def should_send_oauth_resource(client_info: OAuthClientInformationFull | None) -> bool:
+    if not client_info or not client_info.resource:
+        return False
+
+    mode = normalize_oauth_resource_parameter(client_info.oauth_resource_parameter)
+    if mode == 'omit':
+        return False
+    if mode == 'include':
+        return True
+
+    return not scope_has_resource_indicator(client_info.scope)
+
+
+def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -> dict:
+    if not client_info:
+        return {}
+
+    params = {}
+    if client_info.scope:
+        params['scope'] = client_info.scope
+    if should_send_oauth_resource(client_info):
+        params['resource'] = client_info.resource
+    return params
+
+
+async def recover_static_oauth_client_metadata(connection: dict, oauth_client_info: dict) -> dict:
+    if connection.get('auth_type') != 'oauth_2.1_static':
+        return oauth_client_info
+
+    if oauth_client_info.get('scope') and oauth_client_info.get('resource'):
+        return oauth_client_info
+
+    server_url = connection.get('url')
+    if not server_url:
+        return oauth_client_info
+
+    try:
+        resource_metadata = await get_protected_resource_metadata(server_url)
+    except Exception as e:
+        log.debug(f'Unable to recover static OAuth metadata for {server_url}: {e}')
+        return oauth_client_info
+
+    recovered = {**oauth_client_info}
+    if not recovered.get('scope') and resource_metadata.scopes_supported:
+        recovered['scope'] = ' '.join(resource_metadata.scopes_supported)
+        log.info(f'Recovered static OAuth scopes for {server_url} from protected resource metadata')
+
+    if not recovered.get('resource') and resource_metadata.resource:
+        recovered['resource'] = resource_metadata.resource
+
+    return recovered
 
 
 class OAuthClientManager:
@@ -744,6 +852,10 @@ class OAuthClientManager:
 
             try:
                 oauth_client_info = resolve_oauth_client_info(connection)
+                oauth_client_info = await recover_static_oauth_client_metadata(
+                    connection, oauth_client_info
+                )
+                oauth_client_info = apply_connection_oauth_options(connection, oauth_client_info)
                 return self.add_client(expected_client_id, OAuthClientInformationFull(**oauth_client_info))['client']
             except Exception as e:
                 log.error(f'Failed to lazily add OAuth client {expected_client_id} from config: {e}')
@@ -777,7 +889,8 @@ class OAuthClientManager:
             redirect_uri = str(client_info.redirect_uris[0])
 
         try:
-            auth_data = await client.create_authorization_url(redirect_uri=redirect_uri)
+            kwargs = build_oauth_request_params(client_info)
+            auth_data = await client.create_authorization_url(redirect_uri=redirect_uri, **kwargs)
             authorization_url = auth_data.get('url')
 
             if not authorization_url:
@@ -956,9 +1069,8 @@ class OAuthClientManager:
                 'refresh_token': token_data['refresh_token'],
                 'client_id': client.client_id,
             }
-            # RFC 8707: include resource indicator so refreshed tokens retain correct audience
             client_info = await self.get_client_info(client_id)
-            if client_info and client_info.resource:
+            if should_send_oauth_resource(client_info):
                 refresh_data['resource'] = client_info.resource
 
             if hasattr(client, 'client_secret') and client.client_secret:
@@ -1013,10 +1125,8 @@ class OAuthClientManager:
 
         redirect_uri = client_info.redirect_uris[0] if client_info.redirect_uris else None
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
-        # RFC 8707: pass resource indicator so the IdP sets the correct JWT audience
-        kwargs = {}
-        if client_info.resource:
-            kwargs['resource'] = client_info.resource
+        # Pass explicit scope/resource parameters for providers that require them.
+        kwargs = build_oauth_request_params(client_info)
         return await client.authorize_redirect(request, redirect_uri_str, **kwargs)
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
@@ -1032,9 +1142,8 @@ class OAuthClientManager:
             # The Authlib client already has these configured during add_client().
             # Passing them again causes Authlib to concatenate them (e.g., "ID1,ID1"),
             # which results in 401 errors from the token endpoint. (Fix for #19823)
-            # RFC 8707: pass resource indicator for correct JWT audience on token exchange
             token_kwargs = {}
-            if client_info and client_info.resource:
+            if should_send_oauth_resource(client_info):
                 token_kwargs['resource'] = client_info.resource
             token = await client.authorize_access_token(request, **token_kwargs)
 
@@ -1209,6 +1318,7 @@ class OAuthManager:
         """
         provider = session.provider
         token_data = session.token
+        auth_config = await get_oauth_runtime_config()
 
         if not token_data.get('refresh_token'):
             log.warning(f'No refresh token available for session {session.id}')
@@ -1513,7 +1623,7 @@ class OAuthManager:
             return '/user.png'
 
         try:
-            validate_url(picture_url)
+            await asyncio.to_thread(validate_url, picture_url)
 
             get_kwargs = {}
             if access_token:
@@ -1780,7 +1890,7 @@ class OAuthManager:
 
                     user = await Auths.insert_new_auth(
                         email=email,
-                        password=get_password_hash(str(uuid.uuid4())),  # Random password, not used
+                        password=await get_password_hash(str(uuid.uuid4())),  # Random password, not used
                         name=name,
                         profile_image_url=picture_url,
                         role=await self.get_user_role(None, user_data),
@@ -1798,20 +1908,16 @@ class OAuthManager:
                         await Users.update_user_role_by_id(user.id, 'admin', db=db)
                         user = await Users.get_user_by_id(user.id, db=db)
 
-                    if auth_config.WEBHOOK_URL:
-                        await post_webhook(
-                            WEBUI_NAME,
-                            auth_config.WEBHOOK_URL,
-                            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                            {
-                                'action': 'signup',
-                                'message': WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                                'user': user.model_dump_json(exclude_none=True),
-                            },
-                        )
-
                     default_group_id = await Config.get('ui.default_group_id')
                     await apply_default_group_assignment(default_group_id, user.id, db=db)
+                    await publish_event(
+                        request,
+                        EVENTS.USER_CREATED,
+                        actor=user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'role': user.role, 'provider': provider},
+                    )
 
                 else:
                     raise HTTPException(
