@@ -810,6 +810,20 @@
 		});
 	};
 
+	const isAuthFailureResponse = async (response) => {
+		try {
+			const data = await response.clone().json();
+			const detail = data?.detail;
+			return (
+				detail === '401 Unauthorized' ||
+				detail === 'Not authenticated' ||
+				detail === 'Your session has expired or the token is invalid. Please sign in again.'
+			);
+		} catch {
+			return true;
+		}
+	};
+
 	const checkTokenExpiry = async () => {
 		const exp = $user?.expires_at; // token expiry time in unix timestamp
 		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
@@ -939,7 +953,8 @@
 			if (
 				response.status === 401 &&
 				localStorage.token &&
-				isAuthenticatedBackendFetch(input, init)
+				isAuthenticatedBackendFetch(input, init) &&
+				(await isAuthFailureResponse(response))
 			) {
 				redirectToAuthAfterUnauthorized();
 			}
