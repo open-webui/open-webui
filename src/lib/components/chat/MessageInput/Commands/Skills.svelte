@@ -73,14 +73,14 @@
 				on:focus={() => {}}
 				data-selected={skillIdx === selectedIdx}
 			>
-				<div class="flex text-black dark:text-gray-100 line-clamp-1 items-center">
+				<div class="flex text-black dark:text-gray-100 items-center">
 					<div class="flex items-center justify-center size-5 mr-2 shrink-0">
 						<Keyframes className="size-4" />
 					</div>
-					<div class="truncate">
+					<div class="whitespace-nowrap">
 						{skill.name}
 					</div>
-					<div class="ml-2 text-xs text-gray-500 truncate">
+					<div class="ml-2 text-xs text-gray-500 whitespace-nowrap">
 						{skill.id}
 					</div>
 				</div>
