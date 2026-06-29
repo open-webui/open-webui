@@ -14,7 +14,7 @@ Our stance: a visible advisory history is evidence of active scrutiny and a disc
 
 **If an issue is already fixed, or already being fixed in the open, at the time you file, the report will not be accepted** — it did not contribute to discovering or remediating the issue, and we will not publish an advisory for it.
 
-A fix counts as already-existing regardless of which branch it lives on — including `dev` — and regardless of whether it was silently resolved in an earlier version. Branch support status (see table above) governs where a vulnerability must be *reproducible*, not whether a fix already exists: a bug live in a supported branch but already fixed in `dev` is still an already-fixed issue under this rule.
+A fix counts as already-existing regardless of which branch it lives on — including `dev` — and regardless of whether it was silently resolved in an earlier version. Branch support status (see table above) governs where a vulnerability must be _reproducible_, not whether a fix already exists: a bug live in a supported branch but already fixed in `dev` is still an already-fixed issue under this rule.
 
 Two specific patterns this covers, both of which we reject:
 
@@ -44,7 +44,7 @@ If your report describes a real vulnerability under this policy, here's what you
 - **Coordinated disclosure.** We won't publish out from under you while you're still working the issue with us. Status moves visibly on the advisory itself — including the CVE request — and GitHub notifies you of those updates, so you can follow it through to publication.
 - **A real fix, handled responsibly.** For findings with broad or severe real-world impact, we may hold publication for up to ~2 weeks after the patched release so administrators can update before details are public.
 
-We're a small volunteer team, so what we *can't* offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
+We're a small volunteer team, so what we _can't_ offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
 
 ## Alignment with the CVE Program
 

@@ -786,7 +786,9 @@
 			const requestUrl = resolveFetchUrl(input);
 			const backendOrigin = new URL(WEBUI_BASE_URL || '/', window.location.origin).origin;
 
-			return requestUrl.origin === backendOrigin && resolveFetchHeaders(input, init).has('authorization');
+			return (
+				requestUrl.origin === backendOrigin && resolveFetchHeaders(input, init).has('authorization')
+			);
 		} catch {
 			return false;
 		}
@@ -934,7 +936,11 @@
 		window.fetch = async (input, init) => {
 			const response = await originalFetch(input, init);
 
-			if (response.status === 401 && localStorage.token && isAuthenticatedBackendFetch(input, init)) {
+			if (
+				response.status === 401 &&
+				localStorage.token &&
+				isAuthenticatedBackendFetch(input, init)
+			) {
 				redirectToAuthAfterUnauthorized();
 			}
 
