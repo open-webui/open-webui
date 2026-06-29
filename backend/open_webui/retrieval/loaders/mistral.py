@@ -632,7 +632,8 @@ class MistralLoader:
         try:
             async with self._get_session() as session:
                 if self.use_base64:
-                    documents = self._process_results(await self._process_ocr_async(session, self._get_file_data_url()))
+                    ocr_response = await self._process_ocr_async(session, self._get_file_data_url())
+                    documents = self._process_results(ocr_response)
                     total_time = time.time() - start_time
                     log.info(
                         f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents'
