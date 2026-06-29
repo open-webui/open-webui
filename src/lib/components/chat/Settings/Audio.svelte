@@ -279,7 +279,7 @@
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-playback response')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-Playback Response')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
