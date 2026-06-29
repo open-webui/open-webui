@@ -1537,6 +1537,18 @@ async def get_sources_from_items(
                         else:
                             collection_names.append(item['id'])
 
+        elif item.get('type') == 'web_search':
+            if item.get('docs'):
+                # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+                query_result = {
+                    'documents': [[doc.get('content') for doc in item.get('docs')]],
+                    'metadatas': [[doc.get('metadata') for doc in item.get('docs')]],
+                }
+            elif item.get('collection_name'):
+                collection_names.append(item['collection_name'])
+            elif item.get('collection_names'):
+                collection_names.extend(item['collection_names'])
+
         elif item.get('docs'):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             query_result = {
