@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -213,8 +214,12 @@ async def load_tool_module_by_id(tool_id, content=None):
         await Tools.update_tool_by_id(tool_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
-        # Install required packages found within the frontmatter
-        install_frontmatter_requirements(frontmatter.get('requirements', ''))
+        # Install required packages found within the frontmatter.
+        # Runs `pip install` via subprocess, which can take a long time;
+        # offload to a thread so it doesn't block the event loop.
+        await asyncio.to_thread(
+            install_frontmatter_requirements, frontmatter.get('requirements', '')
+        )
 
     module_name = f'tool_{tool_id}'
     module = types.ModuleType(module_name)
@@ -258,7 +263,10 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         await Functions.update_function_by_id(function_id, {'content': content})
     else:
         frontmatter = extract_frontmatter(content)
-        install_frontmatter_requirements(frontmatter.get('requirements', ''))
+        # `pip install` via subprocess can block for a long time; offload it.
+        await asyncio.to_thread(
+            install_frontmatter_requirements, frontmatter.get('requirements', '')
+        )
 
     module_name = f'function_{function_id}'
     module = types.ModuleType(module_name)
@@ -459,6 +467,9 @@ async def install_tool_and_function_dependencies():
                 if dependencies := frontmatter.get('requirements'):
                     all_dependencies += f'{dependencies}, '
 
-        install_frontmatter_requirements(all_dependencies.strip(', '))
+        # `pip install` via subprocess can block for a long time; offload it.
+        await asyncio.to_thread(
+            install_frontmatter_requirements, all_dependencies.strip(', ')
+        )
     except Exception as e:
         log.error(f'Error installing requirements: {e}')
