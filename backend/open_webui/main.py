@@ -472,7 +472,6 @@ if ENABLE_OTEL:
 ########################################
 
 
-
 app.state.OLLAMA_MODELS = {}
 
 ########################################
@@ -531,19 +530,6 @@ app.state.BASE_MODELS = []
 ########################################
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 async def initialize_runtime_config(app: FastAPI):
     # Migrate legacy access_control → access_grants on boot.
     from open_webui.utils.access_control import migrate_access_control
@@ -565,9 +551,7 @@ async def initialize_runtime_config(app: FastAPI):
                     oauth_client_info = await recover_static_oauth_client_metadata(
                         tool_server_connection, oauth_client_info
                     )
-                    oauth_client_info = apply_connection_oauth_options(
-                        tool_server_connection, oauth_client_info
-                    )
+                    oauth_client_info = apply_connection_oauth_options(tool_server_connection, oauth_client_info)
                     app.state.oauth_client_manager.add_client(
                         f'mcp:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
@@ -677,8 +661,6 @@ async def initialize_runtime_config(app: FastAPI):
 ########################################
 
 
-
-
 ########################################
 #
 # IMAGES
@@ -686,31 +668,11 @@ async def initialize_runtime_config(app: FastAPI):
 ########################################
 
 
-
-
-
-
-
-
-
-
 ########################################
 #
 # AUDIO
 #
 ########################################
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 app.state.faster_whisper_model = None
@@ -723,13 +685,6 @@ app.state.speech_speaker_embeddings_dataset = None
 # TASKS
 #
 ########################################
-
-
-
-
-
-
-
 
 
 ########################################
@@ -901,6 +856,12 @@ class ModelUnloadForm(BaseModel):
     model: str
 
 
+def strip_provider_model_prefix(model_id: str, prefix_id: str | None) -> str:
+    if prefix_id and model_id.startswith(f'{prefix_id}.'):
+        return model_id[len(f'{prefix_id}.') :]
+    return model_id
+
+
 @app.post('/api/models/unload')
 async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depends(get_admin_user)):
     """
@@ -937,9 +898,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             key = api_config.get('key', None)
 
             prefix_id = api_config.get('prefix_id', None)
-            actual_model = model_id
-            if prefix_id and actual_model.startswith(f'{prefix_id}.'):
-                actual_model = actual_model[len(f'{prefix_id}.') :]
+            actual_model = strip_provider_model_prefix(model_id, prefix_id)
 
             payload = json.dumps({'model': actual_model, 'keep_alive': 0, 'prompt': ''})
 
@@ -983,6 +942,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
 
         if provider == 'llama.cpp':
             root_url = base_url.rstrip('/').removesuffix('/v1')
+            actual_model = strip_provider_model_prefix(model_id, api_config.get('prefix_id'))
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
@@ -992,7 +952,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
                     }
                     async with session.post(
                         f'{root_url}/models/unload',
-                        json={'model': model_id},
+                        json={'model': actual_model},
                         headers=headers,
                     ) as r:
                         if not r.ok:
@@ -2270,7 +2230,9 @@ async def register_client(request, client_id: str) -> bool:
 
     server_url = connection.get('url')
     auth_type = connection.get('auth_type', 'none')
-    oauth_scope = (connection.get('info') or {}).get('oauth_scope') or (connection.get('config') or {}).get('oauth_scope')
+    oauth_scope = (connection.get('info') or {}).get('oauth_scope') or (connection.get('config') or {}).get(
+        'oauth_scope'
+    )
     oauth_server_key = (connection.get('config') or {}).get('oauth_server_key')
 
     try:
@@ -2324,9 +2286,7 @@ async def register_client(request, client_id: str) -> bool:
 
     oauth_client_manager.remove_client(client_id)
     oauth_client_info = OAuthClientInformationFull(
-        **apply_connection_oauth_options(
-            connection, oauth_client_info.model_dump(mode='json')
-        )
+        **apply_connection_oauth_options(connection, oauth_client_info.model_dump(mode='json'))
     )
     oauth_client_manager.add_client(client_id, oauth_client_info)
     log.info(f'Re-registered OAuth client {client_id} for tool server')
