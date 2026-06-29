@@ -338,6 +338,13 @@ async def upload_file_handler(
                 'OpenWebUI-File-Id': id,
             },
         )
+        max_size = await Config.get('rag.file.max_size')
+        if max_size and len(contents) > int(max_size) * 1024 * 1024:
+            await asyncio.to_thread(Storage.delete_file, file_path)
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'),
+            )
 
         # SHA-256 of raw uploaded bytes for incremental sync diffing.
         # If the client pre-computed and sent file_hash, use that.
@@ -666,6 +673,12 @@ async def update_file_data_content_by_id(
         )
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
+        max_size = await Config.get('rag.file.max_size')
+        if max_size and len(form_data.content.encode('utf-8')) > int(max_size) * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'),
+            )
         try:
             await process_file(
                 request,
