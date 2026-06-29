@@ -73,7 +73,7 @@
 									{/if}
 									{#if toolSpecs.length > 0}
 										<span
-											class="min-w-3 text-center text-[11px] text-gray-500 dark:text-gray-400 shrink-0"
+											class="inline-flex min-w-3 items-center justify-center text-center text-[11px] leading-none text-gray-500 dark:text-gray-400 shrink-0"
 										>
 											{toolSpecs.length}
 										</span>
