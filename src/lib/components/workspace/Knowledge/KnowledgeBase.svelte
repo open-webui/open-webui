@@ -113,6 +113,7 @@
 	let selectedFileId = null;
 	let selectedFile = null;
 	let selectedFileContent = '';
+	let loadingFileContent = false;
 
 	let inputFiles = null;
 
@@ -249,11 +250,29 @@
 	};
 
 	const fileSelectHandler = async (file) => {
+		selectedFile = file;
+		selectedFileContent = file?.data?.content ?? '';
+		loadingFileContent = false;
+
+		if (!file?.id || file?.data?.content !== undefined) {
+			return;
+		}
+
+		loadingFileContent = true;
 		try {
-			selectedFile = file;
-			selectedFileContent = selectedFile?.data?.content || '';
+			const fileWithContent = await getFileById(localStorage.token, file.id);
+			if (selectedFileId === file.id) {
+				selectedFile = fileWithContent ?? file;
+				selectedFileContent = fileWithContent?.data?.content ?? '';
+			}
 		} catch (e) {
-			toast.error($i18n.t('Failed to load file content.'));
+			if (selectedFileId === file.id) {
+				toast.error($i18n.t('Failed to load file content.'));
+			}
+		} finally {
+			if (selectedFileId === file.id) {
+				loadingFileContent = false;
+			}
 		}
 	};
 
@@ -825,6 +844,8 @@
 		currentPage = 1;
 		selectedFileId = null;
 		selectedFile = null;
+		selectedFileContent = '';
+		loadingFileContent = false;
 		getItemsPage();
 	};
 
@@ -953,8 +974,7 @@
 	let isSaving = false;
 
 	const updateFileContentHandler = async () => {
-		if (isSaving) {
-			console.log('Save operation already in progress, skipping...');
+		if (isSaving || loadingFileContent || !selectedFile?.id) {
 			return;
 		}
 
@@ -1414,6 +1434,9 @@
 							placeholder={$i18n.t('Search Collection')}
 							on:focus={() => {
 								selectedFileId = null;
+								selectedFile = null;
+								selectedFileContent = '';
+								loadingFileContent = false;
 							}}
 						/>
 
@@ -1578,13 +1601,18 @@
 														if (file) {
 															fileSelectHandler(file);
 														} else {
+															selectedFileId = null;
 															selectedFile = null;
+															selectedFileContent = '';
+															loadingFileContent = false;
 														}
 													}
 												}}
 												onDelete={(fileId) => {
 													selectedFileId = null;
 													selectedFile = null;
+													selectedFileContent = '';
+													loadingFileContent = false;
 
 													deleteFileHandler(fileId);
 												}}
@@ -1622,6 +1650,8 @@
 								onClose={() => {
 									selectedFileId = null;
 									selectedFile = null;
+									selectedFileContent = '';
+									loadingFileContent = false;
 								}}
 							>
 								<div class="flex flex-col justify-start h-full max-h-full">
@@ -1634,6 +1664,8 @@
 													on:click={() => {
 														selectedFileId = null;
 														selectedFile = null;
+														selectedFileContent = '';
+														loadingFileContent = false;
 													}}
 												>
 													<ChevronLeft strokeWidth="2.5" />
@@ -1647,7 +1679,7 @@
 												<div>
 													<button
 														class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-														disabled={isSaving}
+														disabled={isSaving || loadingFileContent}
 														on:click={() => {
 															updateFileContentHandler();
 														}}
@@ -1663,14 +1695,14 @@
 											{/if}
 										</div>
 
-										{#key selectedFile.id}
+										{#key selectedFile?.id}
 											<textarea
 												class="w-full h-full text-sm outline-none resize-none px-3 py-2"
 												bind:value={selectedFileContent}
-												disabled={!knowledge?.write_access}
+												disabled={!knowledge?.write_access || loadingFileContent}
 												aria-label={$i18n.t('File content')}
 												placeholder={$i18n.t('Add content here')}
-											/>
+											></textarea>
 										{/key}
 									</div>
 								</div>
