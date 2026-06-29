@@ -36,14 +36,16 @@ def expand_recurring_event(
     range_end_dt = datetime.fromtimestamp(range_end_ns / 1_000_000_000)
     scan_start = range_start_dt - timedelta(days=1)
 
+    original_start_ns = event_dict['start_at']
+    original_start_dt = datetime.fromtimestamp(original_start_ns / 1_000_000_000)
+
     try:
-        # Parse with dtstart near the range so we never iterate from epoch
-        rule = rrulestr(rrule_str, dtstart=scan_start, ignoretz=True)
+        # Anchor to the event's real start so day-of-week / day-of-month are correct
+        rule = rrulestr(rrule_str, dtstart=original_start_dt, ignoretz=True)
     except Exception:
         log.warning(f'Failed to parse RRULE for event {event_dict.get("id")}: {rrule_str}')
         return [event_dict]
 
-    original_start_ns = event_dict['start_at']
     original_end_ns = event_dict.get('end_at')
     duration_ns = (original_end_ns - original_start_ns) if original_end_ns else None
 
