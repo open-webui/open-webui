@@ -75,11 +75,15 @@ async def get_tools(
     tools_cache = get_tools_cache(request)
     for tool in await Tools.get_tools(defer_content=True, db=db):
         tool_module = tools_cache.get(tool.id)
+        has_user_valves = (
+            hasattr(tool_module, 'UserValves') if tool_module
+            else (tool.meta.has_user_valves if tool.meta else False)
+        )
         tools.append(
             ToolUserResponse(
                 **{
                     **tool.model_dump(),
-                    'has_user_valves': (hasattr(tool_module, 'UserValves') if tool_module else False),
+                    'has_user_valves': has_user_valves,
                 }
             )
         )
@@ -370,6 +374,7 @@ async def create_new_tools(
             form_data.content = replace_imports(form_data.content)
             tool_module, frontmatter = await load_tool_module_by_id(form_data.id, content=form_data.content)
             form_data.meta.manifest = frontmatter
+            form_data.meta.has_user_valves = hasattr(tool_module, 'UserValves')
 
             TOOLS = get_tools_cache(request)
             TOOLS[form_data.id] = tool_module
@@ -507,6 +512,7 @@ async def update_tools_by_id(
         form_data.content = replace_imports(form_data.content)
         tool_module, frontmatter = await load_tool_module_by_id(id, content=form_data.content)
         form_data.meta.manifest = frontmatter
+        form_data.meta.has_user_valves = hasattr(tool_module, 'UserValves')
 
         TOOLS = get_tools_cache(request)
         TOOLS[id] = tool_module
