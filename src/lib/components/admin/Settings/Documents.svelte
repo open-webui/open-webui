@@ -318,6 +318,7 @@
 				: config.EXTERNAL_DOCUMENT_LOADER_HEADERS;
 
 		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
+		config.RAG_TOKENIZER_MODEL = config?.RAG_TOKENIZER_MODEL ?? '';
 
 		RAGConfig = config;
 	});
@@ -910,9 +911,29 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+									<option value="token_transformers">
+										{$i18n.t('Token')} ({$i18n.t('Transformers')})
+									</option>
 								</select>
 							</div>
 						</div>
+
+						{#if RAGConfig.TEXT_SPLITTER === 'token_transformers'}
+							<div class="mb-2.5 flex flex-col w-full justify-between">
+								<div class="self-center text-xs font-medium min-w-fit mb-1 w-full">
+									{$i18n.t('Tokenizer Model')}
+								</div>
+								<div class="self-center w-full">
+									<input
+										class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Tokenizer Model')}
+										bind:value={RAGConfig.RAG_TOKENIZER_MODEL}
+										autocomplete="off"
+										required={RAG_EMBEDDING_ENGINE !== ''}
+									/>
+								</div>
+							</div>
+						{/if}
 
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">

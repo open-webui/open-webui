@@ -346,6 +346,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'RAG_EMBEDDING_CONCURRENT_REQUESTS': 'rag.embedding_concurrent_requests',
     'RAG_EMBEDDING_ENGINE': 'rag.embedding_engine',
     'RAG_EMBEDDING_MODEL': 'rag.embedding_model',
+    'RAG_TOKENIZER_MODEL': 'rag.tokenizer_model',
     'RAG_EXTERNAL_RERANKER_API_KEY': 'rag.external_reranker_api_key',
     'RAG_EXTERNAL_RERANKER_TIMEOUT': 'rag.external_reranker_timeout',
     'RAG_EXTERNAL_RERANKER_URL': 'rag.external_reranker_url',
@@ -673,6 +674,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'RAG_EXTERNAL_RERANKER_TIMEOUT': config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         'TEXT_SPLITTER': config.TEXT_SPLITTER,
+        'RAG_TOKENIZER_MODEL': config.RAG_TOKENIZER_MODEL,
         'ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER': config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         'CHUNK_SIZE': config.CHUNK_SIZE,
         'CHUNK_MIN_SIZE_TARGET': config.CHUNK_MIN_SIZE_TARGET,
@@ -906,6 +908,7 @@ class ConfigForm(BaseModel):
 
     # Chunking settings
     TEXT_SPLITTER: str | None = None
+    RAG_TOKENIZER_MODEL: str | None = None
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: bool | None = None
     CHUNK_SIZE: int | None = None
     CHUNK_MIN_SIZE_TARGET: int | None = None
@@ -1232,6 +1235,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     config.CHUNK_OVERLAP = (
         form_data.CHUNK_OVERLAP if form_data.CHUNK_OVERLAP is not None else config.CHUNK_OVERLAP
     )
+    config.RAG_TOKENIZER_MODEL = (
+        form_data.RAG_TOKENIZER_MODEL.strip()
+        if form_data.RAG_TOKENIZER_MODEL is not None
+        else config.RAG_TOKENIZER_MODEL
+    )
 
     # File upload settings
     # Empty string means "clear to None" (unlimited/no compression),
@@ -1405,6 +1413,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'RAG_EXTERNAL_RERANKER_TIMEOUT': config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         'TEXT_SPLITTER': config.TEXT_SPLITTER,
+        'RAG_TOKENIZER_MODEL': config.RAG_TOKENIZER_MODEL,
         'CHUNK_SIZE': config.CHUNK_SIZE,
         'CHUNK_MIN_SIZE_TARGET': config.CHUNK_MIN_SIZE_TARGET,
         'ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER': config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
@@ -1538,10 +1547,7 @@ def merge_docs_to_target_size(
     if min_size <= 0:
         return chunks
 
-    measure: Callable[[str], int] = len
-    if config.TEXT_SPLITTER == 'token':
-        encoding = tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
-        measure = lambda text: len(encoding.encode(text, disallowed_special=()))
+    measure = get_splitter_length_function(request, config)
 
     def _merge_backward(result: list[Document], content: str, chunk: Document) -> bool:
         """Try to append content into the last emitted chunk. Returns True on success."""
@@ -1592,6 +1598,43 @@ def merge_docs_to_target_size(
         _emit(result, current_content, current_chunk)
 
     return result
+
+
+def get_transformers_tokenizer(request: Request, config: RetrievalConfig):
+    if config.RAG_TOKENIZER_MODEL:
+        from transformers import AutoTokenizer
+
+        tokenizer_model = config.RAG_TOKENIZER_MODEL
+        if not os.path.exists(tokenizer_model) and '/' not in tokenizer_model:
+            tokenizer_model = f'sentence-transformers/{tokenizer_model}'
+
+        return AutoTokenizer.from_pretrained(
+            tokenizer_model,
+            cache_dir=os.getenv('SENTENCE_TRANSFORMERS_HOME') or os.getenv('HF_HUB_CACHE'),
+            trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+            local_files_only=not RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+        )
+
+    tokenizer = getattr(getattr(request.app.state, 'ef', None), 'tokenizer', None)
+    if tokenizer is not None:
+        return tokenizer
+
+    raise ValueError('Tokenizer model required for Token (Transformers) text splitter')
+
+
+def get_splitter_length_function(
+    request: Request,
+    config: RetrievalConfig,
+) -> Callable[[str], int]:
+    if config.TEXT_SPLITTER == 'token':
+        encoding = tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
+        return lambda text: len(encoding.encode(text, disallowed_special=()))
+
+    if config.TEXT_SPLITTER == 'token_transformers':
+        tokenizer = get_transformers_tokenizer(request, config)
+        return lambda text: len(tokenizer.encode(text))
+
+    return len
 
 
 def save_docs_to_vector_db(
@@ -1691,6 +1734,16 @@ def save_docs_to_vector_db(
                 encoding_name=str(config.TIKTOKEN_ENCODING_NAME),
                 chunk_size=config.CHUNK_SIZE,
                 chunk_overlap=config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
+        elif config.TEXT_SPLITTER == 'token_transformers':
+            log.info('Using transformers token text splitter')
+
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=config.CHUNK_SIZE,
+                chunk_overlap=config.CHUNK_OVERLAP,
+                length_function=get_splitter_length_function(request, config),
                 add_start_index=True,
             )
             docs = text_splitter.split_documents(docs)

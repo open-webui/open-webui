@@ -936,6 +936,8 @@ PDF_LOADER_MODE = os.getenv('PDF_LOADER_MODE', 'page')
 RAG_EMBEDDING_MODEL = os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
 log.info(f'Embedding model set: {RAG_EMBEDDING_MODEL}')
 
+RAG_TOKENIZER_MODEL = os.getenv('RAG_TOKENIZER_MODEL', '')
+
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE and os.getenv('RAG_EMBEDDING_MODEL_AUTO_UPDATE', 'True').lower() == 'true'
 )
@@ -2751,6 +2753,7 @@ DEFAULT_CONFIG = {
     'rag.pdf_extract_images': PDF_EXTRACT_IMAGES,
     'rag.pdf_loader_mode': PDF_LOADER_MODE,
     'rag.embedding_model': RAG_EMBEDDING_MODEL,
+    'rag.tokenizer_model': RAG_TOKENIZER_MODEL,
     'rag.embedding_batch_size': RAG_EMBEDDING_BATCH_SIZE,
     'rag.enable_async_embedding': ENABLE_ASYNC_EMBEDDING,
     'rag.embedding_concurrent_requests': RAG_EMBEDDING_CONCURRENT_REQUESTS,
