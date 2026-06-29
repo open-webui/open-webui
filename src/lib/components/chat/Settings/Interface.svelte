@@ -32,6 +32,7 @@
 	let widescreenMode = false;
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
+	let showFilesOnTerminalSelect = true;
 	let userLocation = false;
 
 	// Interface
@@ -244,6 +245,7 @@
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		showFilesOnTerminalSelect = $settings?.showFilesOnTerminalSelect ?? true;
 
 		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
@@ -1059,6 +1061,25 @@
 							bind:state={scrollOnBranchChange}
 							on:change={() => {
 								saveSettings({ scrollOnBranchChange });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="show-files-on-terminal-select-label" class=" self-center text-xs">
+						{$i18n.t('Show Files on Terminal Select')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="show-files-on-terminal-select-label"
+							tooltip={true}
+							bind:state={showFilesOnTerminalSelect}
+							on:change={() => {
+								saveSettings({ showFilesOnTerminalSelect });
 							}}
 						/>
 					</div>

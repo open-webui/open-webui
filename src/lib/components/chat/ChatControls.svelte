@@ -102,7 +102,7 @@
 	$: if ($selectedTerminalId && showFilesTab) {
 		activeTab = 'files';
 		if (largeScreen) {
-			showControls.set(true);
+			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
 		}
 	}
 

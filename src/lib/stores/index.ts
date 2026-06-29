@@ -213,6 +213,7 @@ type Settings = {
 	iframeSandboxAllowForms?: boolean;
 	iframeSandboxAllowSameOrigin?: boolean;
 	scrollOnBranchChange?: boolean;
+	showFilesOnTerminalSelect?: boolean;
 	directConnections?: null;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
