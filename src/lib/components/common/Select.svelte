@@ -126,22 +126,17 @@
 </button>
 
 {#if open}
-	<div
-		use:portal
-		bind:this={contentEl}
-		class={contentClass}
-		style:max-height={maxHeight}
-		style:overflow-y="auto"
-		transition:flyAndScale
-	>
-		<slot {open} {selectItem}>
-			{#each items as item}
-				<button class={itemClass} type="button" on:click={() => selectItem(item)}>
-					<slot name="item" {item} selected={value === item.value}>
-						{item.label}
-					</slot>
-				</button>
-			{/each}
-		</slot>
+	<div use:portal bind:this={contentEl} transition:flyAndScale>
+		<div class={contentClass} style:max-height={maxHeight} style:overflow-y="auto">
+			<slot {open} {selectItem}>
+				{#each items as item}
+					<button class={itemClass} type="button" on:click={() => selectItem(item)}>
+						<slot name="item" {item} selected={value === item.value}>
+							{item.label}
+						</slot>
+					</button>
+				{/each}
+			</slot>
+		</div>
 	</div>
 {/if}
