@@ -857,8 +857,13 @@
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
-		// Check if a file or a sidebar chat item is being dragged.
-		if (e.dataTransfer?.types?.includes('Files') || e.dataTransfer?.types?.includes('text/plain')) {
+		// Check if a file or a sidebar chat/folder item is being dragged.
+		// Use a custom MIME type to distinguish intentional drags from SortableJS reorder drags
+		// (e.g. Notes, Workspace, pinned Models), which also set 'text/plain'.
+		if (
+			e.dataTransfer?.types?.includes('Files') ||
+			e.dataTransfer?.types?.includes('application/x-open-webui-drag')
+		) {
 			dragged = true;
 		} else {
 			dragged = false;
