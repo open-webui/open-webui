@@ -1,4 +1,5 @@
 import asyncio
+import errno
 import hashlib
 import json
 import logging
@@ -323,21 +324,25 @@ async def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
                 )
 
-        # replace filename with uuid
+        # Prefer readable storage names for admins, but fall back if the filesystem rejects it.
         id = str(uuid.uuid4())
         name = filename
         filename = f'{id}_{filename}'
-        contents, file_path = await asyncio.to_thread(
-            Storage.upload_file,
-            file.file,
-            filename,
-            {
-                'OpenWebUI-User-Email': user.email,
-                'OpenWebUI-User-Id': user.id,
-                'OpenWebUI-User-Name': user.name,
-                'OpenWebUI-File-Id': id,
-            },
-        )
+        tags = {
+            'OpenWebUI-User-Email': user.email,
+            'OpenWebUI-User-Id': user.id,
+            'OpenWebUI-User-Name': user.name,
+            'OpenWebUI-File-Id': id,
+        }
+        try:
+            contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
+        except OSError as e:
+            if e.errno != errno.ENAMETOOLONG:
+                raise
+
+            file.file.seek(0)
+            filename = f'{id}.{file_extension}' if file_extension else id
+            contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
         max_size = await Config.get('rag.file.max_size')
         if max_size and len(contents) > int(max_size) * 1024 * 1024:
             await asyncio.to_thread(Storage.delete_file, file_path)
