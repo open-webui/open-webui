@@ -1,7 +1,7 @@
 <script>
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 	import { Toaster, toast } from 'svelte-sonner';
 
 	let loadingProgress = spring(0, {
@@ -237,7 +237,7 @@
 	const getOrCreateWorker = () => {
 		let worker = $pyodideWorker;
 		if (!worker) {
-			worker = new PyodideWorker();
+			worker = createPyodideWorker();
 			pyodideWorker.set(worker);
 		}
 		return worker;

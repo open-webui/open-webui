@@ -92,6 +92,7 @@ from open_webui.env import (
     ENABLE_SCIM,
     ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    ENABLE_PYODIDE_FILE_PERSISTENCE,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_WEBSOCKET_SUPPORT,
     GLOBAL_LOG_LEVEL,
@@ -269,6 +270,13 @@ class SPAStaticFiles(StaticFiles):
                     return await super().get_response('index.html', scope)
             else:
                 raise ex
+
+
+class CORSStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
 
 
 if LOG_FORMAT != 'json':
@@ -2580,6 +2588,10 @@ applications.get_swagger_ui_html = swagger_ui_html
 
 if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type('text/javascript', '.js')
+    pyodide_dir = FRONTEND_BUILD_DIR / 'pyodide'
+    if os.path.exists(pyodide_dir):
+        app.mount('/pyodide', CORSStaticFiles(directory=pyodide_dir), name='pyodide')
+
     app.mount(
         '/',
         SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
