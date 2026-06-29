@@ -482,6 +482,11 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: 
     path_arg = args[0] if args else None
 
     kb_ids = await _get_accessible_kb_ids(user, model_knowledge, knowledge_id=None)
+    direct_files = (
+        [f for f in await _get_accessible_files(user, model_knowledge) if not f.get('knowledge_id')]
+        if model_knowledge
+        else []
+    )
 
     # If path_arg looks like a KB ID, scope to that KB
     target_kb_id = None
@@ -497,7 +502,7 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: 
     if target_kb_id:
         kb_ids = [(kid, kn, kd) for kid, kn, kd in kb_ids if kid == target_kb_id]
 
-    if not kb_ids:
+    if not kb_ids and not direct_files:
         return 'No knowledge bases found.'
 
     lines = []
@@ -538,6 +543,12 @@ async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: 
 
         if not subdirs and not dir_files:
             lines.append('  (empty)')
+        lines.append('')
+
+    if direct_files and not target_kb_id and not dir_path:
+        lines.append('Attached Files:')
+        for f in direct_files:
+            lines.append(f'  {f["id"]}  {f["filename"]}  {_fmt_size(f)}  {_fmt_date(f)}')
         lines.append('')
 
     return '\n'.join(lines).rstrip()
@@ -958,7 +969,12 @@ async def _kb_sed(
 async def _kb_tree(args: list[str], flags: set[str], user: dict, model_knowledge: list[dict] | None) -> str:
     """Show directory tree structure."""
     kb_ids = await _get_accessible_kb_ids(user, model_knowledge)
-    if not kb_ids:
+    direct_files = (
+        [f for f in await _get_accessible_files(user, model_knowledge) if not f.get('knowledge_id')]
+        if model_knowledge
+        else []
+    )
+    if not kb_ids and not direct_files:
         return 'No knowledge bases found.'
 
     dir_scope = args[0].strip('/') if args else None
@@ -1005,6 +1021,14 @@ async def _kb_tree(args: list[str], flags: set[str], user: dict, model_knowledge
         total_dirs = len(tree['dirs'])
         total_files = len(tree['files'])
         output.append(f'\n  {total_dirs} directories, {total_files} files')
+        output.append('')
+
+    if direct_files and not dir_scope:
+        output.append('Attached Files:')
+        for idx, f in enumerate(direct_files):
+            connector = '└── ' if idx == len(direct_files) - 1 else '├── '
+            output.append(f'  {connector}{f["filename"]}')
+        output.append(f'\n  0 directories, {len(direct_files)} files')
         output.append('')
 
     return '\n'.join(output).rstrip()

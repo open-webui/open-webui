@@ -60,6 +60,7 @@
 	export let onUpload: Function = (e) => {};
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
+	export let onWebSearchToggle: Function = () => {};
 
 	export let toolServers = [];
 
@@ -73,6 +74,15 @@
 	}
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+
+	// True when viewing a shared folder the current user doesn't own AND lacks write access
+	$: folderReadOnly =
+		$selectedFolder != null &&
+		$selectedFolder.user_id !== $user?.id &&
+		$selectedFolder.permission !== 'write';
+
+	// True when the current user does NOT own this folder (hide management menus)
+	$: folderNotOwned = $selectedFolder != null && $selectedFolder.user_id !== $user?.id;
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -95,6 +105,7 @@
 			{#if $selectedFolder}
 				<FolderTitle
 					folder={$selectedFolder}
+					readOnly={folderNotOwned}
 					onUpdate={async (folder) => {
 						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						currentChatPage.set(1);
@@ -210,33 +221,36 @@
 			{/if}
 
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
-				<MessageInput
-					bind:this={messageInput}
-					{history}
-					{selectedModels}
-					bind:files
-					bind:prompt
-					bind:autoScroll
-					bind:selectedToolIds
-					bind:selectedSkillIds
-					bind:selectedFilterIds
-					bind:imageGenerationEnabled
-					bind:codeInterpreterEnabled
-					bind:webSearchEnabled
-					bind:atSelectedModel
-					bind:showCommands
-					bind:dragged
-					{pendingOAuthTools}
-					{toolServers}
-					{stopResponse}
-					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
-					{onChange}
-					{onUpload}
-					on:submit={(e) => {
-						dispatch('submit', e.detail);
-					}}
-				/>
+				{#if !($selectedFolder && folderReadOnly)}
+					<MessageInput
+						bind:this={messageInput}
+						{history}
+						{selectedModels}
+						bind:files
+						bind:prompt
+						bind:autoScroll
+						bind:selectedToolIds
+						bind:selectedSkillIds
+						bind:selectedFilterIds
+						bind:imageGenerationEnabled
+						bind:codeInterpreterEnabled
+						bind:webSearchEnabled
+						bind:atSelectedModel
+						bind:showCommands
+						bind:dragged
+						{pendingOAuthTools}
+						{toolServers}
+						{stopResponse}
+						{createMessagePair}
+						placeholder={$i18n.t('How can I help you today?')}
+						{onChange}
+						{onUpload}
+						{onWebSearchToggle}
+						on:submit={(e) => {
+							dispatch('submit', e.detail);
+						}}
+					/>
+				{/if}
 			</div>
 		</div>
 	</div>

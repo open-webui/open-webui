@@ -20,7 +20,7 @@ from open_webui.env import (
 )
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.routers.files import upload_file_handler
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.routers.images import (
@@ -28,7 +28,6 @@ from open_webui.routers.images import (
     upload_image,
 )
 from open_webui.storage.provider import Storage
-from open_webui.utils.session_pool import get_session
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r'data:image/\w+;base64,', re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r'!\[(.*?)\]\((.+?)\)', re.IGNORECASE)
@@ -59,17 +58,18 @@ async def get_image_base64_from_url(url: str, user=None) -> Optional[str]:
             # called only on the originally-submitted URL; following 3xx redirects
             # without re-validation would let an attacker reach private IPs via a
             # public host that redirects internally (e.g. cloud-metadata exfil).
-            validate_url(url)
-            # Download the image from the URL
-            session = await get_session()
-            async with session.get(
-                url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
-            ) as response:
-                response.raise_for_status()
-                image_data = await response.read()
-                encoded_string = base64.b64encode(image_data).decode('utf-8')
-                content_type = response.headers.get('Content-Type', 'image/png')
-                return f'data:{content_type};base64,{encoded_string}'
+            await asyncio.to_thread(validate_url, url)
+            # Fetch through an SSRF-safe session that re-checks the connect-time IP, so a
+            # rebinding DNS answer that passed validate_url cannot reach an internal address.
+            async with get_ssrf_safe_session() as session:
+                async with session.get(
+                    url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                ) as response:
+                    response.raise_for_status()
+                    image_data = await response.read()
+                    encoded_string = base64.b64encode(image_data).decode('utf-8')
+                    content_type = response.headers.get('Content-Type', 'image/png')
+                    return f'data:{content_type};base64,{encoded_string}'
         else:
             # Non-URL string — treat as file_id. Delegate to the canonical
             # file-ID resolver which enforces ownership/access checks.

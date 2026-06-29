@@ -158,7 +158,7 @@
 	<slot name="label">
 		<div class="mb-2">
 			<div class="flex w-full justify-between mb-1">
-				<div class=" self-center text-xs font-medium text-gray-500">
+				<div class=" self-center text-xs text-gray-500">
 					{$i18n.t('Knowledge')}
 				</div>
 			</div>
@@ -190,36 +190,41 @@
 		{/if}
 
 		{#if loaded}
-			<div class="flex flex-wrap flex-row text-sm gap-1">
-				<KnowledgeSelector
-					on:select={(e) => {
-						const item = e.detail;
+			<div class="flex items-center gap-2">
+				<div class="min-w-0">
+					<KnowledgeSelector
+						on:select={(e) => {
+							const item = e.detail;
 
-						if (!selectedItems.find((k) => k.id === item.id)) {
-							selectedItems = [
-								...selectedItems,
-								{
-									...item
-								}
-							];
-						}
-					}}
-				>
-					<div
-						class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-850 rounded-3xl"
+							if (!selectedItems.find((k) => k.id === item.id)) {
+								selectedItems = [
+									...selectedItems,
+									{
+										...item
+									}
+								];
+							}
+						}}
 					>
-						{$i18n.t('Select Knowledge')}
-					</div>
-				</KnowledgeSelector>
+						<div
+							class="flex min-w-0 items-center bg-transparent text-xs text-gray-500 outline-hidden hover:underline dark:text-gray-400"
+						>
+							<span class="truncate">{$i18n.t('Select Knowledge')}</span>
+						</div>
+					</KnowledgeSelector>
+				</div>
 
 				{#if $user?.role === 'admin' || $user?.permissions?.chat?.file_upload}
 					<button
-						class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-850 rounded-3xl"
+						class="self-center bg-transparent text-xs text-gray-500 hover:underline dark:text-gray-400"
 						type="button"
+						aria-label={$i18n.t('Upload Files')}
 						on:click={() => {
 							filesInputElement.click();
-						}}>{$i18n.t('Upload Files')}</button
+						}}
 					>
+						{$i18n.t('Upload')}
+					</button>
 				{/if}
 			</div>
 		{/if}

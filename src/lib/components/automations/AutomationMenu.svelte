@@ -3,11 +3,13 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let editHandler: Function;
+	export let cloneHandler: Function;
 	export let runHandler: Function = () => {};
 	export let deleteHandler: Function;
 	export let onClose: Function = () => {};
@@ -55,6 +57,18 @@
 				</svg>
 
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
+			</button>
+
+			<button
+				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				draggable="false"
+				on:click={() => {
+					cloneHandler();
+					show = false;
+				}}
+			>
+				<DocumentDuplicate />
+				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</button>
 
 			<button

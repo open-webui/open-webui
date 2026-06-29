@@ -72,7 +72,7 @@
 					const csv = e.target.result;
 					const rows = csv.split('\n');
 
-					let userCount = 0;
+					const validRows = [];
 
 					for (const [idx, row] of rows.entries()) {
 						const columns = row.split(',').map((col) => col.trim());
@@ -83,7 +83,21 @@
 								columns.length === 4 &&
 								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
 							) {
-								const res = await addUser(
+								validRows.push({ idx, columns });
+							} else {
+								toast.error(`Row ${idx + 1}: invalid format.`);
+							}
+						}
+					}
+
+					let userCount = 0;
+					const BATCH_SIZE = 10;
+
+					for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+						const batch = validRows.slice(i, i + BATCH_SIZE);
+						const results = await Promise.allSettled(
+							batch.map(({ idx, columns }) =>
+								addUser(
 									localStorage.token,
 									columns[0],
 									columns[1],
@@ -93,13 +107,13 @@
 								).catch((error) => {
 									toast.error(`Row ${idx + 1}: ${error}`);
 									return null;
-								});
+								})
+							)
+						);
 
-								if (res) {
-									userCount = userCount + 1;
-								}
-							} else {
-								toast.error(`Row ${idx + 1}: invalid format.`);
+						for (const result of results) {
+							if (result.status === 'fulfilled' && result.value) {
+								userCount++;
 							}
 						}
 					}

@@ -20,13 +20,13 @@
 	let _content = $state(value);
 
 	$effect(() => {
-		if (_content) {
+		if (_content !== undefined && _content !== null) {
 			value = _content;
 		}
 	});
 </script>
 
-<Drawer bind:show>
+<Drawer bind:show className="h-full">
 	<div class="flex h-full flex-col">
 		<div
 			class=" sticky top-0 z-30 flex justify-between bg-white px-4.5 pt-3 pb-3 dark:bg-gray-900 dark:text-gray-100"

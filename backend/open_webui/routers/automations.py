@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.automations import (
     AutomationForm,
@@ -14,6 +15,7 @@ from open_webui.models.automations import (
     AutomationRuns,
     Automations,
 )
+from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.automations import (
@@ -38,13 +40,14 @@ PAGE_ITEM_COUNT = 30
 
 
 async def check_automations_permission(request, user):
-    if not request.app.state.config.ENABLE_AUTOMATIONS:
+    config = await Config.get_many('automations.enable', 'user.permissions')
+    if not config.get('automations.enable'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
     if user.role != 'admin' and not await has_permission(
-        user.id, 'features.automations', request.app.state.config.USER_PERMISSIONS
+        user.id, 'features.automations', config.get('user.permissions')
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -72,7 +75,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
 
     # Max count (create only)
     if is_create:
-        max_count = request.app.state.config.AUTOMATION_MAX_COUNT
+        max_count = await Config.get('automations.max_count')
         if max_count:
             max_count = int(max_count)
             if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
@@ -82,7 +85,7 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
                 )
 
     # Min interval (create + update)
-    min_interval = request.app.state.config.AUTOMATION_MIN_INTERVAL
+    min_interval = await Config.get('automations.min_interval')
     if min_interval:
         min_interval = int(min_interval)
         if min_interval > 0:
@@ -173,7 +176,15 @@ async def create_new_automation(
 
     tz = user.timezone
     automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return await enrich_automation(automation, db, tz=tz)
+    response = await enrich_automation(automation, db, tz=tz)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_CREATED,
+        actor=user,
+        subject_id=automation.id,
+        data={'name': automation.name, 'is_active': automation.is_active},
+    )
+    return response
 
 
 ############################
@@ -223,7 +234,15 @@ async def update_automation_by_id(
 
     tz = user.timezone
     updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
-    return await enrich_automation(updated, db, tz=tz)
+    response = await enrich_automation(updated, db, tz=tz)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_UPDATED,
+        actor=user,
+        subject_id=updated.id,
+        data={'name': updated.name, 'is_active': updated.is_active},
+    )
+    return response
 
 
 ############################
@@ -242,7 +261,16 @@ async def toggle_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
-    return await enrich_automation(toggled, db, tz=user.timezone)
+    response = await enrich_automation(toggled, db, tz=user.timezone)
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_ENABLED if toggled.is_active else EVENTS.AUTOMATION_DISABLED,
+        actor=user,
+        subject_id=toggled.id,
+        subject_type='automation',
+        data={'name': toggled.name},
+    )
+    return response
 
 
 ############################
@@ -261,6 +289,13 @@ async def run_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     asyncio.create_task(execute_automation(request.app, automation))
+    await publish_event(
+        request,
+        EVENTS.AUTOMATION_RUN_STARTED,
+        actor=user,
+        subject_id=automation.id,
+        data={'name': automation.name},
+    )
     return await enrich_automation(automation, db, tz=user.timezone)
 
 
@@ -280,7 +315,16 @@ async def delete_automation_by_id(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     await AutomationRuns.delete_by_automation(id, db=db)
-    return await Automations.delete(id, db=db)
+    result = await Automations.delete(id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.AUTOMATION_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'name': automation.name},
+        )
+    return result
 
 
 ############################

@@ -185,7 +185,7 @@ class SentinelRedisProxy:
                         if proxy._should_retry(attempt):
                             proxy._log_retry(exc, attempt)
                             if REDIS_RECONNECT_DELAY:
-                                time.sleep(REDIS_RECONNECT_DELAY / 1000)
+                                await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
                         proxy._log_exhausted(exc)
                         raise

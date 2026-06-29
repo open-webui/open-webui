@@ -7,10 +7,10 @@ name: Python CI
 on:
   push:
     branches: [main, dev]
-    paths: ['backend/**', 'pyproject.toml', 'uv.lock']
+    paths: ['backend/**', 'pyproject.toml', 'uv.lock', '.github/workflows/backend.yaml']
   pull_request:
     branches: [main, dev]
-    paths: ['backend/**', 'pyproject.toml', 'uv.lock']
+    paths: ['backend/**', 'pyproject.toml', 'uv.lock', '.github/workflows/backend.yaml']
 
 concurrency:
   group: backend-${{ github.ref }}
@@ -38,3 +38,6 @@ jobs:
 
       - name: Verify formatting
         run: ruff format --check . --exclude .venv --exclude venv
+
+      - name: Detect logic errors
+        run: ruff check --select=F --ignore=F401,F403,F405,F541,F811,F841 --output-format=github .

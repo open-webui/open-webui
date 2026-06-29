@@ -28,7 +28,7 @@ export const getMemories = async (token: string) => {
 	return res;
 };
 
-export const addNewMemory = async (token: string, content: string) => {
+export const addNewMemory = async (token: string, content: string, type = 'user', path = '') => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/add`, {
@@ -39,7 +39,9 @@ export const addNewMemory = async (token: string, content: string) => {
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			content: content
+			content: content,
+			type,
+			path
 		})
 	})
 		.then(async (res) => {
@@ -59,8 +61,15 @@ export const addNewMemory = async (token: string, content: string) => {
 	return res;
 };
 
-export const updateMemoryById = async (token: string, id: string, content: string) => {
+export const updateMemoryById = async (
+	token: string,
+	id: string,
+	content: string,
+	type?: string,
+	path?: string
+) => {
 	let error = null;
+	const body = { content, ...(type ? { type } : {}), ...(path !== undefined ? { path } : {}) };
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
 		method: 'POST',
@@ -69,9 +78,7 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			content: content
-		})
+		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

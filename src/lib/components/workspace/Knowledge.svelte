@@ -5,7 +5,10 @@
 
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
 	import {
@@ -28,35 +31,49 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import Loader from '../common/Loader.svelte';
 
+	type KnowledgeListItem = {
+		id: string;
+		name: string;
+		description?: string;
+		updated_at: number;
+		write_access?: boolean;
+		meta?: any;
+		user?: {
+			name?: string;
+			email?: string;
+		};
+	};
+
 	let loaded = false;
 	let showDeleteConfirm = false;
 	let tagsContainerElement: HTMLDivElement;
 
-	let selectedItem = null;
+	let selectedItem: KnowledgeListItem | null = null;
 
 	let page = 1;
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let viewOption = '';
+	let sourceOption = '';
 
-	let items = null;
-	let total = null;
+	let items: KnowledgeListItem[] | null = null;
+	let total: number | null = null;
 
 	let allItemsLoaded = false;
 	let itemsLoading = false;
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			init();
 		}, 300);
-	}
+	};
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
 	});
 
-	$: if (viewOption !== undefined) {
+	$: if (loaded && viewOption !== undefined && sourceOption !== undefined) {
 		init();
 	}
 
@@ -83,16 +100,20 @@
 
 	const getItemsPage = async () => {
 		itemsLoading = true;
-		const res = await searchKnowledgeBases(localStorage.token, query, viewOption, page).catch(
-			() => {
-				return [];
-			}
-		);
+		const res = await searchKnowledgeBases(
+			localStorage.token,
+			query,
+			viewOption,
+			page,
+			sourceOption
+		).catch(() => {
+			return [];
+		});
 
 		if (res) {
 			console.log(res);
 			total = res.total;
-			const pageItems = res.items;
+			const pageItems: KnowledgeListItem[] = res.items ?? [];
 
 			if ((pageItems ?? []).length === 0) {
 				allItemsLoaded = true;
@@ -113,7 +134,9 @@
 		return res;
 	};
 
-	const deleteHandler = async (item) => {
+	const deleteHandler = async (item: KnowledgeListItem | null) => {
+		if (!item) return;
+
 		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -124,7 +147,7 @@
 		}
 	};
 
-	const exportHandler = async (item) => {
+	const exportHandler = async (item: KnowledgeListItem) => {
 		try {
 			const blob = await exportKnowledgeById(localStorage.token, item.id);
 			if (blob) {
@@ -145,6 +168,7 @@
 
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
+		sourceOption = localStorage?.workspaceKnowledgeSourceOption || '';
 		loaded = true;
 	});
 </script>
@@ -199,6 +223,7 @@
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search Knowledge')}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>
@@ -209,6 +234,7 @@
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
+								handleSearchInput();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
@@ -239,6 +265,19 @@
 						await tick();
 					}}
 				/>
+
+				<select
+					class="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl outline-hidden"
+					bind:value={sourceOption}
+					on:change={async () => {
+						localStorage.workspaceKnowledgeSourceOption = sourceOption;
+						await tick();
+					}}
+				>
+					<option value="">{$i18n.t('All Sources')}</option>
+					<option value="local">{$i18n.t('Local')}</option>
+					<option value="external">{$i18n.t('Connected')}</option>
+				</select>
 			</div>
 		</div>
 
@@ -265,11 +304,23 @@
 								<div class=" self-center flex-1 justify-between">
 									<div class="flex items-center justify-between -my-1 h-8">
 										<div class=" flex gap-2 items-center justify-between w-full">
-											<div>
-												<Badge type="success" content={$i18n.t('Collection')} />
-											</div>
+											{#if item?.meta?.source === 'external'}
+												<div>
+													<Badge
+														type="muted"
+														content={item?.meta?.external?.provider ?? $i18n.t('Connected')}
+													/>
+												</div>
+												<div>
+													<Badge type="muted" content={$i18n.t('Read Only')} />
+												</div>
+											{:else}
+												<div>
+													<Badge type="success" content={$i18n.t('Collection')} />
+												</div>
+											{/if}
 
-											{#if !item?.write_access}
+											{#if !item?.write_access && item?.meta?.source !== 'external'}
 												<div>
 													<Badge type="muted" content={$i18n.t('Read Only')} />
 												</div>
@@ -280,7 +331,7 @@
 											<div class="flex items-center gap-2">
 												<div class=" flex self-center">
 													<ItemMenu
-														onExport={$user.role === 'admin'
+														onExport={$user?.role === 'admin'
 															? () => {
 																	exportHandler(item);
 																}

@@ -35,6 +35,8 @@
 
 	const i18n = getContext('i18n');
 
+	$: canImportChats = $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true);
+
 	import {
 		getChatList,
 		getAllTags,
@@ -46,7 +48,12 @@
 		deleteAllChats,
 		getChatListBySearchText
 	} from '$lib/apis/chats';
-	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+	import {
+		createNewFolder,
+		getFolders,
+		getSharedFolders,
+		updateFolderParentIdById
+	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { checkActiveChats } from '$lib/apis/tasks';
@@ -61,6 +68,7 @@
 	import Folder from '../common/Folder.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
+	import SharedFolderItem from './Sidebar/SharedFolderItem.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
@@ -70,6 +78,7 @@
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
+	import PinnedNoteList from './Sidebar/PinnedNoteList.svelte';
 	import Note from '../icons/Note.svelte';
 	import Code from '../icons/Code.svelte';
 	import { slide } from 'svelte/transition';
@@ -98,11 +107,14 @@
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
+	let showSharedFolders = false;
 
 	let folders = {};
 	let folderRegistry = {};
 
 	let newFolderId = null;
+
+	let sharedFolders: any[] = [];
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
@@ -215,6 +227,31 @@
 				});
 			}
 		}
+
+		// Merge shared folders into the same structure
+		try {
+			sharedFolders = await getSharedFolders(localStorage.token);
+		} catch (e) {
+			sharedFolders = [];
+		}
+
+		for (const sf of sharedFolders) {
+			if (folders[sf.id]) continue; // Already owned by user
+			folders[sf.id] = { ...sf, shared: true };
+		}
+
+		// Build parent-child relationships for shared folders
+		for (const sf of sharedFolders) {
+			if (folders[sf.id]?.shared && sf.parent_id && folders[sf.parent_id]) {
+				folders[sf.parent_id].childrenIds = folders[sf.parent_id].childrenIds
+					? [...new Set([...folders[sf.parent_id].childrenIds, sf.id])]
+					: [sf.id];
+			}
+		}
+	};
+
+	const initSharedFolders = async () => {
+		await initFolders();
 	};
 
 	const createFolder = async ({ name, data, parent_id }) => {
@@ -291,18 +328,19 @@
 		scrollPaginationEnabled.set(false);
 
 		initFolders();
+		initSharedFolders();
 		await Promise.all([
-			await (async () => {
+			(async () => {
 				console.log('Init tags');
 				const _tags = await getAllTags(localStorage.token);
 				tags.set(_tags);
 			})(),
-			await (async () => {
+			(async () => {
 				console.log('Init pinned chats');
 				const _pinnedChats = await getPinnedChatList(localStorage.token);
 				pinnedChats.set(_pinnedChats);
 			})(),
-			await (async () => {
+			(async () => {
 				if (
 					$config?.features?.enable_notes &&
 					($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
@@ -312,7 +350,7 @@
 					pinnedNotes.set(_pinnedNotes);
 				}
 			})(),
-			await (async () => {
+			(async () => {
 				console.log('Init chat list');
 				const _chats = await getChatList(localStorage.token, $currentChatPage);
 				await chats.set(_chats);
@@ -342,6 +380,11 @@
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
+		if (!canImportChats) {
+			toast.error($i18n.t('Access prohibited'));
+			return;
+		}
+
 		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
 			console.log(item);
@@ -1215,51 +1258,7 @@
 						}}
 						onAddLabel={$i18n.t('New Note')}
 					>
-						<div class="mt-0.5 pb-1.5">
-							{#each $pinnedNotes as note (note.id)}
-								<a
-									class="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition group text-sm"
-									href={`/notes/${note.id}`}
-									on:click={() => {
-										itemClickHandler();
-									}}
-									draggable="false"
-								>
-									<div class="self-center">
-										<Note className="size-4" strokeWidth="2" />
-									</div>
-									<div class="flex-1 text-ellipsis line-clamp-1">
-										{note.title}
-									</div>
-									<button
-										class="invisible group-hover:visible self-center p-0.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition"
-										on:click|preventDefault|stopPropagation={async () => {
-											await toggleNotePinnedStatusById(localStorage.token, note.id);
-											const _pinnedNotes = await getPinnedNoteList(localStorage.token).catch(
-												() => []
-											);
-											pinnedNotes.set(_pinnedNotes);
-										}}
-										aria-label={$i18n.t('Unpin')}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="2"
-											stroke="currentColor"
-											class="size-3.5"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M6 18 18 6M6 6l12 12"
-											/>
-										</svg>
-									</button>
-								</a>
-							{/each}
-						</div>
+						<PinnedNoteList bind:selectedChatId />
 					</Folder>
 				{/if}
 
@@ -1371,6 +1370,11 @@
 								return null;
 							});
 							if (!chat && item) {
+								if (!canImportChats) {
+									toast.error($i18n.t('Access prohibited'));
+									return;
+								}
+
 								chat = await importChats(localStorage.token, [
 									{
 										chat: item.chat,
@@ -1437,6 +1441,11 @@
 												return null;
 											});
 											if (!chat && item) {
+												if (!canImportChats) {
+													toast.error($i18n.t('Access prohibited'));
+													return;
+												}
+
 												chat = await importChats(localStorage.token, [
 													{
 														chat: item.chat,

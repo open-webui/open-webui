@@ -64,11 +64,13 @@
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import OutputEditView from './OutputEditView.svelte';
+	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
 	interface MessageType {
 		id: string;
 		model: string;
 		content: string;
+		output?: OutputItem[];
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
@@ -127,7 +129,11 @@
 		if (source) {
 			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
 			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
-			if (message.content !== source.content || message.done !== source.done) {
+			if (
+				message.content !== source.content ||
+				message.done !== source.done ||
+				message.output?.length !== source.output?.length
+			) {
 				message = structuredClone(source);
 			} else if (!equal(message, source)) {
 				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
@@ -175,6 +181,9 @@
 		(model?.info?.meta?.capabilities?.status_updates ?? true) &&
 		statusEntries.length > 0 &&
 		!(statusEntries.at(-1)?.hidden ?? false);
+	$: visibleResponseContent =
+		getOutputText(message.output) || removeAllDetails(message.content ?? '');
+	$: hasResponseContent = Boolean((message.content ?? '').trim() || message.output?.length);
 
 	let edit = false;
 	let editedContent = '';
@@ -226,7 +235,8 @@
 			: $config?.audio?.tts?.voice);
 
 	const speak = async () => {
-		if (!(message?.content ?? '').trim().length) {
+		const content = visibleResponseContent;
+		if (!content.trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
 		}
@@ -236,7 +246,6 @@
 		const { signal } = speakAbort;
 
 		speaking = true;
-		const content = removeAllDetails(message.content);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -370,17 +379,6 @@
 		return restoredContent;
 	}
 
-	/** Extract plain text from output items for immediate display after edit.
-	 *  NOT a serialize_output port — just grabs text parts. Backend re-serializes
-	 *  the full rich content (with <details> blocks) on save. */
-	function extractTextFromOutput(output: any[]): string {
-		return output
-			.filter((item) => item.type === 'message')
-			.flatMap((item) => (item.content ?? []).map((p: any) => p.text ?? ''))
-			.join('\n')
-			.trim();
-	}
-
 	const editMessageHandler = async () => {
 		edit = true;
 
@@ -407,9 +405,7 @@
 
 	const editMessageConfirmHandler = async () => {
 		if (editedOutput) {
-			// Structured edit: keep original rich content for immediate display;
-			// backend will re-derive content from output on save.
-			editMessage(message.id, { content: message.content, output: editedOutput }, false);
+			editMessage(message.id, { output: editedOutput }, false);
 		} else {
 			// Legacy text edit
 			const messageContent = postprocessAfterEditing(editedContent ?? '');
@@ -425,7 +421,7 @@
 
 	const saveAsCopyHandler = async () => {
 		if (editedOutput) {
-			editMessage(message.id, { content: message.content, output: editedOutput });
+			editMessage(message.id, { output: editedOutput });
 		} else {
 			const messageContent = postprocessAfterEditing(editedContent ?? '');
 			editMessage(message.id, { content: messageContent });
@@ -826,14 +822,15 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if message.content === '' && !message.done && !message.error && !hasVisibleStatus}
+							{#if !hasResponseContent && !message.done && !message.error && !hasVisibleStatus}
 								<Skeleton />
-							{:else if message.content && message.error !== true}
+							{:else if hasResponseContent && message.error !== true}
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
 									content={message.content}
+									output={message.output}
 									sources={message.sources}
 									floatingButtons={message?.done &&
 										!readOnly &&
@@ -860,9 +857,27 @@
 										setInputText(text);
 									}}
 									onSave={({ raw, oldContent, newContent }) => {
-										history.messages[message.id].content = history.messages[
-											message.id
-										].content.replace(raw, raw.replace(oldContent, newContent));
+										const sourceMessage = history.messages[message.id];
+										if (sourceMessage.output?.length) {
+											const updatedOutput = replaceOutputMessageText(
+												sourceMessage.output,
+												oldContent,
+												newContent
+											);
+											if (updatedOutput !== sourceMessage.output) {
+												sourceMessage.output = updatedOutput;
+											} else {
+												sourceMessage.content = sourceMessage.content.replace(
+													raw,
+													raw.replace(oldContent, newContent)
+												);
+											}
+										} else {
+											sourceMessage.content = sourceMessage.content.replace(
+												raw,
+												raw.replace(oldContent, newContent)
+											);
+										}
 
 										updateChat();
 									}}
@@ -1033,7 +1048,7 @@
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
-											copyToClipboard(message.content);
+											copyToClipboard(visibleResponseContent);
 										}}
 									>
 										<svg

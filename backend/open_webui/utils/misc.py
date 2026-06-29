@@ -69,6 +69,44 @@ def is_string_allowed(string: Union[str, Sequence[str]], filter_list: list[str |
     return True
 
 
+def _host_matches_pattern(host: str, pattern: str) -> bool:
+    """Match a hostname against a filter entry on DNS label boundaries.
+
+    `pattern` matches `host` when equal or a parent domain of it, so `corp.com`
+    matches `api.corp.com` but not `evilcorp.com`, and an IP literal matches only
+    itself. Avoids the raw-suffix confusion of a plain endswith.
+    """
+    host = (host or '').strip().lower().rstrip('.')
+    pattern = (pattern or '').strip().lower().rstrip('.')
+    if not host or not pattern:
+        return False
+    return host == pattern or host.endswith('.' + pattern)
+
+
+def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+    """Allow/block a hostname (or list of hostnames / resolved IPs) against a
+    WEB_FETCH_FILTER_LIST-style filter, matching on label boundaries.
+
+    Pass a parsed hostname, never a full URL: matching against a URL lets a path
+    component defeat the filter (e.g. ``https://blocked.example/x`` ends with ``/x``,
+    not the blocked host). Entries prefixed with ``!`` are blocked; the rest form an allowlist.
+    """
+    if not filter_list:
+        return True
+
+    allow_list, block_list = get_allow_block_lists(filter_list)
+    hosts = [host] if isinstance(host, str) else list(host or [])
+
+    if allow_list:
+        if not any(_host_matches_pattern(h, allowed) for h in hosts for allowed in allow_list):
+            return False
+
+    if any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list):
+        return False
+
+    return True
+
+
 def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.
@@ -212,10 +250,11 @@ def convert_output_to_messages(
     pending_tool_calls = []
     pending_content = []
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
+    pending_reasoning_details = []
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls, pending_reasoning
-        if not pending_content and not pending_tool_calls and not pending_reasoning:
+        nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
+        if not pending_content and not pending_tool_calls and not pending_reasoning and not pending_reasoning_details:
             return
 
         message = {
@@ -227,10 +266,14 @@ def convert_output_to_messages(
         if pending_reasoning:
             message['reasoning_content'] = '\n'.join(pending_reasoning)
 
+        if pending_reasoning_details:
+            message['reasoning_details'] = pending_reasoning_details
+
         messages.append(message)
         pending_content = []
         pending_tool_calls = []
         pending_reasoning = []
+        pending_reasoning_details = []
 
     for item in output:
         item_type = item.get('type', '')
@@ -301,7 +344,8 @@ def convert_output_to_messages(
                 )
 
         elif item_type == 'reasoning':
-            if not reasoning_format:
+            reasoning_details = item.get('reasoning_details') if raw else None
+            if not reasoning_format and not reasoning_details:
                 continue
 
             reasoning_text = ''
@@ -321,6 +365,11 @@ def convert_output_to_messages(
                 elif reasoning_format == 'reasoning_content':
                     # llama.cpp: collect for reasoning_content field
                     pending_reasoning.append(reasoning_text)
+
+            if reasoning_details:
+                pending_reasoning_details.extend(
+                    reasoning_details if isinstance(reasoning_details, list) else [reasoning_details]
+                )
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows

@@ -2,22 +2,51 @@
 	import { getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
 
-	const i18n = getContext('i18n');
+	type Filter = {
+		id: string;
+		name?: string;
+		meta?: {
+			description?: string;
+		};
+	};
 
-	export let filters = [];
-	export let selectedFilterIds = [];
+	const i18n = getContext('i18n') as any;
+
+	export let filters: Filter[] = [];
+	export let selectedFilterIds: string[] = [];
+
+	$: selectedFilters = filters.filter((filter) => selectedFilterIds.includes(filter.id));
+	$: availableFilters = filters.filter((filter) => !selectedFilterIds.includes(filter.id));
+
+	const selectFilter = (filter: Filter) => {
+		selectedFilterIds = [...selectedFilterIds, filter.id];
+	};
 </script>
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs text-gray-500 font-medium">{$i18n.t('Default Filters')}</div>
+		<div class=" self-center text-xs text-gray-500">{$i18n.t('Default Filters')}</div>
 	</div>
 
 	<div class="flex flex-col">
 		{#if filters.length > 0}
+			<TypeaheadSelector
+				id="model-default-filters-selector"
+				items={availableFilters.map((filter) => ({
+					...filter,
+					description: filter.meta?.description
+				}))}
+				className="w-48 max-w-full"
+				placeholder={$i18n.t('Search filters')}
+				on:select={(e) => {
+					selectFilter(e.detail);
+				}}
+			/>
+
 			<div class=" flex items-center flex-wrap">
-				{#each filters as filter}
+				{#each selectedFilters as filter}
 					{@const isSelected = selectedFilterIds.includes(filter.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -35,8 +64,8 @@
 							/>
 						</div>
 
-						<div class=" py-0.5 text-sm w-full capitalize font-medium">
-							<Tooltip content={filter.meta.description}>
+						<div class=" py-0.5 text-xs capitalize">
+							<Tooltip content={filter.meta?.description ?? filter.id}>
 								{filter.name}
 							</Tooltip>
 						</div>

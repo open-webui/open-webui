@@ -34,12 +34,12 @@
 
 	$: items = [...noteItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getItems();
 		}, 300);
-	}
+	};
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
@@ -111,6 +111,7 @@
 		if (e.detail === false) {
 			onClose();
 			query = '';
+			handleSearchInput();
 		}
 	}}
 >
@@ -118,16 +119,17 @@
 
 	<div slot="content">
 		<div
-			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-70 p-1.5"
+			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-64 p-1"
 		>
-			<div class=" flex w-full space-x-2 px-2 pb-0.5">
+			<div class=" flex w-full space-x-1.5 px-1.5 pb-0.5">
 				<div class="flex flex-1">
-					<div class=" self-center mr-2">
+					<div class=" self-center mr-1.5">
 						<Search className="size-3.5" />
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						class=" w-full text-sm py-0.5 outline-hidden bg-transparent"
 						bind:value={query}
+						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
@@ -141,7 +143,7 @@
 				{:else}
 					{#each items as item, i}
 						{#if i === 0 || item?.type !== items[i - 1]?.type}
-							<div class="px-2 text-xs text-gray-500 py-1">
+							<div class="px-1.5 text-xs text-gray-500 py-0.5">
 								{#if item?.type === 'note'}
 									{$i18n.t('Notes')}
 								{:else if item?.type === 'collection'}
@@ -153,7 +155,7 @@
 						{/if}
 
 						<div
-							class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm hover:bg-gray-50 hover:dark:bg-gray-800 hover:dark:text-gray-100 selected-command-option-button"
+							class=" px-1.5 py-0.5 rounded-xl w-full text-left flex justify-between items-center text-sm hover:bg-gray-50 hover:dark:bg-gray-800 hover:dark:text-gray-100 selected-command-option-button"
 						>
 							<button
 								class="w-full flex-1"

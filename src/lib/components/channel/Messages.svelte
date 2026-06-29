@@ -37,6 +37,7 @@
 	export let onLoad: Function = () => {};
 	export let onReply: Function = () => {};
 	export let onThread: Function = () => {};
+	export let onPin: Function = () => {};
 
 	let messagesLoading = false;
 
@@ -128,6 +129,7 @@
 				{message}
 				{channel}
 				{thread}
+				{id}
 				replyToMessage={replyToMessage?.id === message.id}
 				disabled={!channel?.write_access || message?.temp_id}
 				pending={!!message?.temp_id}
@@ -165,24 +167,27 @@
 					onReply(message);
 				}}
 				onPin={async (message) => {
+					const pinned = !message.is_pinned;
+					const pinnedBy = pinned ? ($user?.id ?? null) : null;
+					const pinnedAt = pinned ? Date.now() * 1000000 : null;
+
 					messages = messages.map((m) => {
 						if (m.id === message.id) {
-							m.is_pinned = !m.is_pinned;
-							m.pinned_by = !m.is_pinned ? null : $user?.id;
-							m.pinned_at = !m.is_pinned ? null : Date.now() * 1000000;
+							m.is_pinned = pinned;
+							m.pinned_by = pinnedBy;
+							m.pinned_at = pinnedAt;
 						}
 						return m;
 					});
 
-					const updatedMessage = await pinMessage(
-						localStorage.token,
-						message.channel_id,
-						message.id,
-						message.is_pinned
-					).catch((error) => {
-						toast.error(`${error}`);
-						return null;
-					});
+					onPin(message.id, pinned, pinnedBy, pinnedAt);
+
+					await pinMessage(localStorage.token, message.channel_id, message.id, pinned).catch(
+						(error) => {
+							toast.error(`${error}`);
+							return null;
+						}
+					);
 				}}
 				onThread={(id) => {
 					onThread(id);

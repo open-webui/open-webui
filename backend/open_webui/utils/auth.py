@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -25,6 +26,7 @@ from open_webui.env import (
     ENABLE_PASSWORD_VALIDATION,
     LICENSE_BLOB,
     OFFLINE_MODE,
+    PASSWORD_HASH_ALGORITHM,
     PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
@@ -35,6 +37,7 @@ from open_webui.env import (
     pk,
 )
 from open_webui.models.auths import Auths
+from open_webui.models.config import Config
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
 from pytz import UTC
@@ -43,6 +46,7 @@ log = logging.getLogger(__name__)
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = 'HS256'
+PASSWORD_BCRYPT_MAX_BYTES = 72
 
 ##############
 # Auth Utils
@@ -157,14 +161,21 @@ def get_license_data(app, key):
 bearer_security = HTTPBearer(auto_error=False)
 
 
-def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+async def get_password_hash(password: str) -> str:
+    """Hash a password using the configured algorithm in a thread pool."""
+    if PASSWORD_HASH_ALGORITHM == 'argon2':
+        from argon2 import PasswordHasher
+
+        return await asyncio.to_thread(PasswordHasher().hash, password)
+    if PASSWORD_HASH_ALGORITHM == 'bcrypt':
+        return (await asyncio.to_thread(bcrypt.hashpw, password.encode('utf-8'), bcrypt.gensalt())).decode('utf-8')
+
+    raise ValueError(f'Unsupported PASSWORD_HASH_ALGORITHM: {PASSWORD_HASH_ALGORITHM}')
 
 
 def validate_password(password: str) -> bool:
-    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
-    if len(password.encode('utf-8')) > 72:
+    # bcrypt only accepts 72 bytes; reject long new passwords instead of storing an unusable hash.
+    if PASSWORD_HASH_ALGORITHM == 'bcrypt' and len(password.encode('utf-8')) > PASSWORD_BCRYPT_MAX_BYTES:
         raise Exception(
             ERROR_MESSAGES.PASSWORD_TOO_LONG,
         )
@@ -176,16 +187,29 @@ def validate_password(password: str) -> bool:
     return True
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return (
-        bcrypt.checkpw(
-            plain_password.encode('utf-8'),
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password using the algorithm encoded in its hash."""
+    if not hashed_password:
+        return False
+
+    if hashed_password.startswith('$argon2'):
+        from argon2 import PasswordHasher
+        from argon2.exceptions import InvalidHashError, VerificationError
+
+        try:
+            return await asyncio.to_thread(PasswordHasher().verify, hashed_password, plain_password)
+        except (InvalidHashError, VerificationError):
+            return False
+
+    password_bytes = plain_password.encode('utf-8')[:PASSWORD_BCRYPT_MAX_BYTES]
+    try:
+        return await asyncio.to_thread(
+            bcrypt.checkpw,
+            password_bytes,
             hashed_password.encode('utf-8'),
         )
-        if hashed_password
-        else None
-    )
+    except ValueError:
+        return False
 
 
 # Let the one who signed this token be remembered at every gate,
@@ -213,25 +237,25 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
-async def is_valid_token(request, decoded) -> bool:
+async def is_valid_token(decoded, redis=None) -> bool:
     """
     Check whether a JWT has been revoked. Two mechanisms:
     1. Per-token (jti) — used by user-initiated sign-out (known jti).
     2. Per-user (revoked_at) — used by OIDC back-channel logout when
        individual jti values are unknown; rejects tokens with iat <= revoked_at.
     """
-    if request.app.state.redis:
+    if redis:
         # Per-token revocation
         jti = decoded.get('jti')
         if jti:
-            revoked = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
+            revoked = await redis.get(f'{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked')
             if revoked:
                 return False
 
         # Per-user revocation (OIDC back-channel logout)
         user_id = decoded.get('id')
         if user_id:
-            revoked_at = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
+            revoked_at = await redis.get(f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at')
             if revoked_at:
                 try:
                     revoked_at_ts = int(revoked_at)
@@ -341,7 +365,7 @@ async def get_current_user(
             )
 
         if data is not None and 'id' in data:
-            if data.get('jti') and not await is_valid_token(request, data):
+            if not await is_valid_token(data, getattr(request.app.state, 'redis', None)):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail='Invalid token',
@@ -409,12 +433,16 @@ async def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
+    user_permissions = await Config.get('user.permissions')
+    enable_endpoint_restrictions = await Config.get('auth.api_key.endpoint_restrictions')
+    allowed_endpoints = await Config.get('auth.api_key.allowed_endpoints', '')
+
     if not request.state.enable_api_keys or (
         user.role != 'admin'
         and not await has_permission(
             user.id,
             'features.api_keys',
-            request.app.state.config.USER_PERMISSIONS,
+            user_permissions,
         )
     ):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
@@ -422,10 +450,8 @@ async def get_current_user_by_api_key(request, api_key: str):
     # Enforce endpoint restrictions — checked here (not in middleware)
     # so it applies regardless of how the API key was transported
     # (Authorization header, cookie, x-api-key header, etc.).
-    if request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
-        allowed_paths = [
-            path.strip() for path in str(request.app.state.config.API_KEYS_ALLOWED_ENDPOINTS).split(',') if path.strip()
-        ]
+    if enable_endpoint_restrictions:
+        allowed_paths = [path.strip() for path in str(allowed_endpoints).split(',') if path.strip()]
         request_path = request.scope['path']  # Use raw ASGI path — not spoofable via Host header (CVE-2026-48710)
         is_allowed = any(request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths)
         if not is_allowed:
@@ -483,7 +509,7 @@ async def create_admin_user(email: str, password: str, name: str = 'Admin'):
 
     log.info(f'Creating admin account from environment variables: {email}')
     try:
-        hashed = get_password_hash(password)
+        hashed = await get_password_hash(password)
         user = await Auths.insert_new_auth(
             email=email.lower(),
             password=hashed,

@@ -24,6 +24,9 @@
 	export let contentClass =
 		'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg';
 
+	/** Max height for the dropdown content */
+	export let maxHeight = '18rem';
+
 	/** CSS classes for each item button */
 	export let itemClass =
 		'flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl';
@@ -123,15 +126,17 @@
 </button>
 
 {#if open}
-	<div use:portal bind:this={contentEl} class={contentClass} transition:flyAndScale>
-		<slot {open} {selectItem}>
-			{#each items as item}
-				<button class={itemClass} type="button" on:click={() => selectItem(item)}>
-					<slot name="item" {item} selected={value === item.value}>
-						{item.label}
-					</slot>
-				</button>
-			{/each}
-		</slot>
+	<div use:portal bind:this={contentEl} transition:flyAndScale>
+		<div class={contentClass} style:max-height={maxHeight} style:overflow-y="auto">
+			<slot {open} {selectItem}>
+				{#each items as item}
+					<button class={itemClass} type="button" on:click={() => selectItem(item)}>
+						<slot name="item" {item} selected={value === item.value}>
+							{item.label}
+						</slot>
+					</button>
+				{/each}
+			</slot>
+		</div>
 	</div>
 {/if}

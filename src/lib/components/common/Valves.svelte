@@ -1,10 +1,14 @@
 <script>
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
+
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import Switch from './Switch.svelte';
 	import SensitiveInput from './SensitiveInput.svelte';
+	import NativeSelect from './NativeSelect.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
 
 	export let valvesSpec = null;
@@ -12,7 +16,7 @@
 </script>
 
 {#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
-	{#each Object.keys(valvesSpec.properties) as property, idx}
+	{#each Object.keys(valvesSpec.properties) as property}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
@@ -119,29 +123,16 @@
 									/>
 								</div>
 							{:else if valvesSpec.properties[property]?.input?.type === 'select' && valvesSpec.properties[property]?.input?.options}
-								<select
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								<NativeSelect
+									className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 									bind:value={valves[property]}
+									options={valvesSpec.properties[property].input.options}
+									placeholder={valvesSpec.properties[property]?.description ??
+										$i18n.t('Select an option')}
 									on:change={() => {
 										dispatch('change');
 									}}
-								>
-									<option value="" disabled
-										>{valvesSpec.properties[property]?.description ??
-											$i18n.t('Select an option')}</option
-									>
-									{#each valvesSpec.properties[property].input.options as option}
-										{#if typeof option === 'object' && option !== null}
-											<option value={option.value} selected={option.value === valves[property]}>
-												{option.label ?? option.value}
-											</option>
-										{:else}
-											<option value={option} selected={option === valves[property]}>
-												{option}
-											</option>
-										{/if}
-									{/each}
-								</select>
+								/>
 							{:else if valvesSpec.properties[property]?.input?.type === 'color'}
 								<div class="flex items-center space-x-2">
 									<div class="relative size-6">
@@ -213,8 +204,11 @@
 			{/if}
 
 			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
-					{valvesSpec.properties[property].description}
+				<div class="markdown-prose-xs max-w-full text-gray-500 dark:text-gray-400">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html DOMPurify.sanitize(
+						marked.parse(valvesSpec.properties[property].description ?? '', { async: false })
+					)}
 				</div>
 			{/if}
 		</div>

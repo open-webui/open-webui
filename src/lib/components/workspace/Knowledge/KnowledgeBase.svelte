@@ -5,7 +5,10 @@
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -40,7 +43,8 @@
 		deleteKnowledgeDirectory,
 		moveFileInKnowledge,
 		syncKnowledgeDiff,
-		syncKnowledgeCleanup
+		syncKnowledgeCleanup,
+		testExternalKnowledgeRetrieval
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -98,15 +102,18 @@
 		files: any[];
 		access_grants?: any[];
 		write_access?: boolean;
+		meta?: any;
 	};
 
 	let id = null;
 	let knowledge: Knowledge | null = null;
 	let knowledgeId = null;
+	let isExternalKnowledge = false;
 
 	let selectedFileId = null;
 	let selectedFile = null;
 	let selectedFileContent = '';
+	let loadingFileContent = false;
 
 	let inputFiles = null;
 
@@ -132,6 +139,14 @@
 	let deleteDirectoryContents = true;
 
 	let pendingPollTimer: ReturnType<typeof setInterval> | null = null;
+	let externalTestQuery = '';
+	let externalTestResult: {
+		documents?: string[];
+		metadatas?: Record<string, any>[];
+		distances?: number[];
+	} | null = null;
+
+	$: isExternalKnowledge = knowledge?.meta?.source === 'external';
 
 	const reset = () => {
 		currentPage = 1;
@@ -142,14 +157,17 @@
 		await getItemsPage();
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 
 		searchDebounceTimer = setTimeout(() => {
-			getItemsPage();
+			if (currentPage !== 1) {
+				currentPage = 1;
+			} else {
+				getItemsPage();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to filter/pagination changes
 	$: if (
@@ -161,15 +179,6 @@
 		includeContent !== undefined
 	) {
 		getItemsPage();
-	}
-
-	$: if (
-		query !== undefined &&
-		viewOption !== undefined &&
-		sortKey !== undefined &&
-		direction !== undefined
-	) {
-		reset();
 	}
 
 	const getItemsPage = async () => {
@@ -241,11 +250,47 @@
 	};
 
 	const fileSelectHandler = async (file) => {
+		selectedFile = file;
+		selectedFileContent = file?.data?.content ?? '';
+		loadingFileContent = false;
+
+		if (!file?.id || file?.data?.content !== undefined) {
+			return;
+		}
+
+		loadingFileContent = true;
 		try {
-			selectedFile = file;
-			selectedFileContent = selectedFile?.data?.content || '';
+			const fileWithContent = await getFileById(localStorage.token, file.id);
+			if (selectedFileId === file.id) {
+				selectedFile = fileWithContent ?? file;
+				selectedFileContent = fileWithContent?.data?.content ?? '';
+			}
 		} catch (e) {
-			toast.error($i18n.t('Failed to load file content.'));
+			if (selectedFileId === file.id) {
+				toast.error($i18n.t('Failed to load file content.'));
+			}
+		} finally {
+			if (selectedFileId === file.id) {
+				loadingFileContent = false;
+			}
+		}
+	};
+
+	const externalTestHandler = async () => {
+		if (!isExternalKnowledge || !externalTestQuery.trim()) return;
+
+		const external = knowledge?.meta?.external ?? {};
+		const res = await testExternalKnowledgeRetrieval(localStorage.token, external.connection_id, {
+			query: externalTestQuery,
+			source: external.source,
+			count: 5
+		}).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			externalTestResult = res;
 		}
 	};
 
@@ -799,6 +844,8 @@
 		currentPage = 1;
 		selectedFileId = null;
 		selectedFile = null;
+		selectedFileContent = '';
+		loadingFileContent = false;
 		getItemsPage();
 	};
 
@@ -927,8 +974,7 @@
 	let isSaving = false;
 
 	const updateFileContentHandler = async () => {
-		if (isSaving) {
-			console.log('Save operation already in progress, skipping...');
+		if (isSaving || loadingFileContent || !selectedFile?.id) {
 			return;
 		}
 
@@ -1305,283 +1351,369 @@
 		<div
 			class="mt-2 mb-2.5 py-2 -mx-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30 flex-1"
 		>
-			<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
-				<div class="flex flex-1 items-center">
-					<div class=" self-center ml-1 mr-3">
-						<Search className="size-3.5" />
-					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
-						aria-label={$i18n.t('Search Collection')}
-						placeholder={$i18n.t('Search Collection')}
-						on:focus={() => {
-							selectedFileId = null;
-						}}
-					/>
-
-					<Dropdown align="end">
-						<button
-							class="p-1.5 mr-1 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-							type="button"
-						>
-							<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
-						</button>
-
-						<div slot="content">
-							<div
-								class="min-w-[180px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-							>
-								<button
-									class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
-									type="button"
-									on:click={() => {
-										includeContent = !includeContent;
-									}}
-								>
-									<Checkbox
-										state={includeContent ? 'checked' : 'unchecked'}
-										on:change={(e) => {
-											includeContent = e.detail === 'checked';
-										}}
-									/>
-									{$i18n.t('File content')}
-								</button>
-							</div>
+			{#if isExternalKnowledge}
+				<div class="p-5 flex flex-col gap-4">
+					<div class="flex flex-wrap gap-2 text-xs">
+						<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+							{$i18n.t('Connected')}
 						</div>
-					</Dropdown>
+						<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+							{$i18n.t('Read Only')}
+						</div>
+						<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+							{knowledge?.meta?.external?.provider ?? $i18n.t('Provider')}
+						</div>
+						<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+							{$i18n.t('Service Account')}
+						</div>
+					</div>
 
-					{#if knowledge?.write_access}
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
 						<div>
-							<AddContentMenu
-								onUpload={(data) => {
-									if (data.type === 'directory') {
-										uploadDirectoryHandler();
-									} else if (data.type === 'new_directory') {
-										showNewDirectoryModal = true;
-									} else if (data.type === 'web') {
-										showAddWebpageModal = true;
-									} else if (data.type === 'text') {
-										showAddTextContentModal = true;
-									} else {
-										document.getElementById('files-input').click();
-									}
-								}}
-								onSync={async () => {
-									pendingSyncFiles = await collectDirectoryFiles();
-									if (pendingSyncFiles?.length) {
-										showSyncConfirmModal = true;
-									}
-								}}
-								onReset={() => {
-									showResetConfirm = true;
-								}}
-							/>
+							<div class="text-xs text-gray-500 mb-1">{$i18n.t('Mapped Source')}</div>
+							<div class="rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2">
+								{knowledge?.meta?.external?.source?.name ?? $i18n.t('Not configured')}
+							</div>
 						</div>
-					{/if}
-				</div>
-			</div>
-
-			<div class="px-3 flex justify-between">
-				<div
-					class="flex w-full bg-transparent overflow-x-auto scrollbar-none"
-					on:wheel={(e) => {
-						if (e.deltaY !== 0) {
-							e.preventDefault();
-							e.currentTarget.scrollLeft += e.deltaY;
-						}
-					}}
-				>
-					<div
-						class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
-					>
-						<DropdownOptions
-							align="start"
-							className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
-							bind:value={viewOption}
-							items={[
-								{ value: null, label: $i18n.t('All') },
-								{ value: 'created', label: $i18n.t('Created by you') },
-								{ value: 'shared', label: $i18n.t('Shared with you') }
-							]}
-							onChange={(value) => {
-								if (value) {
-									localStorage.workspaceViewOption = value;
-								} else {
-									delete localStorage.workspaceViewOption;
-								}
-							}}
-						/>
-
-						<DropdownOptions
-							align="start"
-							bind:value={sortKey}
-							placeholder={$i18n.t('Sort')}
-							items={[
-								{ value: 'name', label: $i18n.t('Name') },
-								{ value: 'created_at', label: $i18n.t('Created At') },
-								{ value: 'updated_at', label: $i18n.t('Updated At') }
-							]}
-						/>
-
-						{#if sortKey}
-							<DropdownOptions
-								align="start"
-								bind:value={direction}
-								items={[
-									{ value: 'asc', label: $i18n.t('Asc') },
-									{ value: null, label: $i18n.t('Desc') }
-								]}
-							/>
-						{/if}
-					</div>
-				</div>
-			</div>
-
-			{#if currentDirectoryId !== null}
-				<div class="px-5 mt-2">
-					<KnowledgeBreadcrumbs
-						rootLabel={knowledge.name}
-						{breadcrumbs}
-						onNavigate={(dirId) => navigateToDirectory(dirId)}
-						onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)}
-						onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
-					/>
-				</div>
-			{/if}
-
-			{#if syncing}
-				<div class="mx-2.5 mt-2.5 -mb-0.5">
-					<div class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850">
-						<Spinner className="size-3.5 shrink-0" />
-						<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
-							{syncing}
-						</div>
-					</div>
-				</div>
-			{/if}
-
-			{#if fileItems !== null && fileItemsTotal !== null}
-				<div class="flex flex-row flex-1 gap-3 px-2.5 mt-2">
-					<div class="flex-1 flex">
-						<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
-							<div class="w-full h-full flex flex-col min-h-full">
-								{#if fileItems.length > 0 || directoryItems.length > 0}
-									<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
-										<Files
-											files={fileItems}
-											directories={directoryItems}
-											{knowledge}
-											{selectedFileId}
-											onClick={(fileId) => {
-												selectedFileId = fileId;
-
-												if (fileItems) {
-													const file = fileItems.find((file) => file.id === selectedFileId);
-													if (file) {
-														fileSelectHandler(file);
-													} else {
-														selectedFile = null;
-													}
-												}
-											}}
-											onDelete={(fileId) => {
-												selectedFileId = null;
-												selectedFile = null;
-
-												deleteFileHandler(fileId);
-											}}
-											onRename={(fileId, name) => renameFileHandler(fileId, name)}
-											onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
-											onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
-											onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
-											onMoveFileToDirectory={(fileId, dirId) =>
-												moveFileToDirectoryHandler(fileId, dirId)}
-											onMoveDirectoryToDirectory={(dirId, targetId) =>
-												moveDirectoryHandler(dirId, targetId)}
-										/>
-									</div>
-
-									{#if fileItemsTotal > 30}
-										<Pagination bind:page={currentPage} count={fileItemsTotal} perPage={30} />
-									{/if}
-								{:else}
-									<div class="my-3 flex flex-col justify-center text-center text-gray-500 text-xs">
-										<div>
-											{$i18n.t('No content found')}
-										</div>
-									</div>
-								{/if}
+						<div>
+							<div class="text-xs text-gray-500 mb-1">{$i18n.t('Auth Mode')}</div>
+							<div class="rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2">
+								{$i18n.t('Admin-managed service account')}
 							</div>
 						</div>
 					</div>
 
-					{#if selectedFileId !== null}
-						<Drawer
-							className="h-full"
-							show={selectedFileId !== null}
-							onClose={() => {
-								selectedFileId = null;
-								selectedFile = null;
-							}}
-						>
-							<div class="flex flex-col justify-start h-full max-h-full">
-								<div class=" flex flex-col w-full h-full max-h-full">
-									<div class="shrink-0 flex items-center p-2">
-										<div class="mr-2">
-											<button
-												class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-												aria-label={$i18n.t('Close')}
-												on:click={() => {
-													selectedFileId = null;
-													selectedFile = null;
-												}}
-											>
-												<ChevronLeft strokeWidth="2.5" />
-											</button>
-										</div>
-										<div class=" flex-1 text-lg line-clamp-1">
-											{selectedFile?.meta?.name}
-										</div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t(
+							'This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.'
+						)}
+					</div>
 
-										{#if knowledge?.write_access}
-											<div>
-												<button
-													class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-													disabled={isSaving}
-													on:click={() => {
-														updateFileContentHandler();
-													}}
-												>
-													{$i18n.t('Save')}
-													{#if isSaving}
-														<div class="ml-2 self-center">
-															<Spinner />
-														</div>
-													{/if}
-												</button>
-											</div>
-										{/if}
+					<div class="flex flex-col gap-2">
+						<div class="font-medium text-sm">{$i18n.t('Test Query')}</div>
+						<div class="flex gap-2">
+							<input
+								class="w-full text-sm rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2 outline-hidden"
+								bind:value={externalTestQuery}
+								placeholder={$i18n.t('Ask this knowledge source a test question')}
+							/>
+							<button
+								class="px-3 py-2 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm"
+								on:click={externalTestHandler}
+							>
+								{$i18n.t('Test')}
+							</button>
+						</div>
+					</div>
+
+					{#if externalTestResult}
+						<div class="rounded-xl bg-gray-50 dark:bg-gray-850 p-3 text-xs">
+							<div class="font-medium mb-2">{$i18n.t('Preview')}</div>
+							{#each externalTestResult.documents ?? [] as document, idx}
+								<div class="border-t border-gray-100 dark:border-gray-800 py-2">
+									<div class="line-clamp-4">{document}</div>
+									<div class="text-gray-500 mt-1">
+										{externalTestResult.metadatas?.[idx]?.source ?? ''}
 									</div>
-
-									{#key selectedFile.id}
-										<textarea
-											class="w-full h-full text-sm outline-none resize-none px-3 py-2"
-											bind:value={selectedFileContent}
-											disabled={!knowledge?.write_access}
-											aria-label={$i18n.t('File content')}
-											placeholder={$i18n.t('Add content here')}
-										/>
-									{/key}
 								</div>
-							</div>
-						</Drawer>
+							{/each}
+						</div>
 					{/if}
 				</div>
 			{:else}
-				<div class="my-10">
-					<Spinner className="size-4" />
+				<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
+					<div class="flex flex-1 items-center">
+						<div class=" self-center ml-1 mr-3">
+							<Search className="size-3.5" />
+						</div>
+						<input
+							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+							bind:value={query}
+							on:input={handleSearchInput}
+							aria-label={$i18n.t('Search Collection')}
+							placeholder={$i18n.t('Search Collection')}
+							on:focus={() => {
+								selectedFileId = null;
+								selectedFile = null;
+								selectedFileContent = '';
+								loadingFileContent = false;
+							}}
+						/>
+
+						<Dropdown align="end">
+							<button
+								class="p-1.5 mr-1 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+								type="button"
+							>
+								<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
+							</button>
+
+							<div slot="content">
+								<div
+									class="min-w-[180px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+								>
+									<button
+										class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+										type="button"
+										on:click={() => {
+											includeContent = !includeContent;
+										}}
+									>
+										<Checkbox
+											state={includeContent ? 'checked' : 'unchecked'}
+											on:change={(e) => {
+												includeContent = e.detail === 'checked';
+											}}
+										/>
+										{$i18n.t('File content')}
+									</button>
+								</div>
+							</div>
+						</Dropdown>
+
+						{#if knowledge?.write_access}
+							<div>
+								<AddContentMenu
+									onUpload={(data) => {
+										if (data.type === 'directory') {
+											uploadDirectoryHandler();
+										} else if (data.type === 'new_directory') {
+											showNewDirectoryModal = true;
+										} else if (data.type === 'web') {
+											showAddWebpageModal = true;
+										} else if (data.type === 'text') {
+											showAddTextContentModal = true;
+										} else {
+											document.getElementById('files-input').click();
+										}
+									}}
+									onSync={async () => {
+										pendingSyncFiles = await collectDirectoryFiles();
+										if (pendingSyncFiles?.length) {
+											showSyncConfirmModal = true;
+										}
+									}}
+									onReset={() => {
+										showResetConfirm = true;
+									}}
+								/>
+							</div>
+						{/if}
+					</div>
 				</div>
+
+				<div class="px-3 flex justify-between">
+					<div
+						class="flex w-full bg-transparent overflow-x-auto scrollbar-none"
+						on:wheel={(e) => {
+							if (e.deltaY !== 0) {
+								e.preventDefault();
+								e.currentTarget.scrollLeft += e.deltaY;
+							}
+						}}
+					>
+						<div
+							class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
+						>
+							<DropdownOptions
+								align="start"
+								className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
+								bind:value={viewOption}
+								items={[
+									{ value: null, label: $i18n.t('All') },
+									{ value: 'created', label: $i18n.t('Created by you') },
+									{ value: 'shared', label: $i18n.t('Shared with you') }
+								]}
+								onChange={(value) => {
+									if (value) {
+										localStorage.workspaceViewOption = value;
+									} else {
+										delete localStorage.workspaceViewOption;
+									}
+								}}
+							/>
+
+							<DropdownOptions
+								align="start"
+								bind:value={sortKey}
+								placeholder={$i18n.t('Sort')}
+								items={[
+									{ value: 'name', label: $i18n.t('Name') },
+									{ value: 'created_at', label: $i18n.t('Created At') },
+									{ value: 'updated_at', label: $i18n.t('Updated At') }
+								]}
+							/>
+
+							{#if sortKey}
+								<DropdownOptions
+									align="start"
+									bind:value={direction}
+									items={[
+										{ value: 'asc', label: $i18n.t('Asc') },
+										{ value: null, label: $i18n.t('Desc') }
+									]}
+								/>
+							{/if}
+						</div>
+					</div>
+				</div>
+
+				{#if currentDirectoryId !== null}
+					<div class="px-5 mt-2">
+						<KnowledgeBreadcrumbs
+							rootLabel={knowledge.name}
+							{breadcrumbs}
+							onNavigate={(dirId) => navigateToDirectory(dirId)}
+							onMoveFile={(fileId, dirId) => moveFileToDirectoryHandler(fileId, dirId)}
+							onMoveDir={(dirId, targetId) => moveDirectoryHandler(dirId, targetId)}
+						/>
+					</div>
+				{/if}
+
+				{#if syncing}
+					<div class="mx-2.5 mt-2.5 -mb-0.5">
+						<div class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850">
+							<Spinner className="size-3.5 shrink-0" />
+							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+								{syncing}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				{#if fileItems !== null && fileItemsTotal !== null}
+					<div class="flex flex-row flex-1 gap-3 px-2.5 mt-2">
+						<div class="flex-1 flex">
+							<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
+								<div class="w-full h-full flex flex-col min-h-full">
+									{#if fileItems.length > 0 || directoryItems.length > 0}
+										<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+											<Files
+												files={fileItems}
+												directories={directoryItems}
+												{knowledge}
+												{selectedFileId}
+												onClick={(fileId) => {
+													selectedFileId = fileId;
+
+													if (fileItems) {
+														const file = fileItems.find((file) => file.id === selectedFileId);
+														if (file) {
+															fileSelectHandler(file);
+														} else {
+															selectedFileId = null;
+															selectedFile = null;
+															selectedFileContent = '';
+															loadingFileContent = false;
+														}
+													}
+												}}
+												onDelete={(fileId) => {
+													selectedFileId = null;
+													selectedFile = null;
+													selectedFileContent = '';
+													loadingFileContent = false;
+
+													deleteFileHandler(fileId);
+												}}
+												onRename={(fileId, name) => renameFileHandler(fileId, name)}
+												onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
+												onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
+												onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
+												onMoveFileToDirectory={(fileId, dirId) =>
+													moveFileToDirectoryHandler(fileId, dirId)}
+												onMoveDirectoryToDirectory={(dirId, targetId) =>
+													moveDirectoryHandler(dirId, targetId)}
+											/>
+										</div>
+
+										{#if fileItemsTotal > 30}
+											<Pagination bind:page={currentPage} count={fileItemsTotal} perPage={30} />
+										{/if}
+									{:else}
+										<div
+											class="my-3 flex flex-col justify-center text-center text-gray-500 text-xs"
+										>
+											<div>
+												{$i18n.t('No content found')}
+											</div>
+										</div>
+									{/if}
+								</div>
+							</div>
+						</div>
+
+						{#if selectedFileId !== null}
+							<Drawer
+								className="h-full"
+								show={selectedFileId !== null}
+								onClose={() => {
+									selectedFileId = null;
+									selectedFile = null;
+									selectedFileContent = '';
+									loadingFileContent = false;
+								}}
+							>
+								<div class="flex flex-col justify-start h-full max-h-full">
+									<div class=" flex flex-col w-full h-full max-h-full">
+										<div class="shrink-0 flex items-center p-2">
+											<div class="mr-2">
+												<button
+													class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+													aria-label={$i18n.t('Close')}
+													on:click={() => {
+														selectedFileId = null;
+														selectedFile = null;
+														selectedFileContent = '';
+														loadingFileContent = false;
+													}}
+												>
+													<ChevronLeft strokeWidth="2.5" />
+												</button>
+											</div>
+											<div class=" flex-1 text-lg line-clamp-1">
+												{selectedFile?.meta?.name}
+											</div>
+
+											{#if knowledge?.write_access}
+												<div>
+													<button
+														class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+														disabled={isSaving || loadingFileContent}
+														on:click={() => {
+															updateFileContentHandler();
+														}}
+													>
+														{$i18n.t('Save')}
+														{#if isSaving}
+															<div class="ml-2 self-center">
+																<Spinner />
+															</div>
+														{/if}
+													</button>
+												</div>
+											{/if}
+										</div>
+
+										{#key selectedFile?.id}
+											<textarea
+												class="w-full h-full text-sm outline-none resize-none px-3 py-2"
+												bind:value={selectedFileContent}
+												disabled={!knowledge?.write_access || loadingFileContent}
+												aria-label={$i18n.t('File content')}
+												placeholder={$i18n.t('Add content here')}
+											></textarea>
+										{/key}
+									</div>
+								</div>
+							</Drawer>
+						{/if}
+					</div>
+				{:else}
+					<div class="my-10">
+						<Spinner className="size-4" />
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{:else}

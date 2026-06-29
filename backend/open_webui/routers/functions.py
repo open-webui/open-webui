@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.functions import (
     FunctionForm,
@@ -22,6 +23,7 @@ from open_webui.models.functions import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.plugin import (
+    get_functions_cache,
     get_function_module_from_cache,
     load_function_module_by_id,
     replace_imports,
@@ -130,8 +132,13 @@ async def load_function_from_url(request: Request, form_data: LoadUrlForm, user=
             'name': function_name,
             'content': data,
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(
+            status_code=500,
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error fetching function'),
+        )
 
 
 ############################
@@ -171,7 +178,7 @@ async def sync_functions(
         log.exception(f'Failed to load a function: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error loading function'),
         )
 
 
@@ -205,7 +212,7 @@ async def create_new_function(
             )
             form_data.meta.manifest = frontmatter
 
-            FUNCTIONS = request.app.state.FUNCTIONS
+            FUNCTIONS = get_functions_cache(request)
             FUNCTIONS[form_data.id] = function_module
 
             function = await Functions.insert_new_function(user.id, function_type, form_data, db=db)
@@ -217,17 +224,26 @@ async def create_new_function(
                 await Functions.update_function_metadata_by_id(form_data.id, {'toggle': True}, db=db)
 
             if function:
+                await publish_event(
+                    request,
+                    EVENTS.FUNCTION_CREATED,
+                    actor=user,
+                    subject_id=function.id,
+                    data={'type': function.type, 'name': function.name},
+                )
                 return function
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT('Error creating function'),
                 )
+        except HTTPException:
+            raise
         except Exception as e:
             log.exception(f'Failed to create a new function: {e}')
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=ERROR_MESSAGES.DEFAULT(e, 'Error creating function'),
             )
     else:
         raise HTTPException(
@@ -260,12 +276,25 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
 
 
 @router.post('/id/{id}/toggle', response_model=FunctionModel | None)
-async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def toggle_function_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
         function = await Functions.update_function_by_id(id, {'is_active': not function.is_active}, db=db)
 
         if function:
+            await publish_event(
+                request,
+                EVENTS.FUNCTION_ENABLED if function.is_active else EVENTS.FUNCTION_DISABLED,
+                actor=user,
+                subject_id=function.id,
+                subject_type='function',
+                data={'type': function.type, 'name': function.name},
+            )
             return function
         else:
             raise HTTPException(
@@ -285,12 +314,24 @@ async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: Async
 
 
 @router.post('/id/{id}/toggle/global', response_model=FunctionModel | None)
-async def toggle_global_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def toggle_global_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
         function = await Functions.update_function_by_id(id, {'is_global': not function.is_global}, db=db)
 
         if function:
+            await publish_event(
+                request,
+                EVENTS.FUNCTION_UPDATED,
+                actor=user,
+                subject_id=function.id,
+                data={'type': function.type, 'name': function.name, 'is_global': function.is_global},
+            )
             return function
         else:
             raise HTTPException(
@@ -322,7 +363,7 @@ async def update_function_by_id(
         function_module, function_type, frontmatter = await load_function_module_by_id(id, content=form_data.content)
         form_data.meta.manifest = frontmatter
 
-        FUNCTIONS = request.app.state.FUNCTIONS
+        FUNCTIONS = get_functions_cache(request)
         FUNCTIONS[id] = function_module
 
         updated = {**form_data.model_dump(exclude={'id'}), 'type': function_type}
@@ -334,6 +375,13 @@ async def update_function_by_id(
             await Functions.update_function_metadata_by_id(id, {'toggle': True}, db=db)
 
         if function:
+            await publish_event(
+                request,
+                EVENTS.FUNCTION_UPDATED,
+                actor=user,
+                subject_id=function.id,
+                data={'type': function.type, 'name': function.name},
+            )
             return function
         else:
             raise HTTPException(
@@ -341,10 +389,12 @@ async def update_function_by_id(
                 detail=ERROR_MESSAGES.DEFAULT('Error updating function'),
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating function'),
         )
 
 
@@ -363,9 +413,14 @@ async def delete_function_by_id(
     result = await Functions.delete_function_by_id(id, db=db)
 
     if result:
-        FUNCTIONS = request.app.state.FUNCTIONS
-        if id in FUNCTIONS:
-            del FUNCTIONS[id]
+        FUNCTIONS = get_functions_cache(request)
+        FUNCTIONS.pop(id, None)
+        await publish_event(
+            request,
+            EVENTS.FUNCTION_DELETED,
+            actor=user,
+            subject_id=id,
+        )
 
     return result
 
@@ -387,7 +442,7 @@ async def get_function_valves_by_id(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=ERROR_MESSAGES.DEFAULT(e, 'Error getting function valves'),
             )
     else:
         raise HTTPException(
@@ -452,12 +507,18 @@ async def update_function_valves_by_id(
 
                 valves_dict = valves.model_dump(exclude_unset=True)
                 await Functions.update_function_valves_by_id(id, valves_dict, db=db)
+                await publish_event(
+                    request,
+                    EVENTS.FUNCTION_VALVES_UPDATED,
+                    actor=user,
+                    subject_id=id,
+                )
                 return valves_dict
             except Exception as e:
                 log.exception(f'Error updating function values by id {id}: {e}')
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(e),
+                    detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating function valves'),
                 )
         else:
             raise HTTPException(
@@ -489,7 +550,7 @@ async def get_function_user_valves_by_id(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=ERROR_MESSAGES.DEFAULT(e, 'Error getting function user valves'),
             )
     else:
         raise HTTPException(
@@ -544,12 +605,19 @@ async def update_function_user_valves_by_id(
                 user_valves = UserValves(**form_data)
                 user_valves_dict = user_valves.model_dump(exclude_unset=True)
                 await Functions.update_user_valves_by_id_and_user_id(id, user.id, user_valves_dict, db=db)
+                await publish_event(
+                    request,
+                    EVENTS.FUNCTION_VALVES_UPDATED,
+                    actor=user,
+                    subject_id=id,
+                    data={'scope': 'user'},
+                )
                 return user_valves_dict
             except Exception as e:
                 log.exception(f'Error updating function user valves by id {id}: {e}')
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(e),
+                    detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating function user valves'),
                 )
         else:
             raise HTTPException(
