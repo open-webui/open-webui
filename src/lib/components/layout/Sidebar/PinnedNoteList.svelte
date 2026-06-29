@@ -54,6 +54,16 @@
 		<div
 			class="flex items-center text-gray-800 dark:text-gray-200 cursor-grab relative group rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 			data-id={note.id}
+			draggable="true"
+			on:dragstart={(e) => {
+				e.dataTransfer.setData(
+					'text/plain',
+					JSON.stringify({
+						type: 'note',
+						id: note.id
+					})
+				);
+			}}
 		>
 			<a
 				class="grow flex items-center gap-2.5 text-sm"

@@ -57,6 +57,8 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
+	import { getFolderById } from '$lib/apis/folders';
+	import { getNoteById } from '$lib/apis/notes';
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
@@ -874,7 +876,7 @@
 		e.preventDefault();
 		console.log(e);
 
-		// Check if the dropped data is a sidebar chat item
+		// Check if the dropped data is a sidebar chat, folder, note, or model item
 		const textData = e.dataTransfer?.getData('text/plain');
 		if (textData) {
 			try {
@@ -893,6 +895,49 @@
 						if (!files.find((f) => f.id === chatItem.id)) {
 							files = [...files, chatItem];
 						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				} else if (data.type === 'folder' && data.id) {
+					// Fetch the folder to get its name, then add as a reference folder
+					const folder = await getFolderById(localStorage.token, data.id);
+					if (folder) {
+						const folderItem = {
+							type: 'folder',
+							id: folder.id,
+							name: folder.name,
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === folderItem.id)) {
+							files = [...files, folderItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				} else if (data.type === 'note' && data.id) {
+					// Fetch the note to get its title, then add as a reference note
+					const note = await getNoteById(localStorage.token, data.id);
+					if (note) {
+						const noteItem = {
+							type: 'note',
+							id: note.id,
+							name: note.title,
+							status: 'processed'
+						};
+						if (!files.find((f) => f.id === noteItem.id)) {
+							files = [...files, noteItem];
+						}
+					}
+					dragged = false;
+					e.stopPropagation();
+					return;
+				} else if (data.type === 'model' && data.id) {
+					// Find the model from the store and set as @-selected model
+					const model = $models.find((m) => m.id === data.id);
+					if (model) {
+						atSelectedModel = model;
 					}
 					dragged = false;
 					e.stopPropagation();
