@@ -436,7 +436,7 @@
 							</div>
 						</div>
 
-						{#if !ollama && !direct}
+						{#if !direct}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<label
