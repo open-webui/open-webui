@@ -82,6 +82,7 @@ from open_webui.tools.builtin import (
     toggle_automation,
     update_automation,
     update_calendar_event,
+    update_memory,
     update_task,
     view_channel_message,
     view_channel_thread,
@@ -527,19 +528,21 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('chats'):
         builtin_functions.extend([search_chats, view_chat])
 
-    # Add memory tools if builtin category enabled AND enabled for this chat
+    # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
         is_builtin_tool_enabled('memory')
-        and (features.get('memory') or get_model_capability('memory', False))
+        and features.get('memory')
+        and get_model_capability('memory')
         and await has_user_permission('memories')
     ):
         builtin_functions.extend(
             [
                 search_memories,
+                list_memories,
+                update_memory,
                 add_memory,
                 replace_memory_content,
                 delete_memory,
-                list_memories,
             ]
         )
 

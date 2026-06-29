@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
@@ -14,6 +14,7 @@ from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.memory import clean_memory_content, validate_memory_operations
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,10 +65,23 @@ async def get_memories(
 
 class AddMemoryForm(BaseModel):
     content: str
+    type: Literal['user', 'context'] = 'context'
 
 
 class MemoryUpdateModel(BaseModel):
     content: str | None = None
+    type: Literal['user', 'context'] | None = None
+
+
+class MemoryOperationModel(BaseModel):
+    action: Literal['add', 'replace', 'remove']
+    id: str | None = None
+    content: str | None = None
+    type: Literal['user', 'context'] | None = None
+
+
+class UpdateMemoriesForm(BaseModel):
+    operations: list[MemoryOperationModel]
 
 
 @router.post('/add', response_model=MemoryModel | None)
@@ -84,7 +98,8 @@ async def add_memory(
     """
     await check_memories_permission(user)
 
-    memory = await Memories.insert_new_memory(user.id, form_data.content)
+    content = clean_memory_content(form_data.content)
+    memory = await Memories.insert_new_memory(user.id, content, memory_type=form_data.type)
 
     vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
@@ -95,7 +110,11 @@ async def add_memory(
                 'id': memory.id,
                 'text': memory.content,
                 'vector': vector,
-                'metadata': {'created_at': memory.created_at},
+                'metadata': {
+                    'created_at': memory.created_at,
+                    'updated_at': memory.updated_at,
+                    'type': memory.type,
+                },
             }
         ],
     )
@@ -105,9 +124,85 @@ async def add_memory(
         EVENTS.MEMORY_CREATED,
         actor=user,
         subject_id=memory.id,
-        data={'content_preview': memory.content[:300]},
+        data={'content_preview': memory.content[:300], 'type': memory.type},
     )
     return memory
+
+
+@router.post('/update', response_model=list[dict])
+async def update_memories(
+    request: Request,
+    form_data: UpdateMemoriesForm,
+    user=Depends(get_verified_user),
+):
+    await check_memories_permission(user)
+
+    operations = validate_memory_operations(form_data)
+
+    try:
+        results = await Memories.apply_memory_operations(user.id, operations)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    upsert_items = []
+    delete_ids = []
+    response = []
+
+    for result in results:
+        memory = result.get('memory')
+        if isinstance(memory, MemoryModel):
+            result = {**result, 'memory': memory.model_dump()}
+            if result.get('status') in {'created', 'updated'}:
+                vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
+                upsert_items.append(
+                    {
+                        'id': memory.id,
+                        'text': memory.content,
+                        'vector': vector,
+                        'metadata': {
+                            'created_at': memory.created_at,
+                            'updated_at': memory.updated_at,
+                            'type': memory.type,
+                        },
+                    }
+                )
+        if result.get('status') == 'deleted' and result.get('id'):
+            delete_ids.append(result['id'])
+        response.append(result)
+
+    if upsert_items:
+        await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=f'user-memory-{user.id}', items=upsert_items)
+
+    if delete_ids:
+        await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=delete_ids)
+
+    for result in response:
+        status_value = result.get('status')
+        memory = result.get('memory') or {}
+        memory_id = memory.get('id') or result.get('id')
+
+        if status_value == 'created':
+            event = EVENTS.MEMORY_CREATED
+        elif status_value == 'updated':
+            event = EVENTS.MEMORY_UPDATED
+        elif status_value == 'deleted':
+            event = EVENTS.MEMORY_DELETED
+        else:
+            continue
+
+        await publish_event(
+            request,
+            event,
+            actor=user,
+            subject_id=memory_id,
+            data={
+                'content_preview': (memory.get('content') or '')[:300],
+                'type': memory.get('type'),
+                'operation': result.get('action'),
+            },
+        )
+
+    return response
 
 
 ############################
@@ -216,6 +311,7 @@ async def reset_memory_from_vector_db(
                 'metadata': {
                     'created_at': memory.created_at,
                     'updated_at': memory.updated_at,
+                    'type': memory.type,
                 },
             }
             for idx, memory in enumerate(memories)
@@ -281,7 +377,10 @@ async def update_memory_by_id(
     # EMBEDDING_FUNCTION() which makes external API calls (1-5+ seconds).
     await check_memories_permission(user)
 
-    memory = await Memories.update_memory_by_id_and_user_id(memory_id, user.id, form_data.content)
+    content = clean_memory_content(form_data.content) if form_data.content is not None else None
+    if content is None and form_data.type is None:
+        raise HTTPException(status_code=400, detail='No memory update provided')
+    memory = await Memories.update_memory_by_id_and_user_id(memory_id, user.id, content, memory_type=form_data.type)
     if memory is None:
         raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -298,6 +397,7 @@ async def update_memory_by_id(
                     'metadata': {
                         'created_at': memory.created_at,
                         'updated_at': memory.updated_at,
+                        'type': memory.type,
                     },
                 }
             ],
@@ -308,7 +408,7 @@ async def update_memory_by_id(
         EVENTS.MEMORY_UPDATED,
         actor=user,
         subject_id=memory.id,
-        data={'content_preview': memory.content[:300]},
+        data={'content_preview': memory.content[:300], 'type': memory.type},
     )
     return memory
 

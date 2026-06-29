@@ -53,7 +53,6 @@ from open_webui.routers.images import (
     image_edits,
     image_generations,
 )
-from open_webui.routers.memories import QueryMemoryForm, query_memory
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
@@ -90,6 +89,7 @@ from open_webui.utils.filter import (
 )
 
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -147,6 +147,7 @@ DEFAULT_REASONING_TAGS = [
     ('<|begin_of_thought|>', '<|end_of_thought|>'),
     ('◁think▷', '◁/think▷'),
 ]
+
 DEFAULT_SOLUTION_TAGS = [('<|begin_of_solution|>', '<|end_of_solution|>')]
 DEFAULT_CODE_INTERPRETER_TAGS = [('<code_interpreter>', '</code_interpreter>')]
 
@@ -1457,42 +1458,6 @@ async def chat_completion_tools_handler(
 
     return body, {'sources': sources}
 
-
-async def chat_memory_handler(request: Request, form_data: dict, extra_params: dict, user):
-    try:
-        results = await query_memory(
-            request,
-            QueryMemoryForm(
-                **{
-                    'content': get_last_user_message(form_data['messages']) or '',
-                    'k': 3,
-                }
-            ),
-            user,
-        )
-    except Exception as e:
-        log.debug(e)
-        results = None
-
-    user_context = ''
-    if results and hasattr(results, 'documents'):
-        if results.documents and len(results.documents) > 0:
-            for doc_idx, doc in enumerate(results.documents[0]):
-                created_at_date = 'Unknown Date'
-
-                if results.metadatas[0][doc_idx].get('created_at'):
-                    created_at_timestamp = results.metadatas[0][doc_idx]['created_at']
-                    created_at_date = time.strftime('%Y-%m-%d', time.localtime(created_at_timestamp))
-
-                user_context += f'{doc_idx + 1}. [{created_at_date}] {doc}\n'
-
-    form_data['messages'] = add_or_update_system_message(
-        f'User Context:\n{user_context}\n', form_data['messages'], append=True
-    )
-
-    return form_data
-
-
 async def chat_web_search_handler(request: Request, form_data: dict, extra_params: dict, user):
     event_emitter = extra_params['__event_emitter__']
     await event_emitter(
@@ -2649,8 +2614,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if 'memory' in features and features['memory']:
-            # Skip forced memory injection when native FC is enabled - model can use memory tools
-            form_data = await chat_memory_handler(request, form_data, user)
+            form_data = await add_memory_context(request, form_data, user, model)
 
         if 'web_search' in features and features['web_search']:
             # Skip forced RAG web search when native FC is enabled - model can use web_search tool
@@ -2787,6 +2751,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         'tool_ids': tool_ids,
         'terminal_id': terminal_id,
         'files': files,
+        'features': features,
     }
     form_data['metadata'] = metadata
 
