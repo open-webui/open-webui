@@ -713,15 +713,19 @@ async def update_file_data_content_by_id(
         knowledges = await Knowledges.get_knowledges_by_file_id(id, db=db)
         for knowledge in knowledges:
             try:
-                # Remove old embeddings for this file from the KB collection
-                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
-                # Re-add from the now-updated file-{file_id} collection
+                old_vectors = await ASYNC_VECTOR_DB_CLIENT.query(collection_name=knowledge.id, filter={'file_id': id})
+                old_vector_ids = old_vectors.ids[0] if old_vectors and old_vectors.ids else []
+
+                # Re-add from the now-updated file-{file_id} collection before
+                # removing old vectors, so a failed reindex keeps the KB usable.
                 await process_file(
                     request,
                     ProcessFileForm(file_id=id, collection_name=knowledge.id),
                     user=user,
                     db=db,
                 )
+                if old_vector_ids:
+                    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, ids=old_vector_ids)
             except Exception as e:
                 log.warning(f'Failed to update knowledge {knowledge.id} after content change for file {id}: {e}')
 
