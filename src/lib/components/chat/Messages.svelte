@@ -13,7 +13,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
-	import { getChatList, updateChatById } from '$lib/apis/chats';
+	import { deleteChatMessageById, getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
@@ -35,7 +35,6 @@
 	export let atSelectedModel;
 
 	let messages = [];
-	let deletedMessageIds = new Set<string>();
 
 	export let setInputText: Function = () => {};
 
@@ -169,16 +168,10 @@
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			const res = await updateChatById(
-				localStorage.token,
-				chatId,
-				{
-					history: history,
-					messages: messages
-				},
-				Array.from(deletedMessageIds)
-			);
-			deletedMessageIds.clear();
+			const res = await updateChatById(localStorage.token, chatId, {
+				history: history,
+				messages: messages
+			});
 
 			// Refresh local message content from backend (e.g. re-derived via serialize_output)
 			if (res?.chat?.history?.messages) {
@@ -468,11 +461,29 @@
 		// Delete the message and its children
 		[messageId, ...childMessageIds].forEach((id) => {
 			delete history.messages[id];
-			deletedMessageIds.add(id);
 		});
 
-		showMessage({ id: parentMessageId }, false, false);
-		await updateChat();
+		let nextMessageId = parentMessageId;
+		let nextChildrenIds =
+			nextMessageId === null
+				? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
+				: (history.messages[nextMessageId]?.childrenIds ?? []);
+		while (nextChildrenIds.length > 0) {
+			nextMessageId = nextChildrenIds.at(-1);
+			nextChildrenIds = history.messages[nextMessageId]?.childrenIds ?? [];
+		}
+		history.currentId = nextMessageId;
+		history = history;
+
+		if (!$temporaryChatEnabled) {
+			const res = await deleteChatMessageById(localStorage.token, chatId, messageId);
+			if (res?.chat?.history) {
+				history = res.chat.history;
+			}
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
 	};
 
 	const triggerScroll = () => {
