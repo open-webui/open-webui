@@ -2309,7 +2309,7 @@ async def connect_mcp_server(
     """
     mcp_server_connection = None
     for server_connection in await Config.get('tool_server.connections', []):
-        if server_connection.get('type', '') == 'mcp' and server_connection.get('info', {}).get('id') == server_id:
+        if server_connection.get('type', '') == 'mcp' and (server_connection.get('info') or {}).get('id') == server_id:
             mcp_server_connection = server_connection
             break
 
