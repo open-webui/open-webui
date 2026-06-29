@@ -1365,19 +1365,37 @@ async def pin_channel_message(
         await Messages.update_is_pinned_by_id(message_id, form_data.is_pinned, user.id, db=db)
         message = await Messages.get_message_by_id(message_id, db=db)
         message_user = await Users.get_user_by_id(message.user_id, db=db)
-        await publish_event(
-            request,
-            EVENTS.MESSAGE_PINNED if form_data.is_pinned else EVENTS.MESSAGE_UNPINNED,
-            actor=user,
-            subject_id=message_id, subject_type='message',
-            data={'channel_id': id},
-        )
-        return MessageUserResponse(
+        message_data = MessageUserResponse(
             **{
                 **message.model_dump(),
                 'user': UserNameResponse(**message_user.model_dump()) if message_user else None,
             }
         )
+
+        await sio.emit(
+            'events:channel',
+            {
+                'channel_id': channel.id,
+                'message_id': message.id,
+                'data': {
+                    'type': 'message:update',
+                    'data': message_data.model_dump(),
+                },
+                'user': UserNameResponse(**user.model_dump()).model_dump(),
+                'channel': channel.model_dump(),
+            },
+            to=f'channel:{channel.id}',
+        )
+
+        await publish_event(
+            request,
+            EVENTS.MESSAGE_PINNED if form_data.is_pinned else EVENTS.MESSAGE_UNPINNED,
+            actor=user,
+            subject_id=message_id,
+            subject_type='message',
+            data={'channel_id': id},
+        )
+        return message_data
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())

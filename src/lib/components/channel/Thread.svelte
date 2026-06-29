@@ -18,6 +18,7 @@
 	export let channel = null;
 
 	export let onClose = () => {};
+	export let onPin = () => {};
 
 	let messages = null;
 	let top = false;
@@ -196,6 +197,7 @@
 					{messages}
 					{replyToMessage}
 					thread={true}
+					{onPin}
 					onReply={async (message) => {
 						replyToMessage = message;
 
