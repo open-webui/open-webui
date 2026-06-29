@@ -607,14 +607,46 @@ class ChatTable:
         user_id = chat.user_id
         chat = chat.chat
         history = chat.get('history', {})
+        messages = history.setdefault('messages', {})
 
-        if message_id in history.get('messages', {}):
-            history['messages'][message_id] = {
-                **history['messages'][message_id],
+        if message_id in messages:
+            messages[message_id] = {
+                **messages[message_id],
                 **message,
             }
         else:
-            history['messages'][message_id] = message
+            message_parent_id = message.get('parentId')
+            parent_id = message_parent_id
+            if parent_id is None:
+                for existing_id, existing_message in messages.items():
+                    if message_id in existing_message.get('childrenIds', []):
+                        parent_id = existing_id
+                        break
+
+            parent = messages.get(parent_id) if parent_id else None
+            output = message.get('output') or []
+            output_role = next(
+                (item.get('role') for item in output if isinstance(item, dict) and item.get('role')),
+                None,
+            )
+            role = message.get('role') or output_role
+            if not role:
+                role = (
+                    'assistant'
+                    if parent and parent.get('role') == 'user'
+                    else 'user'
+                    if parent and parent.get('role') == 'assistant'
+                    else 'assistant'
+                )
+
+            messages[message_id] = {
+                **message,
+                'id': message.get('id') or message_id,
+                'parentId': message_parent_id if message_parent_id is not None else parent_id,
+                'childrenIds': message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else [],
+                'role': role,
+                'timestamp': message.get('timestamp') or int(time.time()),
+            }
 
         history['currentId'] = message_id
 
@@ -626,7 +658,7 @@ class ChatTable:
                 message_id=message_id,
                 chat_id=id,
                 user_id=user_id,
-                data=history['messages'][message_id],
+                data=messages[message_id],
             )
         except Exception as e:
             log.warning(f'Failed to write to chat_message table: {e}')
