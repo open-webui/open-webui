@@ -266,6 +266,7 @@
 			{id}
 			{output}
 			{model}
+			{save}
 			{preview}
 			{done}
 			{editCodeBlock}
