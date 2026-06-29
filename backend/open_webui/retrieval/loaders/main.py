@@ -17,7 +17,12 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
+from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
+    GLOBAL_LOG_LEVEL,
+    MINERU_MAX_MARKDOWN_BYTES,
+    REQUESTS_VERIFY,
+)
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
@@ -518,7 +523,6 @@ class Loader:
                     mineru_timeout = int(mineru_timeout)
                 except ValueError:
                     mineru_timeout = 300
-
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get('MINERU_API_MODE', 'local'),
@@ -526,6 +530,7 @@ class Loader:
                 api_key=self.kwargs.get('MINERU_API_KEY', ''),
                 params=self.kwargs.get('MINERU_PARAMS', {}),
                 timeout=mineru_timeout,
+                max_markdown_bytes=MINERU_MAX_MARKDOWN_BYTES,
             )
         elif (
             self.engine == 'mistral_ocr'
