@@ -906,8 +906,18 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
     """
     model_id = form_data.model
 
-    # --- Ollama provider ---
     ollama_models = getattr(request.app.state, 'OLLAMA_MODELS', None) or {}
+    openai_models = getattr(request.app.state, 'OPENAI_MODELS', None) or {}
+
+    seen = set()
+    while model_id not in ollama_models and model_id not in openai_models and model_id not in seen:
+        seen.add(model_id)
+        model_info = await Models.get_model_by_id(model_id)
+        if not model_info or not model_info.base_model_id:
+            break
+        model_id = model_info.base_model_id
+
+    # --- Ollama provider ---
     if model_id in ollama_models:
         ollama_config = await Config.get_many('ollama.base_urls', 'ollama.api_configs')
         ollama_base_urls = ollama_config.get('ollama.base_urls') or []
@@ -955,7 +965,6 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
         return {'status': True}
 
     # --- OpenAI-compatible providers ---
-    openai_models = getattr(request.app.state, 'OPENAI_MODELS', None) or {}
     if model_id in openai_models:
         openai_config = await Config.get_many('openai.api_configs', 'openai.api_base_urls', 'openai.api_keys')
         openai_api_configs = openai_config.get('openai.api_configs') or {}
