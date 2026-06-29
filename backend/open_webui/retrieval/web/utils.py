@@ -434,23 +434,29 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             else:
                 browser = p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-            for url in self.urls:
-                try:
-                    self._safe_process_url_sync(url)
-                    page = browser.new_page()
-                    response = page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f'page.goto() returned None for url {url}')
+            try:
+                for url in self.urls:
+                    page = None
+                    try:
+                        self._safe_process_url_sync(url)
+                        page = browser.new_page()
+                        response = page.goto(url, timeout=self.playwright_timeout)
+                        if response is None:
+                            raise ValueError(f'page.goto() returned None for url {url}')
 
-                    text = self.evaluator.evaluate(page, browser, response)
-                    metadata = {'source': url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f'Error loading {url}: {e}')
-                        continue
-                    raise e
-            browser.close()
+                        text = self.evaluator.evaluate(page, browser, response)
+                        metadata = {'source': url}
+                        yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f'Error loading {url}: {e}')
+                            continue
+                        raise e
+                    finally:
+                        if page is not None:
+                            page.close()
+            finally:
+                browser.close()
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Safely load URLs asynchronously with support for remote browser."""
@@ -463,23 +469,29 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             else:
                 browser = await p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-            for url in self.urls:
-                try:
-                    await self._safe_process_url(url)
-                    page = await browser.new_page()
-                    response = await page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f'page.goto() returned None for url {url}')
+            try:
+                for url in self.urls:
+                    page = None
+                    try:
+                        await self._safe_process_url(url)
+                        page = await browser.new_page()
+                        response = await page.goto(url, timeout=self.playwright_timeout)
+                        if response is None:
+                            raise ValueError(f'page.goto() returned None for url {url}')
 
-                    text = await self.evaluator.evaluate_async(page, browser, response)
-                    metadata = {'source': url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f'Error loading {url}: {e}')
-                        continue
-                    raise e
-            await browser.close()
+                        text = await self.evaluator.evaluate_async(page, browser, response)
+                        metadata = {'source': url}
+                        yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f'Error loading {url}: {e}')
+                            continue
+                        raise e
+                    finally:
+                        if page is not None:
+                            await page.close()
+            finally:
+                await browser.close()
 
 
 class SafeWebBaseLoader(WebBaseLoader):
