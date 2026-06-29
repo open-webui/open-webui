@@ -188,6 +188,7 @@ class DoclingLoader:
         self.params = params or {}
 
     def load(self) -> list[Document]:
+        page_break_marker = '\f'
         with open(self.file_path, 'rb') as f:
             headers = {}
             if self.api_key:
@@ -204,6 +205,7 @@ class DoclingLoader:
                 },
                 data={
                     'image_export_mode': 'placeholder',
+                    'md_page_break_placeholder': page_break_marker,
                     **self.params,
                 },
                 headers=headers,
@@ -212,9 +214,19 @@ class DoclingLoader:
         if r.ok:
             result = r.json()
             document_data = result.get('document', {})
-            text = document_data.get('md_content', '<No text content found>')
+            md_content = document_data.get('md_content', '')
+            text = md_content or '<No text content found>'
 
             metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
+            if page_break_marker in md_content:
+                documents = [
+                    Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
+                    for page_idx, page in enumerate(md_content.split(page_break_marker))
+                    if page.strip()
+                ]
+                if documents:
+                    log.debug('Docling extracted text: %s', text)
+                    return documents
 
             log.debug('Docling extracted text: %s', text)
             return [Document(page_content=text, metadata=metadata)]
