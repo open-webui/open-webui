@@ -198,9 +198,19 @@ async def get_models(
 ###########################
 
 
+@router.get('/base/tags', response_model=list[str])
+async def get_base_model_tags(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    tags = await Models.get_all_tags(user_id=user.id, is_admin=True, is_base_model=True, db=db)
+    return sorted(tags)
+
+
 @router.get('/base', response_model=list[ModelResponse])
-async def get_base_models(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
-    return await Models.get_base_models(db=db)
+async def get_base_models(
+    tag: str | None = None,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await Models.get_base_models(tag=tag, db=db)
 
 
 ###########################

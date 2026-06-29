@@ -229,10 +229,25 @@ class ModelsTable:
                 )
             return models
 
-    async def get_base_models(self, db: AsyncSession | None = None) -> list[ModelModel]:
+    @staticmethod
+    def _meta_has_tag(meta: dict | None, tag: str) -> bool:
+        if not meta:
+            return False
+
+        for raw_tag in meta.get('tags', []):
+            name = raw_tag.get('name') if isinstance(raw_tag, dict) else str(raw_tag)
+            if name == tag:
+                return True
+
+        return False
+
+    async def get_base_models(self, tag: str | None = None, db: AsyncSession | None = None) -> list[ModelModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(Model).filter(Model.base_model_id == None))
+            result = await db.execute(select(Model).filter(Model.base_model_id.is_(None)))
             all_models = result.scalars().all()
+            if tag:
+                all_models = [model for model in all_models if self._meta_has_tag(model.meta, tag)]
+
             model_ids = [model.id for model in all_models]
             grants_map = await AccessGrants.get_grants_by_resources('model', model_ids, db=db)
             return [
@@ -395,11 +410,14 @@ class ModelsTable:
         self,
         user_id: str,
         is_admin: bool = False,
+        is_base_model: bool = False,
         db: AsyncSession | None = None,
     ) -> set[str]:
         """Extract unique tag names from model meta, querying only the meta column."""
         async with get_async_db_context(db) as db:
-            stmt = select(Model.meta).filter(Model.base_model_id != None)
+            stmt = select(Model.meta).filter(
+                Model.base_model_id.is_(None) if is_base_model else Model.base_model_id.is_not(None)
+            )
 
             if not is_admin:
                 user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
