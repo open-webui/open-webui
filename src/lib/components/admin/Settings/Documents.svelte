@@ -763,7 +763,9 @@
 							<div class="flex justify-between w-full mt-2 pr-2">
 								<div class="self-center text-xs font-medium">
 									<Tooltip
-										content={$i18n.t('Send the PDF as a base64 data URL instead of uploading it first.')}
+										content={$i18n.t(
+											'Send the PDF as a base64 data URL instead of uploading it first.'
+										)}
 										placement="top-start"
 									>
 										{$i18n.t('Use Base64')}
