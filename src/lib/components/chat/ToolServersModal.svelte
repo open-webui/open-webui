@@ -28,11 +28,7 @@
 						dot: 'bg-green-500',
 						pill: 'text-green-700 dark:text-green-300'
 					}
-				: {
-						label: $i18n.t('No auth'),
-						dot: 'bg-gray-400',
-						pill: 'text-gray-500 dark:text-gray-400'
-					};
+				: null;
 </script>
 
 <Modal bind:show size="md">
@@ -63,32 +59,30 @@
 						{@const status = authStatus(tool)}
 						{@const toolSpecs = tool?.specs ?? []}
 						<Collapsible
-							buttonClassName="w-full mb-1 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							buttonClassName="w-full mb-1 rounded-lg px-2 py-1.5"
 							chevron={toolSpecs.length > 0}
 							disabled={toolSpecs.length === 0}
 						>
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2 min-w-0">
-									<span class="size-2 rounded-full {status.dot}"></span>
 									<div class="text-sm font-medium dark:text-gray-100 text-gray-800 truncate">
 										{tool?.name}
 									</div>
+									{#if status}
+										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
+										<span class="text-[11px] {status.pill} shrink-0">{status.label}</span>
+									{/if}
+									{#if toolSpecs.length > 0}
+										<span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">
+											{toolSpecs.length}
+										</span>
+									{/if}
 								</div>
 
 								{#if tool?.meta?.description}
 									<div class="text-xs text-gray-500 truncate">
 										{tool?.meta?.description}
 									</div>
-								{/if}
-							</div>
-
-							<div class="ml-3 flex shrink-0 items-center gap-2 text-[11px]">
-								<span class="text-gray-500 dark:text-gray-400">{$i18n.t('Enabled')}</span>
-								<span class={status.pill}>{status.label}</span>
-								{#if toolSpecs.length > 0}
-									<span class="text-gray-500 dark:text-gray-400">
-										{$i18n.t('{{COUNT}} tools', { COUNT: toolSpecs.length })}
-									</span>
 								{/if}
 							</div>
 
