@@ -603,6 +603,9 @@
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
 						taskIds = null;
+						if (chatIdProp && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
+							await loadChat();
+						}
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
@@ -866,13 +869,18 @@
 		} catch {}
 	};
 
+	const hasPendingAssistantLeaf = () =>
+		Object.values(history.messages).some(
+			(message) =>
+				message?.role === 'assistant' && !message.done && (message.childrenIds?.length ?? 0) === 0
+		);
+
 	const handleSocketConnect = async () => {
 		if (!chatIdProp || $temporaryChatEnabled) {
 			return;
 		}
 
-		const currentMessage = history.currentId ? history.messages[history.currentId] : null;
-		if (currentMessage?.role !== 'assistant' || currentMessage.done) {
+		if (!hasPendingAssistantLeaf()) {
 			return;
 		}
 
