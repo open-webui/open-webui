@@ -234,6 +234,7 @@ type Settings = {
 	renderMarkdownInAssistantMessages?: boolean;
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
+	pinnedNotesOrder?: string[];
 
 	system?: string;
 	seed?: number;
