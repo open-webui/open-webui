@@ -22,11 +22,12 @@
 	export let selectedModelIdx: number = -1;
 	export let item: any = {};
 	export let index: number = -1;
-	export let value: string = '';
+	export let value: string | null = '';
 
 	export let unloadModelHandler: (modelValue: string) => void = () => {};
 	export let pinModelHandler: (modelId: string) => void = () => {};
 	export let deleteModelHandler: (model: any) => void = () => {};
+	export let selectionOnly = false;
 
 	export let onClick: () => void = () => {};
 
@@ -237,7 +238,7 @@
 	</div>
 
 	<div class="ml-auto pl-2 pr-1 flex items-center gap-1.5 shrink-0">
-		{#if $user?.role === 'admin' && item.model.loaded}
+		{#if !selectionOnly && $user?.role === 'admin' && item.model.loaded}
 			<Tooltip
 				content={`${$i18n.t('Eject')}`}
 				className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "
@@ -256,27 +257,29 @@
 			</Tooltip>
 		{/if}
 
-		<ModelItemMenu
-			bind:show={showMenu}
-			model={item.model}
-			{pinModelHandler}
-			{deleteModelHandler}
-			copyLinkHandler={() => {
-				copyLinkHandler(item.model);
-			}}
-		>
-			<button
-				aria-label={`${$i18n.t('More Options')}`}
-				class="flex"
-				on:click={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					showMenu = !showMenu;
+		{#if !selectionOnly}
+			<ModelItemMenu
+				bind:show={showMenu}
+				model={item.model}
+				{pinModelHandler}
+				{deleteModelHandler}
+				copyLinkHandler={() => {
+					copyLinkHandler(item.model);
 				}}
 			>
-				<EllipsisHorizontal />
-			</button>
-		</ModelItemMenu>
+				<button
+					aria-label={`${$i18n.t('More Options')}`}
+					class="flex"
+					on:click={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						showMenu = !showMenu;
+					}}
+				>
+					<EllipsisHorizontal />
+				</button>
+			</ModelItemMenu>
+		{/if}
 
 		{#if value === item.value}
 			<div>

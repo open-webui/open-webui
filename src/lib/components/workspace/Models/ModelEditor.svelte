@@ -13,6 +13,7 @@
 	import { getVoices } from '$lib/apis/audio';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
@@ -112,6 +113,25 @@
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
 
+	const getBaseModelItems = (models: any[] = []) => {
+		const currentModelId = (model as any)?.id;
+
+		return models
+			.filter(
+				(baseModel) =>
+					(!currentModelId || baseModel.id !== currentModelId) &&
+					!baseModel?.preset &&
+					baseModel?.owned_by !== 'arena' &&
+					!(baseModel?.direct ?? false) &&
+					(!(baseModel?.info?.meta?.hidden ?? false) || baseModel.id === info.base_model_id)
+			)
+			.map((baseModel) => ({
+				value: baseModel.id,
+				label: baseModel.name,
+				model: baseModel
+			}));
+	};
+
 	const loadSuggestionTags = async () => {
 		const res: string[] = await (preset ? getModelTags : getBaseModelTags)(
 			localStorage.token
@@ -139,6 +159,13 @@
 
 		if (name === '') {
 			toast.error($i18n.t('Model Name is required.'));
+			loading = false;
+
+			return;
+		}
+
+		if (preset && !info.base_model_id) {
+			toast.error($i18n.t('Base Model is required.'));
 			loading = false;
 
 			return;
@@ -619,19 +646,16 @@
 									</div>
 
 									<div>
-										<select
-											class="text-sm w-full bg-transparent outline-hidden"
+										<ModelSelector
+											id="workspace-base-model"
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+											searchPlaceholder={$i18n.t('Search a model')}
+											items={getBaseModelItems($models)}
+											className="w-[32rem]"
+											triggerClassName="text-sm"
+											selectionOnly
 											bind:value={info.base_model_id}
-											required
-										>
-											<option value={null} class=" text-gray-900"
-												>{$i18n.t('Select a base model')}</option
-											>
-											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false) && (!(m?.info?.meta?.hidden ?? false) || m.id === info.base_model_id)) as model}
-												<option value={model.id} class=" text-gray-900">{model.name}</option>
-											{/each}
-										</select>
+										/>
 									</div>
 								</div>
 							{/if}
