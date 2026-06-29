@@ -1163,25 +1163,19 @@ async def process_tool_result(
                                 pass
                             tool_response.append(text)
                         elif resource.get('blob'):
-                            mime_type = resource.get('mimeType', 'application/octet-stream')
-                            blob = resource.get('blob', '')
-                            if mime_type.startswith('image/'):
-                                file_url = await get_file_url_from_base64(
-                                    request,
-                                    f'data:{mime_type};base64,{blob}',
+                            resource_mime_type = resource.get('mimeType') or 'application/octet-stream'
+                            resource_blob = resource.get('blob', '')
+                            if resource_mime_type.startswith('image/'):
+                                tool_result_files.append(
                                     {
-                                        'chat_id': metadata.get('chat_id', None),
-                                        'message_id': metadata.get('message_id', None),
-                                        'session_id': metadata.get('session_id', None),
-                                        'result': item,
-                                    },
-                                    user,
+                                        'type': 'image',
+                                        'url': f'data:{resource_mime_type};base64,{resource_blob}',
+                                    }
                                 )
-                                tool_result_files.append({'type': 'image', 'url': file_url})
                             else:
-                                uri = resource.get('uri', 'resource')
+                                resource_uri = resource.get('uri', 'resource')
                                 tool_response.append(
-                                    f'[Resource: {uri}] (binary data, mimeType: {mime_type})'
+                                    f'[Resource: {resource_uri}] (binary data, mimeType: {resource_mime_type})'
                                 )
                         elif resource.get('uri'):
                             tool_response.append(resource.get('uri'))
