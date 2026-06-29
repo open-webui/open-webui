@@ -912,6 +912,8 @@ MISTRAL_OCR_API_BASE_URL = os.getenv('MISTRAL_OCR_API_BASE_URL', 'https://api.mi
 
 MISTRAL_OCR_API_KEY = os.getenv('MISTRAL_OCR_API_KEY', '')
 
+MISTRAL_OCR_USE_BASE64 = os.getenv('MISTRAL_OCR_USE_BASE64', 'False').lower() == 'true'
+
 PADDLEOCR_VL_BASE_URL = os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080')
 
 PADDLEOCR_VL_TOKEN = os.getenv('PADDLEOCR_VL_TOKEN', '')
@@ -2786,6 +2788,7 @@ DEFAULT_CONFIG = {
     'rag.document_intelligence_model': DOCUMENT_INTELLIGENCE_MODEL,
     'rag.mistral_ocr_api_base_url': MISTRAL_OCR_API_BASE_URL,
     'rag.mistral_ocr_api_key': MISTRAL_OCR_API_KEY,
+    'rag.mistral_ocr_use_base64': MISTRAL_OCR_USE_BASE64,
     'rag.paddleocr_vl_base_url': PADDLEOCR_VL_BASE_URL,
     'rag.paddleocr_vl_token': PADDLEOCR_VL_TOKEN,
     'rag.bypass_embedding_and_retrieval': BYPASS_EMBEDDING_AND_RETRIEVAL,

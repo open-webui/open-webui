@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 import os
 import sys
@@ -37,6 +38,7 @@ class MistralLoader:
         timeout: int = 300,  # 5 minutes default
         max_retries: int = 3,
         enable_debug_logging: bool = False,
+        use_base64: bool = False,
     ):
         """
         Initializes the loader with enhanced features.
@@ -47,6 +49,7 @@ class MistralLoader:
             timeout: Request timeout in seconds.
             max_retries: Maximum number of retry attempts.
             enable_debug_logging: Enable detailed debug logs.
+            use_base64: Send the document as a data URL instead of uploading it first.
         """
         if not api_key:
             raise ValueError('API key cannot be empty.')
@@ -59,6 +62,7 @@ class MistralLoader:
         self.timeout = timeout
         self.max_retries = max_retries
         self.debug = enable_debug_logging
+        self.use_base64 = use_base64
 
         # PERFORMANCE OPTIMIZATION: Differentiated timeouts for different operations
         # This prevents long-running OCR operations from affecting quick operations
@@ -416,6 +420,11 @@ class MistralLoader:
 
         return await self._retry_request_async(ocr_request)
 
+    def _get_file_data_url(self) -> str:
+        with open(self.file_path, 'rb') as f:
+            encoded_file = base64.b64encode(f.read()).decode('utf-8')
+        return f'data:application/pdf;base64,{encoded_file}'
+
     def _delete_file(self, file_id: str) -> None:
         """Deletes the file from Mistral storage (sync version)."""
         log.info(f'Deleting uploaded file ID: {file_id}')
@@ -565,6 +574,12 @@ class MistralLoader:
         start_time = time.time()
 
         try:
+            if self.use_base64:
+                documents = self._process_results(self._process_ocr(self._get_file_data_url()))
+                total_time = time.time() - start_time
+                log.info(f'Sync OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+                return documents
+
             # 1. Upload file
             file_id = self._upload_file()
 
@@ -616,6 +631,14 @@ class MistralLoader:
 
         try:
             async with self._get_session() as session:
+                if self.use_base64:
+                    documents = self._process_results(await self._process_ocr_async(session, self._get_file_data_url()))
+                    total_time = time.time() - start_time
+                    log.info(
+                        f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents'
+                    )
+                    return documents
+
                 # 1. Upload file with streaming
                 file_id = await self._upload_file_async(session)
 

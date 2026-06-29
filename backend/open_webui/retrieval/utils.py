@@ -97,6 +97,7 @@ LOADER_CONFIG_KEYS = {
     'DOCUMENT_INTELLIGENCE_MODEL': 'rag.document_intelligence_model',
     'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
     'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
+    'MISTRAL_OCR_USE_BASE64': 'rag.mistral_ocr_use_base64',
     'PADDLEOCR_VL_BASE_URL': 'rag.paddleocr_vl_base_url',
     'PADDLEOCR_VL_TOKEN': 'rag.paddleocr_vl_token',
     'MINERU_API_MODE': 'rag.mineru_api_mode',

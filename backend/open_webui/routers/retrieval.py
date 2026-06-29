@@ -325,6 +325,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'MICROSOFT_WEB_IQ_LANGUAGE': 'web.search.microsoft_web_iq_language',
     'MISTRAL_OCR_API_BASE_URL': 'rag.mistral_ocr_api_base_url',
     'MISTRAL_OCR_API_KEY': 'rag.mistral_ocr_api_key',
+    'MISTRAL_OCR_USE_BASE64': 'rag.mistral_ocr_use_base64',
     'MOJEEK_SEARCH_API_KEY': 'web.search.mojeek_search_api_key',
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': 'web.search.ollama_cloud_api_key',
     'PADDLEOCR_VL_BASE_URL': 'rag.paddleocr_vl_base_url',
@@ -650,6 +651,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'DOCUMENT_INTELLIGENCE_MODEL': config.DOCUMENT_INTELLIGENCE_MODEL,
         'MISTRAL_OCR_API_BASE_URL': config.MISTRAL_OCR_API_BASE_URL,
         'MISTRAL_OCR_API_KEY': config.MISTRAL_OCR_API_KEY,
+        'MISTRAL_OCR_USE_BASE64': config.MISTRAL_OCR_USE_BASE64,
         'PADDLEOCR_VL_BASE_URL': config.PADDLEOCR_VL_BASE_URL,
         'PADDLEOCR_VL_TOKEN': config.PADDLEOCR_VL_TOKEN,
         # MinerU settings
@@ -881,6 +883,7 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_MODEL: str | None = None
     MISTRAL_OCR_API_BASE_URL: str | None = None
     MISTRAL_OCR_API_KEY: str | None = None
+    MISTRAL_OCR_USE_BASE64: bool | None = None
     PADDLEOCR_VL_BASE_URL: str | None = None
     PADDLEOCR_VL_TOKEN: str | None = None
 
@@ -1073,6 +1076,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     )
     config.MISTRAL_OCR_API_KEY = (
         form_data.MISTRAL_OCR_API_KEY if form_data.MISTRAL_OCR_API_KEY is not None else config.MISTRAL_OCR_API_KEY
+    )
+    config.MISTRAL_OCR_USE_BASE64 = (
+        form_data.MISTRAL_OCR_USE_BASE64
+        if form_data.MISTRAL_OCR_USE_BASE64 is not None
+        else config.MISTRAL_OCR_USE_BASE64
     )
     config.PADDLEOCR_VL_BASE_URL = (
         form_data.PADDLEOCR_VL_BASE_URL if form_data.PADDLEOCR_VL_BASE_URL is not None else config.PADDLEOCR_VL_BASE_URL
@@ -1342,6 +1350,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'DOCUMENT_INTELLIGENCE_MODEL': config.DOCUMENT_INTELLIGENCE_MODEL,
         'MISTRAL_OCR_API_BASE_URL': config.MISTRAL_OCR_API_BASE_URL,
         'MISTRAL_OCR_API_KEY': config.MISTRAL_OCR_API_KEY,
+        'MISTRAL_OCR_USE_BASE64': config.MISTRAL_OCR_USE_BASE64,
         'PADDLEOCR_VL_BASE_URL': config.PADDLEOCR_VL_BASE_URL,
         'PADDLEOCR_VL_TOKEN': config.PADDLEOCR_VL_TOKEN,
         # MinerU settings
