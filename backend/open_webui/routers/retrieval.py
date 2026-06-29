@@ -1541,7 +1541,7 @@ def merge_docs_to_target_size(
     measure: Callable[[str], int] = len
     if config.TEXT_SPLITTER == 'token':
         encoding = tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
-        measure = lambda text: len(encoding.encode(text))
+        measure = lambda text: len(encoding.encode(text, disallowed_special=()))
 
     def _merge_backward(result: list[Document], content: str, chunk: Document) -> bool:
         """Try to append content into the last emitted chunk. Returns True on success."""
