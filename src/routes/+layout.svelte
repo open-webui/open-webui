@@ -102,6 +102,7 @@
 
 	let loaded = false;
 	let tokenTimer = null;
+	let isAuthRedirectInProgress = false;
 
 	let showRefresh = false;
 
@@ -760,6 +761,53 @@
 	};
 
 	const TOKEN_EXPIRY_BUFFER = 60; // seconds
+	const resolveFetchUrl = (input) => {
+		if (input instanceof Request) {
+			return new URL(input.url, window.location.origin);
+		}
+
+		return new URL(input, window.location.origin);
+	};
+
+	const resolveFetchHeaders = (input, init) => {
+		if (init?.headers) {
+			return new Headers(init.headers);
+		}
+
+		if (input instanceof Request) {
+			return input.headers;
+		}
+
+		return new Headers();
+	};
+
+	const isAuthenticatedBackendFetch = (input, init) => {
+		try {
+			const requestUrl = resolveFetchUrl(input);
+			const backendOrigin = new URL(WEBUI_BASE_URL || '/', window.location.origin).origin;
+
+			return requestUrl.origin === backendOrigin && resolveFetchHeaders(input, init).has('authorization');
+		} catch {
+			return false;
+		}
+	};
+
+	const redirectToAuthAfterUnauthorized = () => {
+		if (isAuthRedirectInProgress || window.location.pathname === '/auth') {
+			return;
+		}
+
+		isAuthRedirectInProgress = true;
+		user.set(null);
+		localStorage.removeItem('token');
+		toast.error($i18n.t('Session expired. Please sign in again.'));
+
+		const currentPath = `${window.location.pathname}${window.location.search}`;
+		goto(`/auth?redirect=${encodeURIComponent(currentPath)}`).finally(() => {
+			isAuthRedirectInProgress = false;
+		});
+	};
+
 	const checkTokenExpiry = async () => {
 		const exp = $user?.expires_at; // token expiry time in unix timestamp
 		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
@@ -882,6 +930,17 @@
 	};
 
 	onMount(async () => {
+		const originalFetch = window.fetch.bind(window);
+		window.fetch = async (input, init) => {
+			const response = await originalFetch(input, init);
+
+			if (response.status === 401 && localStorage.token && isAuthenticatedBackendFetch(input, init)) {
+				redirectToAuthAfterUnauthorized();
+			}
+
+			return response;
+		};
+
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
