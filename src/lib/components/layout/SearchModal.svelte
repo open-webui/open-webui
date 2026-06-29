@@ -630,7 +630,7 @@
 
 						<!-- svelte-ignore a11y-no-static-element-interactions -->
 						<div
-							class="w-full flex justify-between items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
+							class="w-full flex justify-between items-center rounded-xl text-sm py-2 pl-3 pr-32 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
 							idx + actions.length
 								? 'bg-gray-50 dark:bg-gray-850'
 								: ''}"
@@ -700,10 +700,25 @@
 								</a>
 							{/if}
 
-							<div class="flex items-center gap-1 pl-2 shrink-0">
+							<div
+								class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3 pl-6 shrink-0"
+							>
+								<div class="text-gray-500 dark:text-gray-400 text-xs">
+									{$i18n.t(
+										dayjs(chat?.updated_at * 1000).calendar(null, {
+											sameDay: '[Today]',
+											nextDay: '[Tomorrow]',
+											nextWeek: 'dddd',
+											lastDay: '[Yesterday]',
+											lastWeek: '[Last] dddd',
+											sameElse: 'L'
+										})
+									)}
+								</div>
+
 								{#if editingChatId !== chat.id}
 									{#if shiftKey}
-										<div class="invisible group-hover/item:visible flex items-center space-x-1.5">
+										<div class="flex items-center space-x-1.5">
 											<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 												<button
 													class="self-center dark:hover:text-white transition"
@@ -729,7 +744,7 @@
 											</Tooltip>
 										</div>
 									{:else}
-										<div class="invisible group-hover/item:visible">
+										<div class="flex items-center">
 											<ChatMenu
 												chatId={chat.id}
 												shareHandler={() => {
@@ -776,19 +791,6 @@
 										</div>
 									{/if}
 								{/if}
-
-								<div class="text-gray-500 dark:text-gray-400 text-xs">
-									{$i18n.t(
-										dayjs(chat?.updated_at * 1000).calendar(null, {
-											sameDay: '[Today]',
-											nextDay: '[Tomorrow]',
-											nextWeek: 'dddd',
-											lastDay: '[Yesterday]',
-											lastWeek: '[Last] dddd',
-											sameElse: 'L'
-										})
-									)}
-								</div>
 							</div>
 						</div>
 					{/each}
