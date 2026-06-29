@@ -103,6 +103,15 @@ from pydantic.fields import FieldInfo
 log = logging.getLogger(__name__)
 
 
+def normalize_bearer_token(token: Any) -> str:
+    return token.strip() if isinstance(token, str) else token or ''
+
+
+def bearer_auth_header(token: Any) -> dict[str, str]:
+    token = normalize_bearer_token(token)
+    return {'Authorization': f'Bearer {token}'} if token else {}
+
+
 async def build_tool_server_headers(
     connection: dict,
     request,
@@ -1141,7 +1150,7 @@ async def set_terminal_servers(request: Request):
             return
         headers = {}
         if connection.get('auth_type', 'bearer') == 'bearer':
-            headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+            headers.update(bearer_auth_header(connection.get('key', '')))
         prompt = await get_terminal_system_prompt(server['url'], headers)
         if prompt:
             server['system_prompt'] = prompt
@@ -1216,15 +1225,15 @@ async def get_terminal_tools(
     headers = {'Content-Type': 'application/json', 'X-User-Id': user.id}
 
     if auth_type == 'bearer':
-        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+        headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
         cookies = request.cookies
-        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+        headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
         cookies = request.cookies
         oauth_token = extra_params.get('__oauth_token__', None)
         if oauth_token:
-            headers['Authorization'] = f'Bearer {oauth_token.get("access_token", "")}'
+            headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
     # auth_type == "none": no Authorization header
 
     system_prompt = server_data.get('system_prompt')
@@ -1349,7 +1358,7 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
                 # Fetch from URL
                 task = get_tool_server_data(
                     spec_url,
-                    {'Authorization': f'Bearer {token}'} if token else None,
+                    bearer_auth_header(token) or None,
                 )
             elif spec_type == 'json' and server.get('spec', ''):
                 # Use provided JSON spec

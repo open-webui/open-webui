@@ -27,6 +27,7 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
+    bearer_auth_header,
     get_tool_server_data,
     get_tool_server_url,
     set_terminal_servers,
@@ -351,7 +352,7 @@ async def verify_terminal_server_connection(
 
     headers = {}
     if form_data.auth_type == 'bearer' and form_data.key:
-        headers['Authorization'] = f'Bearer {form_data.key}'
+        headers.update(bearer_auth_header(form_data.key))
 
     try:
         async with aiohttp.ClientSession(
@@ -423,7 +424,7 @@ async def put_terminal_server_policy(
 
     headers = {'Content-Type': 'application/json'}
     if form_data.auth_type == 'bearer' and form_data.key:
-        headers['Authorization'] = f'Bearer {form_data.key}'
+        headers.update(bearer_auth_header(form_data.key))
 
     try:
         async with aiohttp.ClientSession(
@@ -458,7 +459,7 @@ async def put_terminal_server_lifecycle(
 
     headers = {'Content-Type': 'application/json'}
     if form_data.auth_type == 'bearer' and form_data.key:
-        headers['Authorization'] = f'Bearer {form_data.key}'
+        headers.update(bearer_auth_header(form_data.key))
 
     try:
         async with aiohttp.ClientSession(
@@ -496,7 +497,7 @@ async def refresh_terminal_server_terminals(
 
     headers = {'Content-Type': 'application/json'}
     if form_data.auth_type == 'bearer' and form_data.key:
-        headers['Authorization'] = f'Bearer {form_data.key}'
+        headers.update(bearer_auth_header(form_data.key))
 
     body = {
         'only_idle': form_data.only_idle,
