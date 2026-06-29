@@ -101,7 +101,13 @@
 				node.getAttribute('data-checked') === 'false'),
 		replacement: function (content, node) {
 			const checked = node.getAttribute('data-checked') === 'true';
-			content = content.replace(/^\s+/, '');
+			// The GFM plugin's own taskListItems rule already converts the
+			// underlying <input type="checkbox"> (nested inside <label>) into a
+			// "[ ] "/"[x] " marker, since turndown converts child nodes before
+			// this LI-level rule runs. Strip that duplicate marker, plus any
+			// blank lines left over from paragraph wrapping, so we don't end up
+			// with "- [ ] [ ] text" or extra blank lines inside the item.
+			content = content.replace(/^\s*\[[ xX]\]\s*/, '').trim();
 			return `- [${checked ? 'x' : ' '}] ${content}\n`;
 		}
 	});
