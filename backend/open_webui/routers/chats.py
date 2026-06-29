@@ -1674,11 +1674,11 @@ async def delete_shared_chat_by_id(
     if not chat:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
-    if not chat.share_id:
-        return False
-
     await SharedChats.delete_by_chat_id(id, db=db)
-    await Chats.update_chat_share_id_by_id(id, None, db=db)
+
+    if chat.share_id:
+        await Chats.update_chat_share_id_by_id(id, None, db=db)
+
     await AccessGrants.set_access_grants('shared_chat', id, [], db=db)
 
     await publish_event(
