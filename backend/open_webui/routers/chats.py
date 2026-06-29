@@ -37,7 +37,6 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_pe
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.context_compaction import compact_chat_branch
-from open_webui.utils.middleware import serialize_output
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
 from pydantic import BaseModel
@@ -1220,16 +1219,6 @@ async def update_chat_by_id(
                 chat.chat.get('history'),
                 form_data.chat.get('history'),
             )
-
-        # Re-derive content from output for assistant messages so that frontend
-        # edits to output items are reflected in content. Only when output
-        # actually changed — otherwise content set independently of output
-        # (e.g. a `replace` event or an outlet filter footer) would be reverted.
-        existing_messages = (chat.chat.get('history') or {}).get('messages') or {}
-        for msg_id, msg in updated_chat.get('history', {}).get('messages', {}).items():
-            if isinstance(msg, dict) and msg.get('role') == 'assistant' and msg.get('output'):
-                if msg.get('output') != existing_messages.get(msg_id, {}).get('output'):
-                    msg['content'] = serialize_output(msg['output'])
 
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
 

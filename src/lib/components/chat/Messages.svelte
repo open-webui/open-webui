@@ -173,7 +173,7 @@
 				messages: messages
 			});
 
-			// Refresh local message content from backend (e.g. re-derived via serialize_output)
+			// Keep local plain-content edits aligned with the saved chat response.
 			if (res?.chat?.history?.messages) {
 				for (const [id, msg] of Object.entries(res.chat.history.messages)) {
 					if (history.messages[id] && (msg as any).content) {
@@ -385,16 +385,16 @@
 				const message = history.messages[messageId];
 				const parentId = message.parentId;
 
-				const responseMessage = {
-					...message,
-					id: responseMessageId,
-					parentId: parentId,
-					childrenIds: [],
-					files: undefined,
-					content: content,
-					output: output ?? undefined,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-				};
+					const responseMessage = {
+						...message,
+						id: responseMessageId,
+						parentId: parentId,
+						childrenIds: [],
+						files: undefined,
+						content: output !== undefined ? '' : content,
+						...(output !== undefined ? { output } : {}),
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
 
 				history.messages[responseMessageId] = responseMessage;
 				history.currentId = responseMessageId;
@@ -408,13 +408,16 @@
 				}
 
 				await updateChat();
-			} else {
-				// Edit response message
-				history.messages[messageId].originalContent = history.messages[messageId].content;
-				history.messages[messageId].content = content;
-				if (output !== undefined) {
-					history.messages[messageId].output = output;
-				}
+				} else {
+					// Edit response message
+					if (content !== undefined) {
+						history.messages[messageId].originalContent = history.messages[messageId].content;
+						history.messages[messageId].content = content;
+					}
+					if (output !== undefined) {
+						history.messages[messageId].output = output;
+						history.messages[messageId].content = '';
+					}
 				await updateChat();
 			}
 		}

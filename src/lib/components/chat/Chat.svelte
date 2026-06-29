@@ -68,6 +68,7 @@
 		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { getOutputText } from './Messages/structuredOutput';
 
 	import {
 		archiveChatById,
@@ -1248,13 +1249,50 @@
 
 	$: onHistoryChange(history);
 
+	const dispatchCallOverlayAudio = (message, final = false) => {
+		if (!$showCallOverlay) {
+			return;
+		}
+
+		const messageContentParts = getMessageContentParts(
+			getOutputText(message?.output) || removeAllDetails(message?.content ?? ''),
+			$config?.audio?.tts?.split_on ?? 'punctuation'
+		);
+		if (!final) {
+			messageContentParts.pop();
+		}
+
+		const nextContentPart = messageContentParts.at(-1) ?? '';
+		if (!nextContentPart || (!final && nextContentPart === message.lastSentence)) {
+			return;
+		}
+
+		if (!final) {
+			message.lastSentence = nextContentPart;
+		}
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat', {
+				detail: {
+					id: message.id,
+					content: nextContentPart
+				}
+			})
+		);
+	};
+
 	const getContents = () => {
 		const messages = history ? createMessagesList(history, history.currentId) : [];
 		let contents = [];
 		messages.forEach((message) => {
-			if (message?.role !== 'user' && message?.content) {
+			if (message?.role !== 'user') {
+				const messageContent = getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+				if (!messageContent.trim()) {
+					return;
+				}
+
 				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
-					message.content
+					messageContent
 				);
 
 				if (htmlGroups && htmlGroups.length > 0) {
@@ -1923,6 +1961,7 @@
 		// Store raw OR-aligned output items from backend
 		if (output) {
 			message.output = output;
+			dispatchCallOverlayAudio(message);
 		}
 
 		if (error) {
@@ -1933,10 +1972,11 @@
 			message.sources = sources;
 		}
 
-		if (choices) {
+		if (choices && !output) {
 			if (choices[0]?.message?.content) {
 				// Non-stream response
 				message.content += choices[0]?.message?.content;
+				dispatchCallOverlayAudio(message);
 			} else {
 				// Stream response
 				let value = choices[0]?.delta?.content ?? '';
@@ -1948,67 +1988,19 @@
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
 					}
-
-					// Emit chat event for TTS (only when call overlay is active)
-					if ($showCallOverlay) {
-						const messageContentParts = getMessageContentParts(
-							removeAllDetails(message.content),
-							$config?.audio?.tts?.split_on ?? 'punctuation'
-						);
-						messageContentParts.pop();
-
-						// dispatch only last sentence and make sure it hasn't been dispatched before
-						if (
-							messageContentParts.length > 0 &&
-							messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-						) {
-							message.lastSentence = messageContentParts[messageContentParts.length - 1];
-							eventTarget.dispatchEvent(
-								new CustomEvent('chat', {
-									detail: {
-										id: message.id,
-										content: messageContentParts[messageContentParts.length - 1]
-									}
-								})
-							);
-						}
-					}
+					dispatchCallOverlayAudio(message);
 				}
 			}
 		}
 
-		if (content) {
+		if (content && !output) {
 			// REALTIME_CHAT_SAVE is disabled
 			message.content = content;
 
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
 			}
-
-			// Emit chat event for TTS (only when call overlay is active)
-			if ($showCallOverlay) {
-				const messageContentParts = getMessageContentParts(
-					removeAllDetails(message.content),
-					$config?.audio?.tts?.split_on ?? 'punctuation'
-				);
-				messageContentParts.pop();
-
-				// dispatch only last sentence and make sure it hasn't been dispatched before
-				if (
-					messageContentParts.length > 0 &&
-					messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-				) {
-					message.lastSentence = messageContentParts[messageContentParts.length - 1];
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: {
-								id: message.id,
-								content: messageContentParts[messageContentParts.length - 1]
-							}
-						})
-					);
-				}
-			}
+			dispatchCallOverlayAudio(message);
 		}
 
 		if (selected_model_id) {
@@ -2024,9 +2016,10 @@
 
 		if (done) {
 			message.done = true;
+			const visibleContent = getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 
 			if ($settings.responseAutoCopy) {
-				copyToClipboard(message.content);
+				copyToClipboard(visibleContent);
 			}
 
 			if ($settings.responseAutoPlayback && !$showCallOverlay) {
@@ -2035,25 +2028,12 @@
 			}
 
 			// Emit chat event for TTS (only when call overlay is active)
-			if ($showCallOverlay) {
-				let lastMessageContentPart =
-					getMessageContentParts(
-						removeAllDetails(message.content),
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					)?.at(-1) ?? '';
-				if (lastMessageContentPart) {
-					eventTarget.dispatchEvent(
-						new CustomEvent('chat', {
-							detail: { id: message.id, content: lastMessageContentPart }
-						})
-					);
-				}
-			}
+			dispatchCallOverlayAudio(message, true);
 			eventTarget.dispatchEvent(
 				new CustomEvent('chat:finish', {
 					detail: {
 						id: message.id,
-						content: message.content
+						content: visibleContent
 					}
 				})
 			);
@@ -2480,53 +2460,60 @@
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
-		let messages = [
-			params?.system || $settings.system
-				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
-				: undefined
-		].filter(Boolean);
+			let messages: any[] = [
+				params?.system || $settings.system
+					? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
+					: undefined
+			].filter(Boolean);
 
-		if ($temporaryChatEnabled) {
-			messages = [
-				...messages,
-				..._messages.map((message) => ({
-					...message,
-					content: processDetails(message.content),
-					...(message.output ? { output: message.output } : {})
-				}))
-			].filter((message) => message);
+			if ($temporaryChatEnabled) {
+				messages = [
+					...messages,
+					..._messages.map((message) => ({
+						...message,
+						...(message.output && message.role === 'assistant'
+							? { output: message.output }
+							: { content: processDetails(message.content) })
+					}))
+				].filter((message) => message);
 
-			messages = messages
-				.map((message, idx, arr) => {
-					const imageFiles = (message?.files ?? []).filter(
-						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+				messages = messages
+					.map((message) => {
+						const imageFiles = (message?.files ?? []).filter(
+							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+						);
+
+						if (message.output && message.role === 'assistant') {
+							return { role: message.role, output: message.output };
+						}
+
+						if (message.role === 'user' && imageFiles.length > 0) {
+							return {
+								role: message.role,
+								content: [
+									{
+										type: 'text',
+										text: message?.merged?.content ?? message.content
+									},
+									...imageFiles.map((file) => ({
+										type: 'image_url',
+										image_url: {
+											url: file.url
+										}
+									}))
+								]
+							};
+						}
+
+						return {
+							role: message.role,
+							content: message?.merged?.content ?? message.content
+						};
+					})
+					.filter(
+						(message) => message?.role === 'user' || message?.content?.trim() || message?.output?.length
 					);
-
-					return {
-						role: message.role,
-						...(message.output ? { output: message.output } : {}),
-						...(message.role === 'user' && imageFiles.length > 0
-							? {
-									content: [
-										{
-											type: 'text',
-											text: message?.merged?.content ?? message.content
-										},
-										...imageFiles.map((file) => ({
-											type: 'image_url',
-											image_url: {
-												url: file.url
-											}
-										}))
-									]
-								}
-							: {
-									content: message?.merged?.content ?? message.content
-								})
-					};
-				})
-				.filter((message) => message?.role === 'user' || message?.content?.trim());
-		}
+			}
 
 		const toolIds = [];
 		const toolServerIds = [];
