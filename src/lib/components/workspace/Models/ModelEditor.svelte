@@ -9,6 +9,7 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
+	import { getBaseModelTags, getModelTags } from '$lib/apis/models';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -106,6 +107,14 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	export let suggestionTags: { name: string }[] = [];
+
+	const loadSuggestionTags = async () => {
+		const res: string[] = await (preset ? getModelTags : getBaseModelTags)(
+			localStorage.token
+		).catch(() => []);
+		suggestionTags = res.map((tag) => ({ name: tag }));
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -254,6 +263,9 @@
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
 			await functions.set(await getFunctions(localStorage.token));
+		}
+		if (suggestionTags.length === 0) {
+			await loadSuggestionTags();
 		}
 
 		// Fetch admin-configured default model metadata so the editor
@@ -651,6 +663,7 @@
 								<div class="">
 									<Tags
 										tags={info?.meta?.tags ?? []}
+										{suggestionTags}
 										on:delete={(e) => {
 											const tagName = e.detail;
 											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
