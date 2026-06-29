@@ -1053,6 +1053,12 @@ if OFFLINE_MODE:
     ENABLE_VERSION_UPDATE_CHECK = False
 
 ####################################
+# Pyodide file persistence
+####################################
+
+ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', 'false').lower() == 'true'
+
+####################################
 # Audit logging
 ####################################
 
