@@ -14,6 +14,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import TTSVoiceInput from '$lib/components/workspace/Models/TTSVoiceInput.svelte';
 
 	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
@@ -58,8 +59,18 @@
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
+	type Voice = {
+		id: string;
+		name?: string;
+		description?: string;
+		meta?: {
+			description?: string;
+		};
+	};
+
 	// eslint-disable-next-line no-undef
 	let voices: SpeechSynthesisVoice[] = [];
+	let providerVoices: Voice[] = [];
 	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
 
 	const getModels = async () => {
@@ -82,6 +93,8 @@
 
 	const getVoices = async () => {
 		if (TTS_ENGINE === '') {
+			providerVoices = [];
+
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
 
@@ -92,14 +105,18 @@
 				}
 			}, 100);
 		} else {
+			voices = [];
+
 			const res = await _getVoices(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
 
 			if (res) {
 				console.log(res);
-				voices = res.voices;
-				voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
+				providerVoices = res.voices ?? [];
+				providerVoices.sort((a, b) =>
+					(a.name ?? a.id).localeCompare(b.name ?? b.id, $i18n.resolvedLanguage)
+				);
 			}
 		}
 	};
@@ -679,18 +696,12 @@
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<input
-											list="voice-list"
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										<TTSVoiceInput
 											bind:value={TTS_VOICE}
+											voices={providerVoices}
 											placeholder={$i18n.t('Select a voice')}
+											className="w-full rounded-lg py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 										/>
-
-										<datalist id="voice-list">
-											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
-											{/each}
-										</datalist>
 									</div>
 								</div>
 							</div>
@@ -736,18 +747,12 @@
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<input
-											list="voice-list"
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										<TTSVoiceInput
 											bind:value={TTS_VOICE}
+											voices={providerVoices}
 											placeholder={$i18n.t('Select a voice')}
+											className="w-full rounded-lg py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 										/>
-
-										<datalist id="voice-list">
-											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
-											{/each}
-										</datalist>
 									</div>
 								</div>
 							</div>
@@ -777,18 +782,12 @@
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<input
-											list="voice-list"
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										<TTSVoiceInput
 											bind:value={TTS_VOICE}
+											voices={providerVoices}
 											placeholder={$i18n.t('Select a voice')}
+											className="w-full rounded-lg py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 										/>
-
-										<datalist id="voice-list">
-											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
-											{/each}
-										</datalist>
 									</div>
 								</div>
 							</div>
@@ -820,18 +819,12 @@
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<input
-											list="voice-list"
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										<TTSVoiceInput
 											bind:value={TTS_VOICE}
+											voices={providerVoices}
 											placeholder={$i18n.t('Select a voice')}
+											className="w-full rounded-lg py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 										/>
-
-										<datalist id="voice-list">
-											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
-											{/each}
-										</datalist>
 									</div>
 								</div>
 							</div>

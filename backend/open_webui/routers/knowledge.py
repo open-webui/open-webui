@@ -2126,18 +2126,13 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
     zip_buffer.seek(0)
 
     # Sanitize knowledge name for filename
-    # ASCII-safe fallback for the basic filename parameter (latin-1 safe)
-    safe_name = ''.join(c if c.isascii() and (c.isalnum() or c in ' -_') else '_' for c in knowledge.name)
+    safe_name = ''.join(c if c.isalnum() or c in ' -_' else '_' for c in knowledge.name)
     zip_filename = f'{safe_name}.zip'
-
-    # Use RFC 5987 filename* for non-ASCII names so the browser gets the real name
-    quoted_name = quote(f'{knowledge.name}.zip')
-    content_disposition = f'attachment; filename="{zip_filename}"; filename*=UTF-8\'\'{quoted_name}'
 
     return StreamingResponse(
         zip_buffer,
         media_type='application/zip',
-        headers={'Content-Disposition': content_disposition},
+        headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(zip_filename, safe='')}"},
     )
 
 
