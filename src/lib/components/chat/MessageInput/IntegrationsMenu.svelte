@@ -13,7 +13,7 @@
 		terminalServers
 	} from '$lib/stores';
 
-	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { initiateOAuthRedirect } from '$lib/apis/configs';
 	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -397,14 +397,13 @@
 								if (!(tools[toolId]?.authenticated ?? true)) {
 									e.preventDefault();
 
-									let parts = toolId.split(':');
-									let serverId = parts?.at(-1) ?? toolId;
-
-									// Persist the tool ID so we can re-enable it after OAuth redirect
-									sessionStorage.setItem('pendingOAuthToolId', toolId);
-
-									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
-									window.open(authUrl, '_self', 'noopener');
+									const parts = toolId.split(':');
+									initiateOAuthRedirect({
+										id: toolId,
+										serverId: parts.at(-1) ?? toolId,
+										authType:
+											parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
+									});
 								} else {
 									tools[toolId].enabled = !tools[toolId].enabled;
 

@@ -97,6 +97,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
+	import { initiateOAuthRedirect } from '$lib/apis/configs';
 	import { updateFolderById } from '$lib/apis/folders';
 
 	import Banner from '../common/Banner.svelte';
@@ -343,6 +344,27 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
+	const continueOAuthRedirect = async () => {
+		if (pendingOAuthTools.length === 0) {
+			sessionStorage.removeItem('oauthRedirectInProgressToolId');
+			return;
+		}
+
+		if (chatIdProp) {
+			return;
+		}
+
+		const nextTool = pendingOAuthTools[0];
+		if (sessionStorage.getItem('oauthRedirectInProgressToolId') === nextTool.id) {
+			sessionStorage.removeItem('oauthRedirectInProgressToolId');
+			return;
+		}
+
+		saveSessionSelectedModels();
+		await tick();
+		initiateOAuthRedirect(nextTool);
+	};
+
 	let oldSelectedModelIds = [''];
 	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
 		onSelectedModelIdsChange();
@@ -423,6 +445,7 @@
 					}
 					selectedToolIds = authed;
 					pendingOAuthTools = unauthed;
+					await continueOAuthRedirect();
 				} else if ($settings?.tools) {
 					selectedToolIds = $settings.tools;
 				} else {
