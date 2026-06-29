@@ -1073,7 +1073,7 @@ ENABLE_WEB_SEARCH_CONFIRMATION = os.getenv('ENABLE_WEB_SEARCH_CONFIRMATION', 'Fa
 
 WEB_SEARCH_CONFIRMATION_CONTENT = os.getenv(
     'WEB_SEARCH_CONFIRMATION_CONTENT',
-    'Web Search may send your query and retrieved page content to external services.',
+    'Your query will be sent to the configured web search provider.',
 )
 
 WEB_SEARCH_ENGINE = os.getenv('WEB_SEARCH_ENGINE', '')
