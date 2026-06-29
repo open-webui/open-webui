@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Any, Optional
+import datetime as dt
+from typing import Any
 
 from open_webui.retrieval.vector.main import SearchResult
 from open_webui.utils.misc import sanitize_text_for_db
@@ -23,8 +23,10 @@ def process_metadata(
         # Skip large fields
         if key in KEYS_TO_EXCLUDE:
             continue
+        if value is None:
+            continue
         # Convert non-serializable fields to strings
-        if isinstance(value, (datetime, list, dict)):
+        if isinstance(value, (dt.datetime, list, dict)):
             result[key] = sanitize_text_for_db(str(value))
         else:
             result[key] = sanitize_text_for_db(value)
@@ -32,7 +34,7 @@ def process_metadata(
 
 
 def merge_hybrid_search_results(
-    vector_result: Optional[SearchResult],
+    vector_result: SearchResult | None,
     fts_results: list[dict[str, Any]],
     num_queries: int,
     limit: int,
