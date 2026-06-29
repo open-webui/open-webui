@@ -118,7 +118,6 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.errors import error_detail
 from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
@@ -183,7 +182,7 @@ def get_rf(
 
             except Exception as e:
                 log.error(f'ColBERT: {e}')
-                raise Exception(error_detail(e, 'Error loading reranking model'))
+                raise Exception(ERROR_MESSAGES.DEFAULT(e, 'Error loading reranking model'))
         else:
             if engine == 'external':
                 try:
@@ -197,7 +196,9 @@ def get_rf(
                     )
                 except Exception as e:
                     log.error(f'ExternalReranking: {e}')
-                    raise Exception(error_detail(e, 'Error loading reranking model'))
+                    raise Exception(
+                        ERROR_MESSAGES.DEFAULT(e, 'Error loading reranking model')
+                    )
             else:
                 import sentence_transformers
                 import torch
@@ -217,7 +218,7 @@ def get_rf(
                     )
                 except Exception as e:
                     log.error(f'CrossEncoder: {e}')
-                    raise Exception(ERROR_MESSAGES.DEFAULT('CrossEncoder error'))
+                    raise Exception(ERROR_MESSAGES.DEFAULT(e, 'CrossEncoder error'))
 
                 # Safely adjust pad_token_id if missing as some models do not have this in config
                 try:
@@ -606,7 +607,7 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         log.exception(f'Problem updating embedding model: {e}')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_detail(e, 'Error updating embedding configuration'),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating embedding configuration'),
         )
 
 
@@ -1208,7 +1209,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         log.exception(f'Problem updating reranking model: {e}')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_detail(e, 'Error updating reranking configuration'),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating reranking configuration'),
         )
 
     # Chunking settings
@@ -2146,11 +2147,13 @@ async def process_web(
                 'status': True,
                 'content': content,
             }
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_detail(e, 'Error querying knowledge base'),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error querying knowledge base'),
         )
 
 
@@ -2653,11 +2656,13 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 'filenames': urls,
                 'loaded_count': len(docs),
             }
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception('Web search content loading failed')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=error_detail(e, ERROR_MESSAGES.WEB_SEARCH_ERROR()),
+            detail=ERROR_MESSAGES.DEFAULT(e, ERROR_MESSAGES.WEB_SEARCH_ERROR()),
         )
 
 
@@ -2732,11 +2737,13 @@ async def query_doc_handler(
                 k=form_data.k if form_data.k else config.TOP_K,
                 user=user,
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_detail(e, 'Error querying knowledge base'),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error querying knowledge base'),
         )
 
 
@@ -2798,11 +2805,13 @@ async def query_collection_handler(
                 k=form_data.k if form_data.k else config.TOP_K,
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_detail(e, 'Error querying knowledge base'),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error querying knowledge base'),
         )
 
 

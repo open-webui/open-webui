@@ -58,7 +58,6 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.errors import error_detail
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.session_pool import get_session
@@ -1056,7 +1055,7 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
             log.exception(e)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_detail(e, 'Error processing audio file'),
+                detail=ERROR_MESSAGES.DEFAULT(e, 'Error processing audio file'),
             )
 
     results = []
