@@ -50,6 +50,23 @@
 			onSelect({ type: 'skill', data: skill });
 		}
 	};
+
+	const escapeTooltipText = (value = '') =>
+		String(value)
+			.replaceAll('&', '&amp;')
+			.replaceAll('<', '&lt;')
+			.replaceAll('>', '&gt;')
+			.replaceAll('"', '&quot;')
+			.replaceAll("'", '&#39;');
+
+	const getTooltipContent = (skill) => {
+		const name = escapeTooltipText(skill.name);
+		const description = escapeTooltipText(skill.description);
+
+		return `<div class="max-w-80 whitespace-normal text-left leading-snug">
+			<span class="break-words font-medium">${name}</span>${description ? `: <span class="break-words opacity-80">${description}</span>` : ''}
+		</div>`;
+	};
 </script>
 
 <div class="px-2 text-xs text-gray-500 py-1">
@@ -58,7 +75,11 @@
 
 {#if filteredItems.length > 0}
 	{#each filteredItems as skill, skillIdx}
-		<Tooltip content={skill.description || skill.name} placement="top-start">
+		<Tooltip
+			content={getTooltipContent(skill)}
+			placement="top-start"
+			tippyOptions={{ maxWidth: '20rem' }}
+		>
 			<button
 				class="px-2.5 py-1.5 rounded-xl w-full text-left {skillIdx === selectedIdx
 					? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
@@ -73,14 +94,14 @@
 				on:focus={() => {}}
 				data-selected={skillIdx === selectedIdx}
 			>
-				<div class="flex text-black dark:text-gray-100 line-clamp-1 items-center">
+				<div class="flex w-full min-w-0 items-center text-black dark:text-gray-100">
 					<div class="flex items-center justify-center size-5 mr-2 shrink-0">
 						<Keyframes className="size-4" />
 					</div>
-					<div class="truncate">
+					<div class="truncate min-w-0 flex-1">
 						{skill.name}
 					</div>
-					<div class="ml-2 text-xs text-gray-500 truncate">
+					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500">
 						{skill.id}
 					</div>
 				</div>

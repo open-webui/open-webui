@@ -33,13 +33,39 @@
 	let allDay = false;
 	let location = '';
 	let alertMinutes: number = 10;
+	let repeatFrequency = '';
 	let loading = false;
 	let showDeleteConfirmDialog = false;
+
+	const REPEAT_RRULE_MAP: Record<string, string> = {
+		daily: 'FREQ=DAILY',
+		weekdays: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+		weekly: 'FREQ=WEEKLY',
+		monthly: 'FREQ=MONTHLY',
+		yearly: 'FREQ=YEARLY'
+	};
+
+	function getRepeatRrule(): string | undefined {
+		return REPEAT_RRULE_MAP[repeatFrequency] || undefined;
+	}
+
+	function parseRepeatFromRrule(rrule: string | null): string {
+		if (!rrule) return '';
+		const normalized = rrule.toUpperCase().replace(/\s/g, '');
+		for (const [key, value] of Object.entries(REPEAT_RRULE_MAP)) {
+			if (normalized === value) return key;
+		}
+		return '';
+	}
 
 	const NS = 1_000_000;
 
 	function nsToDateStr(ns: number): string {
-		return new Date(ns / NS).toISOString().slice(0, 10);
+		const d = new Date(ns / NS);
+		const year = d.getFullYear();
+		const month = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
 	}
 
 	function nsToTimeStr(ns: number): string {
@@ -62,6 +88,7 @@
 			allDay = event.all_day;
 			location = event.location || '';
 			alertMinutes = event.meta?.alert_minutes ?? 10;
+			repeatFrequency = parseRepeatFromRrule(event.rrule);
 		} else {
 			title = '';
 			description = '';
@@ -83,6 +110,7 @@
 			allDay = false;
 			location = '';
 			alertMinutes = 10;
+			repeatFrequency = '';
 		}
 	}
 
@@ -103,11 +131,12 @@
 				const result = await updateCalendarEvent(localStorage.token, event.id, {
 					calendar_id: calendarId,
 					title: title.trim(),
-					description: description.trim() || null,
+					description: description.trim() || undefined,
 					start_at: startNs,
 					end_at: endNs,
 					all_day: allDay,
-					location: location.trim() || null,
+					rrule: getRepeatRrule(),
+					location: location.trim() || undefined,
 					meta: { alert_minutes: alertMinutes }
 				});
 				if (result) {
@@ -123,6 +152,7 @@
 					start_at: startNs,
 					end_at: endNs,
 					all_day: allDay,
+					rrule: getRepeatRrule(),
 					location: location.trim() || undefined,
 					meta: { alert_minutes: alertMinutes }
 				};
@@ -231,6 +261,22 @@
 					<option value={15}>{$i18n.t('15 minutes before')}</option>
 					<option value={30}>{$i18n.t('30 minutes before')}</option>
 					<option value={60}>{$i18n.t('1 hour before')}</option>
+				</select>
+			</div>
+
+			<!-- Repeat -->
+			<div>
+				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Repeat')}</div>
+				<select
+					class="w-full text-sm bg-transparent outline-hidden cursor-pointer"
+					bind:value={repeatFrequency}
+				>
+					<option value="">{$i18n.t('No Repeat')}</option>
+					<option value="daily">{$i18n.t('Daily')}</option>
+					<option value="weekdays">{$i18n.t('Monday – Friday')}</option>
+					<option value="weekly">{$i18n.t('Weekly')}</option>
+					<option value="monthly">{$i18n.t('Monthly')}</option>
+					<option value="yearly">{$i18n.t('Yearly')}</option>
 				</select>
 			</div>
 

@@ -43,8 +43,9 @@ from open_webui.models.config import Config
 from open_webui.models.users import UserModel
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.retrieval.external import retrieve_external_knowledge
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.main import GetResult
+from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.headers import include_user_info_headers
@@ -84,6 +85,7 @@ LOADER_CONFIG_KEYS = {
     'DATALAB_MARKER_OUTPUT_FORMAT': 'rag.datalab_marker_output_format',
     'EXTERNAL_DOCUMENT_LOADER_URL': 'rag.external_document_loader_url',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
+    'EXTERNAL_DOCUMENT_LOADER_HEADERS': 'rag.external_document_loader_headers',
     'TIKA_SERVER_URL': 'rag.tika_server_url',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCLING_API_KEY': 'rag.docling_api_key',
@@ -130,18 +132,16 @@ def build_loader_from_config(request, config: dict):
     """Build a Loader instance with the admin's configured extraction engine settings."""
     from open_webui.retrieval.loaders.main import Loader
 
-    loader_config = {
-        key: config.get(key)
-        for key in LOADER_CONFIG_KEYS
-        if key.isupper()
-    }
+    loader_config = {key: config.get(key) for key in LOADER_CONFIG_KEYS if key.isupper()}
     return Loader(
         engine=loader_config['CONTENT_EXTRACTION_ENGINE'],
         **{key: value for key, value in loader_config.items() if key != 'CONTENT_EXTRACTION_ENGINE'},
     )
 
 
-def _extract_text_from_binary_response(request, response: requests.Response, url: str, loader_config: dict) -> tuple[str, list]:
+def _extract_text_from_binary_response(
+    request, response: requests.Response, url: str, loader_config: dict
+) -> tuple[str, list]:
     """Download response body to a temp file and extract text using the Loader pipeline."""
     import mimetypes
     import tempfile
@@ -191,7 +191,8 @@ def _is_text_content_type(content_type: str) -> bool:
 
 
 async def get_content_from_url(request, url: str) -> str:
-    from open_webui.retrieval.web.utils import validate_url
+    from open_webui.retrieval.web.utils import validate_url, _SSRFSafeAdapter
+
 
     loader_config = await get_loader_config()
 
@@ -216,7 +217,11 @@ async def get_content_from_url(request, url: str) -> str:
     # re-validation would let an attacker reach private IPs (RFC1918, loopback,
     # cloud-metadata 169.254.169.254) via a public host that redirects internally.
     try:
-        response = requests.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
+        # Probe through the connect-time SSRF guard; bare requests.get re-resolves (DNS-rebinding gap).
+        session = requests.Session()
+        session.mount('http://', _SSRFSafeAdapter())
+        session.mount('https://', _SSRFSafeAdapter())
+        response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')
     except Exception:
@@ -360,9 +365,96 @@ def get_enriched_texts(collection_result: GetResult) -> list[str]:
     return enriched_texts
 
 
+def _search_result_to_documents(result: SearchResult) -> list[Document]:
+    ids = result.ids[0] if result and result.ids else []
+    metadatas = result.metadatas[0] if result and result.metadatas else []
+    documents = result.documents[0] if result and result.documents else []
+    distances = result.distances[0] if result and result.distances else []
+
+    docs = []
+    for idx in range(len(ids)):
+        document = documents[idx]
+        metadata = dict(metadatas[idx] or {})
+        metadata[CHUNK_HASH_KEY] = _content_hash(document)
+        if idx < len(distances):
+            metadata.setdefault('score', distances[idx])
+        docs.append(Document(metadata=metadata, page_content=document))
+    return docs
+
+
+def _supports_native_hybrid_search() -> bool:
+    supports_hybrid_search = getattr(ASYNC_VECTOR_DB_CLIENT, 'supports_hybrid_search', None)
+    if supports_hybrid_search is not None:
+        return bool(supports_hybrid_search)
+    return callable(getattr(ASYNC_VECTOR_DB_CLIENT, 'hybrid_search', None))
+
+
+async def query_doc_with_native_hybrid_search(
+    collection_name: str,
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    k_reranker: int,
+    r: float,
+    hybrid_bm25_weight: float,
+) -> Optional[dict]:
+    try:
+        if not _supports_native_hybrid_search():
+            return None
+
+        query_vectors = []
+        if hybrid_bm25_weight < 1:
+            query_vectors = [await embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)]
+
+        result = await ASYNC_VECTOR_DB_CLIENT.hybrid_search(
+            collection_name=collection_name,
+            query=query,
+            vectors=query_vectors,
+            limit=k,
+            hybrid_bm25_weight=hybrid_bm25_weight,
+        )
+        if result is None:
+            return None
+
+        documents = _search_result_to_documents(result)
+        if not documents:
+            return {'distances': [[]], 'documents': [[]], 'metadatas': [[]]}
+
+        compressor = RerankCompressor(
+            embedding_function=embedding_function,
+            top_n=k_reranker,
+            reranking_function=reranking_function,
+            r_score=r,
+        )
+        compressed = await compressor.acompress_documents(documents, query)
+
+        distances = [d.metadata.get('score') for d in compressed]
+        documents = [d.page_content for d in compressed]
+        metadatas = [d.metadata for d in compressed]
+
+        if k < k_reranker:
+            sorted_items = sorted(zip(distances, documents, metadatas), key=lambda x: x[0], reverse=True)
+            sorted_items = sorted_items[:k]
+
+            if sorted_items:
+                distances, documents, metadatas = map(list, zip(*sorted_items))
+            else:
+                distances, documents, metadatas = [], [], []
+
+        return {
+            'distances': [distances],
+            'documents': [documents],
+            'metadatas': [metadatas],
+        }
+    except Exception as e:
+        log.debug(f'Native hybrid search failed for {collection_name}, falling back to legacy hybrid search: {e}')
+        return None
+
+
 async def query_doc_with_hybrid_search(
     collection_name: str,
-    collection_result: GetResult,
+    collection_result: Optional[GetResult],
     query: str,
     embedding_function,
     k: int,
@@ -371,8 +463,26 @@ async def query_doc_with_hybrid_search(
     r: float,
     hybrid_bm25_weight: float,
     enable_enriched_texts: bool = False,
+    native_hybrid_search: bool = True,
 ) -> dict:
     try:
+        if native_hybrid_search and not enable_enriched_texts:
+            native_result = await query_doc_with_native_hybrid_search(
+                collection_name=collection_name,
+                query=query,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=k_reranker,
+                r=r,
+                hybrid_bm25_weight=hybrid_bm25_weight,
+            )
+            if native_result is not None:
+                return native_result
+
+        if collection_result is None:
+            collection_result = await ASYNC_VECTOR_DB_CLIENT.get(collection_name=collection_name)
+
         # First check if collection_result has the required attributes
         if (
             not collection_result
@@ -652,6 +762,28 @@ async def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     error = False
+
+    if not enable_enriched_texts:
+
+        async def process_native_query(collection_name, query):
+            result = await query_doc_with_native_hybrid_search(
+                collection_name=collection_name,
+                query=query,
+                embedding_function=embedding_function,
+                k=k,
+                reranking_function=reranking_function,
+                k_reranker=k_reranker,
+                r=r,
+                hybrid_bm25_weight=hybrid_bm25_weight,
+            )
+            return result
+
+        native_task_results = await asyncio.gather(
+            *[process_native_query(collection_name, query) for collection_name in collection_names for query in queries]
+        )
+        if native_task_results and all(result is not None for result in native_task_results):
+            return merge_and_sort_query_results(native_task_results, k=k)
+
     # Fetch every collection's contents once up front so the
     # per-query/per-document loop below can reuse them. Each fetch
     # offloads to a worker thread, so run them concurrently with
@@ -686,6 +818,7 @@ async def query_collection_with_hybrid_search(
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
                 enable_enriched_texts=enable_enriched_texts,
+                native_hybrid_search=False,
             )
             return result, None
         except Exception as e:
@@ -1353,50 +1486,61 @@ async def get_sources_from_items(
                     permission='read',
                 )
             ):
-                if item.get('context') == 'full' or bypass_embedding_and_retrieval:
-                    if knowledge_base and (
-                        user.role == 'admin'
-                        or knowledge_base.user_id == user.id
-                        or await AccessGrants.has_access(
-                            user_id=user.id,
-                            resource_type='knowledge',
-                            resource_id=knowledge_base.id,
-                            permission='read',
-                        )
-                    ):
-                        files = await Knowledges.get_files_by_id(knowledge_base.id)
+                if (knowledge_base.meta or {}).get('source') == 'external':
+                    query_result = await retrieve_external_knowledge(
+                        request,
+                        knowledge_base,
+                        queries=queries,
+                        count=k,
+                        user=user,
+                    )
+                    extracted_collections.append(knowledge_base.id)
 
-                        documents = []
-                        metadatas = []
-                        for file in files:
-                            documents.append(file.data.get('content', ''))
-                            metadatas.append(
-                                {
-                                    'file_id': file.id,
-                                    'name': file.filename,
-                                    'source': file.filename,
-                                }
-                            )
-
-                        query_result = {
-                            'documents': [documents],
-                            'metadatas': [metadatas],
-                        }
                 else:
-                    if item.get('legacy'):
-                        if BYPASS_RETRIEVAL_ACCESS_CONTROL:
-                            collection_names = item.get('collection_names', [])
-                        else:
-                            # Legacy KB: item.collection_names is client-supplied.
-                            # Validate against the KB's actual files to prevent
-                            # cross-tenant collection name substitution.
+                    if item.get('context') == 'full' or bypass_embedding_and_retrieval:
+                        if knowledge_base and (
+                            user.role == 'admin'
+                            or knowledge_base.user_id == user.id
+                            or await AccessGrants.has_access(
+                                user_id=user.id,
+                                resource_type='knowledge',
+                                resource_id=knowledge_base.id,
+                                permission='read',
+                            )
+                        ):
                             files = await Knowledges.get_files_by_id(knowledge_base.id)
-                            owned_names = {f'file-{f.id}' for f in files}
-                            owned_names.add(knowledge_base.id)
-                            valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
-                            collection_names = valid_names if valid_names else [knowledge_base.id]
+
+                            documents = []
+                            metadatas = []
+                            for file in files:
+                                documents.append(file.data.get('content', ''))
+                                metadatas.append(
+                                    {
+                                        'file_id': file.id,
+                                        'name': file.filename,
+                                        'source': file.filename,
+                                    }
+                                )
+
+                            query_result = {
+                                'documents': [documents],
+                                'metadatas': [metadatas],
+                            }
                     else:
-                        collection_names.append(item['id'])
+                        if item.get('legacy'):
+                            if BYPASS_RETRIEVAL_ACCESS_CONTROL:
+                                collection_names = item.get('collection_names', [])
+                            else:
+                                # Legacy KB: item.collection_names is client-supplied.
+                                # Validate against the KB's actual files to prevent
+                                # cross-tenant collection name substitution.
+                                files = await Knowledges.get_files_by_id(knowledge_base.id)
+                                owned_names = {f'file-{f.id}' for f in files}
+                                owned_names.add(knowledge_base.id)
+                                valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
+                                collection_names = valid_names if valid_names else [knowledge_base.id]
+                        else:
+                            collection_names.append(item['id'])
 
         elif item.get('docs'):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL

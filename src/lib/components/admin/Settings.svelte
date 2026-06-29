@@ -155,7 +155,21 @@
 			id: 'integrations',
 			title: 'Integrations',
 			route: '/admin/settings/integrations',
-			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			keywords: [
+				'tools',
+				'integrations',
+				'plugins',
+				'extensions',
+				'functions',
+				'openapi',
+				'server',
+				'knowledge',
+				'vector db',
+				'qdrant',
+				'rag',
+				'retrieval',
+				'sources'
+			]
 		},
 		{
 			id: 'documents',

@@ -13,6 +13,7 @@ import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
@@ -297,6 +298,8 @@ async def ws_terminal(
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 
+    app = ws.scope.get('app')
+    opened = False
     session = aiohttp.ClientSession()
     try:
         async with session.ws_connect(upstream_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as upstream:
@@ -308,6 +311,16 @@ async def ws_terminal(
             if auth_type == 'bearer':
                 key = connection.get('key', '')
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
+
+            await publish_event(
+                app,
+                EVENTS.TERMINAL_SESSION_OPENED,
+                actor=user,
+                subject_id=session_id,
+                subject_type='terminal.session',
+                data={'server_id': server_id},
+            )
+            opened = True
 
             async def _client_to_upstream():
                 """Forward client → upstream."""
@@ -357,6 +370,15 @@ async def ws_terminal(
         log.exception('Terminal WebSocket proxy error: %s', e)
     finally:
         await session.close()
+        if opened:
+            await publish_event(
+                app,
+                EVENTS.TERMINAL_SESSION_CLOSED,
+                actor=user,
+                subject_id=session_id,
+                subject_type='terminal.session',
+                data={'server_id': server_id},
+            )
         try:
             await ws.close()
         except Exception:

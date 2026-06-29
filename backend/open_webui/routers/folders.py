@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.config import Config
 from open_webui.models.chats import Chats
@@ -131,6 +132,13 @@ async def create_folder(
             # Create as the folder owner's subfolder (keep tree consistent)
             try:
                 folder = await Folders.insert_new_folder(parent.user_id, form_data, form_data.parent_id, db=db)
+                await publish_event(
+                    request,
+                    EVENTS.FOLDER_CREATED,
+                    actor=user,
+                    subject_id=folder.id,
+                    data={'name': folder.name, 'parent_id': folder.parent_id, 'owner_id': folder.user_id},
+                )
                 return folder
             except Exception as e:
                 log.exception(e)
@@ -141,6 +149,13 @@ async def create_folder(
 
     try:
         folder = await Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
+        await publish_event(
+            request,
+            EVENTS.FOLDER_CREATED,
+            actor=user,
+            subject_id=folder.id,
+            data={'name': folder.name, 'parent_id': folder.parent_id, 'owner_id': folder.user_id},
+        )
         return folder
     except Exception as e:
         log.exception(e)
@@ -283,6 +298,13 @@ async def update_folder_name_by_id(
 
         try:
             folder = await Folders.update_folder_by_id_and_user_id(id, folder.user_id, form_data, db=db)
+            await publish_event(
+                request,
+                EVENTS.FOLDER_UPDATED,
+                actor=user,
+                subject_id=id,
+                data={'name': folder.name},
+            )
             return folder
         except Exception as e:
             log.exception(e)
@@ -325,6 +347,13 @@ async def update_folder_parent_id_by_id(
 
         try:
             folder = await Folders.update_folder_parent_id_by_id_and_user_id(id, user.id, form_data.parent_id, db=db)
+            await publish_event(
+                request,
+                EVENTS.FOLDER_PARENT_UPDATED,
+                actor=user,
+                subject_id=id,
+                data={'parent_id': form_data.parent_id},
+            )
             return folder
         except Exception as e:
             log.exception(e)
@@ -423,6 +452,13 @@ async def update_folder_access_by_id(
     await AccessGrants.set_access_grants('folder', id, form_data.access_grants, db=db)
 
     grants = await AccessGrants.get_grants_by_resource('folder', id, db=db)
+    await publish_event(
+        request,
+        EVENTS.FOLDER_ACCESS_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'grant_count': len(grants)},
+    )
     return {
         **folder.model_dump(),
         'access_grants': [g.model_dump() for g in grants],
@@ -549,6 +585,13 @@ async def delete_folder_by_id(
                     # Clean up access grants for this folder
                     await AccessGrants.revoke_all_access('folder', folder_id, db=db)
 
+                await publish_event(
+                    request,
+                    EVENTS.FOLDER_DELETED,
+                    actor=user,
+                    subject_id=id,
+                    data={'folder_ids': folder_ids, 'delete_contents': delete_contents},
+                )
                 return True
             except Exception as e:
                 log.exception(e)

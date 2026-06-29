@@ -498,6 +498,65 @@ else:
         WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
 
 
+import ssl as _ssl
+
+
+# Dedicated env var for a custom CA bundle file path.  When set, this is
+# used as the default CA bundle for all outbound HTTPS connections that
+# have SSL verification enabled (i.e. when their per-connection SSL env
+# var is ``"True"``).  Per-connection overrides (setting the SSL env var
+# to a path directly) take precedence over this global fallback.
+#
+# This follows the industry convention of ``SSL_CERT_FILE`` / ``REQUESTS_CA_BUNDLE``
+# but is scoped to Open WebUI to avoid interfering with system-level settings.
+AIOHTTP_CLIENT_SSL_CERT_FILE = os.getenv('AIOHTTP_CLIENT_SSL_CERT_FILE', '').strip()
+
+
+def _build_ssl_context_from_file(path: str) -> '_ssl.SSLContext | None':
+    """Create an SSLContext from a CA bundle file, or None if invalid."""
+    if not path:
+        return None
+    if not os.path.isfile(path):
+        log.warning(
+            'SSL CA bundle path does not exist: %r, ignoring',
+            path,
+        )
+        return None
+    ctx = _ssl.create_default_context(cafile=path)
+    log.info('Using custom SSL CA bundle: %s', path)
+    return ctx
+
+
+# Pre-built SSLContext from the dedicated env var (cached once at startup).
+_GLOBAL_SSL_CONTEXT = _build_ssl_context_from_file(AIOHTTP_CLIENT_SSL_CERT_FILE)
+
+
+def _parse_ssl_env(value: str) -> 'bool | _ssl.SSLContext':
+    """Parse an SSL env var into a bool or SSLContext.
+
+    - ``"true"``  → uses ``AIOHTTP_CLIENT_SSL_CERT_FILE`` context if set,
+      otherwise ``True``  (default SSL verification via certifi)
+    - ``"false"`` → ``False`` (no verification)
+    - ``"/path/to/ca-bundle.crt"`` → ``SSLContext`` loading that CA file
+      (takes precedence over ``AIOHTTP_CLIENT_SSL_CERT_FILE``)
+
+    This allows users with corporate or internal CAs to point Open WebUI
+    at a custom CA bundle without disabling verification entirely.
+    """
+    lower = value.strip().lower()
+    if lower == 'true':
+        # Use the global dedicated CA bundle if configured, otherwise default
+        return _GLOBAL_SSL_CONTEXT if _GLOBAL_SSL_CONTEXT is not None else True
+    if lower == 'false':
+        return False
+    # Treat as a file path to a CA bundle (per-connection override)
+    ctx = _build_ssl_context_from_file(value.strip())
+    if ctx is not None:
+        return ctx
+    # Path was invalid — fall back to default
+    return _GLOBAL_SSL_CONTEXT if _GLOBAL_SSL_CONTEXT is not None else True
+
+
 REQUESTS_VERIFY = os.getenv('REQUESTS_VERIFY', 'True').lower() == 'true'
 
 _aiohttp_timeout_raw = os.getenv('AIOHTTP_CLIENT_TIMEOUT', '')
@@ -507,7 +566,10 @@ except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT = 300
 
 
-AIOHTTP_CLIENT_SESSION_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True').lower() == 'true'
+# SSL verification for general outbound requests (OpenAI, OAuth, etc.).
+# Accepts "True", "False", or a path to a CA bundle file.
+# When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
+AIOHTTP_CLIENT_SESSION_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True'))
 
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
@@ -533,7 +595,12 @@ except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
 
-AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True').lower() == 'true'
+# SSL verification for tool server connections specifically.
+# Accepts "True", "False", or a path to a CA bundle file.
+# When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = _parse_ssl_env(
+    os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True')
+)
 
 AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER', '')
 
@@ -686,6 +753,9 @@ BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', '
 # for non-admin users.  When False (default), unknown collection names are
 # denied — closing the legacy unscoped namespace.
 ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
+MINERU_MAX_MARKDOWN_BYTES = (
+    int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
+)
 
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
@@ -984,6 +1054,12 @@ OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'false').lower() == 'true'
 if OFFLINE_MODE:
     os.environ['HF_HUB_OFFLINE'] = '1'
     ENABLE_VERSION_UPDATE_CHECK = False
+
+####################################
+# Pyodide file persistence
+####################################
+
+ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', 'false').lower() == 'true'
 
 ####################################
 # Audit logging

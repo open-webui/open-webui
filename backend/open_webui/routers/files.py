@@ -23,6 +23,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db_context, get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
@@ -247,7 +248,7 @@ async def upload_file(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return await upload_file_handler(
+    result = await upload_file_handler(
         request,
         file=file,
         metadata=metadata,
@@ -257,6 +258,29 @@ async def upload_file(
         background_tasks=background_tasks,
         db=db,
     )
+
+    if isinstance(result, dict):
+        result_id = result.get('id')
+        result_filename = result.get('filename')
+        result_meta = result.get('meta') or {}
+    else:
+        result_id = result.id
+        result_filename = result.filename
+        result_meta = result.meta or {}
+
+    result_content_type = (
+        result_meta.get('content_type')
+        if isinstance(result_meta, dict)
+        else getattr(result_meta, 'content_type', None)
+    )
+    await publish_event(
+        request,
+        EVENTS.FILE_UPLOADED,
+        actor=user,
+        subject_id=result_id,
+        data={'filename': result_filename, 'content_type': result_content_type},
+    )
+    return result
 
 
 async def upload_file_handler(
@@ -483,7 +507,7 @@ async def count_files(
 
 
 @router.delete('/all')
-async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_files(request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     result = await Files.delete_all_files(db=db)
     if result:
         try:
@@ -496,6 +520,7 @@ async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depe
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error deleting files'),
             )
+        await publish_event(request, EVENTS.FILE_DELETED_ALL, actor=user, subject_type='file')
         return {'message': 'All files deleted successfully'}
     else:
         raise HTTPException(
@@ -669,6 +694,13 @@ async def update_file_data_content_by_id(
             except Exception as e:
                 log.warning(f'Failed to update knowledge {knowledge.id} after content change for file {id}: {e}')
 
+        await publish_event(
+            request,
+            EVENTS.FILE_CONTENT_UPDATED,
+            actor=user,
+            subject_id=id,
+            data={'content_preview': form_data.content[:300]},
+        )
         return {'content': file.data.get('content', '')}
     else:
         raise HTTPException(
@@ -858,6 +890,7 @@ class FileRenameForm(BaseModel):
 
 @router.post('/{id}/rename')
 async def rename_file_by_id(
+    request: Request,
     id: str,
     form_data: FileRenameForm,
     user=Depends(get_verified_user),
@@ -874,6 +907,13 @@ async def rename_file_by_id(
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
         result = await Files.update_file_name_by_id(id, form_data.filename, db=db)
         if result:
+            await publish_event(
+                request,
+                EVENTS.FILE_RENAMED,
+                actor=user,
+                subject_id=id,
+                data={'filename': form_data.filename},
+            )
             return result
         else:
             raise HTTPException(
@@ -893,7 +933,9 @@ async def rename_file_by_id(
 
 
 @router.delete('/{id}')
-async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_file_by_id(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -928,6 +970,13 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT('Error deleting files'),
                 )
+            await publish_event(
+                request,
+                EVENTS.FILE_DELETED,
+                actor=user,
+                subject_id=id,
+                data={'filename': file.filename},
+            )
             return {'message': 'File deleted successfully'}
         else:
             raise HTTPException(

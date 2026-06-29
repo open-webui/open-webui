@@ -48,7 +48,12 @@
 		deleteAllChats,
 		getChatListBySearchText
 	} from '$lib/apis/chats';
-	import { createNewFolder, getFolders, getSharedFolders, updateFolderParentIdById } from '$lib/apis/folders';
+	import {
+		createNewFolder,
+		getFolders,
+		getSharedFolders,
+		updateFolderParentIdById
+	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { checkActiveChats } from '$lib/apis/tasks';
@@ -1421,9 +1426,9 @@
 										folder_id: null,
 										created_at: item?.created_at ?? null,
 										updated_at: item?.updated_at ?? null
-										}
-									]);
-								}
+									}
+								]);
+							}
 
 							if (chat) {
 								console.log(chat);

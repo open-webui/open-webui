@@ -44,7 +44,12 @@ def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
 
 
 def create_httpx_client(headers=None, timeout=None, auth=None):
-    return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=True)
+    # AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL may be True, False, or an
+    # ssl.SSLContext (when a custom CA bundle path is configured).
+    # httpx's verify= accepts bool | str | ssl.SSLContext, so all three work.
+    ssl_setting = AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+    verify = ssl_setting if ssl_setting is not True else True
+    return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=verify)
 
 
 def create_insecure_httpx_client(headers=None, timeout=None, auth=None):

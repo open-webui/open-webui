@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 from fastapi.responses import JSONResponse
 from open_webui.config import OAUTH_PROVIDERS
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import SCIM_AUTH_PROVIDER
 from open_webui.internal.db import get_async_session
 from open_webui.models.groups import GroupModel, Groups
@@ -629,6 +630,18 @@ async def create_user(
         await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
         new_user = await Users.get_user_by_id(user_id, db=db)
 
+    await publish_event(
+        request,
+        EVENTS.USER_CREATED,
+        subject_id=new_user.id,
+        source='scim',
+        data={
+            'email': new_user.email,
+            'role': new_user.role,
+            'external_id': user_data.externalId,
+        },
+    )
+
     return await user_to_scim(new_user, request, db=db)
 
 
@@ -687,6 +700,16 @@ async def update_user(
         await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
         updated_user = await Users.get_user_by_id(user_id, db=db)
 
+    await publish_event(
+        request,
+        EVENTS.USER_UPDATED,
+        subject_id=user_id,
+        source='scim',
+        data={
+            'updated_fields': list(update_data.keys()) + (['externalId'] if user_data.externalId else []),
+        },
+    )
+
     return await user_to_scim(updated_user, request, db=db)
 
 
@@ -741,6 +764,14 @@ async def patch_user(
     else:
         updated_user = user
 
+    await publish_event(
+        request,
+        EVENTS.USER_UPDATED,
+        subject_id=user_id,
+        source='scim',
+        data={'updated_fields': list(update_data.keys())},
+    )
+
     return await user_to_scim(updated_user, request, db=db)
 
 
@@ -765,6 +796,14 @@ async def delete_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to delete user',
         )
+
+    await publish_event(
+        request,
+        EVENTS.USER_DELETED,
+        subject_id=user_id,
+        source='scim',
+        data={'email': user.email},
+    )
 
     return None
 
@@ -883,6 +922,22 @@ async def create_group(
 
         new_group = await Groups.get_group_by_id(new_group.id, db=db)
 
+    await publish_event(
+        request,
+        EVENTS.GROUP_CREATED,
+        subject_id=new_group.id,
+        source='scim',
+        data={'name': new_group.name, 'member_ids': member_ids, 'member_count': len(member_ids)},
+    )
+    if member_ids:
+        await publish_event(
+            request,
+            EVENTS.GROUP_MEMBER_ADDED,
+            subject_id=new_group.id,
+            source='scim',
+            data={'member_ids': member_ids, 'count': len(member_ids)},
+        )
+
     return await group_to_scim(new_group, request, db=db)
 
 
@@ -911,9 +966,15 @@ async def update_group(
     )
 
     # Handle members if provided
+    added_member_ids = []
+    removed_member_ids = []
     if group_data.members is not None:
+        old_member_ids = set(await Groups.get_group_user_ids_by_id(group_id, db) or [])
         member_ids = [member.value for member in group_data.members]
         await Groups.set_group_user_ids_by_id(group_id, member_ids, db=db)
+        new_member_ids = set(member_ids)
+        added_member_ids = sorted(new_member_ids - old_member_ids)
+        removed_member_ids = sorted(old_member_ids - new_member_ids)
 
     # Update group
     updated_group = await Groups.update_group_by_id(group_id, update_form, db=db)
@@ -921,6 +982,30 @@ async def update_group(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to update group',
+        )
+
+    await publish_event(
+        request,
+        EVENTS.GROUP_UPDATED,
+        subject_id=group_id,
+        source='scim',
+        data={'updated_fields': ['name', 'members'] if group_data.members is not None else ['name']},
+    )
+    if added_member_ids:
+        await publish_event(
+            request,
+            EVENTS.GROUP_MEMBER_ADDED,
+            subject_id=group_id,
+            source='scim',
+            data={'member_ids': added_member_ids, 'count': len(added_member_ids)},
+        )
+    if removed_member_ids:
+        await publish_event(
+            request,
+            EVENTS.GROUP_MEMBER_REMOVED,
+            subject_id=group_id,
+            source='scim',
+            data={'member_ids': removed_member_ids, 'count': len(removed_member_ids)},
         )
 
     return await group_to_scim(updated_group, request, db=db)
@@ -948,6 +1033,8 @@ async def patch_group(
         name=group.name,
         description=group.description,
     )
+    added_member_ids = []
+    removed_member_ids = []
 
     for operation in patch_data.Operations:
         op = operation.op.lower()
@@ -959,7 +1046,12 @@ async def patch_group(
                 update_form.name = value
             elif path == 'members':
                 # Replace all members
-                await Groups.set_group_user_ids_by_id(group_id, [member['value'] for member in value], db=db)
+                old_member_ids = set(await Groups.get_group_user_ids_by_id(group_id, db) or [])
+                new_member_ids = [member['value'] for member in value]
+                await Groups.set_group_user_ids_by_id(group_id, new_member_ids, db=db)
+                new_member_ids_set = set(new_member_ids)
+                added_member_ids.extend(sorted(new_member_ids_set - old_member_ids))
+                removed_member_ids.extend(sorted(old_member_ids - new_member_ids_set))
 
         elif op == 'add':
             if path == 'members':
@@ -968,11 +1060,13 @@ async def patch_group(
                     for member in value:
                         if isinstance(member, dict) and 'value' in member:
                             await Groups.add_users_to_group(group_id, [member['value']], db=db)
+                            added_member_ids.append(member['value'])
         elif op == 'remove':
             if path and path.startswith('members[value eq'):
                 # Remove specific member
                 member_id = path.split('"')[1]
                 await Groups.remove_users_from_group(group_id, [member_id], db=db)
+                removed_member_ids.append(member_id)
 
     # Update group
     updated_group = await Groups.update_group_by_id(group_id, update_form, db=db)
@@ -980,6 +1074,30 @@ async def patch_group(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to update group',
+        )
+
+    await publish_event(
+        request,
+        EVENTS.GROUP_UPDATED,
+        subject_id=group_id,
+        source='scim',
+        data={'operation_count': len(patch_data.Operations)},
+    )
+    if added_member_ids:
+        await publish_event(
+            request,
+            EVENTS.GROUP_MEMBER_ADDED,
+            subject_id=group_id,
+            source='scim',
+            data={'member_ids': sorted(set(added_member_ids)), 'count': len(set(added_member_ids))},
+        )
+    if removed_member_ids:
+        await publish_event(
+            request,
+            EVENTS.GROUP_MEMBER_REMOVED,
+            subject_id=group_id,
+            source='scim',
+            data={'member_ids': sorted(set(removed_member_ids)), 'count': len(set(removed_member_ids))},
         )
 
     return await group_to_scim(updated_group, request, db=db)
@@ -1006,5 +1124,13 @@ async def delete_group(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to delete group',
         )
+
+    await publish_event(
+        request,
+        EVENTS.GROUP_DELETED,
+        subject_id=group_id,
+        source='scim',
+        data={'name': group.name},
+    )
 
     return None

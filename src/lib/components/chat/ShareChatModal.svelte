@@ -104,7 +104,6 @@
 			} else {
 				chat = null;
 				accessGrants = [];
-				console.log(chat);
 			}
 		})();
 	}

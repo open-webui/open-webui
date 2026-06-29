@@ -8,19 +8,22 @@ import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from mcp.shared.auth import OAuthMetadata
 from open_webui.config import BannerModel
-from open_webui.models.config import Config
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.events import EVENTS, publish_event
+from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
+    apply_connection_oauth_options,
     decrypt_data,
     encrypt_data,
     get_discovery_urls,
     get_oauth_client_info_with_dynamic_client_registration,
     get_oauth_client_info_with_static_credentials,
+    recover_static_oauth_client_metadata,
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
@@ -88,6 +91,13 @@ class ImportConfigForm(BaseModel):
 @router.post('/import', response_model=dict)
 async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(form_data.config)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_IMPORTED,
+        actor=user,
+        subject_id='import',
+        data={'keys': list(form_data.config.keys())},
+    )
     return await Config.get_all()
 
 
@@ -128,7 +138,15 @@ async def set_connections_config(
     user=Depends(get_admin_user),
 ):
     await Config.upsert(config_updates(form_data.model_dump(), CONNECTIONS_CONFIG_KEYS))
-    return await get_config_values(CONNECTIONS_CONFIG_KEYS)
+    values = await get_config_values(CONNECTIONS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_CONNECTIONS_UPDATED,
+        actor=user,
+        subject_id='connections', subject_type='config',
+        data=values,
+    )
+    return values
 
 
 class OAuthClientRegistrationForm(BaseModel):
@@ -241,6 +259,10 @@ async def set_tool_servers_config(
             if auth_type in ('oauth_2.1', 'oauth_2.1_static') and server_id:
                 try:
                     oauth_client_info = resolve_oauth_client_info(connection)
+                    oauth_client_info = await recover_static_oauth_client_metadata(
+                        connection, oauth_client_info
+                    )
+                    oauth_client_info = apply_connection_oauth_options(connection, oauth_client_info)
                     request.app.state.oauth_client_manager.add_client(
                         f'{server_type}:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
@@ -249,6 +271,13 @@ async def set_tool_servers_config(
                     log.debug(f'Failed to add OAuth client for MCP tool server: {e}')
                     continue
 
+    await publish_event(
+        request,
+        EVENTS.CONFIG_TOOL_SERVERS_UPDATED,
+        actor=user,
+        subject_id='tool_server.connections', subject_type='config',
+        data={'count': len(connections), 'types': [connection.get('type', 'openapi') for connection in connections]},
+    )
     return {'TOOL_SERVER_CONNECTIONS': connections}
 
 
@@ -294,6 +323,13 @@ async def set_terminal_servers_config(
 
     await set_terminal_servers(request)
 
+    await publish_event(
+        request,
+        EVENTS.CONFIG_TERMINAL_SERVERS_UPDATED,
+        actor=user,
+        subject_id='terminal_server.connections', subject_type='config',
+        data={'count': len(connections)},
+    )
     return {'TERMINAL_SERVER_CONNECTIONS': connections}
 
 
@@ -354,6 +390,24 @@ class TerminalServerPolicyForm(BaseModel):
     policy_data: dict
 
 
+class TerminalServerLifecycleForm(BaseModel):
+    url: str
+    key: str | None = ''
+    auth_type: str | None = 'bearer'
+    policy_id: str
+    lifecycle_data: dict
+
+
+class TerminalServerRefreshForm(BaseModel):
+    url: str
+    key: str | None = ''
+    auth_type: str | None = 'bearer'
+    user_id: str | None = None
+    policy_id: str | None = None
+    only_idle: bool = True
+    reset: bool = False
+
+
 @router.post('/terminal_servers/policy')
 async def put_terminal_server_policy(
     request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
@@ -387,6 +441,91 @@ async def put_terminal_server_policy(
     except Exception as e:
         log.debug(f'Failed to save policy to terminal server: {e}')
         raise HTTPException(status_code=400, detail='Failed to save policy to terminal server')
+
+
+@router.post('/terminal_servers/lifecycle')
+async def put_terminal_server_lifecycle(
+    request: Request, form_data: TerminalServerLifecycleForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a policy lifecycle PUT to an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {'Content-Type': 'application/json'}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            lifecycle_url = f'{base_url}/api/v1/policies/{form_data.policy_id}/lifecycle'
+            async with session.put(
+                lifecycle_url,
+                headers=headers,
+                json=form_data.lifecycle_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to save lifecycle to terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to save lifecycle to terminal server')
+
+
+@router.post('/terminal_servers/refresh')
+async def refresh_terminal_server_terminals(
+    request: Request, form_data: TerminalServerRefreshForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a terminal refresh request to an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {'Content-Type': 'application/json'}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers['Authorization'] = f'Bearer {form_data.key}'
+
+    body = {
+        'only_idle': form_data.only_idle,
+        'reset': form_data.reset,
+    }
+    if form_data.user_id:
+        body['user_id'] = form_data.user_id
+    if form_data.policy_id:
+        body['policy_id'] = form_data.policy_id
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            refresh_url = f'{base_url}/api/v1/terminals/refresh'
+            async with session.post(
+                refresh_url,
+                headers=headers,
+                json=body,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to refresh terminals: {e}')
+        raise HTTPException(status_code=400, detail='Failed to refresh terminals')
 
 
 @router.post('/tool_servers/verify')
@@ -552,7 +691,20 @@ async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
     await Config.upsert(config_updates(form_data.model_dump(), CODE_EXECUTION_CONFIG_KEYS))
-    return await get_config_values(CODE_EXECUTION_CONFIG_KEYS)
+    values = await get_config_values(CODE_EXECUTION_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_CODE_EXECUTION_UPDATED,
+        actor=user,
+        subject_id='code_execution', subject_type='config',
+        data={
+            'code_execution_enabled': values.get('ENABLE_CODE_EXECUTION'),
+            'code_execution_engine': values.get('CODE_EXECUTION_ENGINE'),
+            'code_interpreter_enabled': values.get('ENABLE_CODE_INTERPRETER'),
+            'code_interpreter_engine': values.get('CODE_INTERPRETER_ENGINE'),
+        },
+    )
+    return values
 
 
 ############################
@@ -581,7 +733,19 @@ async def get_models_config(request: Request, user=Depends(get_admin_user)):
 @router.post('/models', response_model=ModelsConfigForm)
 async def set_models_config(request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(config_updates(form_data.model_dump(), MODELS_CONFIG_KEYS))
-    return await get_config_values(MODELS_CONFIG_KEYS)
+    values = await get_config_values(MODELS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_MODELS_UPDATED,
+        actor=user,
+        subject_id='models', subject_type='config',
+        data={
+            'default_models': values.get('DEFAULT_MODELS'),
+            'default_pinned_models': values.get('DEFAULT_PINNED_MODELS'),
+            'model_order_count': len(values.get('MODEL_ORDER_LIST') or []),
+        },
+    )
+    return values
 
 
 class PromptSuggestion(BaseModel):
@@ -601,7 +765,15 @@ async def set_default_suggestions(
 ):
     data = form_data.model_dump()
     await Config.upsert({'ui.prompt_suggestions': data['suggestions']})
-    return await Config.get('ui.prompt_suggestions')
+    suggestions = await Config.get('ui.prompt_suggestions')
+    await publish_event(
+        request,
+        EVENTS.CONFIG_SUGGESTIONS_UPDATED,
+        actor=user,
+        subject_id='ui.prompt_suggestions', subject_type='config',
+        data={'count': len(suggestions or [])},
+    )
+    return suggestions
 
 
 ############################
@@ -621,7 +793,15 @@ async def set_banners(
 ):
     data = form_data.model_dump()
     await Config.upsert({'ui.banners': data['banners']})
-    return await Config.get('ui.banners')
+    banners = await Config.get('ui.banners')
+    await publish_event(
+        request,
+        EVENTS.CONFIG_BANNERS_UPDATED,
+        actor=user,
+        subject_id='ui.banners', subject_type='config',
+        data={'count': len(banners or [])},
+    )
+    return banners
 
 
 @router.get('/banners', response_model=list[BannerModel])

@@ -22,6 +22,7 @@ from open_webui.config import (
     CACHE_DIR,
 )
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -309,6 +310,18 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
             'openai.api_keys': api_keys,
             'openai.api_configs': api_configs,
         }
+    )
+    await publish_event(
+        request,
+        EVENTS.MODEL_PROVIDER_CONFIG_UPDATED,
+        actor=user,
+        subject_id='openai',
+        subject_type='model.provider_config',
+        data={
+            'provider': 'openai',
+            'enabled': form_data.ENABLE_OPENAI_API,
+            'base_url_count': len(form_data.OPENAI_API_BASE_URLS),
+        },
     )
 
     return {

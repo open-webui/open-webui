@@ -511,7 +511,7 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={folderElement} class="relative {className}" draggable="{!folders[folderId]?.shared}">
+<div bind:this={folderElement} class="relative {className}" draggable={!folders[folderId]?.shared}>
 	{#if draggedOver}
 		<div
 			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"

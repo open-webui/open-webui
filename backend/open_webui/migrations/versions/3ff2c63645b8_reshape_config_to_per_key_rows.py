@@ -443,11 +443,18 @@ LEGACY_KEY_TO_STORAGE_KEY = {
 
 
 def _walk_blob(data: dict, prefix: str = '') -> dict:
-    """Recursively walk a nested dict, yielding (dot.path, value) for leaf nodes."""
+    """Recursively walk a nested config blob, preserving known config values.
+
+    Some config values are intentionally dictionaries, e.g. OPENAI_API_CONFIGS
+    and OLLAMA_API_CONFIGS. Once the current path is a known config key, keep
+    that value intact instead of flattening its internals into orphaned rows.
+    """
     result = {}
     for key, value in data.items():
         path = f'{prefix}{key}' if not prefix else f'{prefix}.{key}'
-        if isinstance(value, dict):
+        if path in BLOB_PATH_TO_KEY or path in LEGACY_KEY_TO_STORAGE_KEY:
+            result[path] = value
+        elif isinstance(value, dict):
             result.update(_walk_blob(value, path))
         else:
             result[path] = value

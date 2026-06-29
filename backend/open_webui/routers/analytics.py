@@ -279,6 +279,9 @@ class ModelChatsResponse(BaseModel):
     total: int
 
 
+MODEL_CHAT_ORDER_FIELDS = {'title', 'updated_at', 'user_name'}
+
+
 @router.get('/models/{model_id:path}/chats', response_model=ModelChatsResponse)
 async def get_model_chats(
     model_id: str,
@@ -286,65 +289,34 @@ async def get_model_chats(
     end_date: Optional[int] = Query(None),
     skip: int = Query(0),
     limit: int = Query(50, le=100),
+    order_by: str = Query('updated_at'),
+    direction: str = Query('desc'),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get chats that used a specific model, with preview and feedback info."""
+    filter = {}
+    if start_date:
+        filter['start_date'] = start_date
+    if end_date:
+        filter['end_date'] = end_date
+    if order_by in MODEL_CHAT_ORDER_FIELDS:
+        filter['order_by'] = order_by
+    if direction in {'asc', 'desc'}:
+        filter['direction'] = direction
 
-    # Get chat IDs that used this model
-    chat_ids = await ChatMessages.get_chat_ids_by_model_id(
+    result = await Chats.get_chats_by_model_id(
         model_id=model_id,
-        start_date=start_date,
-        end_date=end_date,
+        filter=filter,
         skip=skip,
         limit=limit,
         db=db,
     )
 
-    if not chat_ids:
-        return ModelChatsResponse(chats=[], total=0)
-
-    # Get chat details from messages only
-    chats_data = []
-    for chat_id in chat_ids:
-        messages = await ChatMessages.get_messages_by_chat_id(chat_id, db=db)
-        if not messages:
-            continue
-
-        # Get user_id from first user message
-        first_user_msg = next((m for m in messages if m.role == 'user'), None)
-        user_id = first_user_msg.user_id if first_user_msg else None
-
-        # Extract first message content as preview
-        first_message = None
-        if first_user_msg and first_user_msg.content:
-            content = first_user_msg.content
-            if isinstance(content, str):
-                first_message = content[:200]
-            elif isinstance(content, list):
-                text_parts = [b.get('text', '') for b in content if isinstance(b, dict)]
-                first_message = ' '.join(text_parts)[:200]
-
-        # Get user info
-        user_name = None
-        if user_id:
-            user_info = await Users.get_user_by_id(user_id, db=db)
-            user_name = user_info.name if user_info else None
-
-        # Timestamps from messages
-        updated_at = max(m.created_at for m in messages) if messages else 0
-
-        chats_data.append(
-            ModelChatEntry(
-                chat_id=chat_id,
-                user_id=user_id,
-                user_name=user_name,
-                first_message=first_message,
-                updated_at=updated_at,
-            )
-        )
-
-    return ModelChatsResponse(chats=chats_data, total=len(chats_data))
+    return ModelChatsResponse(
+        chats=[ModelChatEntry.model_validate(chat) for chat in result['items']],
+        total=result['total'] or 0,
+    )
 
 
 ####################

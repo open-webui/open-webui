@@ -499,7 +499,7 @@
 
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
-				<div class="flex p-1">
+				<div class="flex p-1 max-h-28 overflow-y-auto">
 					<Tags chatId={chat.id} />
 				</div>
 			{/if}
