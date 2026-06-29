@@ -11,6 +11,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { marked } from 'marked';
 	import SensitiveInput from './SensitiveInput.svelte';
+	import NativeSelect from './NativeSelect.svelte';
 
 	export let title = '';
 	export let message = '';
@@ -24,6 +25,7 @@
 	export let inputPlaceholder = '';
 	export let inputValue = '';
 	export let inputType = '';
+	export let inputOptions: ({ label?: string; value: string } | string)[] = [];
 
 	let _inputValue = inputValue;
 
@@ -147,6 +149,14 @@
 										required={true}
 									/>
 								</div>
+							{:else if inputType === 'select' && inputOptions.length}
+								<NativeSelect
+									className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
+									bind:value={_inputValue}
+									options={inputOptions}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Select an option')}
+									required
+								/>
 							{:else}
 								<textarea
 									bind:value={_inputValue}
