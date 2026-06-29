@@ -868,6 +868,10 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
 
         models.append(model)
 
+    # Chat requests resolve models by ID from request.app.state.MODELS, where
+    # duplicate IDs collapse to the last model. Return the same effective list.
+    models = list({model['id']: model for model in models}.values())
+
     model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:
         model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
