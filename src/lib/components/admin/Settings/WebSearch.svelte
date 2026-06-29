@@ -26,6 +26,7 @@
 		'bocha',
 		'serpstack',
 		'serper',
+		'serphouse',
 		'serply',
 		'searchapi',
 		'serpapi',
@@ -180,6 +181,8 @@
 								{#each webSearchEngines as engine}
 									{#if engine === 'duckduckgo' || engine === 'ddgs'}
 										<option value={engine}>DDGS</option>
+									{:else if engine === 'serphouse'}
+										<option value={engine}>SERPHouse</option>
 									{:else}
 										<option value={engine}>{engine}</option>
 									{/if}
@@ -468,6 +471,36 @@
 										placeholder={$i18n.t('Enter Serper API Key')}
 										bind:value={webConfig.SERPER_API_KEY}
 									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'serphouse'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('SERPHouse API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter SERPHouse API Key')}
+										bind:value={webConfig.SERPHOUSE_API_KEY}
+									/>
+								</div>
+								<div class="mt-1.5">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('SERPHouse Domain')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder="google.com"
+												bind:value={webConfig.SERPHOUSE_DOMAIN}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'serply'}

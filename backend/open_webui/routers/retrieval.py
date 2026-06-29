@@ -103,6 +103,7 @@ from open_webui.retrieval.web.searchapi import search_searchapi
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.serper import search_serper
+from open_webui.retrieval.web.serphouse import search_serphouse
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.sougou import search_sougou
@@ -357,6 +358,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'SERPAPI_API_KEY': 'rag.web.search.serpapi_api_key',
     'SERPAPI_ENGINE': 'rag.web.search.serpapi_engine',
     'SERPER_API_KEY': 'rag.web.search.serper_api_key',
+    'SERPHOUSE_API_KEY': 'rag.web.search.serphouse_api_key',
+    'SERPHOUSE_DOMAIN': 'rag.web.search.serphouse_domain',
     'SERPLY_API_KEY': 'rag.web.search.serply_api_key',
     'SERPSTACK_API_KEY': 'rag.web.search.serpstack_api_key',
     'SERPSTACK_HTTPS': 'rag.web.search.serpstack_https',
@@ -703,6 +706,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPSTACK_API_KEY': config.SERPSTACK_API_KEY,
             'SERPSTACK_HTTPS': config.SERPSTACK_HTTPS,
             'SERPER_API_KEY': config.SERPER_API_KEY,
+            'SERPHOUSE_API_KEY': config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'DDGS_BACKEND': config.DDGS_BACKEND,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
@@ -774,6 +779,8 @@ class WebConfig(BaseModel):
     SERPSTACK_API_KEY: str | None = None
     SERPSTACK_HTTPS: bool | None = None
     SERPER_API_KEY: str | None = None
+    SERPHOUSE_API_KEY: str | None = None
+    SERPHOUSE_DOMAIN: str | None = None
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
     TAVILY_API_KEY: str | None = None
@@ -1273,6 +1280,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.SERPSTACK_API_KEY = form_data.web.SERPSTACK_API_KEY
         config.SERPSTACK_HTTPS = form_data.web.SERPSTACK_HTTPS
         config.SERPER_API_KEY = form_data.web.SERPER_API_KEY
+        config.SERPHOUSE_API_KEY = form_data.web.SERPHOUSE_API_KEY
+        config.SERPHOUSE_DOMAIN = form_data.web.SERPHOUSE_DOMAIN
         config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
         config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
@@ -1412,6 +1421,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SERPSTACK_API_KEY': config.SERPSTACK_API_KEY,
             'SERPSTACK_HTTPS': config.SERPSTACK_HTTPS,
             'SERPER_API_KEY': config.SERPER_API_KEY,
+            'SERPHOUSE_API_KEY': config.SERPHOUSE_API_KEY,
+            'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
@@ -2259,6 +2270,17 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No SERPER_API_KEY found in environment variables')
+    elif engine == 'serphouse':
+        if config.SERPHOUSE_API_KEY:
+            return await search_serphouse(
+                config.SERPHOUSE_API_KEY,
+                config.SERPHOUSE_DOMAIN,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No SERPHOUSE_API_KEY found in environment variables')
     elif engine == 'serply':
         if config.SERPLY_API_KEY:
             return await asyncio.to_thread(
