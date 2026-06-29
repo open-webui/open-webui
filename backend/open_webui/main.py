@@ -1553,7 +1553,8 @@ async def chat_completion(
             # task's current cancel scope", which propagates as a
             # BaseException through the finally block, discards the response
             # return value, and surfaces as a 500 "No response returned."
-            # MCPClient.disconnect() already catches BaseException internally.
+            # MCPClient.disconnect() suppresses known transport teardown errors
+            # while still propagating real task cancellation.
             try:
                 if mcp_clients := metadata.get('mcp_clients'):
                     for client in reversed(list(mcp_clients.values())):
