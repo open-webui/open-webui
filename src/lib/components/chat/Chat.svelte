@@ -1477,8 +1477,8 @@
 
 				chatTitle.set(chatContent.title);
 
-				params = chatContent?.params ?? {};
-				chatFiles = chatContent?.files ?? [];
+				params = structuredClone(chatContent?.params ?? {});
+				chatFiles = structuredClone(chatContent?.files ?? []);
 
 				// Load tasks from chat-level DB field
 				chatTasks = chat?.tasks ?? [];
