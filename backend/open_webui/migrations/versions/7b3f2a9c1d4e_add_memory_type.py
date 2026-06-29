@@ -27,8 +27,8 @@ def upgrade() -> None:
     if 'type' not in columns:
         op.add_column('memory', sa.Column('type', sa.String(), server_default='context', nullable=False))
 
-    if 'ix_memory_kind' not in indexes:
-        op.create_index('ix_memory_kind', 'memory', ['type'])
+    if 'ix_memory_type' not in indexes:
+        op.create_index('ix_memory_type', 'memory', ['type'])
 
 
 def downgrade() -> None:
@@ -37,8 +37,8 @@ def downgrade() -> None:
     columns = {column['name'] for column in inspector.get_columns('memory')}
     indexes = {index['name'] for index in inspector.get_indexes('memory')}
 
-    if 'ix_memory_kind' in indexes:
-        op.drop_index('ix_memory_kind', table_name='memory')
+    if 'ix_memory_type' in indexes:
+        op.drop_index('ix_memory_type', table_name='memory')
 
     if 'type' in columns:
         op.drop_column('memory', 'type')
