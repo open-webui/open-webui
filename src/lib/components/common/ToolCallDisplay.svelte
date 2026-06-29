@@ -84,12 +84,13 @@
 		}
 	}
 
-	$: args = decode(attributes?.arguments ?? '');
 	export let resultContent: string = '';
 
 	$: result = resultContent || decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
+	$: args =
+		open || (Array.isArray(embeds) && embeds.length > 0) ? decode(attributes?.arguments ?? '') : '';
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
