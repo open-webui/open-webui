@@ -34,6 +34,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
+
+# ILIKE case-folds the whole value at 4 bytes/char, so content past ~256 MiB
+# exceeds PostgreSQL's ~1 GiB MaxAllocSize and kills search for every user (the
+# predicate runs on every file row in the seq scan, before any join). Cap it
+# with substr() first. (#24670's ->> fix only removed the earlier CAST bloat.)
+CONTENT_SEARCH_MAX_CHARS = 50 * 1024 * 1024  # ceiling: 4-byte worst case -> ~800 MiB fold
+
+
+def get_content_search_char_limit() -> int:
+    """ILIKE content cap in chars: FILE_MAX_SIZE x4, clamped under MaxAllocSize."""
+    from open_webui.config import RAG_FILE_MAX_SIZE  # lazy: avoid import cycle
+
+    try:
+        limit_mib = int(RAG_FILE_MAX_SIZE.value)
+    except (TypeError, ValueError):
+        limit_mib = 0
+    if limit_mib > 0:
+        return min(limit_mib * 1024 * 1024 * 4, CONTENT_SEARCH_MAX_CHARS)
+    return CONTENT_SEARCH_MAX_CHARS
+
+
 ####################
 # Knowledge DB Schema
 # Let what was gathered here outlast the one who gathered it,
@@ -376,10 +397,12 @@ class KnowledgeTable:
                     q = filter.get('query')
                     if q:
                         if filter.get('include_content'):
-                            # Use ->> (as_string) instead of CAST(-> AS TEXT)
-                            # to avoid PostgreSQL "invalid memory alloc request
-                            # size" on large extracted-content rows (#24670).
-                            content_text = File.data['content'].as_string()
+                            # Cap content before ILIKE; see get_content_search_char_limit.
+                            content_text = func.substr(
+                                File.data['content'].as_string(),
+                                1,
+                                get_content_search_char_limit(),
+                            )
                             search_filter = or_(
                                 File.filename.ilike(f'%{q}%'),
                                 content_text.ilike(f'%{q}%'),
@@ -561,10 +584,12 @@ class KnowledgeTable:
                     query_key = filter.get('query')
                     if query_key:
                         if filter.get('include_content'):
-                            # Use ->> (as_string) instead of CAST(-> AS TEXT)
-                            # to avoid PostgreSQL memory allocation failures on
-                            # large content (#24670).
-                            content_text = File.data['content'].as_string()
+                            # Cap content before ILIKE; see get_content_search_char_limit.
+                            content_text = func.substr(
+                                File.data['content'].as_string(),
+                                1,
+                                get_content_search_char_limit(),
+                            )
                             stmt = stmt.filter(
                                 or_(
                                     File.filename.ilike(f'%{query_key}%'),
