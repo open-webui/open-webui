@@ -2428,7 +2428,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if 'memory' in features and features['memory']:
-            form_data = await add_memory_context(request, form_data, user, model)
+            # Skip forced memory injection when native FC is enabled - model can use memory tools
+            if metadata.get('params', {}).get('function_calling') != 'native':
+                form_data = await add_memory_context(request, form_data, user, model)
 
         if 'web_search' in features and features['web_search']:
             # Skip forced RAG web search when native FC is enabled - model can use web_search tool
