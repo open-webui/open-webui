@@ -740,15 +740,6 @@ async def signin(
                 detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
             )
 
-        password_bytes = form_data.password.encode('utf-8')
-        if len(password_bytes) > 72:
-            # TODO: Implement other hashing algorithms that support longer passwords
-            log.info('Password too long, truncating to 72 bytes for bcrypt')
-            password_bytes = password_bytes[:72]
-
-            # decode safely — ignore incomplete UTF-8 sequences
-            form_data.password = password_bytes.decode('utf-8', errors='ignore')
-
         user = await Auths.authenticate_user(
             form_data.email.lower(),
             lambda pw: verify_password(form_data.password, pw),

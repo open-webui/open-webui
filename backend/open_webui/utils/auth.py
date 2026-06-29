@@ -26,6 +26,7 @@ from open_webui.env import (
     ENABLE_PASSWORD_VALIDATION,
     LICENSE_BLOB,
     OFFLINE_MODE,
+    PASSWORD_HASH_ALGORITHM,
     PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
@@ -45,6 +46,7 @@ log = logging.getLogger(__name__)
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = 'HS256'
+PASSWORD_BCRYPT_MAX_BYTES = 72
 
 ##############
 # Auth Utils
@@ -160,13 +162,20 @@ bearer_security = HTTPBearer(auto_error=False)
 
 
 async def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt in a thread pool (non-blocking)."""
-    return (await asyncio.to_thread(bcrypt.hashpw, password.encode('utf-8'), bcrypt.gensalt())).decode('utf-8')
+    """Hash a password using the configured algorithm in a thread pool."""
+    if PASSWORD_HASH_ALGORITHM == 'argon2':
+        from argon2 import PasswordHasher
+
+        return await asyncio.to_thread(PasswordHasher().hash, password)
+    if PASSWORD_HASH_ALGORITHM == 'bcrypt':
+        return (await asyncio.to_thread(bcrypt.hashpw, password.encode('utf-8'), bcrypt.gensalt())).decode('utf-8')
+
+    raise ValueError(f'Unsupported PASSWORD_HASH_ALGORITHM: {PASSWORD_HASH_ALGORITHM}')
 
 
 def validate_password(password: str) -> bool:
-    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
-    if len(password.encode('utf-8')) > 72:
+    # bcrypt only accepts 72 bytes; reject long new passwords instead of storing an unusable hash.
+    if PASSWORD_HASH_ALGORITHM == 'bcrypt' and len(password.encode('utf-8')) > PASSWORD_BCRYPT_MAX_BYTES:
         raise Exception(
             ERROR_MESSAGES.PASSWORD_TOO_LONG,
         )
@@ -179,15 +188,28 @@ def validate_password(password: str) -> bool:
 
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password using bcrypt in a thread pool."""
+    """Verify a password using the algorithm encoded in its hash."""
     if not hashed_password:
         return False
 
-    return await asyncio.to_thread(
-        bcrypt.checkpw,
-        plain_password.encode('utf-8'),
-        hashed_password.encode('utf-8'),
-    )
+    if hashed_password.startswith('$argon2'):
+        from argon2 import PasswordHasher
+        from argon2.exceptions import InvalidHashError, VerificationError
+
+        try:
+            return await asyncio.to_thread(PasswordHasher().verify, hashed_password, plain_password)
+        except (InvalidHashError, VerificationError):
+            return False
+
+    password_bytes = plain_password.encode('utf-8')[:PASSWORD_BCRYPT_MAX_BYTES]
+    try:
+        return await asyncio.to_thread(
+            bcrypt.checkpw,
+            password_bytes,
+            hashed_password.encode('utf-8'),
+        )
+    except ValueError:
+        return False
 
 
 # Let the one who signed this token be remembered at every gate,
