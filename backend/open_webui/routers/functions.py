@@ -22,6 +22,7 @@ from open_webui.models.functions import (
     FunctionWithValvesModel,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import error_detail
 from open_webui.utils.plugin import (
     get_functions_cache,
     get_function_module_from_cache,
@@ -133,7 +134,7 @@ async def load_function_from_url(request: Request, form_data: LoadUrlForm, user=
             'content': data,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=500, detail=error_detail(e, 'Error fetching function'))
 
 
 ############################
@@ -173,7 +174,7 @@ async def sync_functions(
         log.exception(f'Failed to load a function: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=error_detail(e, 'Error loading function'),
         )
 
 
@@ -236,7 +237,7 @@ async def create_new_function(
             log.exception(f'Failed to create a new function: {e}')
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=error_detail(e, 'Error creating function'),
             )
     else:
         raise HTTPException(
@@ -384,7 +385,7 @@ async def update_function_by_id(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=error_detail(e, 'Error updating function'),
         )
 
 
@@ -432,7 +433,7 @@ async def get_function_valves_by_id(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=error_detail(e, 'Error getting function valves'),
             )
     else:
         raise HTTPException(
@@ -508,7 +509,7 @@ async def update_function_valves_by_id(
                 log.exception(f'Error updating function values by id {id}: {e}')
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(e),
+                    detail=error_detail(e, 'Error updating function valves'),
                 )
         else:
             raise HTTPException(
@@ -540,7 +541,7 @@ async def get_function_user_valves_by_id(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                detail=error_detail(e, 'Error getting function user valves'),
             )
     else:
         raise HTTPException(
@@ -607,7 +608,7 @@ async def update_function_user_valves_by_id(
                 log.exception(f'Error updating function user valves by id {id}: {e}')
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT(e),
+                    detail=error_detail(e, 'Error updating function user valves'),
                 )
         else:
             raise HTTPException(

@@ -31,6 +31,7 @@ from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import error_detail
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
@@ -166,7 +167,11 @@ async def get_image_model(request):
                 options = await r.json()
             return options['sd_model_checkpoint']
         except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+            log.exception(f'Failed to get default model from automatic1111: {e}')
+            raise HTTPException(
+                status_code=400,
+                detail=error_detail(e, 'Failed to connect to the image generation engine'),
+            )
 
 
 class ImagesConfig(BaseModel):
@@ -383,7 +388,8 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                 )
             )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        log.exception(f'Failed to list image generation models: {e}')
+        raise HTTPException(status_code=400, detail=error_detail(e, 'Failed to retrieve image generation models'))
 
 
 class CreateImageForm(BaseModel):
@@ -900,7 +906,7 @@ async def image_edits(
             # Load all images in parallel for better performance
             form_data.image = list(await asyncio.gather(*[load_url_image(img) for img in form_data.image]))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=error_detail(e, 'Error loading image'))
 
     def get_image_file_item(base64_string, param_name='image'):
         data = base64_string

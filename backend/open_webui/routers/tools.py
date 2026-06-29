@@ -31,6 +31,7 @@ from open_webui.utils.access_control import (
     has_permission,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import error_detail
 from open_webui.utils.plugin import (
     get_tools_cache,
     get_tool_module_from_cache,
@@ -295,7 +296,7 @@ async def load_tool_from_url(request: Request, form_data: LoadUrlForm, user=Depe
             'content': data,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=500, detail=error_detail(e, 'Error fetching tool'))
 
 
 ############################
@@ -404,7 +405,7 @@ async def create_new_tools(
             log.exception(f'Failed to load the tool by id {form_data.id}: {e}')
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(str(e)),
+                detail=error_detail(e, 'Error creating tool'),
             )
     else:
         raise HTTPException(
@@ -554,7 +555,7 @@ async def update_tools_by_id(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=error_detail(e, 'Error updating tool'),
         )
 
 
@@ -707,7 +708,7 @@ async def get_tools_valves_by_id(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=error_detail(e, 'Error getting tool valves'),
         )
 
 
@@ -818,7 +819,7 @@ async def update_tools_valves_by_id(
         log.exception(f'Failed to update tool valves by id {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=error_detail(e, 'Error updating tool valves'),
         )
 
 
@@ -860,7 +861,7 @@ async def get_tools_user_valves_by_id(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=error_detail(e, 'Error getting tool user valves'),
         )
 
 
@@ -958,7 +959,7 @@ async def update_tools_user_valves_by_id(
             log.exception(f'Failed to update user valves by id {id}: {e}')
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(str(e)),
+                detail=error_detail(e, 'Error updating tool user valves'),
             )
     else:
         raise HTTPException(

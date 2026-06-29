@@ -20,6 +20,7 @@ from open_webui.models.skills import (
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.errors import error_detail
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -213,7 +214,7 @@ async def create_new_skill(
         log.exception(f'Failed to create skill: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=error_detail(e, 'Error creating skill'),
         )
 
 
@@ -337,7 +338,7 @@ async def update_skill_by_id(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+            detail=error_detail(e, 'Error updating skill'),
         )
 
 
