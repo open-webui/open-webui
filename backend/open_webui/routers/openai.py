@@ -522,7 +522,9 @@ async def get_filtered_models(models, user, db=None):
 
 @cached(
     ttl=MODELS_CACHE_TTL,
-    key=lambda _, user: f'openai_all_models_{user.id}' if user else 'openai_all_models',
+    # key_builder (not key) is the per-call hook in aiocache 0.12; `key=` is a
+    # static key, so a `key=lambda` collapsed every caller to one shared entry.
+    key_builder=lambda _func, request, user=None: f'openai_all_models_{user.id}' if user else 'openai_all_models',
 )
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info('get_all_models()')
