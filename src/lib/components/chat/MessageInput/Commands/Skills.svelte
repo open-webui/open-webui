@@ -101,7 +101,7 @@
 					<div class="truncate min-w-0 flex-1">
 						{skill.name}
 					</div>
-					<div class="ml-2 text-xs text-gray-500 truncate">
+					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500">
 						{skill.id}
 					</div>
 				</div>
