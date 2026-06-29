@@ -161,7 +161,9 @@
 		const groupCount = targets.filter((target) => target.type === 'group').length;
 		const parts = [];
 		if (userCount > 0) {
-			parts.push(userCount === 1 ? $i18n.t('1 user') : $i18n.t('{{count}} users', { count: userCount }));
+			parts.push(
+				userCount === 1 ? $i18n.t('1 user') : $i18n.t('{{count}} users', { count: userCount })
+			);
 		}
 		if (groupCount > 0) {
 			parts.push(
@@ -224,7 +226,9 @@
 		}
 
 		form.events =
-			value === '*' ? ['*'] : [...new Set(form.events.filter((event) => event !== '*').concat(value))];
+			value === '*'
+				? ['*']
+				: [...new Set(form.events.filter((event) => event !== '*').concat(value))];
 		pattern = '';
 	};
 
@@ -280,7 +284,9 @@
 			.filter((group: any) => !targetGroupIds.includes(group.id))
 			.slice(0, 5);
 
-		const res = await searchUsers(localStorage.token, targetQuery, 'name', 'asc', 1).catch(() => null);
+		const res = await searchUsers(localStorage.token, targetQuery, 'name', 'asc', 1).catch(
+			() => null
+		);
 		targetUserResults = (res?.users ?? [])
 			.filter((user: any) => !targetUserIds.includes(user.id))
 			.slice(0, 5);
@@ -390,12 +396,7 @@
 				{editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
 			</h1>
 
-			<button
-				class="self-center"
-				aria-label={$i18n.t('Close')}
-				type="button"
-				on:click={resetForm}
-			>
+			<button class="self-center" aria-label={$i18n.t('Close')} type="button" on:click={resetForm}>
 				<XMark className="size-5" />
 			</button>
 		</div>
@@ -624,7 +625,9 @@
 
 							<div class="max-h-36 overflow-y-auto pb-0.5">
 								{#each filteredEvents as event}
-									<label class="flex items-start gap-2 py-0.5 text-xs text-gray-700 dark:text-gray-300">
+									<label
+										class="flex items-start gap-2 py-0.5 text-xs text-gray-700 dark:text-gray-300"
+									>
 										<input
 											class="mt-0.5"
 											type="checkbox"
@@ -747,7 +750,9 @@
 
 		<div class="mt-1.5">
 			<div class="text-xs text-gray-500">
-				{$i18n.t('Send product events as JSON to external services. Chat destinations receive readable messages.')}
+				{$i18n.t(
+					'Send product events as JSON to external services. Chat destinations receive readable messages.'
+				)}
 			</div>
 		</div>
 	</div>
