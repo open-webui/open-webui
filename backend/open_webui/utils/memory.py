@@ -40,6 +40,214 @@ def memory_vector_text(content: str, path: str | None = None) -> str:
     return f'{path}\n{content}' if path else content
 
 
+def memory_label(memory) -> str:
+    return f'{memory.path}: {memory.content}' if memory.path else memory.content
+
+
+def _path_parts(path: str | None) -> list[str]:
+    return [part for part in (path or '').split('/') if part]
+
+
+def _parent_path(path: str | None) -> str | None:
+    parts = _path_parts(path)
+    return '/'.join(parts[:-1]) if len(parts) > 1 else None
+
+
+def _path_rank(memory_path: str | None, lookup_path: str | None) -> tuple | None:
+    if not lookup_path:
+        return None
+
+    memory_path = clean_memory_path(memory_path)
+    lookup_path = clean_memory_path(lookup_path)
+    if not memory_path or not lookup_path:
+        return None
+
+    if memory_path == lookup_path:
+        return (0, 0)
+    if memory_path.startswith(f'{lookup_path}/'):
+        return (1, len(_path_parts(memory_path)) - len(_path_parts(lookup_path)))
+    if lookup_path.startswith(f'{memory_path}/'):
+        return (2, len(_path_parts(lookup_path)) - len(_path_parts(memory_path)))
+    if _parent_path(memory_path) and _parent_path(memory_path) == _parent_path(lookup_path):
+        return (3, 0)
+
+    memory_parts = set(_path_parts(memory_path))
+    lookup_parts = set(_path_parts(lookup_path))
+    shared = len(memory_parts & lookup_parts)
+    if shared:
+        return (4, -shared)
+    if _path_parts(memory_path)[-1:] == _path_parts(lookup_path)[-1:]:
+        return (5, 0)
+
+    return None
+
+
+def _memory_matches_query(memory, query: str) -> bool:
+    value = query.strip().lower()
+    if not value:
+        return True
+    return value in (memory.content or '').lower() or value in (memory.path or '').lower()
+
+
+def search_memory_rows(
+    memories: list,
+    *,
+    query: str | None = None,
+    path: str | None = None,
+    memory_id: str | None = None,
+    memory_type: str = 'all',
+    limit: int = 20,
+) -> list:
+    rows = list(memories or [])
+    if memory_id:
+        rows = [memory for memory in rows if memory.id == memory_id]
+    if memory_type != 'all':
+        rows = [memory for memory in rows if memory.type == memory_type]
+
+    query = (query or '').strip()
+    lookup_path = clean_memory_path(path)
+    if lookup_path:
+        basename = _path_parts(lookup_path)[-1] if _path_parts(lookup_path) else lookup_path
+
+        def related(memory) -> bool:
+            rank = _path_rank(memory.path, lookup_path)
+            if rank is not None:
+                return True
+            haystack = f'{memory.path or ""}\n{memory.content or ""}'.lower()
+            return lookup_path.lower() in haystack or basename.lower() in haystack
+
+        rows = [memory for memory in rows if related(memory)]
+
+    if query:
+        rows = [memory for memory in rows if _memory_matches_query(memory, query)]
+
+    def sort_key(memory):
+        rank = _path_rank(memory.path, lookup_path) if lookup_path else None
+        return rank if rank is not None else (9, 0), -(memory.updated_at or 0)
+
+    return sorted(rows, key=sort_key)[: max(1, min(limit or 20, 100))]
+
+
+def list_memory_path_groups(
+    memories: list,
+    *,
+    query: str = '',
+    memory_type: str = 'all',
+    limit: int = 100,
+) -> dict:
+    rows = [
+        memory
+        for memory in (memories or [])
+        if (memory_type == 'all' or memory.type == memory_type) and _memory_matches_query(memory, query)
+    ]
+    grouped: dict[tuple[str | None, str], dict] = {}
+    for memory in rows:
+        key = (memory.path, memory.type)
+        group = grouped.setdefault(
+            key,
+            {
+                'path': memory.path,
+                'type': memory.type,
+                'count': 0,
+                'updated_at': 0,
+                'children': [],
+            },
+        )
+        group['count'] += 1
+        group['updated_at'] = max(group['updated_at'], memory.updated_at or 0)
+
+    paths = [path for path, _ in grouped if path]
+    for group in grouped.values():
+        path = group['path']
+        if not path:
+            continue
+        prefix = f'{path}/'
+        children = []
+        for candidate in paths:
+            if not candidate.startswith(prefix):
+                continue
+            remainder = candidate[len(prefix) :]
+            child = f'{prefix}{remainder.split("/", 1)[0]}'
+            if child not in children:
+                children.append(child)
+        group['children'] = children[:20]
+
+    groups = sorted(grouped.values(), key=lambda item: item['updated_at'], reverse=True)
+    return {'paths': groups[: max(1, min(limit or 100, 500))], 'count': len(groups)}
+
+
+def read_memory_path_rows(
+    memories: list,
+    *,
+    path: str,
+    memory_type: str = 'all',
+    include_children: bool = True,
+    limit: int = 50,
+) -> dict:
+    lookup_path = clean_memory_path(path)
+    if not lookup_path:
+        raise HTTPException(status_code=400, detail='Memory path is required')
+
+    rows = [memory for memory in (memories or []) if memory_type == 'all' or memory.type == memory_type]
+    path_set = {memory.path for memory in rows if memory.path}
+    parents = [
+        '/'.join(_path_parts(lookup_path)[:idx])
+        for idx in range(1, len(_path_parts(lookup_path)))
+        if '/'.join(_path_parts(lookup_path)[:idx]) in path_set
+    ]
+    children = sorted(
+        {
+            f'{lookup_path}/{memory.path[len(lookup_path) + 1 :].split("/", 1)[0]}'
+            for memory in rows
+            if memory.path and memory.path.startswith(f'{lookup_path}/')
+        }
+    )
+
+    def selected(memory) -> bool:
+        if memory.path == lookup_path:
+            return True
+        if memory.path in parents:
+            return True
+        return bool(include_children and memory.path and memory.path.startswith(f'{lookup_path}/'))
+
+    selected_rows = [memory for memory in rows if selected(memory)]
+
+    def sort_key(memory):
+        if memory.path == lookup_path:
+            return (0, 0, -(memory.updated_at or 0))
+        if memory.path and memory.path.startswith(f'{lookup_path}/'):
+            return (1, len(_path_parts(memory.path)), -(memory.updated_at or 0))
+        return (2, -len(_path_parts(memory.path)), -(memory.updated_at or 0))
+
+    return {
+        'path': lookup_path,
+        'parents': parents,
+        'children': children[:50],
+        'memories': sorted(selected_rows, key=sort_key)[: max(1, min(limit or 50, 100))],
+    }
+
+
+def memory_path_hints(query: str, memories: list, limit: int = 6) -> list[str]:
+    lowered = (query or '').lower()
+    if not lowered:
+        return []
+
+    hints: list[str] = []
+    for memory in memories or []:
+        path = memory.path
+        if not path or path in hints:
+            continue
+        parts = _path_parts(path)
+        last = parts[-1] if parts else path
+        if path.lower() in lowered or last.lower() in lowered:
+            hints.append(path)
+        elif any(len(part) >= 3 and part.lower() in lowered for part in parts):
+            hints.append(path)
+        if len(hints) >= limit:
+            break
+    return hints
+
+
 def validate_memory_operations(form_data) -> list[dict]:
     if not form_data.operations:
         raise HTTPException(status_code=400, detail='No memory operations provided')
@@ -108,14 +316,26 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
     except Exception as e:
         log.debug(e)
 
-    sections = {'user': [], 'context': []}
+    sections = {'user': [], 'neighborhood': [], 'context': []}
     seen_ids = set()
     for memory in sorted(
         [memory for memory in (all_memories or []) if memory.type == 'user'],
         key=lambda item: (item.path or '', item.updated_at),
     ):
         seen_ids.add(memory.id)
-        sections['user'].append(f'{memory.path}: {memory.content}' if memory.path else memory.content)
+        sections['user'].append(memory_label(memory))
+
+    for hint in memory_path_hints(query, all_memories):
+        for memory in search_memory_rows(
+            all_memories,
+            path=hint,
+            memory_type='context',
+            limit=4,
+        ):
+            if memory.id in seen_ids:
+                continue
+            seen_ids.add(memory.id)
+            sections['neighborhood'].append(memory_label(memory))
 
     if results and hasattr(results, 'documents') and results.documents:
         for doc_idx, doc in enumerate(results.documents[0]):
@@ -143,6 +363,8 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
     parts = []
     if sections['user']:
         parts.append('[User Memory]\n' + '\n'.join(f'- {memory}' for memory in sections['user']))
+    if sections['neighborhood']:
+        parts.append('[Memory Neighborhood]\n' + '\n'.join(f'- {memory}' for memory in sections['neighborhood']))
     if sections['context']:
         parts.append('[Relevant Context]\n' + '\n'.join(f'- {memory}' for memory in sections['context']))
     if not parts:
@@ -167,10 +389,12 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
             if end != -1:
                 messages[0]['content'] = (content[:start] + content[end + len(MEMORY_CONTEXT_CLOSE) :]).strip()
 
+    user_parts = [part for part in parts if part.startswith('[User Memory]')]
+    context_parts = [part for part in parts if not part.startswith('[User Memory]')]
     rendered = '\n\n'.join(
         [
-            parts[0][:user_limit] if parts and parts[0].startswith('[User Memory]') else '',
-            parts[-1][:context_limit] if parts and parts[-1].startswith('[Relevant Context]') else '',
+            '\n\n'.join(user_parts)[:user_limit],
+            '\n\n'.join(context_parts)[:context_limit],
         ]
     ).strip()
     if not rendered:

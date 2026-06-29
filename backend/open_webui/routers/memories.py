@@ -14,7 +14,15 @@ from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.memory import clean_memory_content, clean_memory_path, memory_vector_text, validate_memory_operations
+from open_webui.utils.memory import (
+    clean_memory_content,
+    clean_memory_path,
+    list_memory_path_groups,
+    memory_vector_text,
+    read_memory_path_rows,
+    search_memory_rows,
+    validate_memory_operations,
+)
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -94,6 +102,19 @@ class SearchMemoriesForm(BaseModel):
     path: str | None = None
     memory_id: str | None = None
     limit: int = 20
+
+
+class ListMemoryPathsForm(BaseModel):
+    query: str | None = None
+    type: Literal['user', 'context', 'all'] = 'all'
+    limit: int = 100
+
+
+class ReadMemoryPathForm(BaseModel):
+    path: str
+    type: Literal['user', 'context', 'all'] = 'all'
+    include_children: bool = True
+    limit: int = 50
 
 
 def _memory_metadata(memory: MemoryModel) -> dict:
@@ -316,23 +337,51 @@ async def search_memories(
     await check_memories_permission(user)
 
     memories = await Memories.get_memories_by_user_id(user.id)
-    if form_data.memory_id:
-        memories = [memory for memory in memories if memory.id == form_data.memory_id]
-    if form_data.type != 'all':
-        memories = [memory for memory in memories if memory.type == form_data.type]
-    path = clean_memory_path(form_data.path)
-    if path:
-        memories = [memory for memory in memories if (memory.path or '').startswith(path)]
-    query = (form_data.query or '').strip().lower()
-    if query:
-        memories = [
-            memory
-            for memory in memories
-            if query in memory.content.lower() or query in (memory.path or '').lower()
-        ]
+    return search_memory_rows(
+        memories,
+        query=form_data.query,
+        path=form_data.path,
+        memory_id=form_data.memory_id,
+        memory_type=form_data.type,
+        limit=form_data.limit,
+    )
 
-    limit = max(1, min(form_data.limit or 20, 100))
-    return sorted(memories, key=lambda memory: memory.updated_at, reverse=True)[:limit]
+
+@router.post('/paths')
+async def list_memory_paths(
+    form_data: ListMemoryPathsForm,
+    user=Depends(get_verified_user),
+):
+    await check_memories_permission(user)
+
+    memories = await Memories.get_memories_by_user_id(user.id)
+    return list_memory_path_groups(
+        memories,
+        query=form_data.query or '',
+        memory_type=form_data.type,
+        limit=form_data.limit,
+    )
+
+
+@router.post('/path')
+async def read_memory_path(
+    form_data: ReadMemoryPathForm,
+    user=Depends(get_verified_user),
+):
+    await check_memories_permission(user)
+
+    memories = await Memories.get_memories_by_user_id(user.id)
+    result = read_memory_path_rows(
+        memories,
+        path=form_data.path,
+        memory_type=form_data.type,
+        include_children=form_data.include_children,
+        limit=form_data.limit,
+    )
+    return {
+        **result,
+        'memories': [memory.model_dump() for memory in result['memories']],
+    }
 
 
 ############################

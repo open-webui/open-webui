@@ -64,8 +64,10 @@ from open_webui.tools.builtin import (
     list_knowledge,
     list_knowledge_bases,
     list_memories,
+    list_memory_paths,
     query_knowledge_bases,
     query_knowledge_files,
+    read_memory_path,
     replace_memory_content,
     replace_note_content,
     search_calendar_events,
@@ -558,6 +560,8 @@ async def get_builtin_tools(
         builtin_functions.extend(
             [
                 search_memories,
+                list_memory_paths,
+                read_memory_path,
                 list_memories,
                 update_memory,
                 add_memory,

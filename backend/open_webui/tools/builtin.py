@@ -34,9 +34,13 @@ from open_webui.routers.images import (
 )
 from open_webui.routers.memories import (
     AddMemoryForm,
+    ListMemoryPathsForm,
     MemoryUpdateModel,
+    ReadMemoryPathForm,
     SearchMemoriesForm,
     UpdateMemoriesForm,
+    list_memory_paths as _list_memory_paths,
+    read_memory_path as _read_memory_path,
     search_memories as _search_memories,
     update_memories as _update_memories,
     update_memory_by_id,
@@ -591,6 +595,71 @@ async def execute_code(
 # =============================================================================
 
 
+async def list_memory_paths(
+    query: str = '',
+    count: int = 100,
+    type: str = 'all',
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    List saved memory paths to find existing memory groups before writing or moving memories.
+
+    :param query: Optional query to filter memory paths or contents
+    :param count: Maximum number of paths to return
+    :param type: "user", "context", or "all"
+    :return: JSON with memory paths, counts, children, and update times
+    """
+    try:
+        user = UserModel(**__user__) if __user__ else None
+        result = await _list_memory_paths(
+            ListMemoryPathsForm(
+                query=query or None,
+                type=type if type in {'user', 'context', 'all'} else 'all',
+                limit=count,
+            ),
+            user,
+        )
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'list_memory_paths error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def read_memory_path(
+    path: str,
+    count: int = 50,
+    type: str = 'all',
+    include_children: bool = True,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Read saved memories at a memory path, including nearby parent and child paths.
+
+    :param path: Memory path to read
+    :param count: Maximum number of memories to return
+    :param type: "user", "context", or "all"
+    :param include_children: Include memories under child paths
+    :return: JSON with parent paths, child paths, and memories at the path
+    """
+    try:
+        user = UserModel(**__user__) if __user__ else None
+        result = await _read_memory_path(
+            ReadMemoryPathForm(
+                path=path,
+                type=type if type in {'user', 'context', 'all'} else 'all',
+                include_children=include_children,
+                limit=count,
+            ),
+            user,
+        )
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'read_memory_path error: {e}')
+        return json.dumps({'error': str(e)})
+
+
 async def search_memories(
     query: str = '',
     count: int = 5,
@@ -601,12 +670,12 @@ async def search_memories(
     __user__: dict = None,
 ) -> str:
     """
-    Search or browse saved user memories.
+    Search or browse saved memories by content, path, type, or memory ID.
 
     :param query: Optional query to search memory content and path
     :param count: Number of memories to return (default 5)
     :param type: "user", "context", or "all"
-    :param path: Optional memory path prefix
+    :param path: Optional memory path to search around
     :param memory_id: Optional exact memory ID to read
     :return: JSON with matching memories and their dates
     """
@@ -661,7 +730,7 @@ async def add_memory(
 
     :param content: The memory content to store
     :param type: Use "user" for facts/preferences about the user, or "context" for other durable context
-    :param path: Optional memory path
+    :param path: Optional stable memory address for grouping related memories
     :return: Confirmation that the memory was stored
     """
     if __request__ is None:
@@ -695,7 +764,9 @@ async def update_memory(
 
     Use type "user" for facts, preferences, or instructions about the user.
     Use type "context" for other durable context that may help future chats.
-    Use path when there is a clear path for the memory. Leave path empty when unsure.
+    Path is optional. Use it as a stable memory address to group related memories.
+    Prefer an existing path from list_memory_paths when one fits.
+    Leave path empty when no useful grouping is clear.
 
     Operation shapes:
     - {"action": "add", "content": "...", "type": "user"|"context", "path": "..."}
@@ -736,7 +807,7 @@ async def replace_memory_content(
     :param memory_id: The ID of the memory to update
     :param content: The new content for the memory
     :param type: Optional "user" or "context" type for the updated memory
-    :param path: Optional memory path
+    :param path: Optional stable memory address for grouping related memories
     :return: Confirmation that the memory was updated
     """
     if __request__ is None:
