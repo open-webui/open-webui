@@ -68,9 +68,9 @@ def is_youtube_url(url: str) -> bool:
 LOADER_CONFIG_KEYS = {
     'youtube_language': 'rag.youtube_loader_language',
     'youtube_proxy_url': 'rag.youtube_loader_proxy_url',
-    'web_loader_ssl_verification': 'rag.web.loader.ssl_verification',
-    'web_loader_concurrent_requests': 'rag.web.loader.concurrent_requests',
-    'web_search_trust_env': 'rag.web.search.trust_env',
+    'web_loader_ssl_verification': 'web.loader.ssl_verification',
+    'web_loader_concurrent_requests': 'web.loader.concurrent_requests',
+    'web_search_trust_env': 'web.search.trust_env',
     'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
     'DATALAB_MARKER_API_KEY': 'rag.datalab_marker_api_key',
     'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',

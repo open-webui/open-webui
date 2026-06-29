@@ -228,10 +228,10 @@ async def search_web(
         return json.dumps({'error': 'Request context not available'})
 
     try:
-        engine = await Config.get('rag.web.search.engine')
+        engine = await Config.get('web.search.engine')
         user = UserModel(**__user__) if __user__ else None
 
-        configured = await Config.get('rag.web.search.result_count')
+        configured = await Config.get('web.search.result_count')
         max_count = 5 if configured is None else configured
         count = max(1, min(count, max_count)) if count is not None else max_count
 
@@ -269,7 +269,7 @@ async def fetch_url(
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
         # Guard: content may be None if the web loader silently failed
         if content is not None:
-            max_length = await Config.get('rag.web.fetch.max_content_length')
+            max_length = await Config.get('web.fetch.max_content_length')
             if max_length and max_length > 0 and len(content) > max_length:
                 content = content[:max_length] + '\n\n[Content truncated...]'
         else:
