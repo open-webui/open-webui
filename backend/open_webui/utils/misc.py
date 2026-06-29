@@ -250,10 +250,16 @@ def convert_output_to_messages(
     pending_tool_calls = []
     pending_content = []
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
+    pending_reasoning_details = []
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls, pending_reasoning
-        if not pending_content and not pending_tool_calls and not pending_reasoning:
+        nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
+        if (
+            not pending_content
+            and not pending_tool_calls
+            and not pending_reasoning
+            and not pending_reasoning_details
+        ):
             return
 
         message = {
@@ -265,10 +271,14 @@ def convert_output_to_messages(
         if pending_reasoning:
             message['reasoning_content'] = '\n'.join(pending_reasoning)
 
+        if pending_reasoning_details:
+            message['reasoning_details'] = pending_reasoning_details
+
         messages.append(message)
         pending_content = []
         pending_tool_calls = []
         pending_reasoning = []
+        pending_reasoning_details = []
 
     for item in output:
         item_type = item.get('type', '')
@@ -339,7 +349,8 @@ def convert_output_to_messages(
                 )
 
         elif item_type == 'reasoning':
-            if not reasoning_format:
+            reasoning_details = item.get('reasoning_details') if raw else None
+            if not reasoning_format and not reasoning_details:
                 continue
 
             reasoning_text = ''
@@ -359,6 +370,11 @@ def convert_output_to_messages(
                 elif reasoning_format == 'reasoning_content':
                     # llama.cpp: collect for reasoning_content field
                     pending_reasoning.append(reasoning_text)
+
+            if reasoning_details:
+                pending_reasoning_details.extend(
+                    reasoning_details if isinstance(reasoning_details, list) else [reasoning_details]
+                )
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows
