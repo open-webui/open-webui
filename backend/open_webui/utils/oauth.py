@@ -928,7 +928,16 @@ class OAuthClientManager:
 
                     error_message = f'{error or ""} {error_description or ""}'.lower()
 
-                    if any(keyword in error_message for keyword in ('invalid_client', 'invalid client', 'client id')):
+                    if any(
+                        keyword in error_message
+                        for keyword in (
+                            'invalid_client',
+                            'invalid client',
+                            'client id',
+                            'redirect_uri',
+                            'redirect uri',
+                        )
+                    ):
                         log.warning(
                             f'OAuth client preflight detected invalid registration for {client_info.client_id}: {error} {error_description}'
                         )
