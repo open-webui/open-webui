@@ -393,6 +393,9 @@ CODE_EXECUTION_JUPYTER_TIMEOUT = int(os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT',
 ENABLE_CODE_INTERPRETER = os.getenv('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true'
 
 ENABLE_MEMORIES = os.getenv('ENABLE_MEMORIES', 'True').lower() == 'true'
+ENABLE_MEMORY_BACKGROUND_REVIEW = os.getenv('ENABLE_MEMORY_BACKGROUND_REVIEW', 'False').lower() == 'true'
+MEMORIES_REVIEW_INTERVAL_TURNS = int(os.getenv('MEMORIES_REVIEW_INTERVAL_TURNS', '10'))
+MEMORIES_CONTEXT_CHAR_LIMIT = int(os.getenv('MEMORIES_CONTEXT_CHAR_LIMIT', '2000'))
 
 CODE_INTERPRETER_ENGINE = os.getenv('CODE_INTERPRETER_ENGINE', 'pyodide')
 
@@ -2651,6 +2654,9 @@ DEFAULT_CONFIG = {
     'code_execution.jupyter.timeout': CODE_EXECUTION_JUPYTER_TIMEOUT,
     'code_interpreter.enable': ENABLE_CODE_INTERPRETER,
     'memories.enable': ENABLE_MEMORIES,
+    'memories.background_review.enable': ENABLE_MEMORY_BACKGROUND_REVIEW,
+    'memories.review_interval_turns': MEMORIES_REVIEW_INTERVAL_TURNS,
+    'memories.context_char_limit': MEMORIES_CONTEXT_CHAR_LIMIT,
     'code_interpreter.engine': CODE_INTERPRETER_ENGINE,
     'code_interpreter.prompt_template': CODE_INTERPRETER_PROMPT_TEMPLATE,
     'code_interpreter.jupyter.url': CODE_INTERPRETER_JUPYTER_URL,
