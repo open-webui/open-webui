@@ -984,6 +984,69 @@ class ChatTable:
             result = await session.execute(stmt)
             return [meta for meta in result.scalars().all() if isinstance(meta, dict)]
 
+    async def get_chats_by_model_id(
+        self,
+        model_id: str,
+        filter: dict | None = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: AsyncSession | None = None,
+    ) -> dict:
+        from open_webui.models.users import User
+
+        async with get_async_db_context(db) as session:
+            chat_ids = select(ChatMessage.chat_id).filter(ChatMessage.model_id == model_id).group_by(ChatMessage.chat_id)
+
+            if filter:
+                if filter.get('start_date'):
+                    chat_ids = chat_ids.filter(ChatMessage.created_at >= filter.get('start_date'))
+                if filter.get('end_date'):
+                    chat_ids = chat_ids.filter(ChatMessage.created_at <= filter.get('end_date'))
+
+            chat_ids = chat_ids.subquery()
+
+            stmt = (
+                select(Chat.id, Chat.user_id, Chat.title, Chat.updated_at, User.name.label('user_name'))
+                .join(chat_ids, chat_ids.c.chat_id == Chat.id)
+                .outerjoin(User, User.id == Chat.user_id)
+            )
+
+            order_by = filter.get('order_by') if filter else None
+            direction = filter.get('direction') if filter else None
+            is_asc = direction == 'asc'
+
+            if order_by == 'title':
+                primary_sort = Chat.title.asc() if is_asc else Chat.title.desc()
+            elif order_by == 'user_name':
+                primary_sort = User.name.asc() if is_asc else User.name.desc()
+            else:
+                primary_sort = Chat.updated_at.asc() if is_asc else Chat.updated_at.desc()
+
+            stmt = stmt.order_by(primary_sort, Chat.id.asc())
+
+            count_result = await session.execute(select(func.count()).select_from(stmt.subquery()))
+            total = count_result.scalar()
+
+            if skip:
+                stmt = stmt.offset(skip)
+            if limit:
+                stmt = stmt.limit(limit)
+
+            result = await session.execute(stmt)
+            return {
+                'items': [
+                    {
+                        'chat_id': chat.id,
+                        'user_id': chat.user_id,
+                        'user_name': chat.user_name,
+                        'first_message': chat.title,
+                        'updated_at': chat.updated_at,
+                    }
+                    for chat in result.all()
+                ],
+                'total': total,
+            }
+
     # retrieve conversation
     async def get_chat_by_id(
         self,
