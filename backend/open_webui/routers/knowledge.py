@@ -335,12 +335,19 @@ async def reindex_knowledge_files(
         )
 
     knowledge_bases = await Knowledges.get_knowledge_bases(db=db)
+    knowledge_base_files = [
+        (knowledge_base, await Knowledges.get_files_by_id(knowledge_base.id, db=db))
+        for knowledge_base in knowledge_bases
+    ]
+    total_files = sum(len(files) for _, files in knowledge_base_files)
+    processed_files = 0
+    failed_files = []
+    start_time = time.monotonic()
 
-    log.info(f'Starting reindexing for {len(knowledge_bases)} knowledge bases')
+    log.info(f'Starting reindexing for {len(knowledge_bases)} knowledge bases ({total_files} files)')
 
-    for knowledge_base in knowledge_bases:
+    for kb_idx, (knowledge_base, files) in enumerate(knowledge_base_files, start=1):
         try:
-            files = await Knowledges.get_files_by_id(knowledge_base.id, db=db)
             try:
                 if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
                     await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=knowledge_base.id)
@@ -348,8 +355,19 @@ async def reindex_knowledge_files(
                 log.error(f'Error deleting collection {knowledge_base.id}: {str(e)}')
                 continue  # Skip, don't raise
 
-            failed_files = []
             for file in files:
+                processed_files += 1
+                eta = ''
+                if processed_files > 1:
+                    elapsed = time.monotonic() - start_time
+                    remaining_files = total_files - processed_files + 1
+                    eta = f', ETA: {round(elapsed / (processed_files - 1) * remaining_files)}s'
+
+                log.info(
+                    f'Reindexing knowledge base {kb_idx}/{len(knowledge_bases)} '
+                    f'file {processed_files}/{total_files}{eta}: {file.filename}'
+                )
+
                 try:
                     await process_file(
                         request,
@@ -368,11 +386,11 @@ async def reindex_knowledge_files(
             continue
 
     if failed_files:
-        log.warning(f'Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}')
+        log.warning(f'Failed to process {len(failed_files)} files')
         for failed in failed_files:
             log.warning(f'File ID: {failed["file_id"]}, Error: {failed["error"]}')
 
-    log.info(f'Reindexing completed.')
+    log.info(f'Reindexing completed in {round(time.monotonic() - start_time)}s.')
     await publish_event(
         request,
         EVENTS.KNOWLEDGE_REINDEXED,
