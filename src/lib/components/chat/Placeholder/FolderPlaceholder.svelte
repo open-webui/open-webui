@@ -24,6 +24,12 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	$: showOwnerInfo = Boolean(
+		folder?.shared ||
+		(folder?.user_id && folder.user_id !== $user?.id) ||
+		(folder?.access_grants?.length ?? 0) > 0
+	);
+
 	const loadChats = async () => {
 		// getSharedFolderChats returns all users' chats in one shot; no pagination
 		allChatsLoaded = true;
@@ -96,7 +102,13 @@
 			<FolderKnowledge />
 		{:else if selectedTab === 'chats'}
 			{#if chats !== null}
-				<ChatList {chats} {chatListLoading} {allChatsLoaded} loadHandler={loadChats} />
+				<ChatList
+					{chats}
+					{chatListLoading}
+					{allChatsLoaded}
+					loadHandler={loadChats}
+					{showOwnerInfo}
+				/>
 			{:else}
 				<div class="py-10">
 					<Spinner />

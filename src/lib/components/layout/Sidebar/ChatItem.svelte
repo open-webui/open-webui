@@ -540,7 +540,7 @@
 					<img
 						src="/api/v1/users/{ownerUserId}/profile/image"
 						alt=""
-						class="size-4 rounded-full shrink-0 object-cover mr-1.5"
+						class="size-3.5 rounded-full shrink-0 object-cover mr-1.5"
 					/>
 				</Tooltip>
 			{/if}
