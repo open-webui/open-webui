@@ -281,6 +281,34 @@
 	let history = null;
 	let messages = null;
 
+	const searchFilterPrefixes = ['tag:', 'folder:', 'pinned:', 'archived:', 'shared:'];
+
+	const getSnippetQuery = (query: string) => {
+		return query
+			.trim()
+			.split(/\s+/)
+			.filter(
+				(word) => !searchFilterPrefixes.some((prefix) => word.toLowerCase().startsWith(prefix))
+			)
+			.join(' ')
+			.trim();
+	};
+
+	const getHighlightedSnippet = (snippet: string, query: string) => {
+		const match = getSnippetQuery(query).toLowerCase();
+		const index = match ? snippet.toLowerCase().indexOf(match) : -1;
+
+		if (index === -1) {
+			return [{ text: snippet, highlight: false }];
+		}
+
+		return [
+			{ text: snippet.slice(0, index), highlight: false },
+			{ text: snippet.slice(index, index + match.length), highlight: true },
+			{ text: snippet.slice(index + match.length), highlight: false }
+		].filter((part) => part.text);
+	};
+
 	$: if (!chatListLoading && chatList) {
 		loadChatPreview(selectedIdx);
 	}
@@ -699,7 +727,17 @@
 									</div>
 									{#if chat?.snippet}
 										<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
-											{chat.snippet}
+											{#each getHighlightedSnippet(chat.snippet, query) as part}
+												{#if part.highlight}
+													<mark
+														class="rounded bg-yellow-200/70 px-0.5 text-inherit dark:bg-yellow-500/30"
+													>
+														{part.text}
+													</mark>
+												{:else}
+													{part.text}
+												{/if}
+											{/each}
 										</div>
 									{/if}
 								</a>

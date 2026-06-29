@@ -47,6 +47,8 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
+
 CHAT_CONFIG_KEYS = {
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
@@ -62,6 +64,43 @@ class ChatConfigForm(BaseModel):
 
 class CompactChatForm(BaseModel):
     model: str | None = None
+
+
+def chat_search_content_text(text: str) -> str:
+    words = text.lower().strip().split(' ')
+    return ' '.join(word for word in words if not word.startswith(SEARCH_FILTER_PREFIXES)).strip()
+
+
+def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> str | None:
+    if not search_text:
+        return None
+
+    messages = chat.get('messages', [])
+    if isinstance(messages, dict):
+        messages = messages.values()
+
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+
+        content = message.get('content')
+        if not isinstance(content, str):
+            continue
+
+        index = content.lower().find(search_text)
+        if index == -1:
+            continue
+
+        start = max(index - max_length // 2, 0)
+        end = min(start + max_length, len(content))
+        if index + len(search_text) > end:
+            end = min(index + len(search_text), len(content))
+            start = max(end - max_length, 0)
+
+        snippet = ' '.join(content[start:end].split())
+        return f'{"..." if start else ""}{snippet}{"..." if end < len(content) else ""}'
+
+    return None
 
 
 async def get_chat_config_values() -> dict:
@@ -704,10 +743,10 @@ async def search_user_chats(
     limit = 60
     skip = (page - 1) * limit
 
-    chat_list = [
-        ChatTitleIdResponse(**chat.model_dump())
-        for chat in await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
-    ]
+    search_text = chat_search_content_text(text)
+    chat_list = []
+    for chat in await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db):
+        chat_list.append(ChatTitleIdResponse(**chat.model_dump(), snippet=chat_search_snippet(chat.chat, search_text)))
 
     # Delete tag if no chat is found
     words = text.strip().split(' ')
