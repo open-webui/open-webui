@@ -4,7 +4,6 @@ import fnmatch
 import hashlib
 import json
 import logging
-import mimetypes
 import re
 import sys
 import time
@@ -85,6 +84,7 @@ from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
 
 
@@ -1648,12 +1648,17 @@ class OAuthManager:
                     allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
                 ) as resp:
                     if resp.ok:
+                        upstream_mime = (resp.headers.get('Content-Type', '') or '').split(';', 1)[0].strip().lower()
                         picture = await resp.read()
                         base64_encoded_picture = base64.b64encode(picture).decode('utf-8')
-                        guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                        if guessed_mime_type is None:
-                            guessed_mime_type = 'image/jpeg'
-                        return f'data:{guessed_mime_type};base64,{base64_encoded_picture}'
+                        try:
+                            return validate_profile_image_url(f'data:{upstream_mime};base64,{base64_encoded_picture}')
+                        except ValueError:
+                            log.warning(
+                                f'Rejected OAuth profile picture from {picture_url}: '
+                                f'MIME {upstream_mime!r} is not allowed'
+                            )
+                            return '/user.png'
                     else:
                         log.warning(f'Failed to fetch profile picture from {picture_url}')
                         return '/user.png'
