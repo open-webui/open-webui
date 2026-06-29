@@ -254,6 +254,23 @@ export const sanitizeHistory = (history) => {
 		}
 	}
 
+	// Recover currentId before role reconstruction can make a malformed node
+	// look valid.
+	const currentMessage = history.messages?.[history.currentId];
+	if (!currentMessage?.id || !currentMessage?.role) {
+		let latestLeafId = null;
+		let latestTimestamp = -1;
+
+		for (const [id, message] of Object.entries(history.messages)) {
+			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
+				latestLeafId = id;
+				latestTimestamp = message.timestamp ?? 0;
+			}
+		}
+
+		history.currentId = latestLeafId ?? Object.keys(history.messages)[0] ?? null;
+	}
+
 	// Reconstruct missing parentId and role
 	for (const [id, message] of Object.entries(history.messages)) {
 		// Well-formed: has role and explicit parentId (null is valid for root)
@@ -279,20 +296,6 @@ export const sanitizeHistory = (history) => {
 	// Prune childrenIds referencing deleted/missing nodes
 	for (const message of Object.values(history.messages)) {
 		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
-	}
-
-	// Recover currentId if it points to a missing or incomplete node
-	const currentMessage = history.messages?.[history.currentId];
-	if (!currentMessage?.id || !currentMessage?.role) {
-		let latestLeafId = null;
-		let latestTimestamp = -1;
-		for (const [id, message] of Object.entries(history.messages)) {
-			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
-				latestLeafId = id;
-				latestTimestamp = message.timestamp ?? 0;
-			}
-		}
-		history.currentId = latestLeafId ?? Object.keys(history.messages)[0] ?? null;
 	}
 };
 
