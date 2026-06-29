@@ -291,6 +291,7 @@ if 'postgres://' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 
 DATABASE_SCHEMA = os.getenv('DATABASE_SCHEMA', None)
+DATABASE_ENABLE_IAM_TOKEN_AUTH = os.getenv('DATABASE_ENABLE_IAM_TOKEN_AUTH', 'False').lower() == 'true'
 
 _pool_size_raw = os.getenv('DATABASE_POOL_SIZE')
 try:

@@ -5,10 +5,12 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager, contextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from open_webui.env import (
+    DATABASE_ENABLE_IAM_TOKEN_AUTH,
     DATABASE_ENABLE_SESSION_SHARING,
     DATABASE_ENABLE_SQLITE_WAL,
     DATABASE_POOL_MAX_OVERFLOW,
@@ -27,6 +29,7 @@ from open_webui.env import (
     OPEN_WEBUI_DIR,
 )
 from sqlalchemy import Dialect, MetaData, create_engine, event, types
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
@@ -144,6 +147,63 @@ _url_without_ssl, _ssl_dict = extract_ssl_params_from_url(DATABASE_URL)
 
 # For psycopg2 (sync engine), re-append sslmode + cert-file params.
 SQLALCHEMY_DATABASE_URL = reattach_ssl_params_to_url(_url_without_ssl, _ssl_dict) if _ssl_dict else DATABASE_URL
+
+
+class RDSIAMTokenAuth:
+    _refresh_after = timedelta(minutes=14)
+
+    def __init__(self, database_url: str) -> None:
+        url = make_url(database_url)
+        if not url.drivername.startswith(('postgresql', 'postgres')):
+            raise ValueError('DATABASE_ENABLE_IAM_TOKEN_AUTH is only supported for PostgreSQL databases')
+        if not url.host or not url.username:
+            raise ValueError('DATABASE_ENABLE_IAM_TOKEN_AUTH requires a database host and user')
+
+        self.host = url.host
+        self.port = url.port or 5432
+        self.username = url.username
+        self._client = None
+        self._token: str | None = None
+        self._expires_at = datetime.min.replace(tzinfo=timezone.utc)
+
+    @property
+    def client(self):
+        if self._client is None:
+            import boto3
+
+            self._client = boto3.client('rds')
+        return self._client
+
+    def get_password(self) -> str:
+        now = datetime.now(timezone.utc)
+        if self._token and now < self._expires_at:
+            return self._token
+
+        self._token = self.client.generate_db_auth_token(
+            DBHostname=self.host,
+            Port=self.port,
+            DBUsername=self.username,
+        )
+        self._expires_at = now + self._refresh_after
+        log.info('AWS RDS IAM database token refreshed; next refresh after %s', self._expires_at.isoformat())
+        return self._token
+
+
+_rds_iam_token_auth = RDSIAMTokenAuth(SQLALCHEMY_DATABASE_URL) if DATABASE_ENABLE_IAM_TOKEN_AUTH else None
+
+
+def _set_iam_token_password(dialect, conn_rec, cargs, cparams):
+    if _rds_iam_token_auth is not None:
+        cparams['password'] = _rds_iam_token_auth.get_password()
+
+
+def enable_iam_token_auth(connectable) -> None:
+    if _rds_iam_token_auth is None:
+        return
+
+    engine = getattr(connectable, 'sync_engine', connectable)
+    if not event.contains(engine, 'do_connect', _set_iam_token_password):
+        event.listen(engine, 'do_connect', _set_iam_token_password)
 
 
 def _make_async_url(url: str) -> str:
@@ -268,6 +328,8 @@ else:
     else:
         engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 
+enable_iam_token_auth(engine)
+
 
 # Sync session — used ONLY for startup config loading (config.py runs at import time)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
@@ -343,6 +405,8 @@ else:
             ASYNC_SQLALCHEMY_DATABASE_URL,
             pool_pre_ping=True,
         )
+
+enable_iam_token_auth(async_engine)
 
 
 AsyncSessionLocal = async_sessionmaker(
