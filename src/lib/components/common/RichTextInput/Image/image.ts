@@ -149,10 +149,10 @@ export const Image = Node.create<ImageOptions>({
 			img.setAttribute('alt', node.attrs.alt || '');
 			img.setAttribute('title', node.attrs.title || '');
 
-			img.addEventListener('data', (e) => {
-				const files = e?.files || [];
-				if (files && node.attrs.src.startsWith('data://')) {
-					const file = editorFiles.find((f) => f.id === fileId);
+			img.addEventListener('data', () => {
+				const currentFiles = editor.storage?.files || [];
+				if (node.attrs.src.startsWith('data://')) {
+					const file = currentFiles.find((f) => f.id === fileId);
 					if (file) {
 						img.setAttribute('src', safeImageUrl(file.url || ''));
 					} else {
