@@ -341,7 +341,9 @@ async def upload_file_handler(
 
         # SHA-256 of raw uploaded bytes for incremental sync diffing.
         # If the client pre-computed and sent file_hash, use that.
-        file_hash = file_metadata.get('file_hash') or hashlib.sha256(contents).hexdigest()
+        file_hash = file_metadata.get('file_hash') or await asyncio.to_thread(
+            lambda: hashlib.sha256(contents).hexdigest()
+        )
 
         file_item = await Files.insert_new_file(
             user.id,
