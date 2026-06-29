@@ -72,7 +72,9 @@
 										<span class="text-[11px] {status.pill} shrink-0">{status.label}</span>
 									{/if}
 									{#if toolSpecs.length > 0}
-										<span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">
+										<span
+											class="min-w-3 text-center text-[11px] text-gray-500 dark:text-gray-400 shrink-0"
+										>
 											{toolSpecs.length}
 										</span>
 									{/if}
