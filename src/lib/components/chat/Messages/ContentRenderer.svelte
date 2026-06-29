@@ -129,30 +129,32 @@
 				)
 			: messageContent;
 
-	const markdownUpdateHandler = /** @type {any} */ (async (
-		/** @type {{ lang?: string; text?: string }} */ token
-	) => {
-		const { lang = '', text: code = '' } = token;
+	const markdownUpdateHandler = /** @type {any} */ (
+		async (/** @type {{ lang?: string; text?: string }} */ token) => {
+			const { lang = '', text: code = '' } = token;
 
-		if (
-			($settings?.detectArtifacts ?? true) &&
-			(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-			!$mobile &&
-			$chatId
-		) {
-			await tick();
-			showArtifacts.set(true);
-			showControls.set(true);
+			if (
+				($settings?.detectArtifacts ?? true) &&
+				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				!$mobile &&
+				$chatId
+			) {
+				await tick();
+				showArtifacts.set(true);
+				showControls.set(true);
+			}
 		}
-	});
+	);
 
-	const previewHandler = /** @type {any} */ (async (/** @type {string} */ value) => {
-		console.log('Preview', value);
-		await artifactCode.set(/** @type {any} */ (value));
-		await showControls.set(true);
-		await showArtifacts.set(true);
-		await showEmbeds.set(false);
-	});
+	const previewHandler = /** @type {any} */ (
+		async (/** @type {string} */ value) => {
+			console.log('Preview', value);
+			await artifactCode.set(/** @type {any} */ (value));
+			await showControls.set(true);
+			await showArtifacts.set(true);
+			await showEmbeds.set(false);
+		}
+	);
 
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
@@ -273,7 +275,7 @@
 			{topPadding}
 			{sourceIds}
 			renderMarkdown={$settings?.renderMarkdownInAssistantMessages ?? true}
-			formatMessageContent={formatMessageContent}
+			{formatMessageContent}
 			{onSourceClick}
 			{onTaskClick}
 			{onSave}

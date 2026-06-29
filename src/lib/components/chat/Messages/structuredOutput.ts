@@ -107,7 +107,7 @@ function getMessageText(item: OutputItem): string {
 }
 
 function getReasoningText(item: OutputItem): string {
-	return getTextFromParts((item.summary ?? item.content) ?? []);
+	return getTextFromParts(item.summary ?? item.content ?? []);
 }
 
 function getToolResultText(item?: OutputItem): string {

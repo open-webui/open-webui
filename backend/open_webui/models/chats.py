@@ -998,9 +998,7 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> int:
         async with get_async_db_context(db) as session:
-            result = await session.execute(
-                select(func.count(Chat.id)).filter_by(user_id=user_id, archived=True)
-            )
+            result = await session.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, archived=True))
             return result.scalar() or 0
 
     async def get_shared_chat_list_by_user_id(
@@ -1156,7 +1154,9 @@ class ChatTable:
         from open_webui.models.users import User
 
         async with get_async_db_context(db) as session:
-            chat_ids = select(ChatMessage.chat_id).filter(ChatMessage.model_id == model_id).group_by(ChatMessage.chat_id)
+            chat_ids = (
+                select(ChatMessage.chat_id).filter(ChatMessage.model_id == model_id).group_by(ChatMessage.chat_id)
+            )
 
             if filter:
                 if filter.get('start_date'):

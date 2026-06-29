@@ -1286,14 +1286,14 @@
 		let contents = [];
 		messages.forEach((message) => {
 			if (message?.role !== 'user') {
-				const messageContent = getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+				const messageContent =
+					getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 				if (!messageContent.trim()) {
 					return;
 				}
 
-				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
-					messageContent
-				);
+				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } =
+					getCodeBlockContents(messageContent);
 
 				if (htmlGroups && htmlGroups.length > 0) {
 					htmlGroups.forEach((group) => {
@@ -2016,7 +2016,8 @@
 
 		if (done) {
 			message.done = true;
-			const visibleContent = getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+			const visibleContent =
+				getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(visibleContent);
@@ -2460,60 +2461,61 @@
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
-			let messages: any[] = [
-				params?.system || $settings.system
-					? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
-					: undefined
-			].filter(Boolean);
+		let messages: any[] = [
+			params?.system || $settings.system
+				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
+				: undefined
+		].filter(Boolean);
 
-			if ($temporaryChatEnabled) {
-				messages = [
-					...messages,
-					..._messages.map((message) => ({
-						...message,
-						...(message.output && message.role === 'assistant'
-							? { output: message.output }
-							: { content: processDetails(message.content) })
-					}))
-				].filter((message) => message);
+		if ($temporaryChatEnabled) {
+			messages = [
+				...messages,
+				..._messages.map((message) => ({
+					...message,
+					...(message.output && message.role === 'assistant'
+						? { output: message.output }
+						: { content: processDetails(message.content) })
+				}))
+			].filter((message) => message);
 
-				messages = messages
-					.map((message) => {
-						const imageFiles = (message?.files ?? []).filter(
-							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
-						);
+			messages = messages
+				.map((message) => {
+					const imageFiles = (message?.files ?? []).filter(
+						(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+					);
 
-						if (message.output && message.role === 'assistant') {
-							return { role: message.role, output: message.output };
-						}
+					if (message.output && message.role === 'assistant') {
+						return { role: message.role, output: message.output };
+					}
 
-						if (message.role === 'user' && imageFiles.length > 0) {
-							return {
-								role: message.role,
-								content: [
-									{
-										type: 'text',
-										text: message?.merged?.content ?? message.content
-									},
-									...imageFiles.map((file) => ({
-										type: 'image_url',
-										image_url: {
-											url: file.url
-										}
-									}))
-								]
-							};
-						}
-
+					if (message.role === 'user' && imageFiles.length > 0) {
 						return {
 							role: message.role,
-							content: message?.merged?.content ?? message.content
+							content: [
+								{
+									type: 'text',
+									text: message?.merged?.content ?? message.content
+								},
+								...imageFiles.map((file) => ({
+									type: 'image_url',
+									image_url: {
+										url: file.url
+									}
+								}))
+							]
 						};
-					})
-					.filter(
-						(message) => message?.role === 'user' || message?.content?.trim() || message?.output?.length
-					);
-			}
+					}
+
+					return {
+						role: message.role,
+						content: message?.merged?.content ?? message.content
+					};
+				})
+				.filter(
+					(message) =>
+						message?.role === 'user' || message?.content?.trim() || message?.output?.length
+				);
+		}
 
 		const toolIds = [];
 		const toolServerIds = [];

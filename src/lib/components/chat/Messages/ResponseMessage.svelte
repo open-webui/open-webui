@@ -64,11 +64,7 @@
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import OutputEditView from './OutputEditView.svelte';
-	import {
-		getOutputText,
-		replaceOutputMessageText,
-		type OutputItem
-	} from './structuredOutput';
+	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
 	interface MessageType {
 		id: string;
@@ -185,7 +181,8 @@
 		(model?.info?.meta?.capabilities?.status_updates ?? true) &&
 		statusEntries.length > 0 &&
 		!(statusEntries.at(-1)?.hidden ?? false);
-	$: visibleResponseContent = getOutputText(message.output) || removeAllDetails(message.content ?? '');
+	$: visibleResponseContent =
+		getOutputText(message.output) || removeAllDetails(message.content ?? '');
 	$: hasResponseContent = Boolean((message.content ?? '').trim() || message.output?.length);
 
 	let edit = false;
