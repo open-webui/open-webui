@@ -25,7 +25,7 @@ DICT_CONFIG_KEY_ALIASES = {
     'ollama.api_configs': ('OLLAMA_API_CONFIGS',),
     'rag.mineru_params': ('MINERU_PARAMS',),
     'rag.docling_params': ('DOCLING_PARAMS',),
-    'rag.web.search.linkup_search_params': ('LINKUP_SEARCH_PARAMS',),
+    'web.search.linkup_search_params': ('LINKUP_SEARCH_PARAMS',),
     'image_generation.automatic1111.api_params': ('AUTOMATIC1111_PARAMS',),
     'image_generation.openai.params': ('IMAGES_OPENAI_API_PARAMS',),
     'audio.tts.openai.params': ('AUDIO_TTS_OPENAI_PARAMS',),
@@ -239,6 +239,40 @@ class Config(Base):
             if new_count:
                 await db.commit()
                 log.info('Seeded %d new config defaults', new_count)
+
+    @staticmethod
+    async def rename_prefix(old_prefix: str, new_prefix: str) -> None:
+        """Move persisted config keys from one dotted prefix to another."""
+        if not Config.PERSISTENT_ENABLED:
+            return
+
+        async with get_async_db() as db:
+            result = await db.execute(select(Config).where(Config.key.like(f'{old_prefix}.%')))
+            rows = result.scalars().all()
+            if not rows:
+                return
+
+            now = int(time.time())
+            moved_count = 0
+            deleted_count = 0
+            for row in rows:
+                new_key = f'{new_prefix}.{row.key.removeprefix(f"{old_prefix}.")}'
+                existing = await db.get(Config, new_key)
+                if existing is None:
+                    db.add(Config(key=new_key, value=row.value, updated_at=now))
+                    moved_count += 1
+                else:
+                    deleted_count += 1
+                await db.delete(row)
+
+            await db.commit()
+            log.info(
+                'Renamed %d config keys from %s.* to %s.*; deleted %d old duplicates',
+                moved_count,
+                old_prefix,
+                new_prefix,
+                deleted_count,
+            )
 
     @staticmethod
     async def repair_flattened_dict_configs() -> None:
