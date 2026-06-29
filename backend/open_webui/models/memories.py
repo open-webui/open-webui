@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Literal, Optional
+from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, delete, select
+from sqlalchemy import JSON, BigInteger, Column, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -20,7 +20,9 @@ class Memory(Base):  # user memory store
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String, index=True)
     type = Column(String, default='context', server_default='context', index=True)
+    path = Column(Text, nullable=True)
     content = Column(Text)  # free-form text learned from conversation
+    meta = Column(JSON, nullable=True)
     updated_at = Column(BigInteger)  # epoch seconds
     created_at = Column(BigInteger)  # epoch seconds
 
@@ -31,7 +33,9 @@ class MemoryModel(BaseModel):
     id: str
     user_id: str
     type: Literal['user', 'context'] = 'context'
+    path: str | None = None
     content: str
+    meta: dict | None = None
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
     model_config = ConfigDict(from_attributes=True)  # allows ORM mapping
@@ -47,6 +51,8 @@ class MemoriesTable:
         user_id: str,
         content: str,
         memory_type: str | None = None,
+        path: str | None = None,
+        meta: dict | None = None,
         db: AsyncSession | None = None,
     ) -> MemoryModel | None:
         """Persist a new memory entry and return the created model."""
@@ -56,7 +62,9 @@ class MemoriesTable:
                 id=str(uuid.uuid4()),
                 user_id=user_id,
                 type=self.normalize_memory_type(memory_type),
+                path=path,
                 content=content,
+                meta=meta,
                 created_at=now,
                 updated_at=now,
             )
@@ -71,6 +79,9 @@ class MemoriesTable:
         user_id: str,
         content: str | None,
         memory_type: str | None = None,
+        path: str | None = None,
+        update_path: bool = False,
+        meta: dict | None = None,
         db: AsyncSession | None = None,
     ) -> MemoryModel | None:
         async with get_async_db_context(db) as db:
@@ -83,6 +94,10 @@ class MemoriesTable:
                     memory.content = content
                 if memory_type is not None:
                     memory.type = self.normalize_memory_type(memory_type)
+                if update_path:
+                    memory.path = path
+                if meta is not None:
+                    memory.meta = {**(memory.meta or {}), **meta}
                 memory.updated_at = int(time.time())
 
                 await db.commit()
@@ -167,8 +182,9 @@ class MemoriesTable:
                 if action == 'add':
                     content = operation.get('content', '').strip()
                     memory_type = self.normalize_memory_type(operation.get('type'))
+                    path = operation.get('path')
                     result = await db.execute(
-                        select(Memory).filter_by(user_id=user_id, content=content, type=memory_type)
+                        select(Memory).filter_by(user_id=user_id, content=content, type=memory_type, path=path)
                     )
                     existing = result.scalars().first()
                     if existing:
@@ -186,7 +202,9 @@ class MemoriesTable:
                         id=str(uuid.uuid4()),
                         user_id=user_id,
                         type=memory_type,
+                        path=path,
                         content=content,
+                        meta=operation.get('meta'),
                         created_at=now,
                         updated_at=now,
                     )
@@ -204,6 +222,23 @@ class MemoriesTable:
                     memory.content = content
                     if operation.get('type') is not None:
                         memory.type = self.normalize_memory_type(operation.get('type'))
+                    if 'path' in operation:
+                        memory.path = operation.get('path')
+                    if operation.get('meta') is not None:
+                        memory.meta = {**(memory.meta or {}), **operation.get('meta')}
+                    memory.updated_at = now
+                    await db.flush()
+                    results.append({'action': action, 'status': 'updated', 'memory': MemoryModel.model_validate(memory)})
+
+                elif action == 'move':
+                    memory_id = operation.get('id')
+                    memory = await db.get(Memory, memory_id)
+                    if not memory or memory.user_id != user_id:
+                        raise ValueError(f'Memory not found: {memory_id}')
+
+                    memory.path = operation.get('path')
+                    if operation.get('meta') is not None:
+                        memory.meta = {**(memory.meta or {}), **operation.get('meta')}
                     memory.updated_at = now
                     await db.flush()
                     results.append({'action': action, 'status': 'updated', 'memory': MemoryModel.model_validate(memory)})
