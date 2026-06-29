@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -31,10 +32,10 @@ async def post_webhook(
 ) -> bool:
     try:
         log.debug(f'post_webhook: {url}, {message}, {event_data}')
-        # Block private-IP / loopback / cloud-metadata targets for every
-        # webhook source, including admin-managed event webhooks and
-        # user-configured notification URLs.
-        validate_url(url)
+        # Block private-IP / loopback / cloud-metadata targets — the URL is
+        # caller-controlled (user notification settings under
+        # ENABLE_USER_WEBHOOKS, automation notification triggers).
+        await asyncio.to_thread(validate_url, url)
         payload = {}
 
         # Slack and Google Chat Webhooks

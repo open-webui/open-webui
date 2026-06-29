@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import fnmatch
 import hashlib
@@ -1603,7 +1604,7 @@ class OAuthManager:
             return '/user.png'
 
         try:
-            validate_url(picture_url)
+            await asyncio.to_thread(validate_url, picture_url)
 
             get_kwargs = {}
             if access_token:
