@@ -1156,12 +1156,7 @@ export const getChatAccessGrants = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateChatById = async (
-	token: string,
-	id: string,
-	chat: object,
-	deletedMessageIds: string[] = []
-) => {
+export const updateChatById = async (token: string, id: string, chat: object) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
@@ -1172,8 +1167,7 @@ export const updateChatById = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			chat: chat,
-			...(deletedMessageIds.length && { deleted_message_ids: deletedMessageIds })
+			chat: chat
 		})
 	})
 		.then(async (res) => {
@@ -1186,6 +1180,34 @@ export const updateChatById = async (
 		.catch((err) => {
 			error = err;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deleteChatMessageById = async (token: string, id: string, messageId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/messages/${messageId}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
 			console.error(err);
 			return null;
 		});
