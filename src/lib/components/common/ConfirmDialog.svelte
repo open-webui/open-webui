@@ -108,6 +108,7 @@
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
+			dispatch('cancel');
 		}}
 	>
 		<div
