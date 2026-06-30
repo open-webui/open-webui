@@ -2080,7 +2080,7 @@ class BannerModel(BaseModel):
 
 try:
     banners = json.loads(os.getenv('WEBUI_BANNERS', '[]'))
-    banners = [BannerModel(**banner) for banner in banners]
+    banners = [BannerModel(**banner).model_dump(mode='json') for banner in banners]
 except Exception as e:
     log.exception(f'Error loading WEBUI_BANNERS: {e}')
     banners = []
