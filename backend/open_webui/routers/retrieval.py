@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Callable, Iterator, Optional, Sequence, Union
+from typing import Callable, Iterator, Literal, Optional, Sequence, Union
 
 import tiktoken
 from fastapi import (
@@ -41,6 +41,8 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_QUERY_PREFIX,
+    RAG_FILE_CONTEXT_SCOPE_CONVERSATION,
+    RAG_FILE_CONTEXT_SCOPE_MESSAGE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
@@ -50,6 +52,7 @@ from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
     RAG_EMBEDDING_TIMEOUT,
+    RAG_SYSTEM_CONTEXT,
     SENTENCE_TRANSFORMERS_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
@@ -350,6 +353,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'RAG_EXTERNAL_RERANKER_TIMEOUT': 'rag.external_reranker_timeout',
     'RAG_EXTERNAL_RERANKER_URL': 'rag.external_reranker_url',
     'RAG_FULL_CONTEXT': 'rag.full_context',
+    'RAG_FILE_CONTEXT_SCOPE': 'rag.file_context_scope',
     'RAG_OLLAMA_API_KEY': 'rag.ollama.api_key',
     'RAG_OLLAMA_BASE_URL': 'rag.ollama.base_url',
     'RAG_OPENAI_API_BASE_URL': 'rag.openai.api_base_url',
@@ -429,6 +433,20 @@ async def get_config_values(key_map: dict[str, str]) -> dict:
 
 async def get_retrieval_config() -> RetrievalConfig:
     return RetrievalConfig(await get_config_values(RETRIEVAL_CONFIG_KEYS))
+
+
+async def get_effective_rag_file_context_scope(config: RetrievalConfig | None = None) -> str:
+    if RAG_SYSTEM_CONTEXT:
+        return RAG_FILE_CONTEXT_SCOPE_CONVERSATION
+
+    if config is not None:
+        return getattr(config, 'RAG_FILE_CONTEXT_SCOPE', RAG_FILE_CONTEXT_SCOPE_CONVERSATION)
+
+    return await Config.get('rag.file_context_scope', RAG_FILE_CONTEXT_SCOPE_CONVERSATION)
+
+
+async def is_message_scoped_file_context_enabled(request: Request) -> bool:
+    return await get_effective_rag_file_context_scope() == RAG_FILE_CONTEXT_SCOPE_MESSAGE
 
 
 class CollectionNameForm(BaseModel):
@@ -618,6 +636,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'TOP_K': config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         'RAG_FULL_CONTEXT': config.RAG_FULL_CONTEXT,
+        'RAG_SYSTEM_CONTEXT': RAG_SYSTEM_CONTEXT,
+        'RAG_FILE_CONTEXT_SCOPE': config.RAG_FILE_CONTEXT_SCOPE,
+        'RAG_FILE_CONTEXT_SCOPE_EFFECTIVE': await get_effective_rag_file_context_scope(config),
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': config.ENABLE_RAG_HYBRID_SEARCH,
         'ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS': config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
@@ -845,6 +866,7 @@ class ConfigForm(BaseModel):
     TOP_K: int | None = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
     RAG_FULL_CONTEXT: bool | None = None
+    RAG_FILE_CONTEXT_SCOPE: Literal['conversation', 'message'] | None = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: bool | None = None
@@ -940,6 +962,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     config.RAG_FULL_CONTEXT = (
         form_data.RAG_FULL_CONTEXT if form_data.RAG_FULL_CONTEXT is not None else config.RAG_FULL_CONTEXT
     )
+    if not RAG_SYSTEM_CONTEXT and form_data.RAG_FILE_CONTEXT_SCOPE is not None:
+        config.RAG_FILE_CONTEXT_SCOPE = form_data.RAG_FILE_CONTEXT_SCOPE
 
     # Hybrid search settings
     config.ENABLE_RAG_HYBRID_SEARCH = (
@@ -1319,6 +1343,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'TOP_K': config.TOP_K,
         'BYPASS_EMBEDDING_AND_RETRIEVAL': config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         'RAG_FULL_CONTEXT': config.RAG_FULL_CONTEXT,
+        'RAG_SYSTEM_CONTEXT': RAG_SYSTEM_CONTEXT,
+        'RAG_FILE_CONTEXT_SCOPE': config.RAG_FILE_CONTEXT_SCOPE,
+        'RAG_FILE_CONTEXT_SCOPE_EFFECTIVE': await get_effective_rag_file_context_scope(config),
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': config.ENABLE_RAG_HYBRID_SEARCH,
         'TOP_K_RERANKER': config.TOP_K_RERANKER,

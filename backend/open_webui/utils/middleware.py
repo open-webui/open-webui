@@ -59,6 +59,7 @@ from open_webui.routers.pipelines import (
 )
 from open_webui.routers.retrieval import (
     SearchForm,
+    is_message_scoped_file_context_enabled,
     process_web_search,
 )
 from open_webui.routers.tasks import (
@@ -753,12 +754,217 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
     return context_string
 
 
+FILE_CONTEXT_ITEM_TYPES = {'doc', 'text', 'note', 'chat', 'folder', 'collection'}
+
+
+def is_file_context_item(item: dict) -> bool:
+    if not isinstance(item, dict):
+        return False
+
+    item_type = item.get('type')
+    return item_type in FILE_CONTEXT_ITEM_TYPES or (
+        item_type == 'file' and not (item.get('content_type') or '').startswith('image/')
+    )
+
+
+def get_file_context_key(item: dict) -> tuple:
+    if item.get('id') is not None:
+        return (item.get('type', 'file'), item.get('id'))
+    if item.get('url') is not None:
+        return ('url', item.get('url'))
+
+    try:
+        return ('item', json.dumps(item, sort_keys=True))
+    except TypeError:
+        return ('item', str(item))
+
+
+def prepend_message_text_content(message: dict, content: str) -> None:
+    if isinstance(message.get('content'), list):
+        for item in message['content']:
+            if isinstance(item, dict) and item.get('type') == 'text':
+                item['text'] = f'{content}\n{item.get("text", "")}'
+                return
+        message['content'].insert(0, {'type': 'text', 'text': content})
+    else:
+        message['content'] = f'{content}\n{message.get("content", "")}'
+
+
+def strip_message_files(messages: list[dict]) -> None:
+    for message in messages:
+        message.pop('files', None)
+
+
+def attach_current_user_message_files(messages: list[dict], metadata: dict) -> None:
+    user_message = metadata.get('user_message') or {}
+    files = [item for item in user_message.get('files', []) if is_file_context_item(item)]
+
+    if not files:
+        return
+
+    for message in reversed(messages):
+        if message.get('role') == 'user' and not message.get('files'):
+            message['files'] = files
+            return
+
+
+async def expand_file_context_items(items: list[dict], user: UserModel) -> list[dict]:
+    expanded_items = []
+
+    for item in items:
+        if item.get('type', 'file') == 'folder':
+            folder_id = item.get('id')
+            if folder_id:
+                folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+                if folder and folder.data and 'files' in folder.data:
+                    expanded_items.extend(await get_accessible_folder_files(folder.data['files'], user))
+            continue
+
+        expanded_items.append(item)
+
+    return expanded_items
+
+
+async def apply_message_file_contexts(
+    request: Request,
+    messages: list[dict],
+    files: list[dict] | None,
+    metadata: dict,
+    user: UserModel,
+    source_ids: dict | None = None,
+) -> tuple[list[dict], list[dict] | None, list[dict], list[tuple[int, str, str]]]:
+    attach_current_user_message_files(messages, metadata)
+
+    handled_file_keys = set()
+    if source_ids is None:
+        source_ids = {}
+    rag_config = await Config.get_many(
+        'rag.top_k',
+        'rag.top_k_reranker',
+        'rag.relevance_threshold',
+        'rag.hybrid_bm25_weight',
+        'rag.enable_hybrid_search',
+        'rag.full_context',
+    )
+    scoped_sources = []
+    message_contexts = []
+
+    for message_index, message in enumerate(messages):
+        if message.get('role') != 'user':
+            continue
+
+        message_files = [item for item in message.get('files', []) if is_file_context_item(item)]
+        if not message_files:
+            continue
+
+        query = get_content_from_message(message) or ''
+        expanded_items = await expand_file_context_items(message_files, user)
+
+        if not expanded_items:
+            continue
+
+        all_full_context = all(item.get('context') == 'full' for item in expanded_items)
+
+        try:
+            sources = await get_sources_from_items(
+                request=request,
+                items=expanded_items,
+                queries=[query],
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
+                ),
+                k=rag_config.get('rag.top_k'),
+                reranking_function=(
+                    (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
+                ),
+                k_reranker=rag_config.get('rag.top_k_reranker'),
+                r=rag_config.get('rag.relevance_threshold'),
+                hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
+                hybrid_search=rag_config.get('rag.enable_hybrid_search'),
+                full_context=all_full_context or rag_config.get('rag.full_context'),
+                user=user,
+            )
+        except Exception as e:
+            log.exception(e)
+            continue
+
+        context = get_source_context(sources, source_ids=source_ids).strip()
+        if context:
+            message_contexts.append((message_index, context, query))
+            scoped_sources.extend(sources)
+            handled_file_keys.update(get_file_context_key(item) for item in message_files)
+
+    if files is not None and handled_file_keys:
+        files = [item for item in files if get_file_context_key(item) not in handled_file_keys]
+
+    return messages, files, scoped_sources, message_contexts
+
+
+async def apply_message_file_context_templates(
+    request: Request,
+    messages: list[dict],
+    message_contexts: list[tuple[int, str, str]],
+) -> list[dict]:
+    template = await Config.get('rag.template')
+    for message_index, context, query in message_contexts:
+        if 0 <= message_index < len(messages):
+            prepend_message_text_content(
+                messages[message_index],
+                await rag_template(template, context, query),
+            )
+
+    return messages
+
+
+def merge_latest_user_source_context(
+    messages: list[dict],
+    message_contexts: list[tuple[int, str, str]],
+    sources: list,
+    source_ids: dict | None = None,
+) -> tuple[list[tuple[int, str, str]], list]:
+    if not message_contexts or not sources:
+        return message_contexts, sources
+
+    last_user_index = next(
+        (index for index in range(len(messages) - 1, -1, -1) if messages[index].get('role') == 'user'),
+        None,
+    )
+    if last_user_index is None:
+        return message_contexts, sources
+
+    message_context_index = next(
+        (
+            index
+            for index, (message_index, _message_context, _query) in enumerate(message_contexts)
+            if message_index == last_user_index
+        ),
+        None,
+    )
+    if message_context_index is None:
+        return message_contexts, sources
+
+    context = get_source_context(sources, source_ids=source_ids).strip()
+    if not context:
+        return message_contexts, sources
+
+    message_index, message_context, query = message_contexts[message_context_index]
+    message_contexts[message_context_index] = (
+        message_index,
+        f'{context}\n{message_context}' if message_context else context,
+        query,
+    )
+    return message_contexts, []
+
+
 async def apply_source_context_to_messages(
     request: Request,
     messages: list,
     sources: list,
     user_message: str,
     include_content: bool = True,
+    source_ids: dict | None = None,
 ) -> list:
     """
     Build source context from citation sources and apply to messages.
@@ -771,7 +977,7 @@ async def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, include_content=include_content)
+    context = get_source_context(sources, source_ids=source_ids, include_content=include_content)
 
     context = context.strip()
     if not context:
@@ -2227,8 +2433,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 if f.get('url')
                             ],
                         ]
-                # Strip files field — it's been incorporated into content
-                message.pop('files', None)
+                # Keep non-image files only long enough for optional message-scoped RAG.
+                if await is_message_scoped_file_context_enabled(request):
+                    non_image_files = [file for file in message.get('files', []) if is_file_context_item(file)]
+                    if non_image_files:
+                        message['files'] = non_image_files
+                    else:
+                        message.pop('files', None)
+                else:
+                    message.pop('files', None)
 
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
@@ -2315,6 +2528,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     events = []
     sources = []
+    rag_source_ids = {}
+    message_scoped_sources = []
+    message_scoped_contexts = []
+    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
+        'file_context', True
+    )
 
     # Folder "Project" handling
     # Check if the request has chat_id and is inside of a folder
@@ -2549,6 +2768,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
     #     urls = extract_urls(prompt)
 
+    if await is_message_scoped_file_context_enabled(request):
+        if file_context_enabled:
+            form_data['messages'], files, message_scoped_sources, message_scoped_contexts = (
+                await apply_message_file_contexts(
+                    request,
+                    form_data['messages'],
+                    files,
+                    metadata,
+                    user,
+                    source_ids=rag_source_ids,
+                )
+            )
+
+        strip_message_files(form_data['messages'])
+
     if files:
         if not files:
             files = []
@@ -2754,9 +2988,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 except Exception as e:
                     log.exception(e)
 
-    # Check if file context extraction is enabled for this model (default True)
-    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
-
     if file_context_enabled:
         try:
             form_data, flags = await chat_completion_files_handler(request, form_data, extra_params, user)
@@ -2764,9 +2995,26 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             log.exception(e)
 
+    sources_for_context = sources
+    if message_scoped_contexts and sources_for_context:
+        message_scoped_contexts, sources_for_context = merge_latest_user_source_context(
+            form_data['messages'],
+            message_scoped_contexts,
+            sources_for_context,
+            source_ids=rag_source_ids,
+        )
+
+    if message_scoped_contexts:
+        form_data['messages'] = await apply_message_file_context_templates(
+            request,
+            form_data['messages'],
+            message_scoped_contexts,
+        )
+
     # Save the pre-RAG message state so the native tool call loop can
     # restore to the true original (before file-source injection) rather
     # than a snapshot that already has the RAG template baked in.
+    all_sources = [*message_scoped_sources, *sources]
     system_message = get_system_message(form_data['messages'])
     system_content = get_content_from_message(system_message) if system_message else ''
     model_system_prompt = await resolve_system_prompt(
@@ -2777,17 +3025,23 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if model_system_prompt:
         system_content = f'{model_system_prompt}\n{system_content}' if system_content else model_system_prompt
     metadata['system_prompt'] = system_content or None
-    metadata['user_prompt'] = get_last_user_message(form_data['messages'])
-    metadata['sources'] = sources[:] if sources else []
+    metadata['user_prompt'] = prompt
+    metadata['sources'] = all_sources[:] if all_sources else []
 
     # If context is not empty, insert it into the messages
-    if sources and prompt:
-        form_data['messages'] = await apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
+    if sources_for_context and prompt:
+        form_data['messages'] = await apply_source_context_to_messages(
+            request,
+            form_data['messages'],
+            sources_for_context,
+            prompt,
+            source_ids=rag_source_ids,
+        )
 
     # If there are citations, add them to the data_items
     sources = [
         source
-        for source in sources
+        for source in all_sources
         if source.get('source', {}).get('name', '') or source.get('source', {}).get('id', '')
     ]
 

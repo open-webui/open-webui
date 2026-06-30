@@ -935,6 +935,10 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 
+RAG_FILE_CONTEXT_SCOPE_CONVERSATION = 'conversation'
+RAG_FILE_CONTEXT_SCOPE_MESSAGE = 'message'
+RAG_FILE_CONTEXT_SCOPE = os.getenv('RAG_FILE_CONTEXT_SCOPE', RAG_FILE_CONTEXT_SCOPE_CONVERSATION)
+
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 
 RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None
@@ -2801,6 +2805,7 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search': ENABLE_RAG_HYBRID_SEARCH,
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
+    'rag.file_context_scope': RAG_FILE_CONTEXT_SCOPE,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
     'rag.file.max_size': RAG_FILE_MAX_SIZE,
     'file.image_compression_width': FILE_IMAGE_COMPRESSION_WIDTH,
