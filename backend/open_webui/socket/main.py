@@ -64,7 +64,12 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
+    # PubSub connections require an infinite socket timeout — redis-py >= 8 applies
+    # a default socket_timeout that causes the blocking pubsub listen() loop to raise
+    # TimeoutError every few seconds.  Explicit None keeps the connection alive.
+    redis_options = dict(WEBSOCKET_REDIS_OPTIONS or {})
+    redis_options.setdefault('socket_timeout', None)
+    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=redis_options)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
