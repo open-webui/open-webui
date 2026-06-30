@@ -289,7 +289,11 @@ OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != '' else OLLAMA_BASE_U
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 
-OLLAMA_API_CONFIGS = {}
+try:
+    OLLAMA_API_CONFIGS = json.loads(os.getenv('OLLAMA_API_CONFIGS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading OLLAMA_API_CONFIGS: {e}')
+    OLLAMA_API_CONFIGS = {}
 
 ####################################
 # OPENAI_API
@@ -326,7 +330,11 @@ OPENAI_API_BASE_URLS = [
 ]
 OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 
-OPENAI_API_CONFIGS = {}
+try:
+    OPENAI_API_CONFIGS = json.loads(os.getenv('OPENAI_API_CONFIGS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading OPENAI_API_CONFIGS: {e}')
+    OPENAI_API_CONFIGS = {}
 
 # Get the actual OpenAI API key based on the base URL
 OPENAI_API_KEY = ''
