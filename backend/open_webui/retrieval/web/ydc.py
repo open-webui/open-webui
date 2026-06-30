@@ -34,7 +34,7 @@ def search_youcom(
         'language': language,
     }
 
-    response = requests.get(url, headers=headers, params=params)
+    response = requests.get(url, headers=headers, params=params, timeout=10)
     response.raise_for_status()
 
     json_response = response.json()

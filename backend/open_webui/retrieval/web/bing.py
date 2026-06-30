@@ -26,7 +26,7 @@ def search_bing(
     headers = {'Ocp-Apim-Subscription-Key': subscription_key}
 
     try:
-        response = requests.get(endpoint, headers=headers, params=params)
+        response = requests.get(endpoint, headers=headers, params=params, timeout=10)
         response.raise_for_status()
         json_response = response.json()
         results = json_response.get('webPages', {}).get('value', [])

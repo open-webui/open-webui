@@ -33,7 +33,7 @@ def search_jina(api_key: str, query: str, count: int, base_url: str = '') -> lis
     payload = {'q': query, 'count': count if count <= 10 else 10}
 
     url = str(URL(jina_search_endpoint))
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=headers, json=payload, timeout=10)
     response.raise_for_status()
     data = response.json()
 

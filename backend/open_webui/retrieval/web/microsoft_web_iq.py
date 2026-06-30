@@ -40,6 +40,7 @@ def search_microsoft_web_iq(
                 'contentFormat': 'passage',
             },
             headers=headers,
+            timeout=10,
         )
         response.raise_for_status()
 

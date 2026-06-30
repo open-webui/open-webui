@@ -29,7 +29,7 @@ def search_ollama_cloud(
     payload = {'query': query, 'max_results': count}
 
     try:
-        response = requests.post(f'{url}/api/web_search', headers=headers, json=payload)
+        response = requests.post(f'{url}/api/web_search', headers=headers, json=payload, timeout=10)
         response.raise_for_status()
         data = response.json()
 
