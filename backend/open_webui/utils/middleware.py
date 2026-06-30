@@ -157,6 +157,40 @@ def output_id(prefix: str) -> str:
     return f'{prefix}_{uuid4().hex[:24]}'
 
 
+def merge_reasoning_details(details: list, chunk) -> list:
+    """Merge streamed reasoning_details fragments in place, keyed by index.
+
+    Concatenates text/summary for matching indexes and overwrites other fields
+    (e.g. signature) so signed/encrypted blocks stay intact instead of
+    fragmenting across chunks.
+    """
+    items = (
+        chunk if isinstance(chunk, list) else ([chunk] if isinstance(chunk, dict) else [])
+    )
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        index = item.get('index')
+        existing = (
+            next((e for e in details if e.get('index') == index), None)
+            if isinstance(index, int) and index >= 0
+            else None
+        )
+        if existing is None:
+            entry = dict(item)
+            entry.setdefault('type', 'reasoning.text')
+            details.append(entry)
+            continue
+        for key, value in item.items():
+            if key in ('text', 'summary'):
+                if isinstance(value, str):
+                    base = existing.get(key)
+                    existing[key] = (base + value) if isinstance(base, str) else value
+            else:
+                existing[key] = value
+    return details
+
+
 def _split_tool_calls(
     tool_calls: list[dict],
 ) -> list[dict]:
@@ -4233,7 +4267,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         or delta.get('thinking')
                                     )
                                     reasoning_details = delta.get('reasoning_details')
-                                    if reasoning_content or reasoning_details:
+                                    if reasoning_content:
                                         if not output or output[-1].get('type') != 'reasoning':
                                             reasoning_item = {
                                                 'type': 'reasoning',
@@ -4250,30 +4284,53 @@ async def streaming_chat_response_handler(response, ctx):
                                         else:
                                             reasoning_item = output[-1]
 
-                                        if reasoning_content:
-                                            # Append to reasoning content
-                                            parts = reasoning_item.get('content', [])
-                                            if parts and parts[-1].get('type') == 'output_text':
-                                                parts[-1]['text'] += reasoning_content
-                                            else:
-                                                reasoning_item['content'] = [
-                                                    {
-                                                        'type': 'output_text',
-                                                        'text': reasoning_content,
-                                                    }
-                                                ]
+                                        # Append to reasoning content
+                                        parts = reasoning_item.get('content', [])
+                                        if parts and parts[-1].get('type') == 'output_text':
+                                            parts[-1]['text'] += reasoning_content
+                                        else:
+                                            reasoning_item['content'] = [
+                                                {
+                                                    'type': 'output_text',
+                                                    'text': reasoning_content,
+                                                }
+                                            ]
 
-                                            data = {
-                                                'output': full_output(),
+                                        data = {
+                                            'output': full_output(),
+                                        }
+                                        delta_type = 'content'
+
+                                    if reasoning_details:
+                                        # Keep signatures attached to their reasoning text
+                                        # (they may stream later); create an item if encrypted.
+                                        reasoning_target = next(
+                                            (
+                                                item
+                                                for item in reversed(output)
+                                                if item.get('type') == 'reasoning'
+                                            ),
+                                            None,
+                                        )
+                                        if reasoning_target is None:
+                                            reasoning_target = {
+                                                'type': 'reasoning',
+                                                'id': output_id('r'),
+                                                'status': 'in_progress',
+                                                'start_tag': '<think>',
+                                                'end_tag': '</think>',
+                                                'attributes': {'type': 'reasoning_content'},
+                                                'content': [],
+                                                'summary': None,
+                                                'started_at': time.time(),
                                             }
-                                            delta_type = 'content'
-
-                                        if reasoning_details:
-                                            reasoning_item.setdefault('reasoning_details', []).extend(
-                                                reasoning_details
-                                                if isinstance(reasoning_details, list)
-                                                else [reasoning_details]
-                                            )
+                                            output.append(reasoning_target)
+                                        merge_reasoning_details(
+                                            reasoning_target.setdefault(
+                                                'reasoning_details', []
+                                            ),
+                                            reasoning_details,
+                                        )
 
                                     if value:
                                         if (
