@@ -1,0 +1,78 @@
+name: Build and push image to ACR
+
+# Mirrors the dmtoolkit Azure DevOps pipeline: build the Docker image and push it
+# to the Dority & Manning Azure Container Registry. The registry has a default-Deny
+# network rule set, so this workflow temporarily allow-lists the runner's public IP
+# for the duration of the push and removes it afterwards (in an always() step).
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: acr-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: doritymanningeastus001.azurecr.io
+  ACR_NAME: doritymanningeastus001
+  IMAGE_REPOSITORY: open-webui
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Add runner IP to ACR firewall allow-list
+        run: |
+          set -euo pipefail
+          RUNNER_IP="$(curl -fsSL https://api.ipify.org)"
+          echo "RUNNER_IP=${RUNNER_IP}" >> "$GITHUB_ENV"
+          echo "Allow-listing runner IP ${RUNNER_IP} on ${ACR_NAME}"
+          az acr network-rule add --name "${ACR_NAME}" --ip-address "${RUNNER_IP}" --only-show-errors
+          # Network-rule changes can take a short while to propagate.
+          sleep 30
+
+      - name: ACR login
+        run: az acr login --name "${ACR_NAME}"
+
+      - name: Compute image tag
+        run: |
+          set -euo pipefail
+          # e.g. main.42 — mirrors dmtoolkit's <branch>.<buildId>; slashes are sanitized.
+          SAFE_BRANCH="${GITHUB_REF_NAME//\//-}"
+          echo "IMAGE_TAG=${SAFE_BRANCH}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Remove runner IP from ACR firewall allow-list
+        if: always() && env.RUNNER_IP != ''
+        run: |
+          echo "Removing runner IP ${RUNNER_IP} from ${ACR_NAME}"
+          az acr network-rule remove --name "${ACR_NAME}" --ip-address "${RUNNER_IP}" --only-show-errors --output none || true
