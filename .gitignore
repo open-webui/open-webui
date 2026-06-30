@@ -380,3 +380,9 @@ llm_portkey.py
 .env.local-ai-tutor
 QWEN.md
 _check_db.py
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+.playwright/
