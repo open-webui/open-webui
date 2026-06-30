@@ -662,7 +662,8 @@ async def set_banners(
     user=Depends(get_admin_user),
 ):
     data = form_data.model_dump()
-    request.app.state.config.BANNERS = data['banners']
+    # Store as plain dicts to avoid JSON serialization issues in Redis/DB
+    request.app.state.config.BANNERS = [dict(b) for b in data['banners']]
     return request.app.state.config.BANNERS
 
 
