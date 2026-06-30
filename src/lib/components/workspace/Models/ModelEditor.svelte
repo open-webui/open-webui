@@ -123,7 +123,9 @@
 					!baseModel?.preset &&
 					baseModel?.owned_by !== 'arena' &&
 					!(baseModel?.direct ?? false) &&
-					(!(baseModel?.info?.meta?.hidden ?? false) || baseModel.id === info.base_model_id)
+					($user?.role === 'admin' ||
+						!(baseModel?.info?.meta?.hidden ?? false) ||
+						baseModel.id === info.base_model_id)
 			)
 			.map((baseModel) => ({
 				value: baseModel.id,
@@ -654,6 +656,7 @@
 											className="w-[32rem]"
 											triggerClassName="text-sm"
 											selectionOnly
+											includeHidden={$user?.role === 'admin'}
 											bind:value={info.base_model_id}
 										/>
 									</div>
