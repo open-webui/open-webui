@@ -41,6 +41,8 @@
 	let TTS_MISTRAL_API_KEY = '';
 	let TTS_MISTRAL_API_BASE_URL = '';
 
+	let STT_OPENROUTER_API_BASE_URL = '';
+	let STT_OPENROUTER_API_KEY = '';
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
 	let STT_ENGINE = '';
@@ -148,6 +150,8 @@
 				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
+				OPENROUTER_API_BASE_URL: STT_OPENROUTER_API_BASE_URL,
+				OPENROUTER_API_KEY: STT_OPENROUTER_API_KEY,
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
 				ENGINE: STT_ENGINE,
@@ -202,6 +206,9 @@
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
+
+			STT_OPENROUTER_API_BASE_URL = res.stt.OPENROUTER_API_BASE_URL;
+			STT_OPENROUTER_API_KEY = res.stt.OPENROUTER_API_KEY;
 
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
@@ -263,6 +270,7 @@
 							placeholder={$i18n.t('Select an engine')}
 						>
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
+							<option value="openrouter">{$i18n.t('OpenRouter')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
 							<option value="deepgram">{$i18n.t('Deepgram')}</option>
@@ -305,6 +313,49 @@
 							</div>
 						</div>
 					</div>
+				{:else if STT_ENGINE === 'openrouter'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={STT_OPENROUTER_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_OPENROUTER_API_KEY} />
+						</div>
+					</div>
+
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div>
+						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									list="model-list"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={STT_MODEL}
+									placeholder={$i18n.t('Select a model')}
+								/>
+
+								<datalist id="model-list">
+									<option value="openai/whisper-1" />
+								</datalist>
+								<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+									<a
+										class=" hover:underline dark:text-gray-200 text-gray-800"
+										href="https://openrouter.ai/models?output_modalities=transcription"
+										target="_blank"
+									>
+										{$i18n.t('Click here to see available models.')}
+									</a>
+								</div>
+							</div>
+						</div>
+					</div>
+
 				{:else if STT_ENGINE === 'deepgram'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">

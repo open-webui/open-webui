@@ -92,6 +92,8 @@ TTS_CONFIG_KEYS = {
 }
 
 STT_CONFIG_KEYS = {
+    'OPENROUTER_API_BASE_URL': 'audio.stt.openrouter.api_base_url',
+    'OPENROUTER_API_KEY': 'audio.stt.openrouter.api_key',
     'OPENAI_API_BASE_URL': 'audio.stt.openai.api_base_url',
     'OPENAI_API_KEY': 'audio.stt.openai.api_key',
     'ENGINE': 'audio.stt.engine',
@@ -252,6 +254,8 @@ class TTSConfigForm(BaseModel):
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    OPENROUTER_API_BASE_URL: str
+    OPENROUTER_API_KEY: str
     ENGINE: str
     MODEL: str
     SUPPORTED_CONTENT_TYPES: list[str] = []
@@ -639,6 +643,83 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
     return data
 
 
+async def _transcribe_openrouter(
+    request, file_path, filename, languages, file_dir, id, user=None
+):
+    """Transcribe audio via OpenRouter's STT endpoint (JSON + base64)."""
+    r = None
+    try:
+        session = await get_session()
+        api_key = await Config.get('audio.stt.openrouter.api_key')
+        api_base_url = await Config.get('audio.stt.openrouter.api_base_url') \
+            or 'https://openrouter.ai/api/v1'
+        model = await Config.get('audio.stt.model') \
+            or 'openai/whisper-1'
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        }
+        log.info(headers)
+        if user and ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers = include_user_info_headers(headers, user)
+
+        # Read & base64-encode audio
+        async with aiofiles.open(file_path, 'rb') as f:
+            audio_b64 = base64.b64encode(await f.read()).decode('utf-8')
+
+        # Determine format from extension
+        ext = os.path.splitext(filename)[1].lower().lstrip('.') or 'wav'
+        format_map = {'m4a': 'mp4', 'mp4': 'mp4', 'oga': 'ogg'}
+        audio_format = format_map.get(ext, ext)
+
+        for language in languages:
+            payload = {
+                'model': model,
+                'input_audio': {
+                    'data': audio_b64,
+                    'format': audio_format,
+                },
+            }
+            if language:
+                payload['language'] = language
+
+            r = await session.post(
+                url=f'{api_base_url}/audio/transcriptions',
+                headers=headers,
+                json=payload,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            )
+            if r.status == 200:
+                break
+
+        r.raise_for_status()
+        data = await r.json()
+
+        # Normalize: ensure {"text": "..."} format
+        if 'text' not in data:
+            if 'transcription' in data:
+                data = {'text': data['transcription']}
+            else:
+                data = {'text': str(data)}
+
+        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+            await f.write(json.dumps(data))
+        return data
+
+    except Exception as e:
+        log.exception(e)
+        detail = None
+        if r is not None:
+            try:
+                res = await r.json()
+                if 'error' in res:
+                    detail = f'External: {res["error"].get("message", "")}'
+            except Exception:
+                detail = f'External: {e}'
+        raise Exception(detail if detail else 'Open WebUI: Server Connection Error')
+    
+
 async def _transcribe_openai(request, file_path, filename, languages, file_dir, id, user=None):
     """Transcribe audio via an OpenAI-compatible STT endpoint."""
     r = None
@@ -881,6 +962,8 @@ async def transcription_handler(request, file_path, metadata, user=None):
         return await _transcribe_whisper(request, file_path, languages, file_dir, id)
     elif await Config.get('audio.stt.engine') == 'openai':
         return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user)
+    elif await Config.get('audio.stt.engine') == 'openrouter':
+        return await _transcribe_openrouter(request, file_path, filename, languages, file_dir, id, user)
     elif await Config.get('audio.stt.engine') == 'deepgram':
         return await _transcribe_deepgram(request, file_path, languages, file_dir, id)
     elif await Config.get('audio.stt.engine') == 'azure':
@@ -1274,7 +1357,32 @@ async def get_available_models(request: Request) -> list[dict]:
                     available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
         else:
             available_models = [{'id': 'tts-1'}, {'id': 'tts-1-hd'}]
-
+    elif engine == 'openrouter':
+        try:
+            session = await get_session()
+            api_key = await Config.get('audio.stt.openrouter.api_key')
+            api_base_url = await Config.get('audio.stt.openrouter.api_base_url') \
+                or 'https://openrouter.ai/api/v1'
+            async with session.get(
+                f'{api_base_url}/models',
+                params={
+                    'output_modalities': 'transcription',
+                },
+                headers={
+                    'Authorization': f'Bearer {api_key}'
+                },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=_timeout,
+            ) as resp:
+                resp.raise_for_status()
+                response_data = await resp.json()
+                models = response_data.get('data', [])
+                available_models = [
+                    {'name': m.get('name', m['id']), 'id': m['id']}
+                    for m in models
+                ]
+        except Exception as e:
+            log.error(f'Error fetching models: {e}')
     elif engine == 'elevenlabs':
         try:
             session = await get_session()
