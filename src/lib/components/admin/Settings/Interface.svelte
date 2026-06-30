@@ -19,6 +19,7 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		VISION_TOOL_MODEL: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -223,15 +224,57 @@
 					</div>
 				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-3" />
+			<hr class=" border-gray-100/30 dark:border-gray-850/30 my-3" />
 
-				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Context Compaction')}
-					</div>
-
-					<Switch bind:state={chatConfig.ENABLE_CONTEXT_COMPACTION} />
+			<div class="mb-2.5">
+				<div class=" mb-2 font-medium flex items-center">
+					<div class=" text-xs mr-1">{$i18n.t('Vision Tool Model')}</div>
+					<Tooltip
+						content={$i18n.t(
+							'Model used by the analyze_image tool to analyze images for non-vision models. Select a vision-capable model.'
+						)}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-3.5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+							/>
+						</svg>
+					</Tooltip>
 				</div>
+
+				<select
+					class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+					bind:value={taskConfig.VISION_TOOL_MODEL}
+					placeholder={$i18n.t('Select a model')}
+				>
+					<option value="" selected>{$i18n.t('None')}</option>
+					{#each models as model}
+						<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+							{model.name}
+							{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+						</option>
+					{/each}
+				</select>
+			</div>
+
+			<hr class=" border-gray-100/30 dark:border-gray-850/30 my-3" />
+
+			<div class="mb-2.5 flex w-full items-center justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Context Compaction')}
+				</div>
+
+				<Switch bind:state={chatConfig.ENABLE_CONTEXT_COMPACTION} />
+			</div>
 
 				{#if chatConfig.ENABLE_CONTEXT_COMPACTION}
 					<div class="mb-2.5">
