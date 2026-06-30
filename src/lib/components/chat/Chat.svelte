@@ -1761,6 +1761,12 @@
 		if ($chatId == _chatId && !$temporaryChatEnabled) {
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+			// Persist selected models — the backend inline handler
+			// saves messages, titles, and tags but not chat.models.
+			await updateChatById(localStorage.token, _chatId, {
+				models: selectedModels
+			});
 		}
 	};
 
