@@ -2186,6 +2186,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
 
+    # Determine vision capability once — used by DB message loading and
+    # by the image_url stripping for temporary chats below.
+    model_supports_vision = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
+        'vision', True
+    )
+
     if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
         db_messages = await load_messages_from_db(chat_id, user_message_id)
         if db_messages:
@@ -2207,13 +2213,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
             # Inject image files into content as image_url parts (mirrors frontend logic)
+            # Only inject when the model supports vision; otherwise images stay in
+            # metadata.files so that tools (e.g. analyze_image) can access them
+            # without causing API errors on text-only models.
+            non_vision_image_files: list[dict] = []
             for message in form_data['messages']:
                 image_files = [
                     f
                     for f in message.get('files', [])
                     if f.get('type') == 'image' or (f.get('content_type') or '').startswith('image/')
                 ]
-                if message.get('role') == 'user' and image_files:
+                if message.get('role') == 'user' and image_files and model_supports_vision:
                     text_content = message.get('content', '')
                     if isinstance(text_content, str):
                         message['content'] = [
@@ -2227,8 +2237,29 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 if f.get('url')
                             ],
                         ]
-                # Strip files field — it's been incorporated into content
-                message.pop('files', None)
+                    # Strip files field — it's been incorporated into content
+                    message.pop('files', None)
+                elif message.get('role') == 'user' and image_files and not model_supports_vision:
+                    # Model is not vision-capable: do NOT inject image_url parts
+                    # into the content (would cause API errors on text-only models).
+                    # Collect them so they can be exposed to tools via metadata.
+                    for f in image_files:
+                        if f.get('id') or f.get('url'):
+                            non_vision_image_files.append(f)
+
+            # Make image files available to builtin/custom tools via metadata.files
+            # when the model cannot process them natively.
+            if non_vision_image_files:
+                existing_files = metadata.get('files', []) or []
+                existing_ids = {
+                    f.get('id') or f.get('url') for f in existing_files if isinstance(f, dict)
+                }
+                for f in non_vision_image_files:
+                    fid = f.get('id') or f.get('url')
+                    if fid and fid not in existing_ids:
+                        existing_files.append(f)
+                        existing_ids.add(fid)
+                metadata['files'] = existing_files
 
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
@@ -2282,6 +2313,23 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             pass
 
     form_data = await convert_url_images_to_base64(form_data, user=user)
+
+    # Strip image_url parts from messages for non-vision models.
+    # For persisted chats this is handled during DB message loading above,
+    # but temporary/local chats arrive with image_url parts already embedded
+    # by the frontend. Stripping here prevents API errors on text-only models.
+    if not model_supports_vision:
+        for message in form_data.get('messages', []):
+            content = message.get('content')
+            if isinstance(content, list):
+                filtered = [
+                    part
+                    for part in content
+                    if not (isinstance(part, dict) and part.get('type') == 'image_url')
+                ]
+                # Only update if we actually removed something
+                if len(filtered) != len(content):
+                    message['content'] = filtered
 
     event_emitter = await get_event_emitter(metadata)
     event_caller = await get_event_call(metadata)

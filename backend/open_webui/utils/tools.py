@@ -46,6 +46,7 @@ from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.tools.builtin import (
     add_memory,
+    analyze_image,
     calculate_timestamp,
     create_automation,
     create_calendar_event,
@@ -606,6 +607,17 @@ async def get_builtin_tools(
         and await has_user_permission('image_generation')
     ):
         builtin_functions.append(edit_image)
+
+    # Vision analysis tool — allows non-vision models to analyze uploaded images
+    # by delegating to a separately configured vision-capable model.
+    # Only registered when the model itself does NOT support vision and a
+    # dedicated vision analysis model is configured by the admin.
+    if (
+        is_builtin_tool_enabled('vision')
+        and not get_model_capability('vision')
+        and await Config.get('vision.tool.model_id')
+    ):
+        builtin_functions.append(analyze_image)
 
     # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
     if (

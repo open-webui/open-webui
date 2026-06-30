@@ -2102,6 +2102,8 @@ TASK_MODEL = os.getenv('TASK_MODEL', '')
 
 TASK_MODEL_EXTERNAL = os.getenv('TASK_MODEL_EXTERNAL', '')
 
+VISION_TOOL_MODEL = os.getenv('VISION_TOOL_MODEL', '')
+
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
 
 CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THRESHOLD', '80000'))
@@ -3009,6 +3011,7 @@ DEFAULT_CONFIG = {
     'auth.admin.email': ADMIN_EMAIL,
     'task.model.default': TASK_MODEL,
     'task.model.external': TASK_MODEL_EXTERNAL,
+    'vision.tool.model_id': VISION_TOOL_MODEL,
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,

@@ -424,6 +424,138 @@ async def edit_image(
 
 
 # =============================================================================
+# VISION ANALYSIS TOOLS
+# =============================================================================
+
+
+async def analyze_image(
+    file_id: str = '',
+    question: str = 'Describe this image in detail.',
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: Optional[dict] = None,
+    __files__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Analyze one or more images using a vision-capable model.
+    If file_id is omitted, all images attached to the current message are analyzed.
+    Use this tool whenever the user uploads an image and the main model cannot
+    process images natively.
+
+    :param file_id: The ID of the image file to analyze. Leave empty to analyze all attached images.
+    :param question: What to analyze or ask about the image(s)
+    :return: JSON with the analysis result for each image
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    try:
+        from open_webui.models.config import Config
+        from open_webui.models.users import UserModel
+        from open_webui.utils.chat import generate_chat_completion
+        from open_webui.utils.files import get_image_base64_from_file_id
+
+        user = UserModel(**__user__) if __user__ else None
+
+        # Resolve target file IDs: explicit parameter takes priority,
+        # otherwise auto-discover image files from metadata/files.
+        file_ids: list[str] = []
+        if file_id:
+            file_ids.append(file_id)
+        else:
+            sources = [*(__files__ or [])]
+            if __metadata__:
+                sources.extend(__metadata__.get('files', []) or [])
+            for f in sources:
+                if not isinstance(f, dict):
+                    continue
+                is_image = f.get('type') == 'image' or (f.get('content_type') or '').startswith('image/')
+                if is_image:
+                    fid = f.get('id') or f.get('url')
+                    if fid and fid not in file_ids:
+                        file_ids.append(fid)
+
+        if not file_ids:
+            return json.dumps(
+                {
+                    'error': 'No image files found. Provide a file_id or attach an image to the message.'
+                }
+            )
+
+        # Determine the vision model to use for analysis.
+        vision_model_id = await Config.get('vision.tool.model_id')
+        if not vision_model_id:
+            return json.dumps(
+                {
+                    'error': 'No vision model configured. Set "vision.tool.model_id" in admin settings.'
+                }
+            )
+
+        # Load image(s) as base64 — get_image_base64_from_file_id enforces
+        # ownership / access-control checks.
+        results = []
+        for fid in file_ids:
+            # Strip URL prefix if a full API path was passed.
+            clean_id = fid.split('/')[-1] if '/' in fid else fid
+
+            base64_image = await get_image_base64_from_file_id(clean_id, user=user)
+            if not base64_image:
+                results.append({'file_id': clean_id, 'error': 'Could not load image (not found or access denied)'})
+                continue
+
+            payload = {
+                'model': vision_model_id,
+                'messages': [
+                    {
+                        'role': 'user',
+                        'content': [
+                            {'type': 'text', 'text': question},
+                            {'type': 'image_url', 'image_url': {'url': base64_image}},
+                        ],
+                    }
+                ],
+                'stream': False,
+                'metadata': {
+                    **(__metadata__ or {}),
+                    'task': 'vision_analysis',
+                },
+            }
+
+            response = await generate_chat_completion(
+                __request__, form_data=payload, user=user, bypass_filter=True
+            )
+
+            # Parse the non-streaming response. generate_chat_completion returns
+            # a dict on success, or a JSONResponse on provider errors.
+            analysis_text = ''
+            if isinstance(response, dict):
+                analysis_text = (
+                    response.get('choices', [{}])[0].get('message', {}).get('content', '')
+                )
+            elif hasattr(response, 'body'):
+                body = response.body
+                if hasattr(body, 'decode'):
+                    body = body.decode('utf-8', 'replace')
+                try:
+                    data = json.loads(body)
+                    analysis_text = (
+                        data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    )
+                except Exception:
+                    analysis_text = str(body)
+
+            if not analysis_text:
+                results.append({'file_id': clean_id, 'error': 'Vision model returned empty response'})
+            else:
+                results.append({'file_id': clean_id, 'analysis': analysis_text})
+
+        return json.dumps({'results': results}, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'analyze_image error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+# =============================================================================
 # CODE INTERPRETER TOOLS
 # =============================================================================
 

@@ -764,9 +764,12 @@
 			}
 
 			if (file['type'].startsWith('image/')) {
-				if (visionCapableModels.length === 0) {
-					toast.error($i18n.t('Selected model(s) do not support image inputs'));
-					return;
+				if (visionCapableModels.length === 0 && !$config?.features?.enable_vision_tool) {
+					toast.warning(
+						$i18n.t(
+							'The selected model(s) do not natively support image inputs. Enable the image analysis tool to analyze uploaded images.'
+						)
+					);
 				}
 
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {

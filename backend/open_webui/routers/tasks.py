@@ -40,6 +40,7 @@ router = APIRouter()
 TASK_CONFIG_KEYS = {
     'TASK_MODEL': 'task.model.default',
     'TASK_MODEL_EXTERNAL': 'task.model.external',
+    'VISION_TOOL_MODEL': 'vision.tool.model_id',
     'TITLE_GENERATION_PROMPT_TEMPLATE': 'task.title.prompt_template',
     'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE': 'task.image.prompt_template',
     'ENABLE_AUTOCOMPLETE_GENERATION': 'task.autocomplete.enable',
@@ -96,6 +97,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
 class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]
+    VISION_TOOL_MODEL: Optional[str]
     ENABLE_TITLE_GENERATION: bool
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
