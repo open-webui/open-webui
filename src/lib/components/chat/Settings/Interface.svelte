@@ -48,10 +48,10 @@
 
 	let richTextInput = true;
 	let showFormattingToolbar = false;
-	let insertPromptAsRichText = false;
+	let insertPromptAsRichText = true;
 	let promptAutocomplete = false;
 
-	let largeTextAsFile = false;
+	let largeTextAsFile = true;
 
 	let insertSuggestionPrompt = false;
 	let keepFollowUpPrompts = false;
@@ -98,8 +98,8 @@
 
 	let webSearch = null;
 
-	let iframeSandboxAllowSameOrigin = false;
-	let iframeSandboxAllowForms = false;
+	let iframeSandboxAllowSameOrigin = true;
+	let iframeSandboxAllowForms = true;
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
