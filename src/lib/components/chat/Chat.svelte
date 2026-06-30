@@ -1340,6 +1340,98 @@
 	// Web functions
 	//////////////////////////
 
+	const applySelectedModels = async () => {
+		// Models load asynchronously; resolving against an empty list strands the selector blank
+		if ($models.length === 0) {
+			return;
+		}
+
+		const availableModels = $models
+			.filter((m) => !(m?.info?.meta?.hidden ?? false))
+			.map((m) => m.id);
+
+		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
+
+		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
+			const urlModels = (
+				$page.url.searchParams.get('models') ||
+				$page.url.searchParams.get('model') ||
+				''
+			)?.split(',');
+
+			if (urlModels.length === 1) {
+				if (!$models.find((m) => m.id === urlModels[0])) {
+					// Requested model isn't available; open the selector prefilled with it
+					const modelSelectorButton = document.getElementById('model-selector-0-button');
+					if (modelSelectorButton) {
+						modelSelectorButton.click();
+						await tick();
+
+						const modelSelectorInput = document.getElementById('model-search-input');
+						if (modelSelectorInput) {
+							modelSelectorInput.focus();
+							modelSelectorInput.value = urlModels[0];
+							modelSelectorInput.dispatchEvent(new Event('input'));
+						}
+					}
+				} else {
+					selectedModels = urlModels;
+				}
+			} else {
+				selectedModels = urlModels;
+			}
+
+			selectedModels = selectedModels.filter((modelId) =>
+				$models.map((m) => m.id).includes(modelId)
+			);
+		} else {
+			// Resolve in priority order: folder, sticky session, user default, admin default
+			if ($selectedFolder?.data?.model_ids) {
+				selectedModels = $selectedFolder?.data?.model_ids;
+			} else if (sessionStorage.selectedModels) {
+				selectedModels = JSON.parse(sessionStorage.selectedModels);
+				sessionStorage.removeItem('selectedModels');
+			} else if ($settings?.models) {
+				selectedModels = $settings?.models;
+			} else if (defaultModels && defaultModels.length > 0) {
+				selectedModels = defaultModels;
+			}
+
+			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
+		}
+
+		// Fall back to the admin default, then the first available model
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			if (availableModels.length > 0) {
+				if (defaultModels && defaultModels.length > 0) {
+					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
+				}
+
+				if (
+					selectedModels.length === 0 ||
+					(selectedModels.length === 1 && selectedModels[0] === '')
+				) {
+					selectedModels = [availableModels?.at(0) ?? ''];
+				}
+			} else {
+				selectedModels = [''];
+			}
+		}
+
+		selectedModels = selectedModels.map((modelId) =>
+			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
+	};
+
+	// Resolve once models load, unless a valid selection already exists
+	$: if (
+		chatIdProp === '' &&
+		$models.length > 0 &&
+		!selectedModels.some((modelId) => modelId && $models.some((m) => m.id === modelId))
+	) {
+		applySelectedModels();
+	}
+
 	const initNewChat = async () => {
 		console.log('initNewChat');
 		resetWebSearchConfirmation();
@@ -1367,89 +1459,7 @@
 			await temporaryChatEnabled.set(false);
 		}
 
-		const availableModels = $models
-			.filter((m) => !(m?.info?.meta?.hidden ?? false))
-			.map((m) => m.id);
-
-		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
-
-		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
-			const urlModels = (
-				$page.url.searchParams.get('models') ||
-				$page.url.searchParams.get('model') ||
-				''
-			)?.split(',');
-
-			if (urlModels.length === 1) {
-				if (!$models.find((m) => m.id === urlModels[0])) {
-					// Model not found; open model selector and prefill
-					const modelSelectorButton = document.getElementById('model-selector-0-button');
-					if (modelSelectorButton) {
-						modelSelectorButton.click();
-						await tick();
-
-						const modelSelectorInput = document.getElementById('model-search-input');
-						if (modelSelectorInput) {
-							modelSelectorInput.focus();
-							modelSelectorInput.value = urlModels[0];
-							modelSelectorInput.dispatchEvent(new Event('input'));
-						}
-					}
-				} else {
-					// Model found; set it as selected
-					selectedModels = urlModels;
-				}
-			} else {
-				// Multiple models; set as selected
-				selectedModels = urlModels;
-			}
-
-			// Unavailable models filtering
-			selectedModels = selectedModels.filter((modelId) =>
-				$models.map((m) => m.id).includes(modelId)
-			);
-		} else {
-			if ($selectedFolder?.data?.model_ids) {
-				// Set from folder model IDs
-				selectedModels = $selectedFolder?.data?.model_ids;
-			} else {
-				if (sessionStorage.selectedModels) {
-					// Set from session storage (temporary selection)
-					selectedModels = JSON.parse(sessionStorage.selectedModels);
-					sessionStorage.removeItem('selectedModels');
-				} else {
-					if ($settings?.models) {
-						// Set from user settings
-						selectedModels = $settings?.models;
-					} else if (defaultModels && defaultModels.length > 0) {
-						// Set from default models
-						selectedModels = defaultModels;
-					}
-				}
-			}
-
-			// Unavailable & hidden models filtering
-			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
-		}
-
-		// Ensure at least one model is selected
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if (availableModels.length > 0) {
-				if (defaultModels && defaultModels.length > 0) {
-					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
-				}
-
-				if (
-					selectedModels.length === 0 ||
-					(selectedModels.length === 1 && selectedModels[0] === '')
-				) {
-					// Only fall back to first available model if default models didn't resolve
-					selectedModels = [availableModels?.at(0) ?? ''];
-				}
-			} else {
-				selectedModels = [''];
-			}
-		}
+		await applySelectedModels();
 
 		if ($mobile) {
 			await showControls.set(false);
