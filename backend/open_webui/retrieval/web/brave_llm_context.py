@@ -41,13 +41,13 @@ def search_brave_llm_context(
         'maximum_number_of_tokens': context_tokens,
     }
 
-    response = requests.get(url, headers=headers, params=params)
+    response = requests.get(url, headers=headers, params=params, timeout=10)
 
     # Handle 429 rate limiting - same rate limits as web search
     if response.status_code == 429:
         log.info('Brave LLM Context API rate limited (429), retrying after 1 second...')
         time.sleep(1)
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=10)
 
     response.raise_for_status()
 

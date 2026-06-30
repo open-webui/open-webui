@@ -23,7 +23,7 @@ def search_kagi(api_key: str, query: str, count: int, filter_list: Optional[list
     }
     params = {'query': query, 'limit': count}
 
-    response = requests.post(url, headers=headers, json=params)
+    response = requests.post(url, headers=headers, json=params, timeout=10)
     response.raise_for_status()
     json_response = response.json()
     search_results = json_response.get('data', {}).get('search', [])
