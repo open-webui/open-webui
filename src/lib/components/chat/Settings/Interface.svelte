@@ -41,7 +41,7 @@
 	let notificationSound = true;
 	let notificationSoundAlways = false;
 
-	let highContrastMode = false;
+	let highContrastMode = true;
 
 	let detectArtifacts = true;
 	let displayMultiModelResponsesInTabs = false;
