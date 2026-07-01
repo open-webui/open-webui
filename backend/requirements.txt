@@ -49,7 +49,7 @@ google-genai==1.66.0
 
 langchain==1.2.10
 langchain-community==0.4.2
-langchain-classic==1.0.7
+langchain-classic==1.0.8
 langchain-text-splitters==1.1.2
 
 fake-useragent==2.2.0
