@@ -35,7 +35,7 @@ dependencies = [
     "sqlalchemy[asyncio]==2.0.50",
     "aiosqlite==0.22.1",
     "psycopg[binary]==3.3.4",
-    "alembic==1.18.4",
+    "alembic==1.18.5",
 
     "pycrdt==0.13.1",
     "redis==8.0.0",
