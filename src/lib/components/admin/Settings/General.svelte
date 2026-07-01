@@ -297,6 +297,16 @@
 						<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
 					</div>
 
+					{#if adminConfig.ENABLE_MEMORIES}
+						<div class="mb-2.5 flex w-full items-center justify-between pr-2 pl-4">
+							<div class=" self-center text-xs font-medium text-gray-500 dark:text-gray-400">
+								{$i18n.t('Memory System Context')}
+							</div>
+
+							<Switch bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT} />
+						</div>
+					{/if}
+
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Notes')}

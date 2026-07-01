@@ -1341,18 +1341,26 @@ async def chat_completion(
                             detail=ERROR_MESSAGES.DEFAULT(),
                         )
 
-                    # Persist chat-level files (knowledge collections, docs, etc.)
+                    user_message = metadata.get('user_message') or {}
+                    selected_chat_models = user_message.get('models') if isinstance(user_message, dict) else None
+                    if not isinstance(selected_chat_models, list) or not selected_chat_models:
+                        selected_chat_models = [entry.get('model_id') for entry in message_ids if entry.get('model_id')]
+
+                    # Persist chat-level fields the frontend used to save on every message.
                     # The old frontend saveChatHandler did this on every message;
                     # now the backend owns persistence.
                     chat_files = metadata.get('files')
-                    if chat_files is not None:
+                    if chat_files is not None or selected_chat_models:
                         existing_chat = await Chats.get_chat_by_id(chat_id)
                         if existing_chat:
-                            updated = {**existing_chat.chat, 'files': chat_files}
+                            updated = {**existing_chat.chat}
+                            if chat_files is not None:
+                                updated['files'] = chat_files
+                            if selected_chat_models:
+                                updated['models'] = selected_chat_models
                             await Chats.update_chat_by_id(chat_id, updated)
 
                     # Save user message to DB
-                    user_message = metadata.get('user_message') or {}
                     if user_message and user_message.get('id'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             chat_id,

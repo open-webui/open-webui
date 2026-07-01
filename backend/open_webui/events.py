@@ -442,6 +442,11 @@ class EventDefinitions(BaseModel):
         description='Model provider configuration was updated.',
         message='Model Provider Config updated',
     )
+    MODEL_PROVIDER_REQUEST_FAILED: EventDefinition = EventDefinition(
+        name='model.provider_request.failed',
+        description='A model provider request failed.',
+        message='Model provider request failed',
+    )
     MODEL_PROVIDER_MODEL_CREATED: EventDefinition = EventDefinition(
         name='model.provider_model.created',
         description='A provider model was created.',
@@ -1108,3 +1113,60 @@ async def publish_event(
             await sink.handle_event(app, event_payload, request=request)
         except Exception:
             log.exception('Event sink failed for %s', event_payload.event)
+
+
+async def publish_model_provider_request_failed(
+    request_or_app: Any,
+    *,
+    actor: Any | None,
+    provider: str,
+    base_url: str,
+    status: int,
+    requested_model: str | None = None,
+    api_key: str | None = None,
+    upstream_error: Any = None,
+) -> None:
+    error = upstream_error.get('error') if isinstance(upstream_error, dict) else upstream_error
+    error_code = None
+    if isinstance(error, dict):
+        error_code = error.get('code') or error.get('type') or error.get('error_code')
+        error = error.get('message') or error.get('detail') or error
+
+    error_text = str(error or '')
+    marker = f'{error_code or ""} {error_text}'.lower()
+    error_type = (
+        'model_not_found'
+        if status == 404
+        and any(value in marker for value in ('model_not_found', 'model not found', 'does not exist', 'no such model'))
+        else 'authentication_failed'
+        if status in (401, 403)
+        else 'rate_limited'
+        if status == 429
+        else 'server_failed'
+        if status >= 500
+        else 'upstream_error'
+    )
+
+    data = {
+        'error_type': error_type,
+        'status': status,
+        'provider': provider,
+        'base_url': base_url,
+    }
+    if requested_model:
+        data['requested_model'] = requested_model
+    if api_key:
+        data['api_key_suffix'] = f'...{api_key[-4:]}'
+    if error_code:
+        data['upstream_error_code'] = error_code
+    if error:
+        data['upstream_message'] = error
+
+    await publish_event(
+        request_or_app,
+        EVENTS.MODEL_PROVIDER_REQUEST_FAILED,
+        actor=actor,
+        subject_id=requested_model,
+        subject_type='model',
+        data=data,
+    )

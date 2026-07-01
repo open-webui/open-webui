@@ -47,7 +47,7 @@
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			console.log('Escape');
-			show = false;
+			cancelHandler();
 		}
 
 		if (event.key === 'Enter') {
@@ -63,6 +63,11 @@
 		await tick();
 		await onConfirm();
 		dispatch('confirm', _inputValue);
+	};
+
+	const cancelHandler = () => {
+		show = false;
+		dispatch('cancel');
 	};
 
 	onMount(() => {
@@ -107,7 +112,7 @@
 		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
-			show = false;
+			cancelHandler();
 		}}
 	>
 		<div
@@ -174,8 +179,7 @@
 					<button
 						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
 						on:click={() => {
-							show = false;
-							dispatch('cancel');
+							cancelHandler();
 						}}
 						type="button"
 					>

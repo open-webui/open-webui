@@ -24,6 +24,7 @@
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
+	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import {
 		config,
 		user,
@@ -204,14 +205,14 @@
 		let msgList = [];
 
 		if (history?.messages && history?.currentId) {
-			msgList = createMessagesList(history, history.currentId).map((m) => ({
+			msgList = createMessagesList(history, history.currentId).map((m: any) => ({
 				role: m.role,
-				content: m.content
+				content: getOutputText(m.output) || m.content || ''
 			}));
 		} else {
-			msgList = (chatContent?.messages ?? []).map((m) => ({
+			msgList = (chatContent?.messages ?? []).map((m: any) => ({
 				role: m.role,
-				content: m.content
+				content: getOutputText(m.output) || m.content || ''
 			}));
 		}
 

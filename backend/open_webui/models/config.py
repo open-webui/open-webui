@@ -14,6 +14,7 @@ import logging
 import time
 from typing import Any, ClassVar
 
+from fastapi.encoders import jsonable_encoder
 from open_webui.internal.db import Base, get_async_db
 from sqlalchemy import JSON, BigInteger, Column, Text, delete, select
 
@@ -86,6 +87,10 @@ def _assign_path(target: dict, path: list[str], value: Any) -> None:
     current[path[-1]] = value
 
 
+def _json_value(value: Any) -> Any:
+    return jsonable_encoder(value)
+
+
 # ── Model ────────────────────────────────────────────────────────────────────
 
 
@@ -112,7 +117,7 @@ class Config(Base):
         enable_persistent: bool = True,
         enable_oauth_persistent: bool = False,
     ) -> None:
-        cls.DEFAULTS = defaults or {}
+        cls.DEFAULTS = dict(defaults or {})
         cls.PERSISTENT_ENABLED = enable_persistent
         cls.OAUTH_PERSISTENT_ENABLED = enable_oauth_persistent
 
@@ -188,9 +193,20 @@ class Config(Base):
     @staticmethod
     async def upsert(updates: dict) -> None:
         """Upsert multiple config key-value pairs. Raises on failure."""
+        persistent_updates = {}
+        for key, value in updates.items():
+            value = _json_value(value)
+            if Config.persistent_enabled_for(key):
+                persistent_updates[key] = value
+            else:
+                Config.DEFAULTS[key] = value
+
+        if not persistent_updates:
+            return
+
         async with get_async_db() as db:
             now = int(time.time())
-            for key, value in updates.items():
+            for key, value in persistent_updates.items():
                 existing = await db.get(Config, key)
                 if existing:
                     existing.value = value
@@ -232,6 +248,7 @@ class Config(Base):
             new_count = 0
             for key, value in defaults.items():
                 if key not in existing_keys:
+                    value = _json_value(value)
                     db.add(Config(key=key, value=value, updated_at=now))
                     existing_keys.add(key)
                     new_count += 1

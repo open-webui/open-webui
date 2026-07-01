@@ -290,6 +290,16 @@ OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 
 OLLAMA_API_CONFIGS = {}
+_ollama_api_configs = os.getenv('OLLAMA_API_CONFIGS', '')
+if _ollama_api_configs:
+    try:
+        parsed = json.loads(_ollama_api_configs)
+        if isinstance(parsed, dict):
+            OLLAMA_API_CONFIGS = parsed
+        else:
+            log.warning('OLLAMA_API_CONFIGS must be a JSON object, ignoring')
+    except (json.JSONDecodeError, TypeError):
+        log.warning('OLLAMA_API_CONFIGS is not valid JSON, ignoring')
 
 ####################################
 # OPENAI_API
@@ -327,6 +337,16 @@ OPENAI_API_BASE_URLS = [
 OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 
 OPENAI_API_CONFIGS = {}
+_openai_api_configs = os.getenv('OPENAI_API_CONFIGS', '')
+if _openai_api_configs:
+    try:
+        parsed = json.loads(_openai_api_configs)
+        if isinstance(parsed, dict):
+            OPENAI_API_CONFIGS = parsed
+        else:
+            log.warning('OPENAI_API_CONFIGS must be a JSON object, ignoring')
+    except (json.JSONDecodeError, TypeError):
+        log.warning('OPENAI_API_CONFIGS is not valid JSON, ignoring')
 
 # Get the actual OpenAI API key based on the base URL
 OPENAI_API_KEY = ''
@@ -394,6 +414,7 @@ CODE_EXECUTION_JUPYTER_TIMEOUT = int(os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT',
 ENABLE_CODE_INTERPRETER = os.getenv('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true'
 
 ENABLE_MEMORIES = os.getenv('ENABLE_MEMORIES', 'True').lower() == 'true'
+ENABLE_MEMORY_SYSTEM_CONTEXT = os.getenv('ENABLE_MEMORY_SYSTEM_CONTEXT', 'True').lower() == 'true'
 ENABLE_MEMORY_BACKGROUND_REVIEW = os.getenv('ENABLE_MEMORY_BACKGROUND_REVIEW', 'False').lower() == 'true'
 MEMORIES_REVIEW_INTERVAL_TURNS = int(os.getenv('MEMORIES_REVIEW_INTERVAL_TURNS', '10'))
 MEMORIES_USER_CHAR_LIMIT = int(os.getenv('MEMORIES_USER_CHAR_LIMIT', '2000'))
@@ -1510,6 +1531,8 @@ ELEVENLABS_API_BASE_URL = os.getenv('ELEVENLABS_API_BASE_URL', 'https://api.elev
 AUDIO_STT_OPENAI_API_BASE_URL = os.getenv('AUDIO_STT_OPENAI_API_BASE_URL', OPENAI_API_BASE_URL)
 
 AUDIO_STT_OPENAI_API_KEY = os.getenv('AUDIO_STT_OPENAI_API_KEY', OPENAI_API_KEY)
+
+AUDIO_STT_OPENAI_API_REQUEST_FORMAT = os.getenv('AUDIO_STT_OPENAI_API_REQUEST_FORMAT', 'multipart')
 
 AUDIO_STT_ENGINE = os.getenv('AUDIO_STT_ENGINE', '')
 
@@ -2741,6 +2764,7 @@ DEFAULT_CONFIG = {
     'code_execution.jupyter.timeout': CODE_EXECUTION_JUPYTER_TIMEOUT,
     'code_interpreter.enable': ENABLE_CODE_INTERPRETER,
     'memories.enable': ENABLE_MEMORIES,
+    'memories.system_context.enable': ENABLE_MEMORY_SYSTEM_CONTEXT,
     'memories.background_review.enable': ENABLE_MEMORY_BACKGROUND_REVIEW,
     'memories.review_interval_turns': MEMORIES_REVIEW_INTERVAL_TURNS,
     'memories.user_char_limit': MEMORIES_USER_CHAR_LIMIT,
@@ -2944,6 +2968,7 @@ DEFAULT_CONFIG = {
     'audio.stt.deepgram.api_key': DEEPGRAM_API_KEY,
     'audio.stt.openai.api_base_url': AUDIO_STT_OPENAI_API_BASE_URL,
     'audio.stt.openai.api_key': AUDIO_STT_OPENAI_API_KEY,
+    'audio.stt.openai.api_request_format': AUDIO_STT_OPENAI_API_REQUEST_FORMAT,
     'audio.stt.engine': AUDIO_STT_ENGINE,
     'audio.stt.model': AUDIO_STT_MODEL,
     'audio.stt.supported_content_types': AUDIO_STT_SUPPORTED_CONTENT_TYPES,

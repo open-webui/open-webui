@@ -19,7 +19,7 @@ def get_filtered_results(results, filter_list):
         if not validators.url(url):
             continue
 
-        domain = urlparse(url).netloc
+        domain = urlparse(url).hostname
         if not domain:
             continue
 

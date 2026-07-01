@@ -94,6 +94,7 @@ TTS_CONFIG_KEYS = {
 STT_CONFIG_KEYS = {
     'OPENAI_API_BASE_URL': 'audio.stt.openai.api_base_url',
     'OPENAI_API_KEY': 'audio.stt.openai.api_key',
+    'OPENAI_API_REQUEST_FORMAT': 'audio.stt.openai.api_request_format',
     'ENGINE': 'audio.stt.engine',
     'MODEL': 'audio.stt.model',
     'SUPPORTED_CONTENT_TYPES': 'audio.stt.supported_content_types',
@@ -252,6 +253,7 @@ class TTSConfigForm(BaseModel):
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    OPENAI_API_REQUEST_FORMAT: str = 'multipart'
     ENGINE: str
     MODEL: str
     SUPPORTED_CONTENT_TYPES: list[str] = []
@@ -644,28 +646,47 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
     r = None
     try:
         session = await get_session()
+        api_key = await Config.get('audio.stt.openai.api_key')
+        api_base_url = await Config.get('audio.stt.openai.api_base_url')
+        request_format = (await Config.get('audio.stt.openai.api_request_format') or 'multipart').lower()
+
+        headers = {'Authorization': f'Bearer {api_key}'}
+        if user and ENABLE_FORWARD_USER_INFO_HEADERS:
+            headers = include_user_info_headers(headers, user)
+
         for language in languages:
             payload = {'model': await Config.get('audio.stt.model')}
             if language:
                 payload['language'] = language
-            api_key = await Config.get('audio.stt.openai.api_key')
-            api_base_url = await Config.get('audio.stt.openai.api_base_url')
 
-            headers = {'Authorization': f'Bearer {api_key}'}
-            if user and ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers = include_user_info_headers(headers, user)
+            if request_format == 'json':
+                ext = os.path.splitext(filename)[1].lower().lstrip('.') or 'wav'
+                async with aiofiles.open(file_path, 'rb') as f:
+                    payload['input_audio'] = {
+                        'data': base64.b64encode(await f.read()).decode('utf-8'),
+                        'format': 'ogg' if ext == 'oga' else ext,
+                    }
 
-            form_data = aiohttp.FormData()
-            for key, value in payload.items():
-                form_data.add_field(key, str(value))
-            form_data.add_field('file', open(file_path, 'rb'), filename=filename)
+                r = await session.post(
+                    url=f'{api_base_url}/audio/transcriptions',
+                    headers={**headers, 'Content-Type': 'application/json'},
+                    json=payload,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+            else:
+                form_data = aiohttp.FormData()
+                for key, value in payload.items():
+                    form_data.add_field(key, str(value))
 
-            r = await session.post(
-                url=f'{api_base_url}/audio/transcriptions',
-                headers=headers,
-                data=form_data,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            )
+                with open(file_path, 'rb') as audio_file:
+                    form_data.add_field('file', audio_file, filename=filename)
+
+                    r = await session.post(
+                        url=f'{api_base_url}/audio/transcriptions',
+                        headers=headers,
+                        data=form_data,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    )
             if r.status == 200:
                 break
 

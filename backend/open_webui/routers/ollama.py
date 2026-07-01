@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event
+from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -133,12 +133,27 @@ async def send_request(
         if not r.ok:
             try:
                 res = await r.json()
+                await publish_model_provider_request_failed(
+                    request,
+                    actor=user,
+                    provider='ollama',
+                    base_url=url,
+                    status=r.status,
+                    upstream_error=res,
+                )
                 if 'error' in res:
                     raise HTTPException(status_code=r.status, detail=res['error'])
             except HTTPException:
                 raise
             except Exception as e:
                 log.error(f'Failed to parse error response: {e}')
+                await publish_model_provider_request_failed(
+                    request,
+                    actor=user,
+                    provider='ollama',
+                    base_url=url,
+                    status=r.status,
+                )
             raise HTTPException(
                 status_code=r.status,
                 detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR,
