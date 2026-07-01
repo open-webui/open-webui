@@ -648,9 +648,7 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
         session = await get_session()
         api_key = await Config.get('audio.stt.openai.api_key')
         api_base_url = await Config.get('audio.stt.openai.api_base_url')
-        request_format = (
-            await Config.get('audio.stt.openai.api_request_format') or 'multipart'
-        ).lower()
+        request_format = (await Config.get('audio.stt.openai.api_request_format') or 'multipart').lower()
 
         headers = {'Authorization': f'Bearer {api_key}'}
         if user and ENABLE_FORWARD_USER_INFO_HEADERS:

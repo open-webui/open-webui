@@ -726,7 +726,11 @@ async def add_memory(
     __user__: dict = None,
 ) -> str:
     """
-    Save a user-provided preference, fact, or instruction as memory for future chats.
+    Save enduring information that can improve future chats.
+
+    Save stable preferences, goals, projects, relationships, habits, and standing instructions.
+    Do not save one-off activity, meals, routine daily events, temporary mood, or other short-lived details
+    unless the user explicitly asks you to remember them.
 
     :param content: The memory content to store
     :param type: Use "user" for facts/preferences about the user, or "context" for other durable context
@@ -760,10 +764,12 @@ async def update_memory(
     __user__: dict = None,
 ) -> str:
     """
-    Apply a batch of memory changes after learning durable information.
+    Apply a batch of memory changes after learning enduring information.
 
     Use type "user" for facts, preferences, or instructions about the user.
     Use type "context" for other durable context that may help future chats.
+    Do not save one-off activity, meals, routine daily events, temporary mood, or other short-lived details
+    unless the user explicitly asks you to remember them.
     Path is optional. Use it as a stable memory address to group related memories.
     Prefer an existing path from list_memory_paths when one fits.
     Leave path empty when no useful grouping is clear.

@@ -89,9 +89,7 @@ def _convert_column_to_json(table: str, column: str):
                     parsed = None
 
             conn.execute(
-                sa.update(
-                    sa.table(table, sa.column('id'), sa.column(f'{column}_json', sa.JSON))
-                )
+                sa.update(sa.table(table, sa.column('id'), sa.column(f'{column}_json', sa.JSON)))
                 .where(sa.column('id') == uid)
                 .values({f'{column}_json': parsed})
             )
@@ -122,9 +120,7 @@ def _convert_column_to_text(table: str, column: str):
 
         for uid, raw in rows:
             conn.execute(
-                sa.update(
-                    sa.table(table, sa.column('id'), sa.column(f'{column}_text', sa.Text))
-                )
+                sa.update(sa.table(table, sa.column('id'), sa.column(f'{column}_text', sa.Text)))
                 .where(sa.column('id') == uid)
                 .values({f'{column}_text': json.dumps(raw) if raw is not None else None})
             )
