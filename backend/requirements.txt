@@ -13,7 +13,7 @@ PyJWT[crypto]==2.13.0
 authlib==1.7.2
 
 requests==2.34.2
-aiohttp==3.13.5 # do not update to 3.13.3 - broken
+aiohttp==3.14.1 # do not update to 3.13.3 - broken
 async-timeout==5.0.1
 aiocache==0.12.3
 aiofiles==25.1.0
