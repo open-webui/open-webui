@@ -64,7 +64,7 @@
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
-		"@tiptap/core": "^3.0.7",
+		"@tiptap/core": "^3.27.1",
 		"@tiptap/extension-bubble-menu": "^3.0.7",
 		"@tiptap/extension-code": "^3.0.7",
 		"@tiptap/extension-code-block-lowlight": "^3.0.7",
