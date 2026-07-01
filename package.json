@@ -134,7 +134,7 @@
 		"prosemirror-schema-list": "^1.5.1",
 		"prosemirror-state": "^1.4.3",
 		"prosemirror-tables": "^1.7.1",
-		"prosemirror-view": "^1.34.3",
+		"prosemirror-view": "^1.41.9",
 		"pyodide": "^0.28.2",
 		"shiki": "^4.0.1",
 		"socket.io-client": "^4.8.3",
