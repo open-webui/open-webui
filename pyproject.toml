@@ -52,7 +52,7 @@ dependencies = [
     "mcp==1.27.2",
 
     "openai==2.29.0",
-    "anthropic==0.86.0",
+    "anthropic==0.115.0",
     "google-genai==1.66.0",
 
     "langchain==1.2.10",
