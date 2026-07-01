@@ -18,12 +18,15 @@ export enum Shortcut {
 	DELETE_CHAT = 'deleteChat',
 	OPEN_MODEL_SELECTOR = 'openModelSelector',
 	TOGGLE_DICTATION = 'toggleDictation',
+	NAVIGATE_CHAT_UP = 'navigateChatUp',
+	NAVIGATE_CHAT_DOWN = 'navigateChatDown',
 
 	//Global
 	SEARCH = 'search',
 	OPEN_SETTINGS = 'openSettings',
 	SHOW_SHORTCUTS = 'showShortcuts',
 	TOGGLE_SIDEBAR = 'toggleSidebar',
+	TOGGLE_CONTROLS = 'toggleControls',
 	CLOSE_MODAL = 'closeModal',
 
 	//Input
@@ -73,6 +76,16 @@ export const shortcuts: ShortcutRegistry = {
 		keys: ['mod', 'shift', 'L'],
 		category: 'Chat'
 	},
+	[Shortcut.NAVIGATE_CHAT_UP]: {
+		name: 'Navigate to Previous Chat',
+		keys: ['alt', 'ArrowUp'],
+		category: 'Chat'
+	},
+	[Shortcut.NAVIGATE_CHAT_DOWN]: {
+		name: 'Navigate to Next Chat',
+		keys: ['alt', 'ArrowDown'],
+		category: 'Chat'
+	},
 
 	//Global
 	[Shortcut.SEARCH]: {
@@ -93,6 +106,11 @@ export const shortcuts: ShortcutRegistry = {
 	[Shortcut.TOGGLE_SIDEBAR]: {
 		name: 'Toggle Sidebar',
 		keys: ['mod', 'shift', 'S'],
+		category: 'Global'
+	},
+	[Shortcut.TOGGLE_CONTROLS]: {
+		name: 'Toggle Controls',
+		keys: ['mod', 'shift', 'I'],
 		category: 'Global'
 	},
 	[Shortcut.CLOSE_MODAL]: {

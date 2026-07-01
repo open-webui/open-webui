@@ -75,10 +75,13 @@
 						<!-- {$i18n.t('Delete Chat')} -->
 						<!-- {$i18n.t('Open Model Selector')} -->
 						<!-- {$i18n.t('Toggle Dictation')} -->
+						<!-- {$i18n.t('Navigate to Previous Chat')} -->
+						<!-- {$i18n.t('Navigate to Next Chat')} -->
 						<!-- {$i18n.t('Search')} -->
 						<!-- {$i18n.t('Open Settings')} -->
 						<!-- {$i18n.t('Show Shortcuts')} -->
 						<!-- {$i18n.t('Toggle Sidebar')} -->
+						<!-- {$i18n.t('Toggle Controls')} -->
 						<!-- {$i18n.t('Close Modal')} -->
 						<!-- {$i18n.t('Focus Chat Input')} -->
 						<!-- {$i18n.t('Accept Autocomplete Generation\nJump to Prompt Variable')} -->
