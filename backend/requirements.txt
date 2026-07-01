@@ -107,7 +107,7 @@ azure-storage-blob==12.29.0
 azure-search-documents==12.0.0
 
 ## Google Drive
-google-api-python-client==2.197.0
+google-api-python-client==2.198.0
 google-auth-httplib2==0.4.0
 google-auth-oauthlib==1.4.0
 
