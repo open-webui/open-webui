@@ -38,7 +38,7 @@ dependencies = [
     "alembic==1.18.4",
 
     "pycrdt==0.13.1",
-    "redis==8.0.0",
+    "redis==8.0.1",
     # "valkey-glide-sync==2.3.1",  # optional: install manually if VECTOR_DB=valkey
 
     "pytz==2026.2",
