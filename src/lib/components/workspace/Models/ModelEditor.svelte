@@ -345,7 +345,7 @@
 
 				if (base_model) {
 					model.base_model_id = base_model.id;
-				} else if (!(edit && model.base_model_id === model.id)) {
+				} else if (!edit) {
 					model.base_model_id = null;
 				}
 			}
