@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2026-07-01
+
+### Added
+
+- 🎙️ **More speech-to-text compatibility.** Speech-to-text setups can now choose between file upload and JSON audio requests, making more OpenAI-compatible transcription services work from the admin settings.
+- 🧠 **Memory context control.** Administrators can now keep memory tools enabled while turning off automatic memory context in chats.
+
+### Fixed
+
+- 🔎 **Better chat text across search, exports, titles, and previews.** These areas now use the actual assistant reply text more reliably, including newer response formats.
+- 🕒 **Sidebar chat times stay current.** Chat timestamps in the sidebar now reflect the latest update instead of the original creation time.
+- 🐍 **Code execution loads more reliably.** The Python runtime now loads correctly inside the sandbox and reports setup errors more clearly.
+- 📁 **Directory uploads keep folder paths more consistently.** Knowledge base directory uploads now preserve folder structure more reliably across browsers.
+- 🌐 **Web search blocklists match hosts more accurately.** Blocked hosts are now checked by hostname instead of the full address.
+- 🔐 **CAS sign-in compatibility.** CAS sign-in now works with providers that include a client ID in the sign-in token header.
+- ⚙️ **Smoother admin and provider handling.** Provider connection failures now send clearer admin events, several settings save more reliably, and database updates handle stored settings more safely.
+- 🗣️ **Translation updates.** Catalan, Thai, Brazilian Portuguese, and Spanish translations were updated and corrected.
+
 ## [0.10.1] - 2026-06-29
 
 ### Fixed
