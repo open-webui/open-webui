@@ -2545,9 +2545,11 @@ async def query_knowledge_files(
         user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
-        if not embedding_function:
+        _raw_embedding = __request__.app.state.EMBEDDING_FUNCTION
+        if not _raw_embedding:
             return json.dumps({'error': 'Embedding function not configured'})
+        user_model = UserModel(**__user__) if __user__ else None
+        embedding_function = lambda query, prefix=None: _raw_embedding(query, prefix=prefix, user=user_model)
 
         collection_names = []
         external_knowledges = []
@@ -2738,7 +2740,11 @@ async def query_knowledge_bases(
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
-        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query)
+        _raw_embedding = __request__.app.state.EMBEDDING_FUNCTION
+        if not _raw_embedding:
+            return json.dumps({'error': 'Embedding function not configured'})
+        user_model = UserModel(**__user__) if __user__ else None
+        query_embedding = await _raw_embedding(query, user=user_model)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
         top_results_heap = []
