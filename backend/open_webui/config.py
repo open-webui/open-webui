@@ -1532,6 +1532,8 @@ AUDIO_STT_OPENAI_API_BASE_URL = os.getenv('AUDIO_STT_OPENAI_API_BASE_URL', OPENA
 
 AUDIO_STT_OPENAI_API_KEY = os.getenv('AUDIO_STT_OPENAI_API_KEY', OPENAI_API_KEY)
 
+AUDIO_STT_OPENAI_API_REQUEST_FORMAT = os.getenv('AUDIO_STT_OPENAI_API_REQUEST_FORMAT', 'multipart')
+
 AUDIO_STT_ENGINE = os.getenv('AUDIO_STT_ENGINE', '')
 
 AUDIO_STT_MODEL = os.getenv('AUDIO_STT_MODEL', '')
@@ -2966,6 +2968,7 @@ DEFAULT_CONFIG = {
     'audio.stt.deepgram.api_key': DEEPGRAM_API_KEY,
     'audio.stt.openai.api_base_url': AUDIO_STT_OPENAI_API_BASE_URL,
     'audio.stt.openai.api_key': AUDIO_STT_OPENAI_API_KEY,
+    'audio.stt.openai.api_request_format': AUDIO_STT_OPENAI_API_REQUEST_FORMAT,
     'audio.stt.engine': AUDIO_STT_ENGINE,
     'audio.stt.model': AUDIO_STT_MODEL,
     'audio.stt.supported_content_types': AUDIO_STT_SUPPORTED_CONTENT_TYPES,
