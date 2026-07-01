@@ -4,7 +4,7 @@ pydantic==2.13.4
 python-multipart==0.0.27
 itsdangerous==2.2.0
 
-python-socketio==5.16.2
+python-socketio==5.16.3
 python-jose==3.5.0
 cryptography==48.0.0
 bcrypt==5.0.0
