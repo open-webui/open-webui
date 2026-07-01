@@ -117,7 +117,7 @@ class Config(Base):
         enable_persistent: bool = True,
         enable_oauth_persistent: bool = False,
     ) -> None:
-        cls.DEFAULTS = defaults or {}
+        cls.DEFAULTS = dict(defaults or {})
         cls.PERSISTENT_ENABLED = enable_persistent
         cls.OAUTH_PERSISTENT_ENABLED = enable_oauth_persistent
 
@@ -193,10 +193,20 @@ class Config(Base):
     @staticmethod
     async def upsert(updates: dict) -> None:
         """Upsert multiple config key-value pairs. Raises on failure."""
+        persistent_updates = {}
+        for key, value in updates.items():
+            value = _json_value(value)
+            if Config.persistent_enabled_for(key):
+                persistent_updates[key] = value
+            else:
+                Config.DEFAULTS[key] = value
+
+        if not persistent_updates:
+            return
+
         async with get_async_db() as db:
             now = int(time.time())
-            for key, value in updates.items():
-                value = _json_value(value)
+            for key, value in persistent_updates.items():
                 existing = await db.get(Config, key)
                 if existing:
                     existing.value = value
