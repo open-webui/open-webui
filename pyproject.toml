@@ -6,7 +6,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.136.3",
+    "fastapi==0.138.2",
     "uvicorn[standard]==0.41.0",
     "pydantic==2.13.4",
     "python-multipart==0.0.27",
