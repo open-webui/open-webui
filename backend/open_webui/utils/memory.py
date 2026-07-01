@@ -535,7 +535,8 @@ Memory types:
 - context: other durable context that may help future chats for this user account.
 
 Rules:
-- Save only information likely to matter in future chats.
+- Save enduring details that can improve future conversations.
+- Do not save one-off activity, meals, temporary mood, routine daily events, or other short-lived details unless the user explicitly asks to remember them.
 - Do not save secrets, credentials, transient task steps, or unsupported guesses.
 - Use path when there is a clear path for the memory.
 - Leave path empty when there is no clear place for the memory.
