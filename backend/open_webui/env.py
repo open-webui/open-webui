@@ -444,17 +444,16 @@ WEBSOCKET_REDIS_OPTIONS = os.getenv('WEBSOCKET_REDIS_OPTIONS', '')
 
 
 if WEBSOCKET_REDIS_OPTIONS == '':
+    WEBSOCKET_REDIS_OPTIONS = {'socket_timeout': None}
     if REDIS_SOCKET_CONNECT_TIMEOUT:
-        WEBSOCKET_REDIS_OPTIONS = {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
-    else:
-        log.debug('No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
+        WEBSOCKET_REDIS_OPTIONS['socket_connect_timeout'] = REDIS_SOCKET_CONNECT_TIMEOUT
 else:
     try:
         WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
+        WEBSOCKET_REDIS_OPTIONS.setdefault('socket_timeout', None)
     except Exception:
-        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
+        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to socket_timeout=None')
+        WEBSOCKET_REDIS_OPTIONS = {'socket_timeout': None}
 
 WEBSOCKET_REDIS_URL = os.getenv('WEBSOCKET_REDIS_URL', REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = os.getenv('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
