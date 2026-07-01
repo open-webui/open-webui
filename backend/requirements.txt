@@ -146,7 +146,7 @@ ldap3==2.9.1
 
 ## Trace
 opentelemetry-api==1.42.1
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.43.0
 opentelemetry-exporter-otlp==1.42.1
 opentelemetry-instrumentation==0.63b1
 opentelemetry-instrumentation-fastapi==0.63b1
