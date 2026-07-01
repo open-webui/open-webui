@@ -155,7 +155,7 @@ all = [
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.2.5",
-    "playwright==1.60.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
+    "playwright==1.61.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
     "elasticsearch==9.4.1",
 
     "qdrant-client==1.18.0",
