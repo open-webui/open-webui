@@ -128,7 +128,7 @@ pymilvus==2.6.14
 qdrant-client==1.18.0
 playwright==1.60.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
 elasticsearch==9.4.1
-pinecone==6.0.2
+pinecone==9.1.0
 oracledb==3.4.2
 
 av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
