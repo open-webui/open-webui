@@ -84,7 +84,7 @@ xlrd==2.0.2
 validators==0.35.0
 psutil==7.2.2
 sentencepiece==0.2.1
-soundfile==0.13.1
+soundfile==0.14.0
 
 pillow==12.2.0
 opencv-python-headless==4.13.0.92
