@@ -79,7 +79,7 @@
 		"@tiptap/extension-table": "^3.0.7",
 		"@tiptap/extension-typography": "^3.0.7",
 		"@tiptap/extension-youtube": "^3.0.7",
-		"@tiptap/extensions": "^3.0.7",
+		"@tiptap/extensions": "^3.27.1",
 		"@tiptap/pm": "^3.0.7",
 		"@tiptap/starter-kit": "^3.0.7",
 		"@tiptap/suggestion": "^3.4.2",
