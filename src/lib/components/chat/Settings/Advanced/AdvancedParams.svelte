@@ -52,6 +52,21 @@
 	$: if (params) {
 		onChange(params);
 	}
+
+	// top_k is the number of highest-probability tokens to keep during sampling,
+	// so it must be a non-negative integer. Flag invalid input and coerce on blur.
+	const TOP_K_MIN = 0;
+	const TOP_K_MAX = 1000;
+	$: topKInvalid =
+		(params?.top_k ?? null) !== null &&
+		(!Number.isInteger(params.top_k) || params.top_k < TOP_K_MIN || params.top_k > TOP_K_MAX);
+	const normalizeTopK = () => {
+		if ((params?.top_k ?? null) === null || params.top_k === '') {
+			return;
+		}
+		const rounded = Math.round(Number(params.top_k));
+		params.top_k = Number.isNaN(rounded) ? null : Math.min(TOP_K_MAX, Math.max(TOP_K_MIN, rounded));
+	};
 </script>
 
 <div class=" space-y-1 text-xs pb-safe-bottom">
@@ -619,7 +634,7 @@
 						type="range"
 						min="0"
 						max="1000"
-						step="0.5"
+						step="1"
 						bind:value={params.top_k}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 					/>
@@ -630,11 +645,20 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="0"
-						max="100"
-						step="any"
+						max="1000"
+						step="1"
+						on:change={normalizeTopK}
 					/>
 				</div>
 			</div>
+			{#if topKInvalid}
+				<div class="text-xs text-red-500 mt-1">
+					{$i18n.t('top_k must be a whole number between {{min}} and {{max}}.', {
+						min: TOP_K_MIN,
+						max: TOP_K_MAX
+					})}
+				</div>
+			{/if}
 		{/if}
 	</div>
 
