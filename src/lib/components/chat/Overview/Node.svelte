@@ -6,18 +6,24 @@
 	import ProfileImage from '../Messages/ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Heart from '$lib/components/icons/Heart.svelte';
+	import { getOutputText } from '../Messages/structuredOutput';
 
 	const i18n = getContext('i18n');
 
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
+
+	const getMessageContent = (nodeData: any) =>
+		getOutputText(nodeData?.message?.output) || nodeData?.message?.content || '';
+
+	$: messageContent = getMessageContent(data);
 </script>
 
 <div
 	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-gray-100 dark:border-gray-900 w-60 h-20 group"
 >
 	<Tooltip
-		content={data?.message?.error ? data.message.error.content : data.message.content}
+		content={data?.message?.error ? data.message.error.content : messageContent}
 		class="w-full"
 		allowHTML={false}
 	>
@@ -37,7 +43,7 @@
 					{#if data?.message?.error}
 						<div class="text-red-500 line-clamp-2 text-xs mt-0.5">{data.message.error.content}</div>
 					{:else}
-						<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+						<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{messageContent}</div>
 					{/if}
 				</div>
 			</div>
@@ -77,7 +83,7 @@
 							{data.message.error.content}
 						</div>
 					{:else}
-						<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{data.message.content}</div>
+						<div class="text-gray-500 line-clamp-2 text-xs mt-0.5">{messageContent}</div>
 					{/if}
 				</div>
 			</div>

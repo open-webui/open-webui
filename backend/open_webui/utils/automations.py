@@ -267,7 +267,7 @@ async def _resolve_model_features(app, model_id: str) -> dict:
     if not default_feature_ids:
         return {}
 
-    capabilities = meta.get('capabilities', {})
+    capabilities = meta.get('capabilities') or {}
     features = {}
 
     # code_interpreter is excluded: it requires the frontend event emitter

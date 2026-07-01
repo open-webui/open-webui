@@ -32,6 +32,7 @@
 		tags,
 		selectedFolder,
 		activeChatIds,
+		settings,
 		user
 	} from '$lib/stores';
 
@@ -49,6 +50,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
+	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
 	const i18n = getContext('i18n');
 
@@ -361,14 +363,14 @@
 		const history = chatContent?.history;
 		let messages = [];
 		if (history?.messages && history?.currentId) {
-			messages = createMessagesList(history, history.currentId).map((message) => ({
+			messages = createMessagesList(history, history.currentId).map((message: any) => ({
 				role: message.role,
-				content: message.content
+				content: getOutputText(message.output) || message.content || ''
 			}));
 		} else {
-			messages = (chatContent?.messages ?? []).map((message) => ({
+			messages = (chatContent?.messages ?? []).map((message: any) => ({
 				role: message.role,
-				content: message.content
+				content: getOutputText(message.output) || message.content || ''
 			}));
 		}
 
@@ -463,9 +465,13 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? ($settings?.highContrastMode ?? false)
+					? 'bg-gray-100 dark:bg-gray-800 selected'
+					: 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950 selected'
+					? ($settings?.highContrastMode ?? false)
+						? 'bg-gray-100 dark:bg-gray-900 selected'
+						: 'bg-gray-100 dark:bg-gray-950 selected'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
 				? 'cursor-not-allowed'
 				: ''}"
@@ -499,9 +505,13 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? ($settings?.highContrastMode ?? false)
+					? 'bg-gray-100 dark:bg-gray-800 selected'
+					: 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950 selected'
+					? ($settings?.highContrastMode ?? false)
+						? 'bg-gray-100 dark:bg-gray-900 selected'
+						: 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
@@ -570,9 +580,9 @@
 			</div>
 
 			<!-- Time ago indicator -->
-			{#if createdAt && !mouseOver}
+			{#if (updatedAt ?? createdAt) && !mouseOver}
 				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
-					{formatTimeAgo(createdAt)}
+					{formatTimeAgo(updatedAt ?? createdAt)}
 				</div>
 			{/if}
 		</a>
@@ -584,9 +594,13 @@
 			id="sidebar-chat-item-menu"
 			class="
         {id === $chatId || confirmEdit
-				? 'from-gray-100 dark:from-gray-900 selected'
+				? ($settings?.highContrastMode ?? false)
+					? 'from-gray-100 dark:from-gray-800 selected'
+					: 'from-gray-100 dark:from-gray-900 selected'
 				: selected
-					? 'from-gray-100 dark:from-gray-950 selected'
+					? ($settings?.highContrastMode ?? false)
+						? 'from-gray-100 dark:from-gray-900 selected'
+						: 'from-gray-100 dark:from-gray-950 selected'
 					: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 				? 'right-[8px]'

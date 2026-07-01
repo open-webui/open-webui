@@ -718,6 +718,9 @@ async def update_model_by_id(
         db,
     )
 
+    if 'base_model_id' not in form_data.model_fields_set:
+        form_data.base_model_id = model.base_model_id
+
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
         user.id,

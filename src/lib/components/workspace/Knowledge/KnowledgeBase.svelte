@@ -92,6 +92,9 @@
 	let showResetConfirm = false;
 
 	let minSize = 0;
+	type DirectoryFileEntry = { path: string; filename: string; file: File };
+	type DirectoryManifestEntry = DirectoryFileEntry & { checksum: string; size: number };
+
 	type Knowledge = {
 		id: string;
 		name: string;
@@ -463,165 +466,15 @@
 	};
 
 	const uploadDirectoryHandler = async () => {
-		// Check if File System Access API is supported
-		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
-
-		try {
-			if (isFileSystemAccessSupported) {
-				// Modern browsers (Chrome, Edge) implementation
-				await handleModernBrowserUpload();
-			} else {
-				// Firefox fallback
-				await handleFirefoxUpload();
-			}
-		} catch (error) {
-			handleUploadError(error);
+		const entries = await collectDirectoryFiles();
+		if (entries?.length) {
+			await uploadDirectoryEntries(entries);
 		}
 	};
 
 	// Helper function to check if a path contains hidden folders
 	const hasHiddenFolder = (path) => {
 		return path.split('/').some((part) => part.startsWith('.'));
-	};
-
-	// Modern browsers implementation using File System Access API
-	const handleModernBrowserUpload = async () => {
-		const dirHandle = await window.showDirectoryPicker();
-		let totalFiles = 0;
-		let uploadedFiles = 0;
-
-		// Function to update the UI with the progress
-		const updateProgress = () => {
-			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info(
-				$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
-					uploadedFiles: uploadedFiles,
-					totalFiles: totalFiles,
-					percentage: percentage.toFixed(2)
-				})
-			);
-		};
-
-		// Recursive function to count all files excluding hidden ones
-		async function countFiles(dirHandle) {
-			for await (const entry of dirHandle.values()) {
-				// Skip hidden files and directories
-				if (entry.name.startsWith('.')) continue;
-
-				if (entry.kind === 'file') {
-					totalFiles++;
-				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await countFiles(entry);
-					}
-				}
-			}
-		}
-
-		// Recursive function to process directories excluding hidden files and folders
-		async function processDirectory(dirHandle, path = '') {
-			for await (const entry of dirHandle.values()) {
-				// Skip hidden files and directories
-				if (entry.name.startsWith('.')) continue;
-
-				const entryPath = path ? `${path}/${entry.name}` : entry.name;
-
-				// Skip if the path contains any hidden folders
-				if (hasHiddenFolder(entryPath)) continue;
-
-				if (entry.kind === 'file') {
-					const file = await entry.getFile();
-					const fileWithPath = new File([file], entryPath, { type: file.type });
-
-					await uploadFileHandler(fileWithPath);
-					uploadedFiles++;
-					updateProgress();
-				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await processDirectory(entry, entryPath);
-					}
-				}
-			}
-		}
-
-		await countFiles(dirHandle);
-		updateProgress();
-
-		if (totalFiles > 0) {
-			await processDirectory(dirHandle);
-		} else {
-			console.log('No files to upload.');
-		}
-	};
-
-	// Firefox fallback implementation using traditional file input
-	const handleFirefoxUpload = async () => {
-		return new Promise((resolve, reject) => {
-			// Create hidden file input
-			const input = document.createElement('input');
-			input.type = 'file';
-			input.webkitdirectory = true;
-			input.directory = true;
-			input.multiple = true;
-			input.style.display = 'none';
-
-			// Add input to DOM temporarily
-			document.body.appendChild(input);
-
-			input.onchange = async () => {
-				try {
-					const files = Array.from(input.files)
-						// Filter out files from hidden folders
-						.filter((file) => !hasHiddenFolder(file.webkitRelativePath));
-
-					let totalFiles = files.length;
-					let uploadedFiles = 0;
-
-					// Function to update the UI with the progress
-					const updateProgress = () => {
-						const percentage = (uploadedFiles / totalFiles) * 100;
-						toast.info(
-							$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
-								uploadedFiles: uploadedFiles,
-								totalFiles: totalFiles,
-								percentage: percentage.toFixed(2)
-							})
-						);
-					};
-
-					updateProgress();
-
-					// Process all files
-					for (const file of files) {
-						// Skip hidden files (additional check)
-						if (!file.name.startsWith('.')) {
-							const relativePath = file.webkitRelativePath || file.name;
-							const fileWithPath = new File([file], relativePath, { type: file.type });
-
-							await uploadFileHandler(fileWithPath);
-							uploadedFiles++;
-							updateProgress();
-						}
-					}
-
-					// Clean up
-					document.body.removeChild(input);
-					resolve();
-				} catch (error) {
-					reject(error);
-				}
-			};
-
-			input.onerror = (error) => {
-				document.body.removeChild(input);
-				reject(error);
-			};
-
-			// Trigger file picker
-			input.click();
-		});
 	};
 
 	// Error handler
@@ -634,18 +487,14 @@
 		}
 	};
 
-	// Collect files from a directory without uploading — returns {path, filename, file}[]
-	const collectDirectoryFiles = async (): Promise<Array<{
-		path: string;
-		filename: string;
-		file: File;
-	}> | null> => {
+	// Collect files from a directory without uploading.
+	const collectDirectoryFiles = async (): Promise<DirectoryFileEntry[] | null> => {
 		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
 
 		try {
 			if (isFileSystemAccessSupported) {
 				const dirHandle = await window.showDirectoryPicker();
-				const collected: Array<{ path: string; filename: string; file: File }> = [];
+				const collected: DirectoryFileEntry[] = [];
 
 				async function traverse(handle: FileSystemDirectoryHandle, dirPath = '') {
 					for await (const entry of handle.values()) {
@@ -662,7 +511,7 @@
 					}
 				}
 
-				await traverse(dirHandle);
+				await traverse(dirHandle, dirHandle.name);
 				return collected;
 			} else {
 				// Firefox fallback
@@ -683,10 +532,8 @@
 
 							const collected = files.map((file) => {
 								const parts = file.webkitRelativePath.split('/');
-								// Remove root dir name, extract path and filename
-								const withoutRoot = parts.slice(1);
-								const filename = withoutRoot.pop() || file.name;
-								const path = withoutRoot.join('/');
+								const filename = parts.pop() || file.name;
+								const path = parts.join('/');
 								return { path, filename, file };
 							});
 
@@ -712,6 +559,106 @@
 		}
 	};
 
+	const buildDirectoryManifest = async (
+		entries: DirectoryFileEntry[]
+	): Promise<DirectoryManifestEntry[]> => {
+		return Promise.all(
+			entries.map(async (entry) => ({
+				...entry,
+				checksum: await computeFileHash(entry.file),
+				size: entry.file.size
+			}))
+		);
+	};
+
+	const createMissingDirectories = async (diff: any) => {
+		if (!knowledge) return {};
+
+		const directoryIdByPath: Record<string, string> = { ...(diff.directory_map || {}) };
+
+		for (const dirPath of diff.mkdir) {
+			const segments = dirPath.split('/');
+			const name = segments.at(-1)!;
+			const parentPath = segments.slice(0, -1).join('/');
+			const parentId = parentPath ? directoryIdByPath[parentPath] : null;
+
+			const directory = await createKnowledgeDirectory(
+				localStorage.token,
+				knowledge.id,
+				name,
+				parentId
+			);
+			if (directory) {
+				directoryIdByPath[dirPath] = directory.id;
+			}
+		}
+
+		return directoryIdByPath;
+	};
+
+	const getDirectoryUploadPath = (path: string) => {
+		const currentPath = breadcrumbs.map((crumb) => crumb.name).join('/');
+		return currentPath && path ? `${currentPath}/${path}` : currentPath || path;
+	};
+
+	const uploadDirectoryEntries = async (entries: DirectoryFileEntry[]) => {
+		if (!knowledge) return;
+
+		try {
+			syncing = $i18n.t('Computing checksums ({{count}} files)', { count: entries.length });
+			const manifest = await buildDirectoryManifest(entries);
+
+			syncing = $i18n.t('Comparing with knowledge base...');
+			const diff = await syncKnowledgeDiff(
+				localStorage.token,
+				id,
+				manifest.map(({ filename, path, checksum, size }) => ({
+					filename,
+					path: getDirectoryUploadPath(path),
+					checksum,
+					size
+				}))
+			);
+
+			if (!diff) {
+				toast.error($i18n.t('Failed to compare files.'));
+				return;
+			}
+
+			const directoryIdByPath = await createMissingDirectories(diff);
+
+			let uploadedCount = 0;
+			for (const entry of manifest) {
+				uploadedCount++;
+				const displayPath = entry.path ? `${entry.path}/${entry.filename}` : entry.filename;
+				syncing = $i18n.t('Uploading {{current}}/{{total}}: {{file}}', {
+					current: uploadedCount,
+					total: manifest.length,
+					file: displayPath
+				});
+
+				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
+				await uploadFile(localStorage.token, fileObject, {
+					knowledge_id: knowledge.id,
+					file_hash: entry.checksum,
+					directory_id: entry.path
+						? directoryIdByPath[getDirectoryUploadPath(entry.path)]
+						: currentDirectoryId
+				}).catch((e) => {
+					toast.error(`${e}`);
+					return null;
+				});
+			}
+
+			toast.success($i18n.t('File uploaded successfully'));
+			init();
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			syncing = null;
+		}
+	};
+
 	// Incremental sync: hash locally → diff on server → upload only what changed
 	const syncDirectoryHandler = async () => {
 		if (!pendingSyncFiles?.length) return;
@@ -721,13 +668,7 @@
 			syncing = $i18n.t('Computing checksums ({{count}} files)', {
 				count: pendingSyncFiles.length
 			});
-			const manifest = await Promise.all(
-				pendingSyncFiles.map(async (entry) => ({
-					...entry,
-					checksum: await computeFileHash(entry.file),
-					size: entry.file.size
-				}))
-			);
+			const manifest = await buildDirectoryManifest(pendingSyncFiles);
 			pendingSyncFiles = null;
 
 			// ── 3. Diff against knowledge base ──
@@ -755,23 +696,7 @@
 			}
 
 			// ── 5. mkdir — create missing directories (parents first) ──
-			const directoryIdByPath: Record<string, string> = { ...(diff.directory_map || {}) };
-			for (const dirPath of diff.mkdir) {
-				const segments = dirPath.split('/');
-				const name = segments.at(-1)!;
-				const parentPath = segments.slice(0, -1).join('/');
-				const parentId = parentPath ? directoryIdByPath[parentPath] : null;
-
-				const directory = await createKnowledgeDirectory(
-					localStorage.token,
-					knowledge.id,
-					name,
-					parentId
-				);
-				if (directory) {
-					directoryIdByPath[dirPath] = directory.id;
-				}
-			}
+			const directoryIdByPath = await createMissingDirectories(diff);
 
 			// ── 6. Upload added + modified files ──
 			const filesToUpload = manifest.filter(
@@ -1039,6 +964,53 @@
 		}
 	};
 
+	const readDirectoryEntries = async (reader: any) => {
+		const entries: any[] = [];
+
+		while (true) {
+			const batch = await new Promise<any[]>((resolve, reject) => {
+				reader.readEntries(resolve, reject);
+			});
+
+			if (batch.length === 0) {
+				break;
+			}
+
+			entries.push(...batch);
+		}
+
+		return entries;
+	};
+
+	const collectDroppedEntryFiles = async (
+		entry: any,
+		entryPath = entry.name
+	): Promise<DirectoryFileEntry[]> => {
+		if (entry.name.startsWith('.') || hasHiddenFolder(entryPath)) {
+			return [];
+		}
+
+		if (entry.isFile) {
+			const file = await new Promise<File>((resolve, reject) => {
+				entry.file(resolve, reject);
+			});
+			const parts = entryPath.split('/');
+			const filename = parts.pop() || file.name;
+			return [{ path: parts.join('/'), filename, file }];
+		}
+
+		if (entry.isDirectory) {
+			const reader = entry.createReader();
+			const entries = await readDirectoryEntries(reader);
+			const nested = await Promise.all(
+				entries.map((child) => collectDroppedEntryFiles(child, `${entryPath}/${child.name}`))
+			);
+			return nested.flat();
+		}
+
+		return [];
+	};
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -1063,40 +1035,35 @@
 			return;
 		}
 
-		const handleUploadingFileFolder = (items) => {
-			for (const item of items) {
-				if (item.isFile) {
-					item.file((file) => {
-						uploadFileHandler(file);
-					});
-					continue;
-				}
-
-				// Not sure why you have to call webkitGetAsEntry and isDirectory seperate, but it won't work if you try item.webkitGetAsEntry().isDirectory
-				const wkentry = item.webkitGetAsEntry();
-				const isDirectory = wkentry.isDirectory;
-				if (isDirectory) {
-					// Read the directory
-					wkentry.createReader().readEntries(
-						(entries) => {
-							handleUploadingFileFolder(entries);
-						},
-						(error) => {
-							console.error('Error reading directory entries:', error);
-						}
-					);
-				} else {
-					uploadFileHandler(item.getAsFile());
-				}
-			}
-		};
-
 		if (e.dataTransfer?.types?.includes('Files')) {
 			if (e.dataTransfer?.files) {
 				const inputItems = e.dataTransfer?.items;
 
 				if (inputItems && inputItems.length > 0) {
-					handleUploadingFileFolder(inputItems);
+					const directoryEntries: DirectoryFileEntry[] = [];
+					const looseFiles: File[] = [];
+
+					for (const rawItem of Array.from(inputItems)) {
+						const item = rawItem as DataTransferItem & { webkitGetAsEntry?: () => any };
+						const entry = item.webkitGetAsEntry?.();
+
+						if (entry?.isDirectory) {
+							directoryEntries.push(...(await collectDroppedEntryFiles(entry)));
+						} else {
+							const file = item.getAsFile();
+							if (file) {
+								looseFiles.push(file);
+							}
+						}
+					}
+
+					for (const file of looseFiles) {
+						await uploadFileHandler(file);
+					}
+
+					if (directoryEntries.length > 0) {
+						await uploadDirectoryEntries(directoryEntries);
+					}
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}

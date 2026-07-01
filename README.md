@@ -8,7 +8,7 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
 ![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
 ![Open WebUI Banner](./banner.png)
 
