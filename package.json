@@ -148,7 +148,7 @@
 		"uuid": "^11.1.1",
 		"vega": "^6.2.0",
 		"vega-lite": "^6.4.1",
-		"vite-plugin-static-copy": "^2.2.0",
+		"vite-plugin-static-copy": "^4.1.1",
 		"xlsx": "^0.18.5",
 		"y-prosemirror": "^1.3.7",
 		"y-protocols": "^1.0.7",
