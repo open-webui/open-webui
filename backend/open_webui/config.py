@@ -290,6 +290,16 @@ OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 
 OLLAMA_API_CONFIGS = {}
+_ollama_api_configs = os.getenv('OLLAMA_API_CONFIGS', '')
+if _ollama_api_configs:
+    try:
+        parsed = json.loads(_ollama_api_configs)
+        if isinstance(parsed, dict):
+            OLLAMA_API_CONFIGS = parsed
+        else:
+            log.warning('OLLAMA_API_CONFIGS must be a JSON object, ignoring')
+    except (json.JSONDecodeError, TypeError):
+        log.warning('OLLAMA_API_CONFIGS is not valid JSON, ignoring')
 
 ####################################
 # OPENAI_API
@@ -327,6 +337,16 @@ OPENAI_API_BASE_URLS = [
 OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 
 OPENAI_API_CONFIGS = {}
+_openai_api_configs = os.getenv('OPENAI_API_CONFIGS', '')
+if _openai_api_configs:
+    try:
+        parsed = json.loads(_openai_api_configs)
+        if isinstance(parsed, dict):
+            OPENAI_API_CONFIGS = parsed
+        else:
+            log.warning('OPENAI_API_CONFIGS must be a JSON object, ignoring')
+    except (json.JSONDecodeError, TypeError):
+        log.warning('OPENAI_API_CONFIGS is not valid JSON, ignoring')
 
 # Get the actual OpenAI API key based on the base URL
 OPENAI_API_KEY = ''
