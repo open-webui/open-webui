@@ -32,6 +32,7 @@
 		tags,
 		selectedFolder,
 		activeChatIds,
+		settings,
 		user
 	} from '$lib/stores';
 
@@ -464,9 +465,13 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? ($settings?.highContrastMode ?? false)
+					? 'bg-gray-100 dark:bg-gray-800 selected'
+					: 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950 selected'
+					? ($settings?.highContrastMode ?? false)
+						? 'bg-gray-100 dark:bg-gray-900 selected'
+						: 'bg-gray-100 dark:bg-gray-950 selected'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
 				? 'cursor-not-allowed'
 				: ''}"
@@ -500,9 +505,13 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? ($settings?.highContrastMode ?? false)
+					? 'bg-gray-100 dark:bg-gray-800 selected'
+					: 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950 selected'
+					? ($settings?.highContrastMode ?? false)
+						? 'bg-gray-100 dark:bg-gray-900 selected'
+						: 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
@@ -585,9 +594,13 @@
 			id="sidebar-chat-item-menu"
 			class="
         {id === $chatId || confirmEdit
-				? 'from-gray-100 dark:from-gray-900 selected'
+				? ($settings?.highContrastMode ?? false)
+					? 'from-gray-100 dark:from-gray-800 selected'
+					: 'from-gray-100 dark:from-gray-900 selected'
 				: selected
-					? 'from-gray-100 dark:from-gray-950 selected'
+					? ($settings?.highContrastMode ?? false)
+						? 'from-gray-100 dark:from-gray-900 selected'
+						: 'from-gray-100 dark:from-gray-950 selected'
 					: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 				? 'right-[8px]'
