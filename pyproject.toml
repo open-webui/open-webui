@@ -51,7 +51,7 @@ dependencies = [
     "tiktoken==0.13.0",
     "mcp==1.27.2",
 
-    "openai==2.29.0",
+    "openai==2.44.0",
     "anthropic==0.86.0",
     "google-genai==1.66.0",
 
