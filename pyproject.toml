@@ -117,7 +117,7 @@ dependencies = [
     "google-cloud-storage==3.9.0",
 
     "azure-identity==1.25.3",
-    "azure-storage-blob==12.29.0",
+    "azure-storage-blob==12.30.0",
 
     "ldap3==2.9.1",
 ]
