@@ -7,8 +7,9 @@
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
-	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
+	import { getConnectionsConfig, setConnectionsConfig, getConfigUpdatedAt } from '$lib/apis/configs';
 
+	import dayjs from 'dayjs';
 	import { config, models, settings, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -44,6 +45,7 @@
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let connectionsConfig = null;
+	let configUpdatedAt = {};
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -150,6 +152,9 @@
 				})(),
 				(async () => {
 					connectionsConfig = await getConnectionsConfig(localStorage.token);
+				})(),
+				(async () => {
+					configUpdatedAt = (await getConfigUpdatedAt(localStorage.token)) ?? {};
 				})()
 			]);
 
@@ -240,6 +245,14 @@
 							</div>
 						</div>
 
+						{#if configUpdatedAt['openai.api_configs']}
+							<div class="text-xs text-gray-500 dark:text-gray-400 -mt-1">
+								{$i18n.t('Last updated')}: {dayjs(
+									configUpdatedAt['openai.api_configs'] * 1000
+								).format('YYYY-MM-DD HH:mm')}
+							</div>
+						{/if}
+
 						{#if ENABLE_OPENAI_API}
 							<div class="">
 								<div class="flex justify-between items-center">
@@ -303,6 +316,14 @@
 							/>
 						</div>
 					</div>
+
+					{#if configUpdatedAt['ollama.api_configs']}
+						<div class="text-xs text-gray-500 dark:text-gray-400 -mt-1 mb-2">
+							{$i18n.t('Last updated')}: {dayjs(
+								configUpdatedAt['ollama.api_configs'] * 1000
+							).format('YYYY-MM-DD HH:mm')}
+						</div>
+					{/if}
 
 					{#if ENABLE_OLLAMA_API}
 						<div class="">

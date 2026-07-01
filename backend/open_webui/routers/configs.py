@@ -117,6 +117,12 @@ async def get_config_namespace(namespace: str, user=Depends(get_admin_user)):
     return await Config.get_namespace(namespace)
 
 
+@router.get('/updated', response_model=dict)
+async def get_config_updated_at(user=Depends(get_admin_user)):
+    """Return {config_key: updated_at} (epoch seconds) for all stored config keys."""
+    return await Config.get_updated_at()
+
+
 ############################
 # Connections Config
 ############################

@@ -158,6 +158,20 @@ class Config(Base):
             }
 
     @staticmethod
+    async def get_updated_at(*keys: str) -> dict:
+        """Get {key: updated_at} for the given keys, or for all keys if none given.
+
+        ``updated_at`` is epoch seconds (or ``None`` if never written). Returns
+        only keys that exist as rows in the database.
+        """
+        async with get_async_db() as db:
+            stmt = select(Config.key, Config.updated_at)
+            if keys:
+                stmt = stmt.where(Config.key.in_(set(keys)))
+            result = await db.execute(stmt)
+            return {key: updated_at for key, updated_at in result.all()}
+
+    @staticmethod
     async def get_namespace(namespace: str) -> dict:
         """Get all config keys under a dotted namespace."""
         default_values = {
