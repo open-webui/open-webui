@@ -196,7 +196,7 @@ async def register_oauth_client(
         log.debug(f'Failed to register OAuth client: {e}')
         raise HTTPException(
             status_code=400,
-            detail=f'Failed to register OAuth client',
+            detail=f'Failed to register OAuth client: {e}',
         )
 
 

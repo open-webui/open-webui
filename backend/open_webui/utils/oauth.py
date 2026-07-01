@@ -536,6 +536,20 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
 
+        # Fail fast if authorization server metadata discovery did not resolve an
+        # authorization endpoint. Otherwise registration can still "succeed" (via
+        # the /register fallback below) while issuer/server_metadata stay unset,
+        # which later crashes at authorize time with authlib's
+        # RuntimeError: Missing "authorize_url" value. (#26647)
+        if oauth_server_metadata is None or not oauth_server_metadata.authorization_endpoint:
+            log.error(f'OAuth authorization server metadata discovery failed for {oauth_server_url}')
+            raise Exception(
+                'Could not discover the OAuth authorization server metadata '
+                f'(authorization_endpoint) for {oauth_server_url}. The MCP server must '
+                'expose RFC 8414 / RFC 9728 discovery documents so Open WebUI can '
+                'resolve where to send users to authorize.'
+            )
+
         registration_url = None
         if oauth_server_metadata and oauth_server_metadata.registration_endpoint:
             registration_url = str(oauth_server_metadata.registration_endpoint)
@@ -801,6 +815,17 @@ class OAuthClientManager:
             },
             'server_metadata_url': (oauth_client_info.issuer if oauth_client_info.issuer else None),
         }
+
+        # Defense-in-depth: when the server metadata is already known, pass the
+        # authorization/token endpoints explicitly so authlib does not rely solely
+        # on refetching server_metadata_url (which may be missing/unreachable) to
+        # resolve them. Prevents RuntimeError: Missing "authorize_url". (#26647)
+        server_metadata = oauth_client_info.server_metadata
+        if server_metadata is not None:
+            if getattr(server_metadata, 'authorization_endpoint', None):
+                kwargs['authorize_url'] = str(server_metadata.authorization_endpoint)
+            if getattr(server_metadata, 'token_endpoint', None):
+                kwargs['access_token_url'] = str(server_metadata.token_endpoint)
 
         # Default to S256 for OAuth 2.1 (PKCE is mandatory per RFC 9700)
         kwargs['code_challenge_method'] = 'S256'
@@ -1138,7 +1163,22 @@ class OAuthClientManager:
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
         # Pass explicit scope/resource parameters for providers that require them.
         kwargs = build_oauth_request_params(client_info)
-        return await client.authorize_redirect(request, redirect_uri_str, **kwargs)
+        try:
+            return await client.authorize_redirect(request, redirect_uri_str, **kwargs)
+        except RuntimeError as e:
+            # authlib raises RuntimeError('Missing "authorize_url" value') when the
+            # authorization endpoint could not be resolved from server metadata.
+            # Surface a clear 400 instead of an uncaught 500 for clients that were
+            # registered before discovery was validated. (#26647)
+            log.error(f'OAuth authorize failed for client {client_id}: {e}')
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    'OAuth authorization endpoint could not be resolved for this '
+                    'client. Re-register the MCP server; its OAuth discovery '
+                    'documents may be missing or unreachable.'
+                ),
+            )
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
         client = await self.get_client(client_id)
