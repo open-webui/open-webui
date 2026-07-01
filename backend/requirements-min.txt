@@ -26,7 +26,7 @@ brotlicffi==1.2.0.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 
-sqlalchemy==2.0.50
+sqlalchemy==2.0.51
 aiosqlite==0.22.1
 psycopg[binary]==3.3.4
 alembic==1.18.4
