@@ -49,6 +49,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
+	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
 	const i18n = getContext('i18n');
 
@@ -361,14 +362,14 @@
 		const history = chatContent?.history;
 		let messages = [];
 		if (history?.messages && history?.currentId) {
-			messages = createMessagesList(history, history.currentId).map((message) => ({
+			messages = createMessagesList(history, history.currentId).map((message: any) => ({
 				role: message.role,
-				content: message.content
+				content: getOutputText(message.output) || message.content || ''
 			}));
 		} else {
-			messages = (chatContent?.messages ?? []).map((message) => ({
+			messages = (chatContent?.messages ?? []).map((message: any) => ({
 				role: message.role,
-				content: message.content
+				content: getOutputText(message.output) || message.content || ''
 			}));
 		}
 
