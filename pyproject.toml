@@ -49,7 +49,7 @@ dependencies = [
     "asgiref==3.11.1",
 
     "tiktoken==0.13.0",
-    "mcp==1.27.2",
+    "mcp==1.28.1",
 
     "openai==2.29.0",
     "anthropic==0.86.0",
