@@ -14,6 +14,7 @@ import logging
 import time
 from typing import Any, ClassVar
 
+from fastapi.encoders import jsonable_encoder
 from open_webui.internal.db import Base, get_async_db
 from sqlalchemy import JSON, BigInteger, Column, Text, delete, select
 
@@ -84,6 +85,10 @@ def _assign_path(target: dict, path: list[str], value: Any) -> None:
             current[part] = next_value
         current = next_value
     current[path[-1]] = value
+
+
+def _json_value(value: Any) -> Any:
+    return jsonable_encoder(value)
 
 
 # ── Model ────────────────────────────────────────────────────────────────────
@@ -191,6 +196,7 @@ class Config(Base):
         async with get_async_db() as db:
             now = int(time.time())
             for key, value in updates.items():
+                value = _json_value(value)
                 existing = await db.get(Config, key)
                 if existing:
                     existing.value = value
@@ -232,6 +238,7 @@ class Config(Base):
             new_count = 0
             for key, value in defaults.items():
                 if key not in existing_keys:
+                    value = _json_value(value)
                     db.add(Config(key=key, value=value, updated_at=now))
                     existing_keys.add(key)
                     new_count += 1
