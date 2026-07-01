@@ -149,7 +149,7 @@ opentelemetry-api==1.42.1
 opentelemetry-sdk==1.42.1
 opentelemetry-exporter-otlp==1.42.1
 opentelemetry-instrumentation==0.63b1
-opentelemetry-instrumentation-fastapi==0.63b1
+opentelemetry-instrumentation-fastapi==0.64b0
 opentelemetry-instrumentation-sqlalchemy==0.63b1
 opentelemetry-instrumentation-redis==0.63b1
 opentelemetry-instrumentation-requests==0.63b1
