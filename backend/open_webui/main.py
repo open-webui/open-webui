@@ -1344,9 +1344,7 @@ async def chat_completion(
                     user_message = metadata.get('user_message') or {}
                     selected_chat_models = user_message.get('models') if isinstance(user_message, dict) else None
                     if not isinstance(selected_chat_models, list) or not selected_chat_models:
-                        selected_chat_models = [
-                            entry.get('model_id') for entry in message_ids if entry.get('model_id')
-                        ]
+                        selected_chat_models = [entry.get('model_id') for entry in message_ids if entry.get('model_id')]
 
                     # Persist chat-level fields the frontend used to save on every message.
                     # The old frontend saveChatHandler did this on every message;

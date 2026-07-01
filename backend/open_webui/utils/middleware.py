@@ -3471,7 +3471,6 @@ async def non_streaming_chat_response_handler(response, ctx):
             content = choices[0].get('message', {}).get('content') if choices else ''
 
             if choices and (content or response_output):
-
                 if content or response_output:
                     await event_emitter(
                         {
@@ -4307,11 +4306,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if reasoning_content or reasoning_details:
                                         reasoning_item = (
                                             next(
-                                                (
-                                                    item
-                                                    for item in reversed(output)
-                                                    if item.get('type') == 'reasoning'
-                                                ),
+                                                (item for item in reversed(output) if item.get('type') == 'reasoning'),
                                                 None,
                                             )
                                             if reasoning_details and not reasoning_content
