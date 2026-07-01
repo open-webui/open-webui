@@ -153,7 +153,7 @@ opentelemetry-instrumentation-fastapi==0.63b1
 opentelemetry-instrumentation-sqlalchemy==0.63b1
 opentelemetry-instrumentation-redis==0.63b1
 opentelemetry-instrumentation-requests==0.63b1
-opentelemetry-instrumentation-logging==0.63b1
+opentelemetry-instrumentation-logging==0.64b0
 opentelemetry-instrumentation-httpx==0.63b1
 opentelemetry-instrumentation-aiohttp-client==0.63b1
 opentelemetry-instrumentation-system-metrics==0.63b1
