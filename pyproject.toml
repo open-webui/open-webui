@@ -162,7 +162,7 @@ all = [
     
     "weaviate-client==4.20.3",
     "pymilvus==2.6.14",
-    "pinecone==6.0.2",
+    "pinecone==9.1.0",
     "oracledb==3.4.2",
     "colbert-ai==0.2.22",
 
