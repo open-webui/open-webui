@@ -91,7 +91,7 @@ dependencies = [
     "validators==0.35.0",
     "psutil==7.2.2",
     "sentencepiece==0.2.1",
-    "soundfile==0.13.1",
+    "soundfile==0.14.0",
     "azure-ai-documentintelligence==1.0.2",
 
     "pillow==12.2.0",
