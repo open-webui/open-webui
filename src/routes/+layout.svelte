@@ -810,18 +810,17 @@
 		});
 	};
 
-	const isAuthFailureResponse = async (response) => {
-		try {
-			const data = await response.clone().json();
-			const detail = data?.detail;
-			return (
-				detail === '401 Unauthorized' ||
-				detail === 'Not authenticated' ||
-				detail === 'Your session has expired or the token is invalid. Please sign in again.'
-			);
-		} catch {
-			return true;
-		}
+	const isCurrentSessionUnauthorized = async (originalFetch) => {
+		return originalFetch(`${WEBUI_API_BASE_URL}/auths/`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${localStorage.token}`
+			},
+			credentials: 'include'
+		})
+			.then((res) => res.status === 401)
+			.catch(() => false);
 	};
 
 	const checkTokenExpiry = async () => {
@@ -954,7 +953,7 @@
 				response.status === 401 &&
 				localStorage.token &&
 				isAuthenticatedBackendFetch(input, init) &&
-				(await isAuthFailureResponse(response))
+				(await isCurrentSessionUnauthorized(originalFetch))
 			) {
 				redirectToAuthAfterUnauthorized();
 			}
