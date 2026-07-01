@@ -284,7 +284,7 @@ def validate_memory_operations(form_data) -> list[dict]:
 
 
 def model_allows_memory(model: dict | None) -> bool:
-    return (model or {}).get('info', {}).get('meta', {}).get('capabilities', {}).get('memory', True)
+    return ((model or {}).get('info', {}).get('meta', {}).get('capabilities') or {}).get('memory', True)
 
 
 async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
