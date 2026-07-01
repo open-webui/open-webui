@@ -145,7 +145,7 @@ pytest-docker~=3.2.5
 ldap3==2.9.1
 
 ## Trace
-opentelemetry-api==1.42.1
+opentelemetry-api==1.43.0
 opentelemetry-sdk==1.42.1
 opentelemetry-exporter-otlp==1.42.1
 opentelemetry-instrumentation==0.63b1
