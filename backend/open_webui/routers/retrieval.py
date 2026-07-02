@@ -2636,7 +2636,8 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
             }
         else:
             # Create a single collection for all documents
-            collection_name = f'web-search-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
+            # Bind the ephemeral collection to its owner so filter_accessible_collections can scope it per-user.
+            collection_name = f'web-search-{user.id}-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
 
             try:
                 await run_in_threadpool(
