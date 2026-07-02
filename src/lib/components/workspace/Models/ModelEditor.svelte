@@ -296,9 +296,7 @@
 	};
 
 	onMount(async () => {
-		if (!$tools) {
-			await tools.set(await getTools(localStorage.token));
-		}
+		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
 			await functions.set(await getFunctions(localStorage.token));
