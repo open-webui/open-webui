@@ -148,6 +148,60 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
+	let appliedDefaultModels: string[] | null = null;
+	let selectedModelsInitializedFromSession = false;
+
+	const getAvailableModelIds = () =>
+		$models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
+
+	const getDefaultModelIds = (availableModels: string[]) => {
+		const userDefaultModels = ($settings?.models ?? []).filter((modelId) =>
+			availableModels.includes(modelId)
+		);
+
+		if (userDefaultModels.length > 0) {
+			return userDefaultModels;
+		}
+
+		const globalDefaultModels = ($config?.default_models ? $config.default_models.split(',') : []).filter(
+			(modelId) => availableModels.includes(modelId)
+		);
+
+		if (globalDefaultModels.length > 0) {
+			return globalDefaultModels;
+		}
+
+		return availableModels.length > 0 ? [availableModels.at(0) ?? ''] : [''];
+	};
+
+	const hasSelectedModels = (modelIds: string[] | null | undefined) =>
+		(modelIds ?? []).filter((modelId) => modelId !== '').length > 0;
+
+	$: if (
+		!chatIdProp &&
+		!$selectedFolder?.data?.model_ids &&
+		!$page.url.searchParams.get('models') &&
+		!$page.url.searchParams.get('model') &&
+		$models.length > 0
+	) {
+		const availableModels = getAvailableModelIds();
+		const defaultModels = getDefaultModelIds(availableModels);
+		const selectedModelsWereAutoApplied =
+			appliedDefaultModels !== null && equal(selectedModels, appliedDefaultModels);
+		const shouldReplaceSessionSelection =
+			selectedModelsInitializedFromSession && hasSelectedModels(defaultModels);
+
+		if (
+			!hasSelectedModels(selectedModels) ||
+			selectedModelsWereAutoApplied ||
+			shouldReplaceSessionSelection
+		) {
+			selectedModels = defaultModels;
+			appliedDefaultModels = defaultModels;
+			selectedModelsInitializedFromSession = false;
+		}
+	}
+
 	$: if (atSelectedModel !== undefined) {
 		selectedModelIds = [atSelectedModel.id];
 	} else {
@@ -328,7 +382,7 @@
 		}
 	};
 
-	$: if (selectedModels && chatIdProp !== '') {
+	$: if (selectedModels && chatIdProp) {
 		saveSessionSelectedModels();
 	}
 
@@ -1413,18 +1467,19 @@
 				// Set from folder model IDs
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
-				if (sessionStorage.selectedModels) {
+				if ($settings?.models) {
+					// Set from user settings
+					selectedModels = $settings?.models;
+					sessionStorage.removeItem('selectedModels');
+				} else if (defaultModels && defaultModels.length > 0) {
+					// Set from default models
+					selectedModels = defaultModels;
+					sessionStorage.removeItem('selectedModels');
+				} else if (sessionStorage.selectedModels) {
 					// Set from session storage (temporary selection)
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
+					selectedModelsInitializedFromSession = true;
 					sessionStorage.removeItem('selectedModels');
-				} else {
-					if ($settings?.models) {
-						// Set from user settings
-						selectedModels = $settings?.models;
-					} else if (defaultModels && defaultModels.length > 0) {
-						// Set from default models
-						selectedModels = defaultModels;
-					}
 				}
 			}
 
