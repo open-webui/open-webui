@@ -888,6 +888,36 @@
 		savedModelIds();
 	}
 
+	// initNewChat() runs on mount via page.subscribe, but $models is loaded
+	// asynchronously (getModels() in the app layout) and this component mounts before
+	// that resolves. So initNewChat() can run while $models is still empty, in which
+	// case none of its precedence branches match and selectedModels is left as [''].
+	// Nothing else re-applies the default afterwards, so the default model never gets
+	// selected on a fresh page load. Re-apply the default once models arrive, for a
+	// brand-new chat that still has no valid model selected.
+	$: if (
+		chatIdProp === '' &&
+		$models.length > 0 &&
+		selectedModels.length === 1 &&
+		selectedModels[0] === '' &&
+		!$page.url.searchParams.get('models') &&
+		!$page.url.searchParams.get('model')
+	) {
+		const availableModels = $models
+			.filter((m) => !(m?.info?.meta?.hidden ?? false))
+			.map((m) => m.id);
+		const defaultModels = $config?.default_models ? $config.default_models.split(',') : [];
+		let next = ($settings?.models?.length ? $settings.models : defaultModels).filter((id) =>
+			availableModels.includes(id)
+		);
+		if (next.length === 0 && availableModels.length > 0) {
+			next = [availableModels[0]];
+		}
+		if (next.length > 0) {
+			selectedModels = next;
+		}
+	}
+
 	const stopAudio = () => {
 		try {
 			speechSynthesis.cancel();
