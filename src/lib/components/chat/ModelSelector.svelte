@@ -79,7 +79,10 @@
 								class=" "
 								{disabled}
 								on:click={() => {
-									selectedModels = [...selectedModels, ''];
+									selectedModels = [
+										...selectedModels,
+										selectedModels[selectedModels.length - 1] || ''
+									];
 								}}
 								aria-label="Add Model"
 							>

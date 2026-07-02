@@ -44,10 +44,6 @@
 	<div class="flex justify-between items-center mb-1">
 		<div class="flex items-center gap-2">
 			<div class="font-medium">{$i18n.t('Open Terminal')}</div>
-			<span
-				class="text-[0.65rem] font-medium uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-				>{$i18n.t('Experimental')}</span
-			>
 		</div>
 		<Tooltip content={$i18n.t('Add Connection')}>
 			<button

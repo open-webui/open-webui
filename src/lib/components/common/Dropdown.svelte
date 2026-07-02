@@ -20,6 +20,9 @@
 	/** CSS classes for the dropdown content container */
 	export let contentClass = '';
 
+	/** Max height for the dropdown content */
+	export let maxHeight = 'min(32rem, calc(100dvh - 2rem))';
+
 	/** Side offset in px */
 	export let sideOffset = 4;
 
@@ -187,6 +190,8 @@
 		bind:this={contentEl}
 		class={contentClass}
 		role="menu"
+		style:max-height={maxHeight}
+		style:overflow-y="auto"
 		transition:flyAndScale
 		on:click={(e) => e.stopPropagation()}
 		on:pointerdown={(e) => e.stopPropagation()}

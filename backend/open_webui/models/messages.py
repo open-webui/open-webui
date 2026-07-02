@@ -328,7 +328,8 @@ class MessageTable:
         async with get_async_db_context(db) as db:
             message = await db.get(Message, parent_id)
 
-            if not message:
+            # Thread parent must belong to the requested channel; never disclose a foreign-channel message.
+            if not message or message.channel_id != channel_id:
                 return []
 
             result = await db.execute(
@@ -499,6 +500,71 @@ class MessageTable:
                 reactions[reaction.name]['count'] += 1
 
             return [Reactions(**reaction) for reaction in reactions.values()]
+
+    async def get_reactions_by_message_ids(
+        self, ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, list[Reactions]]:
+        """Batch-fetch reactions for multiple messages in a single query.
+
+        Returns a dict mapping each message_id to its list of Reactions.
+        Messages with no reactions map to an empty list.
+        """
+        if not ids:
+            return {}
+
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(MessageReaction, User)
+                .join(User, MessageReaction.user_id == User.id)
+                .filter(MessageReaction.message_id.in_(ids))
+            )
+            rows = result.all()
+
+            # Group by (message_id, reaction_name)
+            grouped: dict[str, dict[str, dict]] = {mid: {} for mid in ids}
+            for reaction, user in rows:
+                mid = reaction.message_id
+                if mid not in grouped:
+                    grouped[mid] = {}
+                if reaction.name not in grouped[mid]:
+                    grouped[mid][reaction.name] = {
+                        'name': reaction.name,
+                        'users': [],
+                        'count': 0,
+                    }
+                grouped[mid][reaction.name]['users'].append(
+                    {
+                        'id': user.id,
+                        'name': user.name,
+                    }
+                )
+                grouped[mid][reaction.name]['count'] += 1
+
+            return {mid: [Reactions(**r) for r in reactions.values()] for mid, reactions in grouped.items()}
+
+    async def get_thread_reply_counts_by_message_ids(
+        self, ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, tuple[int, int | None]]:
+        """Batch-fetch reply counts and latest reply timestamps for multiple parent messages.
+
+        Returns a dict mapping each parent message_id to a
+        (reply_count, latest_reply_created_at) tuple.
+        Messages with no replies are omitted from the result.
+        """
+        if not ids:
+            return {}
+
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(
+                    Message.parent_id,
+                    func.count(Message.id),
+                    func.max(Message.created_at),
+                )
+                .filter(Message.parent_id.in_(ids))
+                .group_by(Message.parent_id)
+            )
+            return {row[0]: (row[1], row[2]) for row in result.all()}
 
     async def remove_reaction_by_id_and_user_id_and_name(
         self, id: str, user_id: str, name: str, db: Optional[AsyncSession] = None

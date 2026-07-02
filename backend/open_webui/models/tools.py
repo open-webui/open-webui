@@ -10,6 +10,7 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserResponse, Users
+from open_webui.utils.valves import decrypt_valves, encrypt_valves
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, String, Text, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +36,7 @@ class Tool(Base):  # database table definition
 class ToolMeta(BaseModel):
     description: str | None = None
     manifest: dict | None = {}
+    has_user_valves: bool = False
 
 
 class ToolModel(BaseModel):
@@ -231,8 +233,8 @@ class ToolsTable:
         try:
             async with get_async_db_context(db) as db:
                 tool = await db.get(Tool, id)
-                return tool.valves if tool.valves else {}
-        except Exception as e:
+                return decrypt_valves(tool.valves if tool else None)
+        except Exception:
             log.exception(f'Error getting tool valves by id {id}')
             return None
 
@@ -241,7 +243,9 @@ class ToolsTable:
     ) -> ToolValves | None:
         try:
             async with get_async_db_context(db) as db:
-                await db.execute(update(Tool).filter_by(id=id).values(valves=valves, updated_at=int(time.time())))
+                await db.execute(
+                    update(Tool).filter_by(id=id).values(valves=encrypt_valves(valves), updated_at=int(time.time()))
+                )
                 await db.commit()
                 return await self.get_tool_by_id(id, db=db)
         except Exception:
@@ -260,7 +264,7 @@ class ToolsTable:
             if 'valves' not in user_settings['tools']:
                 user_settings['tools']['valves'] = {}
 
-            return user_settings['tools']['valves'].get(id, {})
+            return decrypt_valves(user_settings['tools']['valves'].get(id))
         except Exception as e:
             log.exception(f'Error getting user values by id {id} and user_id {user_id}: {e}')
             return None
@@ -278,12 +282,12 @@ class ToolsTable:
             if 'valves' not in user_settings['tools']:
                 user_settings['tools']['valves'] = {}
 
-            user_settings['tools']['valves'][id] = valves
+            user_settings['tools']['valves'][id] = encrypt_valves(valves)
 
             # Update the user settings in the database
             await Users.update_user_by_id(user_id, {'settings': user_settings}, db=db)
 
-            return user_settings['tools']['valves'][id]
+            return valves
         except Exception as e:
             log.exception(f'Error updating user valves by id {id} and user_id {user_id}: {e}')
             return None

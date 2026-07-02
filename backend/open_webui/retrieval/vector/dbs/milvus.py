@@ -27,8 +27,14 @@ from open_webui.retrieval.vector.main import (
 from open_webui.retrieval.vector.utils import process_metadata
 from pymilvus import Collection, DataType, FieldSchema, connections
 from pymilvus import MilvusClient as Client
+from pymilvus.exceptions import MilvusException
 
 log = logging.getLogger(__name__)
+
+# Milvus caps stored text length (here the chunk lives under the JSON `data`
+# field). Clamp long chunks before insert so one oversized chunk can't fail the
+# whole batch and leave the file with zero embeddings.
+MILVUS_TEXT_MAX_LENGTH = 65535
 
 
 class MilvusClient(VectorDBBase):
@@ -270,18 +276,28 @@ class MilvusClient(VectorDBBase):
             self._create_collection(collection_name=collection_name, dimension=len(items[0]['vector']))
 
         log.info(f'Inserting {len(items)} items into collection {self.collection_prefix}_{collection_name}.')
-        return self.client.insert(
-            collection_name=f'{self.collection_prefix}_{collection_name}',
-            data=[
+        data = []
+        for item in items:
+            text = item['text'] or ''
+            if len(text) > MILVUS_TEXT_MAX_LENGTH:
+                log.warning(f'Milvus: truncating text id={item["id"]} {len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars')
+                text = text[:MILVUS_TEXT_MAX_LENGTH]
+            data.append(
                 {
                     'id': item['id'],
                     'vector': item['vector'],
-                    'data': {'text': item['text']},
+                    'data': {'text': text},
                     'metadata': process_metadata(item['metadata']),
                 }
-                for item in items
-            ],
-        )
+            )
+        try:
+            return self.client.insert(
+                collection_name=f'{self.collection_prefix}_{collection_name}',
+                data=data,
+            )
+        except MilvusException as e:
+            log.error(f'Milvus insert failed for {self.collection_prefix}_{collection_name} ({len(items)} items): {e}')
+            raise
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
@@ -298,18 +314,28 @@ class MilvusClient(VectorDBBase):
             self._create_collection(collection_name=collection_name, dimension=len(items[0]['vector']))
 
         log.info(f'Upserting {len(items)} items into collection {self.collection_prefix}_{collection_name}.')
-        return self.client.upsert(
-            collection_name=f'{self.collection_prefix}_{collection_name}',
-            data=[
+        data = []
+        for item in items:
+            text = item['text'] or ''
+            if len(text) > MILVUS_TEXT_MAX_LENGTH:
+                log.warning(f'Milvus: truncating text id={item["id"]} {len(text)}->{MILVUS_TEXT_MAX_LENGTH} chars')
+                text = text[:MILVUS_TEXT_MAX_LENGTH]
+            data.append(
                 {
                     'id': item['id'],
                     'vector': item['vector'],
-                    'data': {'text': item['text']},
+                    'data': {'text': text},
                     'metadata': process_metadata(item['metadata']),
                 }
-                for item in items
-            ],
-        )
+            )
+        try:
+            return self.client.upsert(
+                collection_name=f'{self.collection_prefix}_{collection_name}',
+                data=data,
+            )
+        except MilvusException as e:
+            log.error(f'Milvus upsert failed for {self.collection_prefix}_{collection_name} ({len(items)} items): {e}')
+            raise
 
     def delete(
         self,

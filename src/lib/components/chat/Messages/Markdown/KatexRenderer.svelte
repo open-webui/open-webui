@@ -30,9 +30,20 @@
 	onMount(async () => {
 		renderToString = await getKatexRenderer();
 	});
+
+	// Cache rendered HTML — only re-compute when content, displayMode, or renderToString changes,
+	// not on every parent re-render during streaming
+	let renderedHTML: string = '';
+	$: if (renderToString) {
+		try {
+			renderedHTML = renderToString(content, { displayMode, throwOnError: false });
+		} catch {
+			renderedHTML = content;
+		}
+	}
 </script>
 
-{#if renderToString}
+{#if renderToString && renderedHTML}
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<svelte:element
@@ -43,6 +54,6 @@
 			toast.success($i18n.t('Copied to clipboard'));
 		}}
 	>
-		{@html renderToString(content, { displayMode, throwOnError: false })}
+		{@html renderedHTML}
 	</svelte:element>
 {/if}

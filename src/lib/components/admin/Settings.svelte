@@ -8,6 +8,7 @@
 	import { getBackendConfig } from '$lib/apis';
 	import Database from './Settings/Database.svelte';
 
+	import Authentication from './Settings/Authentication.svelte';
 	import General from './Settings/General.svelte';
 	import Pipelines from './Settings/Pipelines.svelte';
 	import Audio from './Settings/Audio.svelte';
@@ -37,6 +38,7 @@
 		const tabFromPath = pathParts[pathParts.length - 1];
 		selectedTab = [
 			'general',
+			'authentication',
 			'connections',
 			'models',
 			'evaluations',
@@ -95,6 +97,24 @@
 			]
 		},
 		{
+			id: 'authentication',
+			title: 'Authentication',
+			route: '/admin/settings/authentication',
+			keywords: [
+				'authentication',
+				'auth',
+				'login',
+				'signup',
+				'ldap',
+				'oauth',
+				'oidc',
+				'sso',
+				'roles',
+				'groups',
+				'identity'
+			]
+		},
+		{
 			id: 'connections',
 			title: 'Connections',
 			route: '/admin/settings/connections',
@@ -135,7 +155,21 @@
 			id: 'integrations',
 			title: 'Integrations',
 			route: '/admin/settings/integrations',
-			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			keywords: [
+				'tools',
+				'integrations',
+				'plugins',
+				'extensions',
+				'functions',
+				'openapi',
+				'server',
+				'knowledge',
+				'vector db',
+				'qdrant',
+				'rag',
+				'retrieval',
+				'sources'
+			]
 		},
 		{
 			id: 'documents',
@@ -308,6 +342,7 @@
 		</div>
 
 		<!-- {$i18n.t('General')} -->
+		<!-- {$i18n.t('Authentication')} -->
 		<!-- {$i18n.t('Connections')} -->
 		<!-- {$i18n.t('Models')} -->
 		<!-- {$i18n.t('Evaluations')} -->
@@ -341,6 +376,19 @@
 							<path
 								fill-rule="evenodd"
 								d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					{:else if tab.id === 'authentication'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8 1.5A3.5 3.5 0 0 0 4.5 5v1H4a2 2 0 0 0-2 2v4.5a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-.5V5A3.5 3.5 0 0 0 8 1.5ZM6 6V5a2 2 0 1 1 4 0v1H6Zm2 3a.75.75 0 0 0-.75.75v1a.75.75 0 0 0 1.5 0v-1A.75.75 0 0 0 8 9Z"
 								clip-rule="evenodd"
 							/>
 						</svg>
@@ -515,6 +563,8 @@
 					await config.set(await getBackendConfig());
 				}}
 			/>
+		{:else if selectedTab === 'authentication'}
+			<Authentication />
 		{:else if selectedTab === 'connections'}
 			<Connections
 				on:save={() => {

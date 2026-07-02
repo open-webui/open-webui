@@ -84,13 +84,16 @@
 		getUserList();
 	}
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			getUserList();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				getUserList();
+			}
 		}, 300);
-	}
+	};
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
@@ -106,6 +109,7 @@
 			<input
 				class=" w-full text-sm pr-4 rounded-r-xl outline-hidden bg-transparent"
 				bind:value={query}
+				on:input={handleSearchInput}
 				placeholder={$i18n.t('Search')}
 			/>
 		</div>

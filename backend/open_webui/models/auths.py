@@ -6,6 +6,7 @@ import logging
 import uuid
 from typing import Optional
 
+import bcrypt
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
 from open_webui.utils.validate import validate_profile_image_url
@@ -14,6 +15,11 @@ from sqlalchemy import Boolean, Column, String, Text, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+# Pre-computed hash verified on signin paths that lack a real credential
+# (unknown user, inactive account) so response timing cannot reveal
+# whether an account exists (CWE-208).
+PLACEHOLDER_HASH = bcrypt.hashpw(b'placeholder', bcrypt.gensalt()).decode('utf-8')
 
 
 class Auth(Base):  # credential ↔ user linkage
@@ -142,13 +148,15 @@ class AuthsTable:
         log.info('authenticate_user: %s', email)
         resolved = await Users.get_user_by_email(email, db=db)
         if not resolved:
+            await verify_password(PLACEHOLDER_HASH)
             return
         # load the credential row and verify the password hash
         async with get_async_db_context(db) as session:
             credential = await session.get(Auth, resolved.id)
             if not credential or not credential.active:
+                await verify_password(PLACEHOLDER_HASH)
                 return
-            if not verify_password(credential.password):
+            if not await verify_password(credential.password):
                 return
             return resolved
 

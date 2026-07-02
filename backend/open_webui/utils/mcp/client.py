@@ -44,7 +44,12 @@ def _build_httpx_client(headers=None, timeout=None, auth=None, verify=True):
 
 
 def create_httpx_client(headers=None, timeout=None, auth=None):
-    return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=True)
+    # AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL may be True, False, or an
+    # ssl.SSLContext (when a custom CA bundle path is configured).
+    # httpx's verify= accepts bool | str | ssl.SSLContext, so all three work.
+    ssl_setting = AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+    verify = ssl_setting if ssl_setting is not True else True
+    return _build_httpx_client(headers=headers, timeout=timeout, auth=auth, verify=verify)
 
 
 def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
@@ -77,7 +82,7 @@ class MCPClient:
                     await self.session.initialize()
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
-                await asyncio.shield(self.disconnect())
+                await self.disconnect()
                 raise e
 
     async def list_tool_specs(self) -> Optional[dict]:
@@ -145,9 +150,7 @@ class MCPClient:
         """Clean up and close the session.
 
         This method is idempotent — calling it multiple times or on a
-        client that was never connected is safe.  It shields the close
-        operation from CancelledError and adds a timeout so a hung MCP
-        server cannot block the event loop indefinitely.
+        client that was never connected is safe.
         """
         exit_stack = self.exit_stack
         if exit_stack is None:
@@ -167,8 +170,11 @@ class MCPClient:
             # We simply call aclose() directly. If the task is cancelled, the
             # sockets will eventually be cleaned up by garbage collection.
             await exit_stack.aclose()
-        except TimeoutError:
-            log.warning('MCPClient.disconnect() timed out after 5 s')
+        except asyncio.CancelledError as exc:
+            task = asyncio.current_task()
+            if task is not None and task.cancelling():
+                raise
+            log.debug('MCPClient.disconnect() suppressed internal cancellation: %s', exc)
         except RuntimeError as exc:
             log.debug('MCPClient.disconnect() suppressed RuntimeError: %s', exc)
         except Exception as exc:

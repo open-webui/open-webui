@@ -237,6 +237,12 @@ async def generate_chat_completion(
 
             form_data['model'] = selected_model_id
 
+            # bypass_filter recursion below skips the line-200 check; gate the resolved model here.
+            if not bypass_filter and user.role == 'user':
+                selected_model = request.app.state.MODELS.get(selected_model_id)
+                if selected_model:
+                    await check_model_access(user, selected_model)
+
         if selected_model_id:
             if form_data.get('stream') == True:
 

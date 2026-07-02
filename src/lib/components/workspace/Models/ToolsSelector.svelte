@@ -1,51 +1,64 @@
 <script lang="ts">
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getContext, onMount } from 'svelte';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
+	import { getContext } from 'svelte';
 
-	export let tools = [];
+	type Tool = {
+		id: string;
+		name?: string;
+		meta?: {
+			description?: string;
+		};
+	};
 
-	let _tools = {};
+	export let tools: Tool[] = [];
+	export let selectedToolIds: string[] = [];
 
-	export let selectedToolIds = [];
+	const i18n = getContext('i18n') as any;
 
-	const i18n = getContext('i18n');
+	$: selectedTools = tools.filter((tool) => selectedToolIds.includes(tool.id));
+	$: availableTools = tools.filter((tool) => !selectedToolIds.includes(tool.id));
 
-	onMount(() => {
-		_tools = tools.reduce((acc, tool) => {
-			acc[tool.id] = {
-				...tool,
-				selected: selectedToolIds.includes(tool.id)
-			};
-
-			return acc;
-		}, {});
-	});
+	const selectTool = (tool: Tool) => {
+		selectedToolIds = [...selectedToolIds, tool.id];
+	};
 </script>
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Tools')}</div>
+		<div class=" self-center text-xs text-gray-500">{$i18n.t('Tools')}</div>
 	</div>
 
 	<div class="flex flex-col mb-1">
 		{#if tools.length > 0}
+			<TypeaheadSelector
+				id="model-tools-selector"
+				items={availableTools}
+				className="w-48 max-w-full"
+				placeholder={$i18n.t('Search tools')}
+				on:select={(e) => {
+					selectTool(e.detail);
+				}}
+			/>
+
 			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_tools) as tool, toolIdx}
+				{#each selectedTools as tool, toolIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_tools[tool].selected ? 'checked' : 'unchecked'}
+								state="checked"
 								on:change={(e) => {
-									_tools[tool].selected = e.detail === 'checked';
-									selectedToolIds = Object.keys(_tools).filter((t) => _tools[t].selected);
+									if (e.detail === 'unchecked') {
+										selectedToolIds = selectedToolIds.filter((id) => id !== tool.id);
+									}
 								}}
 							/>
 						</div>
 
-						<Tooltip content={_tools[tool]?.meta?.description ?? _tools[tool].id}>
-							<div class=" py-0.5 text-sm w-full capitalize font-medium">
-								{_tools[tool].name}
+						<Tooltip content={tool.meta?.description ?? tool.id}>
+							<div class=" py-0.5 text-xs capitalize">
+								{tool.name}
 							</div>
 						</Tooltip>
 					</div>

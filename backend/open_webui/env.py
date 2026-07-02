@@ -291,6 +291,7 @@ if 'postgres://' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 
 DATABASE_SCHEMA = os.getenv('DATABASE_SCHEMA', None)
+DATABASE_ENABLE_IAM_TOKEN_AUTH = os.getenv('DATABASE_ENABLE_IAM_TOKEN_AUTH', 'False').lower() == 'true'
 
 _pool_size_raw = os.getenv('DATABASE_POOL_SIZE')
 try:
@@ -443,17 +444,16 @@ WEBSOCKET_REDIS_OPTIONS = os.getenv('WEBSOCKET_REDIS_OPTIONS', '')
 
 
 if WEBSOCKET_REDIS_OPTIONS == '':
+    WEBSOCKET_REDIS_OPTIONS = {'socket_timeout': None}
     if REDIS_SOCKET_CONNECT_TIMEOUT:
-        WEBSOCKET_REDIS_OPTIONS = {'socket_connect_timeout': REDIS_SOCKET_CONNECT_TIMEOUT}
-    else:
-        log.debug('No WEBSOCKET_REDIS_OPTIONS provided, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
+        WEBSOCKET_REDIS_OPTIONS['socket_connect_timeout'] = REDIS_SOCKET_CONNECT_TIMEOUT
 else:
     try:
         WEBSOCKET_REDIS_OPTIONS = json.loads(WEBSOCKET_REDIS_OPTIONS)
+        WEBSOCKET_REDIS_OPTIONS.setdefault('socket_timeout', None)
     except Exception:
-        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to None')
-        WEBSOCKET_REDIS_OPTIONS = None
+        log.warning('Invalid WEBSOCKET_REDIS_OPTIONS, defaulting to socket_timeout=None')
+        WEBSOCKET_REDIS_OPTIONS = {'socket_timeout': None}
 
 WEBSOCKET_REDIS_URL = os.getenv('WEBSOCKET_REDIS_URL', REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = os.getenv('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
@@ -498,6 +498,65 @@ else:
         WEBSOCKET_EVENT_CALLER_TIMEOUT = 300
 
 
+import ssl as _ssl
+
+
+# Dedicated env var for a custom CA bundle file path.  When set, this is
+# used as the default CA bundle for all outbound HTTPS connections that
+# have SSL verification enabled (i.e. when their per-connection SSL env
+# var is ``"True"``).  Per-connection overrides (setting the SSL env var
+# to a path directly) take precedence over this global fallback.
+#
+# This follows the industry convention of ``SSL_CERT_FILE`` / ``REQUESTS_CA_BUNDLE``
+# but is scoped to Open WebUI to avoid interfering with system-level settings.
+AIOHTTP_CLIENT_SSL_CERT_FILE = os.getenv('AIOHTTP_CLIENT_SSL_CERT_FILE', '').strip()
+
+
+def _build_ssl_context_from_file(path: str) -> '_ssl.SSLContext | None':
+    """Create an SSLContext from a CA bundle file, or None if invalid."""
+    if not path:
+        return None
+    if not os.path.isfile(path):
+        log.warning(
+            'SSL CA bundle path does not exist: %r, ignoring',
+            path,
+        )
+        return None
+    ctx = _ssl.create_default_context(cafile=path)
+    log.info('Using custom SSL CA bundle: %s', path)
+    return ctx
+
+
+# Pre-built SSLContext from the dedicated env var (cached once at startup).
+_GLOBAL_SSL_CONTEXT = _build_ssl_context_from_file(AIOHTTP_CLIENT_SSL_CERT_FILE)
+
+
+def _parse_ssl_env(value: str) -> 'bool | _ssl.SSLContext':
+    """Parse an SSL env var into a bool or SSLContext.
+
+    - ``"true"``  → uses ``AIOHTTP_CLIENT_SSL_CERT_FILE`` context if set,
+      otherwise ``True``  (default SSL verification via certifi)
+    - ``"false"`` → ``False`` (no verification)
+    - ``"/path/to/ca-bundle.crt"`` → ``SSLContext`` loading that CA file
+      (takes precedence over ``AIOHTTP_CLIENT_SSL_CERT_FILE``)
+
+    This allows users with corporate or internal CAs to point Open WebUI
+    at a custom CA bundle without disabling verification entirely.
+    """
+    lower = value.strip().lower()
+    if lower == 'true':
+        # Use the global dedicated CA bundle if configured, otherwise default
+        return _GLOBAL_SSL_CONTEXT if _GLOBAL_SSL_CONTEXT is not None else True
+    if lower == 'false':
+        return False
+    # Treat as a file path to a CA bundle (per-connection override)
+    ctx = _build_ssl_context_from_file(value.strip())
+    if ctx is not None:
+        return ctx
+    # Path was invalid — fall back to default
+    return _GLOBAL_SSL_CONTEXT if _GLOBAL_SSL_CONTEXT is not None else True
+
+
 REQUESTS_VERIFY = os.getenv('REQUESTS_VERIFY', 'True').lower() == 'true'
 
 _aiohttp_timeout_raw = os.getenv('AIOHTTP_CLIENT_TIMEOUT', '')
@@ -507,7 +566,10 @@ except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT = 300
 
 
-AIOHTTP_CLIENT_SESSION_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True').lower() == 'true'
+# SSL verification for general outbound requests (OpenAI, OAuth, etc.).
+# Accepts "True", "False", or a path to a CA bundle file.
+# When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
+AIOHTTP_CLIENT_SESSION_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True'))
 
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
@@ -533,7 +595,10 @@ except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
 
-AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True').lower() == 'true'
+# SSL verification for tool server connections specifically.
+# Accepts "True", "False", or a path to a CA bundle file.
+# When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL', 'True'))
 
 AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER = os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER', '')
 
@@ -616,6 +681,8 @@ WEBUI_SECRET_KEY = os.getenv(
     os.getenv('WEBUI_JWT_SECRET_KEY', ''),
 )
 
+ENABLE_VALVE_ENCRYPTION = os.getenv('ENABLE_VALVE_ENCRYPTION', 'False').lower() == 'true'
+
 WEBUI_SESSION_COOKIE_SAME_SITE = os.getenv('WEBUI_SESSION_COOKIE_SAME_SITE', 'lax')
 WEBUI_SESSION_COOKIE_SECURE = os.getenv('WEBUI_SESSION_COOKIE_SECURE', 'false').lower() == 'true'
 WEBUI_AUTH_COOKIE_SAME_SITE = os.getenv('WEBUI_AUTH_COOKIE_SAME_SITE', WEBUI_SESSION_COOKIE_SAME_SITE)
@@ -662,6 +729,7 @@ WEBUI_AUTH_TRUSTED_ROLE_HEADER = os.getenv('WEBUI_AUTH_TRUSTED_ROLE_HEADER', Non
 CUSTOM_API_KEY_HEADER = os.getenv('CUSTOM_API_KEY_HEADER', 'x-api-key')
 
 ENABLE_PASSWORD_VALIDATION = os.getenv('ENABLE_PASSWORD_VALIDATION', 'False').lower() == 'true'
+PASSWORD_HASH_ALGORITHM = os.getenv('PASSWORD_HASH_ALGORITHM', 'bcrypt').lower()
 PASSWORD_VALIDATION_REGEX_PATTERN = os.getenv(
     'PASSWORD_VALIDATION_REGEX_PATTERN',
     r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$',
@@ -686,6 +754,9 @@ BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', '
 # for non-admin users.  When False (default), unknown collection names are
 # denied — closing the legacy unscoped namespace.
 ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
+MINERU_MAX_MARKDOWN_BYTES = (
+    int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
+)
 
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
@@ -862,6 +933,7 @@ else:
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.getenv('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
 )
+ENABLE_API_OUTLET_FILTERS = os.getenv('ENABLE_API_OUTLET_FILTERS', 'True').lower() == 'true'
 
 # When enabled, uses a hardcoded extension-to-MIME dictionary as a last-resort
 # fallback when both mimetypes.guess_type() and file.meta.content_type fail to
@@ -984,6 +1056,12 @@ OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'false').lower() == 'true'
 if OFFLINE_MODE:
     os.environ['HF_HUB_OFFLINE'] = '1'
     ENABLE_VERSION_UPDATE_CHECK = False
+
+####################################
+# Pyodide file persistence
+####################################
+
+ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', 'false').lower() == 'true'
 
 ####################################
 # Audit logging

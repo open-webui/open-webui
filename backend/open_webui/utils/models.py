@@ -12,6 +12,7 @@ from open_webui.config import (
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
@@ -20,8 +21,8 @@ from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
 from open_webui.utils.plugin import (
+    get_functions_cache,
     get_function_module_from_cache,
-    load_function_module_by_id,
 )
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -52,16 +53,9 @@ async def fetch_openai_models(request: Request, user: UserModel = None):
 
 
 async def get_all_base_models(request: Request, user: UserModel = None):
-    openai_task = (
-        fetch_openai_models(request, user)
-        if request.app.state.config.ENABLE_OPENAI_API
-        else asyncio.sleep(0, result=[])
-    )
-    ollama_task = (
-        fetch_ollama_models(request, user)
-        if request.app.state.config.ENABLE_OLLAMA_API
-        else asyncio.sleep(0, result=[])
-    )
+    config = await Config.get_many('openai.enable', 'ollama.enable')
+    openai_task = fetch_openai_models(request, user) if config.get('openai.enable') else asyncio.sleep(0, result=[])
+    ollama_task = fetch_ollama_models(request, user) if config.get('ollama.enable') else asyncio.sleep(0, result=[])
     function_task = get_function_models(request)
 
     openai_models, ollama_models, function_models = await asyncio.gather(openai_task, ollama_task, function_task)
@@ -70,15 +64,23 @@ async def get_all_base_models(request: Request, user: UserModel = None):
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
+    config = await Config.get_many(
+        'models.base_models_cache',
+        'evaluation.arena.enable',
+        'evaluation.arena.models',
+    )
     if (
         request.app.state.MODELS
         and request.app.state.BASE_MODELS
-        and (request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh)
+        and (config.get('models.base_models_cache') and not refresh)
     ):
         base_models = request.app.state.BASE_MODELS
     else:
         base_models = await get_all_base_models(request, user=user)
-        request.app.state.BASE_MODELS = base_models
+        if base_models:
+            request.app.state.BASE_MODELS = base_models
+        else:
+            base_models = request.app.state.BASE_MODELS
 
     # deep copy the base models to avoid modifying the original list
     models = [model.copy() for model in base_models]
@@ -88,9 +90,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         return []
 
     # Add arena models
-    if request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS:
+    if config.get('evaluation.arena.enable'):
         arena_models = []
-        if len(request.app.state.config.EVALUATION_ARENA_MODELS) > 0:
+        arena_config = config.get('evaluation.arena.models') or []
+        if len(arena_config) > 0:
             arena_models = [
                 {
                     'id': model['id'],
@@ -103,7 +106,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     'owned_by': 'arena',
                     'arena': True,
                 }
-                for model in request.app.state.config.EVALUATION_ARENA_MODELS
+                for model in arena_config
             ]
         else:
             # Add default arena model
@@ -289,7 +292,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # Apply global model defaults to all models
     # Per-model overrides take precedence over global defaults
-    default_metadata = getattr(request.app.state.config, 'DEFAULT_MODEL_METADATA', None) or {}
+    default_metadata = await Config.get('models.default_metadata', {}) or {}
 
     if default_metadata:
         for model in models:
@@ -311,10 +314,11 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # Batch-fetch all function valves in one query to avoid N+1 DB hits
     # inside get_action_priority (previously called per action × per model).
     all_function_valves = await Functions.get_function_valves_by_ids(list(all_function_ids))
+    functions_cache = get_functions_cache(request)
 
     def get_action_priority(action_id):
         try:
-            function_module = request.app.state.FUNCTIONS.get(action_id)
+            function_module = functions_cache.get(action_id)
             if function_module and hasattr(function_module, 'Valves'):
                 valves_db = all_function_valves.get(action_id)
                 valves = function_module.Valves(**(valves_db if valves_db else {}))
@@ -344,7 +348,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 log.info(f'Action not found: {action_id}')
                 continue
 
-            function_module = request.app.state.FUNCTIONS.get(action_id)
+            function_module = functions_cache.get(action_id)
             if function_module is None:
                 log.info(f'Failed to load action module: {action_id}')
                 continue
@@ -357,7 +361,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 log.info(f'Filter not found: {filter_id}')
                 continue
 
-            function_module = request.app.state.FUNCTIONS.get(filter_id)
+            function_module = functions_cache.get(filter_id)
             if function_module is None:
                 log.info(f'Failed to load filter module: {filter_id}')
                 continue
@@ -368,7 +372,11 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     models_dict = {model['id']: model for model in models}
     if isinstance(request.app.state.MODELS, RedisDict):
-        request.app.state.MODELS.set(models_dict)
+        try:
+            request.app.state.MODELS.set(models_dict)
+        except Exception as e:
+            log.warning(f'Failed to update Redis model cache, using in-process cache: {e}')
+            request.app.state.MODELS = models_dict
     else:
         request.app.state.MODELS = models_dict
 

@@ -111,6 +111,7 @@
 		});
 
 		if (res) {
+			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			init();
 		}
 	};
@@ -180,14 +181,14 @@
 		await getItemsPage();
 	};
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			if (loaded) {
 				init();
 			}
 		}, 300);
-	}
+	};
 
 	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
 		init();
@@ -380,6 +381,7 @@
 					<input
 						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Notes')}
 					/>
 
@@ -389,6 +391,7 @@
 								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								on:click={() => {
 									query = '';
+									handleSearchInput();
 								}}
 							>
 								<XMark className="size-3" strokeWidth="2" />

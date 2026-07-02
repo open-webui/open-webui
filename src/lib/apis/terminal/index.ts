@@ -15,7 +15,22 @@ export type TerminalFeatures = {
 	terminal?: boolean;
 };
 
+export type TerminalFileRoot = {
+	path: string;
+	label: string;
+};
+
+export type TerminalCwd = {
+	cwd: string | null;
+	home?: string;
+	root?: TerminalFileRoot;
+};
+
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+
+const bearerHeaders = (apiKey: string): Record<string, string> => ({
+	Authorization: `Bearer ${apiKey.trim()}`
+});
 
 export type TerminalServer = {
 	id: string;
@@ -39,7 +54,7 @@ export const getTerminalConfig = async (
 ): Promise<{ features: TerminalFeatures } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/api/config`;
 	const res = await fetch(url, {
-		headers: { Authorization: `Bearer ${apiKey}` }
+		headers: bearerHeaders(apiKey)
 	}).catch(() => null);
 	if (!res || !res.ok) return null;
 	return res.json().catch(() => null);
@@ -49,14 +64,19 @@ export const getCwd = async (
 	baseUrl: string,
 	apiKey: string,
 	sessionId?: string
-): Promise<string | null> => {
+): Promise<TerminalCwd | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
-	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, { headers }).catch(() => null);
 	if (!res || !res.ok) return null;
 	const json = await res.json().catch(() => null);
-	return json?.cwd ?? null;
+	if (!json) return null;
+	return {
+		cwd: json?.cwd ?? null,
+		home: json?.home,
+		root: json?.root
+	};
 };
 
 export const listFiles = async (
@@ -67,7 +87,7 @@ export const listFiles = async (
 ): Promise<FileEntry[] | null> => {
 	// The endpoint uses `directory` as the query param name
 	const url = `${baseUrl.replace(/\/$/, '')}/files/list?directory=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, { headers })
 		.then(async (res) => {
@@ -88,7 +108,7 @@ export const readFile = async (
 	sessionId?: string
 ): Promise<string | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/read?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, { headers }).catch((err) => {
 		console.error('open-terminal readFile error:', err);
@@ -116,7 +136,7 @@ export const downloadFileBlob = async (
 	sessionId?: string
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, { headers }).catch(() => null);
 
@@ -135,7 +155,7 @@ export const archiveFromTerminal = async (
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/archive`;
 	const headers: Record<string, string> = {
-		Authorization: `Bearer ${apiKey}`,
+		...bearerHeaders(apiKey),
 		'Content-Type': 'application/json'
 	};
 	if (sessionId) headers['X-Session-Id'] = sessionId;
@@ -164,7 +184,7 @@ export const uploadToTerminal = async (
 	const url = `${baseUrl.replace(/\/$/, '')}/files/upload?directory=${encodeURIComponent(directory)}`;
 	const body = new FormData();
 	body.append('file', file);
-	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, {
 		method: 'POST',
@@ -190,7 +210,7 @@ export const createDirectory = async (
 ): Promise<{ path: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/mkdir`;
 	const headers: Record<string, string> = {
-		Authorization: `Bearer ${apiKey}`,
+		...bearerHeaders(apiKey),
 		'Content-Type': 'application/json'
 	};
 	if (sessionId) headers['X-Session-Id'] = sessionId;
@@ -217,7 +237,7 @@ export const deleteEntry = async (
 	sessionId?: string
 ): Promise<{ path: string; type: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/delete?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` };
+	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, {
 		method: 'DELETE',
@@ -242,7 +262,7 @@ export const setCwd = async (
 ): Promise<{ cwd: string } | null> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const headers: Record<string, string> = {
-		Authorization: `Bearer ${apiKey}`,
+		...bearerHeaders(apiKey),
 		'Content-Type': 'application/json'
 	};
 	if (sessionId) headers['X-Session-Id'] = sessionId;
@@ -271,7 +291,7 @@ export const moveEntry = async (
 ): Promise<{ source: string; destination: string } | { error: string }> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/files/move`;
 	const headers: Record<string, string> = {
-		Authorization: `Bearer ${apiKey}`,
+		...bearerHeaders(apiKey),
 		'Content-Type': 'application/json'
 	};
 	if (sessionId) headers['X-Session-Id'] = sessionId;
@@ -297,7 +317,7 @@ export const getListeningPorts = async (
 ): Promise<ListeningPort[]> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/ports`;
 	const res = await fetch(url, {
-		headers: { Authorization: `Bearer ${apiKey}` }
+		headers: bearerHeaders(apiKey)
 	}).catch(() => null);
 	if (!res || !res.ok) return [];
 	const json = await res.json().catch(() => null);
@@ -321,7 +341,7 @@ export const createNotebookSession = async (
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${apiKey}`,
+			...bearerHeaders(apiKey),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({ path })
@@ -354,7 +374,7 @@ export const executeNotebookCell = async (
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${apiKey}`,
+			...bearerHeaders(apiKey),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(body)
@@ -381,7 +401,7 @@ export const stopNotebookSession = async (
 	const url = `${baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}`;
 	const res = await fetch(url, {
 		method: 'DELETE',
-		headers: { Authorization: `Bearer ${apiKey}` }
+		headers: bearerHeaders(apiKey)
 	}).catch(() => null);
 	return res?.ok ?? false;
 };

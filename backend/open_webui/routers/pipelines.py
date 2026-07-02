@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import shutil
@@ -18,6 +19,8 @@ from fastapi import (
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.events import EVENTS, publish_event
+from open_webui.models.config import Config
 from open_webui.routers.openai import get_all_models_responses
 from open_webui.utils.auth import get_admin_user
 from pydantic import BaseModel
@@ -51,6 +54,12 @@ def get_sorted_filters(model_id, models):
     return sorted_filters
 
 
+async def get_openai_connection(url_idx: int) -> tuple[str, str]:
+    base_urls = await Config.get('openai.api_base_urls', [])
+    api_keys = await Config.get('openai.api_keys', [])
+    return base_urls[url_idx], api_keys[url_idx]
+
+
 async def process_pipeline_inlet_filter(request, payload, user, models):
     user = {'id': user.id, 'email': user.email, 'name': user.name, 'role': user.role}
     model_id = payload['model']
@@ -69,8 +78,7 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
             except Exception:
                 continue
 
-            url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-            key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+            url, key = await get_openai_connection(urlIdx)
 
             if not key:
                 continue
@@ -133,8 +141,7 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
             except Exception:
                 continue
 
-            url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-            key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+            url, key = await get_openai_connection(urlIdx)
 
             if not key:
                 continue
@@ -194,11 +201,12 @@ async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
     log.debug(f'get_pipelines_list: get_openai_models_responses returned {responses}')
 
     urlIdxs = [idx for idx, response in enumerate(responses) if response is not None and 'pipelines' in response]
+    base_urls = await Config.get('openai.api_base_urls', [])
 
     return {
         'data': [
             {
-                'url': request.app.state.config.OPENAI_API_BASE_URLS[urlIdx],
+                'url': base_urls[urlIdx],
                 'idx': urlIdx,
             }
             for urlIdx in urlIdxs
@@ -229,12 +237,14 @@ async def upload_pipeline(
 
     response = None
     try:
-        # Save the uploaded file
-        with open(file_path, 'wb') as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Save the uploaded file off the event loop (uploads can be large).
+        def _save_upload():
+            with open(file_path, 'wb') as buffer:
+                shutil.copyfileobj(file.file, buffer)
 
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        await asyncio.to_thread(_save_upload)
+
+        url, key = await get_openai_connection(urlIdx)
 
         headers = {'Authorization': f'Bearer {key}'}
 
@@ -257,6 +267,13 @@ async def upload_pipeline(
                     response.raise_for_status()
                     data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_UPLOADED,
+            actor=user,
+            subject_id=data.get('id') or filename,
+            data={'url_idx': urlIdx, 'filename': filename},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -294,8 +311,7 @@ async def add_pipeline(request: Request, form_data: AddPipelineForm, user=Depend
     try:
         urlIdx = form_data.urlIdx
 
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        url, key = await get_openai_connection(urlIdx)
 
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(
@@ -307,6 +323,13 @@ async def add_pipeline(request: Request, form_data: AddPipelineForm, user=Depend
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_ADDED,
+            actor=user,
+            subject_id=data.get('id') or form_data.url,
+            data={'url_idx': urlIdx, 'url': form_data.url},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -338,8 +361,7 @@ async def delete_pipeline(request: Request, form_data: DeletePipelineForm, user=
     try:
         urlIdx = form_data.urlIdx
 
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        url, key = await get_openai_connection(urlIdx)
 
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.delete(
@@ -351,6 +373,13 @@ async def delete_pipeline(request: Request, form_data: DeletePipelineForm, user=
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_DELETED,
+            actor=user,
+            subject_id=form_data.id,
+            data={'url_idx': urlIdx},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -375,8 +404,7 @@ async def delete_pipeline(request: Request, form_data: DeletePipelineForm, user=
 async def get_pipelines(request: Request, urlIdx: Optional[int] = None, user=Depends(get_admin_user)):
     response = None
     try:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        url, key = await get_openai_connection(urlIdx)
 
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
@@ -416,8 +444,7 @@ async def get_pipeline_valves(
 ):
     response = None
     try:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        url, key = await get_openai_connection(urlIdx)
 
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
@@ -428,6 +455,13 @@ async def get_pipeline_valves(
                 response.raise_for_status()
                 data = await response.json()
 
+        await publish_event(
+            request,
+            EVENTS.PIPELINE_VALVES_UPDATED,
+            actor=user,
+            subject_id=pipeline_id,
+            data={'url_idx': urlIdx},
+        )
         return {**data}
     except Exception as e:
         # Handle connection error here
@@ -457,8 +491,7 @@ async def get_pipeline_valves_spec(
 ):
     response = None
     try:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        url, key = await get_openai_connection(urlIdx)
 
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
@@ -499,8 +532,7 @@ async def update_pipeline_valves(
 ):
     response = None
     try:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-        key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
+        url, key = await get_openai_connection(urlIdx)
 
         async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.post(

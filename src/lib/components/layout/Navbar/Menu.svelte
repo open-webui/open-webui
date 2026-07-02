@@ -7,6 +7,7 @@
 
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
 	import {
 		showControls,
@@ -39,6 +40,7 @@
 	const i18n = getContext('i18n');
 
 	export let shareEnabled: boolean = false;
+	export let readOnly: boolean = false;
 
 	export let shareHandler: Function;
 	export let moveChatHandler: Function;
@@ -58,7 +60,8 @@
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
 		const chatText = messages.reduce((a, message, i, arr) => {
-			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
+			const content = getOutputText(message.output) || message.content || '';
+			return `${a}### ${message.role.toUpperCase()}\n${content}\n\n`;
 		}, '');
 
 		return chatText.trim();
@@ -364,7 +367,7 @@
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 			{/if}
 
-			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
+			{#if !readOnly && !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<button
 					draggable="false"
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
@@ -378,17 +381,18 @@
 				</button>
 			{/if}
 
-			<DropdownSub>
-				<button
-					slot="trigger"
-					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-				>
-					<Download strokeWidth="1.5" />
+			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+				<DropdownSub>
+					<button
+						slot="trigger"
+						draggable="false"
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+					>
+						<Download strokeWidth="1.5" />
 
-					<div class="flex items-center">{$i18n.t('Download')}</div>
-				</button>
-				{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+						<div class="flex items-center">{$i18n.t('Download')}</div>
+					</button>
+
 					<button
 						draggable="false"
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
@@ -398,27 +402,28 @@
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 					</button>
-				{/if}
-				<button
-					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					on:click={() => {
-						downloadTxt();
-					}}
-				>
-					<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
-				</button>
 
-				<button
-					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
-					on:click={() => {
-						downloadPdf();
-					}}
-				>
-					<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
-				</button>
-			</DropdownSub>
+					<button
+						draggable="false"
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+						on:click={() => {
+							downloadTxt();
+						}}
+					>
+						<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+					</button>
+
+					<button
+						draggable="false"
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+						on:click={() => {
+							downloadPdf();
+						}}
+					>
+						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
+					</button>
+				</DropdownSub>
+			{/if}
 
 			<button
 				draggable="false"
@@ -438,7 +443,7 @@
 				<div class="flex items-center">{$i18n.t('Copy')}</div>
 			</button>
 
-			{#if !$temporaryChatEnabled && chat?.id}
+			{#if !readOnly && !$temporaryChatEnabled && chat?.id}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 				{#if $folders.length > 0}
@@ -496,7 +501,7 @@
 
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
-				<div class="flex p-1">
+				<div class="flex p-1 max-h-28 overflow-y-auto">
 					<Tags chatId={chat.id} />
 				</div>
 			{/if}

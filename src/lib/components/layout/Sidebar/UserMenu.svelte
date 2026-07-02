@@ -301,7 +301,7 @@
 
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
-			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools || $user?.permissions?.workspace?.skills}
 				<div class="flex items-center w-full">
 					<a
 						href="/workspace"
@@ -613,7 +613,7 @@
 					<div class=" self-center mr-3">
 						<Keyboard className="size-5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Keyboard shortcuts')}</div>
+					<div class=" self-center truncate">{$i18n.t('Keyboard Shortcuts')}</div>
 				</button>
 			{/if}
 

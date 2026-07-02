@@ -41,7 +41,8 @@
 	}
 
 	let codeEditor;
-	let boilerplate = `"""
+	let starterType = 'filter';
+	const filterBoilerplate = `"""
 title: Example Filter
 author: open-webui
 author_url: https://github.com/open-webui
@@ -109,6 +110,52 @@ class Filter:
 
         return body
 `;
+	const eventBoilerplate = `"""
+title: Example Event
+author: open-webui
+author_url: https://github.com/open-webui
+funding_url: https://github.com/open-webui
+version: 0.1
+"""
+
+from pydantic import BaseModel
+
+
+class Event:
+    class Valves(BaseModel):
+        pass
+
+    def __init__(self):
+        self.valves = self.Valves()
+
+    async def event(
+        self,
+        event: dict,
+        __event_id__: str = None,
+        __event_name__: str = None,
+        __id__: str = None,
+        __app__=None,
+        __request__=None,
+    ):
+        print(f"event:{__name__}")
+        print(f"event:id:{__event_id__}")
+        print(f"event:name:{__event_name__}")
+        print(f"event:payload:{event}")
+`;
+	let boilerplate = filterBoilerplate;
+
+	/** @param {'filter' | 'event'} type */
+	const setStarterType = (type) => {
+		starterType = type;
+		boilerplate = type === 'event' ? eventBoilerplate : filterBoilerplate;
+		content = boilerplate;
+		_content = boilerplate;
+	};
+
+	/** @param {string} value */
+	const selectStarterType = (value) => {
+		setStarterType(value === 'event' ? 'event' : 'filter');
+	};
 
 	const _boilerplate = `from pydantic import BaseModel
 from typing import Optional, Union, Generator, Iterator
@@ -328,7 +375,18 @@ class Pipe:
 							</Tooltip>
 						</div>
 
-						<div>
+						<div class="flex items-center gap-2">
+							{#if !edit}
+								<select
+									class="text-xs bg-transparent border border-gray-100 dark:border-gray-800 rounded-lg px-2 py-1 outline-hidden"
+									bind:value={starterType}
+									on:change={(event) => selectStarterType(event.currentTarget.value)}
+									aria-label={$i18n.t('Function starter')}
+								>
+									<option value="filter">{$i18n.t('Filter')}</option>
+									<option value="event">{$i18n.t('Event')}</option>
+								</select>
+							{/if}
 							<Badge type="muted" content={$i18n.t('Function')} />
 						</div>
 					</div>

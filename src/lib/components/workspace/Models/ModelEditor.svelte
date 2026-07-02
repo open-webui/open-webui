@@ -9,8 +9,11 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModelsDefaults } from '$lib/apis/configs';
+	import { getBaseModelTags, getModelTags } from '$lib/apis/models';
+	import { getVoices } from '$lib/apis/audio';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import FailoverProviders from '$lib/components/common/FailoverProviders.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -28,9 +31,9 @@
 	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';
+	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
-	import { updateModelAccessGrants } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -119,6 +122,43 @@
 		model_id: string;
 		capabilities: string[];
 	}> = [];
+	export let suggestionTags: { name: string }[] = [];
+	let voices: { id: string; name?: string }[] = [];
+
+	const getBaseModelItems = (models: any[] = []) => {
+		const currentModelId = (model as any)?.id;
+
+		return models
+			.filter(
+				(baseModel) =>
+					(!currentModelId ||
+						baseModel.id !== currentModelId ||
+						(edit && baseModel.id === info.base_model_id)) &&
+					(!baseModel?.preset || (edit && baseModel.id === info.base_model_id)) &&
+					baseModel?.owned_by !== 'arena' &&
+					!(baseModel?.direct ?? false) &&
+					($user?.role === 'admin' ||
+						!(baseModel?.info?.meta?.hidden ?? false) ||
+						baseModel.id === info.base_model_id)
+			)
+			.map((baseModel) => ({
+				value: baseModel.id,
+				label: baseModel.name,
+				model: baseModel
+			}));
+	};
+
+	const loadSuggestionTags = async () => {
+		const res: string[] = await (preset ? getModelTags : getBaseModelTags)(
+			localStorage.token
+		).catch(() => []);
+		suggestionTags = res.map((tag) => ({ name: tag }));
+	};
+
+	const loadVoices = async () => {
+		const res = await getVoices(localStorage.token).catch(() => null);
+		voices = res?.voices ?? [];
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -135,6 +175,13 @@
 
 		if (name === '') {
 			toast.error($i18n.t('Model Name is required.'));
+			loading = false;
+
+			return;
+		}
+
+		if (preset && !info.base_model_id) {
+			toast.error($i18n.t('Base Model is required.'));
 			loading = false;
 
 			return;
@@ -284,9 +331,19 @@
 	};
 
 	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
+		if (!$tools) {
+			await tools.set(await getTools(localStorage.token));
+		}
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
-		await functions.set(await getFunctions(localStorage.token));
+		if (!$functions) {
+			await functions.set(await getFunctions(localStorage.token));
+		}
+		if (suggestionTags.length === 0) {
+			await loadSuggestionTags();
+		}
+		if (voices.length === 0) {
+			await loadVoices();
+		}
 
 		// Fetch admin-configured default model metadata so the editor
 		// reflects the actual defaults rather than hardcoded values
@@ -314,14 +371,16 @@
 
 			if (model.base_model_id) {
 				const base_model = $models
-					.filter((m) => !m?.preset && !(m?.arena ?? false))
+					.filter(
+						(m) => (!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id)
+					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
 				console.log('base_model', base_model);
 
 				if (base_model) {
 					model.base_model_id = base_model.id;
-				} else {
+				} else if (!edit) {
 					model.base_model_id = null;
 				}
 			}
@@ -426,21 +485,6 @@
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
-		onChange={async () => {
-			if (edit && model?.id) {
-				try {
-					await updateModelAccessGrants(
-						localStorage.token,
-						model.id,
-						model.name ?? name,
-						accessGrants
-					);
-					toast.success($i18n.t('Saved'));
-				} catch (error) {
-					toast.error(error?.detail ?? `${error}`);
-				}
-			}
-		}}
 	/>
 
 	{#if onBack}
@@ -715,6 +759,7 @@
 								<div class="">
 									<Tags
 										tags={info?.meta?.tags ?? []}
+										{suggestionTags}
 										on:delete={(e) => {
 											const tagName = e.detail;
 											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
@@ -922,10 +967,9 @@
 								{$i18n.t('TTS Voice')}
 							</div>
 						</div>
-						<input
-							class="w-full text-sm bg-transparent outline-hidden"
-							type="text"
+						<TTSVoiceInput
 							bind:value={tts.voice}
+							{voices}
 							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 						/>
 					</div>

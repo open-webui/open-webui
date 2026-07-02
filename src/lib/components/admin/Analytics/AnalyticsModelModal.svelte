@@ -17,6 +17,7 @@
 	const i18n = getContext('i18n');
 
 	type Tab = 'overview' | 'chats';
+	type ChatSortKey = 'title' | 'updated_at' | 'user_name';
 	let selectedTab: Tab = 'overview';
 
 	// Overview tab state
@@ -41,6 +42,8 @@
 	}> = [];
 	let chatListLoading = false;
 	let allChatsLoaded = false;
+	let chatOrderBy: ChatSortKey = 'updated_at';
+	let chatDirection: 'asc' | 'desc' = 'desc';
 	const PAGE_SIZE = 50;
 
 	const close = () => {
@@ -48,6 +51,8 @@
 		selectedTab = 'overview';
 		chatList = [];
 		allChatsLoaded = false;
+		chatOrderBy = 'updated_at';
+		chatDirection = 'desc';
 		history = [];
 		tags = [];
 		onClose();
@@ -88,7 +93,9 @@
 				startDate,
 				endDate,
 				0,
-				PAGE_SIZE
+				PAGE_SIZE,
+				chatOrderBy,
+				chatDirection
 			);
 			const chats = res?.chats ?? [];
 			chatList = chats.map((c: any) => ({
@@ -98,7 +105,7 @@
 				user_id: c.user_id,
 				user_name: c.user_name
 			}));
-			allChatsLoaded = chats.length < PAGE_SIZE;
+			allChatsLoaded = chatList.length >= (res?.total ?? chats.length);
 		} catch (err) {
 			console.error('Failed to load chats:', err);
 			chatList = [];
@@ -118,7 +125,9 @@
 				startDate,
 				endDate,
 				skip,
-				PAGE_SIZE
+				PAGE_SIZE,
+				chatOrderBy,
+				chatDirection
 			);
 			const chats = res?.chats ?? [];
 			const newChats = chats.map((c: any) => ({
@@ -131,11 +140,21 @@
 			const existingIds = new Set(chatList.map((c) => c.id));
 			const uniqueNewChats = newChats.filter((c) => !existingIds.has(c.id));
 			chatList = [...chatList, ...uniqueNewChats];
-			allChatsLoaded = chats.length < PAGE_SIZE;
+			allChatsLoaded = chatList.length >= (res?.total ?? chatList.length);
 		} catch (err) {
 			console.error('Failed to load more chats:', err);
 		}
 		chatListLoading = false;
+	};
+
+	const setChatSort = (key: ChatSortKey) => {
+		if (chatOrderBy === key) {
+			chatDirection = chatDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			chatOrderBy = key;
+			chatDirection = key === 'updated_at' ? 'desc' : 'asc';
+		}
+		loadChats();
 	};
 
 	const selectTab = (tab: Tab) => {
@@ -150,7 +169,10 @@
 		selectedTab = 'overview';
 		chatList = [];
 		allChatsLoaded = false;
-		selectRange(selectedRange);
+		chatOrderBy = 'updated_at';
+		chatDirection = 'desc';
+		selectedRange = '30d';
+		loadOverview(30);
 	}
 </script>
 
@@ -250,6 +272,9 @@
 						allLoaded={allChatsLoaded}
 						showUserInfo={true}
 						shareUrl={true}
+						orderBy={chatOrderBy}
+						direction={chatDirection}
+						onSort={setChatSort}
 						onLoadMore={loadMoreChats}
 						onChatClick={() => (show = false)}
 					/>

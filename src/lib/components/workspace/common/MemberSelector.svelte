@@ -63,12 +63,12 @@
 		}
 	};
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getUserList();
 		}, 300);
-	}
+	};
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
@@ -187,6 +187,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
+						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>

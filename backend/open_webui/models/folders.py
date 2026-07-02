@@ -6,7 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, func, select
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, func, select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -58,6 +58,20 @@ class FolderNameIdResponse(BaseModel):
     meta: Optional[FolderMetadataResponse] = None
     parent_id: Optional[str] = None
     is_expanded: bool = False
+    created_at: int
+    updated_at: int
+
+
+class SharedFolderResponse(BaseModel):
+    id: str
+    name: str
+    parent_id: Optional[str] = None
+    user_id: str
+    owner_name: Optional[str] = None
+    permission: str = 'read'
+    access_grants: list = []
+    is_expanded: bool = False
+    meta: Optional[dict] = None
     created_at: int
     updated_at: int
 
@@ -130,6 +144,52 @@ class FolderTable:
         except Exception:
             return None
 
+    async def get_folder_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[FolderModel]:
+        """Fetch folder by ID only (no user_id filter). Used for shared access."""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(Folder).filter_by(id=id))
+                folder = result.scalars().first()
+                if not folder:
+                    return None
+                return FolderModel.model_validate(folder)
+        except Exception:
+            return None
+
+    async def get_shared_folder_ids_for_user(
+        self, user_id: str, user_group_ids: set[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, str]:
+        """
+        Returns {folder_id: highest_permission} for all folders shared with user.
+        Checks direct user grants, group grants, and public (user:*) grants.
+        """
+        from open_webui.models.access_grants import AccessGrant
+
+        async with get_async_db_context(db) as db:
+            conditions = [
+                and_(AccessGrant.principal_type == 'user', AccessGrant.principal_id == '*'),
+                and_(AccessGrant.principal_type == 'user', AccessGrant.principal_id == user_id),
+            ]
+            if user_group_ids:
+                conditions.append(
+                    and_(AccessGrant.principal_type == 'group', AccessGrant.principal_id.in_(user_group_ids))
+                )
+            result = await db.execute(
+                select(AccessGrant).filter(
+                    AccessGrant.resource_type == 'folder',
+                    or_(*conditions),
+                )
+            )
+            grants = result.scalars().all()
+
+            # Build {folder_id: highest_permission} ('write' > 'read')
+            folder_perms = {}
+            for g in grants:
+                existing = folder_perms.get(g.resource_id)
+                if existing != 'write':
+                    folder_perms[g.resource_id] = g.permission
+            return folder_perms
+
     async def get_children_folders_by_id_and_user_id(
         self, id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> Optional[list[FolderModel]]:
@@ -187,6 +247,25 @@ class FolderTable:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Folder).filter_by(parent_id=parent_id, user_id=user_id))
             return [FolderModel.model_validate(folder) for folder in result.scalars().all()]
+
+    async def get_folder_ids_by_id_and_user_id_in_subtree(
+        self, id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[str]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Folder).filter_by(id=id, user_id=user_id))
+            folder = result.scalars().first()
+            if not folder:
+                return []
+
+            folder_ids = [folder.id]
+            folders = [FolderModel.model_validate(folder)]
+            while folders:
+                current_folder = folders.pop()
+                children = await self.get_folders_by_parent_id_and_user_id(current_folder.id, user_id, db=db)
+                folder_ids.extend(child.id for child in children)
+                folders.extend(children)
+
+            return folder_ids
 
     async def update_folder_parent_id_by_id_and_user_id(
         self,

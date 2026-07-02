@@ -46,7 +46,7 @@
 			case 'escape':
 				return 'Esc';
 			case 'enter':
-				return isMac ? '↩' : 'Enter';
+				return isMac ? '↩\uFE0E' : 'Enter';
 			case 'tab':
 				return isMac ? '⇥' : 'Tab';
 			case 'arrowup':

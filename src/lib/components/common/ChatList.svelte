@@ -5,10 +5,13 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
 	dayjs.extend(calendar);
 
 	const i18n = getContext('i18n');
+	type SortKey = 'title' | 'updated_at' | 'user_name';
 
 	export let chatList: Array<{
 		id: string;
@@ -25,22 +28,89 @@
 	export let emptyMessage = 'No chats found';
 	export let onLoadMore: (() => void) | null = null;
 	export let onChatClick: ((chatId: string) => void) | null = null;
+	export let orderBy: SortKey | null = null;
+	export let direction: 'asc' | 'desc' = 'desc';
+	export let onSort: ((key: SortKey) => void) | null = null;
 </script>
 
 <div>
 	{#if chatList && chatList.length > 0}
 		<div class="flex text-xs font-medium mb-1.5">
 			{#if showUserInfo}
-				<div class="px-1.5 py-1 w-32">
-					{$i18n.t('User')}
+				{#if onSort}
+					<button
+						type="button"
+						class="px-1.5 py-1 w-32 cursor-pointer select-none"
+						on:click={() => onSort?.('user_name')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('User')}
+							{#if orderBy === 'user_name'}
+								<span class="font-normal">
+									{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+											className="size-2"
+										/>{/if}
+								</span>
+							{:else}
+								<span class="invisible"><ChevronUp className="size-2" /></span>
+							{/if}
+						</div>
+					</button>
+				{:else}
+					<div class="px-1.5 py-1 w-32">
+						{$i18n.t('User')}
+					</div>
+				{/if}
+			{/if}
+			{#if onSort}
+				<button
+					type="button"
+					class="px-1.5 py-1 {showUserInfo
+						? 'flex-1'
+						: 'basis-3/5'} cursor-pointer select-none text-left"
+					on:click={() => onSort?.('title')}
+				>
+					<div class="flex gap-1.5 items-center">
+						{$i18n.t('Title')}
+						{#if orderBy === 'title'}
+							<span class="font-normal">
+								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+										className="size-2"
+									/>{/if}
+							</span>
+						{:else}
+							<span class="invisible"><ChevronUp className="size-2" /></span>
+						{/if}
+					</div>
+				</button>
+				<button
+					type="button"
+					class="px-1.5 py-1 hidden sm:flex {showUserInfo
+						? 'w-28'
+						: 'basis-2/5'} justify-end cursor-pointer select-none"
+					on:click={() => onSort?.('updated_at')}
+				>
+					<div class="flex gap-1.5 items-center">
+						{$i18n.t('Updated at')}
+						{#if orderBy === 'updated_at'}
+							<span class="font-normal">
+								{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+										className="size-2"
+									/>{/if}
+							</span>
+						{:else}
+							<span class="invisible"><ChevronUp className="size-2" /></span>
+						{/if}
+					</div>
+				</button>
+			{:else}
+				<div class="px-1.5 py-1 {showUserInfo ? 'flex-1' : 'basis-3/5'}">
+					{$i18n.t('Title')}
+				</div>
+				<div class="px-1.5 py-1 hidden sm:flex {showUserInfo ? 'w-28' : 'basis-2/5'} justify-end">
+					{$i18n.t('Updated at')}
 				</div>
 			{/if}
-			<div class="px-1.5 py-1 {showUserInfo ? 'flex-1' : 'basis-3/5'}">
-				{$i18n.t('Title')}
-			</div>
-			<div class="px-1.5 py-1 hidden sm:flex {showUserInfo ? 'w-28' : 'basis-2/5'} justify-end">
-				{$i18n.t('Updated at')}
-			</div>
 		</div>
 	{/if}
 	<div class="max-h-[22rem] overflow-y-scroll">

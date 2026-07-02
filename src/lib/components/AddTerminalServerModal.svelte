@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import { settings } from '$lib/stores';
 
@@ -15,14 +15,16 @@
 	import {
 		detectTerminalServerType,
 		verifyTerminalServerConnection,
-		putOrchestratorPolicy
+		putOrchestratorPolicy,
+		putOrchestratorLifecycle,
+		refreshOrchestratorTerminals
 	} from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
 
 	export let show = false;
 	export let edit = false;
 	export let direct = false;
-	export let connection = null;
+	export let connection: any = null;
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: () => void = () => {};
@@ -42,6 +44,7 @@
 	// Policy / auto-detect state
 	let serverType: 'orchestrator' | 'terminal' | null = null;
 	let verifying = false;
+	let refreshing = false;
 	let policyId = '';
 	let policyImage = '';
 	let policyEnvPairs: { key: string; value: string }[] = [];
@@ -50,6 +53,13 @@
 	let policyStorage = 'ephemeral';
 	let policyStorageSize = '5Gi';
 	let policyIdleTimeout = 30;
+	let lifecycleJson = '{}';
+	let refreshOnlyIdle = true;
+	let refreshReset = false;
+
+	const stringifyJson = (value: object | null | undefined) => {
+		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);
+	};
 
 	const init = () => {
 		if (connection) {
@@ -79,6 +89,9 @@
 			// Restore resources
 			policyCpu = p.cpu_limit ?? '1';
 			policyMemory = p.memory_limit ?? '1Gi';
+			lifecycleJson = stringifyJson(connection?.lifecycle);
+			refreshOnlyIdle = true;
+			refreshReset = false;
 		} else {
 			id = '';
 			url = '';
@@ -98,6 +111,9 @@
 			policyStorage = 'ephemeral';
 			policyStorageSize = '5Gi';
 			policyIdleTimeout = 30;
+			lifecycleJson = '{}';
+			refreshOnlyIdle = true;
+			refreshReset = false;
 		}
 	};
 
@@ -162,6 +178,20 @@
 		}
 	};
 
+	const parseJson = (label: string, value: string): object | null => {
+		try {
+			const parsed = JSON.parse(value || '{}');
+			if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+				toast.error($i18n.t('{{label}} must be a JSON object', { label }));
+				return null;
+			}
+			return parsed;
+		} catch {
+			toast.error($i18n.t('{{label}} contains invalid JSON', { label }));
+			return null;
+		}
+	};
+
 	const buildPolicyData = (): object => {
 		const data: Record<string, any> = {};
 
@@ -191,6 +221,37 @@
 		return data;
 	};
 
+	const refreshHandler = async () => {
+		if (!policyId) {
+			toast.error($i18n.t('Policy ID is required'));
+			return;
+		}
+
+		refreshing = true;
+		try {
+			const result = await refreshOrchestratorTerminals(
+				localStorage.token,
+				url,
+				key,
+				{
+					policy_id: policyId,
+					only_idle: refreshOnlyIdle,
+					reset: refreshReset
+				},
+				auth_type
+			);
+			toast.success(
+				$i18n.t('Refresh requested: {{count}} terminal(s)', {
+					count: (result as { refreshed?: number } | null)?.refreshed ?? 0
+				})
+			);
+		} catch (err) {
+			toast.error($i18n.t('Failed to refresh terminals: {{error}}', { error: err }));
+		} finally {
+			refreshing = false;
+		}
+	};
+
 	const submitHandler = async () => {
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
@@ -199,11 +260,28 @@
 
 		// Remove trailing slash
 		url = url.replace(/\/$/, '');
+		// Bearer key whitespace breaks the terminal WebSocket auth (HTTP headers strip it, JSON doesn't)
+		key = key.trim();
 
 		// Save policy to orchestrator if applicable
+		let policyData = {};
+		let lifecycleData = {};
 		if (serverType === 'orchestrator' && !direct && policyId) {
+			const parsedLifecycle = parseJson('Lifecycle JSON', lifecycleJson);
+			if (!parsedLifecycle) return;
+			policyData = buildPolicyData();
+			lifecycleData = parsedLifecycle;
+
 			try {
-				await putOrchestratorPolicy(localStorage.token, url, key, policyId, buildPolicyData());
+				await putOrchestratorPolicy(localStorage.token, url, key, policyId, policyData, auth_type);
+				await putOrchestratorLifecycle(
+					localStorage.token,
+					url,
+					key,
+					policyId,
+					lifecycleData,
+					auth_type
+				);
 			} catch (err) {
 				toast.error($i18n.t('Failed to save policy: {{error}}', { error: err }));
 				return;
@@ -224,7 +302,7 @@
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
 			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {}),
-			...(serverType === 'orchestrator' ? { policy: buildPolicyData() } : {})
+			...(serverType === 'orchestrator' ? { policy: policyData, lifecycle: lifecycleData } : {})
 		};
 
 		onSubmit(result);
@@ -565,6 +643,46 @@
 										</div>
 									{/each}
 								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between mb-0.5">
+										<div
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Lifecycle JSON')}
+										</div>
+									</div>
+									<textarea
+										id="lifecycle-json"
+										class={`w-full min-h-24 resize-y text-xs bg-transparent font-mono rounded-lg p-2 border border-gray-200 dark:border-gray-800 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										bind:value={lifecycleJson}
+										spellcheck="false"
+										placeholder={`{\n  "reset": {\n    "schedule": "@weekly",\n    "timezone": "UTC"\n  }\n}`}
+									></textarea>
+								</div>
+							</div>
+
+							<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
+								<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+									<label class="flex items-center gap-1.5">
+										<input type="checkbox" bind:checked={refreshOnlyIdle} />
+										<span>{$i18n.t('Idle only')}</span>
+									</label>
+									<label class="flex items-center gap-1.5">
+										<input type="checkbox" bind:checked={refreshReset} />
+										<span>{$i18n.t('Reset persisted files')}</span>
+									</label>
+								</div>
+								<button
+									type="button"
+									class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+									disabled={refreshing}
+									on:click={refreshHandler}
+								>
+									{refreshing ? $i18n.t('Refreshing...') : $i18n.t('Refresh Terminals')}
+								</button>
 							</div>
 						{/if}
 

@@ -127,7 +127,7 @@
 				</div>
 
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-					{groups.length}
+					{filteredGroups.length}
 				</div>
 			</div>
 
@@ -221,13 +221,15 @@
 		{/if}
 	</div>
 
-	<EditGroupModal
-		bind:show={showDefaultPermissionsModal}
-		tabs={['permissions']}
-		bind:permissions={defaultPermissions}
-		custom={false}
-		onSubmit={updateDefaultPermissionsHandler}
-	/>
+	{#if showDefaultPermissionsModal}
+		<EditGroupModal
+			bind:show={showDefaultPermissionsModal}
+			tabs={['permissions']}
+			permissions={defaultPermissions}
+			custom={false}
+			onSubmit={updateDefaultPermissionsHandler}
+		/>
+	{/if}
 
 	<button
 		class="flex items-center justify-between rounded-lg w-full transition mt-4"

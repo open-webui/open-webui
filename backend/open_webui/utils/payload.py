@@ -10,6 +10,26 @@ from open_webui.utils.misc import (
 from open_webui.utils.task import prompt_template, prompt_variables_template
 
 
+async def resolve_system_prompt(
+    system: Optional[str],
+    metadata: Optional[dict] = None,
+    user=None,
+) -> str:
+    if not system:
+        return ''
+
+    # Metadata (WebUI Usage)
+    if metadata:
+        variables = metadata.get('variables', {})
+        if variables:
+            system = prompt_variables_template(system, variables)
+
+    # Legacy (API Usage)
+    system = await prompt_template(system, user)
+
+    return system
+
+
 # What goes out cannot be taken back. Let it be shaped
 # well before it leaves this place.
 # inplace function: form_data is modified
@@ -20,17 +40,9 @@ async def apply_system_prompt_to_body(
     user=None,
     replace: bool = False,
 ) -> dict:
+    system = await resolve_system_prompt(system, metadata, user)
     if not system:
         return form_data
-
-    # Metadata (WebUI Usage)
-    if metadata:
-        variables = metadata.get('variables', {})
-        if variables:
-            system = prompt_variables_template(system, variables)
-
-    # Legacy (API Usage)
-    system = await prompt_template(system, user)
 
     if replace:
         form_data['messages'] = replace_system_message_content(system, form_data.get('messages', []))
@@ -72,6 +84,7 @@ def remove_open_webui_params(params: dict) -> dict:
         'stream_delta_chunk_size': int,
         'function_calling': str,
         'reasoning_tags': list,
+        'compact_token_threshold': int,
         'system': str,
     }
 

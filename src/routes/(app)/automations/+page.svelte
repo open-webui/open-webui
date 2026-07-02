@@ -40,6 +40,7 @@
 	let loading = false;
 
 	let showCreateModal = false;
+	let cloneFrom: AutomationResponse | null = null;
 
 	let showDeleteConfirm = false;
 	let deleteTarget: AutomationResponse | null = null;
@@ -50,19 +51,27 @@
 
 	let page = 1;
 
-	// Debounce only query changes (gate behind loaded to prevent double-fetch on mount)
-	$: if (loaded && query !== undefined) {
+	const handleSearchInput = () => {
+		if (!loaded) return;
+
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			getAutomationList();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				getAutomationList();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to page/filter changes (gate behind loaded)
 	$: if (loaded && page && statusFilter !== undefined) {
 		getAutomationList();
+	}
+
+	$: if (!showCreateModal) {
+		cloneFrom = null;
 	}
 
 	const getAutomationList = async () => {
@@ -139,6 +148,14 @@
 		getAutomationList();
 	};
 
+	const cloneHandler = (automation: AutomationResponse) => {
+		cloneFrom = {
+			...automation,
+			name: `${automation.name} (Clone)`
+		};
+		showCreateModal = true;
+	};
+
 	const formatRRule = (rrule: string): string => {
 		// Detect one-time schedule (ONCE)
 		if (rrule.includes('COUNT=1')) {
@@ -195,8 +212,6 @@
 		}
 
 		loaded = true;
-		// Explicit initial fetch — reactive blocks will handle subsequent changes
-		await getAutomationList();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
@@ -227,6 +242,7 @@
 <AutomationModal
 	bind:show={showCreateModal}
 	automation={null}
+	{cloneFrom}
 	on:save={(e) => {
 		getAutomationList();
 		if (e.detail?.id) {
@@ -273,6 +289,7 @@
 							<button
 								class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 								on:click={() => {
+									cloneFrom = null;
 									showCreateModal = true;
 								}}
 							>
@@ -296,6 +313,7 @@
 							<input
 								class="w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 								bind:value={query}
+								on:input={handleSearchInput}
 								aria-label={$i18n.t('Search Automations')}
 								placeholder={$i18n.t('Search Automations')}
 								maxlength="500"
@@ -308,6 +326,7 @@
 										aria-label={$i18n.t('Clear search')}
 										on:click={() => {
 											query = '';
+											handleSearchInput();
 										}}
 									>
 										<XMark className="size-3" strokeWidth="2" />
@@ -429,6 +448,9 @@
 										<AutomationMenu
 											editHandler={() => {
 												goto(`/automations/${automation.id}`);
+											}}
+											cloneHandler={() => {
+												cloneHandler(automation);
 											}}
 											runHandler={() => {
 												runNowHandler(automation);

@@ -88,6 +88,10 @@
 						} finally {
 							draggedOver = false;
 						}
+
+						// Only process the first non-file item; all share the same
+						// text/plain payload, so continuing would duplicate the drop.
+						break;
 					}
 				}
 			}

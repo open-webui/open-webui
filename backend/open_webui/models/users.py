@@ -279,6 +279,11 @@ class UsersTable:
         oauth: dict | None = None,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
+        try:
+            profile_image_url = validate_profile_image_url(profile_image_url)
+        except ValueError:
+            profile_image_url = '/user.png'
+
         async with get_async_db_context(db) as session:
             user = UserModel(
                 **{
@@ -606,6 +611,11 @@ class UsersTable:
         profile_image_url: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
+        try:
+            profile_image_url = validate_profile_image_url(profile_image_url)
+        except ValueError:
+            profile_image_url = '/user.png'
+
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)
             if user is None:

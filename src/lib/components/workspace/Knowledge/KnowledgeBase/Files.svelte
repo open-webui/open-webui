@@ -109,6 +109,7 @@
 				class="relative flex items-center gap-1 rounded-xl p-2 text-left flex-1 justify-between"
 				type="button"
 				on:click={() => {
+					if (editingFileId) return;
 					onClick(file?.id ?? file?.tempId);
 				}}
 				on:dblclick={() => {
@@ -126,6 +127,10 @@
 								on:keydown={(e) => {
 									if (e.key === 'Enter') submitRename();
 									if (e.key === 'Escape') cancelRename();
+									if (e.key === ' ') e.stopPropagation();
+								}}
+								on:keyup={(e) => {
+									if (e.key === ' ') e.stopPropagation();
 								}}
 								on:blur={submitRename}
 								on:click={(e) => e.stopPropagation()}

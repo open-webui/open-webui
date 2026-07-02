@@ -78,18 +78,20 @@
 		}
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			loadSkillItems();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				loadSkillItems();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to page/filter changes
-	$: if (page && viewOption !== undefined) {
+	$: if (loaded && page && viewOption !== undefined) {
 		loadSkillItems();
 	}
 
@@ -261,7 +263,7 @@
 					}}
 				/>
 
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={() => {
@@ -274,7 +276,7 @@
 					</button>
 				{/if}
 
-				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills)}
+				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={async () => {
@@ -321,6 +323,7 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search Skills')}
 					placeholder={$i18n.t('Search Skills')}
 				/>
@@ -331,6 +334,7 @@
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
+								handleSearchInput();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />

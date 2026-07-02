@@ -5,7 +5,18 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
-	import { getChatById, getChatList, getChatListBySearchText } from '$lib/apis/chats';
+	import {
+		getChatById,
+		getChatList,
+		getChatListBySearchText,
+		cloneChatById,
+		deleteChatById,
+		archiveChatById,
+		updateChatById,
+		updateChatFolderIdById,
+		getPinnedChatList,
+		getAllTags
+	} from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
 
 	import dayjs from '$lib/dayjs';
@@ -13,16 +24,234 @@
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
-	import { config, user } from '$lib/stores';
+	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
+	import {
+		config,
+		user,
+		chats,
+		chatId as currentChatId,
+		pinnedChats,
+		currentChatPage,
+		tags
+	} from '$lib/stores';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
+
+	import ChatMenu from './Sidebar/ChatMenu.svelte';
+	import ShareChatModal from '../chat/ShareChatModal.svelte';
+	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
+	import ArchiveBox from '../icons/ArchiveBox.svelte';
+	import GarbageBin from '../icons/GarbageBin.svelte';
+	import { generateTitle } from '$lib/apis';
 	dayjs.extend(calendar);
 	dayjs.extend(localizedFormat);
 
 	export let show = false;
 	export let onClose = () => {};
+
+	let showShareChatModal = false;
+	let showDeleteConfirm = false;
+	let menuChatId = '';
+	let menuChatTitle = '';
+
+	let editingChatId = null;
+	let editingChatTitle = '';
+
+	let shiftKey = false;
+
+	const onShiftKeyDown = (e) => {
+		if (e.key === 'Shift') shiftKey = true;
+	};
+
+	const onShiftKeyUp = (e) => {
+		if (e.key === 'Shift') shiftKey = false;
+	};
+	let generating = false;
+
+	const refreshSidebar = async () => {
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+	};
+
+	const cloneChatHandler = async (id) => {
+		const chat = chatList?.find((c) => c.id === id);
+		const res = await cloneChatById(
+			localStorage.token,
+			id,
+			$i18n.t('Clone of {{TITLE}}', {
+				TITLE: chat?.title ?? 'Chat'
+			})
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			await refreshSidebar();
+			await searchHandler();
+		}
+	};
+
+	const archiveChatHandler = async (id) => {
+		try {
+			await archiveChatById(localStorage.token, id);
+
+			chatList = chatList?.filter((c) => c.id !== id) ?? null;
+
+			if ($currentChatId === id) {
+				await goto('/');
+				currentChatId.set('');
+			}
+
+			await refreshSidebar();
+			toast.success($i18n.t('Chat archived.'));
+		} catch (error) {
+			toast.error($i18n.t('Failed to archive chat.'));
+		}
+	};
+
+	const deleteChatHandler = async (id) => {
+		const res = await deleteChatById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			chatList = chatList?.filter((c) => c.id !== id) ?? null;
+			tags.set(await getAllTags(localStorage.token));
+
+			if ($currentChatId === id) {
+				await goto('/');
+				currentChatId.set('');
+			}
+
+			await refreshSidebar();
+		}
+	};
+
+	const moveChatHandler = async (chatId, folderId) => {
+		if (chatId && folderId) {
+			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
+				await refreshSidebar();
+				toast.success($i18n.t('Chat moved successfully'));
+			}
+		}
+	};
+
+	const renameHandler = async (id) => {
+		editingChatId = id;
+		editingChatTitle = chatList?.find((c) => c.id === id)?.title ?? '';
+
+		await tick();
+		const input = document.getElementById(`search-chat-title-input-${id}`);
+		if (input) {
+			input.focus();
+			input.select();
+		}
+	};
+
+	const confirmRename = async () => {
+		if (!editingChatId) return;
+
+		const trimmed = editingChatTitle.trim();
+		if (trimmed === '') {
+			toast.error($i18n.t('Title cannot be an empty string.'));
+			return;
+		}
+
+		await updateChatById(localStorage.token, editingChatId, { title: trimmed });
+
+		if (chatList) {
+			chatList = chatList.map((c) => (c.id === editingChatId ? { ...c, title: trimmed } : c));
+		}
+
+		editingChatId = null;
+		editingChatTitle = '';
+		await refreshSidebar();
+	};
+
+	const cancelRename = () => {
+		editingChatId = null;
+		editingChatTitle = '';
+	};
+
+	const generateTitleHandler = async () => {
+		if (!editingChatId || generating) return;
+
+		generating = true;
+		const chat = await getChatById(localStorage.token, editingChatId).catch(() => null);
+
+		if (!chat) {
+			toast.error($i18n.t('Failed to load chat'));
+			generating = false;
+			return;
+		}
+
+		const chatContent = chat.chat;
+		const history = chatContent?.history;
+		let msgList = [];
+
+		if (history?.messages && history?.currentId) {
+			msgList = createMessagesList(history, history.currentId).map((m: any) => ({
+				role: m.role,
+				content: getOutputText(m.output) || m.content || ''
+			}));
+		} else {
+			msgList = (chatContent?.messages ?? []).map((m: any) => ({
+				role: m.role,
+				content: getOutputText(m.output) || m.content || ''
+			}));
+		}
+
+		let model = '';
+		if (history?.messages && history?.currentId) {
+			let currentId = history.currentId;
+			while (currentId) {
+				const msg = history.messages[currentId];
+				if (!msg) break;
+				if (msg.role === 'assistant' && msg.model) {
+					model = msg.model;
+					break;
+				}
+				currentId = msg.parentId;
+			}
+		}
+		if (!model) {
+			model = chatContent?.models?.at(0) ?? '';
+		}
+
+		editingChatTitle = '';
+
+		const generatedTitle = await generateTitle(localStorage.token, model, msgList).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (generatedTitle) {
+			editingChatTitle = generatedTitle;
+		}
+
+		generating = false;
+
+		if (generatedTitle) {
+			await confirmRename();
+		}
+	};
 
 	let actions = [
 		{
@@ -52,6 +281,41 @@
 	let selectedModels = [''];
 	let history = null;
 	let messages = null;
+
+	const searchFilterPrefixes = ['tag:', 'folder:', 'pinned:', 'archived:', 'shared:'];
+
+	const getSnippetQuery = (query: string) => {
+		return query
+			.trim()
+			.split(/\s+/)
+			.filter(
+				(word) => !searchFilterPrefixes.some((prefix) => word.toLowerCase().startsWith(prefix))
+			)
+			.join(' ')
+			.trim();
+	};
+
+	const getHighlightedSnippet = (snippet: string, query: string) => {
+		const match = getSnippetQuery(query).toLowerCase();
+		const matchIndex = match ? snippet.toLowerCase().indexOf(match) : -1;
+
+		if (matchIndex === -1) {
+			return [{ text: snippet, highlight: false }];
+		}
+
+		const start = Math.max(matchIndex - 60, 0);
+		const end = Math.min(matchIndex + match.length + 80, snippet.length);
+		const visibleSnippet = `${start > 0 ? '...' : ''}${snippet.slice(start, end)}${
+			end < snippet.length ? '...' : ''
+		}`;
+		const index = visibleSnippet.toLowerCase().indexOf(match);
+
+		return [
+			{ text: visibleSnippet.slice(0, index), highlight: false },
+			{ text: visibleSnippet.slice(index, index + match.length), highlight: true },
+			{ text: visibleSnippet.slice(index + match.length), highlight: false }
+		].filter((part) => part.text);
+	};
 
 	$: if (!chatListLoading && chatList) {
 		loadChatPreview(selectedIdx);
@@ -173,11 +437,26 @@
 
 	$: if (show) {
 		searchHandler();
+	} else {
+		editingChatId = null;
+		editingChatTitle = '';
+		generating = false;
 	}
 
 	const onKeyDown = (e) => {
+		// Ignore keydown fired while confirming an IME composition (e.g. Japanese/Chinese/Korean)
+		// so confirming the composition with Enter doesn't trigger search actions (#26172).
+		if (e.isComposing || e.keyCode === 229) {
+			return;
+		}
+
 		const searchOptions = document.getElementById('search-options-container');
 		if (searchOptions || !show) {
+			return;
+		}
+
+		// Don't handle navigation/activation keys while editing a chat title
+		if (editingChatId) {
 			return;
 		}
 
@@ -246,6 +525,8 @@
 		];
 
 		document.addEventListener('keydown', onKeyDown);
+		document.addEventListener('keydown', onShiftKeyDown);
+		document.addEventListener('keyup', onShiftKeyUp);
 	});
 
 	onDestroy(() => {
@@ -253,8 +534,24 @@
 			clearTimeout(searchDebounceTimeout);
 		}
 		document.removeEventListener('keydown', onKeyDown);
+		document.removeEventListener('keydown', onShiftKeyDown);
+		document.removeEventListener('keyup', onShiftKeyUp);
 	});
 </script>
+
+<ShareChatModal bind:show={showShareChatModal} chatId={menuChatId} />
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete chat?')}
+	on:confirm={() => {
+		deleteChatHandler(menuChatId);
+	}}
+>
+	<div class="text-sm text-gray-500 flex-1 line-clamp-3">
+		{$i18n.t('This will delete')} <span class="font-semibold">{menuChatTitle}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 <Modal size="xl" bind:show>
 	<div class="py-3 dark:text-gray-300 text-gray-700">
@@ -367,42 +664,186 @@
 							</div>
 						{/if}
 
-						<a
-							class=" w-full flex justify-between items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+						<!-- svelte-ignore a11y-no-static-element-interactions -->
+						<div
+							class="w-full flex justify-between items-center rounded-xl text-sm py-2 pl-3 pr-32 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
 							idx + actions.length
 								? 'bg-gray-50 dark:bg-gray-850'
 								: ''}"
-							href="/c/{chat.id}"
-							draggable="false"
 							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
 							on:mouseenter={() => {
 								selectedIdx = idx + actions.length;
 							}}
-							on:click={async () => {
-								await goto(`/c/${chat.id}`);
-								show = false;
-								onClose();
-							}}
 						>
-							<div class=" flex-1">
-								<div class="text-ellipsis line-clamp-1 w-full">
-									{chat?.title}
+							{#if editingChatId === chat.id}
+								<div class="flex-1 min-w-0">
+									<input
+										id="search-chat-title-input-{chat.id}"
+										bind:value={editingChatTitle}
+										class="bg-transparent w-full outline-none"
+										placeholder={generating ? $i18n.t('Generating...') : ''}
+										disabled={generating}
+										on:keydown={(e) => {
+											e.stopPropagation();
+											if (e.key === 'Enter') {
+												e.preventDefault();
+												confirmRename();
+											} else if (e.key === 'Escape') {
+												e.preventDefault();
+												cancelRename();
+											}
+										}}
+										on:blur={() => {
+											if (!generating) {
+												confirmRename();
+											}
+										}}
+									/>
 								</div>
-							</div>
 
-							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
-								{$i18n.t(
-									dayjs(chat?.updated_at * 1000).calendar(null, {
-										sameDay: '[Today]',
-										nextDay: '[Tomorrow]',
-										nextWeek: 'dddd',
-										lastDay: '[Yesterday]',
-										lastWeek: '[Last] dddd',
-										sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
-									})
-								)}
+								<div class="flex items-center shrink-0 pl-1">
+									<Tooltip content={$i18n.t('Generate')}>
+										<button
+											class="self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+											disabled={generating}
+											on:mousedown|preventDefault={() => {}}
+											on:click|preventDefault|stopPropagation={() => {
+												generateTitleHandler();
+											}}
+										>
+											{#if generating}
+												<Spinner className="size-4" />
+											{:else}
+												<Sparkles strokeWidth="2" />
+											{/if}
+										</button>
+									</Tooltip>
+								</div>
+							{:else}
+								<a
+									class="flex-1 min-w-0"
+									href="/c/{chat.id}"
+									draggable="false"
+									on:click={async () => {
+										await goto(`/c/${chat.id}`);
+										show = false;
+										onClose();
+									}}
+								>
+									<div class="text-ellipsis line-clamp-1 w-full">
+										{chat?.title}
+									</div>
+									{#if chat?.snippet}
+										<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+											{#each getHighlightedSnippet(chat.snippet, query) as part}
+												{#if part.highlight}
+													<mark
+														class="rounded bg-yellow-200/70 px-0.5 text-inherit dark:bg-yellow-500/30"
+													>
+														{part.text}
+													</mark>
+												{:else}
+													{part.text}
+												{/if}
+											{/each}
+										</div>
+									{/if}
+								</a>
+							{/if}
+
+							<div
+								class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3 pl-6 shrink-0"
+							>
+								<div class="text-gray-500 dark:text-gray-400 text-xs">
+									{$i18n.t(
+										dayjs(chat?.updated_at * 1000).calendar(null, {
+											sameDay: '[Today]',
+											nextDay: '[Tomorrow]',
+											nextWeek: 'dddd',
+											lastDay: '[Yesterday]',
+											lastWeek: '[Last] dddd',
+											sameElse: 'L'
+										})
+									)}
+								</div>
+
+								{#if editingChatId !== chat.id}
+									{#if shiftKey}
+										<div class="flex items-center space-x-1.5">
+											<Tooltip content={$i18n.t('Archive')} className="flex items-center">
+												<button
+													class="self-center dark:hover:text-white transition"
+													on:click|stopPropagation={() => {
+														archiveChatHandler(chat.id);
+													}}
+													type="button"
+												>
+													<ArchiveBox className="size-4 translate-y-[0.5px]" strokeWidth="2" />
+												</button>
+											</Tooltip>
+
+											<Tooltip content={$i18n.t('Delete')}>
+												<button
+													class="self-center dark:hover:text-white transition"
+													on:click|stopPropagation={() => {
+														deleteChatHandler(chat.id);
+													}}
+													type="button"
+												>
+													<GarbageBin strokeWidth="2" />
+												</button>
+											</Tooltip>
+										</div>
+									{:else}
+										<div class="flex items-center">
+											<ChatMenu
+												chatId={chat.id}
+												shareHandler={() => {
+													menuChatId = chat.id;
+													showShareChatModal = true;
+												}}
+												{moveChatHandler}
+												cloneChatHandler={() => {
+													cloneChatHandler(chat.id);
+												}}
+												archiveChatHandler={() => {
+													archiveChatHandler(chat.id);
+												}}
+												renameHandler={() => {
+													renameHandler(chat.id);
+												}}
+												deleteHandler={() => {
+													menuChatId = chat.id;
+													menuChatTitle = chat.title;
+													showDeleteConfirm = true;
+												}}
+												onClose={() => {}}
+												onPinChange={async () => {
+													await refreshSidebar();
+													await searchHandler();
+												}}
+											>
+												<button
+													aria-label="Chat Menu"
+													class="self-center dark:hover:text-white transition"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+														/>
+													</svg>
+												</button>
+											</ChatMenu>
+										</div>
+									{/if}
+								{/if}
 							</div>
-						</a>
+						</div>
 					{/each}
 
 					{#if !allChatsLoaded}

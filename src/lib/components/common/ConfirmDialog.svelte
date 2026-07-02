@@ -11,6 +11,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { marked } from 'marked';
 	import SensitiveInput from './SensitiveInput.svelte';
+	import NativeSelect from './NativeSelect.svelte';
 
 	export let title = '';
 	export let message = '';
@@ -24,6 +25,7 @@
 	export let inputPlaceholder = '';
 	export let inputValue = '';
 	export let inputType = '';
+	export let inputOptions: ({ label?: string; value: string } | string)[] = [];
 
 	let _inputValue = inputValue;
 
@@ -45,7 +47,7 @@
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			console.log('Escape');
-			show = false;
+			cancelHandler();
 		}
 
 		if (event.key === 'Enter') {
@@ -61,6 +63,11 @@
 		await tick();
 		await onConfirm();
 		dispatch('confirm', _inputValue);
+	};
+
+	const cancelHandler = () => {
+		show = false;
+		dispatch('cancel');
 	};
 
 	onMount(() => {
@@ -105,7 +112,7 @@
 		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
-			show = false;
+			cancelHandler();
 		}}
 	>
 		<div
@@ -147,6 +154,14 @@
 										required={true}
 									/>
 								</div>
+							{:else if inputType === 'select' && inputOptions.length}
+								<NativeSelect
+									className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
+									bind:value={_inputValue}
+									options={inputOptions}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Select an option')}
+									required
+								/>
 							{:else}
 								<textarea
 									bind:value={_inputValue}
@@ -164,8 +179,7 @@
 					<button
 						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
 						on:click={() => {
-							show = false;
-							dispatch('cancel');
+							cancelHandler();
 						}}
 						type="button"
 					>

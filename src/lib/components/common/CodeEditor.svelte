@@ -15,7 +15,7 @@
 
 	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
@@ -96,7 +96,7 @@
 
 	const getPyodideWorker = () => {
 		if (!pyodideWorkerInstance) {
-			pyodideWorkerInstance = new PyodideWorker(); // Your worker constructor
+			pyodideWorkerInstance = createPyodideWorker();
 		}
 		return pyodideWorkerInstance;
 	};
