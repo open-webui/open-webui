@@ -857,7 +857,7 @@ async def _make_channel_emitter(request_info):
     channel_id = request_info['chat_id'].removeprefix('channel:')
     message_id = request_info['message_id']
 
-    state = {'last_emit_at': 0.0}
+    state = {'last_emit_at': 0.0, 'content': ''}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
     async def _emit_channel_update(content: str, done: bool = False):
@@ -896,9 +896,13 @@ async def _make_channel_emitter(request_info):
         event_type = event_data.get('type')
 
         if event_type == 'chat:completion':
+            from open_webui.utils.misc import get_content_from_completion_event
+
             data = event_data.get('data', {})
-            content = data.get('content', '')
             done = data.get('done', False)
+
+            state['content'] = get_content_from_completion_event(data, state['content'])
+            content = state['content']
 
             if not content and not done:
                 return
