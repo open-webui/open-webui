@@ -230,6 +230,10 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         if user is None:
             await ws.close(code=4001, reason='User not found')
             return None
+        # Match the HTTP terminal routes' get_verified_user gate: pending/deactivated roles are not verified users.
+        if user.role not in {'user', 'admin'}:
+            await ws.close(code=4003, reason='Access prohibited')
+            return None
     except (asyncio.TimeoutError, json.JSONDecodeError):
         await ws.close(code=4001, reason='Auth timeout or invalid payload')
         return None
