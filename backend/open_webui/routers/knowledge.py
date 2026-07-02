@@ -1936,6 +1936,10 @@ async def sync_knowledge_cleanup(
         if not file:
             continue
 
+        # Only clean up files that belong to this knowledge base.
+        if not await Knowledges.has_file(id, file_id, db=db):
+            continue
+
         await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
 
         try:
@@ -1960,6 +1964,10 @@ async def sync_knowledge_cleanup(
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):
+        # Only delete directories that belong to this knowledge base.
+        directory = await Knowledges.get_directory_by_id(dir_id, db=db)
+        if not directory or directory.knowledge_id != id:
+            continue
         await Knowledges.delete_directory(dir_id, move_files_to_parent=False, db=db)
 
     return {'status': True}
