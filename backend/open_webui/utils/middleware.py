@@ -2454,14 +2454,26 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data = await add_memory_context(request, form_data, user, model)
 
         if 'web_search' in features and features['web_search']:
-            # Skip forced RAG web search when native FC is enabled - model can use web_search tool
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
-                form_data = await chat_web_search_handler(request, form_data, extra_params, user)
+            # features is client-supplied; re-check the permission the native FC path enforces.
+            if getattr(user, 'role', None) == 'admin' or await has_permission(
+                getattr(user, 'id', ''),
+                'features.web_search',
+                await Config.get('user.permissions'),
+            ):
+                # Skip forced RAG web search when native FC is enabled - model can use web_search tool
+                if metadata.get('params', {}).get('function_calling') == 'legacy':
+                    form_data = await chat_web_search_handler(request, form_data, extra_params, user)
 
         if 'image_generation' in features and features['image_generation']:
-            # Skip forced image generation when native FC is enabled - model can use generate_image tool
-            if metadata.get('params', {}).get('function_calling') == 'legacy':
-                form_data = await chat_image_generation_handler(request, form_data, extra_params, user)
+            # features is client-supplied; re-check the permission the direct /images routes enforce.
+            if getattr(user, 'role', None) == 'admin' or await has_permission(
+                getattr(user, 'id', ''),
+                'features.image_generation',
+                await Config.get('user.permissions'),
+            ):
+                # Skip forced image generation when native FC is enabled - model can use generate_image tool
+                if metadata.get('params', {}).get('function_calling') == 'legacy':
+                    form_data = await chat_image_generation_handler(request, form_data, extra_params, user)
 
         if 'code_interpreter' in features and features['code_interpreter']:
             engine = await Config.get('code_interpreter.engine', 'pyodide')
