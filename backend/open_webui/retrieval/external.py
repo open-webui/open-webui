@@ -207,6 +207,7 @@ async def _retrieve_milvus(connection, auth_config, knowledge, query, count, emb
 async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
     try:
         import psycopg
+        from pgvector import Vector
         from pgvector.psycopg import register_vector
         from psycopg.rows import dict_row
     except ImportError as exc:
@@ -230,6 +231,7 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
     document_id_field = source_config.get('document_id_field') or 'id'
 
     vector = await embedding_function(query)
+    query_vector = vector if isinstance(vector, Vector) else Vector(vector)
 
     def _search():
         from psycopg import sql
@@ -274,7 +276,7 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
                         table_name=table_identifier,
                         collection=collection_identifier,
                     ),
-                    (vector, collection_name, count),
+                    (query_vector, collection_name, count),
                 )
                 return cur.fetchall()
 
