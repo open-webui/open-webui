@@ -1142,3 +1142,38 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             yield buffer + b'\n'
 
     return yield_safe_stream_chunks()
+
+
+def get_content_from_completion_event(data: dict, current_content: str = '') -> str:
+    """Resolve the assistant reply text carried by a `chat:completion` event.
+
+    The reply text location varies by event shape: legacy events carry a
+    cumulative top-level `content`, streaming events carry incremental
+    `choices[0].delta.content` (or a full `choices[0].message.content`),
+    and done events may carry the reply only inside OR-style `output` items.
+    `current_content` is the text accumulated from previous events; it is
+    returned unchanged when the event carries no reply text.
+    """
+    content = current_content
+
+    top_level = data.get('content')
+    if isinstance(top_level, str) and top_level:
+        content = top_level
+
+    choices = data.get('choices') or []
+    if choices and isinstance(choices[0], dict):
+        delta_text = (choices[0].get('delta') or {}).get('content')
+        message_text = (choices[0].get('message') or {}).get('content')
+        if isinstance(delta_text, str) and delta_text:
+            content = current_content + delta_text
+        elif isinstance(message_text, str) and message_text:
+            content = message_text
+
+    if data.get('output'):
+        output_text = '\n'.join(
+            m['content'] for m in convert_output_to_messages(data['output']) if m.get('content')
+        )
+        if output_text:
+            content = output_text
+
+    return content
