@@ -1,5 +1,7 @@
 <script lang="ts">
+	import type i18nType from '$lib/i18n';
 	import { getContext, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -20,15 +22,20 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats, folders, settings, theme, user } from '$lib/stores';
+	import { folders, settings, user } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
-	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
+	import Photo from '$lib/components/icons/Photo.svelte';
+	import {
+		canvasToBlob,
+		copyBlobToClipboard,
+		renderChatMessagesToCanvas
+	} from '$lib/components/chat/export';
 
-	const i18n = getContext('i18n');
+	const i18n: typeof i18nType = getContext('i18n');
 
 	export let shareHandler: Function;
 	export let moveChatHandler: Function;
@@ -83,122 +90,115 @@
 		saveAs(blob, `chat-${chat.chat.title}.txt`);
 	};
 
+	const getFullMessagesCanvas = async () => {
+		showFullMessages = true;
+		await tick();
+
+		const containerElement = document.getElementById('full-messages-container');
+		if (!containerElement) {
+			throw new Error('Full messages container not found');
+		}
+
+		try {
+			return await renderChatMessagesToCanvas(containerElement);
+		} finally {
+			showFullMessages = false;
+		}
+	};
+
+	const copyImage = async () => {
+		chat = await getChatById(localStorage.token, chatId);
+		if (!chat) {
+			return;
+		}
+
+		try {
+			const blobPromise = getFullMessagesCanvas().then((canvas) => canvasToBlob(canvas));
+			let copied = false;
+
+			try {
+				copied = await copyBlobToClipboard(blobPromise);
+			} catch (error) {
+				console.error('Error copying chat image to clipboard', error);
+			}
+
+			if (copied) {
+				toast.success($i18n.t('Image copied to clipboard'));
+			} else {
+				const blob = await blobPromise;
+				saveAs(blob, `chat-${chat.chat.title}.png`);
+				toast.success($i18n.t('Image clipboard is not supported; image downloaded instead'));
+			}
+		} catch (error) {
+			console.error('Error copying chat image', error);
+			toast.error($i18n.t('Failed to copy image'));
+		}
+	};
+
 	const downloadPdf = async () => {
 		chat = await getChatById(localStorage.token, chatId);
 		if (!chat) {
 			return;
 		}
 
-		const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-			import('jspdf'),
-			import('html2canvas-pro')
-		]);
+		const { default: jsPDF } = await import('jspdf');
 
 		if ($settings?.stylizedPdfExport ?? true) {
-			showFullMessages = true;
-			await tick();
+			try {
+				const isDarkMode = document.documentElement.classList.contains('dark');
+				const canvas = await getFullMessagesCanvas();
 
-			const containerElement = document.getElementById('full-messages-container');
-			if (containerElement) {
-				try {
-					const isDarkMode = document.documentElement.classList.contains('dark');
-					const virtualWidth = 800; // px, fixed width for cloned element
+				const pdf = new jsPDF('p', 'mm', 'a4');
+				const pageWidthMM = 210;
+				const pageHeightMM = 297;
+				const pxPerPDFMM = canvas.width / pageWidthMM;
+				const pagePixelHeight = Math.floor(pxPerPDFMM * pageHeightMM);
 
-					// Clone and style
-					const clonedElement = containerElement.cloneNode(true);
-					clonedElement.classList.add('text-black');
-					clonedElement.classList.add('dark:text-white');
-					clonedElement.style.width = `${virtualWidth}px`;
-					clonedElement.style.position = 'absolute';
-					clonedElement.style.left = '-9999px';
-					clonedElement.style.height = 'auto';
-					document.body.appendChild(clonedElement);
+				let offsetY = 0;
+				let page = 0;
 
-					// Override content-visibility so html2canvas can capture all messages
-					clonedElement.querySelectorAll('.message-listitem').forEach((el) => {
-						el.style.contentVisibility = 'visible';
-					});
+				while (offsetY < canvas.height) {
+					const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY);
+					const pageCanvas = document.createElement('canvas');
+					pageCanvas.width = canvas.width;
+					pageCanvas.height = sliceHeight;
 
-					// Let the browser compute layout for the cloned element
-					await new Promise((r) => requestAnimationFrame(r));
-
-					// Render entire content once
-					const canvas = await html2canvas(clonedElement, {
-						backgroundColor: isDarkMode ? '#000' : '#fff',
-						useCORS: true,
-						scale: 2, // increase resolution
-						width: virtualWidth
-					});
-
-					document.body.removeChild(clonedElement);
-
-					const pdf = new jsPDF('p', 'mm', 'a4');
-					const pageWidthMM = 210;
-					const pageHeightMM = 297;
-
-					// Convert page height in mm to px on canvas scale for cropping
-					// Get canvas DPI scale:
-					const pxPerMM = canvas.width / virtualWidth; // width in px / width in px?
-					// Since 1 page width is 210 mm, but canvas width is 800 px at scale 2
-					// Assume 1 mm = px / (pageWidthMM scaled)
-					// Actually better: Calculate scale factor from px/mm:
-					// virtualWidth px corresponds directly to 210mm in PDF, so pxPerMM:
-					const pxPerPDFMM = canvas.width / pageWidthMM; // canvas px per PDF mm
-
-					// Height in px for one page slice:
-					const pagePixelHeight = Math.floor(pxPerPDFMM * pageHeightMM);
-
-					let offsetY = 0;
-					let page = 0;
-
-					while (offsetY < canvas.height) {
-						// Height of slice
-						const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY);
-
-						// Create temp canvas for slice
-						const pageCanvas = document.createElement('canvas');
-						pageCanvas.width = canvas.width;
-						pageCanvas.height = sliceHeight;
-
-						const ctx = pageCanvas.getContext('2d');
-
-						// Draw the slice of original canvas onto pageCanvas
-						ctx.drawImage(
-							canvas,
-							0,
-							offsetY,
-							canvas.width,
-							sliceHeight,
-							0,
-							0,
-							canvas.width,
-							sliceHeight
-						);
-
-						const imgData = pageCanvas.toDataURL('image/jpeg', 0.7);
-
-						// Calculate image height in PDF units keeping aspect ratio
-						const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
-
-						if (page > 0) pdf.addPage();
-
-						if (isDarkMode) {
-							pdf.setFillColor(0, 0, 0);
-							pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
-						}
-
-						pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
-
-						offsetY += sliceHeight;
-						page++;
+					const ctx = pageCanvas.getContext('2d');
+					if (!ctx) {
+						throw new Error('Failed to create canvas context');
 					}
 
-					pdf.save(`chat-${chat.chat.title}.pdf`);
+					ctx.drawImage(
+						canvas,
+						0,
+						offsetY,
+						canvas.width,
+						sliceHeight,
+						0,
+						0,
+						canvas.width,
+						sliceHeight
+					);
 
-					showFullMessages = false;
-				} catch (error) {
-					console.error('Error generating PDF', error);
+					const imgData = pageCanvas.toDataURL('image/jpeg', 0.7);
+					const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
+
+					if (page > 0) pdf.addPage();
+
+					if (isDarkMode) {
+						pdf.setFillColor(0, 0, 0);
+						pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
+					}
+
+					pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
+
+					offsetY += sliceHeight;
+					page++;
 				}
+
+				pdf.save(`chat-${chat.chat.title}.pdf`);
+			} catch (error) {
+				console.error('Error generating PDF', error);
 			}
 		} else {
 			console.log('Downloading PDF');
@@ -358,6 +358,17 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
 					</button>
 				</DropdownSub>
+
+				<button
+					draggable="false"
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					on:click={() => {
+						copyImage();
+					}}
+				>
+					<Photo className="size-4" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Copy as image')}</div>
+				</button>
 			{/if}
 
 			<button
