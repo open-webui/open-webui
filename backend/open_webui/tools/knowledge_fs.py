@@ -691,6 +691,10 @@ async def _kb_grep(
         for i, line in enumerate(lines, 1):
             if _matches(line):
                 matched.append(f'{i}: {line}')
+        if count_only:
+            return str(len(matched))
+        if filenames_only:
+            return '(standard input)' if matched else f'No matches for "{pattern}"'
         return '\\n'.join(matched) if matched else f'No matches for "{pattern}"'
 
     # Single file grep
