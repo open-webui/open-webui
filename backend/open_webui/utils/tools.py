@@ -518,6 +518,21 @@ async def get_builtin_tools(
     folder_knowledge = extra_params.get('__metadata__', {}).get('folder_knowledge')
     if folder_knowledge:
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
+    # When File Context is off, expose chat-attached collections and notes (selected via
+    # the chat input) to the builtin knowledge tools so the model can query them on demand
+    # instead of the disabled legacy RAG path. Collections/notes only: their access is
+    # re-resolved and re-checked per id inside each tool, so trusting the client id here
+    # grants nothing. Files are excluded (they'd short-circuit _has_read_access_to_file).
+    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
+    if not file_context_enabled:
+        existing_ids = {item.get('id') for item in (model_knowledge or [])}
+        chat_knowledge = [
+            {'type': item['type'], 'id': item['id'], 'name': item.get('name')}
+            for item in (extra_params.get('__metadata__', {}).get('files') or [])
+            if item.get('type') in ('collection', 'note') and item.get('id') and item['id'] not in existing_ids
+        ]
+        if chat_knowledge:
+            model_knowledge = list(model_knowledge or []) + chat_knowledge
     if is_builtin_tool_enabled('knowledge'):
         from open_webui.env import ENABLE_KB_EXEC
 

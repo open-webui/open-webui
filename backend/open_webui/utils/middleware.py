@@ -1505,9 +1505,13 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
-async def add_file_context(messages: list, chat_id: str, user) -> list:
+async def add_file_context(messages: list, chat_id: str, user, include_knowledge: bool = False) -> list:
     """
     Add file URLs to messages for native function calling.
+    include_knowledge surfaces chat-attached resources that carry no file URL (collections,
+    notes, referenced chats, and KB-selected files) so the model can reach them via the
+    builtin tools instead of the disabled RAG path; used when File Context is off. Metadata
+    only: each id is access-checked server-side when a tool actually reads it.
     """
     if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
         return messages
@@ -1527,6 +1531,12 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' name="{file["name"]}"'
         return f'<file {attrs}/>'
 
+    def format_knowledge_tag(item):
+        attrs = f'type="{item["type"]}" id="{item["id"]}"'
+        if item.get('name'):
+            attrs += f' name="{item["name"]}"'
+        return f'<file {attrs}/>'
+
     # Pair only user-role messages from both lists to avoid misalignment.
     # After process_messages_with_output(), assistant messages with tool calls
     # are expanded into multiple messages (assistant + tool results), making
@@ -1537,16 +1547,27 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
     for message, stored_message in zip(user_messages, stored_user_messages):
-        files_with_urls = [
-            file
-            for file in stored_message.get('files', [])
+        stored_files = stored_message.get('files', [])
+        tags = [
+            format_file_tag(file)
+            for file in stored_files
             if file.get('url') and not file.get('url').startswith('data:')
         ]
-        if not files_with_urls:
+        if include_knowledge:
+            # URL-less chat attachments (collections, notes, referenced chats, KB-selected
+            # files); URL-bearing files are already tagged above. Access is re-checked per id
+            # inside each tool, so surfacing the id here grants nothing.
+            tags += [
+                format_knowledge_tag(item)
+                for item in stored_files
+                if item.get('id')
+                and not item.get('url')
+                and item.get('type') in ('collection', 'note', 'chat', 'file')
+            ]
+        if not tags:
             continue
 
-        file_tags = [format_file_tag(file) for file in files_with_urls]
-        file_context = '<attached_files>\n' + '\n'.join(file_tags) + '\n</attached_files>\n\n'
+        file_context = '<attached_files>\n' + '\n'.join(tags) + '\n</attached_files>\n\n'
 
         content = message.get('content', '')
         if isinstance(content, list):
@@ -2600,6 +2621,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     }
     form_data['metadata'] = metadata
 
+    # Check if file context extraction is enabled for this model (default True)
+    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
+
     # When the caller provides an explicit `tools` key in the request body,
     # skip all server-side tool resolution and pass the caller's tools through
     # unchanged.  Sending `tools: []` explicitly opts out of builtin injection.
@@ -2738,9 +2762,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
         if use_builtin_tools:
-            # Add file context to user messages
+            # Add file context to user messages; when File Context is off, also surface
+            # chat-attached collections and notes so the model can query them via builtin tools.
             chat_id = metadata.get('chat_id')
-            form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
+            form_data['messages'] = await add_file_context(
+                form_data.get('messages', []), chat_id, user, include_knowledge=not file_context_enabled
+            )
             builtin_tools = await get_builtin_tools(
                 request,
                 {
@@ -2776,9 +2803,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     sources.extend(flags.get('sources', []))
                 except Exception as e:
                     log.exception(e)
-
-    # Check if file context extraction is enabled for this model (default True)
-    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
 
     if file_context_enabled:
         try:
