@@ -11,7 +11,6 @@ from langchain_community.document_loaders import (
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
-    OutlookMessageLoader,
     PyPDFLoader,
     TextLoader,
     YoutubeLoader,
@@ -654,7 +653,18 @@ class Loader:
                     )
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
-                loader = OutlookMessageLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import (
+                        UnstructuredEmailLoader,
+                    )
+
+                    # unstructured parses .msg via python-oxmsg; avoids extract_msg's beautifulsoup4<4.14 conflict
+                    loader = UnstructuredEmailLoader(file_path, process_attachments=False)
+                except ImportError:
+                    raise ValueError(
+                        "Processing .msg files requires the 'unstructured' package. "
+                        'Install it with: pip install unstructured'
+                    )
             elif file_ext == 'odt':
                 try:
                     from langchain_community.document_loaders import UnstructuredODTLoader
