@@ -59,11 +59,65 @@ logging.getLogger('uvicorn.access').addFilter(EndpointFilter())
 ####################################
 
 
+# Fork migration revision IDs that were renamed to avoid colliding with IDs
+# upstream later claimed. A DB last migrated by the older fork revision has the
+# OLD id stamped in alembic_version, which alembic would now resolve to the
+# wrong migration (e.g. a1b2c3d4e5f6 -> upstream's add_skill_table instead of
+# the fork's knowledge_file embedding-status migration). Reconciled at startup.
+FORK_ALEMBIC_RENAMES = {
+    'a1b2c3d4e5f6': 'kb01embedstatus',  # knowledge_file embedding status
+}
+
+
+def _reconcile_alembic_stamp() -> None:
+    """Auto-fix stale fork revision IDs in alembic_version before upgrading.
+
+    Schema-verified and idempotent; never raises so it can never block startup
+    (a failure here just surfaces the normal alembic error afterwards).
+    """
+    try:
+        from sqlalchemy import inspect as sa_inspect, text
+
+        from open_webui.internal.db import engine
+
+        insp = sa_inspect(engine)
+        if 'alembic_version' not in set(insp.get_table_names()):
+            return  # fresh install — nothing stamped yet
+
+        with engine.begin() as conn:
+            row = conn.execute(text('SELECT version_num FROM alembic_version')).fetchone()
+            if not row or row[0] not in FORK_ALEMBIC_RENAMES:
+                return
+
+            stamp, target = row[0], FORK_ALEMBIC_RENAMES[row[0]]
+
+            # Guard against misreading a legitimate upstream stamp: only remap
+            # when the fork migration's own schema footprint is present.
+            try:
+                kf_cols = {c['name'] for c in insp.get_columns('knowledge_file')}
+            except Exception:
+                kf_cols = set()
+            if stamp == 'a1b2c3d4e5f6' and 'status' not in kf_cols:
+                log.warning(
+                    f'alembic stamp {stamp} has no matching knowledge_file.status column; leaving stamp unchanged.'
+                )
+                return
+
+            conn.execute(text('UPDATE alembic_version SET version_num = :v'), {'v': target})
+            log.info(f'Reconciled fork alembic stamp: {stamp} -> {target}')
+    except Exception as e:
+        log.warning(f'Could not reconcile alembic stamp (non-fatal): {e}')
+
+
 def run_migrations():
     log.info('Running migrations')
     try:
         from alembic import command
         from alembic.config import Config as AlembicConfig
+
+        # Repair any stale fork revision IDs before alembic tries to resolve the
+        # graph, otherwise upgrade head can fail or target the wrong migration.
+        _reconcile_alembic_stamp()
 
         alembic_cfg = AlembicConfig(OPEN_WEBUI_DIR / 'alembic.ini')
 
