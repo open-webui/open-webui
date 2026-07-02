@@ -12,6 +12,7 @@
 	} from '$lib/apis/calendar';
 	import CalendarView from '$lib/components/calendar/CalendarView.svelte';
 	import CalendarSidebar from '$lib/components/calendar/CalendarSidebar.svelte';
+	import { miniCalendarVisibleRange } from '$lib/components/calendar/calendarEventIndicators';
 	import CalendarEventModal from '$lib/components/calendar/CalendarEventModal.svelte';
 	import CreateCalendarModal from '$lib/components/calendar/CreateCalendarModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -27,6 +28,7 @@
 	let loaded = false;
 	let calendars: CalendarModel[] = [];
 	let events: CalendarEventModel[] = [];
+	let miniCalendarEvents: CalendarEventModel[] = [];
 	let visibleCalendarIds: Set<string> = new Set();
 
 	let view: 'month' | 'week' | 'day' = 'month';
@@ -36,6 +38,9 @@
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
 	let showCreateCalendarModal = false;
+	let miniRangeStart: string | null = null;
+	let miniRangeEnd: string | null = null;
+	let miniEventsLoaded = false;
 
 	const MONTH_NAMES = [
 		'January',
@@ -100,8 +105,33 @@
 		}
 	}
 
+	function getMiniVisibleRange(date: Date): { start: string; end: string } {
+		const range = miniCalendarVisibleRange(date);
+		return {
+			start: range.start.toISOString(),
+			end: range.end.toISOString()
+		};
+	}
+
+	async function loadMiniEvents(start?: string, end?: string) {
+		try {
+			const range =
+				start && end
+					? { start, end }
+					: miniRangeStart && miniRangeEnd
+						? { start: miniRangeStart, end: miniRangeEnd }
+						: getMiniVisibleRange(currentDate);
+			miniRangeStart = range.start;
+			miniRangeEnd = range.end;
+			miniCalendarEvents = await getCalendarEvents(localStorage.token, range.start, range.end);
+			miniEventsLoaded = true;
+		} catch (err) {
+			toast.error(`${err}`);
+		}
+	}
+
 	async function refresh() {
-		await loadEvents();
+		await Promise.all([loadEvents(), loadMiniEvents()]);
 	}
 
 	function toggleCalendar(id: string) {
@@ -159,6 +189,13 @@
 		currentDate = date;
 		await tick();
 		refresh();
+	}
+
+	async function handleMiniVisibleRangeChange(start: string, end: string) {
+		if (miniEventsLoaded && miniRangeStart === start && miniRangeEnd === end) {
+			return;
+		}
+		await loadMiniEvents(start, end);
 	}
 
 	function handleCreateCalendar() {
@@ -360,12 +397,14 @@
 			<div class="hidden md:flex flex-col w-56 shrink-0 pr-1.5 pl-3 overflow-y-auto">
 				<CalendarSidebar
 					{calendars}
+					events={miniCalendarEvents}
 					{visibleCalendarIds}
 					{currentDate}
 					onToggle={toggleCalendar}
 					onCreateCalendar={handleCreateCalendar}
 					onDeleteCalendar={handleDeleteCalendar}
 					onDateSelect={handleDateSelect}
+					onVisibleRangeChange={handleMiniVisibleRangeChange}
 				/>
 			</div>
 
