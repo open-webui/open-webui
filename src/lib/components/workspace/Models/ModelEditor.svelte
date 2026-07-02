@@ -33,6 +33,7 @@
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import { normalizeModelKnowledge } from './utils';
 
 	const i18n = getContext('i18n');
 
@@ -359,24 +360,7 @@
 					)
 				: null;
 
-			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
-				if (item?.collection_name && item?.type !== 'file') {
-					return {
-						id: item.collection_name,
-						name: item.name,
-						legacy: true
-					};
-				} else if (item?.collection_names) {
-					return {
-						name: item.name,
-						type: 'collection',
-						collection_names: item.collection_names,
-						legacy: true
-					};
-				} else {
-					return item;
-				}
-			});
+			knowledge = normalizeModelKnowledge(model?.meta?.knowledge ?? []);
 
 			toolIds = model?.meta?.toolIds ?? [];
 			skillIds = model?.meta?.skillIds ?? [];
