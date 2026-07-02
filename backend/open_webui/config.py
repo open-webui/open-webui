@@ -124,7 +124,27 @@ def run_migrations():
         migrations_path = OPEN_WEBUI_DIR / 'migrations'
         alembic_cfg.set_main_option('script_location', str(migrations_path))
 
-        command.upgrade(alembic_cfg, 'head')
+        # Serialize migrations across processes (multiple uvicorn workers /
+        # crash-restarts) with a Postgres advisory lock. Without this, concurrent
+        # runs race on transactional DDL — e.g. the config reshape renames
+        # `config` mid-flight, another worker's read then fails, its `except:
+        # pass` swallows the error, the transaction aborts, and the next DDL
+        # dies with InFailedSqlTransaction. The lock is session-level: if a
+        # holder dies it auto-releases on disconnect, so it can't deadlock.
+        from open_webui.internal.db import engine
+        from sqlalchemy import text
+
+        _MIG_LOCK_KEY = 4277384593  # fixed arbitrary key for open-webui migrations
+
+        if getattr(engine.dialect, 'name', '') == 'postgresql':
+            with engine.connect() as lock_conn:
+                lock_conn.execute(text('SELECT pg_advisory_lock(:k)'), {'k': _MIG_LOCK_KEY})
+                try:
+                    command.upgrade(alembic_cfg, 'head')
+                finally:
+                    lock_conn.execute(text('SELECT pg_advisory_unlock(:k)'), {'k': _MIG_LOCK_KEY})
+        else:
+            command.upgrade(alembic_cfg, 'head')
     except Exception as e:
         log.exception(f'Error running migrations: {e}')
 
