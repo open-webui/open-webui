@@ -4,6 +4,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
+	import { getArtifactCodeBlockSignature, isArtifactCodeToken } from './artifacts';
 	import {
 		artifactCode,
 		chatId,
@@ -129,22 +130,43 @@
 				)
 			: messageContent;
 
+	let contentArtifactSignature = null;
+	let openedArtifactSignature = null;
+
+	const openArtifactsPanel = async () => {
+		await tick();
+		showArtifacts.set(true);
+		showControls.set(true);
+	};
+
 	const markdownUpdateHandler = /** @type {any} */ (
 		async (/** @type {{ lang?: string; text?: string }} */ token) => {
 			const { lang = '', text: code = '' } = token;
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				isArtifactCodeToken({ lang, text: code }) &&
 				!$mobile &&
 				$chatId
 			) {
-				await tick();
-				showArtifacts.set(true);
-				showControls.set(true);
+				await openArtifactsPanel();
 			}
 		}
 	);
+
+	$: contentArtifactSignature =
+		($settings?.detectArtifacts ?? true) && !$mobile && $chatId
+			? getArtifactCodeBlockSignature(content)
+			: null;
+
+	$: {
+		if (!contentArtifactSignature) {
+			openedArtifactSignature = null;
+		} else if (contentArtifactSignature !== openedArtifactSignature) {
+			openedArtifactSignature = contentArtifactSignature;
+			openArtifactsPanel();
+		}
+	}
 
 	const previewHandler = /** @type {any} */ (
 		async (/** @type {string} */ value) => {
