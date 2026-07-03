@@ -105,8 +105,9 @@ async def get_accessible_folder_files(
 ) -> list[dict]:
     """Filter folder.data['files'] entries to those the caller can read.
 
-    Each entry is expected to have 'type' ('file' or 'collection') and 'id'.
-    Admins bypass all checks. Unknown types are kept as-is.
+    Entries carry a 'type' ('file', 'collection' or 'note') and 'id'. File, collection and
+    note ids are each access-checked against the caller; admins bypass all checks and
+    genuinely unknown types are kept as-is.
     """
     if not entries:
         return []
@@ -127,6 +128,22 @@ async def get_accessible_folder_files(
                 accessible.append(entry)
         elif entry_type == 'collection':
             if await Knowledges.check_access_by_user_id(entry_id, user.id, 'read', db=db):
+                accessible.append(entry)
+        elif entry_type == 'note':
+            # Owner has no self-grant (notes are private by default), so check ownership too.
+            from open_webui.models.notes import Notes
+
+            note = await Notes.get_note_by_id(entry_id, db=db)
+            if note and (
+                note.user_id == user.id
+                or await AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='note',
+                    resource_id=entry_id,
+                    permission='read',
+                    db=db,
+                )
+            ):
                 accessible.append(entry)
         else:
             accessible.append(entry)
