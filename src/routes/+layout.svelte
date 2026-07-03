@@ -810,6 +810,8 @@
 		isAuthRedirectInProgress = true;
 		user.set(null);
 		localStorage.removeItem('token');
+		// Clear the OAuth token cookie so /auth doesn't auto-login and redirect-loop
+		document.cookie = 'token=; Max-Age=0; path=/';
 		toast.error($i18n.t('Session expired. Please sign in again.'));
 
 		const currentPath = `${window.location.pathname}${window.location.search}`;
