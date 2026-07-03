@@ -85,9 +85,13 @@ async def check_connection_health(url: str, key: str, api_config: dict) -> dict:
 
 async def _run_health_checks(app) -> None:
     state = app.state
-    base_urls = list(getattr(state.config, 'OPENAI_API_BASE_URLS', None) or [])
-    keys = list(getattr(state.config, 'OPENAI_API_KEYS', None) or [])
-    configs = dict(getattr(state.config, 'OPENAI_API_CONFIGS', None) or {})
+    # Config is DB-backed now (upstream removed app.state.config).
+    from open_webui.models.config import Config
+
+    _rt = await Config.get_many('openai.api_base_urls', 'openai.api_keys', 'openai.api_configs')
+    base_urls = list(_rt.get('openai.api_base_urls') or [])
+    keys = list(_rt.get('openai.api_keys') or [])
+    configs = dict(_rt.get('openai.api_configs') or {})
 
     if getattr(state, 'PROVIDER_HEALTH', None) is None:
         state.PROVIDER_HEALTH = {}

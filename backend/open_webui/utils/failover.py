@@ -16,6 +16,8 @@ from typing import Optional
 
 from fastapi import Request
 
+from open_webui.models.config import Config
+
 log = logging.getLogger(__name__)
 
 
@@ -90,7 +92,7 @@ def _health_status(health_cache: Optional[dict], url: str) -> str:
     return entry.get('status', 'unknown')
 
 
-def resolve_failover_candidates(
+async def resolve_failover_candidates(
     request: Request,
     model_info,
     payload: dict,
@@ -104,7 +106,7 @@ def resolve_failover_candidates(
     1. **Workspace-model-level chain**: ``model_info.meta.failover_providers``
        — when a workspace model has its own ordered list configured, that
        overrides everything else.
-    2. **Base-model-level chain**: ``app.state.config.MODEL_FAILOVER_MAP``
+    2. **Base-model-level chain**: the ``models.failover_map`` DB config key
        — a global admin map keyed by model id. The requested model is the
        implicit primary; entries from the map become backups #1..N. This
        lets one config protect every workspace model (and direct chats)
@@ -123,9 +125,12 @@ def resolve_failover_candidates(
     skip_set = set(skip_urls or [])
     required_caps = required_capabilities_from_payload(payload)
 
-    base_urls = request.app.state.config.OPENAI_API_BASE_URLS
-    keys = request.app.state.config.OPENAI_API_KEYS
-    configs = request.app.state.config.OPENAI_API_CONFIGS
+    # Config is now DB-backed (upstream removed app.state.config); read the
+    # OpenAI connection lists directly from Config (mirrors get_openai_runtime_config).
+    _rt = await Config.get_many('openai.api_base_urls', 'openai.api_keys', 'openai.api_configs')
+    base_urls = _rt.get('openai.api_base_urls') or []
+    keys = _rt.get('openai.api_keys') or []
+    configs = _rt.get('openai.api_configs') or {}
     models_state = request.app.state.OPENAI_MODELS or {}
 
     def _build_candidate(model_id: str, position: int, capabilities: list[str]) -> Optional[ProviderCandidate]:
@@ -190,7 +195,7 @@ def resolve_failover_candidates(
         if primary is not None:
             candidates.append(primary)
 
-        global_map = getattr(request.app.state.config, 'MODEL_FAILOVER_MAP', None) or {}
+        global_map = (await Config.get('models.failover_map')) or {}
         # PersistentConfig deserialises to plain dicts/lists, not Pydantic
         # FailoverProvider instances — handle dicts defensively.
         chain = global_map.get(requested_id) or []

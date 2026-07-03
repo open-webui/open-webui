@@ -1182,7 +1182,7 @@ async def generate_chat_completion(
         await get_all_models(request, user=user)
 
     health_cache = getattr(request.app.state, 'PROVIDER_HEALTH', None)
-    candidates = resolve_failover_candidates(
+    candidates = await resolve_failover_candidates(
         request=request,
         model_info=model_info,
         payload=payload,
@@ -1193,7 +1193,7 @@ async def generate_chat_completion(
     # If the legacy resolver found nothing (model not in cache), refresh and retry.
     if not candidates:
         await get_all_models(request, user=user)
-        candidates = resolve_failover_candidates(
+        candidates = await resolve_failover_candidates(
             request=request,
             model_info=model_info,
             payload=payload,

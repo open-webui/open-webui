@@ -778,7 +778,7 @@ async def get_model_failover_map(request: Request, user=Depends(get_admin_user))
     to regular users (matches how we hide `provider_selected` metadata from
     them on chat messages).
     """
-    return {'MODEL_FAILOVER_MAP': request.app.state.config.MODEL_FAILOVER_MAP or {}}
+    return {'MODEL_FAILOVER_MAP': (await Config.get('models.failover_map')) or {}}
 
 
 @router.post('/models/failover', response_model=ModelFailoverMapForm)
@@ -794,8 +794,8 @@ async def set_model_failover_map(
         for base_id, entries in form_data.MODEL_FAILOVER_MAP.items()
         if entries
     }
-    request.app.state.config.MODEL_FAILOVER_MAP = cleaned
-    return {'MODEL_FAILOVER_MAP': request.app.state.config.MODEL_FAILOVER_MAP}
+    await Config.upsert({'models.failover_map': cleaned})
+    return {'MODEL_FAILOVER_MAP': cleaned}
 
 
 class PromptSuggestion(BaseModel):
