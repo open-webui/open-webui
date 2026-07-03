@@ -61,6 +61,7 @@
 		addTerminalConnection,
 		removeTerminalConnection
 	} from '$lib/utils/connections';
+	import { executeToolRequest } from '$lib/utils/executeTool';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import {
@@ -422,40 +423,23 @@
 	};
 
 	const executeTool = async (data, cb, chatId) => {
-		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
+		const resolvedToolServer = resolveToolServer(data.server?.url);
 
-		console.log('executeTool', data, toolServer);
+		console.log('executeTool', data, resolvedToolServer.toolServer);
 
-		if (toolServer) {
-			const res = await executeToolServer(
-				token,
-				toolServer.url,
-				data?.name,
-				data?.params,
-				toolServerData,
-				chatId
-			);
-
-			console.log('executeToolServer', res);
-
-			if (data?.name === 'display_file' && data?.params?.path) {
-				if (res?.exists !== false) {
-					displayFileHandler(data.params.path, { showControls, showFileNavPath });
-				}
+		await executeToolRequest({
+			data,
+			chatId,
+			resolved: resolvedToolServer,
+			executeToolServer,
+			cb,
+			onDisplayFile: (path) => {
+				displayFileHandler(path, { showControls, showFileNavPath });
+			},
+			onWriteFile: (path) => {
+				showFileNavDir.set(path);
 			}
-
-			if (['write_file'].includes(data?.name) && data?.params?.path) {
-				showFileNavDir.set(res?.path ?? data.params.path);
-			}
-
-			if (cb) {
-				cb(structuredClone(res));
-			}
-		} else {
-			if (cb) {
-				cb({ error: 'Tool Server Not Found' });
-			}
-		}
+		});
 	};
 
 	const chatEventHandler = async (event, cb) => {
