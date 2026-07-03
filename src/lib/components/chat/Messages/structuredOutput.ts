@@ -146,7 +146,13 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 function buildReasoningToken(item: OutputItem, isLastItem: boolean) {
 	const duration = item.duration ?? '';
 	const isDone = isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
-	const text = getReasoningText(item)
+	const rawText = getReasoningText(item);
+
+	if (isDone && !rawText.trim()) {
+		return null;
+	}
+
+	const text = rawText
 		.split('\n')
 		.map((line) => (line.startsWith('>') ? line : `> ${line}`))
 		.join('\n');
