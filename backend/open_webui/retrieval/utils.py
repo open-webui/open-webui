@@ -71,6 +71,20 @@ LOADER_CONFIG_KEYS = {
     'web_loader_ssl_verification': 'web.loader.ssl_verification',
     'web_loader_concurrent_requests': 'web.loader.concurrent_requests',
     'web_search_trust_env': 'web.search.trust_env',
+    'web_loader_engine': 'web.loader.engine',
+    'web_loader_timeout': 'web.loader.timeout',
+    'playwright_ws_url': 'web.loader.playwright_ws_url',
+    'playwright_timeout': 'web.loader.playwright_timeout',
+    'firecrawl_api_key': 'web.loader.firecrawl_api_key',
+    'firecrawl_api_url': 'web.loader.firecrawl_api_url',
+    'firecrawl_timeout': 'web.loader.firecrawl_timeout',
+    'tavily_api_key': 'web.search.tavily_api_key',
+    'tavily_extract_depth': 'web.search.tavily_extract_depth',
+    'microsoft_web_iq_api_base_url': 'web.search.microsoft_web_iq_api_base_url',
+    'microsoft_web_iq_api_key': 'web.search.microsoft_web_iq_api_key',
+    'microsoft_web_iq_language': 'web.search.microsoft_web_iq_language',
+    'external_web_loader_url': 'web.loader.external_web_loader_url',
+    'external_web_loader_api_key': 'web.loader.external_web_loader_api_key',
     'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
     'DATALAB_MARKER_API_KEY': 'rag.datalab_marker_api_key',
     'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',
@@ -126,6 +140,7 @@ def get_loader(request, url: str, config: dict):
         verify_ssl=config.get('web_loader_ssl_verification'),
         requests_per_second=config.get('web_loader_concurrent_requests'),
         trust_env=config.get('web_search_trust_env'),
+        loader_config=config,
     )
 
 

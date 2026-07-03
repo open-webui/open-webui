@@ -2609,6 +2609,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
                 requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
                 trust_env=config.WEB_SEARCH_TRUST_ENV,
+                loader_config=await get_loader_config(),
             )
             docs = await loader.aload()
 
