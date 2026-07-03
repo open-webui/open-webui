@@ -46,7 +46,7 @@ class PaddleOCRVLLoader:
 
         # Detect fileType based on file extension
         ext = self.file_path.lower().split('.')[-1]
-        image_extensions = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'webp']
+        image_extensions = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif', 'webp']
         file_type = 1 if ext in image_extensions else 0
 
         payload = {

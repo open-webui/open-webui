@@ -88,6 +88,8 @@ known_source_ext = [
     'toml',
 ]
 
+paddleocr_vl_supported_ext = ['pdf', 'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif', 'webp']
+
 
 class ExcelLoader:
     """Fallback Excel loader using pandas when unstructured is not installed."""
@@ -555,7 +557,11 @@ class Loader:
                 file_path=file_path,
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
             )
-        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+        elif (
+            self.engine == 'paddleocr_vl'
+            and self.kwargs.get('PADDLEOCR_VL_TOKEN') != ''
+            and file_ext in paddleocr_vl_supported_ext
+        ):
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
