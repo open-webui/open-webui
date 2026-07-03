@@ -702,7 +702,7 @@ async def _kb_grep(
         elif 'error' in resolved:
             return resolved['error']
         else:
-            lines = resolved['content'].split('\\n')
+            lines = resolved['content'].split('\n')
             matched = []
             for i, line in enumerate(lines, 1):
                 if _matches(line):
@@ -715,7 +715,7 @@ async def _kb_grep(
 
             if not matched:
                 return f'No matches for "{pattern}" in {resolved["filename"]}'
-            return '\\n'.join(matched)
+            return '\n'.join(matched)
 
     # Cross-file grep (optionally scoped to directory)
     accessible = await _get_accessible_files(user, model_knowledge)
