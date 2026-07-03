@@ -2038,6 +2038,19 @@ def strip_compaction_fields(messages: list[dict]) -> list[dict]:
     return stripped
 
 
+def add_context_summary_system_message(
+    messages: list[dict],
+    context_summary: str,
+    system_prompt: str = '',
+) -> list[dict]:
+    messages = [dict(message) for message in messages]
+    summary_content = f'[CONVERSATION SUMMARY]\n{context_summary}'
+    if system_prompt and not get_system_message(messages):
+        messages.insert(0, {'role': 'system', 'content': system_prompt})
+
+    return add_or_update_system_message(summary_content, messages, append=True)
+
+
 def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     tool_result_ids = {
         message.get('tool_call_id')
@@ -2278,10 +2291,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 system_prompt,
             )
             if context_summary:
-                form_data['messages'] = add_or_update_system_message(
-                    f'[CONVERSATION SUMMARY]\n{context_summary}',
+                form_data['messages'] = add_context_summary_system_message(
                     form_data['messages'],
-                    append=True,
+                    context_summary,
+                    system_prompt,
                 )
         except Exception:
             log.exception('Context compaction failed; continuing with full chat history')
