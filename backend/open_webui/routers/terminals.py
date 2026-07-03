@@ -5,6 +5,7 @@ Routes:
   *    /{server_id}/{path:path}  — proxy request to terminal server
 """
 
+import asyncio
 import logging
 import posixpath
 from urllib.parse import unquote
@@ -18,6 +19,7 @@ from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
+from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
@@ -103,6 +105,18 @@ async def proxy_terminal(
     base_url = (connection.get('url') or '').rstrip('/')
     if not base_url:
         return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
+
+    # Security: validate base_url against the SSRF allowlist before proxying.
+    # Admin-configured terminal URLs are not immune to SSRF — a compromised
+    # admin account or misconfigured URL pointing to an IMDS endpoint
+    # (e.g. http://169.254.169.254/latest/meta-data/) would otherwise be proxied
+    # verbatim. validate_url() applies the same block-list used by the web
+    # retrieval pipeline: private IPs, link-local, cloud metadata endpoints. OW-H4.
+    try:
+        await asyncio.to_thread(validate_url, base_url)
+    except Exception as e:
+        log.warning(f'Terminal proxy SSRF guard rejected URL {base_url!r}: {e}')
+        return JSONResponse({'error': 'Terminal server URL is not permitted'}, status_code=400)
 
     safe_path = _sanitize_proxy_path(path)
     if safe_path is None:

@@ -2075,7 +2075,12 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.getenv('CORS_ALLOW_ORIGIN', '*').split(';')
+#
+# Security: Default changed from '*' to '' (deny-all cross-origin) to prevent
+# CSRF-equivalent attacks and credential exfiltration from authenticated sessions.
+# Operators that need cross-origin access must explicitly configure allowed origins.
+# See: https://github.com/OhanaSec/jc-pentest-harness (OW-H1)
+CORS_ALLOW_ORIGIN = os.getenv('CORS_ALLOW_ORIGIN', '').split(';')
 
 # Allows custom URL schemes (e.g., app://) to be used as origins for CORS.
 # Useful for local development or desktop clients with schemes like app:// or other custom protocols.
@@ -2084,6 +2089,8 @@ CORS_ALLOW_CUSTOM_SCHEME = os.getenv('CORS_ALLOW_CUSTOM_SCHEME', '').split(';')
 
 if CORS_ALLOW_ORIGIN == ['*']:
     log.warning("\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n")
+elif CORS_ALLOW_ORIGIN == ['']:
+    log.info("CORS_ALLOW_ORIGIN not set — cross-origin requests are denied by default. Set CORS_ALLOW_ORIGIN to allow specific origins.")
 else:
     # You have to pick between a single wildcard or a list of origins.
     # Doing both will result in CORS errors in the browser.
@@ -2378,10 +2385,15 @@ Responses from models: {{responses}}"""
 
 ENABLE_API_KEYS = os.getenv('ENABLE_API_KEYS', 'False').lower() == 'true'
 
+# Security: default to True so newly created API keys are scoped to specific
+# endpoints rather than granting full user-equivalent API access. A leaked key
+# (e.g. embedded in a client script) should not reach /api/v1/memories/,
+# /api/v1/files/, or arbitrary model invocations by default. Operators that
+# need unrestricted keys must explicitly opt out. See OW-L5.
 ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
     os.getenv(
         'ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS',
-        os.getenv('ENABLE_API_KEY_ENDPOINT_RESTRICTIONS', 'False'),
+        os.getenv('ENABLE_API_KEY_ENDPOINT_RESTRICTIONS', 'True'),
     ).lower()
     == 'true'
 )

@@ -82,7 +82,19 @@ log = logging.getLogger(__name__)
 
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
-signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+_redis_for_rate_limiter = get_redis_client()
+if _redis_for_rate_limiter is None:
+    # Security: Redis unavailable — signin rate limiter falling back to in-process
+    # memory store. In-memory limiting is per-worker and resets on restart, so
+    # a multi-worker or multi-instance deployment provides weaker brute-force
+    # protection than Redis. Strongly recommend enabling Redis for production
+    # deployments. See OW-L4.
+    log.warning(
+        'Redis is unavailable: signin rate limiter is using in-process memory fallback. '
+        'Rate limit state will not be shared across workers or persist across restarts. '
+        'Configure REDIS_URL for production deployments.'
+    )
+signin_rate_limiter = RateLimiter(redis_client=_redis_for_rate_limiter, limit=5 * 3, window=60 * 3)
 
 ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
@@ -438,7 +450,14 @@ async def ldap_auth(
     LDAP_APP_PASSWORD = await Config.get('ldap.server.app_password')
     LDAP_USE_TLS = await Config.get('ldap.server.use_tls')
     LDAP_CA_CERT_FILE = await Config.get('ldap.server.ca_cert_file')
-    LDAP_VALIDATE_CERT = CERT_REQUIRED if await Config.get('ldap.server.validate_cert') else CERT_NONE
+    # Security: default to CERT_REQUIRED. CERT_NONE disables TLS certificate
+    # validation, exposing LDAP auth to MITM attacks. See OW-M4.
+    _ldap_validate_cert_setting = await Config.get('ldap.server.validate_cert')
+    if _ldap_validate_cert_setting is None:
+        _ldap_validate_cert_setting = True  # safe default: always validate
+    LDAP_VALIDATE_CERT = CERT_REQUIRED if _ldap_validate_cert_setting else CERT_NONE
+    if LDAP_VALIDATE_CERT == CERT_NONE and LDAP_USE_TLS:
+        log.warning('LDAP: use_tls=true but validate_cert=false — TLS certificate validation is DISABLED. This exposes authentication to MITM attacks.')
     LDAP_CIPHERS = await Config.get('ldap.server.ciphers') if await Config.get('ldap.server.ciphers') else 'ALL'
 
     try:

@@ -70,7 +70,11 @@ if WEBSOCKET_MANAGER == 'redis':
         async_mode='asgi',
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
+        # Security: always_connect=False ensures unauthenticated connections are
+        # cleanly rejected at the Socket.IO handshake rather than entering the
+        # socket pool in an indeterminate state. Prevents resource exhaustion
+        # via socket pool flooding with no auth-gate. See OW-M2.
+        always_connect=False,
         client_manager=redis_manager,
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
@@ -83,7 +87,11 @@ else:
         async_mode='asgi',
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
+        # Security: always_connect=False ensures unauthenticated connections are
+        # cleanly rejected at the Socket.IO handshake rather than entering the
+        # socket pool in an indeterminate state. Prevents resource exhaustion
+        # via socket pool flooding with no auth-gate. See OW-M2.
+        always_connect=False,
         logger=WEBSOCKET_SERVER_LOGGING,
         ping_interval=WEBSOCKET_SERVER_PING_INTERVAL,
         ping_timeout=WEBSOCKET_SERVER_PING_TIMEOUT,
@@ -364,6 +372,13 @@ async def connect(sid, environ, auth):
                 'last_seen_at': int(time.time()),
             }
             await sio.enter_room(sid, f'user:{user.id}')
+            return True
+
+    # Security: explicitly reject unauthenticated connections.
+    # With always_connect=False, returning False causes Socket.IO to cleanly
+    # refuse the handshake rather than accepting the connection into an
+    # indeterminate state. Prevents socket pool resource exhaustion. See OW-M2.
+    return False
 
 
 @sio.on('user-join')

@@ -268,9 +268,30 @@ OPENAI_CONFIG_KEYS = {
 }
 
 
+def _mask_api_key(key: str) -> str:
+    """Return a masked version of an API key for display (last 4 chars visible).
+
+    Security: API keys must not be returned in full to the admin UI. Even
+    though the endpoint is admin-only, full keys transit the network on every
+    config page load and are stored in browser DevTools memory. Combined with
+    a CORS misconfiguration (OW-H1), a CSRF attack against an admin session
+    can exfiltrate all provider credentials. See OW-M5.
+    """
+    if not key:
+        return key
+    if len(key) <= 8:
+        return '***'
+    return f'{key[:3]}...{key[-4:]}'
+
+
 async def get_openai_config() -> dict:
     values = await Config.get_many(*OPENAI_CONFIG_KEYS.values())
-    return {field: values[storage_key] for field, storage_key in OPENAI_CONFIG_KEYS.items() if storage_key in values}
+    result = {field: values[storage_key] for field, storage_key in OPENAI_CONFIG_KEYS.items() if storage_key in values}
+    # Mask API keys before returning to the admin UI. Keys are write-only;
+    # re-enter the full key to update. See OW-M5.
+    if 'OPENAI_API_KEYS' in result and isinstance(result['OPENAI_API_KEYS'], list):
+        result['OPENAI_API_KEYS'] = [_mask_api_key(k) for k in result['OPENAI_API_KEYS']]
+    return result
 
 
 async def get_openai_runtime_config() -> tuple[bool, list[str], list[str], dict]:
