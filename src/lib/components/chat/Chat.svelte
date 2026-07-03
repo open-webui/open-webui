@@ -53,6 +53,7 @@
 	} from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { toChatActionMessage } from './actionPayload';
 
 	import {
 		convertMessagesToHistory,
@@ -1769,14 +1770,7 @@
 
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
-			messages: messages.map((m) => ({
-				id: m.id,
-				role: m.role,
-				content: m.content,
-				info: m.info ? m.info : undefined,
-				timestamp: m.timestamp,
-				...(m.sources ? { sources: m.sources } : {})
-			})),
+			messages: messages.map(toChatActionMessage),
 			...(event ? { event: event } : {}),
 			model_item: $models.find((m) => m.id === modelId),
 			chat_id: _chatId,
