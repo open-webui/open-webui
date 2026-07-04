@@ -36,7 +36,7 @@ from fastapi import HTTPException
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -54,10 +54,10 @@ class UsageLimitsConfig(BaseModel):
     period: Literal['daily', 'weekly', 'monthly'] = 'daily'
 
     # Optional per-period caps (None = unlimited for that dimension)
-    max_messages: int | None = None
-    max_input_tokens: int | None = None
-    max_output_tokens: int | None = None
-    max_total_tokens: int | None = None
+    max_messages: int | None = Field(default=None, ge=0)
+    max_input_tokens: int | None = Field(default=None, ge=0)
+    max_output_tokens: int | None = Field(default=None, ge=0)
+    max_total_tokens: int | None = Field(default=None, ge=0)
 
     model_config = {'extra': 'ignore'}
 
@@ -80,7 +80,7 @@ class QuotaDimension(BaseModel):
 
 
 class QuotaSummary(BaseModel):
-    """Clean, pre-computed quota summary for the user-facing /me/quota endpoint.
+    """Clean, pre-computed quota summary for the GET /user/quota endpoint.
 
     When no limits are configured, ``unlimited`` is True and all dimension
     fields are None — the frontend can gate on that flag without inspecting

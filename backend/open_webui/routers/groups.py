@@ -357,7 +357,7 @@ async def preview_group_access(
 ############################
 
 
-@router.get('/id/{id}/usage-limits')
+@router.get('/id/{id}/usage-limits', response_model=UsageLimitsConfig | None)
 async def get_group_usage_limits(
     id: str,
     admin=Depends(get_admin_user),
@@ -382,10 +382,10 @@ async def get_group_usage_limits(
 ############################
 
 
-@router.put('/id/{id}/usage-limits')
+@router.put('/id/{id}/usage-limits', response_model=UsageLimitsConfig | None)
 async def update_group_usage_limits(
     id: str,
-    form_data: UsageLimitsConfig | None = Body(default=None),
+    form_data: UsageLimitsConfig | None = Body(...),
     admin=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):

@@ -696,13 +696,13 @@ class TestAdversarial:
     # ── Invalid / malicious config ────────────────────────────────────────────
 
     def test_negative_limit_rejected_by_schema(self):
-        """Pydantic should reject negative limits at the boundary."""
-        # Pydantic doesn't add gt=0 by default, but _dimension floors remaining at 0.
-        # Negative limits would behave oddly; verify _dimension handles gracefully.
-        d = _dimension(0, -1)
-        assert d is not None
-        # remaining = max(0, -1 - 0) = 0
-        assert d.remaining == 0
+        """Schema must reject negative cap values (ge=0 enforced by Field)."""
+        import pytest as _pytest
+        from pydantic import ValidationError
+
+        for field in ('max_messages', 'max_input_tokens', 'max_output_tokens', 'max_total_tokens'):
+            with _pytest.raises(ValidationError):
+                UsageLimitsConfig(**{field: -1})
 
     def test_zero_limit_config_is_immediately_blocking(self):
         """A limit of 0 tokens means every request is blocked."""

@@ -473,7 +473,7 @@ async def get_current_user_usage(
 ############################
 
 
-@router.get('/{user_id}/usage-limits')
+@router.get('/{user_id}/usage-limits', response_model=UsageLimitsConfig | None)
 async def get_user_usage_limits(
     user_id: str,
     admin=Depends(get_admin_user),
@@ -498,10 +498,10 @@ async def get_user_usage_limits(
 ############################
 
 
-@router.put('/{user_id}/usage-limits')
+@router.put('/{user_id}/usage-limits', response_model=UsageLimitsConfig | None)
 async def update_user_usage_limits(
     user_id: str,
-    form_data: UsageLimitsConfig | None = Body(default=None),
+    form_data: UsageLimitsConfig | None = Body(...),
     admin=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
