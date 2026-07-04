@@ -271,3 +271,4 @@ Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open W
 - Fork completed.
 - Clone completed.
 - First commit completed.
+- Recurrent work.
