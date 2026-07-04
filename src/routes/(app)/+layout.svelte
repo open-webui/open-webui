@@ -460,7 +460,10 @@
 				<Sidebar />
 
 				{#if loaded}
-					<slot />
+					<!-- a11y: `contents` keeps the flex layout intact while exposing a `main` landmark (WCAG 2.4.1 / 1.3.1). The skip link in the root layout targets #main-content. -->
+					<main id="main-content" class="contents">
+						<slot />
+					</main>
 				{:else}
 					<div
 						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
