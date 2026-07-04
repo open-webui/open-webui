@@ -20,6 +20,7 @@
 		settings,
 		showFileNavPath,
 		selectedTerminalId,
+		terminalServersLoaded,
 		user
 	} from '$lib/stores';
 
@@ -71,11 +72,16 @@
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
+	$: hasDirectToolServerAccess =
+		$user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true);
+	$: selectedSystemTerminalAvailable = ($terminalServers ?? []).some(
+		(t) => t.id && t.id === $selectedTerminalId
+	);
+	$: selectedDirectTerminalAvailable = ($settings?.terminalServers ?? []).some(
+		(s) => s.url === $selectedTerminalId
+	);
 	$: showFilesTab =
-		($selectedTerminalId &&
-			(($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) ||
-				$user?.role === 'admin' ||
-				($user?.permissions?.features?.direct_tool_servers ?? true))) ||
+		($selectedTerminalId && (selectedSystemTerminalAvailable || hasDirectToolServerAccess)) ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
 
@@ -106,11 +112,15 @@
 		}
 	}
 
-	// Clear selected direct terminal if user lost permission
+	$: if ($selectedTerminalId && selectedDirectTerminalAvailable && !hasDirectToolServerAccess) {
+		selectedTerminalId.set(null);
+	}
+
 	$: if (
+		$terminalServersLoaded &&
 		$selectedTerminalId &&
-		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
-		!($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+		!selectedSystemTerminalAvailable &&
+		!selectedDirectTerminalAvailable
 	) {
 		selectedTerminalId.set(null);
 	}

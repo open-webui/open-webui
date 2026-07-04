@@ -35,6 +35,7 @@
 		temporaryChatEnabled,
 		toolServers,
 		terminalServers,
+		terminalServersLoaded,
 		selectedTerminalId,
 		showSearch,
 		showSidebar,
@@ -123,65 +124,70 @@
 	};
 
 	const setToolServers = async () => {
-		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-		toolServersData = toolServersData.filter((data) => {
-			if (!data || data.error) {
-				toast.error(
-					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-						URL: data?.url
-					})
+		terminalServersLoaded.set(false);
+		try {
+			let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+			toolServersData = toolServersData.filter((data) => {
+				if (!data || data.error) {
+					toast.error(
+						$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+							URL: data?.url
+						})
+					);
+					return false;
+				}
+				return true;
+			});
+			toolServers.set(toolServersData);
+
+			// Inject enabled terminal servers as always-on tool servers
+			const enabledTerminals = ($settings?.terminalServers ?? []).filter((s) => s.enabled);
+			if (enabledTerminals.length > 0) {
+				let terminalServersData = await getToolServersData(
+					enabledTerminals.map((t) => ({
+						url: t.url,
+						auth_type: t.auth_type ?? 'bearer',
+						key: t.key ?? '',
+						path: t.path ?? '/openapi.json',
+						config: { enable: true }
+					}))
 				);
-				return false;
+				terminalServersData = terminalServersData
+					.filter((data) => {
+						if (!data || data.error) {
+							toast.error(
+								$i18n.t(`Failed to connect to {{URL}} terminal server`, {
+									URL: data?.url
+								})
+							);
+							return false;
+						}
+						return true;
+					})
+					.map((data, i) => ({
+						...data,
+						key: enabledTerminals[i]?.key ?? ''
+					}));
+
+				terminalServers.set(terminalServersData);
+			} else {
+				terminalServers.set([]);
 			}
-			return true;
-		});
-		toolServers.set(toolServersData);
 
-		// Inject enabled terminal servers as always-on tool servers
-		const enabledTerminals = ($settings?.terminalServers ?? []).filter((s) => s.enabled);
-		if (enabledTerminals.length > 0) {
-			let terminalServersData = await getToolServersData(
-				enabledTerminals.map((t) => ({
-					url: t.url,
-					auth_type: t.auth_type ?? 'bearer',
-					key: t.key ?? '',
-					path: t.path ?? '/openapi.json',
-					config: { enable: true }
-				}))
-			);
-			terminalServersData = terminalServersData
-				.filter((data) => {
-					if (!data || data.error) {
-						toast.error(
-							$i18n.t(`Failed to connect to {{URL}} terminal server`, {
-								URL: data?.url
-							})
-						);
-						return false;
-					}
-					return true;
-				})
-				.map((data, i) => ({
-					...data,
-					key: enabledTerminals[i]?.key ?? ''
+			// Fetch terminal servers the user has access to (for FileNav + terminal_id)
+			const systemTerminals = await getTerminalServers(localStorage.token);
+			if (systemTerminals.length > 0) {
+				// Store with proxy URL and session key for FileNav file browsing
+				const terminalEntries = systemTerminals.map((t) => ({
+					id: t.id,
+					url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
+					name: t.name,
+					key: localStorage.token
 				}));
-
-			terminalServers.set(terminalServersData);
-		} else {
-			terminalServers.set([]);
-		}
-
-		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
-		const systemTerminals = await getTerminalServers(localStorage.token);
-		if (systemTerminals.length > 0) {
-			// Store with proxy URL and session key for FileNav file browsing
-			const terminalEntries = systemTerminals.map((t) => ({
-				id: t.id,
-				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
-				name: t.name,
-				key: localStorage.token
-			}));
-			terminalServers.update((existing) => [...existing, ...terminalEntries]);
+				terminalServers.update((existing) => [...existing, ...terminalEntries]);
+			}
+		} finally {
+			terminalServersLoaded.set(true);
 		}
 	};
 
