@@ -21,6 +21,7 @@ from open_webui.utils.usage_limits import (
     get_quota_summary,
     get_usage_status,
 )
+from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -697,11 +698,8 @@ class TestAdversarial:
 
     def test_negative_limit_rejected_by_schema(self):
         """Schema must reject negative cap values (ge=0 enforced by Field)."""
-        import pytest as _pytest
-        from pydantic import ValidationError
-
         for field in ('max_messages', 'max_input_tokens', 'max_output_tokens', 'max_total_tokens'):
-            with _pytest.raises(ValidationError):
+            with pytest.raises(ValidationError):
                 UsageLimitsConfig(**{field: -1})
 
     def test_zero_limit_config_is_immediately_blocking(self):

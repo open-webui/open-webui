@@ -28,7 +28,6 @@ Known limitation — cross-period dimension merging:
 """
 
 import logging
-from contextlib import suppress
 from datetime import UTC, datetime, timedelta  # noqa: ICN003
 from typing import Literal
 
@@ -68,7 +67,7 @@ class UsageStatus(BaseModel):
     limits: UsageLimitsConfig | None = None
     period_start: int | None = None
     period_end: int | None = None
-    usage: dict = {}
+    usage: dict = Field(default_factory=dict)
 
 
 class QuotaDimension(BaseModel):
@@ -156,8 +155,8 @@ def _most_restrictive(configs: list[UsageLimitsConfig]) -> UsageLimitsConfig:
         non_none = [v for v in values if v is not None]
         return min(non_none) if non_none else None
 
-    # Sort so the shortest period comes first
-    configs.sort(key=lambda c: _PERIOD_ORDER.get(c.period, 99))
+    # Sort so the shortest period comes first (do not mutate the caller's list)
+    configs = sorted(configs, key=lambda c: _PERIOD_ORDER.get(c.period, 99))
     effective_period = configs[0].period
 
     # Only compare limits from configs that share the most restrictive period
@@ -194,11 +193,11 @@ async def get_effective_usage_limits(
     # ── 1. User-level override ────────────────────────────────────────────
     raw_user_limits = (user.info or {}).get('usage_limits')
     if raw_user_limits is not None:
-        with suppress(Exception):
+        try:
             user_limits = UsageLimitsConfig.model_validate(raw_user_limits)
-            # Explicit user config found — honour it regardless of groups.
             return user_limits if user_limits.enabled else None
-        log.warning('Ignoring malformed usage_limits for user %s', user_id)
+        except Exception:
+            log.warning('Ignoring malformed usage_limits for user %s', user_id)
 
     # ── 2. Group-level limits ─────────────────────────────────────────────
     groups = await Groups.get_groups_by_member_id(user_id, db=db)
@@ -207,12 +206,12 @@ async def get_effective_usage_limits(
         raw_group_limits = (group.data or {}).get('usage_limits')
         if raw_group_limits is None:
             continue
-        with suppress(Exception):
+        try:
             gl = UsageLimitsConfig.model_validate(raw_group_limits)
             if gl.enabled:
                 enabled_group_limits.append(gl)
-            continue
-        log.warning('Ignoring malformed usage_limits for group %s', group.id)
+        except Exception:
+            log.warning('Ignoring malformed usage_limits for group %s', group.id)
 
     if not enabled_group_limits:
         return None
@@ -229,7 +228,7 @@ async def get_user_usage_for_period(
     user_id: str,
     period: str,
     db: AsyncSession | None = None,
-) -> dict:
+) -> dict[str, int]:
     """Return current-period token/message stats for a single user."""
     start_date = get_period_start_ts(period)
     usage_map = await ChatMessages.get_token_usage_by_user(
@@ -279,6 +278,8 @@ async def check_usage_limits(
         usage = await get_user_usage_for_period(user_id, limits.period, db=db)
         period_end = get_period_end_ts(limits.period)
 
+        retry_after = str(max(0, period_end - int(datetime.now(UTC).timestamp())))
+
         def _exceeded(limit: int | None, key: str, label: str) -> None:
             if limit is None:
                 return
@@ -286,6 +287,7 @@ async def check_usage_limits(
             if current >= limit:
                 raise HTTPException(
                     status_code=429,
+                    headers={'Retry-After': retry_after},
                     detail={
                         'error': 'usage_limit_exceeded',
                         'limit_type': label,
@@ -316,7 +318,7 @@ async def get_usage_status(
     user_id: str,
     db: AsyncSession | None = None,
 ) -> UsageStatus:
-    """Build a UsageStatus payload for the /me/usage endpoint (raw numbers)."""
+    """Build a UsageStatus payload for the /user/usage endpoint (raw numbers)."""
     limits = await get_effective_usage_limits(user_id, db=db)
     if not limits or not limits.enabled:
         return UsageStatus()
@@ -346,7 +348,7 @@ async def get_quota_summary(
     user_id: str,
     db: AsyncSession | None = None,
 ) -> QuotaSummary:
-    """Build a clean, pre-computed quota summary for the /me/quota endpoint.
+    """Build a clean, pre-computed quota summary for the /user/quota endpoint.
 
     Returns a flat, human-readable structure with ``remaining`` already
     calculated and ``resets_at`` as an ISO date string so the frontend can
