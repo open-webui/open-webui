@@ -14,7 +14,6 @@ from langchain_community.document_loaders import (
     OutlookMessageLoader,
     PyPDFLoader,
     TextLoader,
-    YoutubeLoader,
 )
 from langchain_core.documents import Document
 from open_webui.env import (
@@ -555,7 +554,11 @@ class Loader:
                 file_path=file_path,
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
             )
-        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+        elif (
+            self.engine == 'paddleocr_vl'
+            and self.kwargs.get('PADDLEOCR_VL_BASE_URL') != ''
+            and file_ext in ['pdf', 'jpg', 'png', 'jpeg', 'bmp', 'tiff', 'webp']
+        ):
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
