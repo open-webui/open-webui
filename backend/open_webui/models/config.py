@@ -91,6 +91,20 @@ def _json_value(value: Any) -> Any:
     return jsonable_encoder(value)
 
 
+_CONFIG_DEFAULT_MISSING = object()
+
+
+def _coerce_value_for_key(key: str, value: Any, default: Any = _CONFIG_DEFAULT_MISSING) -> Any:
+    expected_value = Config.DEFAULTS[key] if key in Config.DEFAULTS else default
+    if isinstance(expected_value, bool) and isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == 'true':
+            return True
+        if normalized == 'false':
+            return False
+    return value
+
+
 # ── Model ────────────────────────────────────────────────────────────────────
 
 
@@ -140,7 +154,8 @@ class Config(Base):
             return Config.default_value(key, default)
         async with get_async_db() as db:
             row = await db.get(Config, key)
-            return row.value if row else Config.default_value(key, default)
+            value = row.value if row else Config.default_value(key, default)
+            return _coerce_value_for_key(key, value, default)
 
     @staticmethod
     async def get_many(*keys: str) -> dict:
@@ -155,7 +170,10 @@ class Config(Base):
             return disabled_values
         async with get_async_db() as db:
             result = await db.execute(select(Config).where(Config.key.in_(enabled_keys)))
-            values = {row.key: row.value for row in result.scalars().all()}
+            values = {
+                row.key: _coerce_value_for_key(row.key, row.value)
+                for row in result.scalars().all()
+            }
             return {
                 key: values.get(key, Config.default_value(key))
                 for key in keys
@@ -174,7 +192,10 @@ class Config(Base):
             return default_values
         async with get_async_db() as db:
             result = await db.execute(select(Config).where(Config.key.like(f'{namespace}.%')))
-            values = {row.key: row.value for row in result.scalars().all()}
+            values = {
+                row.key: _coerce_value_for_key(row.key, row.value)
+                for row in result.scalars().all()
+            }
             values.update(default_values)
             return values
 
@@ -185,7 +206,10 @@ class Config(Base):
             return dict(Config.DEFAULTS)
         async with get_async_db() as db:
             result = await db.execute(select(Config))
-            values = {row.key: row.value for row in result.scalars().all()}
+            values = {
+                row.key: _coerce_value_for_key(row.key, row.value)
+                for row in result.scalars().all()
+            }
             if not Config.OAUTH_PERSISTENT_ENABLED:
                 values.update({key: value for key, value in Config.DEFAULTS.items() if key.startswith('oauth.')})
             return values
