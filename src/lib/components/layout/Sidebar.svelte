@@ -805,6 +805,7 @@
 
 <button
 	id="sidebar-new-chat-button"
+	aria-label={$i18n.t('New Chat')}
 	class="hidden"
 	on:click={() => {
 		goto('/');

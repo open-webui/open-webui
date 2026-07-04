@@ -708,6 +708,7 @@
 						<!-- Shortcut support using "delete-chat-button" id -->
 						<button
 							id="delete-chat-button"
+							aria-label={$i18n.t('Delete')}
 							class="hidden"
 							on:click={() => {
 								showDeleteConfirm = true;

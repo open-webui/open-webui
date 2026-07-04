@@ -1321,6 +1321,7 @@
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
+												aria-label={$i18n.t('Regenerate')}
 												class="hidden regenerate-response-button"
 												on:click={() => {
 													showRateComment = false;
