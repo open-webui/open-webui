@@ -839,3 +839,26 @@ body {
 #note-content-container .ProseMirror {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
 }
+
+/*
+  Accessibility: light-theme text contrast (WCAG 2.1 SC 1.4.3 Contrast Minimum, 4.5:1).
+
+  The muted grays used for secondary text fail 4.5:1 on white in light mode
+  (gray-500 = 2.77:1, gray-400 = 2.07:1, gray-300 = 1.58:1). The shared
+  --color-gray-* tokens are NOT darkened globally, because those same grays are
+  used for secondary text on the dark background where they already pass (e.g.
+  gray-500 on gray-900 = 6.53:1); darkening the tokens would regress dark mode.
+
+  Instead we remap only the muted TEXT color utilities, scoped to html.light, to
+  luminances that clear 4.5:1 on white while preserving the visual ordering
+  (500 darker than 400 darker than 300). Backgrounds and borders are untouched.
+*/
+html.light .text-gray-500 {
+	color: oklch(0.52 0 0); /* 5.51:1 on white */
+}
+html.light .text-gray-400 {
+	color: oklch(0.54 0 0); /* 5.06:1 on white */
+}
+html.light .text-gray-300 {
+	color: oklch(0.56 0 0); /* 4.65:1 on white */
+}
