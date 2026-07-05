@@ -188,6 +188,10 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 
+# Fallback for tokens without expiry metadata AND without a refresh_token
+# (e.g. Slack xoxp user tokens): long-lived until revoked, cannot be refreshed.
+NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS = 365 * 24 * 3600
+
 
 # Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
 # rejects unknown headers unless we register the provider extension.
@@ -203,8 +207,12 @@ def _normalize_token_expiry(token: dict) -> dict:
     Resolution order:
     1. If *expires_at* is already present and non-None, trust it.
     2. Else if *expires_in* is present and non-None, compute *expires_at*.
-    3. Otherwise fall back to ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a
-       warning so operators can identify providers that omit expiration.
+    3. Else if a *refresh_token* is present, fall back to
+       ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a warning so operators can
+       identify providers that omit expiration.
+    4. Otherwise the token is non-expiring and non-refreshable; use
+       ``NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS`` so the refresh path (which
+       would inevitably fail and delete the session) is not triggered.
 
     Also stamps *issued_at* for auditing.
     """
@@ -218,12 +226,21 @@ def _normalize_token_expiry(token: dict) -> dict:
         token['expires_at'] = int(datetime.now().timestamp() + token['expires_in'])
         return token
 
-    # Neither field present — conservative fallback
-    log.warning(
-        "OAuth token response missing both 'expires_in' and 'expires_at'; "
-        f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
-    )
-    token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    # Neither field present — conservative fallback, but only if the token
+    # can actually be refreshed; otherwise a short fabricated expiry would
+    # guarantee session deletion once the impossible refresh fails (#26141)
+    if token.get('refresh_token'):
+        log.warning(
+            "OAuth token response missing both 'expires_in' and 'expires_at'; "
+            f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
+        )
+        token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    else:
+        log.info(
+            "OAuth token response missing 'expires_in', 'expires_at' and 'refresh_token'; "
+            'treating token as long-lived'
+        )
+        token['expires_at'] = int(datetime.now().timestamp() + NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS)
     return token
 
 
