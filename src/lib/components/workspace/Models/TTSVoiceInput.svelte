@@ -24,17 +24,15 @@
 	let suggestionsOpen = false;
 
 	$: query = value.trim().toLowerCase();
-	$: filteredVoices = (voices ?? [])
-		.filter((voice) => {
-			const id = voice.id.toLowerCase();
-			const name = (voice.name ?? '').toLowerCase();
-			const description = (voice.description ?? voice.meta?.description ?? '').toLowerCase();
+	$: filteredVoices = (voices ?? []).filter((voice) => {
+		const id = voice.id.toLowerCase();
+		const name = (voice.name ?? '').toLowerCase();
+		const description = (voice.description ?? voice.meta?.description ?? '').toLowerCase();
 
-			return (
-				query === '' || id.includes(query) || name.includes(query) || description.includes(query)
-			);
-		})
-		.slice(0, 8);
+		return (
+			query === '' || id.includes(query) || name.includes(query) || description.includes(query)
+		);
+	});
 	$: if (suggestionsOpen && filteredVoices.length > 0) {
 		tick().then(positionPopup);
 	}
@@ -139,9 +137,9 @@
 					selectVoice(voice);
 				}}
 			>
-				<span class="truncate">{voice.id}</span>
+				<span class="truncate">{voice.name ?? voice.id}</span>
 				{#if voice.name && voice.name !== voice.id}
-					<span class="truncate text-gray-500 dark:text-gray-400">{voice.name}</span>
+					<span class="truncate text-gray-500 dark:text-gray-400">{voice.id}</span>
 				{/if}
 			</button>
 		{/each}
