@@ -33,9 +33,9 @@ MAX_GREP_MATCHES = 50
 
 
 def is_regex_pattern(pattern: str) -> bool:
-    """Detect if a pattern looks like regex (\|, .*, .+, \d, \w, \s, [...])."""
+    """Detect if a pattern looks like regex (|, .*, .+, \d, \w, \s, [...])."""
     return (
-        '\|' in pattern
+        '|' in pattern
         or '.*' in pattern
         or '.+' in pattern
         or '.?' in pattern
