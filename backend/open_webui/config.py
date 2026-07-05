@@ -585,7 +585,12 @@ CODE_INTERPRETER_JUPYTER_TIMEOUT = ConfigVar(
 )
 
 CODE_INTERPRETER_BLOCKED_MODULES = [
-    library.strip() for library in os.getenv('CODE_INTERPRETER_BLOCKED_MODULES', '').split(',') if library.strip()
+    library.strip()
+    for library in os.getenv(
+        "CODE_INTERPRETER_BLOCKED_MODULES",
+        "os,sys,subprocess,socket,ctypes,shutil,pty,platform,multiprocessing",
+    ).split(",")
+    if library.strip()
 ]
 
 DEFAULT_CODE_INTERPRETER_PROMPT = """

@@ -463,11 +463,9 @@ async def execute_code(
                 _real_import = builtins.__import__
                 def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                     if name.split('.')[0] in BLOCKED_MODULES:
-                        importer_name = globals.get('__name__') if globals else None
-                        if importer_name == '__main__':
-                            raise ImportError(
-                                f"Direct import of module {{name}} is restricted."
-                            )
+                        raise ImportError(
+                            f"Import of module {{name}} is restricted."
+                        )
                     return _real_import(name, globals, locals, fromlist, level)
 
                 builtins.__import__ = restricted_import
