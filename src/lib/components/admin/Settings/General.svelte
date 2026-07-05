@@ -259,7 +259,7 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Folders')}
+							{$i18n.t('Projects')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
@@ -269,7 +269,7 @@
 						<div class="mb-2.5 w-full justify-between">
 							<div class="flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Folder Max File Count')}
+									{$i18n.t('Project Max File Count')}
 								</div>
 							</div>
 
@@ -284,7 +284,7 @@
 							</div>
 
 							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-								{$i18n.t('Maximum number of files allowed per folder.')}
+								{$i18n.t('Maximum number of files allowed per project.')}
 							</div>
 						</div>
 					{/if}

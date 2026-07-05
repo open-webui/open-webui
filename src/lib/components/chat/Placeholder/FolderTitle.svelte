@@ -44,7 +44,7 @@
 
 	const updateHandler = async ({ name, meta, data }) => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty.'));
+			toast.error($i18n.t('Project name cannot be empty.'));
 			return;
 		}
 
@@ -70,7 +70,7 @@
 				folder.data = data;
 			}
 
-			toast.success($i18n.t('Folder updated successfully'));
+			toast.success($i18n.t('Project updated successfully'));
 
 			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
 				toast.error(`${error}`);
@@ -95,7 +95,7 @@
 		if (res) {
 			folder.meta = { ...folder.meta, icon: iconName ?? '' };
 
-			toast.success($i18n.t('Folder updated successfully'));
+			toast.success($i18n.t('Project updated successfully'));
 
 			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
 				toast.error(`${error}`);
@@ -116,7 +116,7 @@
 		);
 
 		if (res) {
-			toast.success($i18n.t('Folder deleted successfully'));
+			toast.success($i18n.t('Project deleted successfully'));
 			onDelete(folder);
 		}
 	};
@@ -139,7 +139,7 @@
 
 	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty.'));
+			toast.error($i18n.t('Project name cannot be empty.'));
 			return;
 		}
 
@@ -156,7 +156,7 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t('Folder created successfully'));
+			toast.success($i18n.t('Project created successfully'));
 			onUpdate();
 		}
 	};
@@ -180,7 +180,7 @@
 
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
-		title={$i18n.t('Delete folder?')}
+		title={$i18n.t('Delete project?')}
 		on:confirm={() => {
 			deleteHandler();
 		}}
@@ -199,7 +199,7 @@
 			<input type="checkbox" bind:checked={deleteFolderContents} />
 
 			<div class="text-xs text-gray-500">
-				{$i18n.t('Delete all contents inside this folder')}
+				{$i18n.t('Delete all contents inside this project')}
 			</div>
 		</div>
 	</DeleteConfirmDialog>
@@ -226,7 +226,7 @@
 					}}
 				>
 					<button
-						aria-label={$i18n.t('Change folder icon')}
+						aria-label={$i18n.t('Change project icon')}
 						class=" rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
 					>
 						{#if folder?.meta?.icon}
@@ -265,7 +265,7 @@
 				>
 					<button
 						class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto"
-						aria-label={$i18n.t('Folder options')}
+						aria-label={$i18n.t('Project options')}
 						on:click={(e) => {}}
 					>
 						<EllipsisHorizontal className="size-4" strokeWidth="2.5" />

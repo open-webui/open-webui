@@ -52,7 +52,7 @@
 				}}
 			>
 				<Folder />
-				<div class="flex items-center">{$i18n.t('Create Folder')}</div>
+				<div class="flex items-center">{$i18n.t('Create Project')}</div>
 			</button>
 
 			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />

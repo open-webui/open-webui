@@ -29,7 +29,7 @@
 		},
 		{
 			name: 'folder:',
-			description: $i18n.t('search for folders')
+			description: $i18n.t('search for projects')
 		},
 		{
 			name: 'pinned:',

@@ -47,7 +47,7 @@
 		const maxFileCount = $config?.features?.folder_max_file_count ?? '';
 		if (maxFileCount && (data?.files ?? []).length > maxFileCount) {
 			toast.error(
-				$i18n.t('Maximum number of files per folder is {{max}}.', { max: maxFileCount ?? 0 })
+				$i18n.t('Maximum number of files per project is {{max}}.', { max: maxFileCount ?? 0 })
 			);
 			loading = false;
 			return;
@@ -113,9 +113,9 @@
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">
 				{#if edit}
-					{$i18n.t('Edit Folder')}
+					{$i18n.t('Edit Project')}
 				{:else}
-					{$i18n.t('Create Folder')}
+					{$i18n.t('Create Project')}
 				{/if}
 			</div>
 			<button
@@ -137,7 +137,7 @@
 					}}
 				>
 					<div class="flex flex-col w-full mt-1">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Folder Name')}</div>
+						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Project Name')}</div>
 
 						<div class="flex-1">
 							<input
@@ -145,7 +145,7 @@
 								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
-								placeholder={$i18n.t('Enter folder name')}
+								placeholder={$i18n.t('Enter project name')}
 								autocomplete="off"
 							/>
 						</div>
@@ -183,7 +183,7 @@
 					/>
 
 					<div class="flex justify-between w-full mt-1 items-center">
-						<div class="text-xs text-gray-500">{$i18n.t('Folder Background Image')}</div>
+						<div class="text-xs text-gray-500">{$i18n.t('Project Background Image')}</div>
 
 						<div class="">
 							<button
