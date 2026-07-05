@@ -43,13 +43,17 @@
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+
+	// Safari's content-visibility implementation has paint bugs that leave
+	// on-screen messages blank (#26712), so skip virtualization there
+	const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 </script>
 
 <div
 	role="listitem"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
-		: 'max-w-5xl'} mx-auto rounded-lg group message-listitem"
+		: 'max-w-5xl'} mx-auto rounded-lg group {isSafari ? '' : 'message-listitem'}"
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
