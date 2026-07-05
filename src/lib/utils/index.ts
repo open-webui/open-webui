@@ -2023,7 +2023,22 @@ export const renderVegaVisualization = async (spec: string, lang: string = '', i
 		const vegaLite = await import('vega-lite');
 		vegaSpec = vegaLite.compile(parsedSpec).spec;
 	}
-	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	// Chat content is untrusted: block Vega from fetching external resources so a crafted spec
+	// can't turn a viewer's browser into an SSRF/exfil client. `data.url`/topojson go through
+	// loader.load; `image` mark urls go through loader.sanitize and end up as <image href> in the
+	// SVG (fetched on display), so both paths must reject external URLs.
+	const loader = vega.loader();
+	loader.load = async () => {
+		throw new Error('External resource loading is disabled for rendered visualizations');
+	};
+	const sanitize = loader.sanitize.bind(loader);
+	loader.sanitize = async (uri: string, options: any) => {
+		if (/^(https?:|\/\/)/i.test(uri)) {
+			throw new Error('External resource loading is disabled for rendered visualizations');
+		}
+		return sanitize(uri, options);
+	};
+	const view = new vega.View(vega.parse(vegaSpec), { loader, renderer: 'none' });
 	const svg = await view.toSVG();
 	return svg;
 };
