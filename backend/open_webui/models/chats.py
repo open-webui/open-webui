@@ -13,7 +13,7 @@ from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
-from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
+from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     JSON,
@@ -755,6 +755,12 @@ class ChatTable:
                 'role': role,
                 'timestamp': message.get('timestamp') or int(time.time()),
             }
+
+        # Keep `content` in sync with structured output for consumers that read `content`
+        if 'output' in message and not (isinstance(message.get('content'), str) and message['content'].strip()):
+            output_text = get_output_text(messages[message_id].get('output'))
+            if output_text:
+                messages[message_id]['content'] = sanitize_text_for_db(output_text)
 
         history['currentId'] = message_id
 

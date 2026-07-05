@@ -220,6 +220,26 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     return reconciled_messages
 
 
+def get_output_text(output: list | None) -> str:
+    """Extract the assistant-visible text from output message items."""
+    if not output or not isinstance(output, list):
+        return ''
+
+    texts = []
+    for item in output:
+        if not isinstance(item, dict) or item.get('type') != 'message':
+            continue
+        text = ''.join(
+            part.get('text') or ''
+            for part in item.get('content', [])
+            if isinstance(part, dict) and part.get('type') == 'output_text'
+        )
+        if text.strip():
+            texts.append(text)
+
+    return '\n'.join(texts)
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
