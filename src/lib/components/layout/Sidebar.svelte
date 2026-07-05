@@ -352,7 +352,9 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const _chats = await getChatList(localStorage.token, $currentChatPage);
+				// pass the page explicitly: $currentChatPage can still hold a stale
+				// value here when initChatList runs inside a store subscriber flush
+				const _chats = await getChatList(localStorage.token, 1);
 				await chats.set(_chats);
 			})()
 		]);
@@ -364,11 +366,12 @@
 	const loadMoreChats = async () => {
 		chatListLoading = true;
 
-		currentChatPage.set($currentChatPage + 1);
+		const page = $currentChatPage + 1;
+		currentChatPage.set(page);
 
 		let newChatList = [];
 
-		newChatList = await getChatList(localStorage.token, $currentChatPage);
+		newChatList = await getChatList(localStorage.token, page);
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;

@@ -2935,8 +2935,8 @@
 
 			await tick();
 
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, 1));
 
 			selectedFolder.set(null);
 		} else {

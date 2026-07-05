@@ -107,12 +107,12 @@
 					folder={$selectedFolder}
 					readOnly={folderNotOwned}
 					onUpdate={async (folder) => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						currentChatPage.set(1);
+						await chats.set(await getChatList(localStorage.token, 1));
 					}}
 					onDelete={async () => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						currentChatPage.set(1);
+						await chats.set(await getChatList(localStorage.token, 1));
 
 						selectedFolder.set(null);
 					}}
