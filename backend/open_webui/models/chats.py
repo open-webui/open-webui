@@ -1621,7 +1621,7 @@ class ChatTable:
         self,
         folder_id: str,
         skip: int = 0,
-        limit: int = 60,
+        limit: int | None = None,
         db: AsyncSession | None = None,
     ) -> list[dict]:
         """Get chats in a folder across ALL users. Returns dicts with user_id."""
@@ -1652,6 +1652,16 @@ class ChatTable:
                 }
                 for chat in all_chats
             ]
+
+    async def count_all_chats_by_folder_id(self, folder_id: str, db: AsyncSession | None = None) -> int:
+        """Count chats in a folder across ALL users."""
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(func.count(Chat.id))
+                .filter_by(folder_id=folder_id, archived=False)
+                .filter(or_(Chat.pinned == False, Chat.pinned == None))
+            )
+            return result.scalar() or 0
 
     async def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None

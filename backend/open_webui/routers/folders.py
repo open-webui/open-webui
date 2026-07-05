@@ -477,6 +477,8 @@ async def update_folder_access_by_id(
 async def get_shared_folder_chats(
     request: Request,
     id: str,
+    skip: int = 0,
+    limit: int | None = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -500,7 +502,8 @@ async def get_shared_folder_chats(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chats = await Chats.get_all_chats_by_folder_id(id, db=db)
+    chats = await Chats.get_all_chats_by_folder_id(id, skip=skip, limit=limit, db=db)
+    total = await Chats.count_all_chats_by_folder_id(id, db=db)
 
     # Resolve owner names for display (avatar URLs are constructed client-side)
     owner_cache: dict[str, str] = {}
@@ -513,6 +516,7 @@ async def get_shared_folder_chats(
 
     return {
         'chats': [{**chat, 'readonly': chat['user_id'] != user.id} for chat in chats],
+        'total': total,
         'folder_permission': 'write' if has_write else 'read',
     }
 
