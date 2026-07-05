@@ -24,21 +24,34 @@ REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
 
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
-
-    async for message in pubsub.listen():
-        if message['type'] != 'message':
-            continue
+    while True:
+        pubsub = redis.pubsub()
         try:
-            command = json.loads(message['data'])
-            if command.get('action') == 'stop':
-                task_id = command.get('task_id')
-                local_task = tasks.get(task_id)
-                if local_task:
-                    local_task.cancel()
+            await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+            while True:
+                # get_message instead of listen(): an idle listen() dies on redis-py 8's 5s default socket_timeout
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=5)
+                if message is None or message['type'] != 'message':
+                    continue
+                try:
+                    command = json.loads(message['data'])
+                    if command.get('action') == 'stop':
+                        task_id = command.get('task_id')
+                        local_task = tasks.get(task_id)
+                        if local_task:
+                            local_task.cancel()
+                except Exception as e:
+                    log.exception(f'Error handling distributed task command: {e}')
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
-            log.exception(f'Error handling distributed task command: {e}')
+            log.error(f'Task command listener connection lost, resubscribing in 5s: {e}')
+            await asyncio.sleep(5)
+        finally:
+            try:
+                await pubsub.aclose()
+            except Exception:
+                pass
 
 
 ### ------------------------------
