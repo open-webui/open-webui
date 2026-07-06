@@ -14,10 +14,8 @@ from open_webui.models.feedbacks import (
     FeedbackModel,
     Feedbacks,
     LeaderboardFeedbackData,
-    ModelHistoryEntry,
     ModelHistoryResponse,
 )
-from open_webui.models.users import UserModel, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -419,12 +417,13 @@ async def create_feedback(
             detail=ERROR_MESSAGES.DEFAULT(),
         )
 
+    data = getattr(feedback, 'data', None) or {'rating': None}
     await publish_event(
         request,
         EVENTS.FEEDBACK_CREATED,
         actor=user,
         subject_id=feedback.id,
-        data={'rating': getattr(feedback, 'rating', None)},
+        data={'rating': data.get('rating')},
     )
     return feedback
 
@@ -458,12 +457,13 @@ async def update_feedback_by_id(
     if not feedback:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
+    data = getattr(feedback, 'data', None) or {'rating': None}
     await publish_event(
         request,
         EVENTS.FEEDBACK_UPDATED,
         actor=user,
         subject_id=feedback.id,
-        data={'rating': getattr(feedback, 'rating', None)},
+        data={'rating': data.get('rating')},
     )
     return feedback
 
