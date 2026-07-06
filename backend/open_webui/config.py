@@ -1128,6 +1128,12 @@ WEB_SEARCH_CONFIRMATION_CONTENT = os.getenv(
     'Your query will be sent to the configured web search provider.',
 )
 
+####################################
+# Tool Call Confirmation
+####################################
+
+ENABLE_TOOL_CALL_CONFIRMATION = os.getenv('ENABLE_TOOL_CALL_CONFIRMATION', 'False').lower() == 'true'
+
 WEB_SEARCH_ENGINE = os.getenv('WEB_SEARCH_ENGINE', '')
 
 BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
@@ -2861,6 +2867,7 @@ DEFAULT_CONFIG = {
     'web.search.enable': ENABLE_WEB_SEARCH,
     'web.search.confirmation.enable': ENABLE_WEB_SEARCH_CONFIRMATION,
     'web.search.confirmation.content': WEB_SEARCH_CONFIRMATION_CONTENT,
+    'tool.call.confirmation.enable': ENABLE_TOOL_CALL_CONFIRMATION,
     'web.search.engine': WEB_SEARCH_ENGINE,
     'web.search.bypass_embedding_and_retrieval': BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     'web.search.bypass_web_loader': BYPASS_WEB_SEARCH_WEB_LOADER,

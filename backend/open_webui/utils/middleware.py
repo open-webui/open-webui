@@ -1082,6 +1082,11 @@ async def terminal_event_handler(
         )
 
 
+class _ToolCallDenied(Exception):
+    """Sentinel exception raised when the user denies a tool call confirmation."""
+    pass
+
+
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
 ) -> tuple[dict, dict]:
@@ -1189,6 +1194,26 @@ async def chat_completion_tools_handler(
                     allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
                     tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
 
+                    # Tool call confirmation: ask user before executing
+                    if await Config.get('tool.call.confirmation.enable') and event_caller:
+                        params_display = json.dumps(tool_function_params, indent=2, ensure_ascii=False)
+                        confirmation = await event_caller(
+                            {
+                                'type': 'confirmation',
+                                'data': {
+                                    'title': f'Allow tool call: {tool_function_name}?',
+                                    'message': f'The model wants to call **{tool_function_name}** with:\n```json\n{params_display}\n```',
+                                },
+                            }
+                        )
+                        if not confirmation:
+                            tool_result = json.dumps({
+                                'status': 'denied',
+                                'message': f'Tool call to {tool_function_name} was denied by user.',
+                            })
+                            # Skip tool execution; jump to result processing
+                            raise _ToolCallDenied()
+
                     if tool.get('direct', False):
                         tool_result = await event_caller(
                             {
@@ -1206,6 +1231,8 @@ async def chat_completion_tools_handler(
                         tool_function = tool['callable']
                         tool_result = await tool_function(**tool_function_params)
 
+                except _ToolCallDenied:
+                    pass  # tool_result already set with denial message
                 except Exception as e:
                     tool_result = str(e)
 
