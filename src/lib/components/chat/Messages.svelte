@@ -131,7 +131,7 @@
 
 	$: handleHistoryChange(history.currentId, history.messages);
 
-	$: if (autoScroll && bottomPadding) {
+	$: if (autoScroll && bottomPadding && ($settings?.chatResponseAutoScroll ?? true)) {
 		(async () => {
 			await tick();
 			scrollToBottom();

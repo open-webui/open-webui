@@ -130,6 +130,9 @@
 
 	let autoScroll = true;
 	let isNearTop = true;
+	$: responseAutoScroll = $settings?.chatResponseAutoScroll ?? true;
+
+	const shouldAutoScrollResponse = () => autoScroll && responseAutoScroll;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
@@ -671,7 +674,7 @@
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
-					if (autoScroll) {
+					if (shouldAutoScrollResponse()) {
 						scrollToBottom('smooth');
 					}
 				} else if (type === 'chat:outlet') {
@@ -1880,7 +1883,7 @@
 
 			await tick();
 
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 
@@ -1944,7 +1947,7 @@
 		history.currentId = currentParentId;
 		await tick();
 
-		if (autoScroll) {
+		if (shouldAutoScrollResponse()) {
 			scrollToBottom();
 		}
 
@@ -2043,7 +2046,7 @@
 			history.messages[message.id] = message;
 
 			await tick();
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 
@@ -2064,7 +2067,7 @@
 		console.log(data);
 		await tick();
 
-		if (autoScroll) {
+		if (shouldAutoScrollResponse()) {
 			scheduleScrollToBottom();
 		}
 	};
@@ -2746,7 +2749,7 @@
 
 			history.messages[history.currentId] = responseMessage;
 
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 		}
@@ -2894,7 +2897,7 @@
 						history.messages[messageId] = message;
 					}
 
-					if (autoScroll) {
+					if (shouldAutoScrollResponse()) {
 						scheduleScrollToBottom();
 					}
 				}

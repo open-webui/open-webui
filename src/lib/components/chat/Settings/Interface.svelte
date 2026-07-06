@@ -31,6 +31,7 @@
 	let responseAutoCopy = false;
 	let widescreenMode = false;
 	let splitLargeChunks = false;
+	let chatResponseAutoScroll = true;
 	let scrollOnBranchChange = true;
 	let showFilesOnTerminalSelect = true;
 	let userLocation = false;
@@ -244,6 +245,7 @@
 		chatBubble = $settings?.chatBubble ?? true;
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
+		chatResponseAutoScroll = $settings?.chatResponseAutoScroll ?? true;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
 		showFilesOnTerminalSelect = $settings?.showFilesOnTerminalSelect ?? true;
 
@@ -762,6 +764,25 @@
 					</div>
 				</div>
 			{/if}
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="chat-response-auto-scroll-label" class=" self-center text-xs">
+						{$i18n.t('Auto-scroll Responses')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="chat-response-auto-scroll-label"
+							tooltip={true}
+							bind:state={chatResponseAutoScroll}
+							on:change={() => {
+								saveSettings({ chatResponseAutoScroll });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
