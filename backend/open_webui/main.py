@@ -245,6 +245,7 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
+from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.session_pool import get_session
@@ -789,6 +790,33 @@ if audit_level != AuditLevel.NONE:
         audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
+##################################
+#
+# Rate Limiting for expensive endpoints
+#
+##################################
+
+_chat_rate_limiter = RateLimiter(
+    redis_client=get_redis_client(),
+    limit=60,
+    window=60,
+)
+
+_RATE_LIMITED_PATHS = {'/api/chat/completions', '/api/v1/chat/completions', '/api/embeddings'}
+
+
+@app.middleware('http')
+async def chat_rate_limit_middleware(request: Request, call_next):
+    if request.method == 'POST' and request.url.path in _RATE_LIMITED_PATHS:
+        user_id = request.headers.get('Authorization', request.client.host if request.client else 'unknown')
+        if _chat_rate_limiter.is_limited(user_id):
+            return JSONResponse(
+                status_code=429,
+                content={'detail': ERROR_MESSAGES.RATE_LIMIT_EXCEEDED},
+            )
+    return await call_next(request)
+
+
 ##################################
 #
 # Chat Endpoints
