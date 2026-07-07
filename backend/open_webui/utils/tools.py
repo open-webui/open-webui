@@ -18,7 +18,7 @@ from typing import (
     get_args,
     get_type_hints,
 )
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 
 import aiohttp
 import yaml
@@ -110,6 +110,23 @@ def normalize_bearer_token(token: Any) -> str:
 def bearer_auth_header(token: Any) -> dict[str, str]:
     token = normalize_bearer_token(token)
     return {'Authorization': f'Bearer {token}'} if token else {}
+
+
+def _validate_http_url(value: str, field_name: str) -> str:
+    """
+    Validate an external service URL used for tool execution.
+    """
+    if not value or not isinstance(value, str):
+        raise ValueError(f'{field_name} is required and must be a string')
+
+    if any(ch in value for ch in ('\\', '\r', '\n', '\t')):
+        raise ValueError(f'{field_name} contains unsupported characters')
+
+    parsed = urlparse(value)
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+        raise ValueError(f'{field_name} must be an absolute http(s) URL')
+
+    return value.strip()
 
 
 async def build_tool_server_headers(
@@ -1572,9 +1589,11 @@ def get_tool_server_url(url: str | None, path: str) -> str:
     """
     if '://' in path:
         # If it contains "://", it's a full URL
-        return path
+        return _validate_http_url(path, 'path')
     if url:
-        url = url.rstrip('/')
+        url = _validate_http_url(url.rstrip('/'), 'url')
+    else:
+        raise ValueError('url is required when path is not a full URL')
     if not path.startswith('/'):
         # Ensure the path starts with a slash
         path = f'/{path}'
