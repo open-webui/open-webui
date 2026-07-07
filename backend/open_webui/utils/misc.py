@@ -158,14 +158,45 @@ def get_last_user_message_item(messages: list[dict]) -> dict | None:
     return None
 
 
+def get_output_text_from_message(message: dict) -> str | None:
+    output = message.get('output')
+    if not isinstance(output, list):
+        return None
+
+    text_parts = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+
+        if item.get('type') != 'message':
+            continue
+
+        for part in item.get('content') or []:
+            if isinstance(part, dict) and part.get('type') == 'output_text':
+                text = part.get('text')
+                if text:
+                    text_parts.append(text)
+
+    if text_parts:
+        return ''.join(text_parts)
+
+    return None
+
+
 def get_content_from_message(message: dict) -> str | None:
+    content = None
     if isinstance(message.get('content'), list):
         for item in message['content']:
             if item['type'] == 'text':
-                return item['text']
+                content = item['text']
+                break
     else:
-        return message.get('content')
-    return None
+        content = message.get('content')
+
+    if isinstance(content, str) and content.strip():
+        return content
+
+    return get_output_text_from_message(message) or content
 
 
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
