@@ -2374,7 +2374,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data['messages'])
     model_knowledge = model.get('info', {}).get('meta', {}).get('knowledge', False)
 
-    if model_knowledge and metadata.get('params', {}).get('function_calling') == 'legacy':
+    # Inject model-attached knowledge unconditionally so RAG runs on every query
+    # for models that have a knowledge base attached, regardless of function-calling
+    # mode (default/native/legacy). Upstream gates this on `function_calling == 'legacy'`,
+    # which means default & native modes only expose knowledge as an optional builtin
+    # tool the model may never call — so RAG silently never runs. Dropping the gate
+    # guarantees auto-RAG. (chat_completion_files_handler below runs whenever the
+    # file_context capability is on, which is the default.) The builtin knowledge
+    # tools remain available for the model to do follow-up searches if it needs to.
+    if model_knowledge:
         await event_emitter(
             {
                 'type': 'status',
