@@ -187,6 +187,10 @@ class NoteTable:
                             )
                         )
 
+                folder = filter.get('folder')
+                if folder:
+                    stmt = stmt.filter(Note.meta['folder'].as_string() == folder)
+
                 view_option = filter.get('view_option')
                 if view_option == 'created':
                     stmt = stmt.filter(Note.user_id == user_id)
@@ -386,6 +390,31 @@ class NoteTable:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(PinnedNote.note_id).filter_by(user_id=user_id))
             return result.scalars().all()
+
+    async def get_distinct_folders(
+        self,
+        user_id: str,
+        permission: str = 'read',
+        db: Optional[AsyncSession] = None,
+    ) -> list[str]:
+        async with get_async_db_context(db) as db:
+            user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
+            user_group_ids = [group.id for group in user_groups]
+
+            stmt = select(Note)
+            stmt = self._has_permission(db, stmt, {'user_id': user_id, 'group_ids': user_group_ids}, permission)
+
+            result = await db.execute(stmt)
+            notes = result.scalars().all()
+
+            folders = set()
+            for note in notes:
+                if note.meta and isinstance(note.meta, dict):
+                    folder = note.meta.get('folder')
+                    if folder:
+                        folders.add(folder)
+
+            return sorted(folders)
 
 
 Notes = NoteTable()

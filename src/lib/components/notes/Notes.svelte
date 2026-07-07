@@ -38,7 +38,8 @@
 		getNoteList,
 		searchNotes,
 		toggleNotePinnedStatusById,
-		getPinnedNoteList
+		getPinnedNoteList,
+		getFolders
 	} from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { downloadPdf, createNoteHandler } from './utils';
@@ -74,6 +75,8 @@
 	let displayOption = null;
 	let viewOption = null;
 	let permission = null;
+	let folder = null;
+	let folders = [];
 
 	let page = 1;
 
@@ -178,6 +181,7 @@
 
 	const init = async () => {
 		reset();
+		folders = await getFolders(localStorage.token).catch(() => []);
 		await getItemsPage();
 	};
 
@@ -190,7 +194,7 @@
 		}, 300);
 	};
 
-	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
+	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined && folder !== undefined) {
 		init();
 	}
 
@@ -207,7 +211,8 @@
 			viewOption,
 			permission,
 			sortKey,
-			page
+			page,
+			folder
 		).catch(() => {
 			return [];
 		});
@@ -293,9 +298,12 @@
 		dragged = false;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		viewOption = localStorage?.noteViewOption ?? null;
 		displayOption = localStorage?.noteDisplayOption ?? null;
+		folder = localStorage?.noteFolder ?? null;
+
+		folders = await getFolders(localStorage.token).catch(() => []);
 
 		loaded = true;
 
@@ -351,11 +359,12 @@
 					</div>
 				</div>
 
-				<div class="flex w-full justify-end gap-1.5">
+				<div class="flex w-full justify-end gap-1.5 items-center">
 					<button
 						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 						on:click={async () => {
-							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+							const currentFolder = localStorage?.noteFolder ?? null;
+							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'), undefined, undefined, currentFolder);
 
 							if (res) {
 								goto(`/notes/${res.id}`);
@@ -442,6 +451,25 @@
 								]}
 							/>
 						{/if}
+
+						{#if folders.length > 0}
+							<DropdownOptions
+								align="start"
+								className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
+								bind:value={folder}
+								items={[
+									{ value: null, label: $i18n.t('All Folders') },
+									...folders.map((f) => ({ value: f, label: f }))
+								]}
+								onChange={(value) => {
+									if (value) {
+										localStorage.noteFolder = value;
+									} else {
+										delete localStorage.noteFolder;
+									}
+								}}
+							/>
+						{/if}
 					</div>
 				</div>
 
@@ -499,6 +527,12 @@
 																	{note.title}
 																</div>
 															</Tooltip>
+
+															{#if note?.meta?.folder}
+																<div class="shrink-0 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+																	{note.meta.folder}
+																</div>
+															{/if}
 
 															<div class="flex shrink-0 items-center text-xs gap-2.5">
 																<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
@@ -591,6 +625,12 @@
 																<div class=" font-semibold line-clamp-1 capitalize">
 																	{note.title}
 																</div>
+
+																{#if note?.meta?.folder}
+																	<div class="shrink-0 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+																		{note.meta.folder}
+																	</div>
+																{/if}
 
 																<div>
 																	<NoteMenu

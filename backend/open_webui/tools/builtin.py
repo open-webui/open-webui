@@ -1082,6 +1082,7 @@ async def write_note(
     content: str,
     __request__: Request = None,
     __user__: dict = None,
+    __folder_id__: str = None,
 ) -> str:
     """
     Create a new note with the given title and content.
@@ -1101,9 +1102,18 @@ async def write_note(
 
         user_id = __user__.get('id')
 
+        meta = {}
+        if __folder_id__:
+            from open_webui.models.folders import Folders
+
+            folder = await Folders.get_folder_by_id_and_user_id(__folder_id__, user_id)
+            if folder:
+                meta['folder'] = folder.name
+
         form = NoteForm(
             title=title,
             data={'content': {'md': content}},
+            meta=meta if meta else None,
             access_grants=[],  # Private by default - only owner can access
         )
 
