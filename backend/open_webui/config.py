@@ -392,6 +392,21 @@ try:
 except Exception:
     TERMINAL_PROXY_HEADERS = {}
 
+
+def _parse_positive_int(env_var: str, default: int) -> int:
+    """
+    Parse an integer environment variable as a non-negative timeout/limit.
+    """
+    raw = os.getenv(env_var)
+    if raw is None or raw == '':
+        return default
+    try:
+        value = int(raw)
+        return max(0, value)
+    except (TypeError, ValueError):
+        log.warning(f'Invalid integer for {env_var}: {raw!r}; using {default}')
+        return default
+
 ####################################
 # Code Interpreter
 ####################################
@@ -409,16 +424,16 @@ CODE_EXECUTION_JUPYTER_AUTH_TOKEN = os.getenv('CODE_EXECUTION_JUPYTER_AUTH_TOKEN
 
 CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = os.getenv('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', '')
 
-CODE_EXECUTION_JUPYTER_TIMEOUT = int(os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT', '60'))
+CODE_EXECUTION_JUPYTER_TIMEOUT = _parse_positive_int('CODE_EXECUTION_JUPYTER_TIMEOUT', 60)
 
 ENABLE_CODE_INTERPRETER = os.getenv('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true'
 
 ENABLE_MEMORIES = os.getenv('ENABLE_MEMORIES', 'True').lower() == 'true'
 ENABLE_MEMORY_SYSTEM_CONTEXT = os.getenv('ENABLE_MEMORY_SYSTEM_CONTEXT', 'True').lower() == 'true'
 ENABLE_MEMORY_BACKGROUND_REVIEW = os.getenv('ENABLE_MEMORY_BACKGROUND_REVIEW', 'False').lower() == 'true'
-MEMORIES_REVIEW_INTERVAL_TURNS = int(os.getenv('MEMORIES_REVIEW_INTERVAL_TURNS', '10'))
-MEMORIES_USER_CHAR_LIMIT = int(os.getenv('MEMORIES_USER_CHAR_LIMIT', '2000'))
-MEMORIES_CONTEXT_CHAR_LIMIT = int(os.getenv('MEMORIES_CONTEXT_CHAR_LIMIT', '2000'))
+MEMORIES_REVIEW_INTERVAL_TURNS = _parse_positive_int('MEMORIES_REVIEW_INTERVAL_TURNS', 10)
+MEMORIES_USER_CHAR_LIMIT = _parse_positive_int('MEMORIES_USER_CHAR_LIMIT', 2000)
+MEMORIES_CONTEXT_CHAR_LIMIT = _parse_positive_int('MEMORIES_CONTEXT_CHAR_LIMIT', 2000)
 
 CODE_INTERPRETER_ENGINE = os.getenv('CODE_INTERPRETER_ENGINE', 'pyodide')
 
@@ -442,11 +457,8 @@ CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = os.getenv(
     os.getenv('CODE_EXECUTION_JUPYTER_AUTH_PASSWORD', ''),
 )
 
-CODE_INTERPRETER_JUPYTER_TIMEOUT = int(
-    os.getenv(
-        'CODE_INTERPRETER_JUPYTER_TIMEOUT',
-        os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT', '60'),
-    )
+CODE_INTERPRETER_JUPYTER_TIMEOUT = _parse_positive_int(
+    'CODE_INTERPRETER_JUPYTER_TIMEOUT', _parse_positive_int('CODE_EXECUTION_JUPYTER_TIMEOUT', 60)
 )
 
 CODE_INTERPRETER_BLOCKED_MODULES = [
