@@ -47,6 +47,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
 )
+from open_webui.utils.model_params import pop_model_params_from_payload
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
@@ -1138,18 +1139,16 @@ async def generate_chat_completion(
             payload['model'] = base_model_id
             model_id = base_model_id
 
-        params = model_info.params.model_dump()
-
-        if params:
-            system = params.pop('system', None)
-
-            payload = apply_model_params_to_body_openai(params, payload)
-            if not bypass_system_prompt:
-                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
-
         await check_model_access(user, model_info, bypass_filter)
     else:
         await check_model_access(user, None, bypass_filter)
+
+    params = pop_model_params_from_payload(payload, model_info)
+    if params:
+        system = params.pop('system', None)
+        payload = apply_model_params_to_body_openai(params, payload)
+        if not bypass_system_prompt:
+            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
