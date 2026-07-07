@@ -134,6 +134,8 @@
 
 	export let prompt = '';
 	export let files = [];
+	let canExpandInput = false;
+	$: canExpandInput = prompt.split('\n').length > 2;
 
 	export let selectedToolIds = [];
 	export let selectedSkillIds = [];
@@ -1487,33 +1489,32 @@
 								</div>
 							{/if}
 
-							<div class="px-2.5">
+							<div class="px-2.5 relative">
+								{#if canExpandInput}
+									<div class="absolute top-2 ltr:right-3 rtl:left-3 z-20">
+										<button
+											type="button"
+											class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+											aria-label="Expand input"
+											on:click={async () => {
+												showInputModal = true;
+											}}
+										>
+											<Expand />
+										</button>
+									</div>
+								{/if}
+
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
-									0
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 pl-1 {canExpandInput
+										? 'ltr:pr-9 rtl:pl-9 rtl:pr-1'
+										: 'pr-1'} resize-none h-fit max-h-96 overflow-auto {files.length === 0
 										? atSelectedModel !== undefined
 											? 'pt-1.5'
 											: 'pt-2.5'
 										: ''}"
 									id="chat-input-container"
 								>
-									{#if prompt.split('\n').length > 2}
-										<div class="fixed top-0 right-0 z-20">
-											<div class="mt-2.5 mr-3">
-												<button
-													type="button"
-													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-													aria-label="Expand input"
-													on:click={async () => {
-														showInputModal = true;
-													}}
-												>
-													<Expand />
-												</button>
-											</div>
-										</div>
-									{/if}
-
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
 											{#key $settings?.showFormattingToolbar ?? false}
