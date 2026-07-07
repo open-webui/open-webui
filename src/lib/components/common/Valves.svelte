@@ -9,6 +9,7 @@
 	import Switch from './Switch.svelte';
 	import SensitiveInput from './SensitiveInput.svelte';
 	import NativeSelect from './NativeSelect.svelte';
+	import MultiSelect from './MultiSelect.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
 
 	export let valvesSpec = null;
@@ -37,7 +38,11 @@
 							// Initialize to custom value
 							if ((propertySpec?.type ?? null) === 'array') {
 								const defaultArray = propertySpec?.default ?? [];
-								valves[property] = Array.isArray(defaultArray) ? defaultArray.join(', ') : '';
+								if (propertySpec?.input?.type === 'multiselect') {
+									valves[property] = Array.isArray(defaultArray) ? [...defaultArray] : [];
+								} else {
+									valves[property] = Array.isArray(defaultArray) ? defaultArray.join(', ') : '';
+								}
 							} else {
 								valves[property] = propertySpec?.default ?? '';
 							}
@@ -95,6 +100,16 @@
 									/>
 								</div>
 							</div>
+						{:else if valvesSpec.properties[property]?.input?.type === 'multiselect' && valvesSpec.properties[property]?.input?.options}
+							<MultiSelect
+								className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								bind:value={valves[property]}
+								options={valvesSpec.properties[property].input.options}
+								placeholder={$i18n.t('Select options')}
+								on:change={() => {
+									dispatch('change');
+								}}
+							/>
 						{:else if (valvesSpec.properties[property]?.type ?? null) !== 'string'}
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
