@@ -2351,6 +2351,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if not folder_id:
         folder_id = metadata.get('folder_id', None)
 
+    # Pass resolved folder_id to tools for auto-assignment (e.g., note creation)
+    if folder_id:
+        extra_params['__folder_id__'] = folder_id
+
     if folder_id and user:
         folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
 

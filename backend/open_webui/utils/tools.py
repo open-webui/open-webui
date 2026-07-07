@@ -666,6 +666,7 @@ async def get_builtin_tools(
                 '__event_call__': extra_params.get('__event_call__'),
                 '__metadata__': extra_params.get('__metadata__'),
                 '__chat_id__': extra_params.get('__chat_id__'),
+                '__folder_id__': extra_params.get('__folder_id__'),
                 '__message_id__': extra_params.get('__message_id__'),
                 '__model_knowledge__': model_knowledge,
             },

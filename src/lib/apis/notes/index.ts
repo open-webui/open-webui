@@ -97,13 +97,18 @@ export const searchNotes = async (
 	viewOption: string | null = null,
 	permission: string | null = null,
 	sortKey: string | null = null,
-	page: number | null = null
+	page: number | null = null,
+	folder: string | null = null
 ) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
 
 	if (query !== null) {
 		searchParams.append('query', query);
+	}
+
+	if (folder !== null) {
+		searchParams.append('folder', folder);
 	}
 
 	if (viewOption !== null) {
@@ -148,6 +153,37 @@ export const searchNotes = async (
 	}
 
 	return res;
+};
+
+export const getFolders = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/folders`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res ?? [];
 };
 
 export const getNoteList = async (token: string = '', page: number | null = null) => {

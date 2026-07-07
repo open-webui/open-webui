@@ -20,6 +20,7 @@ from open_webui.models.notes import (
     NoteModel,
     Notes,
     NoteUserResponse,
+    NoteItemResponse,
 )
 from open_webui.models.users import UserResponse, Users
 from open_webui.socket.main import sio
@@ -54,6 +55,7 @@ class NoteItemResponse(BaseModel):
     id: str
     title: str
     data: Optional[dict]
+    meta: Optional[dict] = None
     is_pinned: Optional[bool] = False
     updated_at: int
     created_at: int
@@ -148,6 +150,7 @@ async def get_pinned_notes(
 async def search_notes(
     request: Request,
     query: Optional[str] = None,
+    folder: Optional[str] = None,
     view_option: Optional[str] = None,
     permission: Optional[str] = None,
     order_by: Optional[str] = None,
@@ -173,6 +176,8 @@ async def search_notes(
     filter = {}
     if query:
         filter['query'] = query
+    if folder:
+        filter['folder'] = folder
     if view_option:
         filter['view_option'] = view_option
     if permission:
@@ -195,6 +200,28 @@ async def search_notes(
         note.is_pinned = note.id in pinned_note_ids
         note.data = _truncate_note_data(note.data)
     return result
+
+
+############################
+# GetFolders
+############################
+
+
+@router.get('/folders', response_model=list[str])
+async def get_folders(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    return await Notes.get_distinct_folders(user.id, 'read', db=db)
 
 
 ############################
