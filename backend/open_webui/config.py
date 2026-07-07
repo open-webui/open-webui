@@ -383,7 +383,15 @@ OAUTH_CLIENT_TIMEOUT = os.getenv('OAUTH_CLIENT_TIMEOUT', '')
 # TERMINAL_SERVER
 ####################################
 
-terminal_server_connections = json.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
+try:
+    terminal_server_connections = json.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
+except Exception as e:
+    log.exception(f'Error loading TERMINAL_SERVER_CONNECTIONS: {e}')
+    terminal_server_connections = []
+
+if not isinstance(terminal_server_connections, list):
+    log.warning('TERMINAL_SERVER_CONNECTIONS must be a JSON array; ignoring invalid value')
+    terminal_server_connections = []
 
 TERMINAL_SERVER_CONNECTIONS = terminal_server_connections
 
