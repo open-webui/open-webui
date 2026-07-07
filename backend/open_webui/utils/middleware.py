@@ -111,6 +111,7 @@ from open_webui.utils.misc import (
     strip_empty_content_blocks,
 )
 from open_webui.utils.payload import apply_system_prompt_to_body, resolve_system_prompt
+from open_webui.utils.vision_rag import process_image_rag
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
 from open_webui.utils.sanitize import sanitize_code
@@ -2795,6 +2796,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     sources.extend(flags.get('sources', []))
                 except Exception as e:
                     log.exception(e)
+
+    # Vision Image RAG: if the last user message contains images and a vision
+    # model is available (the chatting model when it is vision-capable, else the
+    # admin-configured 'rag.vision.support_model'), describe the image and
+    # replace the image parts with that description. This MUST run before
+    # chat_completion_files_handler below so the description feeds RAG query
+    # generation, and it lets non-vision models use images via the global model.
+    # Best-effort: on any failure the normal chat flow continues unaffected.
+    try:
+        await process_image_rag(request, form_data, metadata, user, model, event_emitter)
+    except Exception as e:
+        log.exception(e)
 
     # Check if file context extraction is enabled for this model (default True)
     file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)

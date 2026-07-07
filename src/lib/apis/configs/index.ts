@@ -732,6 +732,67 @@ export const setModelFailoverMap = async (
 	return res?.MODEL_FAILOVER_MAP ?? {};
 };
 
+/**
+ * Fetch the global vision-support model id used by Vision Image RAG.
+ *
+ * Empty string means "not set" (only vision-capable chatting models get
+ * image RAG). Admin-only on the backend.
+ */
+export const getRagVisionConfig = async (token: string): Promise<string> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/rag/vision`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail ?? err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.VISION_SUPPORT_MODEL ?? '';
+};
+
+export const setRagVisionConfig = async (token: string, visionSupportModel: string): Promise<string> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/rag/vision`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ VISION_SUPPORT_MODEL: visionSupportModel })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail ?? err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.VISION_SUPPORT_MODEL ?? '';
+};
+
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 

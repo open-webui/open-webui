@@ -798,6 +798,31 @@ async def set_model_failover_map(
     return {'MODEL_FAILOVER_MAP': cleaned}
 
 
+class RagVisionConfigForm(BaseModel):
+    # Optional model id used to describe images for Vision Image RAG when the
+    # chatting model is not vision-capable. Empty string = disabled.
+    VISION_SUPPORT_MODEL: str = ''
+
+
+@router.get('/rag/vision', response_model=RagVisionConfigForm)
+async def get_rag_vision_config(request: Request, user=Depends(get_admin_user)):
+    """Return the global vision-support model used by Vision Image RAG."""
+    return {'VISION_SUPPORT_MODEL': (await Config.get('rag.vision.support_model')) or ''}
+
+
+@router.post('/rag/vision', response_model=RagVisionConfigForm)
+async def set_rag_vision_config(
+    request: Request,
+    form_data: RagVisionConfigForm,
+    user=Depends(get_admin_user),
+):
+    """Set the global vision-support model. Empty string disables the non-vision
+    fallback (only vision-capable chatting models then get image RAG)."""
+    value = (form_data.VISION_SUPPORT_MODEL or '').strip()
+    await Config.upsert({'rag.vision.support_model': value})
+    return {'VISION_SUPPORT_MODEL': value}
+
+
 class PromptSuggestion(BaseModel):
     title: list[str]
     content: str
