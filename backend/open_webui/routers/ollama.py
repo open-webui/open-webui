@@ -61,6 +61,20 @@ def _clean_proxy_headers(raw_headers) -> dict:
     return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
 
 
+def _validate_http_url(url: str) -> str:
+    if not url or not isinstance(url, str):
+        raise ValueError('URL must be a non-empty string')
+
+    if any(ch in url for ch in ('\\', '\r', '\n', '\t')):
+        raise ValueError('URL contains unsupported characters')
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+        raise ValueError('URL must be an absolute http(s) URL')
+
+    return url.strip()
+
+
 async def send_get_request(
     url: str,
     key: str | None = None,
@@ -242,6 +256,11 @@ class ConnectionVerificationForm(BaseModel):
     url: str
     key: str | None = None
 
+    @validator('url')
+    @classmethod
+    def validate_url(cls, value):
+        return _validate_http_url(value)
+
 
 @router.post('/verify')
 async def verify_connection(
@@ -294,6 +313,13 @@ class OllamaConfigForm(BaseModel):
     ENABLE_OLLAMA_API: bool | None = None
     OLLAMA_BASE_URLS: list[str]
     OLLAMA_API_CONFIGS: dict
+
+    @validator('OLLAMA_BASE_URLS')
+    @classmethod
+    def validate_base_urls(cls, value):
+        if value is None:
+            return value
+        return [_validate_http_url(url) for url in value]
 
 
 @router.post('/config/update')
