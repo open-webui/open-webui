@@ -1451,12 +1451,13 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
 
     except Exception as e:
         log.exception(e)
+        detail = e.detail if isinstance(e, HTTPException) else None
         await event_emitter(
             {
                 'type': 'status',
                 'data': {
                     'action': 'web_search',
-                    'description': 'An error occurred while searching the web',
+                    'description': (str(detail) if detail else 'An error occurred while searching the web'),
                     'queries': queries,
                     'done': True,
                     'error': True,
