@@ -108,7 +108,8 @@ export const DEFAULT_CAPABILITIES = {
 	citations: true,
 	status_updates: true,
 	usage: undefined,
-	builtin_tools: true
+	builtin_tools: true,
+	memory: true
 };
 
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
